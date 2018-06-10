@@ -1,0 +1,4 @@
+Execute the following to install required packages:
+
+opam install integers
+opam install ocamlgraph
