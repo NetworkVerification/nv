@@ -1,2 +1,1 @@
-# nv
-educational materials on network verification
+# Educational materials on network verification
