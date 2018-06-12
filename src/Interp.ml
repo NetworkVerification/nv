@@ -12,36 +12,65 @@ let error s = raise (IError s)
 
 (* Environments *)
 
-module StringMap = Map.Make (
-  struct
-    type t = string
-    let compare s1 s2 = Pervasives.compare s1 s2
-  end
-)  
-  
-type env = value StringMap.t
+module Env =
+struct
 
-let empty = StringMap.empty
+  type entry =
+    | V of value
+    | F of func
+
+  module M = Map.Make (Syntax.Var)
+	
+  type t = entry M.t
+
+  let empty = M.empty
     
-let lookup env x =
-  try
-    StringMap.find x env
-  with
-      Not_found -> error ("unbound variable " ^ x)
+  let lookup env x =
+    try
+      M.find x env
+    with
+	Not_found -> error ("unbound variable " ^ Var.to_string x)
 
-let update env x v =
-  StringMap.add x v env
+  let lookup_val env x =
+    match lookup env x with
+      | V v -> v
+      | F f -> error ("lookup val found function" ^ Var.to_string x)
 
-let env_to_string env =
-  StringMap.fold (fun k v s -> k ^ ":" ^ value_to_string v ^ ";" ^ s) env
+  let lookup_fun env x =
+    match lookup env x with
+      | V v -> error ("lookup function found val" ^ Var.to_string x)
+      | F f -> f
+	
+  let update env x entry =
+    M.add x entry env
 
+  let update_val env x v =
+    update env x (V v)
+
+  let update_fun env x f =
+    update env x (F f)
+
+  let to_string env =
+    M.fold (fun k entry s ->
+      let entry_string = 
+	match entry with
+	  | V v -> value_to_string v
+	  | F f -> func_to_string f
+      in
+      Var.to_string k ^ ":" ^ entry_string ^ ";" ^ s) env
+end
+  
 (* Expression and operator interpreters *)
     
 let rec interp_exp env e =
   match e with
-    | EVar x -> lookup env x
+    | EVar x -> Env.lookup_val env x
     | EVal v -> v
     | EOp (op, es) -> interp_op env op es
+    | EApp (x, es) ->
+      let vs = List.map (interp_exp env) es in
+      let f = Env.lookup_fun env x in
+      apply f vs
     | EIf (e1, e2, e3) ->
       (match interp_exp env e1 with
 	| VBool true -> interp_exp env e2
@@ -49,7 +78,7 @@ let rec interp_exp env e =
 	| _ -> error "bad if condition")
     | ELet (x,e1,e2) ->
       let v1 = interp_exp env e1 in
-      interp_exp (update env x v1) e2
+      interp_exp (Env.update_val env x v1) e2
     | ETuple es -> VTuple (List.map (interp_exp env) es)
     | EProj (i,e) ->
       (if i < 0 then error (sprintf "negative projection from tuple: %d " i);
@@ -63,15 +92,29 @@ let rec interp_exp env e =
     | EMatch (e1,e2,x,e3) ->
       (match interp_exp env e1 with
 	| VOption None -> interp_exp env e2
-	| VOption (Some v) -> interp_exp (update env x v) e3
+	| VOption (Some v) -> interp_exp (Env.update_val env x v) e3
 	| _ -> error "match expression processing non-option")
-	       
+
+and apply (vars, body) vs =
+  let rec create_env env vars vs =
+    match vars, vs with
+      | [], [] -> env
+      | var::vars, v::vs -> create_env (Env.update_val env var v) vars vs
+      | _, _ -> error "bad function application"
+  in	
+  interp_exp (create_env Env.empty vars vs) body 
+	
 and interp_op env op es =
   if arity op != List.length es then
     error (sprintf "operation %s has arity %d not arity %d"
 	     (op_to_string op) (arity op) (List.length es));
   let vs = List.map (interp_exp env) es in
   match op, vs with
+    | Eq, [v1; v2] ->
+        if equal_val v1 v2 then
+	  VBool true
+        else
+          VBool false
     | And, [VBool b1; VBool b2] ->
         VBool (b1 && b2)
     | Or, [VBool b1; VBool b2] ->
@@ -85,29 +128,33 @@ and interp_op env op es =
   	  VBool true
         else
 	  VBool false
-    | UEq, [VUInt32 i1; VUInt32 i2] ->
-        if UInt32.compare i1 i2 = 0 then
-	  VBool true
-        else
-          VBool false
-    | SSingle, [VUInt32 i] ->
-        VSet (UInt32Set.singleton i)
-    | SUnion, [VSet s1; VSet s2] ->
-	VSet (UInt32Set.union s1 s2)
-    | SDiff, [VSet s1; VSet s2] ->
-        VSet (UInt32Set.diff s1 s2)
-    | SMember,  [VUInt32 i; VSet s] ->
-        VBool (UInt32Set.mem i s)
+    | MPresent, [VMap m; VUInt32 i] ->
+        VBool (UIMap.mem i m)
+    | MGet, [VMap m; VUInt32 i] ->
+      (try
+	 VOption (Some (UIMap.find i m))
+       with
+	   Not_found -> VOption None)
+    | MBind, [VMap m; VTuple [VUInt32 i; v]] ->
+        VMap (UIMap.add i v m)
+    | MUnion,  [VMap m1; VMap m2] ->  error "UNIMPLEMENTED"  (* TODO *)
+        (* need ocaml 4.03: VBool (UI2Map.union (fun k v1 v2 -> v1) m1 m2) *)
     | _, _ ->
         error "bad operator application"
 
-let interp e = interp_exp empty e
+let interp e = interp_exp Env.empty e
 
-let apply (vars, body) vs =
-  let rec create_env e vars vs =
-    match vars, vs with
-      | [], [] -> e
-      | var::vars, v::vs -> create_env (update e var v) vars vs
-      | _, _ -> error "bad top-level functional application"
-  in	
-  interp_exp (create_env empty vars vs) body 
+let interp_decl env d =
+  match d with
+    | DE e -> Env.V (interp_exp env e)
+    | DF f -> Env.F f
+  
+let interp_decls ds =
+  let rec loop env ds =
+    match ds with
+	[] -> env
+      | (x,d)::ds ->
+	let entry = interp_decl env d in
+	Env.update env x entry                             (* inefficient *)
+  in
+  loop Env.empty ds
