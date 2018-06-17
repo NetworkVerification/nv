@@ -6,12 +6,25 @@ open Unsigned
 open Printf
 open Srp
 
+module Env = Interp.Env
+
 (* variables *)
 
-let x = "x"
-let y = "y"
-let xe = EVar "x"
-let ye = EVar "y"
+let x = Var.fresh "x"
+let y = Var.fresh "y"
+let x1 = Var.fresh "x1"
+let x2 = Var.fresh "x2"
+let incr_x = Var.fresh "incr"
+let less_x = Var.fresh "less"
+let edge_x = Var.fresh "edge"
+
+let xe = EVar x
+let x1e = EVar x1
+let x2e = EVar x2
+let ye = EVar y
+let incr_xe = EVar incr_x
+let less_xe = EVar less_x
+let edge_xe = EVar edge_x
 
 (* integers *)
 
@@ -36,7 +49,11 @@ let lam x e = ([x], e)
 let lams xs e = (xs, e)
   
 let incr_f = lam x (EOp (UAdd, [xe; EVal one]))
-let less_f = lams [x;y] (EIf (EOp (ULessEq, [xe; ye]), xe, ye))
+let less_f = lams [x;y] (EIf (EOp (ULess, [xe; ye]), xe, ye))
+
+let env1 = Env.update (Env.update Env.empty incr_x (VFun incr_f)) less_x (VFun less_f) 
+let trans1 = lams [edge_x; x1] (EApp (incr_xe, [x1e]))
+let merge1 = lams [edge_x; x1; x2] (EApp (less_xe,[x1e; x2e]))  
   
 (* SRPs *)
   
@@ -54,8 +71,9 @@ let diamond_g =
   
 let srp = {
   graph = diamond_g;
-  trans = (fun e -> incr_f);
-  merge = (fun v -> less_f);
+  env = env1;
+  trans = trans1;
+  merge = merge1;
 }
 
 let init = [(u0, VUInt32 u0)]

@@ -6,10 +6,12 @@ open Unsigned
 
 (* variables *)
 
-let x = "x"
-let y = "y"
-let xe = EVar "x"
-let ye = EVar "y"
+let x = Var.fresh "x"
+let y = Var.fresh "y"
+let xe = EVar x
+let ye = EVar y
+let xf = Var.fresh "f"
+let xfe = EVar xf
 
 (* values *)
 
@@ -17,8 +19,11 @@ let t = VBool true
 let f = VBool false
 let z = VUInt32 UInt32.zero
 let one = VUInt32 UInt32.one
-let two = VUInt32 (UInt32.of_int 2)
-let three = VUInt32 (UInt32.of_int 3)
+let ne n = VUInt32 (UInt32.of_int n)
+let two = ne 2
+let three = ne 3
+let four = ne 4
+
   
 (* expressions *)
 
@@ -28,6 +33,7 @@ let ze = EVal z
 let onee = EVal one
 let twoe = EVal two
 let threee = EVal three
+let foure = EVal four
   
 let e1 = te
 let e2 = fe 
@@ -39,9 +45,26 @@ let e7 = ELet (x, e2, ELet (x, e1, e5))
 let e8 = ELet (x, e2, ELet (y, e1, e5))
 
 (* functions *)
-let lam x e = ([x], e)
+let lam x e = EVal (VFun ([x], e))
+let app f e = EApp (f, [e])
+
+let lams xs e = EVal (VFun (xs,e))
+let apps e es = EApp (e, es)
   
 let f1 = lam x (EOp (UAdd, [xe; EVal one]))
+
+let f_opt =
+  lams [xf;x]
+    (EMatch
+       (EVar x,
+	EVal (VOption None),
+	y, ESome (app (EVar xf) (EVar y)))
+    )
+
+let some_one = EVal (VOption (Some one))
+let e_add_one_option = apps f_opt [f1; some_one]
+
+let two_again = EMatch (e_add_one_option, foure, y, EVar y)
   
 (* utilties *)
 
@@ -59,25 +82,17 @@ let expression_tests = [
   e6, t;
   e7, t;
   e8, f;
+  app f1 ze, one;  
+  app f1 onee, two;
+  two_again, two;
 ]
 
-let t_interp (e, result) =
+let test_interp (e, result) =
   assert_equal ~printer:Printing.value_to_string (Interp.interp e) result 
     
 let expression_suite = "interpreting expressions">:::
-  test_all t_interp expression_tests
-
-let t_app ((f,arg), result) =
-  assert_equal ~printer:Printing.value_to_string (Interp.apply f [arg]) result 
-  
-let function_tests = [
-  (f1,z), one;  
-  (f1,one), two;
-]
-
-let function_suite = "interpreting functions">:::
-  test_all t_app function_tests
-  
+  test_all test_interp expression_tests
+   
 let _ = run_test_tt_main expression_suite
-let _ = run_test_tt_main function_suite
+
 

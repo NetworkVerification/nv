@@ -1,9 +1,11 @@
- open Unsigned
+open Unsigned
+open Syntax
 
 type srp = {
   graph : Graph.t;
-  trans : Graph.Edge.t -> Syntax.func;
-  merge : Graph.Vertex.t -> Syntax.func;
+  env : Interp.Env.t;
+  trans : func;
+  merge : func;
 }
 
 (******************)
@@ -15,7 +17,7 @@ let error s = raise (Simulation_error s)
 
 (* Simulation States *)
 (* Invariant: All valid graph vertices are associated with an attribute initially (and always) *) 
-type state = Syntax.value Graph.VertexMap.t
+type state = value Graph.VertexMap.t
 
 (* initial_state g [(x1,a1),...] d n creates a state s where 
     vertices xi have attributes ai and all other vertices have attribute d *)
@@ -45,14 +47,14 @@ let get_attribute v s =
     | None -> error ("no attribute at vertex " ^ UInt32.to_string v)
     | Some a -> a
   
-let simulate_step {graph=g;trans=t;merge=m} s x =
+let simulate_step {graph=g;env=env;trans=trans;merge=merge} s x =
   let do_neighbor initial_attribute (s,todo) n =
-    let edge = (x,n) in
-    let t_func = t edge in
-    let m_func = m n in
-    let n_incoming_attribute = Interp.apply t_func [initial_attribute] in
+    let neighbor = VUInt32 n in
+    let origin = VUInt32 x in
+    let edge = VTuple [origin; neighbor] in
+    let n_incoming_attribute = Interp.apply env trans [edge; initial_attribute] in
     let n_old_attribute = get_attribute n s in
-    let n_new_attribute = Interp.apply m_func [n_old_attribute; n_incoming_attribute] in
+    let n_new_attribute = Interp.apply env merge [neighbor; n_old_attribute; n_incoming_attribute] in
     if Syntax.equal_val n_old_attribute n_new_attribute then
       (s,todo)
     else
