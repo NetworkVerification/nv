@@ -1,0 +1,5 @@
+S src
+S test
+B _build/test
+B _build/src
+PKG batteries ppx_deriving.std str ANSITerminal Z3
