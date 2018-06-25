@@ -1,0 +1,14 @@
+let nodes = 2
+
+let edges = {
+ 0=1;
+}
+
+let merge x y =
+  if x < y then x else y
+
+let trans x = x + 1
+
+let init = {
+ 0=1;
+}
