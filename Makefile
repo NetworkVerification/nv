@@ -15,4 +15,4 @@ run_tests: tests
 
 clean:
 	ocamlbuild -clean
-	rm -Rf *.d.byte *.native _build *~
+	rm -Rf *~ src/*~ test/*~ examples/*~
