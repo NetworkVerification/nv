@@ -38,7 +38,10 @@
 %token EDGES NODES INIT
 
 %start prog
-%type <Syntax.declarations> prog
+%type  <Syntax.declarations> prog
+
+%start expr
+%type <Syntax.exp> expr
 
 %left PLUS SUB      /* lowest precedence */
 %left AND OR
@@ -62,15 +65,15 @@ init:
 ;
 
 inits:
-    |            { [] }
+    | init       { [$1] }
     | init inits { $1 :: $2 }
 ;
 
 component:
     | LET fdecl EQ expr                 { global_let $2 $4 }
-    | LET EDGES EQ RBRACE edges LBRACE  { DEdges $5 }
+    | LET EDGES EQ LBRACE edges RBRACE  { DEdges $5 }
     | LET NODES EQ NUM                  { DNodes $4 }
-    | LET INIT EQ RBRACE inits LBRACE   { DInit $5 }
+    | LET INIT EQ LBRACE inits RBRACE   { DInit $5 }
 ;
   
 components:
@@ -127,16 +130,20 @@ exprs:
 ;
 
 edge:
-    | NUM SUB NUM              { [($1,$3)] }
-    | NUM EQ NUM               { [($1,$3); ($3,$1)] }
+    | NUM SUB NUM SEMI         { [($1,$3)] }
+    | NUM EQ NUM SEMI          { [($1,$3); ($3,$1)] }
 
 edges:
     | edge                     { $1 }
-    | edge SEMI edges          { $1 @ $3 }
+    | edge edges               { $1 @ $2 }
 ;
 
 prog:
     | components EOF           { $1 }
 ;
 
-
+/*
+prog:
+    | expr {$1 }
+;
+*/

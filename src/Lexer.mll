@@ -29,6 +29,7 @@ rule token = parse
   | "Some"       { SOME }
   | "edges"      { EDGES }
   | "nodes"      { NODES }
+  | "init"       { INIT }
   | "match"      { MATCH }
   | "with"       { WITH }
   | id as s      { ID (Var.create s) }

@@ -1,5 +1,5 @@
 PKGS = -package integers -package ounit -package z3
-BUILD = ocamlbuild -use-ocamlfind -use-menhir -r $(PKGS)
+BUILD = ocamlbuild -use-ocamlfind -r $(PKGS)
 MLFILES= src/*.ml src/*.mli test/*.ml \
 
 default:  src/Main

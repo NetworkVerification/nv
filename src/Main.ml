@@ -4,19 +4,6 @@ open Syntax
 open Printing
 open Interp
 
-let t = VBool true
-let f = VBool false
-let e1 = EVal t
-let e2 = EVal f
-let e3 = EOp (And, [e1; e2])
-let v4 = interp e3
-
-let pl = print_endline
-
-
-let print_components cs =
-  print_endline "made it!"
-
 (* Command Line Arguments *)
 
 let simulate_flag = ref false
@@ -41,11 +28,38 @@ let commandline_processing () =
   in
   let usage_msg = "SRP verification. Options available:" in
   Arg.parse speclist print_endline usage_msg
-    
-let main () =
-  let () = commandline_processing () in
-  let components = Input.read_from_file (filename()) in
-  if verbose() then
-    print_components components;
-  
 
+
+let main =
+  let () = commandline_processing () in
+  let ds = Input.read_from_file (filename()) in
+  print_endline (Printing.declarations_to_string ds)
+
+
+(*
+let prog =
+  "let nodes = 2 \
+\
+let edges = {\
+ 0=1;\
+}\
+\
+let merge x y =\
+  if x < y then x else y\
+\
+let trans x = x + 1\
+\
+let init = {\
+ 0=0;\
+}"
+
+
+let e = "2"
+
+let fn = "examples/simple.nv"
+    
+let main =
+  let ds = Input.read_from_file fn in
+  print_endline (Printing.declarations_to_string ds)
+
+*)

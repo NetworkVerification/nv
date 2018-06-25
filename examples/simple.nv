@@ -10,5 +10,5 @@ let merge x y =
 let trans x = x + 1
 
 let init = {
- 0=1;
+ 0=0;
 }
