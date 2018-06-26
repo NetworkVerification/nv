@@ -162,8 +162,14 @@ let rec declaration_to_string d =
     | DMerge e -> "let merge = " ^ exp_to_string e 
     | DTrans e -> "let trans = " ^ exp_to_string e 
     | DNodes n -> "let nodes = " ^ UInt32.to_string n
-    | DEdges es -> "let edges = {" ^ List.fold_right (fun (u,v) s -> UInt32.to_string u ^ "=" ^ UInt32.to_string v ^ ";") es "" ^ "}"
-    | DInit es -> "let init = {" ^ List.fold_right (fun (u,e) s -> UInt32.to_string u ^ "=" ^ exp_to_string e ^ ";") es "" ^ "}"
+    | DEdges es ->
+      "let edges = {"
+      ^ List.fold_right (fun (u,v) s -> UInt32.to_string u ^ "=" ^ UInt32.to_string v ^ ";") es ""
+      ^ "}"
+    | DInit (es,e) ->
+      "let init = {"
+      ^ List.fold_right (fun (u,e) s -> UInt32.to_string u ^ "=" ^ exp_to_string e ^ ";") es ""
+      ^ "default=" ^ exp_to_string e ^ ";}"
 	
 let rec declarations_to_string ds =
   match ds with

@@ -25,6 +25,7 @@ rule token = parse
   | "if"         { IF }
   | "then"       { THEN }
   | "else"       { ELSE }
+  | "fun"        { FUN }
   | "None"       { NONE }
   | "Some"       { SOME }
   | "edges"      { EDGES }
@@ -32,6 +33,7 @@ rule token = parse
   | "init"       { INIT }
   | "match"      { MATCH }
   | "with"       { WITH }
+  | "default"    { DEFAULT }
   | id as s      { ID (Var.create s) }
   | num as n     { NUM (Unsigned.UInt32.of_string n) }
   | "&&"         { AND }

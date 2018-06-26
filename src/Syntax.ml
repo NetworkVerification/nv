@@ -53,7 +53,7 @@ type declaration =
   | DTrans of exp
   | DNodes of UInt32.t
   | DEdges of (UInt32.t * UInt32.t) list
-  | DInit of (UInt32.t * exp) list
+  | DInit of (UInt32.t * exp) list * exp
 
 type declarations = declaration list
     
@@ -74,3 +74,24 @@ let arity op =
   | MSet -> 3
   | MMap -> 2
   | MMerge -> 3
+
+(* Useful constructors *)
+
+let exp v = EVal v
+
+exception Syntax of string
+let error s = raise (Syntax s)
+
+let rec lams params body =
+  match params with
+      [] -> error "lams: no parameters"
+    | [p] -> EFun (p,body)
+    | p::params -> EFun (p, lams params body)
+      
+let rec apps f args =
+  match args with
+      [] -> error "apps: no arguments"
+    | [a] -> EApp(f,a)
+    | a::args -> apps (EApp (f,a)) args
+
+let apply_closure cl args = apps (EVal (VClosure cl)) (List.map (fun a -> exp a) args)

@@ -3,9 +3,8 @@ open Syntax
 
 type srp = {
   graph : Graph.t;
-  env : Interp.Env.t;
-  trans : func;
-  merge : func;
+  trans : Syntax.closure;
+  merge : Syntax.closure;
 }
 
 (******************)
@@ -16,30 +15,153 @@ exception Simulation_error of string
 let error s = raise (Simulation_error s)
 
 (* Simulation States *)
-(* Invariant: All valid graph vertices are associated with an attribute initially (and always) *) 
-type state = value Graph.VertexMap.t
+(* Solution Invariant: All valid graph vertices are associated with an attribute initially (and always) *) 
+type solution = value Graph.VertexMap.t
+type queue = Graph.Vertex.t list
+type state = solution * queue
 
-(* initial_state g [(x1,a1),...] d n creates a state s where 
+
+(* initial_state node_num [(x1,a1),...] d creates a state s where 
     vertices xi have attributes ai and all other vertices have attribute d *)
-let create_state g init default =
+let create_state node_num init default =
+  let good_node n = (UInt32.compare UInt32.zero n <= 0) && (UInt32.compare n node_num < 0) in
   let rec default_all i m =
-    if UInt32.compare i (Graph.num_vertices g) < 0 then
+    if good_node i then
       default_all (UInt32.succ i) (Graph.VertexMap.add i default m)
     else
       m
   in
-  let rec initialize init m =
+  let rec initialize init (m,q) =
     match init with
-	[] -> m
+	[] -> (m,q)
       | (n,a)::init' ->
-	Graph.good_vertex g n;
-	Graph.VertexMap.add n a m
+	if good_node n then
+	  initialize init' (Graph.VertexMap.add n a m, n::q)
+	else
+	  error (Printf.sprintf "attempting to initialize node %d for simulation but graph only has %d nodes"
+		   (UInt32.to_int n) (UInt32.to_int node_num))
   in
-  initialize init (default_all UInt32.zero Graph.VertexMap.empty)    
-    
-let state_to_string s = Graph.vertex_map_to_string Printing.value_to_string s
+  initialize init ((default_all UInt32.zero Graph.VertexMap.empty), [])
 
-let print_state s = Graph.print_vertex_map Printing.value_to_string s
+type info = {
+  mutable env : Syntax.value Env.t;                (* environment *)
+  mutable m : Syntax.closure option;                 (* merge *)
+  mutable t : Syntax.closure option;                 (* trans *)
+  mutable ns : UInt32.t option;                    (* nodes *)
+  mutable es : (UInt32.t * UInt32.t) list option;  (* edges *)
+  mutable st : state option;                       (* initial state *)
+}
+    
+let declarations_to_state ds =
+  let info = {
+    env=Env.empty;
+    m=None;
+    t=None;
+    ns=None;
+    es=None;
+    st=None;
+  } in
+  let if_none opt f msg =
+    match opt with
+      | None -> f () 
+      | Some f -> error msg
+  in
+  let process_declaration d =
+    match d with
+      | DLet (x,e) ->
+	let env = info.env in
+	let v = Interp.interp_env env e in
+	info.env <- Env.update env x v
+	  
+      | DMerge e ->
+	let get_merge () =
+	  match Interp.interp_env info.env e with
+	    | VClosure cl -> info.m <- Some cl
+	    | _ -> error "merge was not evaluated to a closure"
+	in
+	if_none info.m get_merge "multiple merge functions"
+
+      | DTrans e ->
+	let get_trans () =
+	  match Interp.interp_env info.env e with
+	    | VClosure cl -> info.t <- Some cl
+	    | _ -> error "trans was not evaluated to a closure"
+	in
+	if_none info.t get_trans "multiple trans functions"
+
+      | DNodes n ->
+	if_none info.ns (fun () -> info.ns <- Some n) "multiple nodes declarations"
+
+      | DEdges es ->
+	if_none info.es (fun () -> info.es <- Some es) "multiple edges declarations"
+
+      | DInit (ies,default) ->
+	if_none info.st (fun () ->
+	    (match info.ns with
+		None -> raise (Simulation_error "must declare number of nodes (let nodes = n) before initializing them (let init = { ... })")
+	      | Some n ->
+		let vs = List.map (fun (i,e) -> (i, Interp.interp_env info.env e)) ies in
+		let dv = Interp.interp_env info.env default in
+		info.st <- Some (create_state n vs dv))
+	) "multiple initialization declarations"
+  in
+  List.iter process_declaration ds;
+  match info with
+    | {env=_;
+       m=Some mf;
+       t=Some tf;
+       ns=Some n;
+       es=Some es;
+       st=Some st;
+      } -> let srp = {graph=Graph.add_edges (Graph.create n) es;
+		      trans=tf;
+		      merge=mf;} in
+	   let state = st in
+	   (srp, state)
+	     
+    | {env=_;
+       m=None;
+       t=_;
+       ns=_;
+       es=_;
+       st=_;
+      } -> error "missing merge function"
+
+    | {env=_;
+       m=_;
+       t=None;
+       ns=_;
+       es=_;
+       st=_;
+      } -> error "missing trans function"
+
+    | {env=_;
+       m=_;
+       t=_;
+       ns=None;
+       es=_;
+       st=_;
+      } -> error "missing nodes declaration"
+
+    | {env=_;
+       m=_;
+       t=_;
+       ns=_;
+       es=None;
+       st=_;
+      } -> error "missing edges declaration"
+
+    | {env=_;
+       m=_;
+       t=_;
+       ns=_;
+       es=_;
+       st=None;
+      } -> error "missing init declaration"
+    
+let solution_to_string s = Graph.vertex_map_to_string Printing.value_to_string s
+
+let print_solution s = Graph.print_vertex_map Printing.value_to_string s
 
 let get_attribute v s =
   let find_opt v m = try Some (Graph.VertexMap.find v m) with Not_found -> None in
@@ -47,15 +169,15 @@ let get_attribute v s =
     | None -> error ("no attribute at vertex " ^ UInt32.to_string v)
     | Some a -> a
   
-let simulate_step {graph=g;env=env;trans=trans;merge=merge} s x =
+let simulate_step {graph=g;trans=trans;merge=merge} s x =
   let do_neighbor initial_attribute (s,todo) n =
     let neighbor = VUInt32 n in
     let origin = VUInt32 x in
     let edge = VTuple [origin; neighbor] in
-    let n_incoming_attribute = Interp.apply env trans [edge; initial_attribute] in
+    let n_incoming_attribute = Interp.interp_closure trans [edge; initial_attribute] in
     let n_old_attribute = get_attribute n s in
-    let n_new_attribute = Interp.apply env merge [neighbor; n_old_attribute; n_incoming_attribute] in
-    if Syntax.equal_val n_old_attribute n_new_attribute then
+    let n_new_attribute = Interp.interp_closure merge [neighbor; n_old_attribute; n_incoming_attribute] in
+    if Interp.equal_val n_old_attribute n_new_attribute then
       (s,todo)
     else
       (Graph.VertexMap.add n n_new_attribute s, n::todo)
@@ -64,36 +186,32 @@ let simulate_step {graph=g;env=env;trans=trans;merge=merge} s x =
   let neighbors = Graph.neighbors g x in
   List.fold_left (do_neighbor initial_attribute) (s,[]) neighbors
 
-(* simulate srp s q simulates srp starting with initial s and queue q *)
-let rec simulate_init srp s q =
+(* simulate srp s q simulates srp starting with initial state (s,q) *)
+let rec simulate_init srp (s,q) =
   match q with
       [] -> s
     | next::rest ->
       let (s', more) = simulate_step srp s next in
-      simulate_init srp s' (more @ rest)
+      simulate_init srp (s',(more @ rest))
 	
 (* simulate for at most k steps *)    
-let simulate_bound srp s q k =
+let simulate_init_bound srp (s,q) k =
   let rec loop s q k =
     if k <= 0 then
-      s
+      (s,q)
     else
       match q with
-	  [] -> s
+	  [] -> (s,[])
 	| next::rest ->
 	  let (s', more) = simulate_step srp s next in
 	  loop s' (more @ rest) (k-1)
   in
   loop s q k
-	
-(* simulate for at most k steps *)    
-let simulate srp init default =
-  let rec loop s q =
-      match q with
-	  [] -> s
-	| next::rest ->
-	  let (s', more) = simulate_step srp s next in
-	  loop s' (more @ rest)
-  in
-  let q = List.map (fun (v,a) -> v) init in
-  loop (create_state srp.graph init default) q
+
+let simulate_declarations ds =
+  let (srp,state) = declarations_to_state ds in
+  simulate_init srp state
+
+let simulate_declarations_bound ds k =
+  let (srp,state) = declarations_to_state ds in
+  simulate_init_bound srp state k

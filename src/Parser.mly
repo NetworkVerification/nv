@@ -32,10 +32,10 @@
 %token <Unsigned.UInt32.t> NUM
 %token AND OR NOT TRUE FALSE
 %token PLUS SUB EQ LESS GREATER LEQ GEQ 
-%token LET IN IF THEN ELSE
+%token LET IN IF THEN ELSE FUN
 %token SOME NONE MATCH WITH
 %token DOT BAR ARROW SEMI LPAREN RPAREN LBRACKET RBRACKET LBRACE RBRACE COMMA EOF
-%token EDGES NODES INIT
+%token EDGES NODES INIT DEFAULT
 
 %start prog
 %type  <Syntax.declarations> prog
@@ -51,17 +51,22 @@
 
 %%
 
+aparams:
+    | ID            { [$1] }
+    | ID params     { $1::$2 }
+;
+
 params:
-    |               {[]}
-    | ID params     {$1::$2}
+    |               { [] }
+    | ID params     { $1::$2 }
 ;
   
 fdecl:
-    | ID params     {($1,$2)}
+    | ID params     { ($1,$2) }
 ;
 
 init:
-    | NUM EQ expr SEMI {($1,$3)}
+    | NUM EQ expr SEMI { ($1,$3) }
 ;
 
 inits:
@@ -69,11 +74,15 @@ inits:
     | init inits { $1 :: $2 }
 ;
 
+default:
+    | DEFAULT EQ expr SEMI { $3 }
+;
+
 component:
     | LET fdecl EQ expr                 { global_let $2 $4 }
     | LET EDGES EQ LBRACE edges RBRACE  { DEdges $5 }
     | LET NODES EQ NUM                  { DNodes $4 }
-    | LET INIT EQ LBRACE inits RBRACE   { DInit $5 }
+    | LET INIT EQ LBRACE inits default RBRACE   { DInit ($5, $6) }
 ;
   
 components:
@@ -85,11 +94,17 @@ expr:
     | expr1                               { $1 }
 ;
 
+baropt:
+    |       { () }
+    | BAR   { () }
+;
+
 expr1:
     | expr2                                               { $1 }
     | LET fdecl EQ expr IN expr1                          { let (id, e) = local_let $2 $4 in ELet (id, e, $6) }
     | IF expr1 THEN expr ELSE expr1                       { EIf ($2, $4, $6) }
-    | MATCH expr WITH NONE ARROW expr1 BAR ID ARROW expr1 { EMatch ($2, $6, $8, $10) }
+    | MATCH expr WITH baropt NONE ARROW expr1 BAR SOME ID ARROW expr1 { EMatch ($2, $7, $10, $12) }
+    | FUN aparams ARROW expr1                             { make_fun $2 $4 }
 ;
 
 expr2:

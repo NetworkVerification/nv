@@ -112,13 +112,9 @@ and interp_op env op es =
 and apply env (x, body) v =	
   interp_exp (Env.update env x v) body 
 
-let interp e = interp_exp Env.empty e
   
-let interp_decls ds =
-  let rec loop env ds =
-    match ds with
-	[] -> env
-      | (x,e)::ds ->
-	Env.update env x (interp_exp env e)
-  in
-  loop Env.empty ds
+let interp e = interp_exp Env.empty e
+
+let interp_env env e = interp_exp env e
+
+let interp_closure cl args = interp (Syntax.apply_closure cl args)
