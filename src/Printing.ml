@@ -47,14 +47,14 @@ let prec_exp e =
     | EVar _ -> 0
     | EVal _ -> 0
     | EOp (op, _) -> prec_op op
-    | EFun _ -> max_prec
+    | EFun _ -> 8
     | EApp _ -> max_prec  
     | EIf _ -> max_prec
     | ELet _ -> max_prec
     | ETuple _ -> 0
     | EProj _ -> 1
     | ESome _ -> max_prec
-    | EMatch _ -> 0
+    | EMatch _ -> 8
 
 let rec sep s f xs =
   match xs with
@@ -112,7 +112,7 @@ and exp_to_string_p prec e =
       | EOp (op, es) -> op_args_to_string prec p op es
       | EFun (x,e) -> "\\" ^ Var.to_string x ^ "." ^ exp_to_string_p prec e
       | EApp (e1, e2) ->
-	exp_to_string_p prec e1 ^ " " ^ exp_to_string_p prec e2 ^ " "
+	exp_to_string_p prec e1 ^ " " ^ exp_to_string_p p e2 ^ " "
       | EIf (e1,e2,e3) ->
 	"if " ^ exp_to_string_p max_prec e1 ^
 	  " then " ^ exp_to_string_p max_prec e2 ^
@@ -125,8 +125,8 @@ and exp_to_string_p prec e =
       | ESome e -> "Some " ^ exp_to_string_p prec e
       | EMatch (e1,e2,v,e3) ->
 	"match " ^ exp_to_string_p max_prec e1 ^ " with " ^
-	  "none -> (" ^ exp_to_string_p max_prec e2 ^ ")" ^
-	  "some " ^ Var.to_string v ^ " -> (" ^ exp_to_string_p max_prec e3 ^ ")"
+	  "None -> " ^ exp_to_string_p p e2 ^
+	  " | Some " ^ Var.to_string v ^ " -> " ^ exp_to_string_p p e3 
   in
   if p > prec then "(" ^ s ^ ")" else s
 
