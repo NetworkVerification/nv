@@ -3,7 +3,7 @@
 open Unsigned
 
 type var = Var.t
-   
+
 type op =
   (* Boolean operators *)
   | And
@@ -16,11 +16,17 @@ type op =
   | ULess
   | ULeq
   (* Map operations *)
-  | MCreate (* MCreate n -- creates map 0..n-1 *)
-  | MGet    (* MGet m k = m[k] *)
-  | MSet    (* MStore m k v = m[k]:=v *)
-  | MMap    (* MMap f m = [f m[0]; f m[1]; ...] *)
-  | MMerge  (* MMerge f m1 m2 = [f m1[0] m2[0]; ... ] *)
+  | MCreate
+  (* MCreate n -- creates map 0..n-1 *)
+  | MGet
+  (* MGet m k = m[k] *)
+  | MSet
+  (* MStore m k v = m[k]:=v *)
+  | MMap
+  (* MMap f m = [f m[0]; f m[1]; ...] *)
+  | MMerge
+
+(* MMerge f m1 m2 = [f m1[0] m2[0]; ... ] *)
 
 type pattern =
   | PWild
@@ -29,10 +35,10 @@ type pattern =
   | PUInt32 of UInt32.t
   | PTuple of pattern list
   | POption of pattern option
-      
+
 type value =
   | VBool of bool
-  | VUInt32 of UInt32.t  
+  | VUInt32 of UInt32.t
   | VMap of value IMap.t
   | VTuple of value list
   | VOption of value option
@@ -53,9 +59,9 @@ and exp =
 
 and branches = (pattern * exp) list
 
-and func = var * exp
+and func = (var * exp)
 
-and closure = value Env.t * func
+and closure = (value Env.t * func)
 
 type declaration =
   | DLet of var * exp
@@ -66,7 +72,7 @@ type declaration =
   | DInit of exp
 
 type declarations = declaration list
-    
+
 (* Utilities *)
 
 let arity op =
@@ -85,23 +91,28 @@ let arity op =
   | MMap -> 2
   | MMerge -> 3
 
+
 (* Useful constructors *)
 
 let exp v = EVal v
 
 exception Syntax of string
+
 let error s = raise (Syntax s)
 
 let rec lams params body =
   match params with
-      [] -> error "lams: no parameters"
-    | [p] -> EFun (p,body)
-    | p::params -> EFun (p, lams params body)
-      
+  | [] -> error "lams: no parameters"
+  | [p] -> EFun (p, body)
+  | p :: params -> EFun (p, lams params body)
+
+
 let rec apps f args =
   match args with
-      [] -> error "apps: no arguments"
-    | [a] -> EApp(f,a)
-    | a::args -> apps (EApp (f,a)) args
+  | [] -> error "apps: no arguments"
+  | [a] -> EApp (f, a)
+  | a :: args -> apps (EApp (f, a)) args
 
-let apply_closure cl args = apps (EVal (VClosure cl)) (List.map (fun a -> exp a) args)
+
+let apply_closure cl args =
+  apps (EVal (VClosure cl)) (List.map (fun a -> exp a) args)

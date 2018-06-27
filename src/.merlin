@@ -1,7 +1,0 @@
-S .
-S test
-B _build
-B test/_build
-
-PKG integers
-PKG oUnit

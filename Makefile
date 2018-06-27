@@ -22,3 +22,6 @@ run_tests: tests
 clean:
 	ocamlbuild -clean
 	rm -Rf *~ src/*~ test/*~ examples/*~
+
+format:
+	ocamlformat -i $(MLFILES)
