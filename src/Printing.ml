@@ -70,7 +70,18 @@ let rec term s f xs =
 let comma_sep f xs = sep "," f xs
 let semi_sep f xs = sep ";" f xs
 let semi_term f xs = term ";" f xs
-  
+
+let rec pattern_to_string pattern =
+  match pattern with
+    | PWild -> "_"
+    | PVar x -> Var.to_string x
+    | PBool true -> "true"
+    | PBool false -> "false"
+    | PUInt32 i -> UInt32.to_string i
+    | PTuple ps -> "(" ^ comma_sep pattern_to_string ps ^ ")"
+    | POption None -> "None"
+    | POption (Some p) -> "Some " ^ pattern_to_string p
+      
 let rec func_to_string_p prec (x,e) =
   let s = "fun " ^ Var.to_string x ^  " -> " ^ exp_to_string_p max_prec e in
   if prec < max_prec then
@@ -123,12 +134,18 @@ and exp_to_string_p prec e =
       | ETuple es -> "(" ^ comma_sep (exp_to_string_p max_prec) es ^ ")"
       | EProj (i,e) -> (exp_to_string_p p e) ^ "." ^ string_of_int i
       | ESome e -> "Some " ^ exp_to_string_p prec e
-      | EMatch (e1,e2,v,e3) ->
-	"match " ^ exp_to_string_p max_prec e1 ^ " with " ^
-	  "None -> " ^ exp_to_string_p p e2 ^
-	  " | Some " ^ Var.to_string v ^ " -> " ^ exp_to_string_p p e3 
+      | EMatch (e1,bs) ->
+	"match " ^ exp_to_string_p max_prec e1 ^ " with " ^ branches_to_string prec bs
   in
   if p > prec then "(" ^ s ^ ")" else s
+
+and branch_to_string prec (p,e) =
+  " | " ^ pattern_to_string p ^ " -> " ^ exp_to_string_p prec e
+    
+and branches_to_string prec bs =
+  match bs with
+    | [] -> ""
+    | b::bs -> branch_to_string prec b ^ branches_to_string prec bs
 
 and op_args_to_string prec p op es =
   if is_keyword_op op then

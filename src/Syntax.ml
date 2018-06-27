@@ -22,6 +22,14 @@ type op =
   | MMap    (* MMap f m = [f m[0]; f m[1]; ...] *)
   | MMerge  (* MMerge f m1 m2 = [f m1[0] m2[0]; ... ] *)
 
+type pattern =
+  | PWild
+  | PVar of var
+  | PBool of bool
+  | PUInt32 of UInt32.t
+  | PTuple of pattern list
+  | POption of pattern option
+      
 type value =
   | VBool of bool
   | VUInt32 of UInt32.t  
@@ -41,7 +49,9 @@ and exp =
   | ETuple of exp list
   | EProj of int * exp
   | ESome of exp
-  | EMatch of exp * exp * var * exp  (* match e1 with None -> e2 | Some v -> e3 *) 
+  | EMatch of exp * branches
+
+and branches = (pattern * exp) list
 
 and func = var * exp
 

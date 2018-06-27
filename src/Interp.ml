@@ -11,7 +11,7 @@ exception IError of string
 let error s = raise (IError s)
 
 (* Equality of values *)
-
+  
 exception Equality of value
     
 let rec equal_val v1 v2 =
@@ -32,6 +32,39 @@ and equal_vals vs1 vs2 =
     | _, _ -> false
   
 (* Expression and operator interpreters *)
+
+(* matches p b is Some env if v matches p and None otherwise; assumes no repeated variables in pattern *)
+let rec matches p v =
+  match p, v with
+    | PWild, v -> Some Env.empty
+    | PVar x, v -> Some (Env.bind x v)
+    | PBool true, VBool true -> Some Env.empty
+    | PBool false, VBool false -> Some Env.empty
+    | PUInt32 i1, VUInt32 i2 -> if UInt32.compare i1 i2 = 0 then Some Env.empty else None
+    | PTuple ps, VTuple vs -> matches_list ps vs
+    | POption None, VOption None -> Some Env.empty
+    | POption (Some p), VOption (Some v) -> matches p v
+    | (PBool _ | PUInt32 _ | PTuple _ | POption _), _ -> None
+      
+and matches_list ps vs =
+  match ps, vs with
+    | [],[] -> Some Env.empty
+    | p::ps, v::vs ->
+      (match matches p v with
+	| None -> None
+	| Some env1 ->
+	  (match matches_list ps vs with
+	    | None -> None
+	    | Some env2 -> Some (Env.updates env2 env1)))
+    | _, _ -> None
+
+let rec match_branches branches v =
+  match branches with
+    | [] -> None
+    | (p,e)::branches ->
+      (match matches p v with
+	| Some env -> Some (env, e)
+	| None -> match_branches branches v)
     
 let rec interp_exp env e =
   match e with
@@ -63,11 +96,11 @@ let rec interp_exp env e =
 	    List.nth vs i)
 	 | _ -> error ("bad projection"))
     | ESome e -> VOption (Some (interp_exp env e))
-    | EMatch (e1,e2,x,e3) ->
-      (match interp_exp env e1 with
-	| VOption None -> interp_exp env e2
-	| VOption (Some v) -> interp_exp (Env.update env x v) e3
-	| v -> error ("match expression processing non-option: " ^ value_to_string v))
+    | EMatch (e1,branches) ->
+      let v = interp_exp env e1 in
+      (match match_branches branches v with
+	  Some (env2,e) -> interp_exp (Env.updates env env2) e
+	| None -> error ("value " ^ value_to_string v ^ " did not match any pattern in match statement"))
 	
 and interp_op env op es =
   if arity op != List.length es then

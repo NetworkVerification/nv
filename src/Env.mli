@@ -4,6 +4,9 @@ type 'a t
 (* empty environment *)
 val empty : 'a t
 
+(* bind k v is the environment with just the entry k v *)
+val bind : Var.t -> 'a -> 'a t
+
 (* look up binding, raising Unbound_var if the key is not found *)
 exception Unbound_var of Var.t
 val lookup : 'a t -> Var.t -> 'a 

@@ -7,6 +7,11 @@
       | [e] -> e
       | es -> ETuple es
 
+  let tuple_pattern ps =
+    match ps with
+      | [p] -> p
+      | ps -> PTuple ps
+
   let rec make_fun params body =
       match params with
 	| [] -> body
@@ -34,7 +39,7 @@
 %token PLUS SUB EQ LESS GREATER LEQ GEQ 
 %token LET IN IF THEN ELSE FUN
 %token SOME NONE MATCH WITH
-%token DOT BAR ARROW SEMI LPAREN RPAREN LBRACKET RBRACKET LBRACE RBRACE COMMA EOF
+%token DOT BAR ARROW SEMI LPAREN RPAREN LBRACKET RBRACKET LBRACE RBRACE COMMA UNDERSCORE EOF
 %token EDGES NODES INIT DEFAULT
 
 %start prog
@@ -94,16 +99,11 @@ expr:
     | expr1                               { $1 }
 ;
 
-baropt:
-    |       { () }
-    | BAR   { () }
-;
-
 expr1:
     | expr2                                               { $1 }
     | LET fdecl EQ expr IN expr1                          { let (id, e) = local_let $2 $4 in ELet (id, e, $6) }
     | IF expr1 THEN expr ELSE expr1                       { EIf ($2, $4, $6) }
-    | MATCH expr WITH baropt NONE ARROW expr1 BAR SOME ID ARROW expr1 { EMatch ($2, $7, $10, $12) }
+    | MATCH expr WITH branches                            { EMatch ($2, $4) }
     | FUN aparams ARROW expr1                             { make_fun $2 $4 }
 ;
 
@@ -151,6 +151,31 @@ edge:
 edges:
     | edge                     { $1 }
     | edge edges               { $1 @ $2 }
+;
+
+pattern:
+    | UNDERSCORE               { PWild }
+    | ID                       { PVar $1 }
+    | TRUE                     { PBool true }
+    | FALSE                    { PBool false }
+    | NUM                      { PUInt32 $1 }
+    | LPAREN patterns RPAREN   { tuple_pattern $2 }
+    | NONE                     { POption None }
+    | SOME pattern             { POption (Some $2) }
+;
+
+patterns:
+    | pattern                  { [$1] }
+    | pattern COMMA patterns   { $1::$3 }
+;
+
+branch:
+    | BAR pattern ARROW expr   { ($2, $4) }
+;
+
+branches:
+    | branch                   { [$1] }
+    | branch branches          { $1::$2 }
 ;
 
 prog:

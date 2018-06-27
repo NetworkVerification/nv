@@ -55,6 +55,7 @@ rule token = parse
   | "]"          { RBRACKET }
   | "{"          { LBRACE }
   | "}"          { RBRACE }
+  | "_"          { UNDERSCORE }
   | [' ' '\t']   { token lexbuf }
   | '\n'         { incr_linenum lexbuf; token lexbuf}
   | _ as c       { printf "[Parse Error] Unrecognized character: %c\n" c; token lexbuf }
