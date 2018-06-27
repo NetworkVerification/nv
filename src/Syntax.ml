@@ -63,7 +63,7 @@ type declaration =
   | DTrans of exp
   | DNodes of UInt32.t
   | DEdges of (UInt32.t * UInt32.t) list
-  | DInit of (UInt32.t * exp) list * exp
+  | DInit of exp
 
 type declarations = declaration list
     

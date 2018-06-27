@@ -22,6 +22,7 @@
 
   let merge_identifier = "merge"
   let trans_identifier = "trans"
+  let init_identifier = "init"
     
   let global_let (id,params) body =
     let e = make_fun params body in
@@ -29,6 +30,8 @@
       DMerge e
     else if Var.name id = trans_identifier then
       DTrans e
+    else if Var.name id = init_identifier then
+      DInit e
     else
       DLet (id, make_fun params body)
 %}
@@ -40,7 +43,7 @@
 %token LET IN IF THEN ELSE FUN
 %token SOME NONE MATCH WITH
 %token DOT BAR ARROW SEMI LPAREN RPAREN LBRACKET RBRACKET LBRACE RBRACE COMMA UNDERSCORE EOF
-%token EDGES NODES INIT DEFAULT
+%token EDGES NODES DEFAULT
 
 %start prog
 %type  <Syntax.declarations> prog
@@ -70,15 +73,6 @@ fdecl:
     | ID params     { ($1,$2) }
 ;
 
-init:
-    | NUM EQ expr SEMI { ($1,$3) }
-;
-
-inits:
-    | init       { [$1] }
-    | init inits { $1 :: $2 }
-;
-
 default:
     | DEFAULT EQ expr SEMI { $3 }
 ;
@@ -87,7 +81,6 @@ component:
     | LET fdecl EQ expr                 { global_let $2 $4 }
     | LET EDGES EQ LBRACE edges RBRACE  { DEdges $5 }
     | LET NODES EQ NUM                  { DNodes $4 }
-    | LET INIT EQ LBRACE inits default RBRACE   { DInit ($5, $6) }
 ;
   
 components:

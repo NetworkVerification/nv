@@ -21,6 +21,7 @@ type queue = Graph.Vertex.t list
 type state = solution * queue
 
 
+    (*
 (* initial_state node_num [(x1,a1),...] d creates a state s where 
     vertices xi have attributes ai and all other vertices have attribute d *)
 let create_state node_num init default =
@@ -43,13 +44,27 @@ let create_state node_num init default =
   in
   initialize init ((default_all UInt32.zero Graph.VertexMap.empty), [])
 
+  *)
+
+let create_state n cl =
+  let rec loop n q m =
+    if UInt32.compare n UInt32.zero > 0 then
+      let next_n = UInt32.pred n in
+      let next_q = next_n::q in
+      let next_m = Graph.VertexMap.add next_n (Interp.interp_closure cl [VUInt32 next_n]) m in
+      loop next_n next_q next_m
+    else
+      (m,q)
+  in
+  loop n [] Graph.VertexMap.empty
+
 type info = {
-  mutable env : Syntax.value Env.t;                (* environment *)
+  mutable env : Syntax.value Env.t;                  (* environment *)
   mutable m : Syntax.closure option;                 (* merge *)
   mutable t : Syntax.closure option;                 (* trans *)
-  mutable ns : UInt32.t option;                    (* nodes *)
-  mutable es : (UInt32.t * UInt32.t) list option;  (* edges *)
-  mutable st : state option;                       (* initial state *)
+  mutable ns : UInt32.t option;                      (* nodes *)
+  mutable es : (UInt32.t * UInt32.t) list option;    (* edges *)
+  mutable init : Syntax.closure option;              (* initial state *)
 }
     
 let declarations_to_state ds =
@@ -59,7 +74,7 @@ let declarations_to_state ds =
     t=None;
     ns=None;
     es=None;
-    st=None;
+    init=None;
   } in
   let if_none opt f msg =
     match opt with
@@ -95,15 +110,13 @@ let declarations_to_state ds =
       | DEdges es ->
 	if_none info.es (fun () -> info.es <- Some es) "multiple edges declarations"
 
-      | DInit (ies,default) ->
-	if_none info.st (fun () ->
-	    (match info.ns with
-		None -> raise (Simulation_error "must declare number of nodes (let nodes = n) before initializing them (let init = { ... })")
-	      | Some n ->
-		let vs = List.map (fun (i,e) -> (i, Interp.interp_env info.env e)) ies in
-		let dv = Interp.interp_env info.env default in
-		info.st <- Some (create_state n vs dv))
-	) "multiple initialization declarations"
+      | DInit e ->
+	let get_initializer () =
+	  match Interp.interp_env info.env e with
+	    | VClosure cl -> info.init <- Some cl
+	    | _ -> error "init was not evaluated to a closure"
+	in
+	if_none info.init get_initializer "multiple initialization declarations"
   in
   List.iter process_declaration ds;
   match info with
@@ -112,11 +125,11 @@ let declarations_to_state ds =
        t=Some tf;
        ns=Some n;
        es=Some es;
-       st=Some st;
+       init=Some cl;
       } -> let srp = {graph=Graph.add_edges (Graph.create n) es;
 		      trans=tf;
 		      merge=mf;} in
-	   let state = st in
+	   let state = create_state n cl in
 	   (srp, state)
 	     
     | {env=_;
@@ -124,7 +137,7 @@ let declarations_to_state ds =
        t=_;
        ns=_;
        es=_;
-       st=_;
+       init=_;
       } -> error "missing merge function"
 
     | {env=_;
@@ -132,7 +145,7 @@ let declarations_to_state ds =
        t=None;
        ns=_;
        es=_;
-       st=_;
+       init=_;
       } -> error "missing trans function"
 
     | {env=_;
@@ -140,7 +153,7 @@ let declarations_to_state ds =
        t=_;
        ns=None;
        es=_;
-       st=_;
+       init=_;
       } -> error "missing nodes declaration"
 
     | {env=_;
@@ -148,7 +161,7 @@ let declarations_to_state ds =
        t=_;
        ns=_;
        es=None;
-       st=_;
+       init=_;
       } -> error "missing edges declaration"
 
     | {env=_;
@@ -156,7 +169,7 @@ let declarations_to_state ds =
        t=_;
        ns=_;
        es=_;
-       st=None;
+       init=None;
       } -> error "missing init declaration"
     
 let solution_to_string s = Graph.vertex_map_to_string Printing.value_to_string s

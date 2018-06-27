@@ -33,7 +33,7 @@ let trans edge x = x + 1
 (* The initial state of the network;
    A map from nodes to initial values with type A.
  *)
-let init = {
- 0=0;
- default=10;
-}
+let init node =
+  match node with
+  | 0 -> 0
+  | _ -> 10

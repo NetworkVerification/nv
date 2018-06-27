@@ -183,10 +183,7 @@ let rec declaration_to_string d =
       "let edges = {"
       ^ List.fold_right (fun (u,v) s -> UInt32.to_string u ^ "=" ^ UInt32.to_string v ^ ";") es ""
       ^ "}"
-    | DInit (es,e) ->
-      "let init = {"
-      ^ List.fold_right (fun (u,e) s -> UInt32.to_string u ^ "=" ^ exp_to_string e ^ ";") es ""
-      ^ "default=" ^ exp_to_string e ^ ";}"
+    | DInit e -> "let init = " ^ exp_to_string e
 	
 let rec declarations_to_string ds =
   match ds with

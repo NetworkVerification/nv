@@ -30,7 +30,6 @@ rule token = parse
   | "Some"       { SOME }
   | "edges"      { EDGES }
   | "nodes"      { NODES }
-  | "init"       { INIT }
   | "match"      { MATCH }
   | "with"       { WITH }
   | "default"    { DEFAULT }
