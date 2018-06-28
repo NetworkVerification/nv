@@ -2,6 +2,26 @@
 
 open Unsigned
 
+(* indices into maps or map sizes must be static constants *)  
+type index = UInt32.t
+
+(* see:  http://okmij.org/ftp/ML/generalization.html *)
+type level = int
+    
+type ty =
+  | TVar of tvar ref  (* schematic variable to be unified *)
+  | QVar of string    (* prenex quantified variable *)
+  | TBool
+  | TInt of index  (* index is number of bits in Int type: 32 for now *)
+  | TArrow of ty * ty
+  | TTuple of ty list
+  | TOption of ty
+  | TMap of index * ty  (* TMap (i,t) is a map from [0..i-1] to t *)
+
+and tvar =
+  | Name of string * level
+  | Link of ty
+
 type var = Var.t
 
 type op =
