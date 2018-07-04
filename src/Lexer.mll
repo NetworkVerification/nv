@@ -15,6 +15,7 @@
 let id = ['a'-'z' 'A'-'Z']['a'-'z' 'A'-'Z' '_' '0'-'9']*
 let symbol = ['~' '`' '!' '@' '#' '$' '%' '^' '&' '|' ':' '?' '>' '<' '[' ']' '=' '-' '.']+
 let num = ['0'-'9']+
+let tid = ['\'']['a'-'z' 'A'-'Z']['a'-'z' 'A'-'Z' '_' '0'-'9']*
   
 rule token = parse
   | "(*"         { comments 0 lexbuf }
@@ -32,9 +33,13 @@ rule token = parse
   | "nodes"      { NODES }
   | "match"      { MATCH }
   | "with"       { WITH }
-  | "default"    { DEFAULT }
+  | "option"     { TOPTION }
+  | "vec"        { TVECTOR }
+  | "type"       { TYPE }
+  | "attribute"  { ATTRIBUTE }
   | id as s      { ID (Var.create s) }
   | num as n     { NUM (Unsigned.UInt32.of_string n) }
+(*  | tid as s     { TID (Var.create s) } *)
   | "&&"         { AND }
   | "||"         { OR }
   | "|"          { BAR }
@@ -48,6 +53,7 @@ rule token = parse
   | "<"          { LESS }
   | ">"          { GREATER }
   | ";"          { SEMI }
+  | ":"          { COLON }
   | "("          { LPAREN }
   | ")"          { RPAREN }
   | "["          { LBRACKET }
@@ -55,6 +61,7 @@ rule token = parse
   | "{"          { LBRACE }
   | "}"          { RBRACE }
   | "_"          { UNDERSCORE }
+  | "*"          { STAR }
   | [' ' '\t']   { token lexbuf }
   | '\n'         { incr_linenum lexbuf; token lexbuf}
   | _ as c       { printf "[Parse Error] Unrecognized character: %c\n" c; token lexbuf }

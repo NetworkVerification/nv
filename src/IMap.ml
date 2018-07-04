@@ -50,7 +50,10 @@ let equal equal_vals (m1, default1, i1) (m2, default2, i2) =
   in
   UInt32.compare i1 i2 = 0 && test_default () && Rep.equal equal_vals m1 m2
 
-
 let length (m, default, i) = i
 
 let bindings (m, default, i) = (Rep.bindings m, default)
+
+let from_bindings i (bs, default) =
+  let m = List.fold_left (fun m (i,d) -> Rep.add i d m) Rep.empty bs in
+  (m, default, i)

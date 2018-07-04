@@ -7,19 +7,21 @@ type index = UInt32.t
 
 (* see:  http://okmij.org/ftp/ML/generalization.html *)
 type level = int
+type tyname = Var.t
     
 type ty =
-  | TVar of tvar ref  (* schematic variable to be unified *)
-  | QVar of string    (* prenex quantified variable *)
+  | TVar of tyvar ref  (* schematic variable to be unified *)
+  | QVar of tyname     (* prenex quantified variable *)
   | TBool
-  | TInt of index  (* index is number of bits in Int type: 32 for now *)
+  | TInt of index      (* index is number of bits in Int type: 32 for now *)
   | TArrow of ty * ty
   | TTuple of ty list
   | TOption of ty
   | TMap of index * ty  (* TMap (i,t) is a map from [0..i-1] to t *)
+  | TAll of tyname list * ty
 
-and tvar =
-  | Name of string * level
+and tyvar =
+  | Unbound of tyname * level
   | Link of ty
 
 type var = Var.t
@@ -36,8 +38,8 @@ type op =
   | ULess
   | ULeq
   (* Map operations *)
-  | MCreate
-  (* MCreate n -- creates map 0..n-1 *)
+  | MCreate of ty option
+  (* MCreate n -- creates map 0..n-1 with type ty *)
   | MGet
   (* MGet m k = m[k] *)
   | MSet
@@ -45,8 +47,7 @@ type op =
   | MMap
   (* MMap f m = [f m[0]; f m[1]; ...] *)
   | MMerge
-
-(* MMerge f m1 m2 = [f m1[0] m2[0]; ... ] *)
+  (* MMerge f m1 m2 = [f m1[0] m2[0]; ... ] *)
 
 type pattern =
   | PWild
@@ -59,32 +60,51 @@ type pattern =
 type value =
   | VBool of bool
   | VUInt32 of UInt32.t
-  | VMap of value IMap.t
+  | VMap of value IMap.t * ty option
   | VTuple of value list
-  | VOption of value option
+  | VOption of value option * ty option
   | VClosure of closure
+  | VTyClosure of tyclosure
 
 and exp =
   | EVar of var
   | EVal of value
   | EOp of op * exp list
   | EFun of func
+  | ETyFun of tyfunc
   | EApp of exp * exp
+  | ETyApp of exp * ty list
   | EIf of exp * exp * exp
   | ELet of var * exp * exp
   | ETuple of exp list
   | EProj of int * exp
   | ESome of exp
   | EMatch of exp * branches
+  | ETy of exp * ty
 
 and branches = (pattern * exp) list
 
-and func = (var * exp)
+and func = {
+  arg : var;
+  argty : ty option;
+  resty : ty option;
+  body : exp;
+}
 
-and closure = (value Env.t * func)
+and tyfunc = tyname list * exp
+
+and closure = env * func
+
+and tyclosure = env * tyfunc
+
+and env = {
+  ty : ty Env.t;
+  value : value Env.t;
+}
 
 type declaration =
   | DLet of var * exp
+  | DATy of ty
   | DMerge of exp
   | DTrans of exp
   | DNodes of UInt32.t
@@ -105,14 +125,17 @@ let arity op =
   | UEq -> 2
   | ULess -> 2
   | ULeq -> 2
-  | MCreate -> 2
+  | MCreate _ -> 2
   | MGet -> 2
   | MSet -> 3
   | MMap -> 2
   | MMerge -> 3
 
-
 (* Useful constructors *)
+
+let (~>) ty ty = TArrow (ty, ty)
+
+let tint = TInt(UInt32.of_int 32)
 
 let exp v = EVal v
 
@@ -120,12 +143,23 @@ exception Syntax of string
 
 let error s = raise (Syntax s)
 
+let func x body =
+   {arg = x;
+    argty = None;
+    resty = None;
+    body = body;
+   }
+
+let ty_func tyargs body = (tyargs, body)
+
+let lam x body =
+  EFun (func x body)
+
 let rec lams params body =
   match params with
   | [] -> error "lams: no parameters"
-  | [p] -> EFun (p, body)
-  | p :: params -> EFun (p, lams params body)
-
+  | [p] -> lam p body
+  | p :: params -> lam p (lams params body)
 
 let rec apps f args =
   match args with

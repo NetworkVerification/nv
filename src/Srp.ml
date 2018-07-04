@@ -19,31 +19,6 @@ type queue = Graph.Vertex.t list
 
 type state = solution * queue
 
-(*
-(* initial_state node_num [(x1,a1),...] d creates a state s where 
-    vertices xi have attributes ai and all other vertices have attribute d *)
-let create_state node_num init default =
-  let good_node n = (UInt32.compare UInt32.zero n <= 0) && (UInt32.compare n node_num < 0) in
-  let rec default_all i m =
-    if good_node i then
-      default_all (UInt32.succ i) (Graph.VertexMap.add i default m)
-    else
-      m
-  in
-  let rec initialize init (m,q) =
-    match init with
-	[] -> (m,q)
-      | (n,a)::init' ->
-	if good_node n then
-	  initialize init' (Graph.VertexMap.add n a m, n::q)
-	else
-	  error (Printf.sprintf "attempting to initialize node %d for simulation but graph only has %d nodes"
-		   (UInt32.to_int n) (UInt32.to_int node_num))
-  in
-  initialize init ((default_all UInt32.zero Graph.VertexMap.empty), [])
-
-  *)
-
 let create_state n cl =
   let rec loop n q m =
     if UInt32.compare n UInt32.zero > 0 then
@@ -61,7 +36,7 @@ let create_state n cl =
 
 
 type info =
-  { mutable env: Syntax.value Env.t
+  { mutable env: Syntax.env
   ; (* environment *)
   mutable m: Syntax.closure option
   ; (* merge *)
@@ -76,7 +51,7 @@ type info =
 
 let declarations_to_state ds =
   let info =
-    {env= Env.empty; m= None; t= None; ns= None; es= None; init= None}
+    {env= Interp.empty_env; m= None; t= None; ns= None; es= None; init= None}
   in
   let if_none opt f msg =
     match opt with None -> f () | Some f -> error msg
@@ -86,7 +61,7 @@ let declarations_to_state ds =
     | DLet (x, e) ->
         let env = info.env in
         let v = Interp.interp_env env e in
-        info.env <- Env.update env x v
+        info.env <- Interp.update_value env x v
     | DMerge e ->
         let get_merge () =
           match Interp.interp_env info.env e with

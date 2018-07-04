@@ -15,7 +15,7 @@
   let rec make_fun params body =
       match params with
 	| [] -> body
-	| x::rest -> EFun (x, make_fun rest body)
+	| (x,tyopt)::rest -> EFun {arg=x;argty=tyopt;resty=None;body=make_fun rest body;}
     
   let local_let (id,params) body =
     (id, make_fun params body)
@@ -43,7 +43,9 @@
 %token LET IN IF THEN ELSE FUN
 %token SOME NONE MATCH WITH
 %token DOT BAR ARROW SEMI LPAREN RPAREN LBRACKET RBRACKET LBRACE RBRACE COMMA UNDERSCORE EOF
-%token EDGES NODES DEFAULT
+%token STAR TOPTION TVECTOR ATTRIBUTE TYPE COLON TBOOL TINT
+/* %token <Var.t> TID */
+%token EDGES NODES
 
 %start prog
 %type  <Syntax.declarations> prog
@@ -58,29 +60,58 @@
 %left LBRACKET      /* highest precedence */
 
 %%
+ty:
+   | ty1 { $1 }
+;
 
-aparams:
-    | ID            { [$1] }
-    | ID params     { $1::$2 }
+ty1:
+   | ty2 { $1 }
+   | ty2 ARROW ty1 { TArrow ($1, $3) }
+;
+
+ty2:
+   | ty3 { $1 }
+   | tuple { TTuple $1 }
+;
+
+tuple:
+   | ty3 STAR ty3   { [$1;$3] }
+   | ty3 STAR tuple { $1::$3 }
+;
+
+ty3:
+   | ty4             { $1 }
+   | ty3 TOPTION     { TOption $1 }
+   | ty3 TVECTOR LBRACKET NUM RBRACKET {TMap ($4, $1)}
+;
+
+ty4:
+   | TBOOL          { TBool }
+   | TINT           { Syntax.tint }
+   | LPAREN ty RPAREN { $2 }
+/* | TID            { QVar $1 }       TO DO:  No user polymorphism for now */
+;
+
+param:
+   | ID                         { ($1, None) }
+   | LPAREN ID COLON ty RPAREN  { ($2, Some $4) }
 ;
 
 params:
-    |               { [] }
-    | ID params     { $1::$2 }
+    | param            { [$1] }
+    | param params     { $1::$2 }
 ;
   
-fdecl:
-    | ID params     { ($1,$2) }
-;
-
-default:
-    | DEFAULT EQ expr SEMI { $3 }
+letvars:
+    | ID        { ($1,[]) }
+    | ID params { ($1, $2) }
 ;
 
 component:
-    | LET fdecl EQ expr                 { global_let $2 $4 }
+    | LET letvars EQ expr               { global_let $2 $4 }
     | LET EDGES EQ LBRACE edges RBRACE  { DEdges $5 }
     | LET NODES EQ NUM                  { DNodes $4 }
+    | TYPE ATTRIBUTE EQ ty              { DATy $4 }
 ;
   
 components:
@@ -94,10 +125,10 @@ expr:
 
 expr1:
     | expr2                                               { $1 }
-    | LET fdecl EQ expr IN expr1                          { let (id, e) = local_let $2 $4 in ELet (id, e, $6) }
+    | LET letvars EQ expr IN expr1                          { let (id, e) = local_let $2 $4 in ELet (id, e, $6) }
     | IF expr1 THEN expr ELSE expr1                       { EIf ($2, $4, $6) }
     | MATCH expr WITH branches                            { EMatch ($2, $4) }
-    | FUN aparams ARROW expr1                             { make_fun $2 $4 }
+    | FUN params ARROW expr1                              { make_fun $2 $4 }
 ;
 
 expr2:
@@ -128,9 +159,10 @@ expr4:
     | NUM                      { EVal (VUInt32 $1) }
     | TRUE                     { EVal (VBool true) }
     | FALSE                    { EVal (VBool false) }
-    | NONE                     { EVal (VOption None) }
+    | NONE                     { EVal (VOption (None,None)) }
     | LPAREN exprs RPAREN      { tuple_it $2 }
-
+    | LPAREN expr COLON ty RPAREN { ETy ($2, $4) }
+;
 	
 exprs:
     | expr                     { [$1] }
@@ -140,6 +172,7 @@ exprs:
 edge:
     | NUM SUB NUM SEMI         { [($1,$3)] }
     | NUM EQ NUM SEMI          { [($1,$3); ($3,$1)] }
+;
 
 edges:
     | edge                     { $1 }

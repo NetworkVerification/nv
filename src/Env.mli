@@ -16,6 +16,8 @@ exception Unbound_var of Var.t
 
 val lookup : 'a t -> Var.t -> 'a
 
+val lookup_opt : 'a t -> Var.t -> 'a option
+
 (* add a binding, possibly shadowing preexisting bindings *)
 
 val update : 'a t -> Var.t -> 'a -> 'a t
