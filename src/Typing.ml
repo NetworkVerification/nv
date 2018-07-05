@@ -113,7 +113,11 @@ let generalize ty =
     | TVar {contents= Unbound (name, l)} when l > !current_level ->
         (Env.bind name (), QVar name)
     | TVar {contents= Link ty} -> gen ty
-    | TVar _ | QVar _ | TBool | TInt _ -> (Env.empty, ty)
+    | TVar _ | TBool | TInt _ -> (Env.empty, ty)
+    | QVar q ->
+        if_debug
+          ("qvar " ^ Var.to_string q ^ " appears in generalization check") ;
+        (Env.empty, ty)
     | TArrow (ty1, ty2) ->
         let tvs1, ty1 = gen ty1 in
         let tvs2, ty2 = gen ty2 in
