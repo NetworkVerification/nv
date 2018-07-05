@@ -5,7 +5,7 @@ open Syntax
 val op_to_string : op -> string
 
 val tyvar_to_string : tyvar -> string
-  
+
 val ty_to_string : ty -> string
 
 val value_to_string : value -> string

@@ -2,27 +2,30 @@
 
 open Unsigned
 
-(* indices into maps or map sizes must be static constants *)  
+(* indices into maps or map sizes must be static constants *)
 type index = UInt32.t
 
 (* see:  http://okmij.org/ftp/ML/generalization.html *)
 type level = int
+
 type tyname = Var.t
-    
+
 type ty =
-  | TVar of tyvar ref  (* schematic variable to be unified *)
-  | QVar of tyname     (* prenex quantified variable *)
+  | TVar of tyvar ref
+  (* schematic variable to be unified *)
+  | QVar of tyname
+  (* prenex quantified variable *)
   | TBool
-  | TInt of index      (* index is number of bits in Int type: 32 for now *)
+  | TInt of index
+  (* index is number of bits in Int type: 32 for now *)
   | TArrow of ty * ty
   | TTuple of ty list
   | TOption of ty
-  | TMap of index * ty  (* TMap (i,t) is a map from [0..i-1] to t *)
+  | TMap of index * ty
+  (* TMap (i,t) is a map from [0..i-1] to t *)
   | TAll of tyname list * ty
 
-and tyvar =
-  | Unbound of tyname * level
-  | Link of ty
+and tyvar = Unbound of tyname * level | Link of ty
 
 type var = Var.t
 
@@ -47,7 +50,8 @@ type op =
   | MMap
   (* MMap f m = [f m[0]; f m[1]; ...] *)
   | MMerge
-  (* MMerge f m1 m2 = [f m1[0] m2[0]; ... ] *)
+
+(* MMerge f m1 m2 = [f m1[0] m2[0]; ... ] *)
 
 type pattern =
   | PWild
@@ -84,23 +88,15 @@ and exp =
 
 and branches = (pattern * exp) list
 
-and func = {
-  arg : var;
-  argty : ty option;
-  resty : ty option;
-  body : exp;
-}
+and func = {arg: var; argty: ty option; resty: ty option; body: exp}
 
-and tyfunc = tyname list * exp
+and tyfunc = (tyname list * exp)
 
-and closure = env * func
+and closure = (env * func)
 
-and tyclosure = env * tyfunc
+and tyclosure = (env * tyfunc)
 
-and env = {
-  ty : ty Env.t;
-  value : value Env.t;
-}
+and env = {ty: ty Env.t; value: value Env.t}
 
 type declaration =
   | DLet of var * exp
@@ -131,11 +127,12 @@ let arity op =
   | MMap -> 2
   | MMerge -> 3
 
+
 (* Useful constructors *)
 
-let (~>) ty ty = TArrow (ty, ty)
+let ( ~> ) ty ty = TArrow (ty, ty)
 
-let tint = TInt(UInt32.of_int 32)
+let tint = TInt (UInt32.of_int 32)
 
 let exp v = EVal v
 
@@ -143,23 +140,18 @@ exception Syntax of string
 
 let error s = raise (Syntax s)
 
-let func x body =
-   {arg = x;
-    argty = None;
-    resty = None;
-    body = body;
-   }
+let func x body = {arg= x; argty= None; resty= None; body}
 
 let ty_func tyargs body = (tyargs, body)
 
-let lam x body =
-  EFun (func x body)
+let lam x body = EFun (func x body)
 
 let rec lams params body =
   match params with
   | [] -> error "lams: no parameters"
   | [p] -> lam p body
   | p :: params -> lam p (lams params body)
+
 
 let rec apps f args =
   match args with
