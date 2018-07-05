@@ -1,5 +1,6 @@
 (* Driver *)
 
+open Typing
 open Syntax
 open Printing
 open Interp

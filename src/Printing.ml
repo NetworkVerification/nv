@@ -73,7 +73,7 @@ let ty_prec t =
     | TMap _ -> 4
     | TAll _ -> 10
 
-let rec type_to_string_p prec t =
+let rec ty_to_string_p prec t =
   let p = ty_prec t in
   let s =
     match t with
@@ -81,20 +81,20 @@ let rec type_to_string_p prec t =
       | QVar name -> "{" ^ Var.to_string name ^ "}"
       | TBool -> "bool"
       | TInt i -> "int" ^ UInt32.to_string i
-      | TArrow (t1,t2) -> type_to_string_p p t1 ^ " -> " ^ type_to_string_p prec t1
-      | TTuple ts -> sep "*" (type_to_string_p p) ts
-      | TOption t -> type_to_string_p p t ^ " option"
-      | TMap (i,t) -> type_to_string_p p t  ^ " vec[" ^ UInt32.to_string i ^ "]"
-      | TAll (tvs,ty) -> "all[" ^ comma_sep Var.to_string tvs ^ "]." ^ type_to_string_p p ty
+      | TArrow (t1,t2) -> ty_to_string_p p t1 ^ " -> " ^ ty_to_string_p prec t1
+      | TTuple ts -> sep "*" (ty_to_string_p p) ts
+      | TOption t -> ty_to_string_p p t ^ " option"
+      | TMap (i,t) -> ty_to_string_p p t  ^ " vec[" ^ UInt32.to_string i ^ "]"
+      | TAll (tvs,ty) -> "all[" ^ comma_sep Var.to_string tvs ^ "]." ^ ty_to_string_p p ty
   in
   if p < prec then s else "(" ^ s ^ ")"
     
 and tyvar_to_string tv =
   match tv with
       Unbound (name, l) -> Var.to_string name ^ "[" ^ string_of_int l ^ "]"
-    | Link ty -> "<" ^ type_to_string_p max_prec ty ^ ">"
+    | Link ty -> "<" ^ ty_to_string_p max_prec ty ^ ">"
 
-let type_to_string t = type_to_string_p max_prec t
+let ty_to_string t = ty_to_string_p max_prec t
   
 let op_to_string op =
   match op with
@@ -106,7 +106,7 @@ let op_to_string op =
   | UEq -> "="
   | ULess -> "<"
   | ULeq -> "<="
-  | MCreate (Some t)-> "(create : " ^ type_to_string t ^ ")"
+  | MCreate (Some t)-> "(create : " ^ ty_to_string t ^ ")"
   | MCreate None -> "create"
   | MGet -> "!"
   | MSet -> "set"
@@ -127,7 +127,7 @@ let rec pattern_to_string pattern =
 
 
 let ty_env_to_string env =
-  Env.to_string type_to_string env.ty
+  Env.to_string ty_to_string env.ty
 
 let rec value_env_to_string env =
   Env.to_string (value_to_string_p max_prec) env.value
@@ -139,12 +139,12 @@ and func_to_string_p prec { arg = x; argty = argt; resty = rest; body = body; } 
   let s_arg =
     match argt with
       | None -> Var.to_string x
-      | Some t -> "(" ^ Var.to_string x ^ ":" ^ type_to_string t ^ ")"
+      | Some t -> "(" ^ Var.to_string x ^ ":" ^ ty_to_string t ^ ")"
   in
   let s_res =
        match rest with
 	   None -> ""
-	 | Some t -> " : " ^ type_to_string t
+	 | Some t -> " : " ^ ty_to_string t
   in
   let s = "fun " ^ s_arg ^ s_res ^ " -> " ^ exp_to_string_p max_prec body in
   if prec < max_prec then "(" ^ s ^ ")" else s
@@ -154,12 +154,12 @@ and closure_to_string_p prec (env, { arg = x; argty = argt; resty = rest; body =
   let s_arg =
     match argt with
       | None -> Var.to_string x
-      | Some t -> "(" ^ Var.to_string x ^ ":" ^ type_to_string t ^ ")"
+      | Some t -> "(" ^ Var.to_string x ^ ":" ^ ty_to_string t ^ ")"
   in
   let s_res =
        match rest with
 	   None -> ""
-	 | Some t -> " : " ^ type_to_string t
+	 | Some t -> " : " ^ ty_to_string t
   in
   let s =
     "fun" ^ env_to_string env ^ s_arg ^ s_res ^ " -> " ^ exp_to_string_p prec body
@@ -187,16 +187,16 @@ and value_to_string_p prec v =
   | VBool false -> "false"
   | VUInt32 i -> UInt32.to_string i
   | VMap (m,None) -> map_to_string "=" ";" m
-  | VMap (m,Some t) -> "(" ^ (map_to_string "=" ";" m) ^ type_to_string t ^ ")"
+  | VMap (m,Some t) -> "(" ^ (map_to_string "=" ";" m) ^ ty_to_string t ^ ")"
   | VTuple vs -> "(" ^ comma_sep (value_to_string_p max_prec) vs ^ ")"
   | VOption (None,None) -> "None"
-  | VOption (None,Some t) -> "(None : "^ type_to_string t ^ ")"
+  | VOption (None,Some t) -> "(None : "^ ty_to_string t ^ ")"
   | VOption (Some v,None) ->
       let s = "Some" ^ value_to_string_p max_prec v in
       if max_prec > prec then "(" ^ s ^ ")" else s
   | VOption (Some v,Some t) ->
       let s = "Some" ^ value_to_string_p max_prec v in
-      "(" ^ s ^ ":" ^ type_to_string t ^ ")" 
+      "(" ^ s ^ ":" ^ ty_to_string t ^ ")" 
   | VClosure cl -> closure_to_string_p prec cl
   | VTyClosure tc -> tyclosure_to_string_p prec tc
 
@@ -277,7 +277,7 @@ let rec declaration_to_string d =
           es ""
       ^ "}"
   | DInit e -> "let init = " ^ exp_to_string e
-  | DATy t -> "type attribute = " ^ type_to_string t
+  | DATy t -> "type attribute = " ^ ty_to_string t
 
 
 let rec declarations_to_string ds =

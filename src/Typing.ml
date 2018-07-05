@@ -3,6 +3,7 @@
  *)
 
 open Syntax
+open Printing
 
 let debug = true
 let if_debug s =
@@ -47,13 +48,13 @@ let occurs tvr ty =
       
     | QVar q ->  (* this case should not occur, I don't think *)
       begin
-	if_debug "qvar " ^ Var.to_string q ^ " appears in occ check";
+	if_debug ("qvar " ^ Var.to_string q ^ " appears in occ check");
 	()
       end
 	
     | TArrow (t1,t2) -> occ tvr t1; occ tvr t2 
     | TBool | TInt _ -> ()
-    | TTuple of ts -> List.iter (occ tvr) ts
+    | TTuple ts -> List.iter (occ tvr) ts
     | TOption t -> occ tvr t
     | TMap (_,t) -> occ tvr t
     | TAll _ -> error "impredicative polymorphism in occurs check"
@@ -61,11 +62,11 @@ let occurs tvr ty =
   try
     occ tvr ty
   with
-      Occurs -> error (Printf.sprintf "%s occurs in %s\n" (tyvar_to_string tvr) (ty_to_string ty))
+      Occurs -> error (Printf.sprintf "%s occurs in %s\n" (tyvar_to_string (!tvr)) (ty_to_string ty))
 
 (* Simplistic.  No path compression *)
 (* Also, QVar are unexpected: they should've been instantiated *)
-let rec unify t1 t2 ->
+let rec unify t1 t2 =
   if t1 == t2 then ()                   (* t1 and t2 are physically the same *)
   else match (t1,t2) with
   | (TVar ({contents = Unbound _} as tv),t')
@@ -86,7 +87,7 @@ let rec unify t1 t2 ->
   | TMap (i1,t1), TMap (i2,t2) when i1 = i2 -> unify t1 t2
   | TAll _, _ -> error "impredicative polymorphism in unification (1)"
   | _, TAll _ -> error "impredicative polymorphism in unification (2)"
-  | _, _ -> error (Prinf.sprintf "unification error: %s %s" (ty_to_string t1) (ty_to_string t2))
+  | _, _ -> error (Printf.sprintf "unification error: %s %s" (ty_to_string t1) (ty_to_string t2))
 
 and unifies ts1 ts2 =
   match ts1, ts2 with
@@ -95,7 +96,7 @@ and unifies ts1 ts2 =
     | _, _ -> error "wrong number of components in unification"
 
 let unify_opt topt1 t2 =
-  match ot1 with
+  match topt1 with
       Some t1 -> unify t1 t2
     | None -> ()
 
@@ -110,9 +111,9 @@ let generalize ty =
       | TVar _ | QVar _ | TBool | TInt _ -> (Env.empty,ty)
 	
       | TArrow (ty1,ty2) ->
-	let (tvs,ty1) = gen ty1 in
-	let (tvs,ty2) = gen ty2 in
-	((Env.updates tvs1 tvs2), TArrow (gen ty1, gen ty2))
+	let (tvs1,ty1) = gen ty1 in
+	let (tvs2,ty2) = gen ty2 in
+	((Env.updates tvs1 tvs2), TArrow (ty1, ty2))
     
       | TTuple ts ->
 	let tvs, tys = gens ts in
@@ -138,7 +139,7 @@ let generalize ty =
 	  
   in
   let (env, ty) = gen ty in
-  (Env.bindings env, ty)
+  (List.map (fun (x,_) -> x) (Env.to_list env), ty)
 
 (* instantiation: replace schematic variables with fresh TVar *)
 let inst subst ty = 
@@ -146,15 +147,18 @@ let inst subst ty =
     match ty with
     | QVar name -> 
         begin
-          try (Env.lookup subst name, subst)
-          with Unbound_var x -> failwith "bad instantiation: " ^  (Var.to_string x)
-	    (* (* reference code with implicit quantifiers *)
-            let tv = fresh_tyvar () in
-            (tv, Env.update subst name tv)
-            *)
+          try Env.lookup subst name
+          with Env.Unbound_var x -> failwith ("bad instantiation: " ^  (Var.to_string x))
         end
 	  
     | TVar {contents = Link ty} -> loop subst ty
+
+    | TVar {contents=Unbound (name, _)} ->
+      begin
+	if_debug ("found unbound tyvar " ^ Var.to_string name);
+        try Env.lookup subst name
+        with Env.Unbound_var x -> failwith ("bad instantiation: " ^  (Var.to_string x))
+      end
 
     | TBool | TInt _ -> ty
       
@@ -164,7 +168,7 @@ let inst subst ty =
         TArrow (ty1,ty2)
 
     | TTuple ts ->
-      let ts = loops subst tys in
+      let ts = loops subst ts in
       TTuple ts
       
     | TOption t ->
@@ -186,7 +190,7 @@ let inst subst ty =
 	ty::tys
 	  
   in
-  fst (loop Env.empty ty)
+  loop subst ty
 
 (* instantiate schema, returning both the new type and the list of type variables *)
 let inst_schema (names, ty) =
@@ -195,7 +199,7 @@ let inst_schema (names, ty) =
     Env.update env name tv
   in
   let subst = List.fold_left add_name Env.empty names in
-  let tys = List.map (fun name -> Env.find env name) names in
+  let tys = List.map (fun name -> Env.lookup subst name) names in
   (inst subst ty, tys)
 
 let op_typ op =
@@ -204,11 +208,11 @@ let op_typ op =
   | Or -> ([], [TBool; TBool], TBool)
   | Not -> ([], [TBool], TBool)
   (* Unsigned Integer 32 operators *)
-  | UAdd -> ([], [TInt 32; TInt 32], TInt 32)
-  | USub -> ([], [TInt 32; TInt 32], TInt 32)
-  | UEq -> ([], [TInt 32; TInt 32], TBool)
-  | ULess -> ([], [TInt 32; TInt 32], TBool)
-  | ULeq -> ([], [TInt 32; TInt 32], TBool)
+  | UAdd -> ([], [tint; tint], tint)
+  | USub -> ([], [tint; tint], tint)
+  | UEq -> ([], [tint; tint], TBool)
+  | ULess -> ([], [tint; tint], TBool)
+  | ULeq -> ([], [tint; tint], TBool)
   (* Map operations *)
   | MCreate _ -> failwith "special type for create"
   | MGet -> failwith "special type for get"
@@ -233,7 +237,9 @@ let rec infer_exp env e =
 	  | Some t -> (e,t)
       end
 	
-    | EVal v -> infer_value env v
+    | EVal v ->
+      let v, t = infer_value env v in
+      (EVal v, t)
       
     | EOp (o, es) ->
       begin
@@ -255,8 +261,7 @@ let rec infer_exp env e =
       let e, ty_e = infer_exp (Env.update env x ty_x) body in
       unify_opt argty ty_x;
       unify_opt resty ty_e;
-      (EFun {targs = targs;
-	     arg = x;
+      (EFun {arg = x;
 	     argty = Some ty_x;
 	     resty = Some ty_e;
 	     body = body;},
@@ -269,12 +274,12 @@ let rec infer_exp env e =
     | EApp (e1,e2) ->
       let e1,ty_fun = infer_exp env e1 in
       let e2,ty_arg = infer_exp env e2 in
-      let ty_res = newvar () in
+      let ty_res = fresh_tyvar () in
       unify ty_fun (TArrow (ty_arg,ty_res));
       (EApp(e1,e2), ty_res)
 	
     | ETyApp (e, tys) ->
-      fail_with "explicit type application unimplemented in type inference"
+      failwith "explicit type application unimplemented in type inference"
 	
     | EIf (e1,e2,e3) ->
       let e1,tcond = infer_exp env e1 in
@@ -293,10 +298,10 @@ let rec infer_exp env e =
 	leave_level ();
 	match generalize ty_e1 with
 	  | ([], ty) ->
-	    let (e2, ty_e2) = infer (Env.update env x ty) e2 in
+	    let (e2, ty_e2) = infer_exp (Env.update env x ty) e2 in
 	    (ELet (x, e1, e2), ty_e2)
 	  | (tvs, ty) ->
-	    let (e2, ty_e2) = infer (Env.update env x (TAll (tvs, ty))) e2 in
+	    let (e2, ty_e2) = infer_exp (Env.update env x (TAll (tvs, ty))) e2 in
 	    (ELet (x, ETyFun (tvs, e1), e2), ty_e2)  (* NOTE:  Changes order of evaluation if e is not a value;
 						        If we have effects, value restriction needed. *)
       end
@@ -311,7 +316,7 @@ let rec infer_exp env e =
 	
     | ESome e ->
       let (e,t) = infer_exp env e in
-      (ESome e, TOption ty)
+      (ESome e, TOption t)
 
     | EMatch (e,branches) ->
       let (e,tmatch) = infer_exp env e in
@@ -321,7 +326,7 @@ let rec infer_exp env e =
     | ETy (e,t) ->
       let (e,t1) = infer_exp env e in
       unify t t1;
-      ETy (e,t1)
+      (ETy (e,t1), t1)
 
 and infer_exps env es =
   match es with
@@ -333,25 +338,25 @@ and infer_exps env es =
 	
 and infer_value env v =
   match v with
-    | VBool b -> TBool
-    | VUInt32 i -> TInt 32
-    | VMap (m,tyopt) ->
+    | VBool b -> (v, TBool)
+    | VUInt32 i -> (v, tint)
+    | VMap (m,tyopt) -> failwith "unimplemented"  (* To DO *) (*
       let i = IMap.length m in
       let (vs, default) = IMap.bindings m in
       let (default, t) = infer_value env default in
-      let (vs, ts) = infer_values env vs in
+      let (vs, ts) = infer_values env (List.map (fun (_,v) -> v) vs) in
       let tv = fresh_tyvar () in
       unify t tv;
       List.iter (fun t -> unify t tv) ts;
       let t = TMap (i, tv) in
       let m = IMap.from_bindings i (vs,default) in
-      (VMap (m, Some tv))
+      (VMap (m, Some tv), t) *)
     | VTuple vs ->
       let (vs,ts) = infer_values env vs in
       (VTuple vs, TTuple ts)
     | VOption (None,topt) ->
       let tv = fresh_tyvar () in
-      unify_opt topt tv
+      unify_opt topt tv;
       (VOption (None, Some tv), TOption tv)
     | VOption (Some v,topt) ->
       let (v, t) = infer_value env v in
@@ -361,6 +366,14 @@ and infer_value env v =
       (VOption (Some v, Some tv), TOption tv)
     | VClosure cl -> failwith "unimplemented: closure type inference because i am lazy"
 
+and infer_values env vs =
+  match vs with
+      [] -> ([], [])
+    | v::vs ->
+      let (v,t) = infer_value env v in
+      let (vs,ts) = infer_values env vs in
+      (v::vs, t::ts)
+      
 and infer_branches env tmatch bs =
   match bs with
       [] -> failwith "empty branches in infer branches"
@@ -389,14 +402,16 @@ and infer_pattern env tmatch p =
     | POption (Some p), TOption t -> infer_pattern env t p
     | POption None, TOption t -> env
     | _, TOption _ -> error "expected option pattern"
+    | _, (TVar _| QVar _| TArrow (_, _) | TMap (_, _)| TAll (_, _)) -> error "bad pattern"
 
 and infer_patterns env ts ps =
   match ts, ps with
       [], [] -> env
-    | t::ts, p:ps ->
+    | t::ts, p::ps ->
       valid_pat p;
-      let env = infer_patterns env t p in
+      let env = infer_pattern env t p in
       infer_patterns env ts ps
+    |_, _ -> error "bad arity in pattern match"
 
 (* ensure patterns do not contain duplicate variables *)
 and valid_pat p = valid_pattern Env.empty p |> ignore
@@ -406,11 +421,11 @@ and valid_pattern env p =
     | PWild -> env
     | PVar x ->
       begin
-	match Env.lookup_opt x env with
+	match Env.lookup_opt env x with
 	    None -> Env.update env x ()
-	  | Some _ -> error "variable " ^ Var.to_string x ^ " appears twice in pattern"
+	  | Some _ -> error ("variable " ^ Var.to_string x ^ " appears twice in pattern")
       end
-    | PBool _ | PUInt32 -> env
+    | PBool _ | PUInt32 _ -> env
     | PTuple ps -> valid_patterns env ps
     | POption None -> env
     | POption (Some p) -> valid_pattern env p
