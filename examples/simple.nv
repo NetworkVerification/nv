@@ -2,6 +2,8 @@
    Implements shortest paths on a 2-node network
    with the destination at node 0. *)
 
+type attribute = int
+
 (* Number of nodes in network topology;
    nodes are numbered 0..nodes-1
  *)

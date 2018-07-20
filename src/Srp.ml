@@ -81,7 +81,7 @@ let declarations_to_state ds =
           (fun () -> info.ns <- Some n)
           "multiple nodes declarations"
     | DEdges es ->
-        if_none info.es
+        if_none info.es 
           (fun () -> info.es <- Some es)
           "multiple edges declarations"
     | DInit e ->
@@ -92,6 +92,7 @@ let declarations_to_state ds =
         in
         if_none info.init get_initializer
           "multiple initialization declarations"
+    | DATy _ -> ()
   in
   List.iter process_declaration ds ;
   match info with

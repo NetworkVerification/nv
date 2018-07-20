@@ -54,6 +54,7 @@ let main =
   print_endline "** Starting SRP Processing **" ;
   let () = commandline_processing () in
   let ds = Input.read_from_file (filename ()) in
+  let ds = Typing.infer_declarations ds in
   if verbose () then (
     print_endline "** SRP Definition **" ;
     print_endline (Printing.declarations_to_string ds) ;

@@ -21,7 +21,7 @@ rule token = parse
   | "(*"         { comments 0 lexbuf }
   | "false"      { FALSE }
   | "true"       { TRUE }
-  | "let"        { LET }
+  | "let"        { LET } 
   | "in"         { IN }
   | "if"         { IF }
   | "then"       { THEN }
@@ -34,6 +34,8 @@ rule token = parse
   | "match"      { MATCH }
   | "with"       { WITH }
   | "option"     { TOPTION }
+  | "int"        { TINT }
+  | "bool"       { TBOOL }
   | "vec"        { TVECTOR }
   | "type"       { TYPE }
   | "attribute"  { ATTRIBUTE }

@@ -1,3 +1,5 @@
+type attribute = int option
+
 let nodes = 4
 
 let edges = {

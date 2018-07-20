@@ -170,3 +170,15 @@ let rec apps f args : exp =
 
 let apply_closure cl (args : value list) =
   apps (e_val (VClosure cl)) (List.map (fun a -> exp (EVal a)) args)
+
+let get_attr_type ds = 
+  try 
+  let daty = List.find (fun d -> 
+    match d with
+    | DATy ty -> true
+    | _ -> false
+  ) ds in 
+  match daty with 
+  | DATy ty -> Some ty 
+  | _ -> failwith "impossible"
+  with _ -> None

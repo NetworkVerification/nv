@@ -13,6 +13,21 @@ exception Inference of string
 
 let error s = raise (Inference s) 
 
+let oget (x: 'a option) : 'a = 
+    match x with 
+    | None -> failwith "oget"
+    | Some y -> y
+
+let node_ty = tint
+
+let edge_ty = TTuple [node_ty; node_ty]
+
+let init_ty aty = TArrow (node_ty, aty)
+
+let merge_ty aty = TArrow (node_ty, (TArrow (aty, TArrow (aty, aty))))
+
+let trans_ty aty = TArrow (edge_ty, TArrow (aty, aty))
+
 (* Region-like levels for efficient implementation of type generalization *)
 let current_level = ref 1
 
@@ -37,7 +52,6 @@ let reset_tyvars () =
   (*  Var.reset ();  *)
   (* DPW: don't need to do this *)
   level_reset ()
-
 
 let tyname () = Var.fresh "a"
 
@@ -263,7 +277,7 @@ let rec infer_exp env (e : exp) : exp =
   | EIf (e1, e2, e3) ->
       let e1, tcond = infer_exp env e1 |> textract in
       let e2, ty2 = infer_exp env e2 |> textract in
-      let e3, ty3 = infer_exp env e2 |> textract in
+      let e3, ty3 = infer_exp env e3 |> textract in
       unify TBool tcond ; unify ty2 ty3 ; texp (EIf (e1, e2, e3), ty2)
   | ELet (x, e1, e2) -> (
       (* TO DO? Could traverse the term e1 again replacing TVars with QVars of the same name.
@@ -368,20 +382,23 @@ and infer_branches env tmatch bs =
 
 and infer_pattern env tmatch p =
   valid_pat p ;
-  match (p, tmatch) with
-  | PWild, _ -> env
-  | PVar x, tmatch -> Env.update env x tmatch
-  | PBool _, TBool -> env
-  | _, TBool -> error "expected bool pattern"
-  | PUInt32 _, TInt i -> env
-  | _, TInt i -> error "expected int pattern"
-  | PTuple ps, TTuple ts -> infer_patterns env ts ps
-  | _, TTuple _ -> error "expected tuple pattern"
-  | POption Some p, TOption t -> infer_pattern env t p
-  | POption None, TOption t -> env
-  | _, TOption _ -> error "expected option pattern"
-  | _, (TVar _ | QVar _ | TArrow (_, _) | TMap (_, _) | TAll (_, _)) ->
-      error "bad pattern"
+  match p with
+  | PWild -> env
+  | PVar x -> Env.update env x tmatch
+  | PBool _ -> unify tmatch TBool; env
+  | PUInt32 _ -> unify tmatch tint; env
+  | PTuple ps -> 
+    let ts = List.map (fun p -> fresh_tyvar ()) ps in 
+    let ty = TTuple ts in 
+    unify tmatch ty;
+    infer_patterns env ts ps
+  | POption x -> begin 
+      let t = fresh_tyvar () in 
+      unify tmatch (TOption t);
+      match x with 
+      | None -> env
+      | Some p -> infer_pattern env t p
+    end
 
 and infer_patterns env ts ps =
   match (ts, ps) with
@@ -391,6 +408,45 @@ and infer_patterns env ts ps =
       let env = infer_pattern env t p in
       infer_patterns env ts ps
   | _, _ -> error "bad arity in pattern match"
+
+and infer_declarations (ds : declarations) : declarations = 
+  match get_attr_type ds with 
+  | None -> error ("attribute type not declared: type attribute = ...")
+  | Some ty -> infer_declarations_aux Env.empty ty ds 
+
+and infer_declarations_aux env aty (ds : declarations) : declarations = 
+  match ds with 
+  | [] -> []
+  | d::ds' -> 
+    let (env', d') = infer_declaration env aty d in 
+    d' :: (infer_declarations_aux env' aty ds')
+
+and infer_declaration env aty d : ty Env.t * declaration = 
+  match d with 
+  | DLet (var, e) -> 
+    let e' = infer_exp env e in 
+    (Env.update env var (oget e'.ety), DLet(var, e'))
+  | DMerge e -> 
+    let e' = infer_exp env e in
+    let ty = oget e'.ety in 
+    print_endline ("merge_ty " ^ (Printing.ty_to_string (merge_ty aty)));
+    print_endline ("ty " ^ (Printing.ty_to_string ty));
+    unify ty (merge_ty aty);
+    (Env.update env (Var.create "merge") ty, DMerge e')
+  | DTrans e ->
+    let e' = infer_exp env e in
+    let ty = oget e'.ety in  
+    unify ty (trans_ty aty);
+    (Env.update env (Var.create "trans") ty, DTrans e')
+  | DInit e -> 
+    let e' = infer_exp env e in
+    let ty = oget e'.ety in  
+    unify ty (init_ty aty);
+    (Env.update env (Var.create "trans") ty, DInit e')  
+  | DATy _
+  | DNodes _
+  | DEdges _ -> (env, d)
+  
 
 (* ensure patterns do not contain duplicate variables *)
 and valid_pat p = valid_pattern Env.empty p |> ignore
