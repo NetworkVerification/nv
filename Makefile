@@ -16,6 +16,9 @@ simple: $(MLFILES)
 diamond: $(MLFILES)
 	./Main.native -f "examples/diamond.nv" -v -s
 
+diamond-ospf: $(MLFILES)
+	./Main.native -f "examples/diamond-ospf.nv" -v -s
+
 run_tests: tests
 	./Interp_test.native
 

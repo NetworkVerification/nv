@@ -61,7 +61,7 @@ type pattern =
   | PTuple of pattern list
   | POption of pattern option
 
-type value =
+type v =
   | VBool of bool
   | VUInt32 of UInt32.t
   | VMap of value IMap.t * ty option
@@ -70,7 +70,9 @@ type value =
   | VClosure of closure
   | VTyClosure of tyclosure
 
-and exp =
+and value = {v: v; vty: ty option; vspan: Span.t option}
+
+and e =
   | EVar of var
   | EVal of value
   | EOp of op * exp list
@@ -85,6 +87,8 @@ and exp =
   | ESome of exp
   | EMatch of exp * branches
   | ETy of exp * ty
+
+and exp = {e: e; ety: ty option; espan: Span.t option}
 
 and branches = (pattern * exp) list
 
@@ -134,7 +138,11 @@ let ( ~> ) ty ty = TArrow (ty, ty)
 
 let tint = TInt (UInt32.of_int 32)
 
-let exp v = EVal v
+let exp (e : e) : exp = {e=e; ety=None; espan=None}
+
+let value (v : v) : value = {v=v; vty=None; vspan=None}
+
+let e_val (x: v) : exp = exp (EVal (value x))
 
 exception Syntax of string
 
@@ -144,7 +152,7 @@ let func x body = {arg= x; argty= None; resty= None; body}
 
 let ty_func tyargs body = (tyargs, body)
 
-let lam x body = EFun (func x body)
+let lam x body = exp (EFun (func x body))
 
 let rec lams params body =
   match params with
@@ -153,12 +161,12 @@ let rec lams params body =
   | p :: params -> lam p (lams params body)
 
 
-let rec apps f args =
+let rec apps f args : exp =
   match args with
   | [] -> error "apps: no arguments"
-  | [a] -> EApp (f, a)
-  | a :: args -> apps (EApp (f, a)) args
+  | [a] -> exp (EApp (f, a))
+  | a :: args -> apps (exp (EApp (f, a))) args
 
 
-let apply_closure cl args =
-  apps (EVal (VClosure cl)) (List.map (fun a -> exp a) args)
+let apply_closure cl (args : value list) =
+  apps (e_val (VClosure cl)) (List.map (fun a -> exp (EVal a)) args)

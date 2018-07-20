@@ -5,7 +5,7 @@
   let tuple_it es =
     match es with
       | [e] -> e
-      | es -> ETuple es
+      | es -> exp (ETuple es)
 
   let tuple_pattern ps =
     match ps with
@@ -15,7 +15,7 @@
   let rec make_fun params body =
       match params with
 	| [] -> body
-	| (x,tyopt)::rest -> EFun {arg=x;argty=tyopt;resty=None;body=make_fun rest body;}
+	| (x,tyopt)::rest -> exp (EFun {arg=x;argty=tyopt;resty=None;body=make_fun rest body;})
     
   let local_let (id,params) body =
     (id, make_fun params body)
@@ -125,43 +125,43 @@ expr:
 
 expr1:
     | expr2                                               { $1 }
-    | LET letvars EQ expr IN expr1                          { let (id, e) = local_let $2 $4 in ELet (id, e, $6) }
-    | IF expr1 THEN expr ELSE expr1                       { EIf ($2, $4, $6) }
-    | MATCH expr WITH branches                            { EMatch ($2, $4) }
+    | LET letvars EQ expr IN expr1                          { let (id, e) = local_let $2 $4 in exp (ELet (id, e, $6)) }
+    | IF expr1 THEN expr ELSE expr1                       { exp (EIf ($2, $4, $6)) }
+    | MATCH expr WITH branches                            { exp (EMatch ($2, $4)) }
     | FUN params ARROW expr1                              { make_fun $2 $4 }
 ;
 
 expr2:
     | expr3                      { $1 }
-    | expr2 expr3                { EApp ($1, $2) }
-    | SOME expr3                 { ESome $2 }
+    | expr2 expr3                { exp (EApp ($1, $2)) }
+    | SOME expr3                 { exp (ESome $2) }
 ;
 
 expr3:
     | expr4                                        { $1 }
-    | NOT expr3                                    { EOp (Not,[$2]) }
-    | expr3 AND expr4                              { EOp (And, [$1;$3]) }
-    | expr3 OR expr4                               { EOp (Or, [$1;$3]) }
-    | expr3 PLUS expr4                             { EOp (UAdd, [$1;$3]) }
-    | expr3 SUB expr4                              { EOp (USub, [$1;$3]) }
-    | expr4 EQ expr4                               { EOp (UEq, [$1;$3]) }
-    | expr4 LESS expr4                             { EOp (ULess, [$1;$3]) }
-    | expr4 GREATER expr4                          { EOp (ULess, [$3;$1]) }
-    | expr4 LEQ expr4                              { EOp (ULeq, [$1;$3]) }
-    | expr4 GEQ expr4                              { EOp (ULeq, [$3;$1]) }
-    | expr3 LBRACKET expr RBRACKET                 { EOp (MGet, [$1;$3]) }
-    | expr3 LBRACKET expr EQ expr RBRACKET         { EOp (MSet, [$1;$3;$5]) }
-    | expr3 DOT NUM                                { EProj (UInt32.to_int $3, $1) }
+    | NOT expr3                                    { exp (EOp (Not,[$2])) }
+    | expr3 AND expr4                              { exp (EOp (And, [$1;$3])) }
+    | expr3 OR expr4                               { exp (EOp (Or, [$1;$3])) }
+    | expr3 PLUS expr4                             { exp (EOp (UAdd, [$1;$3])) }
+    | expr3 SUB expr4                              { exp (EOp (USub, [$1;$3])) }
+    | expr4 EQ expr4                               { exp (EOp (UEq, [$1;$3])) }
+    | expr4 LESS expr4                             { exp (EOp (ULess, [$1;$3])) }
+    | expr4 GREATER expr4                          { exp (EOp (ULess, [$3;$1])) }
+    | expr4 LEQ expr4                              { exp (EOp (ULeq, [$1;$3])) }
+    | expr4 GEQ expr4                              { exp (EOp (ULeq, [$3;$1])) }
+    | expr3 LBRACKET expr RBRACKET                 { exp (EOp (MGet, [$1;$3])) }
+    | expr3 LBRACKET expr EQ expr RBRACKET         { exp (EOp (MSet, [$1;$3;$5])) }
+    | expr3 DOT NUM                                { exp (EProj (UInt32.to_int $3, $1)) }
 ;
 
 expr4:
-    | ID                       { EVar $1 }
-    | NUM                      { EVal (VUInt32 $1) }
-    | TRUE                     { EVal (VBool true) }
-    | FALSE                    { EVal (VBool false) }
-    | NONE                     { EVal (VOption (None,None)) }
+    | ID                       { exp (EVar $1) }
+    | NUM                      { e_val (VUInt32 $1) }
+    | TRUE                     { e_val (VBool true) }
+    | FALSE                    { e_val (VBool false) }
+    | NONE                     { e_val (VOption (None,None)) }
     | LPAREN exprs RPAREN      { tuple_it $2 }
-    | LPAREN expr COLON ty RPAREN { ETy ($2, $4) }
+    | LPAREN expr COLON ty RPAREN { exp (ETy ($2, $4)) }
 ;
 	
 exprs:
@@ -207,9 +207,3 @@ branches:
 prog:
     | components EOF           { $1 }
 ;
-
-/*
-prog:
-    | expr {$1 }
-;
-*/

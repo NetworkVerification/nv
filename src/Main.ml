@@ -75,31 +75,3 @@ let main =
           (fun q -> print_string (Unsigned.UInt32.to_string q ^ ";"))
           qs ) ;
     print_endline "** End SRP Solution **" )
-
-(*
-let prog =
-  "let nodes = 2 \
-\
-let edges = {\
- 0=1;\
-}\
-\
-let merge x y =\
-  if x < y then x else y\
-\
-let trans x = x + 1\
-\
-let init = {\
- 0=0;\
-}"
-
-
-let e = "2"
-
-let fn = "examples/simple.nv"
-    
-let main =
-  let ds = Input.read_from_file fn in
-  print_endline (Printing.declarations_to_string ds)
-
-*)

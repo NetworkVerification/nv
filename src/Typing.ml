@@ -11,7 +11,7 @@ let if_debug s = if debug then print_endline s else ()
 
 exception Inference of string
 
-let error s = raise (Inference s)
+let error s = raise (Inference s) 
 
 (* Region-like levels for efficient implementation of type generalization *)
 let current_level = ref 1
@@ -214,18 +214,25 @@ let op_typ op =
 
 let check_empty l s = match l with _ :: _ -> failwith s | [] -> ()
 
-let rec infer_exp env e =
-  match e with
+let texp (e,t)  = {e=e; ety=Some t; espan=None}
+
+let textract e = 
+  match e.ety with 
+  | None -> failwith "impossible"
+  | Some ty -> (e, ty)
+
+let rec infer_exp env (e : exp) : exp =
+  match e.e with
   | EVar x -> (
     match Env.lookup_opt env x with
     | None -> error ("unbound variable " ^ Var.to_string x)
     | Some TAll (tvs, t) ->
         let ty, tys = inst_schema (tvs, t) in
-        (ETyApp (e, tys), ty)
-    | Some t -> (e, t) )
+        texp (ETyApp (e, tys), ty)
+    | Some t -> texp (e.e, t) )
   | EVal v ->
-      let v, t = infer_value env v in
-      (EVal v, t)
+      let v, t = infer_value env v |> textractv in
+      texp (EVal v, t)
   | EOp (o, es) -> (
     match o with
     | MCreate _ | MGet | MSet | MMap | MMerge ->
@@ -234,75 +241,82 @@ let rec infer_exp env e =
         let tvs, argtys, resty = op_typ o in
         check_empty tvs "polymorphic operators not supported yet" ;
         let es, tys = infer_exps env es in
-        unifies argtys tys ; (EOp (o, es), resty) )
+        unifies argtys tys ; texp (EOp (o, es), resty) )
   | EFun {arg= x; argty; resty; body} ->
       let ty_x = fresh_tyvar () in
-      let e, ty_e = infer_exp (Env.update env x ty_x) body in
+      let e, ty_e = infer_exp (Env.update env x ty_x) body |> textract in
       unify_opt argty ty_x ;
       unify_opt resty ty_e ;
-      ( EFun {arg= x; argty= Some ty_x; resty= Some ty_e; body}
+      texp (EFun {arg= x; argty= Some ty_x; resty= Some ty_e; body}
       , TArrow (ty_x, ty_e) )
   | ETyFun (names, body) ->
-      let body, ty = infer_exp env body in
-      (ETyFun (names, body), TAll (names, ty))
+      let body, ty = infer_exp env body |> textract in
+      texp (ETyFun (names, body), TAll (names, ty))
   | EApp (e1, e2) ->
-      let e1, ty_fun = infer_exp env e1 in
-      let e2, ty_arg = infer_exp env e2 in
+      let e1, ty_fun = infer_exp env e1 |> textract in
+      let e2, ty_arg = infer_exp env e2 |> textract in
       let ty_res = fresh_tyvar () in
       unify ty_fun (TArrow (ty_arg, ty_res)) ;
-      (EApp (e1, e2), ty_res)
+      texp (EApp (e1, e2), ty_res)
   | ETyApp (e, tys) ->
       failwith "explicit type application unimplemented in type inference"
   | EIf (e1, e2, e3) ->
-      let e1, tcond = infer_exp env e1 in
-      let e2, ty2 = infer_exp env e2 in
-      let e3, ty3 = infer_exp env e2 in
-      unify TBool tcond ; unify ty2 ty3 ; (EIf (e1, e2, e3), ty2)
+      let e1, tcond = infer_exp env e1 |> textract in
+      let e2, ty2 = infer_exp env e2 |> textract in
+      let e3, ty3 = infer_exp env e2 |> textract in
+      unify TBool tcond ; unify ty2 ty3 ; texp (EIf (e1, e2, e3), ty2)
   | ELet (x, e1, e2) -> (
       (* TO DO? Could traverse the term e1 again replacing TVars with QVars of the same name.
            Did not do this for now. *)
       enter_level () ;
-      let e1, ty_e1 = infer_exp env e1 in
+      let e1, ty_e1 = infer_exp env e1 |> textract in
       leave_level () ;
       match generalize ty_e1 with
       | [], ty ->
-          let e2, ty_e2 = infer_exp (Env.update env x ty) e2 in
-          (ELet (x, e1, e2), ty_e2)
+          let e2, ty_e2 = infer_exp (Env.update env x ty) e2 |> textract in
+          texp (ELet (x, e1, e2), ty_e2)
       | tvs, ty ->
-          let e2, ty_e2 = infer_exp (Env.update env x (TAll (tvs, ty))) e2 in
-          (ELet (x, ETyFun (tvs, e1), e2), ty_e2)
+          let e2, ty_e2 = infer_exp (Env.update env x (TAll (tvs, ty))) e2 |> textract in
+          texp (ELet (x, ETyFun (tvs, e1) |> exp, e2), ty_e2)
       (* NOTE:  Changes order of evaluation if e is not a value;
 						        If we have effects, value restriction needed. *)
       )
   | ETuple es ->
       let es, tys = infer_exps env es in
-      (ETuple es, TTuple tys)
+      texp (ETuple es, TTuple tys)
   | EProj (i, e) ->
-      let e, t = infer_exp env e in
-      (EProj (i, e), t)
+      let e, t = infer_exp env e |> textract in
+      texp (EProj (i, e), t)
   | ESome e ->
-      let e, t = infer_exp env e in
-      (ESome e, TOption t)
+      let e, t = infer_exp env e |> textract in
+      texp (ESome e, TOption t)
   | EMatch (e, branches) ->
-      let e, tmatch = infer_exp env e in
+      let e, tmatch = infer_exp env e |> textract in
       let branches, t = infer_branches env tmatch branches in
-      (EMatch (e, branches), t)
+      texp (EMatch (e, branches), t)
   | ETy (e, t) ->
-      let e, t1 = infer_exp env e in
-      unify t t1 ; (ETy (e, t1), t1)
+      let e, t1 = infer_exp env e |> textract in
+      unify t t1 ; texp (ETy (e, t1), t1)
 
 and infer_exps env es =
   match es with
   | [] -> ([], [])
   | e :: es ->
-      let e, ty = infer_exp env e in
+      let e, ty = infer_exp env e |> textract in
       let es, tys = infer_exps env es in
       (e :: es, ty :: tys)
 
-and infer_value env v =
-  match v with
-  | VBool b -> (v, TBool)
-  | VUInt32 i -> (v, tint)
+and tvalue (v,t)  = {v=v; vty=Some t; vspan=None}
+
+and textractv v = 
+    match v.vty with 
+    | None -> failwith "impossible"
+    | Some ty -> (v, ty)
+
+and infer_value env (v : Syntax.value) : Syntax.value =
+  match v.v with
+  | VBool b -> tvalue (v.v, TBool)
+  | VUInt32 i -> tvalue (v.v, tint)
   | VMap (m, tyopt) ->
       failwith "unimplemented"
       (* To DO *)
@@ -319,22 +333,23 @@ and infer_value env v =
       (VMap (m, Some tv), t) *)
   | VTuple vs ->
       let vs, ts = infer_values env vs in
-      (VTuple vs, TTuple ts)
+      tvalue (VTuple vs, TTuple ts)
   | VOption (None, topt) ->
       let tv = fresh_tyvar () in
-      unify_opt topt tv ; (VOption (None, Some tv), TOption tv)
+      unify_opt topt tv ; tvalue (VOption (None, Some tv), TOption tv)
   | VOption (Some v, topt) ->
-      let v, t = infer_value env v in
+      let v, t = infer_value env v |> textractv in
       let tv = fresh_tyvar () in
-      unify_opt topt tv ; unify t tv ; (VOption (Some v, Some tv), TOption tv)
+      unify_opt topt tv ; unify t tv ; tvalue (VOption (Some v, Some tv), TOption tv)
   | VClosure cl ->
       failwith "unimplemented: closure type inference because i am lazy"
+  | _ -> failwith "impossible"
 
 and infer_values env vs =
   match vs with
   | [] -> ([], [])
   | v :: vs ->
-      let v, t = infer_value env v in
+      let v, t = infer_value env v |> textractv in
       let vs, ts = infer_values env vs in
       (v :: vs, t :: ts)
 
@@ -343,12 +358,12 @@ and infer_branches env tmatch bs =
   | [] -> failwith "empty branches in infer branches"
   | [(p, e)] ->
       let env2 = infer_pattern env tmatch p in
-      let e, t = infer_exp env2 e in
+      let e, t = infer_exp env2 e |> textract in
       ([(p, e)], t)
   | (p, e) :: bs ->
       let bs, tbranch = infer_branches env tmatch bs in
       let env2 = infer_pattern env tmatch p in
-      let e, t = infer_exp env2 e in
+      let e, t = infer_exp env2 e |> textract in
       unify t tbranch ; ((p, e) :: bs, t)
 
 and infer_pattern env tmatch p =

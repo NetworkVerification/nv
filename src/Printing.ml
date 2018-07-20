@@ -12,7 +12,7 @@ let is_keyword_op op =
 let max_prec = 10
 
 let prec_op op =
-  match op with
+  match op with 
   | And -> 7
   | Or -> 7
   | Not -> 6
@@ -29,7 +29,7 @@ let prec_op op =
 
 
 let prec_exp e =
-  match e with
+  match e.e with
   | EVar _ -> 0
   | EVal _ -> 0
   | EOp (op, _) -> prec_op op
@@ -189,7 +189,7 @@ and map_to_string sep_s term_s m =
 
 
 and value_to_string_p prec v =
-  match v with
+  match v.v with
   | VBool true -> "true"
   | VBool false -> "false"
   | VUInt32 i -> UInt32.to_string i
@@ -211,7 +211,7 @@ and value_to_string_p prec v =
 and exp_to_string_p prec e =
   let p = prec_exp e in
   let s =
-    match e with
+    match e.e with
     | EVar x -> Var.to_string x
     | EVal v -> value_to_string_p prec v
     | EOp (op, es) -> op_args_to_string prec p op es

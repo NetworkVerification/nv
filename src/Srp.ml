@@ -4,7 +4,7 @@ open Syntax
 type srp = {graph: Graph.t; trans: Syntax.closure; merge: Syntax.closure}
 
 (******************)
-(* SRP Simulation *)
+(* SRP Simulation *) 
 (******************)
 
 exception Simulation_error of string
@@ -26,7 +26,7 @@ let create_state n cl =
       let next_q = next_n :: q in
       let next_m =
         Graph.VertexMap.add next_n
-          (Interp.interp_closure cl [VUInt32 next_n])
+          (Interp.interp_closure cl [VUInt32 next_n |> value])
           m
       in
       loop next_n next_q next_m
@@ -64,14 +64,14 @@ let declarations_to_state ds =
         info.env <- Interp.update_value env x v
     | DMerge e ->
         let get_merge () =
-          match Interp.interp_env info.env e with
+          match (Interp.interp_env info.env e).v with
           | VClosure cl -> info.m <- Some cl
           | _ -> error "merge was not evaluated to a closure"
         in
         if_none info.m get_merge "multiple merge functions"
     | DTrans e ->
         let get_trans () =
-          match Interp.interp_env info.env e with
+          match (Interp.interp_env info.env e).v with
           | VClosure cl -> info.t <- Some cl
           | _ -> error "trans was not evaluated to a closure"
         in
@@ -86,7 +86,7 @@ let declarations_to_state ds =
           "multiple edges declarations"
     | DInit e ->
         let get_initializer () =
-          match Interp.interp_env info.env e with
+          match (Interp.interp_env info.env e).v with
           | VClosure cl -> info.init <- Some cl
           | _ -> error "init was not evaluated to a closure"
         in
@@ -130,9 +130,9 @@ let get_attribute v s =
 
 let simulate_step {graph= g; trans; merge} s x =
   let do_neighbor initial_attribute (s, todo) n =
-    let neighbor = VUInt32 n in
-    let origin = VUInt32 x in
-    let edge = VTuple [origin; neighbor] in
+    let neighbor = value (VUInt32 n) in
+    let origin = value (VUInt32 x) in
+    let edge = value (VTuple [origin; neighbor]) in
     let n_incoming_attribute =
       Interp.interp_closure trans [edge; initial_attribute]
     in
