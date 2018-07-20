@@ -70,7 +70,7 @@ type v =
   | VClosure of closure
   | VTyClosure of tyclosure
 
-and value = {v: v; vty: ty option; vspan: Span.t option}
+and value = {v: v; vty: ty option; vspan: Span.t}
 
 and e =
   | EVar of var
@@ -88,7 +88,7 @@ and e =
   | EMatch of exp * branches
   | ETy of exp * ty
 
-and exp = {e: e; ety: ty option; espan: Span.t option}
+and exp = {e: e; ety: ty option; espan: Span.t}
 
 and branches = (pattern * exp) list
 
@@ -138,9 +138,9 @@ let ( ~> ) ty ty = TArrow (ty, ty)
 
 let tint = TInt (UInt32.of_int 32)
 
-let exp (e : e) : exp = {e=e; ety=None; espan=None}
+let exp (e : e) : exp = {e=e; ety=None; espan=Span.default}
 
-let value (v : v) : value = {v=v; vty=None; vspan=None}
+let value (v : v) : value = {v=v; vty=None; vspan=Span.default}
 
 let e_val (x: v) : exp = exp (EVal (value x))
 

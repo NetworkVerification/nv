@@ -228,7 +228,7 @@ let op_typ op =
 
 let check_empty l s = match l with _ :: _ -> failwith s | [] -> ()
 
-let texp (e,t)  = {e=e; ety=Some t; espan=None}
+let texp (e,t)  = {e=e; ety=Some t; espan=Span.default}
 
 let textract e = 
   match e.ety with 
@@ -320,7 +320,7 @@ and infer_exps env es =
       let es, tys = infer_exps env es in
       (e :: es, ty :: tys)
 
-and tvalue (v,t)  = {v=v; vty=Some t; vspan=None}
+and tvalue (v,t)  = {v=v; vty=Some t; vspan=Span.default}
 
 and textractv v = 
     match v.vty with 
@@ -374,7 +374,7 @@ and infer_branches env tmatch bs =
       let env2 = infer_pattern env tmatch p in
       let e, t = infer_exp env2 e |> textract in
       ([(p, e)], t)
-  | (p, e) :: bs ->
+  | (p, e) :: bs -> 
       let bs, tbranch = infer_branches env tmatch bs in
       let env2 = infer_pattern env tmatch p in
       let e, t = infer_exp env2 e |> textract in

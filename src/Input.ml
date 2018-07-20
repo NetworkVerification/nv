@@ -31,3 +31,4 @@ let read_from_file fname =
   let cin = open_in fname in
   let res = read (Lexing.from_channel cin) in
   close_in cin ; res
+
