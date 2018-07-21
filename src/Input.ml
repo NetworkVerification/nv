@@ -1,3 +1,24 @@
+
+type info = 
+  {input: string array;
+   linenums: (int*int) array}
+
+let get_position_opt idx info = 
+  let position = ref None in
+  Array.iteri (fun i (s,e) -> 
+    (if idx >= s && idx <= e then 
+      position := Some (i, idx - s));
+  ) info.linenums;
+  !position
+
+let get_position idx info = 
+  match get_position_opt idx info with 
+  | None -> failwith "invalid index for get_position"
+  | Some x -> x
+
+let get_line idx info =
+  info.input.(idx)
+
 let read lexbuf =
   let get_info () =
     let curr = lexbuf.Lexing.lex_curr_p in
@@ -19,11 +40,9 @@ let read lexbuf =
       Printf.printf "[Parse Error] end of file in comment\n" ;
       exit 0
 
-
 let read_from_in cin =
   let res = read (Lexing.from_channel cin) in
   close_in cin ; res
-
 
 let read_from_str str = Lexing.from_string str |> read
 
@@ -31,3 +50,28 @@ let read_from_file fname =
   let cin = open_in fname in
   let res = read (Lexing.from_channel cin) in
   close_in cin ; res
+
+
+let read_file fname = 
+  let lines = ref [] in
+  let indices = ref [] in
+  let index = ref 0 in
+  let chan = open_in fname in
+  try
+    while true; do
+      let line = input_line chan in
+      let len = (String.length line) in 
+      let new_len = !index + len + 1 in 
+      indices := (!index, new_len) :: !indices;
+      index := new_len;
+      lines := line :: !lines
+    done; 
+    {input=Array.of_list (!lines); linenums=Array.of_list !indices}
+  with End_of_file ->
+    close_in chan;
+    {input=Array.of_list (List.rev !lines); linenums= Array.of_list (List.rev !indices)}
+
+let parse fname =
+  let t = read_file fname in  
+  let ds = read_from_file fname in 
+  (ds, t)

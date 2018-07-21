@@ -1,1 +1,1 @@
-true: package(ounit), package(integers), package(z3)
+true: package(ounit), package(integers), package(z3), package(ANSITerminal)
