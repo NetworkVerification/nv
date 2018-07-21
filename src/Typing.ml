@@ -16,8 +16,8 @@ let error s = raise (Inference s)
 let oget (x: 'a option) : 'a =
   match x with None -> failwith "oget" | Some y -> y
 
-let val_to_exp (v : value) : exp = 
-  {e=EVal v; ety=v.vty; espan=v.vspan}
+
+let val_to_exp (v: value) : exp = {e= EVal v; ety= v.vty; espan= v.vspan}
 
 let node_ty = tint
 
@@ -109,20 +109,23 @@ let rec unify info e t1 t2 =
     | TAll _, _ -> error "impredicative polymorphism in unification (1)"
     | _, TAll _ -> error "impredicative polymorphism in unification (2)"
     | _, _ ->
-        let msg = Printf.sprintf "unable to unify types: %s and %s" (ty_to_string t1)
-        (ty_to_string t2) in
+        let msg =
+          Printf.sprintf "unable to unify types: %s and %s" (ty_to_string t1)
+            (ty_to_string t2)
+        in
         Console.error info e.espan msg
-        
 
 
-and unifies info (e:exp) ts1 ts2 =
+and unifies info (e: exp) ts1 ts2 =
   match (ts1, ts2) with
   | [], [] -> ()
   | t1 :: ts1, t2 :: ts2 -> unify info e t1 t2 ; unifies info e ts1 ts2
   | _, _ -> error "wrong number of components in unification"
 
 
-let unify_opt info (e:exp) topt1 t2 = match topt1 with Some t1 -> unify info e t1 t2 | None -> ()
+let unify_opt info (e: exp) topt1 t2 =
+  match topt1 with Some t1 -> unify info e t1 t2 | None -> ()
+
 
 let generalize ty =
   let rec gen ty =
@@ -293,7 +296,9 @@ let rec infer_exp info env (e: exp) : exp =
       leave_level () ;
       match generalize ty_e1 with
       | [], ty ->
-          let e2, ty_e2 = infer_exp info (Env.update env x ty) e2 |> textract in
+          let e2, ty_e2 =
+            infer_exp info (Env.update env x ty) e2 |> textract
+          in
           texp (ELet (x, e1, e2), ty_e2)
       | tvs, ty ->
           let e2, ty_e2 =
@@ -400,7 +405,8 @@ and infer_pattern info env e tmatch p =
   | PTuple ps ->
       let ts = List.map (fun p -> fresh_tyvar ()) ps in
       let ty = TTuple ts in
-      unify info e tmatch ty ; infer_patterns info env e ts ps
+      unify info e tmatch ty ;
+      infer_patterns info env e ts ps
   | POption x ->
       let t = fresh_tyvar () in
       unify info e tmatch (TOption t) ;
