@@ -1,20 +1,4 @@
-type info = {input: string array; linenums: (int * int) array}
-
-let get_position_opt idx info =
-  let position = ref None in
-  Array.iteri
-    (fun i (s, e) -> if idx >= s && idx <= e then position := Some (i, idx - s))
-    info.linenums ;
-  !position
-
-
-let get_position idx info =
-  match get_position_opt idx info with
-  | None -> failwith "invalid index for get_position"
-  | Some x -> x
-
-
-let get_line idx info = (info.input).(idx)
+open Console
 
 let read lexbuf =
   let get_info () =
@@ -51,7 +35,7 @@ let read_from_file fname =
   close_in cin ; res
 
 
-let read_file fname =
+let read_file fname : Console.info =
   let lines = ref [] in
   let indices = ref [] in
   let index = ref 0 in

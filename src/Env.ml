@@ -1,9 +1,5 @@
 module M = Map.Make (Var)
 
-exception EError of string
-
-let error s = raise (EError s)
-
 type 'a t = 'a M.t
 
 let empty = M.empty

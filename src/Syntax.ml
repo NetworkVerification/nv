@@ -144,10 +144,6 @@ let value (v: v) : value = {v; vty= None; vspan= Span.default}
 
 let e_val (x: v) : exp = exp (EVal (value x))
 
-exception Syntax of string
-
-let error s = raise (Syntax s)
-
 let func x body = {arg= x; argty= None; resty= None; body}
 
 let ty_func tyargs body = (tyargs, body)
@@ -156,14 +152,14 @@ let lam x body = exp (EFun (func x body))
 
 let rec lams params body =
   match params with
-  | [] -> error "lams: no parameters"
+  | [] -> Console.error "lams: no parameters"
   | [p] -> lam p body
   | p :: params -> lam p (lams params body)
 
 
 let rec apps f args : exp =
   match args with
-  | [] -> error "apps: no arguments"
+  | [] -> Console.error "apps: no arguments"
   | [a] -> exp (EApp (f, a))
   | a :: args -> apps (exp (EApp (f, a))) args
 

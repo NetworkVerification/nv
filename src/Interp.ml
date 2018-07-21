@@ -7,11 +7,6 @@ open Printing
 open Printf
 
 (* Interpreter Errors *)
-
-exception IError of string
-
-let error s = raise (IError s)
-
 (* Interpreter Environments *)
 
 let empty_env = {ty= Env.empty; value= Env.empty}
@@ -27,7 +22,7 @@ let update_tys env tvs tys =
     match (tvs, tys) with
     | [], [] -> tenv
     | tv :: tvs, ty :: tys -> loop (Env.update tenv tv ty) tvs tys
-    | _, _ -> error "wrong arity in type application"
+    | _, _ -> Console.error "wrong arity in type application"
   in
   {env with ty= loop env.ty tvs tys}
 
@@ -109,45 +104,46 @@ let rec interp_exp env e =
       let v2 = interp_exp env e2 in
       match v1.v with
       | VClosure (c_env, f) -> interp_exp (update_value c_env f.arg v2) f.body
-      | _ -> error "bad functional application" )
+      | _ -> Console.error "bad functional application" )
   | ETyApp (e1, tys) -> (
       let v1 = interp_exp env e1 in
       match v1.v with
       | VTyClosure (c_env, (tvs, body)) ->
           interp_exp (update_tys c_env tvs tys) body
-      | _ -> error "bad functional application" )
+      | _ -> Console.error "bad functional application" )
   | EIf (e1, e2, e3) -> (
     match (interp_exp env e1).v with
     | VBool true -> interp_exp env e2
     | VBool false -> interp_exp env e3
-    | _ -> error "bad if condition" )
+    | _ -> Console.error "bad if condition" )
   | ELet (x, e1, e2) ->
       let v1 = interp_exp env e1 in
       interp_exp (update_value env x v1) e2
   | ETuple es -> value (VTuple (List.map (interp_exp env) es))
   | EProj (i, e) -> (
-      if i < 0 then error (sprintf "negative projection from tuple: %d " i) ;
+      if i < 0 then
+        Console.error (sprintf "negative projection from tuple: %d " i) ;
       match (interp_exp env e).v with
       | VTuple vs ->
           if i >= List.length vs then
-            error
+            Console.error
               (sprintf "projection out of range: %d > %d" i (List.length vs)) ;
           List.nth vs i
-      | _ -> error "bad projection" )
+      | _ -> Console.error "bad projection" )
   | ESome e -> value (VOption (Some (interp_exp env e), None))
   | EMatch (e1, branches) ->
       let v = interp_exp env e1 in
       match match_branches branches v with
       | Some (env2, e) -> interp_exp (update_values env env2) e
       | None ->
-          error
+          Console.error
             ( "value " ^ value_to_string v
             ^ " did not match any pattern in match statement" )
 
 
 and interp_op env op es =
   if arity op != List.length es then
-    error
+    Console.error
       (sprintf "operation %s has arity %d not arity %d" (op_to_string op)
          (arity op) (List.length es)) ;
   let vs = List.map (interp_exp env) es in
@@ -164,7 +160,7 @@ and interp_op env op es =
   | MCreate t, [{v= VUInt32 i}; v] -> VMap (IMap.create i v, t) |> value
   | MGet, [{v= VMap (m, t)}; {v= VUInt32 i}] -> (
     try IMap.find m i with IMap.Out_of_bounds i ->
-      error ("bad get: " ^ UInt32.to_string i) )
+      Console.error ("bad get: " ^ UInt32.to_string i) )
   | MSet, [{v= VMap (m, t)}; {v= VUInt32 i}; v] ->
       VMap (IMap.update m i v, t) |> value
   | MMap, [{v= VClosure (c_env, f)}; {v= VMap (m, t)}] ->
@@ -180,10 +176,11 @@ and interp_op env op es =
         in
         match v.v with
         | VOption (vopt, _) -> vopt
-        | _ -> error "bad merge application; did not return option value"
+        | _ ->
+            Console.error "bad merge application; did not return option value"
       in
       VMap (IMap.merge f_lifted m1 m2, t1) |> value
-  | _, _ -> error "bad operator application"
+  | _, _ -> Console.error "bad operator application"
 
 
 and apply env f v = interp_exp (update_value env f.arg v) f.body

@@ -9,10 +9,6 @@ let debug = true
 
 let if_debug s = if debug then print_endline s else ()
 
-exception Inference of string
-
-let error s = raise (Inference s)
-
 let oget (x: 'a option) : 'a =
   match x with None -> failwith "oget" | Some y -> y
 
@@ -78,10 +74,10 @@ let occurs tvr ty =
     | TTuple ts -> List.iter (occ tvr) ts
     | TOption t -> occ tvr t
     | TMap (_, t) -> occ tvr t
-    | TAll _ -> error "impredicative polymorphism in occurs check"
+    | TAll _ -> Console.error "impredicative polymorphism in occurs check"
   in
   try occ tvr ty with Occurs ->
-    error
+    Console.error
       (Printf.sprintf "%s occurs in %s\n"
          (tyvar_to_string !tvr)
          (ty_to_string ty))
@@ -106,21 +102,23 @@ let rec unify info e t1 t2 =
     | TTuple ts1, TTuple ts2 -> unifies info e ts1 ts2
     | TOption t1, TOption t2 -> unify info e t1 t2
     | TMap (i1, t1), TMap (i2, t2) when i1 = i2 -> unify info e t1 t2
-    | TAll _, _ -> error "impredicative polymorphism in unification (1)"
-    | _, TAll _ -> error "impredicative polymorphism in unification (2)"
+    | TAll _, _ ->
+        Console.error "impredicative polymorphism in unification (1)"
+    | _, TAll _ ->
+        Console.error "impredicative polymorphism in unification (2)"
     | _, _ ->
         let msg =
           Printf.sprintf "unable to unify types: %s and %s" (ty_to_string t1)
             (ty_to_string t2)
         in
-        Console.error info e.espan msg
+        Console.error_position info e.espan msg
 
 
 and unifies info (e: exp) ts1 ts2 =
   match (ts1, ts2) with
   | [], [] -> ()
   | t1 :: ts1, t2 :: ts2 -> unify info e t1 t2 ; unifies info e ts1 ts2
-  | _, _ -> error "wrong number of components in unification"
+  | _, _ -> Console.error "wrong number of components in unification"
 
 
 let unify_opt info (e: exp) topt1 t2 =
@@ -151,7 +149,7 @@ let generalize ty =
     | TMap (i, t) ->
         let tvs, ty = gen t in
         (tvs, TMap (i, ty))
-    | TAll _ -> error "impredicative polymorphism in generalization"
+    | TAll _ -> Console.error "impredicative polymorphism in generalization"
   and gens tys =
     match tys with
     | [] -> (Env.empty, [])
@@ -190,7 +188,7 @@ let inst subst ty =
     | TMap (i, t) ->
         let t = loop subst t in
         TMap (i, t)
-    | TAll _ -> error "impredicative polymorphism in instantiation"
+    | TAll _ -> Console.error "impredicative polymorphism in instantiation"
   and loops subst tys =
     match tys with
     | [] -> []
@@ -244,7 +242,7 @@ let rec infer_exp info env (e: exp) : exp =
   match e.e with
   | EVar x -> (
     match Env.lookup_opt env x with
-    | None -> error ("unbound variable " ^ Var.to_string x)
+    | None -> Console.error ("unbound variable " ^ Var.to_string x)
     | Some TAll (tvs, t) ->
         let ty, tys = inst_schema (tvs, t) in
         texp (ETyApp (e, tys), ty)
@@ -419,11 +417,11 @@ and infer_patterns info env e ts ps =
       valid_pat p ;
       let env = infer_pattern info env e t p in
       infer_patterns info env e ts ps
-  | _, _ -> error "bad arity in pattern match"
+  | _, _ -> Console.error "bad arity in pattern match"
 
 and infer_declarations info (ds: declarations) : declarations =
   match get_attr_type ds with
-  | None -> error "attribute type not declared: type attribute = ..."
+  | None -> Console.error "attribute type not declared: type attribute = ..."
   | Some ty -> infer_declarations_aux info Env.empty ty ds
 
 and infer_declarations_aux info env aty (ds: declarations) : declarations =
@@ -465,7 +463,8 @@ and valid_pattern env p =
     match Env.lookup_opt env x with
     | None -> Env.update env x ()
     | Some _ ->
-        error ("variable " ^ Var.to_string x ^ " appears twice in pattern") )
+        Console.error
+          ("variable " ^ Var.to_string x ^ " appears twice in pattern") )
   | PBool _ | PUInt32 _ -> env
   | PTuple ps -> valid_patterns env ps
   | POption None -> env

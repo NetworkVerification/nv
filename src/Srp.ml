@@ -9,8 +9,6 @@ type srp = {graph: Graph.t; trans: Syntax.closure; merge: Syntax.closure}
 
 exception Simulation_error of string
 
-let error s = raise (Simulation_error s)
-
 (* Simulation States *)
 (* Solution Invariant: All valid graph vertices are associated with an attribute initially (and always) *)
 type solution = value Graph.VertexMap.t
@@ -54,7 +52,7 @@ let declarations_to_state ds =
     {env= Interp.empty_env; m= None; t= None; ns= None; es= None; init= None}
   in
   let if_none opt f msg =
-    match opt with None -> f () | Some f -> error msg
+    match opt with None -> f () | Some f -> Console.error msg
   in
   let process_declaration d =
     match d with
@@ -66,14 +64,14 @@ let declarations_to_state ds =
         let get_merge () =
           match (Interp.interp_env info.env e).v with
           | VClosure cl -> info.m <- Some cl
-          | _ -> error "merge was not evaluated to a closure"
+          | _ -> Console.error "merge was not evaluated to a closure"
         in
         if_none info.m get_merge "multiple merge functions"
     | DTrans e ->
         let get_trans () =
           match (Interp.interp_env info.env e).v with
           | VClosure cl -> info.t <- Some cl
-          | _ -> error "trans was not evaluated to a closure"
+          | _ -> Console.error "trans was not evaluated to a closure"
         in
         if_none info.t get_trans "multiple trans functions"
     | DNodes n ->
@@ -88,7 +86,7 @@ let declarations_to_state ds =
         let get_initializer () =
           match (Interp.interp_env info.env e).v with
           | VClosure cl -> info.init <- Some cl
-          | _ -> error "init was not evaluated to a closure"
+          | _ -> Console.error "init was not evaluated to a closure"
         in
         if_none info.init get_initializer
           "multiple initialization declarations"
@@ -103,15 +101,15 @@ let declarations_to_state ds =
       let state = create_state n cl in
       (srp, state)
   | {env= _; m= None; t= _; ns= _; es= _; init= _} ->
-      error "missing merge function"
+      Console.error "missing merge function"
   | {env= _; m= _; t= None; ns= _; es= _; init= _} ->
-      error "missing trans function"
+      Console.error "missing trans function"
   | {env= _; m= _; t= _; ns= None; es= _; init= _} ->
-      error "missing nodes declaration"
+      Console.error "missing nodes declaration"
   | {env= _; m= _; t= _; ns= _; es= None; init= _} ->
-      error "missing edges declaration"
+      Console.error "missing edges declaration"
   | {env= _; m= _; t= _; ns= _; es= _; init= None} ->
-      error "missing init declaration"
+      Console.error "missing init declaration"
 
 
 let solution_to_string s =
@@ -125,7 +123,7 @@ let get_attribute v s =
     try Some (Graph.VertexMap.find v m) with Not_found -> None
   in
   match find_opt v s with
-  | None -> error ("no attribute at vertex " ^ UInt32.to_string v)
+  | None -> Console.error ("no attribute at vertex " ^ UInt32.to_string v)
   | Some a -> a
 
 
