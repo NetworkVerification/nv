@@ -4,7 +4,7 @@ open Syntax
 type srp = {graph: Graph.t; trans: Syntax.closure; merge: Syntax.closure}
 
 (******************)
-(* SRP Simulation *) 
+(* SRP Simulation *)
 (******************)
 
 exception Simulation_error of string
@@ -81,7 +81,7 @@ let declarations_to_state ds =
           (fun () -> info.ns <- Some n)
           "multiple nodes declarations"
     | DEdges es ->
-        if_none info.es 
+        if_none info.es
           (fun () -> info.es <- Some es)
           "multiple edges declarations"
     | DInit e ->

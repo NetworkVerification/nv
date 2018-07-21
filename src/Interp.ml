@@ -61,7 +61,7 @@ and equal_vals vs1 vs2 =
 
 (* Expression and operator interpreters *)
 (* matches p b is Some env if v matches p and None otherwise; assumes no repeated variables in pattern *)
-let rec matches p (v : Syntax.value) : Syntax.value Env.t option =
+let rec matches p (v: Syntax.value) : Syntax.value Env.t option =
   match (p, v.v) with
   | PWild, v -> Some Env.empty
   | PVar x, _ -> Some (Env.bind x v)
@@ -152,25 +152,32 @@ and interp_op env op es =
          (arity op) (List.length es)) ;
   let vs = List.map (interp_exp env) es in
   match (op, vs) with
-  | And, [({v=VBool b1}); ({v=VBool b2})] -> VBool (b1 && b2) |> value
-  | Or, [({v=VBool b1}); ({v=VBool b2})] -> VBool (b1 || b2) |> value
-  | Not, [({v=VBool b1})] -> VBool (not b1) |> value
-  | UAdd, [({v=VUInt32 i1}); ({v=VUInt32 i2})] -> VUInt32 (UInt32.add i1 i2) |> value
-  | UEq, [({v=VUInt32 i1}); ({v=VUInt32 i2})] ->
+  | And, [{v= VBool b1}; {v= VBool b2}] -> VBool (b1 && b2) |> value
+  | Or, [{v= VBool b1}; {v= VBool b2}] -> VBool (b1 || b2) |> value
+  | Not, [{v= VBool b1}] -> VBool (not b1) |> value
+  | UAdd, [{v= VUInt32 i1}; {v= VUInt32 i2}] ->
+      VUInt32 (UInt32.add i1 i2) |> value
+  | UEq, [{v= VUInt32 i1}; {v= VUInt32 i2}] ->
       (if UInt32.compare i1 i2 = 0 then VBool true else VBool false) |> value
-  | ULess, [({v=VUInt32 i1}); ({v=VUInt32 i2})] ->
+  | ULess, [{v= VUInt32 i1}; {v= VUInt32 i2}] ->
       (if UInt32.compare i1 i2 = -1 then VBool true else VBool false) |> value
-  | MCreate t, [({v=VUInt32 i}); v] -> VMap (IMap.create i v, t) |> value
-  | MGet, [({v=VMap (m, t)}); ({v=VUInt32 i})] -> (
+  | MCreate t, [{v= VUInt32 i}; v] -> VMap (IMap.create i v, t) |> value
+  | MGet, [{v= VMap (m, t)}; {v= VUInt32 i}] -> (
     try IMap.find m i with IMap.Out_of_bounds i ->
       error ("bad get: " ^ UInt32.to_string i) )
-  | MSet, [({v=VMap (m, t)}); ({v=VUInt32 i}); v] -> VMap (IMap.update m i v, t) |> value
-  | MMap, [({v=VClosure (c_env, f)}); ({v=VMap (m, t)})] ->
+  | MSet, [{v= VMap (m, t)}; {v= VUInt32 i}; v] ->
+      VMap (IMap.update m i v, t) |> value
+  | MMap, [{v= VClosure (c_env, f)}; {v= VMap (m, t)}] ->
       VMap (IMap.map (fun v -> apply c_env f v) m, t) |> value
-  | MMerge, [({v=VClosure (c_env, f)}); ({v=VMap (m1, t1)}); ({v=VMap (m2, t2)})] ->
+  | MMerge, [{v= VClosure (c_env, f)}; {v= VMap (m1, t1)}; {v= VMap (m2, t2)}] ->
       (* TO DO:  Need to preserve types in VOptions here ? *)
       let f_lifted v1opt v2opt =
-        let v = apply c_env f (VTuple [VOption (v1opt, None) |> value; VOption (v2opt, None) |> value] |> value) in 
+        let v =
+          apply c_env f
+            ( VTuple
+                [VOption (v1opt, None) |> value; VOption (v2opt, None) |> value]
+            |> value )
+        in
         match v.v with
         | VOption (vopt, _) -> vopt
         | _ -> error "bad merge application; did not return option value"
@@ -185,4 +192,5 @@ let interp e = interp_exp empty_env e
 
 let interp_env env e = interp_exp env e
 
-let interp_closure cl (args : value list) = interp (Syntax.apply_closure cl args)
+let interp_closure cl (args: value list) =
+  interp (Syntax.apply_closure cl args)

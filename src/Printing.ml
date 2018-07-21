@@ -12,7 +12,7 @@ let is_keyword_op op =
 let max_prec = 10
 
 let prec_op op =
-  match op with 
+  match op with
   | And -> 7
   | Or -> 7
   | Not -> 6

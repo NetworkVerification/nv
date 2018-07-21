@@ -138,9 +138,9 @@ let ( ~> ) ty ty = TArrow (ty, ty)
 
 let tint = TInt (UInt32.of_int 32)
 
-let exp (e : e) : exp = {e=e; ety=None; espan=Span.default}
+let exp (e: e) : exp = {e; ety= None; espan= Span.default}
 
-let value (v : v) : value = {v=v; vty=None; vspan=Span.default}
+let value (v: v) : value = {v; vty= None; vspan= Span.default}
 
 let e_val (x: v) : exp = exp (EVal (value x))
 
@@ -168,17 +168,14 @@ let rec apps f args : exp =
   | a :: args -> apps (exp (EApp (f, a))) args
 
 
-let apply_closure cl (args : value list) =
+let apply_closure cl (args: value list) =
   apps (e_val (VClosure cl)) (List.map (fun a -> exp (EVal a)) args)
 
-let get_attr_type ds = 
-  try 
-  let daty = List.find (fun d -> 
-    match d with
-    | DATy ty -> true
-    | _ -> false
-  ) ds in 
-  match daty with 
-  | DATy ty -> Some ty 
-  | _ -> failwith "impossible"
+
+let get_attr_type ds =
+  try
+    let daty =
+      List.find (fun d -> match d with DATy ty -> true | _ -> false) ds
+    in
+    match daty with DATy ty -> Some ty | _ -> failwith "impossible"
   with _ -> None
