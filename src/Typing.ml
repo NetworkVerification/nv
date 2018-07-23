@@ -292,7 +292,13 @@ let rec infer_exp info env (e: exp) : exp =
       enter_level () ;
       let e1, ty_e1 = infer_exp info env e1 |> textract in
       leave_level () ;
-      match generalize ty_e1 with
+      let ts, ty = generalize ty_e1 in
+      Printf.printf "type: %s\n" (Printing.ty_to_string ty_e1) ;
+      Printf.printf "  generalized type: %s\n" (Printing.ty_to_string ty) ;
+      List.iter
+        (fun t -> Printf.printf "  generalized: %s\n" (Var.to_string t))
+        ts ;
+      match (ts, ty) with
       | [], ty ->
           let e2, ty_e2 =
             infer_exp info (Env.update env x ty) e2 |> textract
@@ -433,9 +439,27 @@ and infer_declarations_aux info env aty (ds: declarations) : declarations =
 
 and infer_declaration info env aty d : ty Env.t * declaration =
   match d with
-  | DLet (var, e) ->
-      let e' = infer_exp info env e in
-      (Env.update env var (oget e'.ety), DLet (var, e'))
+  | DLet (x, _, e1) -> (
+      enter_level () ;
+      let e1, ty_e1 = infer_exp info env e1 |> textract in
+      leave_level () ;
+      (* (Env.update env var (oget e1.ety), DLet (var, e1)) *)
+      let ts, ty = generalize ty_e1 in
+      Printf.printf "type: %s\n" (Printing.ty_to_string ty_e1) ;
+      Printf.printf "  generalized type: %s\n" (Printing.ty_to_string ty) ;
+      List.iter
+        (fun t -> Printf.printf "  generalized: %s\n" (Var.to_string t))
+        ts ;
+      match (ts, ty) with
+      | [], ty ->
+          (Env.update env x ty, DLet (x, Some ty, texp (e1.e, ty)))
+          (* TODO: possible noop rewrapping e1? *)
+      | tvs, ty ->
+          ( Env.update env x ty
+          , DLet (x, None, texp (ETyFun (tvs, e1), TAll (tvs, ty))) )
+      (* NOTE:  Changes order of evaluation if e is not a value;
+						        If we have effects, value restriction needed. *)
+      )
   | DMerge e ->
       let e' = infer_exp info env e in
       let ty = oget e'.ety in

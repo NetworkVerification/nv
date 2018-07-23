@@ -103,7 +103,7 @@ and tyclosure = (env * tyfunc)
 and env = {ty: ty Env.t; value: value Env.t}
 
 type declaration =
-  | DLet of var * exp
+  | DLet of var * ty option * exp
   | DATy of ty
   | DMerge of exp
   | DTrans of exp

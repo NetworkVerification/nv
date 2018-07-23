@@ -42,7 +42,7 @@
     else if Var.name id = init_identifier then
       DInit e
     else
-      DLet (id, make_fun params body span)
+      DLet (id, None, make_fun params body span)
   
 %}
 
