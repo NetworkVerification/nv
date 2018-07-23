@@ -2,3 +2,5 @@ Execute the following to install required packages:
 
 opam install integers
 opam install ounit
+opam install ansiterminal
+opam install z3
