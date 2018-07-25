@@ -132,6 +132,7 @@ let rec interp_exp env e =
       | _ -> Console.error "bad projection" )
   | ESome e -> value (VOption (Some (interp_exp env e), None))
   | EMatch (e1, branches) ->
+    begin
       let v = interp_exp env e1 in
       match match_branches branches v with
       | Some (env2, e) -> interp_exp (update_values env env2) e
@@ -139,7 +140,8 @@ let rec interp_exp env e =
           Console.error
             ( "value " ^ value_to_string v
             ^ " did not match any pattern in match statement" )
-
+    end
+  | ETy (e,t) -> interp_exp env e
 
 and interp_op env op es =
   if arity op != List.length es then
