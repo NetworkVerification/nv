@@ -8,6 +8,7 @@ let is_keyword_op op =
   | And | Or | Not | UAdd | USub | UEq | ULess | ULeq | MGet -> false
   | MCreate _ | MSet | MMap | MMerge -> true
 
+
 (* set to true if you want to print universal quanifiers explicitly *)
 let quantifiers = true
 
@@ -31,7 +32,7 @@ let prec_op op =
 
 
 let prec_exp e =
-  match e.e with 
+  match e.e with
   | EVar _ -> 0
   | EVal _ -> 0
   | EOp (op, _) -> prec_op op
@@ -43,7 +44,8 @@ let prec_exp e =
   | EProj _ -> 1
   | ESome _ -> max_prec
   | EMatch _ -> 8
-  | ETy (_,_) -> max_prec
+  | ETy (_, _) -> max_prec
+
 
 let rec sep s f xs =
   match xs with
@@ -51,8 +53,10 @@ let rec sep s f xs =
   | [x] -> f x
   | x :: y :: rest -> f x ^ s ^ sep s f (y :: rest)
 
+
 let rec term s f xs =
   match xs with [] -> "" | x :: rest -> f x ^ s ^ term s f rest
+
 
 let comma_sep f xs = sep "," f xs
 
@@ -88,12 +92,11 @@ let rec ty_to_string_p prec t =
     | TOption t -> ty_to_string_p p t ^ " option"
     | TMap (i, t) -> ty_to_string_p p t ^ " vec[" ^ UInt32.to_string i ^ "]"
     | TAll (tvs, ty) ->
-      let quant =
-	if quantifiers then
-          "all[" ^ comma_sep Var.to_string tvs ^ "]."
-	else
-	  ""
-      in quant ^ ty_to_string_p p ty
+        let quant =
+          if quantifiers then "all[" ^ comma_sep Var.to_string tvs ^ "]."
+          else ""
+        in
+        quant ^ ty_to_string_p p ty
   in
   if p < prec then s else "(" ^ s ^ ")"
 
@@ -175,15 +178,6 @@ and closure_to_string_p prec (env, {arg= x; argty= argt; resty= rest; body}) =
   if prec < max_prec then "(" ^ s ^ ")" else s
 
 
-and tyfunc_to_string_p prec (tvs, body) =
-  "Fun " ^ comma_sep Var.to_string tvs ^ " -> " ^ exp_to_string_p prec body
-
-
-and tyclosure_to_string_p prec (env, (tvs, body)) =
-  "Fun " ^ env_to_string env ^ comma_sep Var.to_string tvs ^ " -> "
-  ^ exp_to_string_p prec body
-
-
 and map_to_string sep_s term_s m =
   let binding_to_string (k, v) =
     UInt32.to_string k ^ sep_s ^ value_to_string_p max_prec v
@@ -221,7 +215,7 @@ and exp_to_string_p prec e =
     | EOp (op, es) -> op_args_to_string prec p op es
     | EFun f -> func_to_string_p prec f
     | EApp (e1, e2) ->
-      exp_to_string_p prec e1 ^ " " ^ exp_to_string_p p e2 ^ " "
+        exp_to_string_p prec e1 ^ " " ^ exp_to_string_p p e2 ^ " "
     | EIf (e1, e2, e3) ->
         "if " ^ exp_to_string_p max_prec e1 ^ " then "
         ^ exp_to_string_p max_prec e2 ^ " else " ^ exp_to_string_p prec e3
@@ -233,7 +227,7 @@ and exp_to_string_p prec e =
     | ESome e -> "Some " ^ exp_to_string_p prec e
     | EMatch (e1, bs) ->
         "match " ^ exp_to_string_p max_prec e1 ^ " with "
-      ^ branches_to_string prec bs
+        ^ branches_to_string prec bs
     | ETy (e, t) -> exp_to_string_p prec e ^ ty_to_string t
   in
   if p > prec then "(" ^ s ^ ")" else s
@@ -270,10 +264,6 @@ let exp_to_string e = exp_to_string_p max_prec e
 let func_to_string f = func_to_string_p max_prec f
 
 let closure_to_string c = closure_to_string_p max_prec c
-
-let tyfunc_to_string tf = tyfunc_to_string_p max_prec tf
-
-let tyclosure_to_string tc = tyclosure_to_string_p max_prec tc
 
 let rec declaration_to_string d =
   match d with

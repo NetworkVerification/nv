@@ -119,8 +119,8 @@ let rec unify info e t1 t2 : unit =
   if try_unify t1 t2 then ()
   else
     let msg =
-      Printf.sprintf "unable to unify types: %s and %s"
-        (ty_to_string t1) (ty_to_string t2)
+      Printf.sprintf "unable to unify types: %s and %s" (ty_to_string t1)
+        (ty_to_string t2)
     in
     Console.error_position info e.espan msg
 
@@ -306,7 +306,7 @@ let rec infer_exp i info env (e: exp) : exp =
         texp
           ( EFun {arg= x; argty= Some ty_x; resty= Some ty_e; body}
           , TArrow (ty_x, ty_e) )
-    | EApp (e1, e2) -> 
+    | EApp (e1, e2) ->
         let e1, ty_fun = infer_exp (i + 1) info env e1 |> textract in
         let e2, ty_arg = infer_exp (i + 1) info env e2 |> textract in
         let ty = substitute ty_fun in
@@ -323,7 +323,7 @@ let rec infer_exp i info env (e: exp) : exp =
         unify info e1 TBool tcond ;
         unify info e ty2 ty3 ;
         texp (EIf (e1, e2, e3), ty2)
-    | ELet (x, e1, e2) -> (
+    | ELet (x, e1, e2) ->
         (* TO DO? Could traverse the term e1 again replacing TVars with QVars of the same name.
            Did not do this for now. *)
         enter_level () ;
@@ -331,12 +331,11 @@ let rec infer_exp i info env (e: exp) : exp =
         leave_level () ;
         let _, ty = generalize ty_e1 in
         let e2, ty_e2 =
-            infer_exp (i + 1) info (Env.update env x ty) e2 |> textract
+          infer_exp (i + 1) info (Env.update env x ty) e2 |> textract
         in
         texp (ELet (x, e1, e2), ty_e2)
         (* NOTE:  Changes order of evaluation if e is not a value;
 						        If we have effects, value restriction needed. *)
-        )
     | ETuple es ->
         let es, tys = infer_exps (i + 1) info env es in
         texp (ETuple es, TTuple tys)
@@ -406,7 +405,6 @@ and infer_value info env (v: Syntax.value) : Syntax.value =
       tvalue (VOption (Some v, Some tv), TOption tv)
   | VClosure cl ->
       failwith "unimplemented: closure type inference because i am lazy"
-  | _ -> failwith "impossible"
 
 and infer_values info env vs =
   match vs with
@@ -481,9 +479,7 @@ and infer_declaration i info env aty d : ty Env.t * declaration =
       | [], ty ->
           (Env.update env x ty, DLet (x, Some ty, texp (e1.e, ty)))
           (* TODO: possible noop rewrapping e1? *)
-      | tvs, ty ->
-          ( Env.update env x ty
-          , DLet (x, None, texp (e1.e, ty)) )
+      | tvs, ty -> (Env.update env x ty, DLet (x, None, texp (e1.e, ty)))
       (* NOTE:  Changes order of evaluation if e is not a value;
 						        If we have effects, value restriction needed. *)
       )

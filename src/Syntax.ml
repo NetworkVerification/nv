@@ -91,11 +91,7 @@ and branches = (pattern * exp) list
 
 and func = {arg: var; argty: ty option; resty: ty option; body: exp}
 
-and tyfunc = (tyname list * exp)
-
 and closure = (env * func)
-
-and tyclosure = (env * tyfunc)
 
 and env = {ty: ty Env.t; value: value Env.t}
 

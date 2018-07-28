@@ -14,11 +14,7 @@ val exp_to_string : exp -> string
 
 val func_to_string : func -> string
 
-val tyfunc_to_string : tyfunc -> string
-
 val closure_to_string : closure -> string
-
-val tyclosure_to_string : tyclosure -> string
 
 val env_to_string : env -> string
 
