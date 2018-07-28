@@ -36,9 +36,7 @@ let prec_exp e =
   | EVal _ -> 0
   | EOp (op, _) -> prec_op op
   | EFun _ -> 8
-  | ETyFun _ -> 8
   | EApp _ -> max_prec
-  | ETyApp _ -> max_prec
   | EIf _ -> max_prec
   | ELet _ -> max_prec
   | ETuple _ -> 0
@@ -224,8 +222,6 @@ and exp_to_string_p prec e =
     | EFun f -> func_to_string_p prec f
     | EApp (e1, e2) ->
       exp_to_string_p prec e1 ^ " " ^ exp_to_string_p p e2 ^ " "
-    | ETyApp (e,ts) ->
-      exp_to_string_p prec e ^ "[" ^ comma_sep ty_to_string ts ^ "]"
     | EIf (e1, e2, e3) ->
         "if " ^ exp_to_string_p max_prec e1 ^ " then "
         ^ exp_to_string_p max_prec e2 ^ " else " ^ exp_to_string_p prec e3
