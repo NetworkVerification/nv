@@ -8,6 +8,8 @@ let is_keyword_op op =
   | And | Or | Not | UAdd | USub | UEq | ULess | ULeq | MGet -> false
   | MCreate _ | MSet | MMap | MMerge -> true
 
+(* set to true if you want to print universal quanifiers explicitly *)
+let quantifiers = true
 
 let max_prec = 10
 
@@ -34,14 +36,16 @@ let prec_exp e =
   | EVal _ -> 0
   | EOp (op, _) -> prec_op op
   | EFun _ -> 8
+  | ETyFun _ -> 8
   | EApp _ -> max_prec
+  | ETyApp _ -> max_prec
   | EIf _ -> max_prec
   | ELet _ -> max_prec
   | ETuple _ -> 0
   | EProj _ -> 1
   | ESome _ -> max_prec
   | EMatch _ -> 8
-
+  | ETy (_,_) -> max_prec
 
 let rec sep s f xs =
   match xs with
@@ -49,10 +53,8 @@ let rec sep s f xs =
   | [x] -> f x
   | x :: y :: rest -> f x ^ s ^ sep s f (y :: rest)
 
-
 let rec term s f xs =
-  match xs with [] -> "" | x :: rest -> f x ^ s ^ sep s f rest
-
+  match xs with [] -> "" | x :: rest -> f x ^ s ^ term s f rest
 
 let comma_sep f xs = sep "," f xs
 
@@ -88,7 +90,12 @@ let rec ty_to_string_p prec t =
     | TOption t -> ty_to_string_p p t ^ " option"
     | TMap (i, t) -> ty_to_string_p p t ^ " vec[" ^ UInt32.to_string i ^ "]"
     | TAll (tvs, ty) ->
-        "all[" ^ comma_sep Var.to_string tvs ^ "]." ^ ty_to_string_p p ty
+      let quant =
+	if quantifiers then
+          "all[" ^ comma_sep Var.to_string tvs ^ "]."
+	else
+	  ""
+      in quant ^ ty_to_string_p p ty
   in
   if p < prec then s else "(" ^ s ^ ")"
 
@@ -216,7 +223,9 @@ and exp_to_string_p prec e =
     | EOp (op, es) -> op_args_to_string prec p op es
     | EFun f -> func_to_string_p prec f
     | EApp (e1, e2) ->
-        exp_to_string_p prec e1 ^ " " ^ exp_to_string_p p e2 ^ " "
+      exp_to_string_p prec e1 ^ " " ^ exp_to_string_p p e2 ^ " "
+    | ETyApp (e,ts) ->
+      exp_to_string_p prec e ^ "[" ^ comma_sep ty_to_string ts ^ "]"
     | EIf (e1, e2, e3) ->
         "if " ^ exp_to_string_p max_prec e1 ^ " then "
         ^ exp_to_string_p max_prec e2 ^ " else " ^ exp_to_string_p prec e3
@@ -228,7 +237,8 @@ and exp_to_string_p prec e =
     | ESome e -> "Some " ^ exp_to_string_p prec e
     | EMatch (e1, bs) ->
         "match " ^ exp_to_string_p max_prec e1 ^ " with "
-        ^ branches_to_string prec bs
+      ^ branches_to_string prec bs
+    | ETy (e, t) -> exp_to_string_p prec e ^ ty_to_string t
   in
   if p > prec then "(" ^ s ^ ")" else s
 
