@@ -68,7 +68,6 @@ type v =
   | VTuple of value list
   | VOption of value option * ty option
   | VClosure of closure
-  | VTyClosure of tyclosure
 
 and value = {v: v; vty: ty option; vspan: Span.t}
 
@@ -77,9 +76,7 @@ and e =
   | EVal of value
   | EOp of op * exp list
   | EFun of func
-  | ETyFun of tyfunc
   | EApp of exp * exp
-  | ETyApp of exp * ty list
   | EIf of exp * exp * exp
   | ELet of var * exp * exp
   | ETuple of exp list

@@ -29,7 +29,7 @@ let prec_op op =
 
 
 let prec_exp e =
-  match e.e with
+  match e.e with 
   | EVar _ -> 0
   | EVal _ -> 0
   | EOp (op, _) -> prec_op op
@@ -205,7 +205,6 @@ and value_to_string_p prec v =
       let s = "Some" ^ value_to_string_p max_prec v in
       "(" ^ s ^ ":" ^ ty_to_string t ^ ")"
   | VClosure cl -> closure_to_string_p prec cl
-  | VTyClosure tc -> tyclosure_to_string_p prec tc
 
 
 and exp_to_string_p prec e =
@@ -216,7 +215,6 @@ and exp_to_string_p prec e =
     | EVal v -> value_to_string_p prec v
     | EOp (op, es) -> op_args_to_string prec p op es
     | EFun f -> func_to_string_p prec f
-    | ETyFun tf -> tyfunc_to_string_p prec tf
     | EApp (e1, e2) ->
         exp_to_string_p prec e1 ^ " " ^ exp_to_string_p p e2 ^ " "
     | EIf (e1, e2, e3) ->

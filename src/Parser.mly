@@ -10,7 +10,7 @@
 
   let tuple_it es (span : Span.t) : exp =
     match es with
-    | [e] -> e
+    | [e] -> exp e.e span
     | es -> exp (ETuple es) span
 
   let tuple_pattern ps =
@@ -19,22 +19,22 @@
     | ps -> PTuple ps
 
   (* TODO: span not calculated correctly here? *)
-  let rec make_fun params (body : exp) (span : Span.t) : exp =
+  let rec make_fun params (body : exp) (body_span: Span.t) (span : Span.t) : exp =
     match params with
 	| [] -> body
 	| (x,tyopt)::rest -> 
-        let e = EFun {arg=x;argty=tyopt;resty=None;body=make_fun rest body span} in
+        let e = EFun {arg=x; argty=tyopt; resty=None; body=make_fun rest body body_span body_span} in
         exp e span
     
-  let local_let (id,params) body span =
-    (id, make_fun params body span)
+  let local_let (id,params) body body_span span =
+    (id, make_fun params body body_span span)
 
   let merge_identifier = "merge"
   let trans_identifier = "trans"
   let init_identifier = "init"
     
-  let global_let (id,params) body span =
-    let e = make_fun params body span in
+  let global_let (id,params) body body_span span =
+    let e = make_fun params body body_span span in
     if Var.name id = merge_identifier then
       DMerge e
     else if Var.name id = trans_identifier then
@@ -42,7 +42,7 @@
     else if Var.name id = init_identifier then
       DInit e
     else
-      DLet (id, None, make_fun params body span)
+      DLet (id, None, e)
   
 %}
 
@@ -154,7 +154,7 @@ letvars:
 ;
 
 component:
-    | LET letvars EQ expr               { global_let $2 $4 (Span.extend $1 $4.espan) }
+    | LET letvars EQ expr               { global_let $2 $4 $4.espan (Span.extend $1 $4.espan) }
     | LET EDGES EQ LBRACE edges RBRACE  { DEdges $5 }
     | LET NODES EQ NUM                  { DNodes (snd $4) }
     | TYPE ATTRIBUTE EQ ty              { DATy $4 }
@@ -172,12 +172,12 @@ expr:
 expr1:
     | expr2                               { $1 }
     | LET letvars EQ expr IN expr1        { let span = (Span.extend $1 $6.espan) in
-                                            let (id, e) = local_let $2 $4 span in 
+                                            let (id, e) = local_let $2 $4 $4.espan span in 
                                             exp (ELet (id, e, $6)) span }
     | IF expr1 THEN expr ELSE expr1       { exp (EIf ($2, $4, $6)) (Span.extend $1 $6.espan) }
     (* TODO: span not quite right here *)
     | MATCH expr WITH branches            { exp (EMatch ($2, $4)) (Span.extend $1 $3) }
-    | FUN params ARROW expr1              { make_fun $2 $4 (Span.extend $1 $4.espan) }
+    | FUN params ARROW expr1              { make_fun $2 $4 $4.espan (Span.extend $1 $4.espan) }
 ;
 
 expr2:

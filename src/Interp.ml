@@ -42,8 +42,6 @@ let rec equal_val v1 v2 =
   | VOption (Some v1, _), VOption (Some v2, _) -> equal_val v1 v2
   | VClosure _, _ -> raise (Equality v1)
   | _, VClosure _ -> raise (Equality v2)
-  | VTyClosure _, _ -> raise (Equality v1)
-  | _, VTyClosure _ -> raise (Equality v2)
   | _, _ -> false
 
 
@@ -94,22 +92,16 @@ let rec match_branches branches v =
 
 let rec interp_exp env e =
   match e.e with
+  | ETy (e,_) -> interp_exp env e
   | EVar x -> Env.lookup env.value x
   | EVal v -> v
   | EOp (op, es) -> interp_op env op es
   | EFun f -> value (VClosure (env, f))
-  | ETyFun f -> value (VTyClosure (env, f))
-  | EApp (e1, e2) -> (
+  | EApp (e1, e2) -> ( 
       let v1 = interp_exp env e1 in
       let v2 = interp_exp env e2 in
       match v1.v with
       | VClosure (c_env, f) -> interp_exp (update_value c_env f.arg v2) f.body
-      | _ -> Console.error "bad functional application" )
-  | ETyApp (e1, tys) -> (
-      let v1 = interp_exp env e1 in
-      match v1.v with
-      | VTyClosure (c_env, (tvs, body)) ->
-          interp_exp (update_tys c_env tvs tys) body
       | _ -> Console.error "bad functional application" )
   | EIf (e1, e2, e3) -> (
     match (interp_exp env e1).v with

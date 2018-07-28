@@ -52,7 +52,7 @@ let commandline_processing () =
 let main =
   let () = commandline_processing () in
   let ds, info = Input.parse (filename ()) in
-  let ds = Typing.infer_declarations info ds in
+  let ds = Typing.infer_declarations 0 info ds in
   print_endline "" ;
   print_endline "** Starting SRP Processing **" ;
   if verbose () then (
