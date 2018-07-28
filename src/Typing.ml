@@ -280,7 +280,7 @@ let rec infer_exp i info env (e: exp) : exp =
       match Env.lookup_opt env x with
       | None -> Console.error ("unbound variable " ^ Var.to_string x)
       | Some TAll (tvs, t) ->
-          let ty, tys = inst_schema (tvs, t) in
+          let ty, _ = inst_schema (tvs, t) in
           texp (EVar x, ty)
       | Some t -> texp (e.e, t) )
     | EVal v ->
