@@ -93,7 +93,13 @@ let rec match_branches branches v =
 let rec interp_exp env e =
   match e.e with
   | ETy (e, _) -> interp_exp env e
-  | EVar x -> Env.lookup env.value x
+  | EVar x -> (
+    match Env.lookup_opt env.value x with
+    | None ->
+        Console.error
+          (Printf.sprintf "runtime exception - unbound variable: %s"
+             (Var.to_string x))
+    | Some v -> v )
   | EVal v -> v
   | EOp (op, es) -> interp_op env op es
   | EFun f -> value (VClosure (env, f))

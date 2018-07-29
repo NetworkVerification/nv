@@ -10,6 +10,8 @@ let lookup env x = try M.find x env with Not_found -> raise (Unbound_var x)
 
 let lookup_opt env x = M.find_opt x env
 
+let remove env x = M.remove x env
+
 let update env x entry = M.add x entry env
 
 (* update env1 with the bindings of env2.  If both environments have the same key, env2 shadows env1 *)

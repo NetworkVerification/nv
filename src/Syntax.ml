@@ -133,6 +133,8 @@ let tint = TInt (UInt32.of_int 32)
 
 let exp (e: e) : exp = {e; ety= None; espan= Span.default}
 
+let wrap exp e = {e; ety= exp.ety; espan= exp.espan}
+
 let value (v: v) : value = {v; vty= None; vspan= Span.default}
 
 let e_val (x: v) : exp = exp (EVal (value x))

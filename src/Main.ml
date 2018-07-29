@@ -5,6 +5,7 @@ open Printing
 open Interp
 open Typing
 open Renaming
+open Inline
 
 (* Command Line Arguments *)
 
@@ -55,6 +56,7 @@ let main =
   let ds, info = Input.parse (filename ()) in
   let ds = Typing.infer_declarations 0 info ds in
   let ds = Renaming.alpha_convert_declarations ds in
+  (* let ds = Inline.inline_declarations ds in *)
   print_endline "" ;
   print_endline "** Starting SRP Processing **" ;
   if verbose () then (

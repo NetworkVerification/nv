@@ -2,15 +2,24 @@ open Syntax
 
 let fresh x = Var.fresh (Var.to_string x)
 
-let wrap exp e = {e; ety= exp.ety; espan= exp.espan}
-
-let rec update_pattern (env: Var.t Env.t) (p: pattern) : Var.t Env.t =
+let rec update_pattern (env: Var.t Env.t) (p: pattern) : pattern * Var.t Env.t =
   match p with
-  | PWild | PBool _ | PUInt32 _ -> env
-  | PVar v -> Env.update env v (fresh v)
-  | PTuple ps -> List.fold_left (fun acc p -> update_pattern acc p) env ps
-  | POption None -> env
-  | POption Some p -> update_pattern env p
+  | PWild | PBool _ | PUInt32 _ -> (p, env)
+  | PVar x ->
+      let y = fresh x in
+      (PVar y, Env.update env x y)
+  | PTuple ps ->
+      let env, ps = List.fold_left add_pattern (env, []) ps in
+      (PTuple ps, env)
+  | POption None -> (p, env)
+  | POption Some p ->
+      let p', env = update_pattern env p in
+      (POption (Some p'), env)
+
+
+and add_pattern (env, ps) p =
+  let p', env' = update_pattern env p in
+  (env', p' :: ps)
 
 
 let rec alpha_convert_exp (env: Var.t Env.t) (e: exp) =
@@ -43,19 +52,22 @@ let rec alpha_convert_exp (env: Var.t Env.t) (e: exp) =
   | EMatch (e, bs) ->
       let bs' =
         List.map
-          (fun (p, e) -> (p, alpha_convert_exp (update_pattern env p) e))
+          (fun (p, e) ->
+            let p, env = update_pattern env p in
+            (p, alpha_convert_exp env e) )
           bs
       in
       EMatch (alpha_convert_exp env e, bs') |> wrap e
-  | ETy (e1, ty) -> alpha_convert_exp env e1
+  | ETy (e1, ty) -> ETy (alpha_convert_exp env e1, ty) |> wrap e
 
 
 let alpha_convert_declaration (env: Var.t Env.t) (d: declaration) =
   match d with
   | DLet (x, tyo, e) ->
-      let env = Env.update env x (fresh x) in
+      let y = fresh x in
+      let env = Env.update env x y in
       let e = alpha_convert_exp env e in
-      (env, DLet (x, tyo, e))
+      (env, DLet (y, tyo, e))
   | DMerge e -> (env, DMerge (alpha_convert_exp env e))
   | DTrans e -> (env, DTrans (alpha_convert_exp env e))
   | DInit e -> (env, DInit (alpha_convert_exp env e))
