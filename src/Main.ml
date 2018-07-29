@@ -54,7 +54,8 @@ let commandline_processing () =
 let main =
   let () = commandline_processing () in
   let ds, info = Input.parse (filename ()) in
-  let decls = Typing.infer_declarations 0 info ds in
+  let decls = Typing.infer_declarations info ds in
+  Typing.check_annot_decls decls ;
   let decls = Renaming.alpha_convert_declarations decls in
   let decls = Inline.inline_declarations decls in
   print_endline "" ;

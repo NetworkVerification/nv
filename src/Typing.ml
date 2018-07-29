@@ -9,10 +9,6 @@ let debug = true
 
 let if_debug s = if debug then print_endline s else ()
 
-let oget (x: 'a option) : 'a =
-  match x with None -> failwith "oget" | Some y -> y
-
-
 let val_to_exp (v: value) : exp = {e= EVal v; ety= v.vty; espan= v.vspan}
 
 let node_ty = tint
@@ -49,6 +45,42 @@ let reset_tyvars () =
   (*  Var.reset ();  *)
   (* DPW: don't need to do this *)
   level_reset ()
+
+
+let rec check_annot (e: exp) =
+  ( match e.ety with
+  | None ->
+      Console.error
+        (Printf.sprintf "internal type annotation missing: %s\n"
+           (Printing.exp_to_string e))
+  | Some _ -> () ) ;
+  match e.e with
+  | EVar _ | EVal _ -> ()
+  | EOp (op, es) -> List.iter check_annot es
+  | EFun f -> check_annot f.body
+  | EApp (e1, e2) -> check_annot e1 ; check_annot e2
+  | EIf (e1, e2, e3) -> check_annot e1 ; check_annot e2 ; check_annot e3
+  | ELet (_, e1, e2) -> check_annot e1 ; check_annot e2
+  | ETuple es -> List.iter check_annot es
+  | EProj (_, e) -> check_annot e
+  | ESome e -> check_annot e
+  | EMatch (e, bs) ->
+      check_annot e ;
+      List.iter (fun (_, e) -> check_annot e) bs
+  | ETy (e, ty) -> check_annot e
+
+
+let check_annot_decl (d: declaration) =
+  match d with
+  | DLet (_, tyo, e) -> check_annot e
+  | DMerge e | DTrans e | DInit e -> check_annot e
+  | DNodes _ | DEdges _ | DATy _ -> ()
+
+
+let rec check_annot_decls (ds: declarations) =
+  match ds with
+  | [] -> ()
+  | d :: ds -> check_annot_decl d ; check_annot_decls ds
 
 
 let tyname () = Var.fresh "a"
@@ -271,9 +303,6 @@ let textract e =
 
 
 let rec infer_exp i info env (e: exp) : exp =
-  (* Printf.printf "%sinfer_exp: %s\n"
-    (Console.repeat " " (2 * i))
-    (Printing.exp_to_string e) ; *)
   let exp =
     match e.e with
     | EVar x -> (
@@ -304,7 +333,7 @@ let rec infer_exp i info env (e: exp) : exp =
         unify_opt info e argty ty_x ;
         unify_opt info e resty ty_e ;
         texp
-          ( EFun {arg= x; argty= Some ty_x; resty= Some ty_e; body}
+          ( EFun {arg= x; argty= Some ty_x; resty= Some ty_e; body= e}
           , TArrow (ty_x, ty_e) )
     | EApp (e1, e2) ->
         let e1, ty_fun = infer_exp (i + 1) info env e1 |> textract in
@@ -354,10 +383,12 @@ let rec infer_exp i info env (e: exp) : exp =
         unify info e t t1 ;
         texp (ETy (e, t1), t1)
   in
-  (* Printf.printf "%sresult: %s\n"
-    (Console.repeat " " (2 * i))
-    (Printing.ty_to_string (oget exp.ety)) ; *)
+  (* Printf.printf "result = %s: %s\n"
+    (Printing.exp_to_string exp)
+    (Printing.ty_to_string (oget exp.ety)) ;
+  check_annot exp ; *)
   exp
+
 
 and infer_exps i info env es =
   match es with
@@ -367,10 +398,12 @@ and infer_exps i info env es =
       let es, tys = infer_exps (i + 1) info env es in
       (e :: es, ty :: tys)
 
+
 and tvalue (v, t) = {v; vty= Some t; vspan= Span.default}
 
 and textractv v =
   match v.vty with None -> failwith "impossible" | Some ty -> (v, ty)
+
 
 and infer_value info env (v: Syntax.value) : Syntax.value =
   match v.v with
@@ -406,6 +439,7 @@ and infer_value info env (v: Syntax.value) : Syntax.value =
   | VClosure cl ->
       failwith "unimplemented: closure type inference because i am lazy"
 
+
 and infer_values info env vs =
   match vs with
   | [] -> ([], [])
@@ -413,6 +447,7 @@ and infer_values info env vs =
       let v, t = infer_value info env v |> textractv in
       let vs, ts = infer_values info env vs in
       (v :: vs, t :: ts)
+
 
 and infer_branches i info env exp tmatch bs =
   match bs with
@@ -426,6 +461,7 @@ and infer_branches i info env exp tmatch bs =
       let env2 = infer_pattern (i + 1) info env exp tmatch p in
       let e, t = infer_exp (i + 1) info env2 e |> textract in
       unify info e t tbranch ; ((p, e) :: bs, t)
+
 
 and infer_pattern i info env e tmatch p =
   valid_pat p ;
@@ -446,6 +482,7 @@ and infer_pattern i info env e tmatch p =
       | None -> env
       | Some p -> infer_pattern (i + 1) info env e t p
 
+
 and infer_patterns i info env e ts ps =
   match (ts, ps) with
   | [], [] -> env
@@ -455,10 +492,12 @@ and infer_patterns i info env e ts ps =
       infer_patterns (i + 1) info env e ts ps
   | _, _ -> Console.error "bad arity in pattern match"
 
+
 and infer_declarations i info (ds: declarations) : declarations =
   match get_attr_type ds with
   | None -> Console.error "attribute type not declared: type attribute = ..."
   | Some ty -> infer_declarations_aux (i + 1) info Env.empty ty ds
+
 
 and infer_declarations_aux i info env aty (ds: declarations) : declarations =
   match ds with
@@ -467,22 +506,17 @@ and infer_declarations_aux i info env aty (ds: declarations) : declarations =
       let env', d' = infer_declaration (i + 1) info env aty d in
       d' :: infer_declarations_aux (i + 1) info env' aty ds'
 
+
 and infer_declaration i info env aty d : ty Env.t * declaration =
   match d with
-  | DLet (x, _, e1) -> (
+  | DLet (x, _, e1) ->
       enter_level () ;
       let e1, ty_e1 = infer_exp (i + 1) info env e1 |> textract in
       leave_level () ;
+      check_annot e1 ;
       (* (Env.update env var (oget e1.ety), DLet (var, e1)) *)
       let ts, ty = generalize ty_e1 in
-      match (ts, ty) with
-      | [], ty ->
-          (Env.update env x ty, DLet (x, Some ty, texp (e1.e, ty)))
-          (* TODO: possible noop rewrapping e1? *)
-      | tvs, ty -> (Env.update env x ty, DLet (x, None, texp (e1.e, ty)))
-      (* NOTE:  Changes order of evaluation if e is not a value;
-						        If we have effects, value restriction needed. *)
-      )
+      (Env.update env x ty, DLet (x, Some ty, texp (e1.e, ty)))
   | DMerge e ->
       let e' = infer_exp (i + 1) info env e in
       let ty = oget e'.ety in
@@ -499,6 +533,7 @@ and infer_declaration i info env aty d : ty Env.t * declaration =
       unify info e ty (init_ty aty) ;
       (Env.update env (Var.create "trans") ty, DInit e')
   | DATy _ | DNodes _ | DEdges _ -> (env, d)
+
 
 (* ensure patterns do not contain duplicate variables *)
 and valid_pat p = valid_pattern Env.empty p |> ignore
@@ -517,5 +552,12 @@ and valid_pattern env p =
   | POption None -> env
   | POption Some p -> valid_pattern env p
 
+
 and valid_patterns env p =
   match p with [] -> env | p :: ps -> valid_patterns (valid_pattern env p) ps
+
+
+let infer_declarations info (ds: declarations) : declarations =
+  match get_attr_type ds with
+  | None -> Console.error "attribute type not declared: type attribute = ..."
+  | Some ty -> infer_declarations_aux 0 info Env.empty ty ds

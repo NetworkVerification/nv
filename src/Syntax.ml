@@ -145,6 +145,10 @@ let ty_func tyargs body = (tyargs, body)
 
 let lam x body = exp (EFun (func x body))
 
+let oget (x: 'a option) : 'a =
+  match x with None -> failwith "oget" | Some y -> y
+
+
 let rec lams params body =
   match params with
   | [] -> Console.error "lams: no parameters"
