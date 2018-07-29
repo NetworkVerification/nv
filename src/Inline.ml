@@ -24,19 +24,19 @@ let z = y + 4
 we should also delete x afterwards because it has a function type
 *)
 
-let inline_exp (env : exp Env.t) aty (e : exp) = 
-  failwith ""
+let inline_exp (env: exp Env.t) aty (e: exp) = failwith ""
 
-let inline_declaration (env : exp Env.t) aty (d : declaration) = 
+let inline_declaration (env: exp Env.t) aty (d: declaration) =
   match d with
-  | DLet (x, tyo, e) -> 
-      let (env, e) = inline_exp env aty e in
+  | DLet (x, tyo, e) ->
+      let env, e = inline_exp env aty e in
       let env = Env.update env x e in
-      (env, DLet(x,tyo,e))
+      (env, DLet (x, tyo, e))
   | DMerge e -> inline_exp env aty e
   | DTrans e -> inline_exp env aty e
   | DInit e -> inline_exp env aty e
   | DATy _ | DNodes _ | DEdges _ -> (env, d)
+
 
 let rec inline_declarations (ds: declarations) =
   match get_attr_type ds with
