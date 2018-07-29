@@ -54,21 +54,21 @@ let commandline_processing () =
 let main =
   let () = commandline_processing () in
   let ds, info = Input.parse (filename ()) in
-  let ds = Typing.infer_declarations 0 info ds in
-  let ds = Renaming.alpha_convert_declarations ds in
-  (* let ds = Inline.inline_declarations ds in *)
+  let decls = Typing.infer_declarations 0 info ds in
+  let decls = Renaming.alpha_convert_declarations decls in
+  let decls = Inline.inline_declarations decls in
   print_endline "" ;
   print_endline "** Starting SRP Processing **" ;
   if verbose () then (
     print_endline "** SRP Definition **" ;
-    print_endline (Printing.declarations_to_string ds) ;
+    print_endline (Printing.declarations_to_string decls) ;
     print_endline "** End SRP Definition **" ) ;
   if simulate () then (
     print_endline "** Starting SRP Simulation **" ;
     let solution, q =
       match bound () with
-      | None -> (Srp.simulate_declarations ds, [])
-      | Some b -> Srp.simulate_declarations_bound ds b
+      | None -> (Srp.simulate_declarations decls, [])
+      | Some b -> Srp.simulate_declarations_bound decls b
     in
     print_endline "** SRP Solution **" ;
     Srp.print_solution solution ;

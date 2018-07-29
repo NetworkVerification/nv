@@ -22,7 +22,14 @@ let is_function_ty e =
   match e.ety with None -> false | Some TArrow _ -> true | _ -> false
 
 
-let has_var p x = match p with PWild -> false | _ -> failwith ""
+let rec has_var p x =
+  match p with
+  | PWild | PBool _ | PUInt32 _ -> false
+  | PVar y -> Var.equals x y
+  | PTuple ps -> List.fold_left (fun acc p -> acc || has_var p x) false ps
+  | POption None -> false
+  | POption Some p -> has_var p x
+
 
 let rec remove_all env p =
   match p with
@@ -36,7 +43,9 @@ let rec remove_all env p =
 let rec substitute x e1 e2 =
   match e1.e with
   | EVar y -> if Var.equals x y then e2 else e1
-  | EFun f -> if Var.equals x f.arg then e1 else substitute x f.body e2
+  | EFun f ->
+      if Var.equals x f.arg then e1
+      else EFun {f with body= substitute x f.body e2} |> wrap e1
   | EApp (e3, e4) -> EApp (substitute x e3 e2, substitute x e4 e2) |> wrap e1
   | EIf (e3, e4, e5) ->
       EIf (substitute x e3 e2, substitute x e4 e2, substitute x e5 e2)
@@ -61,21 +70,17 @@ and substitute_pattern x e2 (p, e) =
 
 
 let rec inline_app env e1 e2 : exp =
-  Printf.printf "inline_app: (%s,%s)\n"
+  (* Printf.printf "inline_app e1: %s\ninline_app e2: %s)\n"
     (Printing.exp_to_string e1)
-    (Printing.exp_to_string e2) ;
+    (Printing.exp_to_string e2) ; *)
   match e1.e with
   | EVar x -> (
     match Env.lookup_opt env x with
-    | None -> e1
+    | None -> EApp (e1, e2) |> wrap e1
     | Some e -> inline_app env e e2 )
   | EFun f ->
       let e = substitute f.arg f.body e2 in
       inline_exp env e
-  | EApp (e3, e4) ->
-      let e1' = inline_app env e3 e4 in
-      Printf.printf "Result: %s\n" (Printing.exp_to_string e1') ;
-      inline_app env e1' e2
   | EIf (e3, e4, e5) ->
       EIf (e3, inline_app env e4 e2, inline_app env e5 e2) |> wrap e1
   | ELet (x, e3, e4) ->
@@ -84,6 +89,7 @@ let rec inline_app env e1 e2 : exp =
   | EMatch (e, bs) ->
       EMatch (inline_exp env e, List.map (inline_branch_app env e2) bs)
       |> wrap e1
+  | EApp _ -> EApp (e1, e2) |> wrap e1
   | ESome _ | EProj _ | ETuple _ | EOp _ | EVal _ ->
       Console.error
         (Printf.sprintf "inline_app: %s" (Printing.exp_to_string e1))
@@ -92,9 +98,9 @@ let rec inline_app env e1 e2 : exp =
 and inline_branch_app env e2 (p, e) = (p, inline_app env e e2)
 
 and inline_exp (env: exp Env.t) (e: exp) : exp =
-  Printf.printf "inline_exp: %s\n" (Printing.exp_to_string e) ;
+  (* Printf.printf "inline_exp: %s\n" (Printing.exp_to_string e) ;
   Env.to_list env
-  |> List.iter (fun (x, e) -> Printf.printf "  env: %s\n" (Var.to_string x)) ;
+  |> List.iter (fun (x, e) -> Printf.printf "  env: %s\n" (Var.to_string x)) ; *)
   match e.e with
   | EVar x -> ( match Env.lookup_opt env x with None -> e | Some e1 -> e1 )
   | EVal v -> e
@@ -102,7 +108,7 @@ and inline_exp (env: exp Env.t) (e: exp) : exp =
   | EFun f ->
       let body = inline_exp (Env.remove env f.arg) f.body in
       EFun {f with body} |> wrap e
-  | EApp (e1, e2) -> inline_app env e1 e2
+  | EApp (e1, e2) -> inline_app env (inline_exp env e1) (inline_exp env e2)
   | EIf (e1, e2, e3) ->
       EIf (inline_exp env e1, inline_exp env e2, inline_exp env e3) |> wrap e
   | ELet (x, e1, e2) ->

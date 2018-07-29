@@ -198,7 +198,7 @@ and value_to_string_p prec v =
   | VOption (None, None) -> "None"
   | VOption (None, Some t) -> "(None : " ^ ty_to_string t ^ ")"
   | VOption (Some v, None) ->
-      let s = "Some" ^ value_to_string_p max_prec v in
+      let s = "Some(" ^ value_to_string_p max_prec v ^ ")" in
       if max_prec > prec then "(" ^ s ^ ")" else s
   | VOption (Some v, Some t) ->
       let s = "Some" ^ value_to_string_p max_prec v in
@@ -226,8 +226,8 @@ and exp_to_string_p prec e =
     | EProj (i, e) -> exp_to_string_p p e ^ "." ^ string_of_int i
     | ESome e -> "Some " ^ exp_to_string_p prec e
     | EMatch (e1, bs) ->
-        "match " ^ exp_to_string_p max_prec e1 ^ " with "
-        ^ branches_to_string prec bs
+        "(match " ^ exp_to_string_p max_prec e1 ^ " with "
+        ^ branches_to_string prec bs ^ ")"
     | ETy (e, t) -> exp_to_string_p prec e ^ ty_to_string t
   in
   if p > prec then "(" ^ s ^ ")" else s

@@ -10,7 +10,7 @@ let rec update_pattern (env: Var.t Env.t) (p: pattern) : pattern * Var.t Env.t =
       (PVar y, Env.update env x y)
   | PTuple ps ->
       let env, ps = List.fold_left add_pattern (env, []) ps in
-      (PTuple ps, env)
+      (PTuple (List.rev ps), env)
   | POption None -> (p, env)
   | POption Some p ->
       let p', env = update_pattern env p in
