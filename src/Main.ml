@@ -61,7 +61,7 @@ let main =
   print_endline "** Starting SRP Processing **" ;
   if verbose () then (
     print_endline "** SRP Definition **" ;
-    print_endline (Printing.declarations_to_string decls) ;
+    print_endline (Printing.declarations_to_string ds) ;
     print_endline "** End SRP Definition **" ) ;
   if simulate () then (
     print_endline "** Starting SRP Simulation **" ;

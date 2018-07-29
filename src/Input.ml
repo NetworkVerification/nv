@@ -39,7 +39,10 @@ let read_file fname : Console.info =
   let lines = ref [] in
   let indices = ref [] in
   let index = ref 0 in
-  let chan = open_in fname in
+  let chan =
+    try open_in fname with _ ->
+      Console.error (Printf.sprintf "file '%s' not found" fname)
+  in
   try
     while true do
       let line = input_line chan in
