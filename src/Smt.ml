@@ -1,6 +1,7 @@
 open Unsigned
 open Syntax
 
+(* encoding in the smt-lib format *)
 type smt_encoding =
   { defs: string
   ; merge: string
@@ -65,35 +66,68 @@ let encode (ds: declarations) : smt_encoding =
   in
   match (get_merge ds, get_trans ds, get_init ds) with
   | Some emerge, Some etrans, Some einit ->
-      let merge, x, y =
+      let merge, mnode, x, y =
         match emerge.e with
         | EFun
             { arg= node
+            ; argty= nodety
             ; body=
                 { e=
                     EFun
                       { arg= x
                       ; argty= xty
                       ; body= {e= EFun {arg= y; argty= yty; body= e}} } } } ->
-            Printf.printf "Inner merge:\n%s\n" (Printing.exp_to_string e) ;
+            let nodestr = Var.to_string node in
             let xstr = Var.to_string x in
             let ystr = Var.to_string y in
             let xty, yty = (oget xty, oget yty) in
+            let nparam = create_const nodestr (oget nodety) in
             let xparam = create_const xstr xty in
             let yparam = create_const ystr yty in
             let result = create_const "result" (oget e.ety) in
             let a, e = encode_exp e in
-            ( Printf.sprintf "%s%s%s%s(assert (= result %s))" xparam yparam a
-                result e
+            ( Printf.sprintf "%s%s%s%s%s(assert (= result %s))" nparam xparam
+                yparam a result e
+            , nodestr
             , xstr
             , ystr )
         | _ -> Console.error "internal error"
       in
+      let trans, tnode, z =
+        match emerge.e with
+        | EFun
+            { arg= node
+            ; argty= nodety
+            ; body= {e= EFun {arg= x; argty= xty; body= e}} } ->
+            let nodestr = Var.to_string node in
+            let xstr = Var.to_string x in
+            let xty = oget xty in
+            let nparam = create_const nodestr (oget nodety) in
+            let xparam = create_const xstr xty in
+            let result = create_const "result" (oget e.ety) in
+            let a, e = encode_exp e in
+            ( Printf.sprintf "%s%s%s%s(assert (= result %s))" nparam xparam a
+                result e
+            , nodestr
+            , xstr )
+        | _ -> Console.error "internal error"
+      in
+      let init, inode =
+        match emerge.e with
+        | EFun {arg= node; argty= nodety; body= e} ->
+            let nodestr = Var.to_string node in
+            let nparam = create_const nodestr (oget nodety) in
+            let result = create_const "result" (oget e.ety) in
+            let a, e = encode_exp e in
+            ( Printf.sprintf "%s%s%s\n(assert (= result %s))" nparam a result e
+            , nodestr )
+        | _ -> Console.error "internal error"
+      in
       { defs
       ; merge
-      ; merge_args= [x; y]
-      ; trans= ""
-      ; trans_args= []
-      ; init= ""
-      ; init_args= [] }
+      ; merge_args= [mnode; x; y]
+      ; trans
+      ; trans_args= [tnode; z]
+      ; init
+      ; init_args= [inode] }
   | _ -> Console.error "attribute type not declared: type attribute = ..."
