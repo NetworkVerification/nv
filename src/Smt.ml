@@ -12,7 +12,9 @@ type smt_encoding =
   ; init_args: string list }
 
 let rec ty_to_smtlib (ty: ty) : string =
+  (* Printf.printf "Type: %s\n" (Printing.ty_to_string ty); *)
   match ty with
+  | TVar {contents=Link t} -> ty_to_smtlib t
   | TBool -> "Bool"
   | TInt i -> "_ BitVec " ^ UInt32.to_string i
   | TTuple ts -> (
@@ -20,9 +22,12 @@ let rec ty_to_smtlib (ty: ty) : string =
     | [] -> Console.error "empty tuple"
     | [t] -> ty_to_smtlib t
     | t :: ts -> "Pair " ^ ty_to_smtlib t ^ " " ^ ty_to_smtlib (TTuple ts) )
-  | TOption ty -> Console.error "unimplemented"
+  | TOption ty -> "Option " ^ (ty_to_smtlib ty)
   | TMap _ | TAll _ -> Console.error "unimplemented"
-  | TVar _ | QVar _ | TArrow _ -> Console.error "internal error (ty_to_smtlib)"
+  | TVar _ | QVar _ | TArrow _ ->
+      Console.error
+        (Printf.sprintf "internal error (ty_to_smtlib): %s"
+           (Printing.ty_to_string ty))
 
 
 let create_const name ty =
@@ -32,7 +37,7 @@ let create_const name ty =
 let rec encode_exp (e: exp) : string * string =
   match e.e with
   | EVar x -> ("", Var.to_string x)
-  | EVal v -> encode_value e
+  | EVal v -> ("", encode_value v.v)
   | EOp (op, es) -> failwith ""
   | EIf (e1, e2, e3) ->
       let a1, e1 = encode_exp e1 in
@@ -51,12 +56,27 @@ let rec encode_exp (e: exp) : string * string =
   | ESome e ->
       let a, e = encode_exp e in
       (a, Printf.sprintf "(some (%s))" e)
-  | EMatch (e, bs) -> failwith ""
+  | EMatch (e, bs) -> ("", "(TODO: match)")
   | ETy (e, ty) -> encode_exp e
   | EFun _ | EApp _ -> Console.error "function in smt encoding"
 
 
-and encode_value v = failwith ""
+and encode_value v : string =
+  match v with
+  | VBool true -> "true"
+  | VBool false -> "false"
+  | VUInt32 i -> UInt32.to_string i
+  | VTuple vs -> (
+    match vs with
+    | [] -> Console.error "internal error (encode_value)"
+    | [v] -> encode_value v.v
+    | v :: vs ->
+        Printf.sprintf "(mk-pair %s %s)" (encode_value v.v)
+          (encode_value (VTuple vs)) )
+  | VOption (vo, tyo) -> failwith ""
+  | VClosure _ -> Console.error "internal error (closure in smt)"
+  | VMap _ -> Console.error "unimplemented: map"
+
 
 let encode (ds: declarations) : smt_encoding =
   let defs =
