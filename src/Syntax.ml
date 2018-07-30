@@ -167,10 +167,26 @@ let apply_closure cl (args: value list) =
   apps (e_val (VClosure cl)) (List.map (fun a -> exp (EVal a)) args)
 
 
-let get_attr_type ds =
+let get_decl ds f =
   try
-    let daty =
-      List.find (fun d -> match d with DATy ty -> true | _ -> false) ds
+    let daty : declaration =
+      List.find (fun d -> match f d with None -> false | Some _ -> true) ds
     in
-    match daty with DATy ty -> Some ty | _ -> failwith "impossible"
+    f daty
   with _ -> None
+
+
+let get_attr_type ds =
+  get_decl ds (fun d -> match d with DATy ty -> Some ty | _ -> None)
+
+
+let get_merge ds =
+  get_decl ds (fun d -> match d with DMerge e -> Some e | _ -> None)
+
+
+let get_trans ds =
+  get_decl ds (fun d -> match d with DTrans e -> Some e | _ -> None)
+
+
+let get_init ds =
+  get_decl ds (fun d -> match d with DInit e -> Some e | _ -> None)

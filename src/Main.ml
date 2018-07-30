@@ -6,6 +6,7 @@ open Interp
 open Typing
 open Renaming
 open Inline
+open Smt
 
 (* Command Line Arguments *)
 
@@ -58,6 +59,7 @@ let main =
   Typing.check_annot_decls decls ;
   let decls = Renaming.alpha_convert_declarations decls in
   let decls = Inline.inline_declarations decls in
+  let _ = encode decls in
   print_endline "" ;
   print_endline "** Starting SRP Processing **" ;
   if verbose () then (
