@@ -10,6 +10,8 @@ val ty_to_string : ty -> string
 
 val value_to_string : value -> string
 
+val pattern_to_string : pattern -> string
+
 val exp_to_string : exp -> string
 
 val func_to_string : func -> string

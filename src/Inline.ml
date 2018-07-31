@@ -53,10 +53,6 @@ and substitute_pattern x e2 (p, e) =
   if has_var p x then (p, e) else (p, substitute x e e2)
 
 
-let rec get_inner_type t : ty =
-  match t with TVar {contents= Link t} -> get_inner_type t | _ -> t
-
-
 let inst_types t1 t2 =
   let map = ref Env.empty in
   let rec aux t1 t2 =
@@ -88,7 +84,7 @@ let rec inline_type (env: ty Env.t) ty : ty =
 
 
 let inline_type_app e1 e2 : ty =
-  match (get_inner_type (oget e1.ety), oget e2.ety) with
+  match (Typing.get_inner_type (oget e1.ety), oget e2.ety) with
   | TArrow (t1, t2), t3 ->
       let env = inst_types t1 t3 in
       inline_type env t2

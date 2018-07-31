@@ -47,6 +47,10 @@ let reset_tyvars () =
   level_reset ()
 
 
+let rec get_inner_type t : ty =
+  match t with TVar {contents= Link t} -> get_inner_type t | _ -> t
+
+
 let rec check_annot (e: exp) =
   ( match e.ety with
   | None ->

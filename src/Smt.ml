@@ -15,7 +15,7 @@ let rec ty_to_smtlib (ty: ty) : string =
   match ty with
   | TVar {contents= Link t} -> ty_to_smtlib t
   | TBool -> "Bool"
-  | TInt i -> Printf.sprintf "(_ BitVec %s)" (UInt32.to_string i)
+  | TInt i -> Printf.sprintf "_ BitVec %s" (UInt32.to_string i)
   | TTuple ts -> (
     match ts with
     | [] -> Console.error "empty tuple"
@@ -32,7 +32,7 @@ let rec ty_to_smtlib (ty: ty) : string =
 
 
 let create_const name ty =
-  Printf.sprintf "(declare-const %s %s)\n" name (ty_to_smtlib ty)
+  Printf.sprintf "\n(declare-const %s (%s))" name (ty_to_smtlib ty)
 
 
 let rec encode_exp (e: exp) : string * string =
@@ -46,11 +46,11 @@ let rec encode_exp (e: exp) : string * string =
     | Not ->
         let a, e = List.hd es |> encode_exp in
         (a, Printf.sprintf "(not %s)" e)
-    | UAdd -> encode_op "+" es
-    | USub -> encode_op "-" es
+    | UAdd -> encode_op "bvadd" es
+    | USub -> encode_op "bvsub" es
     | UEq -> encode_op "=" es
-    | ULess -> encode_op "<" es
-    | ULeq -> encode_op "<=" es
+    | ULess -> encode_op "bvult" es
+    | ULeq -> encode_op "bvule" es
     | MCreate _ | MGet | MSet | MMap | MMerge ->
         Console.error "unsupported map operation" )
   | EIf (e1, e2, e3) ->
@@ -63,7 +63,7 @@ let rec encode_exp (e: exp) : string * string =
       let a = create_const xstr (oget e1.ety) in
       let a1, e1 = encode_exp e1 in
       let a2, e2 = encode_exp e2 in
-      let a = Printf.sprintf "%s(assert (= %s %s))\n" a xstr e1 in
+      let a = Printf.sprintf "%s\n(assert (= %s %s))" a xstr e1 in
       (a ^ a1 ^ a2, e2)
   | ETuple es -> (
     match es with
@@ -76,14 +76,14 @@ let rec encode_exp (e: exp) : string * string =
   | EProj (i, e) -> Console.error "unimplemented: EProj"
   | ESome e ->
       let a, e = encode_exp e in
-      (a, Printf.sprintf "(some (%s))" e)
+      (a, Printf.sprintf "(some %s)" e)
   | EMatch (e, bs) ->
       let x = Var.fresh "match" in
       let name = Var.to_string x in
       let a = create_const name (oget e.ety) in
-      let b, e = encode_exp e in
-      let a = Printf.sprintf "%s%s(assert (= %s %s))" a b name e in
-      let c, e = encode_branches name bs ("", "(false)") in
+      let b, e1 = encode_exp e in
+      let a = Printf.sprintf "%s%s\n(assert (= %s %s))" a b name e1 in
+      let c, e = encode_branches name bs (oget e.ety) in
       (a ^ c, e)
   | ETy (e, ty) -> encode_exp e
   | EFun _ | EApp _ -> Console.error "function in smt encoding"
@@ -98,55 +98,71 @@ and encode_op op_str es =
       let b, e2 = encode_op op_str es in
       (a ^ b, Printf.sprintf "(%s %s %s)" op_str e1 e2)
 
+(* we make the last branch fire no matter what *)
+and encode_branches name bs (t : ty) = 
+  match List.rev bs with 
+  | [] -> Console.error "internal error (encode_branches)"
+  | (p,e) :: bs -> 
+    let b, e = encode_exp e in
+    let c, _ = encode_pattern name p t in
+    encode_branches_aux name (List.rev bs) (c ^ b, e) t
 
 (* I'm assuming here that the cases are exhaustive *)
-and encode_branches name bs acc =
+and encode_branches_aux name bs acc (t : ty) =
   let a, acc = acc in
   match bs with
   | [] -> (a, acc)
   | (p, e) :: bs ->
       let b, e = encode_exp e in
-      let c, p = encode_pattern name p in
-      let acc = Printf.sprintf "(ite (%s) %s %s)" p e acc in
-      encode_branches name bs (a ^ c ^ b, acc)
+      let c, p = encode_pattern name p t in
+      let acc = Printf.sprintf "(ite %s %s %s)" p e acc in
+      encode_branches_aux name bs (a ^ c ^ b, acc) t
 
 
-(* TODO: need to get the types of pattern variables *)
-and encode_pattern name p =
-  match p with
-  | PWild -> ("", "(true)")
-  | PVar x ->
+and encode_pattern name p (t : ty) =
+  match (p, Typing.get_inner_type t) with
+  | PWild, _ -> ("", "true")
+  | PVar x, t ->
       let local_name = Var.to_string x in
-      let a = create_const local_name TBool in
-      let binding = Printf.sprintf "%s(assert (= %s %s))" a local_name name in
-      (binding, local_name)
-  | PBool b -> ("", Printf.sprintf "(= %s %s)" name (string_of_bool b))
-  | PUInt32 i -> ("", Printf.sprintf "(= %s %s)" name (UInt32.to_string i))
-  | PTuple ps -> (
-    match ps with
-    | [] -> Console.error "internal error (encode_pattern)"
-    | [p] -> encode_pattern name p
-    | p :: ps ->
+      let a = create_const local_name t in
+      let binding =
+        Printf.sprintf "%s\n(assert (= %s %s))" a local_name name
+      in
+      (binding, "true")
+  | PBool b, TBool -> ("", Printf.sprintf "(= %s %s)" name (string_of_bool b))
+  | PUInt32 i, TInt _ ->
+      ("", Printf.sprintf "(= %s %s)" name (UInt32.to_string i))
+  | PTuple ps, TTuple ts -> (
+    match (ps, ts) with
+    | [p], [t] -> encode_pattern name p t
+    | p :: ps, t :: ts ->
         let fst_name = Var.fresh "first" |> Var.to_string in
-        let fst = create_const fst_name TBool in
+        let fst = create_const fst_name t in
         let snd_name = Var.fresh "second" |> Var.to_string in
-        let snd = create_const snd_name TBool in
+        let snd = create_const snd_name (TTuple ts) in
         let fst_decl =
-          Printf.sprintf "\n%s(assert (= %s (first %s)))" fst fst_name name
+          Printf.sprintf "%s\n(assert (= %s (first %s)))" fst fst_name name
         in
         let snd_decl =
-          Printf.sprintf "\n%s(assert (= %s (first %s)))" snd snd_name name
+          Printf.sprintf "%s\n(assert (= %s (second %s)))" snd snd_name name
         in
-        let a, p = encode_pattern snd_name (PTuple ps) in
-        (fst_decl ^ snd_decl ^ a, p) )
-  | POption None -> ("", Printf.sprintf "(is-none %s)" name)
-  | POption Some p ->
+        let a, p1 = encode_pattern fst_name p t in
+        let b, p2 = encode_pattern snd_name (PTuple ps) (TTuple ts) in
+        let condition = Printf.sprintf "(and %s %s)" p1 p2 in
+        (fst_decl ^ snd_decl ^ a ^ b, condition)
+    | _ -> Console.error "internal error (encode_pattern)" )
+  | POption None, TOption _ -> ("", Printf.sprintf "(is-none %s)" name)
+  | POption Some p, TOption t ->
       let new_name = Var.fresh "option" |> Var.to_string in
-      (* TODO: correct type here *)
-      let a = create_const new_name TBool in
-      let a = Printf.sprintf "\n%s(assert (= %s (val %s)))" a new_name name in
-      let b, p = encode_pattern new_name p in
+      let a = create_const new_name t in
+      let a = Printf.sprintf "%s\n(assert (= %s (val %s)))" a new_name name in
+      let b, p = encode_pattern new_name p t in
       (a ^ b, Printf.sprintf "(and (is-some %s) %s)" name p)
+  | _ ->
+      Console.error
+        (Printf.sprintf "internal error (encode_pattern): (%s, %s)"
+           (Printing.pattern_to_string p)
+           (Printing.ty_to_string (Typing.get_inner_type t)))
 
 
 and encode_value v : string =
@@ -168,10 +184,10 @@ and encode_value v : string =
 
 
 let encode (ds: declarations) : smt_encoding =
+  Var.reset () ;
   let defs =
     "(declare-datatypes (T1 T2) ((Pair (mk-pair (first T1) (second T2)))))\n\
-     (declare-datatypes (T) ((Option none (some (val T)))))\n\
-     "
+     (declare-datatypes (T) ((Option none (some (val T)))))"
   in
   match (get_merge ds, get_trans ds, get_init ds) with
   | Some emerge, Some etrans, Some einit ->
@@ -195,7 +211,7 @@ let encode (ds: declarations) : smt_encoding =
             let yparam = create_const ystr yty in
             let result = create_const "result" (oget exp.ety) in
             let a, e = encode_exp exp in
-            ( Printf.sprintf "%s%s%s%s%s(assert (= result %s))" nparam xparam
+            ( Printf.sprintf "%s%s%s%s%s\n(assert (= result %s))" nparam xparam
                 yparam a result e
             , nodestr
             , xstr
@@ -215,7 +231,7 @@ let encode (ds: declarations) : smt_encoding =
             let xparam = create_const xstr xty in
             let result = create_const "result" (oget exp.ety) in
             let a, e = encode_exp exp in
-            ( Printf.sprintf "%s%s%s%s(assert (= result %s))" nparam xparam a
+            ( Printf.sprintf "%s%s%s%s\n(assert (= result %s))" nparam xparam a
                 result e
             , nodestr
             , xstr )

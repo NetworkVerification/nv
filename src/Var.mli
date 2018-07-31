@@ -6,6 +6,8 @@ val create : string -> t
 
 val fresh : string -> t
 
+val reset : unit -> unit
+
 val name : t -> string
 
 val to_var : string * int -> t
