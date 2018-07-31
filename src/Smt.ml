@@ -98,17 +98,19 @@ and encode_op op_str es =
       let b, e2 = encode_op op_str es in
       (a ^ b, Printf.sprintf "(%s %s %s)" op_str e1 e2)
 
+
 (* we make the last branch fire no matter what *)
-and encode_branches name bs (t : ty) = 
-  match List.rev bs with 
+and encode_branches name bs (t: ty) =
+  match List.rev bs with
   | [] -> Console.error "internal error (encode_branches)"
-  | (p,e) :: bs -> 
-    let b, e = encode_exp e in
-    let c, _ = encode_pattern name p t in
-    encode_branches_aux name (List.rev bs) (c ^ b, e) t
+  | (p, e) :: bs ->
+      let b, e = encode_exp e in
+      let c, _ = encode_pattern name p t in
+      encode_branches_aux name (List.rev bs) (c ^ b, e) t
+
 
 (* I'm assuming here that the cases are exhaustive *)
-and encode_branches_aux name bs acc (t : ty) =
+and encode_branches_aux name bs acc (t: ty) =
   let a, acc = acc in
   match bs with
   | [] -> (a, acc)
@@ -119,7 +121,7 @@ and encode_branches_aux name bs acc (t : ty) =
       encode_branches_aux name bs (a ^ c ^ b, acc) t
 
 
-and encode_pattern name p (t : ty) =
+and encode_pattern name p (t: ty) =
   match (p, Typing.get_inner_type t) with
   | PWild, _ -> ("", "true")
   | PVar x, t ->
@@ -178,7 +180,7 @@ and encode_value v : string =
         Printf.sprintf "(mk-pair %s %s)" (encode_value v.v)
           (encode_value (VTuple vs)) )
   | VOption (None, _) -> "none"
-  | VOption (Some v, _) -> Printf.sprintf "(some (val %s))" (encode_value v.v)
+  | VOption (Some v, _) -> Printf.sprintf "(some %s)" (encode_value v.v)
   | VClosure _ -> Console.error "internal error (closure in smt)"
   | VMap _ -> Console.error "unimplemented: map"
 
