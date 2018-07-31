@@ -57,45 +57,85 @@ let rec get_inner_type t : ty =
   match t with TVar {contents= Link t} -> get_inner_type t | _ -> t
 
 
-let get_rettype ty =
-  match get_inner_type (oget ty) with
-  | TArrow (_, t2) -> t2
-  | _ -> Console.error "inlining internals: %s\n"
+let inst_types t1 t2 =
+  let map = ref Env.empty in
+  let rec aux t1 t2 =
+    match (t1, t2) with
+    | TVar {contents= Link r}, s -> aux r s
+    | QVar x, t | TVar {contents= Unbound (x, _)}, t ->
+        map := Env.update !map x t
+    | TBool, TBool -> ()
+    | TInt i, TInt j when i = j -> ()
+    | TArrow (r1, s1), TArrow (r2, s2) -> aux r1 r2 ; aux s1 s2
+    | TTuple ts1, TTuple ts2 when List.length ts1 = List.length ts2 ->
+        List.combine ts1 ts2 |> List.iter (fun (r, s) -> aux r s)
+    | TOption r, TOption s -> aux r s
+    | _ -> Console.error "unimplemented (inst_types)"
+  in
+  aux t1 t2 ; !map
 
+
+let rec inline_type (env: ty Env.t) ty : ty =
+  match ty with
+  | TVar {contents= Link t} -> inline_type env t
+  | QVar x | TVar {contents= Unbound (x, _)} -> (
+    match Env.lookup_opt env x with Some t -> t | None -> ty )
+  | TBool | TInt _ -> ty
+  | TArrow (r, s) -> TArrow (inline_type env r, inline_type env s)
+  | TTuple ts -> TTuple (List.map (inline_type env) ts)
+  | TOption r -> TOption (inline_type env r)
+  | _ -> Console.error "unimplemented (inline_type)"
+
+
+let inline_type_app e1 e2 : ty =
+  match (get_inner_type (oget e1.ety), oget e2.ety) with
+  | TArrow (t1, t2), t3 ->
+      let env = inst_types t1 t3 in
+      inline_type env t2
+  | _ -> Console.error "inlining internals (inline_type_app)"
+
+
+(* match get_inner_type (oget ty) with
+  | TArrow (_, t2) -> t2
+  | _ -> Console.error "inlining internals: %s\n" *)
 
 let rec inline_app env e1 e2 : exp =
   (* Printf.printf "inline_app e1: %s\ninline_app e2: %s)\n"
     (Printing.exp_to_string e1)
     (Printing.exp_to_string e2) ; *)
-  match e1.e with
-  | EVar x -> (
-    match Env.lookup_opt env x with
-    | None -> EApp (e1, e2) |> wrap e1 |> annot (get_rettype e1.ety)
-    | Some e -> inline_app env e e2 )
-  | EFun f ->
-      let e = substitute f.arg f.body e2 |> annot (oget f.resty) in
-      inline_exp env e
-  | EIf (e3, e4, e5) ->
-      let etrue = inline_app env e4 e2 in
-      let efalse = inline_app env e5 e2 in
-      EIf (e3, etrue, efalse) |> wrap e1 |> annot (oget etrue.ety)
-  | ELet (x, e3, e4) ->
-      let e5 =
-        inline_exp env (EApp (e4, e2) |> wrap e4 |> annot (get_rettype e4.ety))
-      in
-      ELet (x, e3, e5) |> wrap e1
-  | ETy (e1, ty) -> inline_app env e1 e2
-  | EMatch (e, bs) -> (
-      let e = inline_exp env e in
-      let branches = List.map (inline_branch_app env e2) bs in
-      let e = EMatch (e, branches) |> wrap e1 in
-      match branches with
-      | [] -> Console.error "internal error"
-      | (p, eb) :: _ -> e |> annot (oget eb.ety) )
-  | EApp _ -> EApp (e1, e2) |> wrap e1 |> annot (get_rettype e1.ety)
-  | ESome _ | EProj _ | ETuple _ | EOp _ | EVal _ ->
-      Console.error
-        (Printf.sprintf "inline_app: %s" (Printing.exp_to_string e1))
+  let exp =
+    match e1.e with
+    | EVar x -> (
+      match Env.lookup_opt env x with
+      | None -> EApp (e1, e2) |> wrap e1 |> annot (inline_type_app e1 e2)
+      | Some e -> inline_app env e e2 )
+    | EFun f ->
+        let e = substitute f.arg f.body e2 |> annot (oget f.resty) in
+        inline_exp env e
+    | EIf (e3, e4, e5) ->
+        let etrue = inline_app env e4 e2 in
+        let efalse = inline_app env e5 e2 in
+        EIf (e3, etrue, efalse) |> wrap e1 |> annot (oget etrue.ety)
+    | ELet (x, e3, e4) ->
+        let e5 =
+          inline_exp env
+            (EApp (e4, e2) |> wrap e4 |> annot (inline_type_app e4 e2))
+        in
+        ELet (x, e3, e5) |> wrap e1
+    | ETy (e1, ty) -> inline_app env e1 e2
+    | EMatch (e, bs) -> (
+        let e = inline_exp env e in
+        let branches = List.map (inline_branch_app env e2) bs in
+        let e = EMatch (e, branches) |> wrap e1 in
+        match branches with
+        | [] -> Console.error "internal error"
+        | (p, eb) :: _ -> e |> annot (oget eb.ety) )
+    | EApp _ -> EApp (e1, e2) |> wrap e1 |> annot (inline_type_app e1 e2)
+    | ESome _ | EProj _ | ETuple _ | EOp _ | EVal _ ->
+        Console.error
+          (Printf.sprintf "inline_app: %s" (Printing.exp_to_string e1))
+  in
+  exp
 
 
 and inline_branch_app env e2 (p, e) = (p, inline_app env e e2)
