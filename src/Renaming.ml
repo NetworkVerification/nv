@@ -49,7 +49,6 @@ let rec alpha_convert_exp (env: Var.t Env.t) (e: exp) =
       ELet (y, e1', e2') |> wrap e
   | ETuple es ->
       ETuple (List.map (fun e -> alpha_convert_exp env e) es) |> wrap e
-  | EProj (i, e1) -> EProj (i, alpha_convert_exp env e1) |> wrap e
   | ESome e1 -> ESome (alpha_convert_exp env e1) |> wrap e
   | EMatch (e, bs) ->
       let bs' =

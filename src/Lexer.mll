@@ -50,7 +50,6 @@ rule token = parse
   | "|"          { BAR (position lexbuf) }
   | "->"         { ARROW (position lexbuf) }
   | "!"          { NOT (position lexbuf) }
-  | "."          { DOT (position lexbuf) }
   | ","          { COMMA (position lexbuf) }
   | "+"          { PLUS (position lexbuf) }
   | "-"          { SUB (position lexbuf) }

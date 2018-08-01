@@ -60,9 +60,9 @@ let main =
   let decls = Renaming.alpha_convert_declarations decls in
   let decls = Inline.inline_declarations decls in
   let decls = Typing.infer_declarations info decls in
-  (* let smt = Smt.encode decls in
+  let smt = Smt.encode decls in
   Printf.printf "%s" smt.defs ;
-  Printf.printf "%s" smt.merge ; *)
+  Printf.printf "%s" smt.merge ;
   print_endline "" ;
   print_endline "** Starting SRP Processing **" ;
   if verbose () then (

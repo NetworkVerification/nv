@@ -22,9 +22,8 @@ type ty =
   | TTuple of ty list
   | TOption of ty
   | TMap of index * ty
-  (* TMap (i,t) is a map from [0..i-1] to t *)
-  | TAll of tyname list * ty
 
+(* TMap (i,t) is a map from [0..i-1] to t *)
 and tyvar = Unbound of tyname * level | Link of ty
 
 type var = Var.t
@@ -64,9 +63,9 @@ type pattern =
 type v =
   | VBool of bool
   | VUInt32 of UInt32.t
-  | VMap of value IMap.t * ty option
+  | VMap of value IMap.t
   | VTuple of value list
-  | VOption of value option * ty option
+  | VOption of value option
   | VClosure of closure
 
 and value = {v: v; vty: ty option; vspan: Span.t}
@@ -80,7 +79,6 @@ and e =
   | EIf of exp * exp * exp
   | ELet of var * exp * exp
   | ETuple of exp list
-  | EProj of int * exp
   | ESome of exp
   | EMatch of exp * branches
   | ETy of exp * ty

@@ -2,9 +2,8 @@ open Unsigned
 open Syntax
 
 (* Scanf.sscanf s "%d %[^\n]" (fun n s-> f (n::acc) s) *)
-
 (* encoding in the smt-lib format *)
-type smt_encoding = 
+type smt_encoding =
   { defs: string
   ; merge: string
   ; merge_args: string list
@@ -12,7 +11,6 @@ type smt_encoding =
   ; trans_args: string list
   ; init: string
   ; init_args: string list }
-  
 
 let rec ty_to_smtlib (ty: ty) : string =
   match ty with
@@ -27,7 +25,7 @@ let rec ty_to_smtlib (ty: ty) : string =
         Printf.sprintf "Pair (%s) (%s)" (ty_to_smtlib t)
           (ty_to_smtlib (TTuple ts)) )
   | TOption ty -> Printf.sprintf "Option (%s)" (ty_to_smtlib ty)
-  | TMap _ | TAll _ -> Console.error "unimplemented"
+  | TMap _ -> Console.error "unimplemented"
   | TVar _ | QVar _ | TArrow _ ->
       Console.error
         (Printf.sprintf "internal error (ty_to_smtlib): %s"
@@ -76,7 +74,6 @@ let rec encode_exp (e: exp) : string * string =
         let a, e1 = encode_exp e in
         let b, e2 = encode_exp (ETuple es |> exp) in
         (a ^ b, Printf.sprintf "(mk-pair %s %s)" e1 e2) )
-  | EProj (i, e) -> Console.error "unimplemented: EProj"
   | ESome e ->
       let a, e = encode_exp e in
       (a, Printf.sprintf "(some %s)" e)
@@ -182,8 +179,8 @@ and encode_value v : string =
     | v :: vs ->
         Printf.sprintf "(mk-pair %s %s)" (encode_value v.v)
           (encode_value (VTuple vs)) )
-  | VOption (None, _) -> "none"
-  | VOption (Some v, _) -> Printf.sprintf "(some %s)" (encode_value v.v)
+  | VOption None -> "none"
+  | VOption Some v -> Printf.sprintf "(some %s)" (encode_value v.v)
   | VClosure _ -> Console.error "internal error (closure in smt)"
   | VMap _ -> Console.error "unimplemented: map"
 

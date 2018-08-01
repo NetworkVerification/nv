@@ -70,7 +70,6 @@
 %token <Span.t> NONE 
 %token <Span.t> MATCH 
 %token <Span.t> WITH
-%token <Span.t> DOT 
 %token <Span.t> BAR 
 %token <Span.t> ARROW 
 %token <Span.t> SEMI 
@@ -103,7 +102,6 @@
 %left PLUS SUB      /* lowest precedence */
 %left AND OR
 %right NOT
-%left DOT
 %left LBRACKET      /* highest precedence */
 
 %%
@@ -200,7 +198,6 @@ expr3:
     | expr4 GEQ expr4                           { exp (EOp (ULeq, [$3;$1])) (Span.extend $1.espan $3.espan) }
     | expr3 LBRACKET expr RBRACKET              { exp (EOp (MGet, [$1;$3])) (Span.extend $1.espan $4) }
     | expr3 LBRACKET expr EQ expr RBRACKET      { exp (EOp (MSet, [$1;$3;$5])) (Span.extend $1.espan $6) }
-    | expr3 DOT NUM                             { exp (EProj (UInt32.to_int (snd $3), $1)) (Span.extend $1.espan (fst $3)) }
 ;
 
 expr4:
@@ -208,7 +205,7 @@ expr4:
     | NUM                      { e_val (VUInt32 (snd $1)) (fst $1) }
     | TRUE                     { e_val (VBool true) $1 }
     | FALSE                    { e_val (VBool false) $1 }
-    | NONE                     { e_val (VOption (None,None)) $1 }
+    | NONE                     { e_val (VOption None) $1 }
     | LPAREN exprs RPAREN      { tuple_it $2 (Span.extend $1 $3) }
     | LPAREN expr COLON ty RPAREN { exp (ETy ($2, $4)) (Span.extend $1 $5) }
 ;

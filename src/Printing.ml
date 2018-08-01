@@ -41,7 +41,6 @@ let prec_exp e =
   | EIf _ -> max_prec
   | ELet _ -> max_prec
   | ETuple _ -> 0
-  | EProj _ -> 1
   | ESome _ -> max_prec
   | EMatch _ -> 8
   | ETy (_, _) -> max_prec
@@ -76,7 +75,6 @@ let ty_prec t =
   | TTuple _ -> 6
   | TOption _ -> 4
   | TMap _ -> 4
-  | TAll _ -> 10
 
 
 let rec ty_to_string_p prec t =
@@ -91,12 +89,6 @@ let rec ty_to_string_p prec t =
     | TTuple ts -> sep "*" (ty_to_string_p p) ts
     | TOption t -> ty_to_string_p p t ^ " option"
     | TMap (i, t) -> ty_to_string_p p t ^ " vec[" ^ UInt32.to_string i ^ "]"
-    | TAll (tvs, ty) ->
-        let quant =
-          if quantifiers then "all[" ^ comma_sep Var.to_string tvs ^ "]."
-          else ""
-        in
-        quant ^ ty_to_string_p p ty
   in
   if p < prec then s else "(" ^ s ^ ")"
 
@@ -192,17 +184,12 @@ and value_to_string_p prec v =
   | VBool true -> "true"
   | VBool false -> "false"
   | VUInt32 i -> UInt32.to_string i
-  | VMap (m, None) -> map_to_string "=" ";" m
-  | VMap (m, Some t) -> "(" ^ map_to_string "=" ";" m ^ ty_to_string t ^ ")"
+  | VMap m -> map_to_string "=" ";" m
   | VTuple vs -> "(" ^ comma_sep (value_to_string_p max_prec) vs ^ ")"
-  | VOption (None, None) -> "None"
-  | VOption (None, Some t) -> "(None : " ^ ty_to_string t ^ ")"
-  | VOption (Some v, None) ->
+  | VOption None -> "None"
+  | VOption Some v ->
       let s = "Some(" ^ value_to_string_p max_prec v ^ ")" in
       if max_prec > prec then "(" ^ s ^ ")" else s
-  | VOption (Some v, Some t) ->
-      let s = "Some" ^ value_to_string_p max_prec v in
-      "(" ^ s ^ ":" ^ ty_to_string t ^ ")"
   | VClosure cl -> closure_to_string_p prec cl
 
 
@@ -223,7 +210,6 @@ and exp_to_string_p prec e =
         "let " ^ Var.to_string x ^ "=" ^ exp_to_string_p max_prec e1 ^ " in "
         ^ exp_to_string_p prec e2
     | ETuple es -> "(" ^ comma_sep (exp_to_string_p max_prec) es ^ ")"
-    | EProj (i, e) -> exp_to_string_p p e ^ "." ^ string_of_int i
     | ESome e -> "Some " ^ exp_to_string_p prec e
     | EMatch (e1, bs) ->
         "(match " ^ exp_to_string_p max_prec e1 ^ " with "

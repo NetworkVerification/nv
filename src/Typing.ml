@@ -66,7 +66,6 @@ let rec check_annot (e: exp) =
   | EIf (e1, e2, e3) -> check_annot e1 ; check_annot e2 ; check_annot e3
   | ELet (_, e1, e2) -> check_annot e1 ; check_annot e2
   | ETuple es -> List.iter check_annot es
-  | EProj (_, e) -> check_annot e
   | ESome e -> check_annot e
   | EMatch (e, bs) ->
       check_annot e ;
@@ -110,7 +109,6 @@ let occurs tvr ty =
     | TTuple ts -> List.iter (occ tvr) ts
     | TOption t -> occ tvr t
     | TMap (_, t) -> occ tvr t
-    | TAll _ -> Console.error "impredicative polymorphism in occurs check"
   in
   try occ tvr ty with Occurs ->
     Console.error
@@ -146,10 +144,6 @@ let rec unify info e t1 t2 : unit =
       | TTuple ts1, TTuple ts2 -> try_unifies ts1 ts2
       | TOption t1, TOption t2 -> try_unify t1 t2
       | TMap (i1, t1), TMap (i2, t2) when i1 = i2 -> try_unify t1 t2
-      | TAll _, _ ->
-          Console.error "impredicative polymorphism in unification (1)"
-      | _, TAll _ ->
-          Console.error "impredicative polymorphism in unification (2)"
       | _, _ -> false
   in
   if try_unify t1 t2 then ()
@@ -175,38 +169,35 @@ let unify_opt info (e: exp) topt1 t2 =
 let generalize ty =
   let rec gen ty =
     match ty with
-    | TVar {contents= Unbound (name, l)} when l > !current_level ->
-        (Env.bind name (), QVar name)
+    | TVar {contents= Unbound (name, l)} when l > !current_level -> QVar name
     | TVar {contents= Link ty} -> gen ty
-    | TVar _ | TBool | TInt _ -> (Env.empty, ty)
+    | TVar _ | TBool | TInt _ -> ty
     | QVar q ->
         if_debug
           ("qvar " ^ Var.to_string q ^ " appears in generalization check") ;
-        (Env.empty, ty)
+        ty
     | TArrow (ty1, ty2) ->
-        let tvs1, ty1 = gen ty1 in
-        let tvs2, ty2 = gen ty2 in
-        (Env.updates tvs1 tvs2, TArrow (ty1, ty2))
+        let ty1 = gen ty1 in
+        let ty2 = gen ty2 in
+        TArrow (ty1, ty2)
     | TTuple ts ->
-        let tvs, tys = gens ts in
-        (tvs, TTuple tys)
+        let tys = gens ts in
+        TTuple tys
     | TOption t ->
-        let tvs, ty = gen t in
-        (tvs, TOption ty)
+        let ty = gen t in
+        TOption ty
     | TMap (i, t) ->
-        let tvs, ty = gen t in
-        (tvs, TMap (i, ty))
-    | TAll _ -> Console.error "impredicative polymorphism in generalization"
+        let ty = gen t in
+        TMap (i, ty)
   and gens tys =
     match tys with
-    | [] -> (Env.empty, [])
+    | [] -> []
     | ty1 :: tys ->
-        let tvs1, ty1 = gen ty1 in
-        let tvs, tys = gens tys in
-        (Env.updates tvs tvs1, ty1 :: tys)
+        let ty1 = gen ty1 in
+        let tys = gens tys in
+        ty1 :: tys
   in
-  let env, ty = gen ty in
-  (List.map (fun (x, _) -> x) (Env.to_list env), ty)
+  gen ty
 
 
 (* instantiation: replace schematic variables with fresh TVar *)
@@ -235,7 +226,6 @@ let inst subst ty =
     | TMap (i, t) ->
         let t = loop subst t in
         TMap (i, t)
-    | TAll _ -> Console.error "impredicative polymorphism in instantiation"
   and loops subst tys =
     match tys with
     | [] -> []
@@ -274,7 +264,6 @@ let substitute (ty: ty) : ty =
     | TTuple ts -> TTuple (List.map substitute_aux ts)
     | TOption t -> TOption (substitute_aux t)
     | TMap (i, t) -> TMap (i, substitute_aux t)
-    | TAll (tvs, t) -> TAll (tvs, substitute_aux t)
   in
   substitute_aux ty
 
@@ -312,10 +301,11 @@ let rec infer_exp i info env (e: exp) : exp =
     | EVar x -> (
       match Env.lookup_opt env x with
       | None -> Console.error ("unbound variable " ^ Var.to_string x)
-      | Some TAll (tvs, t) ->
+      (* | Some TAll (tvs, t) ->
           let ty, _ = inst_schema (tvs, t) in
-          texp (EVar x, ty)
-      | Some t -> texp (e.e, t) )
+          texp (EVar x, ty) *)
+      | Some t ->
+          texp (e.e, substitute t) )
     | EVal v ->
         let v, t = infer_value info env v |> textractv in
         texp (EVal v, t)
@@ -342,12 +332,12 @@ let rec infer_exp i info env (e: exp) : exp =
     | EApp (e1, e2) ->
         let e1, ty_fun = infer_exp (i + 1) info env e1 |> textract in
         let e2, ty_arg = infer_exp (i + 1) info env e2 |> textract in
-        let ty = substitute ty_fun in
+        (* let ty = substitute ty_fun in *)
         (* Printf.printf "ty_fun: %s\n" (Printing.ty_to_string ty_fun) ;
         Printf.printf "ty_arg: %s\n" (Printing.ty_to_string ty_arg) ;
         Printf.printf "substituted: %s\n" (Printing.ty_to_string ty) ; *)
         let ty_res = fresh_tyvar () in
-        unify info e ty (TArrow (ty_arg, ty_res)) ;
+        unify info e ty_fun (TArrow (ty_arg, ty_res)) ;
         texp (EApp (e1, e2), ty_res)
     | EIf (e1, e2, e3) ->
         let e1, tcond = infer_exp (i + 1) info env e1 |> textract in
@@ -362,7 +352,7 @@ let rec infer_exp i info env (e: exp) : exp =
         enter_level () ;
         let e1, ty_e1 = infer_exp (i + 1) info env e1 |> textract in
         leave_level () ;
-        let _, ty = generalize ty_e1 in
+        let ty = generalize ty_e1 in
         let e2, ty_e2 =
           infer_exp (i + 1) info (Env.update env x ty) e2 |> textract
         in
@@ -372,20 +362,9 @@ let rec infer_exp i info env (e: exp) : exp =
     | ETuple es ->
         let es, tys = infer_exps (i + 1) info env es in
         texp (ETuple es, TTuple tys)
-    | EProj (j, e) ->
-       (* TODO: What if t is a type variable? *)
-       begin 
-         let e, t = infer_exp (i + 1) info env e |> textract in 
-         match t with
-           TTuple ts ->
-            texp (EProj (j, e), List.nth ts j )
-         | _ -> Console.error "Expected tuple type."
-       end
-         
     | ESome e ->
         let e, t = infer_exp (i + 1) info env e |> textract in
         texp (ESome e, TOption t)
-      
     | EMatch (e, branches) ->
         let e, tmatch = infer_exp (i + 1) info env e |> textract in
         let branches, t = infer_branches (i + 1) info env e tmatch branches in
@@ -395,8 +374,8 @@ let rec infer_exp i info env (e: exp) : exp =
         unify info e t t1 ;
         texp (ETy (e, t1), t1)
   in
-  (* Printf.printf "result = %s: %s\n"
-    (Printing.exp_to_string exp)
+  (* Printf.printf "infer_exp: %s\n" (Printing.exp_to_string e);
+  Printf.printf "type: %s\n"
     (Printing.ty_to_string (oget exp.ety)) ;
   check_annot exp ; *)
   exp
@@ -421,7 +400,7 @@ and infer_value info env (v: Syntax.value) : Syntax.value =
   match v.v with
   | VBool b -> tvalue (v.v, TBool)
   | VUInt32 i -> tvalue (v.v, tint)
-  | VMap (m, tyopt) ->
+  | VMap m ->
       failwith "unimplemented"
       (* To DO *)
       (*
@@ -438,16 +417,14 @@ and infer_value info env (v: Syntax.value) : Syntax.value =
   | VTuple vs ->
       let vs, ts = infer_values info env vs in
       tvalue (VTuple vs, TTuple ts)
-  | VOption (None, topt) ->
+  | VOption None ->
       let tv = fresh_tyvar () in
-      unify_opt info (val_to_exp v) topt tv ;
-      tvalue (VOption (None, Some tv), TOption tv)
-  | VOption (Some v, topt) ->
+      tvalue (VOption None, TOption tv)
+  | VOption Some v ->
       let v, t = infer_value info env v |> textractv in
       let tv = fresh_tyvar () in
-      unify_opt info (val_to_exp v) topt tv ;
       unify info (val_to_exp v) t tv ;
-      tvalue (VOption (Some v, Some tv), TOption tv)
+      tvalue (VOption (Some v), TOption tv)
   | VClosure cl ->
       failwith "unimplemented: closure type inference because i am lazy"
 
@@ -527,7 +504,7 @@ and infer_declaration i info env aty d : ty Env.t * declaration =
       leave_level () ;
       check_annot e1 ;
       (* (Env.update env var (oget e1.ety), DLet (var, e1)) *)
-      let ts, ty = generalize ty_e1 in
+      let ty = generalize ty_e1 in
       (Env.update env x ty, DLet (x, Some ty, texp (e1.e, ty)))
   | DMerge e ->
       let e' = infer_exp (i + 1) info env e in

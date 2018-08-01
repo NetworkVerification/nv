@@ -36,10 +36,10 @@ let rec equal_val v1 v2 =
   match (v1.v, v2.v) with
   | VBool b1, VBool b2 -> b1 = b2
   | VUInt32 i1, VUInt32 i2 -> UInt32.compare i1 i2 = 0
-  | VMap (m1, _), VMap (m2, _) -> IMap.equal equal_val m1 m2
+  | VMap m1, VMap m2 -> IMap.equal equal_val m1 m2
   | VTuple vs1, VTuple vs2 -> equal_vals vs1 vs2
-  | VOption (None, _), VOption (None, _) -> true
-  | VOption (Some v1, _), VOption (Some v2, _) -> equal_val v1 v2
+  | VOption None, VOption None -> true
+  | VOption Some v1, VOption Some v2 -> equal_val v1 v2
   | VClosure _, _ -> raise (Equality v1)
   | _, VClosure _ -> raise (Equality v2)
   | _, _ -> false
@@ -63,8 +63,8 @@ let rec matches p (v: Syntax.value) : Syntax.value Env.t option =
   | PUInt32 i1, VUInt32 i2 ->
       if UInt32.compare i1 i2 = 0 then Some Env.empty else None
   | PTuple ps, VTuple vs -> matches_list ps vs
-  | POption None, VOption (None, _) -> Some Env.empty
-  | POption Some p, VOption (Some v, _) -> matches p v
+  | POption None, VOption None -> Some Env.empty
+  | POption Some p, VOption Some v -> matches p v
   | (PBool _ | PUInt32 _ | PTuple _ | POption _), _ -> None
 
 
@@ -118,17 +118,7 @@ let rec interp_exp env e =
       let v1 = interp_exp env e1 in
       interp_exp (update_value env x v1) e2
   | ETuple es -> value (VTuple (List.map (interp_exp env) es))
-  | EProj (i, e) -> (
-      if i < 0 then
-        Console.error (sprintf "negative projection from tuple: %d " i) ;
-      match (interp_exp env e).v with
-      | VTuple vs ->
-          if i >= List.length vs then
-            Console.error
-              (sprintf "projection out of range: %d > %d" i (List.length vs)) ;
-          List.nth vs i
-      | _ -> Console.error "bad projection" )
-  | ESome e -> value (VOption (Some (interp_exp env e), None))
+  | ESome e -> value (VOption (Some (interp_exp env e)))
   | EMatch (e1, branches) ->
       let v = interp_exp env e1 in
       match match_branches branches v with
@@ -155,29 +145,26 @@ and interp_op env op es =
       (if UInt32.compare i1 i2 = 0 then VBool true else VBool false) |> value
   | ULess, [{v= VUInt32 i1}; {v= VUInt32 i2}] ->
       (if UInt32.compare i1 i2 = -1 then VBool true else VBool false) |> value
-  | MCreate t, [{v= VUInt32 i}; v] -> VMap (IMap.create i v, t) |> value
-  | MGet, [{v= VMap (m, t)}; {v= VUInt32 i}] -> (
+  | MCreate t, [{v= VUInt32 i}; v] -> VMap (IMap.create i v) |> value
+  | MGet, [{v= VMap m}; {v= VUInt32 i}] -> (
     try IMap.find m i with IMap.Out_of_bounds i ->
       Console.error ("bad get: " ^ UInt32.to_string i) )
-  | MSet, [{v= VMap (m, t)}; {v= VUInt32 i}; v] ->
-      VMap (IMap.update m i v, t) |> value
-  | MMap, [{v= VClosure (c_env, f)}; {v= VMap (m, t)}] ->
-      VMap (IMap.map (fun v -> apply c_env f v) m, t) |> value
-  | MMerge, [{v= VClosure (c_env, f)}; {v= VMap (m1, t1)}; {v= VMap (m2, t2)}] ->
+  | MSet, [{v= VMap m}; {v= VUInt32 i}; v] -> VMap (IMap.update m i v) |> value
+  | MMap, [{v= VClosure (c_env, f)}; {v= VMap m}] ->
+      VMap (IMap.map (fun v -> apply c_env f v) m) |> value
+  | MMerge, [{v= VClosure (c_env, f)}; {v= VMap m1}; {v= VMap m2}] ->
       (* TO DO:  Need to preserve types in VOptions here ? *)
       let f_lifted v1opt v2opt =
         let v =
           apply c_env f
-            ( VTuple
-                [VOption (v1opt, None) |> value; VOption (v2opt, None) |> value]
-            |> value )
+            (VTuple [VOption v1opt |> value; VOption v2opt |> value] |> value)
         in
         match v.v with
-        | VOption (vopt, _) -> vopt
+        | VOption vopt -> vopt
         | _ ->
             Console.error "bad merge application; did not return option value"
       in
-      VMap (IMap.merge f_lifted m1 m2, t1) |> value
+      VMap (IMap.merge f_lifted m1 m2) |> value
   | _, _ -> Console.error "bad operator application"
 
 

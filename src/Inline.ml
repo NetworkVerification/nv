@@ -42,7 +42,6 @@ let rec substitute x e1 e2 =
       EMatch (substitute x e e2, List.map (substitute_pattern x e2) bs)
       |> wrap e1
   | ESome e -> ESome (substitute x e e2) |> wrap e1
-  | EProj (i, e) -> EProj (i, substitute x e e2) |> wrap e1
   | ETuple es -> ETuple (List.map (fun e -> substitute x e e2) es) |> wrap e1
   | EOp (op, es) ->
       EOp (op, List.map (fun e -> substitute x e e2) es) |> wrap e1
@@ -57,7 +56,7 @@ let inst_types t1 t2 =
   let map = ref Env.empty in
   let rec aux t1 t2 =
     match (t1, t2) with
-    | TVar {contents= Link r}, s -> aux r s
+    | TVar {contents= Link r}, s | r, TVar {contents= Link s} -> aux r s
     | QVar x, t | TVar {contents= Unbound (x, _)}, t ->
         map := Env.update !map x t
     | TBool, TBool -> ()
@@ -66,7 +65,10 @@ let inst_types t1 t2 =
     | TTuple ts1, TTuple ts2 when List.length ts1 = List.length ts2 ->
         List.combine ts1 ts2 |> List.iter (fun (r, s) -> aux r s)
     | TOption r, TOption s -> aux r s
-    | _ -> Console.error "unimplemented (inst_types)"
+    | _ ->
+        Console.error
+          (Printf.sprintf "unimplemented (inst_types): (%s, %s)"
+             (Printing.ty_to_string t1) (Printing.ty_to_string t2))
   in
   aux t1 t2 ; !map
 
@@ -83,7 +85,7 @@ let rec inline_type (env: ty Env.t) ty : ty =
   | _ -> Console.error "unimplemented (inline_type)"
 
 
-let inline_type_app e1 e2 : ty = 
+let inline_type_app e1 e2 : ty =
   match (Typing.get_inner_type (oget e1.ety), oget e2.ety) with
   | TArrow (t1, t2), t3 ->
       let env = inst_types t1 t3 in
@@ -127,7 +129,7 @@ let rec inline_app env e1 e2 : exp =
         | [] -> Console.error "internal error"
         | (p, eb) :: _ -> e |> annot (oget eb.ety) )
     | EApp _ -> EApp (e1, e2) |> wrap e1 |> annot (inline_type_app e1 e2)
-    | ESome _ | EProj _ | ETuple _ | EOp _ | EVal _ ->
+    | ESome _ | ETuple _ | EOp _ | EVal _ ->
         Console.error
           (Printf.sprintf "inline_app: %s" (Printing.exp_to_string e1))
   in
@@ -152,7 +154,6 @@ and inline_exp (env: exp Env.t) (e: exp) : exp =
       if is_function_ty e1 then inline_exp (Env.update env x e1') e2
       else ELet (x, e1', inline_exp env e2) |> wrap e
   | ETuple es -> ETuple (List.map (inline_exp env) es) |> wrap e
-  | EProj (i, e1) -> EProj (i, inline_exp env e1) |> wrap e
   | ESome e1 -> ESome (inline_exp env e1) |> wrap e
   | EMatch (e1, bs) ->
       EMatch (inline_exp env e1, List.map (inline_branch env) bs) |> wrap e
@@ -169,7 +170,7 @@ and inline_branch env (p, e) =
 let inline_declaration (env: exp Env.t) (d: declaration) =
   match d with
   | DLet (x, tyo, e) ->
-      let e = inline_exp env e in
+      (* let e = inline_exp env e in *)
       if is_function_ty e then (Env.update env x e, None)
       else (env, Some (DLet (x, tyo, e)))
   | DMerge e -> (env, Some (DMerge (inline_exp env e)))
