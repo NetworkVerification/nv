@@ -171,7 +171,7 @@ and encode_value v : string =
   match v with
   | VBool true -> "true"
   | VBool false -> "false"
-  | VUInt32 i -> UInt32.to_string i
+  | VUInt32 i -> Printf.sprintf "(_ bv%d %s)" 32 (UInt32.to_string i)
   | VTuple vs -> (
     match vs with
     | [] -> Console.error "internal error (encode_value)"
