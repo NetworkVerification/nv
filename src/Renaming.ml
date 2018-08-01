@@ -85,4 +85,5 @@ let rec alpha_convert_aux env (ds: declarations) : declarations =
 
 
 let rec alpha_convert_declarations (ds: declarations) =
+  Var.reset () ;
   alpha_convert_aux Env.empty ds

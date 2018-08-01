@@ -118,7 +118,7 @@ and encode_branches_aux name bs acc (t: ty) =
       let b, e = encode_exp e in
       let c, p = encode_pattern name p t in
       let acc = Printf.sprintf "(ite %s %s %s)" p e acc in
-      encode_branches_aux name bs (a ^ c ^ b, acc) t
+      encode_branches_aux name bs (c ^ b ^ a, acc) t
 
 
 and encode_pattern name p (t: ty) =
