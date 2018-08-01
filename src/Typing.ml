@@ -372,12 +372,20 @@ let rec infer_exp i info env (e: exp) : exp =
     | ETuple es ->
         let es, tys = infer_exps (i + 1) info env es in
         texp (ETuple es, TTuple tys)
-    | EProj (i, e) ->
-        let e, t = infer_exp (i + 1) info env e |> textract in
-        texp (EProj (i, e), t)
+    | EProj (j, e) ->
+       (* TODO: What if t is a type variable? *)
+       begin 
+         let e, t = infer_exp (i + 1) info env e |> textract in 
+         match t with
+           TTuple ts ->
+            texp (EProj (j, e), List.nth ts j )
+         | _ -> Console.error "Expected tuple type."
+       end
+         
     | ESome e ->
         let e, t = infer_exp (i + 1) info env e |> textract in
         texp (ESome e, TOption t)
+      
     | EMatch (e, branches) ->
         let e, tmatch = infer_exp (i + 1) info env e |> textract in
         let branches, t = infer_branches (i + 1) info env e tmatch branches in
