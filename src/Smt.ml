@@ -1,8 +1,10 @@
 open Unsigned
 open Syntax
 
+(* Scanf.sscanf s "%d %[^\n]" (fun n s-> f (n::acc) s) *)
+
 (* encoding in the smt-lib format *)
-type smt_encoding =
+type smt_encoding = 
   { defs: string
   ; merge: string
   ; merge_args: string list
@@ -10,6 +12,7 @@ type smt_encoding =
   ; trans_args: string list
   ; init: string
   ; init_args: string list }
+  
 
 let rec ty_to_smtlib (ty: ty) : string =
   match ty with

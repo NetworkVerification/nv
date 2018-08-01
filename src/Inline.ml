@@ -83,7 +83,7 @@ let rec inline_type (env: ty Env.t) ty : ty =
   | _ -> Console.error "unimplemented (inline_type)"
 
 
-let inline_type_app e1 e2 : ty =
+let inline_type_app e1 e2 : ty = 
   match (Typing.get_inner_type (oget e1.ety), oget e2.ety) with
   | TArrow (t1, t2), t3 ->
       let env = inst_types t1 t3 in
