@@ -58,6 +58,20 @@ let commandline_processing () =
   Arg.parse speclist print_endline usage_msg
 
 
+let run_smt info ds =
+  let decls = Renaming.alpha_convert_declarations ds in
+  let decls = Inline.inline_declarations decls in
+  let decls = Typing.infer_declarations info decls in
+  let res = Smt.solve decls in
+  match res with
+  | Unsat -> ()
+  | Unknown -> ()
+  | Sat map ->
+      NodeMap.iter
+        (fun k v -> Printf.printf "%d:%s\n" k (Printing.exp_to_string v))
+        map
+
+
 let main =
   let () = commandline_processing () in
   let ds, info = Input.parse (filename ()) in
@@ -67,28 +81,18 @@ let main =
     print_endline "** SRP Definition **" ;
     print_endline (Printing.declarations_to_string ds) ;
     print_endline "** End SRP Definition **" ) ;
-  ( if verify () then
-      let decls = Renaming.alpha_convert_declarations decls in
-      let decls = Inline.inline_declarations decls in
-      let decls = Typing.infer_declarations info decls in
-      let _ = Smt.encode decls in
-      (* Printf.printf "%s" smt.defs ;
-    Printf.printf "%s" smt.merge ; *)
-      print_endline "" ) ;
+  if verify () then run_smt info decls ;
   if simulate () then (
-    print_endline "** Starting SRP Simulation **" ;
     let solution, q =
       match bound () with
       | None -> (Srp.simulate_declarations decls, [])
       | Some b -> Srp.simulate_declarations_bound decls b
     in
-    print_endline "** SRP Solution **" ;
     Srp.print_solution solution ;
-    ( match q with
+    match q with
     | [] -> ()
     | qs ->
         print_string "non-quiescent nodes:" ;
         List.iter
           (fun q -> print_string (Unsigned.UInt32.to_string q ^ ";"))
-          qs ) ;
-    print_endline "** End SRP Solution **" )
+          qs )

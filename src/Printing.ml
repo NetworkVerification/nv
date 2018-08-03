@@ -210,7 +210,7 @@ and exp_to_string_p prec e =
         "let " ^ Var.to_string x ^ "=" ^ exp_to_string_p max_prec e1 ^ " in "
         ^ exp_to_string_p prec e2
     | ETuple es -> "(" ^ comma_sep (exp_to_string_p max_prec) es ^ ")"
-    | ESome e -> "Some " ^ exp_to_string_p prec e
+    | ESome e -> "Some(" ^ exp_to_string_p prec e ^ ")"
     | EMatch (e1, bs) ->
         "(match " ^ exp_to_string_p max_prec e1 ^ " with "
         ^ branches_to_string prec bs ^ ")"

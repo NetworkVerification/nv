@@ -2,6 +2,7 @@ open Unsigned
 open Syntax
 open Z3
 
+(* 
 type ('a, 'b, 'c) smt_encoding =
   { merge: 'b
   ; merge_args: 'a list
@@ -13,11 +14,6 @@ type ('a, 'b, 'c) smt_encoding =
 
 type smtlib_encoding = (string, string, string) smt_encoding
 
-type z3_encoding = (Z3.Symbol.symbol, Z3.Expr.expr, unit) smt_encoding
-
-type smt_env = {solver: Z3.Solver.solver; ctx: Z3.context}
-
-(* 
 let rec encode_exp (e: exp) : string * string =
   match e.e with
   | EVar x -> ("", Var.to_string x)
@@ -241,15 +237,20 @@ let encode_smtlib (ds: declarations) : smtlib_encoding =
       ; init_args= [inode]
       ; metadata= defs }
   | _ -> Console.error "attribute type not declared: type attribute = ..."
-
-
 *)
+
+type smt_env = {solver: Z3.Solver.solver; ctx: Z3.context}
 
 let create_fresh descr s =
   Printf.sprintf "%s-%s" descr (Var.fresh s |> Var.to_string)
 
 
 let create_name descr n = Printf.sprintf "%s-%s" descr (Var.to_string n)
+
+let z3_int ctx i =
+  Expr.mk_numeral_string ctx (UInt32.to_string i)
+    (Arithmetic.Integer.mk_sort ctx)
+
 
 let rec ty_to_smtlib (ty: ty) : string =
   match ty with
@@ -429,10 +430,7 @@ and encode_pattern_z3 descr env zname p (t: ty) =
       Boolean.mk_true env.ctx
   | PBool b, TBool -> Boolean.mk_eq env.ctx zname (Boolean.mk_val env.ctx b)
   | PUInt32 i, TInt _ ->
-      let const =
-        Expr.mk_numeral_string env.ctx (UInt32.to_string i)
-          (Arithmetic.Integer.mk_sort env.ctx)
-      in
+      let const = z3_int env.ctx i in
       Boolean.mk_eq env.ctx zname const
   | PTuple ps, TTuple ts -> (
     match (ps, ts) with
@@ -491,9 +489,7 @@ and encode_value_z3 descr env (v: Syntax.value) =
   match v.v with
   | VBool true -> Boolean.mk_true env.ctx
   | VBool false -> Boolean.mk_false env.ctx
-  | VUInt32 i ->
-      Expr.mk_numeral_string env.ctx (UInt32.to_string i)
-        (Arithmetic.Integer.mk_sort env.ctx)
+  | VUInt32 i -> z3_int env.ctx i
   | VTuple vs -> (
     match oget v.vty with
     | TTuple ts ->
@@ -605,10 +601,22 @@ end)
 
 let cfg = [("model", "true"); ("proof", "false")]
 
-let encode_z3 (ds: declarations) : Solver.solver =
+let encode_z3 (ds: declarations) : smt_env =
   Var.reset () ;
   let ctx = Z3.mk_context cfg in
-  let solver = Z3.Solver.mk_solver ctx None in
+  let t1 = Tactic.mk_tactic ctx "simplify" in
+  let t2 = Tactic.mk_tactic ctx "propagate-values" in
+  let t3 = Tactic.mk_tactic ctx "solve-eqs" in
+  let t4 = Tactic.mk_tactic ctx "bit-blast" in
+  let t5 = Tactic.mk_tactic ctx "smt" in
+  let t =
+    Tactic.and_then ctx t1
+      (Tactic.and_then ctx t2
+         (Tactic.and_then ctx t3 (Tactic.and_then ctx t4 t5 []) [])
+         [])
+      []
+  in
+  let solver = Z3.Solver.mk_solver_t ctx t in
   let env = {solver; ctx} in
   let emerge, etrans, einit, nodes, edges, aty =
     match
@@ -630,9 +638,7 @@ let encode_z3 (ds: declarations) : Solver.solver =
   for i = 0 to UInt32.to_int nodes - 1 do
     let init, n = encode_z3_init (Printf.sprintf "init-%d" i) env einit in
     Solver.add env.solver
-      [ Boolean.mk_eq env.ctx n
-          (Expr.mk_numeral_string env.ctx (string_of_int i)
-             (Arithmetic.Integer.mk_sort env.ctx)) ] ;
+      [Boolean.mk_eq env.ctx n (z3_int env.ctx (UInt32.of_int i))] ;
     init_map := NodeMap.add i init !init_map
   done ;
   (* map each edge to transfer function result *)
@@ -654,14 +660,8 @@ let encode_z3 (ds: declarations) : Solver.solver =
           env etrans
       in
       trans_input_map := EdgeMap.add (i, j) x !trans_input_map ;
-      let ie =
-        Expr.mk_numeral_string env.ctx (UInt32.to_string i)
-          (Arithmetic.Integer.mk_sort env.ctx)
-      in
-      let je =
-        Expr.mk_numeral_string env.ctx (UInt32.to_string j)
-          (Arithmetic.Integer.mk_sort env.ctx)
-      in
+      let ie = z3_int env.ctx i in
+      let je = z3_int env.ctx j in
       let pair_sort =
         ty_to_sort env.ctx
           (TTuple [TInt (UInt32.of_int 32); TInt (UInt32.of_int 32)])
@@ -687,9 +687,7 @@ let encode_z3 (ds: declarations) : Solver.solver =
           Solver.add solver [Boolean.mk_eq ctx trans x] ;
           Solver.add solver [Boolean.mk_eq ctx acc y] ;
           Solver.add solver
-            [ Boolean.mk_eq ctx n
-                (Expr.mk_numeral_int env.ctx i
-                   (Arithmetic.Integer.mk_sort env.ctx)) ] ;
+            [Boolean.mk_eq ctx n (z3_int env.ctx (UInt32.of_int i))] ;
           merge_result )
         init in_edges
     in
@@ -705,22 +703,58 @@ let encode_z3 (ds: declarations) : Solver.solver =
       let label = NodeMap.find (UInt32.to_int i) !labelling in
       Solver.add solver [Boolean.mk_eq ctx label x] )
     !trans_input_map ;
-  solver
+  env
 
 
-type smt_result = Unsat | Sat of unit | Unknown
+let rec z3_to_exp (e: Expr.expr) : Syntax.exp =
+  try
+    let i = UInt32.of_string (Expr.to_string e) in
+    EVal (VUInt32 i |> value) |> exp
+  with _ ->
+    let f = Expr.get_func_decl e in
+    let es = Expr.get_args e in
+    let name = FuncDecl.get_name f |> Symbol.to_string in
+    match name with
+    | "true" -> EVal (VBool true |> value) |> exp
+    | "false" -> EVal (VBool false |> value) |> exp
+    | "some" ->
+        let e = z3_to_exp (List.hd es) in
+        ESome e |> exp
+    | "none" -> EVal (VOption None |> value) |> exp
+    | _ ->
+        if String.sub name 0 7 = "mk-pair" then
+          let es = List.map z3_to_exp es in
+          ETuple es |> exp
+        else failwith ""
 
-let encode ds =
-  let solver = encode_z3 ds in
-  let q = Solver.check solver [] in
+
+type smt_result = Unsat | Sat of exp NodeMap.t | Unknown
+
+let solve ds =
+  let num_nodes, aty =
+    match (get_nodes ds, get_attr_type ds) with
+    | Some n, Some aty -> (n, aty)
+    | _ -> Console.error "internal error (encode)"
+  in
+  let env = encode_z3 ds in
+  let q = Solver.check env.solver [] in
   match q with
   | UNSATISFIABLE -> Unsat
   | UNKNOWN -> Unknown
   | SATISFIABLE ->
-      let m = Solver.get_model solver in
+      let m = Solver.get_model env.solver in
       match m with
       | None -> Console.error "internal error (encode)"
       | Some m ->
-          Printf.printf "Solver says: %s\n" (Solver.string_of_status q) ;
-          Printf.printf "Model: \n%s\n" (Model.to_string m) ;
-          Sat ()
+          let map = ref NodeMap.empty in
+          for i = 0 to UInt32.to_int num_nodes - 1 do
+            let l =
+              Expr.mk_const_s env.ctx
+                (Printf.sprintf "label-%d" i)
+                (ty_to_sort env.ctx aty)
+            in
+            let e = Model.eval m l true |> oget in
+            let e = z3_to_exp e in
+            map := NodeMap.add i e !map
+          done ;
+          Sat !map
