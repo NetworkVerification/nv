@@ -6,7 +6,7 @@ open Syntax
 let is_keyword_op op =
   match op with
   | And | Or | Not | UAdd | USub | UEq | ULess | ULeq | MGet -> false
-  | MCreate _ | MSet | MMap | MMerge -> true
+  | MCreate | MSet | MMap | MMerge | MFilter -> true
 
 
 (* set to true if you want to print universal quanifiers explicitly *)
@@ -24,11 +24,12 @@ let prec_op op =
   | UEq -> 5
   | ULess -> 5
   | ULeq -> 5
-  | MCreate _ -> 5
+  | MCreate -> 5
   | MGet -> 5
   | MSet -> 3
   | MMap -> 5
   | MMerge -> 5
+  | MFilter -> 5
 
 
 let prec_exp e =
@@ -111,12 +112,12 @@ let op_to_string op =
   | UEq -> "="
   | ULess -> "<"
   | ULeq -> "<="
-  | MCreate Some t -> "(create : " ^ ty_to_string t ^ ")"
-  | MCreate None -> "create"
+  | MCreate -> "create"
   | MGet -> "!"
   | MSet -> "set"
   | MMap -> "map"
   | MMerge -> "merge"
+  | MFilter -> "filter"
 
 
 let rec pattern_to_string pattern =

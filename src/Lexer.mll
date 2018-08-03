@@ -37,10 +37,14 @@ rule token = parse
   | "nodes"      { NODES (position lexbuf) }
   | "match"      { MATCH (position lexbuf) }
   | "with"       { WITH (position lexbuf) }
+  | "createMap"  { CREATEMAP (position lexbuf) }
+  | "map"        { MAP (position lexbuf) }
+  | "filter"     { FILTER (position lexbuf) }
+  | "combine"    { COMBINE (position lexbuf) }
+  | "dict"       { TDICT (position lexbuf) }
   | "option"     { TOPTION (position lexbuf) }
   | "int"        { TINT (position lexbuf) }
   | "bool"       { TBOOL (position lexbuf) }
-  | "vec"        { TVECTOR (position lexbuf) }
   | "type"       { TYPE (position lexbuf) }
   | "attribute"  { ATTRIBUTE (position lexbuf) }
   | id as s      { ID (position lexbuf, Var.create s) }
@@ -49,6 +53,7 @@ rule token = parse
   | "||"         { OR (position lexbuf) }
   | "|"          { BAR (position lexbuf) }
   | "->"         { ARROW (position lexbuf) }
+  | ".."         { DOTDOT (position lexbuf) }
   | "!"          { NOT (position lexbuf) }
   | ","          { COMMA (position lexbuf) }
   | "+"          { PLUS (position lexbuf) }

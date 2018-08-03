@@ -345,7 +345,7 @@ let rec encode_exp_z3 descr env (e: exp) =
     | UEq -> encode_op_z3 descr env (Boolean.mk_eq env.ctx) es
     | ULess -> encode_op_z3 descr env (Arithmetic.mk_lt env.ctx) es
     | ULeq -> encode_op_z3 descr env (Arithmetic.mk_le env.ctx) es
-    | MCreate _ | MGet | MSet | MMap | MMerge ->
+    | MCreate | MGet | MSet | MMap | MMerge | MFilter ->
         Console.error "unsupported map operation" )
   | EIf (e1, e2, e3) ->
       let ze1 = encode_exp_z3 descr env e1 in

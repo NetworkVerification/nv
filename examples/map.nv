@@ -1,4 +1,4 @@
-type attribute = option[int]
+type attribute = dict[32; option[int]]
 
 let nodes = 4
 
@@ -22,12 +22,16 @@ let mapbetter f o1 o2 =
   | (Some x, Some y) -> Some (f x y)
       
 let merge node x y =
-  mapbetter (fun x y -> if x < y then x else y) x y
+  let f = mapbetter (fun x y -> if x < y then x else y) in 
+  map f x y
 
 let trans edge x =
-  mapo (fun x -> x + 1) x
+  map (fun x -> mapo (fun x -> x + 1) x) x
 
 let init node =
+  let m = createMap 32 None in
   match node with
-  | 0 -> Some 0
-  | _ -> None
+  | 0 -> m[3 := Some 0]
+  | 1 -> m[5 := Some 0]
+  | 2 -> m[7 := Some 0]
+  | 3 -> m[9 := Some 0]

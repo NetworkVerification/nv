@@ -1,4 +1,4 @@
-type attribute = int option
+type attribute = option[int]
 
 let nodes = 4
 

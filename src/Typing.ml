@@ -280,11 +280,12 @@ let op_typ op =
   | ULess -> ([], [tint; tint], TBool)
   | ULeq -> ([], [tint; tint], TBool)
   (* Map operations *)
-  | MCreate _ -> failwith "special type for create"
+  | MCreate -> failwith "special type for create"
   | MGet -> failwith "special type for get"
   | MSet -> failwith "special type for set"
   | MMap -> failwith "special type for map"
   | MMerge -> failwith "special type for merge"
+  | MFilter -> failwith "special type for filter"
 
 
 let check_empty l s = match l with _ :: _ -> failwith s | [] -> ()
@@ -311,7 +312,7 @@ let rec infer_exp i info env (e: exp) : exp =
         texp (EVal v, t)
     | EOp (o, es) -> (
       match o with
-      | MCreate _ | MGet | MSet | MMap | MMerge ->
+      | MCreate | MGet | MSet | MMap | MMerge | MFilter ->
           failwith "unimplemented map ops"
       | _ ->
           let tvs, argtys, resty = op_typ o in

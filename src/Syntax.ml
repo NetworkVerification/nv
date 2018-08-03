@@ -40,7 +40,7 @@ type op =
   | ULess
   | ULeq
   (* Map operations *)
-  | MCreate of ty option
+  | MCreate
   (* MCreate n -- creates map 0..n-1 with type ty *)
   | MGet
   (* MGet m k = m[k] *)
@@ -49,6 +49,7 @@ type op =
   | MMap
   (* MMap f m = [f m[0]; f m[1]; ...] *)
   | MMerge
+  | MFilter
 
 (* MMerge f m1 m2 = [f m1[0] m2[0]; ... ] *)
 
@@ -116,11 +117,12 @@ let arity op =
   | UEq -> 2
   | ULess -> 2
   | ULeq -> 2
-  | MCreate _ -> 2
+  | MCreate -> 2
   | MGet -> 2
   | MSet -> 3
   | MMap -> 2
   | MMerge -> 3
+  | MFilter -> 2
 
 
 (* Useful constructors *)

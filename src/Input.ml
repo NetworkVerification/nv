@@ -9,17 +9,15 @@ let read lexbuf =
     (tok, line, cnum)
   in
   try Parser.prog Lexer.token lexbuf with
-  | Parsing.Parse_error ->
+  | Failure x -> Console.error (Printf.sprintf "[Parser] %s" x)
+  | End_of_file -> Console.error "[Parser] end of file in comment"
+  | _ ->
       let tok, line, cnum = get_info () in
-      Printf.printf "[Parse Error] token: %s, line: %s, char: %s\n" tok
-        (string_of_int line) (string_of_int cnum) ;
-      exit 0
-  | Failure x ->
-      Printf.printf "[Parse Error] %s\n" x ;
-      exit 0
-  | End_of_file ->
-      Printf.printf "[Parse Error] end of file in comment\n" ;
-      exit 0
+      let msg =
+        Printf.sprintf "[Parser] token: %s, line: %s, char: %s" tok
+          (string_of_int line) (string_of_int cnum)
+      in
+      Console.error msg
 
 
 let read_from_in cin =
