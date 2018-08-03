@@ -23,7 +23,7 @@ let mapbetter f o1 o2 =
       
 let merge node x y =
   let f = mapbetter (fun x y -> if x < y then x else y) in 
-  map f x y
+  combine f x y
 
 let trans edge x =
   map (fun x -> mapo (fun x -> x + 1) x) x
