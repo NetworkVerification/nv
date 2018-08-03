@@ -708,7 +708,19 @@ let encode_z3 (ds: declarations) : Solver.solver =
   solver
 
 
+type smt_result = Unsat | Sat of unit | Unknown
+
 let encode ds =
   let solver = encode_z3 ds in
-  Printf.printf "%s" (Solver.to_string solver) ;
-  ()
+  let q = Solver.check solver [] in
+  match q with
+  | UNSATISFIABLE -> Unsat
+  | UNKNOWN -> Unknown
+  | SATISFIABLE ->
+      let m = Solver.get_model solver in
+      match m with
+      | None -> Console.error "internal error (encode)"
+      | Some m ->
+          Printf.printf "Solver says: %s\n" (Solver.string_of_status q) ;
+          Printf.printf "Model: \n%s\n" (Model.to_string m) ;
+          Sat ()
