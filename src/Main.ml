@@ -12,6 +12,8 @@ open Smt
 
 let simulate_flag = ref false
 
+let verify_flag = ref false
+
 let verbose_flag = ref false
 
 let debug_flag = ref false
@@ -21,6 +23,8 @@ let filename_flag : string option ref = ref None
 let sim_bound_flag : int option ref = ref None
 
 let simulate () = !simulate_flag
+
+let verify () = !verify_flag
 
 let debug () = !debug_flag
 
@@ -46,7 +50,9 @@ let commandline_processing () =
     ; ("-f", Arg.String set_filename, "SRP definition file")
     ; ("-v", Arg.Set verbose_flag, "Print SRP definition file")
     ; ("-s", Arg.Set simulate_flag, "Simulate SRP definition file")
-    ; ("-b", Arg.Int set_bound, "Bound on number of SRP simulation steps") ]
+    ; ("-b", Arg.Int set_bound, "Bound on number of SRP simulation steps")
+    ; ("-smt", Arg.Set verify_flag, "Verify the SRP definition file using SMT")
+    ]
   in
   let usage_msg = "SRP verification. Options available:" in
   Arg.parse speclist print_endline usage_msg
@@ -57,18 +63,18 @@ let main =
   let ds, info = Input.parse (filename ()) in
   let decls = Typing.infer_declarations info ds in
   Typing.check_annot_decls decls ;
-  let decls = Renaming.alpha_convert_declarations decls in
-  let decls = Inline.inline_declarations decls in
-  let decls = Typing.infer_declarations info decls in
-  let smt = Smt.encode decls in
-  Printf.printf "%s" smt.defs ;
-  Printf.printf "%s" smt.merge ;
-  print_endline "" ;
-  print_endline "** Starting SRP Processing **" ;
   if verbose () then (
     print_endline "** SRP Definition **" ;
     print_endline (Printing.declarations_to_string ds) ;
     print_endline "** End SRP Definition **" ) ;
+  ( if verify () then
+      let decls = Renaming.alpha_convert_declarations decls in
+      let decls = Inline.inline_declarations decls in
+      let decls = Typing.infer_declarations info decls in
+      let smt = Smt.encode_z3 decls in
+      (* Printf.printf "%s" smt.defs ;
+    Printf.printf "%s" smt.merge ; *)
+      print_endline "" ) ;
   if simulate () then (
     print_endline "** Starting SRP Simulation **" ;
     let solution, q =
