@@ -188,3 +188,11 @@ let get_trans ds =
 
 let get_init ds =
   get_decl ds (fun d -> match d with DInit e -> Some e | _ -> None)
+
+
+let get_edges ds =
+  get_decl ds (fun d -> match d with DEdges es -> Some es | _ -> None)
+
+
+let get_nodes ds =
+  get_decl ds (fun d -> match d with DNodes i -> Some i | _ -> None)
