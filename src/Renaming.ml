@@ -12,15 +12,13 @@ let rec update_pattern (env: Var.t Env.t) (p: pattern) : pattern * Var.t Env.t =
       let env, ps = List.fold_left add_pattern (env, []) ps in
       (PTuple (List.rev ps), env)
   | POption None -> (p, env)
-  | POption Some p ->
+  | POption (Some p) ->
       let p', env = update_pattern env p in
       (POption (Some p'), env)
-
 
 and add_pattern (env, ps) p =
   let p', env' = update_pattern env p in
   (env', p' :: ps)
-
 
 let rec alpha_convert_exp (env: Var.t Env.t) (e: exp) =
   (* Printf.printf "expr: %s\n" (Printing.exp_to_string e);
@@ -61,7 +59,6 @@ let rec alpha_convert_exp (env: Var.t Env.t) (e: exp) =
       EMatch (alpha_convert_exp env e, bs') |> wrap e
   | ETy (e1, ty) -> ETy (alpha_convert_exp env e1, ty) |> wrap e
 
-
 let alpha_convert_declaration (env: Var.t Env.t) (d: declaration) =
   match d with
   | DLet (x, tyo, e) ->
@@ -74,14 +71,12 @@ let alpha_convert_declaration (env: Var.t Env.t) (d: declaration) =
   | DInit e -> (env, DInit (alpha_convert_exp env e))
   | DATy _ | DNodes _ | DEdges _ -> (env, d)
 
-
 let rec alpha_convert_aux env (ds: declarations) : declarations =
   match ds with
   | [] -> []
   | d :: ds' ->
       let env', d' = alpha_convert_declaration env d in
       d' :: alpha_convert_aux env' ds'
-
 
 let rec alpha_convert_declarations (ds: declarations) =
   Var.reset () ;

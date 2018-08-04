@@ -32,19 +32,18 @@ let create_state n cl =
   in
   loop n [] Graph.VertexMap.empty
 
-
 type info =
   { mutable env: Syntax.env
   ; (* environment *)
-  mutable m: Syntax.closure option
+    mutable m: Syntax.closure option
   ; (* merge *)
-  mutable t: Syntax.closure option
+    mutable t: Syntax.closure option
   ; (* trans *)
-  mutable ns: UInt32.t option
+    mutable ns: UInt32.t option
   ; (* nodes *)
-  mutable es: (UInt32.t * UInt32.t) list option
+    mutable es: (UInt32.t * UInt32.t) list option
   ; (* edges *)
-  mutable init: Syntax.closure option
+    mutable init: Syntax.closure option
   (* initial state *) }
 
 let declarations_to_state ds =
@@ -111,10 +110,8 @@ let declarations_to_state ds =
   | {env= _; m= _; t= _; ns= _; es= _; init= None} ->
       Console.error "missing init declaration"
 
-
 let solution_to_string s =
   Graph.vertex_map_to_string Printing.value_to_string s
-
 
 let print_solution s = Graph.print_vertex_map Printing.value_to_string s
 
@@ -125,7 +122,6 @@ let get_attribute v s =
   match find_opt v s with
   | None -> Console.error ("no attribute at vertex " ^ UInt32.to_string v)
   | Some a -> a
-
 
 let simulate_step {graph= g; trans; merge} s x =
   let do_neighbor initial_attribute (s, todo) n =
@@ -147,7 +143,6 @@ let simulate_step {graph= g; trans; merge} s x =
   let neighbors = Graph.neighbors g x in
   List.fold_left (do_neighbor initial_attribute) (s, []) neighbors
 
-
 (* simulate srp s q simulates srp starting with initial state (s,q) *)
 let rec simulate_init srp (s, q) =
   match q with
@@ -155,7 +150,6 @@ let rec simulate_init srp (s, q) =
   | next :: rest ->
       let s', more = simulate_step srp s next in
       simulate_init srp (s', more @ rest)
-
 
 (* simulate for at most k steps *)
 let simulate_init_bound srp (s, q) k =
@@ -170,11 +164,9 @@ let simulate_init_bound srp (s, q) k =
   in
   loop s q k
 
-
 let simulate_declarations ds =
   let srp, state = declarations_to_state ds in
   simulate_init srp state
-
 
 let simulate_declarations_bound ds k =
   let srp, state = declarations_to_state ds in

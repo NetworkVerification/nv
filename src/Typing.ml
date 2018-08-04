@@ -47,10 +47,8 @@ let reset_tyvars () =
   (* DPW: don't need to do this *)
   level_reset ()
 
-
 let rec get_inner_type t : ty =
   match t with TVar {contents= Link t} -> get_inner_type t | _ -> t
-
 
 let rec check_annot (e: exp) =
   (* Printf.printf "expr: %s\n" (Printing.exp_to_string e) ;
@@ -75,19 +73,16 @@ let rec check_annot (e: exp) =
       List.iter (fun (_, e) -> check_annot e) bs
   | ETy (e, ty) -> check_annot e
 
-
 let check_annot_decl (d: declaration) =
   match d with
   | DLet (_, tyo, e) -> check_annot e
   | DMerge e | DTrans e | DInit e -> check_annot e
   | DNodes _ | DEdges _ | DATy _ -> ()
 
-
 let rec check_annot_decls (ds: declarations) =
   match ds with
   | [] -> ()
   | d :: ds -> check_annot_decl d ; check_annot_decls ds
-
 
 let tyname () = Var.fresh "a"
 
@@ -115,10 +110,8 @@ let occurs tvr ty =
   in
   try occ tvr ty with Occurs ->
     Console.error
-      (Printf.sprintf "%s occurs in %s\n"
-         (tyvar_to_string !tvr)
+      (Printf.sprintf "%s occurs in %s\n" (tyvar_to_string !tvr)
          (ty_to_string ty))
-
 
 (* Simplistic.  No path compression *)
 (* Also, QVar are unexpected: they should've been instantiated *)
@@ -163,17 +156,14 @@ let rec unify info e t1 t2 : unit =
     in
     Console.error_position info e.espan msg
 
-
 and unifies info (e: exp) ts1 ts2 =
   match (ts1, ts2) with
   | [], [] -> ()
   | t1 :: ts1, t2 :: ts2 -> unify info e t1 t2 ; unifies info e ts1 ts2
   | _, _ -> Console.error "wrong number of components in unification"
 
-
 let unify_opt info (e: exp) topt1 t2 =
   match topt1 with Some t1 -> unify info e t1 t2 | None -> ()
-
 
 let generalize ty =
   let rec gen ty =
@@ -198,7 +188,6 @@ let generalize ty =
         TMap (i, ty)
   in
   match ty with TArrow _ -> gen ty | _ -> ty
-
 
 (* instantiation: replace schematic variables with fresh TVar *)
 let inst subst ty =
@@ -236,7 +225,6 @@ let inst subst ty =
   in
   loop subst ty
 
-
 (* instantiate schema, returning both the new type and the list of type variables *)
 let inst_schema (names, ty) =
   let add_name env name =
@@ -246,7 +234,6 @@ let inst_schema (names, ty) =
   let subst = List.fold_left add_name Env.empty names in
   let tys = List.map (fun name -> Env.lookup subst name) names in
   (inst subst ty, tys)
-
 
 let substitute (ty: ty) : ty =
   let map = ref Env.empty in
@@ -267,7 +254,6 @@ let substitute (ty: ty) : ty =
   in
   substitute_aux ty
 
-
 let op_typ op =
   match op with
   | And -> ([TBool; TBool], TBool)
@@ -287,12 +273,10 @@ let op_typ op =
   | MMerge -> failwith "special type for merge"
   | MFilter -> failwith "special type for filter"
 
-
 let texp (e, t) = {e; ety= Some t; espan= Span.default}
 
 let textract e =
   match e.ety with None -> failwith "impossible" | Some ty -> (e, ty)
-
 
 let rec infer_exp i info env (e: exp) : exp =
   let exp =
@@ -416,7 +400,6 @@ let rec infer_exp i info env (e: exp) : exp =
   check_annot exp ; *)
   exp
 
-
 and infer_exps i info env es =
   match es with
   | [] -> ([], [])
@@ -425,14 +408,12 @@ and infer_exps i info env es =
       let es, tys = infer_exps (i + 1) info env es in
       (e :: es, ty :: tys)
 
-
 and tvalue (v, t) = {v; vty= Some t; vspan= Span.default}
 
 and textractv v =
   match v.vty with
   | None -> Console.error "internal error (textractv)"
   | Some ty -> (v, ty)
-
 
 and infer_value info env (v: Syntax.value) : Syntax.value =
   match v.v with
@@ -458,14 +439,13 @@ and infer_value info env (v: Syntax.value) : Syntax.value =
   | VOption None ->
       let tv = fresh_tyvar () in
       tvalue (VOption None, TOption tv)
-  | VOption Some v ->
+  | VOption (Some v) ->
       let v, t = infer_value info env v |> textractv in
       let tv = fresh_tyvar () in
       unify info (val_to_exp v) t tv ;
       tvalue (VOption (Some v), TOption tv)
   | VClosure cl ->
       failwith "unimplemented: closure type inference because i am lazy"
-
 
 and infer_values info env vs =
   match vs with
@@ -474,7 +454,6 @@ and infer_values info env vs =
       let v, t = infer_value info env v |> textractv in
       let vs, ts = infer_values info env vs in
       (v :: vs, t :: ts)
-
 
 and infer_branches i info env exp tmatch bs =
   match bs with
@@ -487,8 +466,8 @@ and infer_branches i info env exp tmatch bs =
       let bs, tbranch = infer_branches (i + 1) info env exp tmatch bs in
       let env2 = infer_pattern (i + 1) info env exp tmatch p in
       let e, t = infer_exp (i + 1) info env2 e |> textract in
-      unify info e t tbranch ; ((p, e) :: bs, t)
-
+      unify info e t tbranch ;
+      ((p, e) :: bs, t)
 
 and infer_pattern i info env e tmatch p =
   valid_pat p ;
@@ -509,7 +488,6 @@ and infer_pattern i info env e tmatch p =
       | None -> env
       | Some p -> infer_pattern (i + 1) info env e t p
 
-
 and infer_patterns i info env e ts ps =
   match (ts, ps) with
   | [], [] -> env
@@ -519,12 +497,10 @@ and infer_patterns i info env e ts ps =
       infer_patterns (i + 1) info env e ts ps
   | _, _ -> Console.error "bad arity in pattern match"
 
-
 and infer_declarations i info (ds: declarations) : declarations =
   match get_attr_type ds with
   | None -> Console.error "attribute type not declared: type attribute = ..."
   | Some ty -> infer_declarations_aux (i + 1) info Env.empty ty ds
-
 
 and infer_declarations_aux i info env aty (ds: declarations) : declarations =
   match ds with
@@ -532,7 +508,6 @@ and infer_declarations_aux i info env aty (ds: declarations) : declarations =
   | d :: ds' ->
       let env', d' = infer_declaration (i + 1) info env aty d in
       d' :: infer_declarations_aux (i + 1) info env' aty ds'
-
 
 and infer_declaration i info env aty d : ty Env.t * declaration =
   match d with
@@ -560,7 +535,6 @@ and infer_declaration i info env aty d : ty Env.t * declaration =
       (Env.update env (Var.create "trans") ty, DInit e')
   | DATy _ | DNodes _ | DEdges _ -> (env, d)
 
-
 (* ensure patterns do not contain duplicate variables *)
 and valid_pat p = valid_pattern Env.empty p |> ignore
 
@@ -576,12 +550,10 @@ and valid_pattern env p =
   | PBool _ | PUInt32 _ -> env
   | PTuple ps -> valid_patterns env ps
   | POption None -> env
-  | POption Some p -> valid_pattern env p
-
+  | POption (Some p) -> valid_pattern env p
 
 and valid_patterns env p =
   match p with [] -> env | p :: ps -> valid_patterns (valid_pattern env p) ps
-
 
 let infer_declarations info (ds: declarations) : declarations =
   match get_attr_type ds with

@@ -24,5 +24,4 @@ let to_string entry_to_string env =
     (fun k v s -> Var.to_string k ^ "=" ^ entry_to_string v ^ ";" ^ s)
     env ""
 
-
 let to_list env = M.bindings env

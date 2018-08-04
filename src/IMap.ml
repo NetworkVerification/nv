@@ -20,10 +20,8 @@ let find (m, default, l) k =
   if not (in_bounds k l) then raise (Out_of_bounds k)
   else match Rep.find_opt k m with None -> default | Some v -> v
 
-
 let update (m, default, l) k v =
   if not (in_bounds k l) then (m, default, l) else (Rep.add k v m, default, l)
-
 
 let map f (m, default, l) = (Rep.map f m, f default, l)
 
@@ -45,14 +43,12 @@ let merge (f: 'a -> 'b -> 'c) ((m1, default1, i1): 'a t)
   in
   (Rep.merge f_checked m1 m2, default, length)
 
-
 let equal equal_vals (m1, default1, i1) (m2, default2, i2) =
   let test_default () =
     if UInt32.compare (UInt32.of_int (Rep.cardinal m1)) i1 = 0 then true
     else equal_vals default1 default2
   in
   UInt32.compare i1 i2 = 0 && test_default () && Rep.equal equal_vals m1 m2
-
 
 let length (m, default, i) = i
 

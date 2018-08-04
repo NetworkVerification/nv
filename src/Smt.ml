@@ -244,18 +244,15 @@ type smt_env = {solver: Z3.Solver.solver; ctx: Z3.context}
 let create_fresh descr s =
   Printf.sprintf "%s-%s" descr (Var.fresh s |> Var.to_string)
 
-
 let create_name descr n = Printf.sprintf "%s-%s" descr (Var.to_string n)
 
 let z3_int ctx i =
   Expr.mk_numeral_string ctx (UInt32.to_string i)
     (Arithmetic.Integer.mk_sort ctx)
 
-
 let add solver args =
   (* List.iter (fun e -> Printf.printf "(assert %s)\n" (Expr.to_string e)) args; *)
   Solver.add solver args
-
 
 let rec ty_to_smtlib (ty: ty) : string =
   match ty with
@@ -276,10 +273,8 @@ let rec ty_to_smtlib (ty: ty) : string =
         (Printf.sprintf "internal error (ty_to_smtlib): %s"
            (Printing.ty_to_string ty))
 
-
 let mk_array_sort ctx sort =
   Z3Array.mk_sort ctx (Arithmetic.Integer.mk_sort ctx) sort
-
 
 let rec ty_to_sort ctx (ty: ty) : Z3.Sort.sort =
   match ty with
@@ -321,10 +316,8 @@ let rec ty_to_sort ctx (ty: ty) : Z3.Sort.sort =
   | TMap (i, t) -> mk_array_sort ctx (ty_to_sort ctx t)
   | TVar _ | QVar _ | TArrow _ -> Console.error "internal error (ty_to_sort)"
 
-
 let create_const name ty =
   Printf.sprintf "\n(declare-const %s (%s))" name (ty_to_smtlib ty)
-
 
 let rec encode_exp_z3 descr env (e: exp) =
   (* Printf.printf "expr: %s\n" (Printing.exp_to_string e) ; *)
@@ -375,14 +368,13 @@ let rec encode_exp_z3 descr env (e: exp) =
         let name = create_fresh descr "map" in
         let x = create_name descr x in
         let x = Symbol.mk_string env.ctx x in
+        let xarg = Expr.mk_const env.ctx x (ty_to_sort env.ctx (oget ty1)) in
         let f = FuncDecl.mk_func_decl_s env.ctx name [sort1] sort1 in
-        let app =
-          Expr.mk_app env.ctx f
-            [Expr.mk_const env.ctx x (ty_to_sort env.ctx (oget ty1))]
-        in
+        let app = Expr.mk_app env.ctx f [xarg] in
         let body = Boolean.mk_eq env.ctx app e1 in
+        (* note: do not use mk_forall, appears to be broken *)
         let q =
-          Quantifier.mk_forall env.ctx [sort1] [x] body None [] [] None None
+          Quantifier.mk_forall_const env.ctx [xarg] body None [] [] None None
           |> Quantifier.expr_of_quantifier
         in
         add env.solver [q] ;
@@ -410,8 +402,8 @@ let rec encode_exp_z3 descr env (e: exp) =
         let app = Expr.mk_app env.ctx f [xarg; yarg] in
         let body = Boolean.mk_eq env.ctx app e1 in
         let q =
-          Quantifier.mk_forall env.ctx [sort1; sort1] [x; y] body None [] []
-            None None
+          Quantifier.mk_forall_const env.ctx [xarg; yarg] body None [] [] None
+            None
           |> Quantifier.expr_of_quantifier
         in
         add env.solver [q] ;
@@ -457,7 +449,6 @@ let rec encode_exp_z3 descr env (e: exp) =
   | ETy (e, ty) -> encode_exp_z3 descr env e
   | EFun _ | EApp _ -> Console.error "function in smt encoding"
 
-
 and encode_op_z3 descr env f es =
   match es with
   | [] -> Console.error "internal error (encode_op)"
@@ -466,7 +457,6 @@ and encode_op_z3 descr env f es =
       let ze1 = encode_exp_z3 descr env e in
       let ze2 = encode_op_z3 descr env f es in
       f ze1 ze2
-
 
 and encode_branches_z3 descr env name bs (t: ty) =
   match List.rev bs with
@@ -477,7 +467,6 @@ and encode_branches_z3 descr env name bs (t: ty) =
       let _ = encode_pattern_z3 descr env name p t in
       encode_branches_aux_z3 descr env name (List.rev bs) ze t
 
-
 (* I'm assuming here that the cases are exhaustive *)
 and encode_branches_aux_z3 descr env name bs accze (t: ty) =
   match bs with
@@ -487,7 +476,6 @@ and encode_branches_aux_z3 descr env name bs accze (t: ty) =
       let zp = encode_pattern_z3 descr env name p t in
       let ze = Boolean.mk_ite env.ctx zp ze accze in
       encode_branches_aux_z3 descr env name bs ze t
-
 
 and encode_pattern_z3 descr env zname p (t: ty) =
   let ty = Typing.get_inner_type t in
@@ -536,7 +524,7 @@ and encode_pattern_z3 descr env zname p (t: ty) =
       let opt_sort = ty_to_sort env.ctx t in
       let f = Datatype.get_recognizers opt_sort |> List.hd in
       Expr.mk_app env.ctx f [zname]
-  | POption Some p, TOption t ->
+  | POption (Some p), TOption t ->
       let new_name = create_fresh descr "option" in
       let za = Expr.mk_const_s env.ctx new_name (ty_to_sort env.ctx t) in
       let opt_sort = ty_to_sort env.ctx ty in
@@ -553,7 +541,6 @@ and encode_pattern_z3 descr env zname p (t: ty) =
         (Printf.sprintf "internal error (encode_pattern): (%s, %s)"
            (Printing.pattern_to_string p)
            (Printing.ty_to_string (Typing.get_inner_type t)))
-
 
 and encode_value_z3 descr env (v: Syntax.value) =
   match v.v with
@@ -572,14 +559,13 @@ and encode_value_z3 descr env (v: Syntax.value) =
       let opt_sort = ty_to_sort env.ctx (oget v.vty) in
       let f = Datatype.get_constructors opt_sort |> List.hd in
       Expr.mk_app env.ctx f []
-  | VOption Some v1 ->
+  | VOption (Some v1) ->
       let opt_sort = ty_to_sort env.ctx (oget v.vty) in
       let f = List.nth (Datatype.get_constructors opt_sort) 1 in
       let zv = encode_value_z3 descr env v1 in
       Expr.mk_app env.ctx f [zv]
   | VClosure _ -> Console.error "internal error (closure in smt)"
   | VMap _ -> Console.error "unimplemented: map"
-
 
 let encode_z3_merge str env e =
   match e.e with
@@ -613,7 +599,6 @@ let encode_z3_merge str env e =
       (result, nodestr, xstr, ystr)
   | _ -> Console.error "internal error"
 
-
 let encode_z3_trans str env e =
   match e.e with
   | EFun
@@ -637,7 +622,6 @@ let encode_z3_trans str env e =
       (result, edgestr, xstr)
   | _ -> Console.error "internal error"
 
-
 let encode_z3_init str env e =
   match e.e with
   | EFun {arg= node; argty= nodety; body= e} ->
@@ -654,7 +638,6 @@ let encode_z3_init str env e =
       (result, nodestr)
   | _ -> Console.error "internal error"
 
-
 module NodeMap = Map.Make (struct
   type t = int
 
@@ -669,7 +652,7 @@ module EdgeMap = Map.Make (struct
     if cmp <> 0 then cmp else UInt32.compare b d
 end)
 
-let cfg = [("model", "true"); ("proof", "false")]
+let cfg = [("auto-config", "false")]
 
 let encode_z3 (ds: declarations) : smt_env =
   Var.reset () ;
@@ -718,8 +701,8 @@ let encode_z3 (ds: declarations) : smt_env =
     (fun (i, j) ->
       ( try
           let idxs = NodeMap.find (UInt32.to_int j) !incoming_map in
-          incoming_map
-          := NodeMap.add (UInt32.to_int j) ((i, j) :: idxs) !incoming_map
+          incoming_map :=
+            NodeMap.add (UInt32.to_int j) ((i, j) :: idxs) !incoming_map
         with _ ->
           incoming_map := NodeMap.add (UInt32.to_int j) [(i, j)] !incoming_map
       ) ;
@@ -772,7 +755,6 @@ let encode_z3 (ds: declarations) : smt_env =
     !trans_input_map ;
   env
 
-
 let rec z3_to_exp (e: Expr.expr) : Syntax.exp option =
   try
     let i = UInt32.of_string (Expr.to_string e) in
@@ -791,15 +773,15 @@ let rec z3_to_exp (e: Expr.expr) : Syntax.exp option =
     | _ ->
         if String.length name >= 7 && String.sub name 0 7 = "mk-pair" then
           let es = List.map z3_to_exp es in
-          if List.exists
-               (fun e -> match e with None -> true | Some _ -> false)
-               es
+          if
+            List.exists
+              (fun e -> match e with None -> true | Some _ -> false)
+              es
           then None
           else Some (ETuple (List.map oget es) |> exp)
         else None
 
-
-type smt_result = Unsat | Sat of (exp option) NodeMap.t | Unknown
+type smt_result = Unsat | Sat of exp option NodeMap.t | Unknown
 
 let solve ds =
   let num_nodes, aty =

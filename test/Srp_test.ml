@@ -77,7 +77,6 @@ let less_f = lams [x; y] (EIf (EOp (ULess, [xe; ye]), xe, ye))
 let env1 =
   Env.update (Env.update Env.empty incr_x (VFun incr_f)) less_x (VFun less_f)
 
-
 let trans1 = lams [edge_x; x1] (EApp (incr_xe, [x1e]))
 
 let merge1 = lams [edge_x; x1; x2] (EApp (less_xe, [x1e; x2e]))
@@ -90,7 +89,6 @@ let merge1 = lams [edge_x; x1; x2] (EApp (less_xe, [x1e; x2e]))
 let diamond_g =
   Graph.add_edges (Graph.create u4) [(u0, u1); (u1, u3); (u0, u2); (u2, u3)]
 
-
 let srp = {graph= diamond_g; env= env1; trans= trans1; merge= merge1}
 
 let init = [(u0, VUInt32 u0)]
@@ -101,7 +99,6 @@ let tests =
   [ ( (srp, init, default)
     , [(u0, VUInt32 u0); (u1, VUInt32 u1); (u2, VUInt32 u1); (u3, VUInt32 u2)]
     ) ]
-
 
 let do_test i ((srp, init, default), expected) =
   print_endline ("TEST " ^ string_of_int i ^ ":") ;
@@ -115,7 +112,6 @@ let do_test i ((srp, init, default), expected) =
   in
   print_endline "final state" ;
   Srp.print_state final_state
-
 
 let all_tests () = List.iteri do_test tests
 

@@ -26,7 +26,6 @@ let update_tys env tvs tys =
   in
   {env with ty= loop env.ty tvs tys}
 
-
 (* Equality of values *)
 (* ignores type annotations when checking for equality *)
 let rec equal_val v1 v2 =
@@ -36,18 +35,16 @@ let rec equal_val v1 v2 =
   | VMap m1, VMap m2 -> IMap.equal equal_val m1 m2
   | VTuple vs1, VTuple vs2 -> equal_vals vs1 vs2
   | VOption None, VOption None -> true
-  | VOption Some v1, VOption Some v2 -> equal_val v1 v2
+  | VOption (Some v1), VOption (Some v2) -> equal_val v1 v2
   | VClosure _, _ -> Console.error "internal error (equal_val)"
   | _, VClosure _ -> Console.error "internal error (equal_val)"
   | _, _ -> false
-
 
 and equal_vals vs1 vs2 =
   match (vs1, vs2) with
   | [], [] -> true
   | v1 :: rest1, v2 :: rest2 -> equal_val v1 v2 && equal_vals rest1 rest2
   | _, _ -> false
-
 
 (* Expression and operator interpreters *)
 (* matches p b is Some env if v matches p and None otherwise; assumes no repeated variables in pattern *)
@@ -61,9 +58,8 @@ let rec matches p (v: Syntax.value) : Syntax.value Env.t option =
       if UInt32.compare i1 i2 = 0 then Some Env.empty else None
   | PTuple ps, VTuple vs -> matches_list ps vs
   | POption None, VOption None -> Some Env.empty
-  | POption Some p, VOption Some v -> matches p v
+  | POption (Some p), VOption (Some v) -> matches p v
   | (PBool _ | PUInt32 _ | PTuple _ | POption _), _ -> None
-
 
 and matches_list ps vs =
   match (ps, vs) with
@@ -77,7 +73,6 @@ and matches_list ps vs =
       | Some env2 -> Some (Env.updates env2 env1) )
   | _, _ -> None
 
-
 let rec match_branches branches v =
   match branches with
   | [] -> None
@@ -85,7 +80,6 @@ let rec match_branches branches v =
     match matches p v with
     | Some env -> Some (env, e)
     | None -> match_branches branches v
-
 
 let rec interp_exp env e =
   match e.e with
@@ -125,7 +119,6 @@ let rec interp_exp env e =
             ( "value " ^ value_to_string v
             ^ " did not match any pattern in match statement" )
 
-
 and interp_op env op es =
   if arity op != List.length es then
     Console.error
@@ -158,7 +151,6 @@ and interp_op env op es =
       in
       VMap (IMap.merge f_lifted m1 m2) |> value
   | _, _ -> Console.error "bad operator application"
-
 
 and apply env f v = interp_exp (update_value env f.arg v) f.body
 

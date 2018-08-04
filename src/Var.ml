@@ -6,7 +6,6 @@ let next () =
   counter := !counter + 1 ;
   !counter
 
-
 let reset () = counter := 0
 
 let fresh s = (s, next ())

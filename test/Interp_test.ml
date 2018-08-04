@@ -83,7 +83,6 @@ let f_opt =
   lams [xf; x]
     (EMatch (EVar x, EVal (VOption None), y, ESome (app (EVar xf) (EVar y))))
 
-
 let some_one = EVal (VOption (Some one))
 
 let e_add_one_option = apps f_opt [f1; some_one]
@@ -100,7 +99,6 @@ let test_all f tests =
       name >:: test )
     tests
 
-
 let expression_tests =
   [ (e1, t)
   ; (e3, f)
@@ -112,13 +110,10 @@ let expression_tests =
   ; (app f1 onee, two)
   ; (two_again, two) ]
 
-
 let test_interp (e, result) =
   assert_equal ~printer:Printing.value_to_string (Interp.interp e) result
 
-
 let expression_suite =
   "interpreting expressions" >::: test_all test_interp expression_tests
-
 
 let _ = run_test_tt_main expression_suite

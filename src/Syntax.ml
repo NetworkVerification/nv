@@ -124,7 +124,6 @@ let arity op =
   | MMerge -> 3
   | MFilter -> 2
 
-
 (* Useful constructors *)
 
 let ( ~> ) ty ty = TArrow (ty, ty)
@@ -148,13 +147,11 @@ let lam x body = exp (EFun (func x body))
 let oget (x: 'a option) : 'a =
   match x with None -> failwith "oget" | Some y -> y
 
-
 let rec lams params body =
   match params with
   | [] -> Console.error "lams: no parameters"
   | [p] -> lam p body
   | p :: params -> lam p (lams params body)
-
 
 let rec apps f args : exp =
   match args with
@@ -162,10 +159,8 @@ let rec apps f args : exp =
   | [a] -> exp (EApp (f, a))
   | a :: args -> apps (exp (EApp (f, a))) args
 
-
 let apply_closure cl (args: value list) =
   apps (e_val (VClosure cl)) (List.map (fun a -> exp (EVal a)) args)
-
 
 let get_decl ds f =
   try
@@ -175,26 +170,20 @@ let get_decl ds f =
     f daty
   with _ -> None
 
-
 let get_attr_type ds =
   get_decl ds (fun d -> match d with DATy ty -> Some ty | _ -> None)
-
 
 let get_merge ds =
   get_decl ds (fun d -> match d with DMerge e -> Some e | _ -> None)
 
-
 let get_trans ds =
   get_decl ds (fun d -> match d with DTrans e -> Some e | _ -> None)
-
 
 let get_init ds =
   get_decl ds (fun d -> match d with DInit e -> Some e | _ -> None)
 
-
 let get_edges ds =
   get_decl ds (fun d -> match d with DEdges es -> Some es | _ -> None)
-
 
 let get_nodes ds =
   get_decl ds (fun d -> match d with DNodes i -> Some i | _ -> None)

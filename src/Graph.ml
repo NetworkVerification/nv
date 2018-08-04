@@ -24,19 +24,16 @@ let update v f m =
   | None -> VertexMap.remove v m
   | Some ns -> VertexMap.add v ns m
 
-
 let vertex_map_to_string elem_to_string m =
   let kvs = VertexMap.fold (fun k v l -> (k, v) :: l) m [] in
   List.fold_left
     (fun s (k, v) -> UInt32.to_string k ^ ":" ^ elem_to_string v ^ s)
     "" kvs
 
-
 let print_vertex_map elem_to_string m =
   VertexMap.iter
     (fun k v -> print_endline (UInt32.to_string k ^ ":" ^ elem_to_string v))
     m
-
 
 (* a graph as ajacency list * # of vertices *)
 type t = Vertex.t list VertexMap.t * UInt32.t
@@ -54,7 +51,6 @@ let edges (m, i) =
   List.rev
     (VertexMap.fold (fun v neighbors a -> my_edges v neighbors @ a) m [])
 
-
 (* a vertex v does not belong to a graph's set of vertices *)
 exception BadVertex of UInt32.t
 
@@ -62,10 +58,8 @@ let good_vertex (m, i) v =
   if UInt32.compare v UInt32.zero < 0 || not (UInt32.compare i v > 0) then
     raise (BadVertex v)
 
-
 let good_graph g =
   List.iter (fun (v, w) -> good_vertex g v ; good_vertex g w) (edges g)
-
 
 (* add_edge g e adds directed edge e to g *)
 let add_edge (m, i) (v, w) =
@@ -78,10 +72,8 @@ let add_edge (m, i) (v, w) =
   in
   (update v f m, i)
 
-
 let rec add_edges g edges =
   match edges with [] -> g | e :: edges -> add_edges (add_edge g e) edges
-
 
 (* add_edge g e adds directed edge e to g *)
 let remove_edge (m, i) (v, w) =
@@ -97,12 +89,10 @@ let remove_edge (m, i) (v, w) =
   in
   (update v f m, i)
 
-
 (* neighbors of v in g *)
 let neighbors (m, i) v =
   good_vertex (m, i) v ;
   match find_opt v m with None -> [] | Some ns -> ns
-
 
 let print g =
   Printf.printf "%d\n" (UInt32.to_int (num_vertices g)) ;
@@ -110,7 +100,6 @@ let print g =
     (fun (v, w) ->
       Printf.printf "%d -> %d\n" (UInt32.to_int v) (UInt32.to_int w) )
     (edges g)
-
 
 let to_string g =
   let b = Buffer.create 80 in

@@ -3,7 +3,6 @@ open Syntax
 let is_function_ty e =
   match Typing.get_inner_type (oget e.ety) with TArrow _ -> true | _ -> false
 
-
 let annot ty e = {e= e.e; ety= Some ty; espan= e.espan}
 
 let rec has_var p x =
@@ -12,8 +11,7 @@ let rec has_var p x =
   | PVar y -> Var.equals x y
   | PTuple ps -> List.fold_left (fun acc p -> acc || has_var p x) false ps
   | POption None -> false
-  | POption Some p -> has_var p x
-
+  | POption (Some p) -> has_var p x
 
 let rec remove_all env p =
   match p with
@@ -21,8 +19,7 @@ let rec remove_all env p =
   | PVar x -> Env.remove env x
   | PTuple ps -> List.fold_left (fun acc p -> remove_all acc p) env ps
   | POption None -> env
-  | POption Some p -> remove_all env p
-
+  | POption (Some p) -> remove_all env p
 
 let rec substitute x e1 e2 =
   match e1.e with
@@ -47,10 +44,8 @@ let rec substitute x e1 e2 =
       EOp (op, List.map (fun e -> substitute x e e2) es) |> wrap e1
   | EVal _ -> e1
 
-
 and substitute_pattern x e2 (p, e) =
   if has_var p x then (p, e) else (p, substitute x e e2)
-
 
 let inst_types t1 t2 =
   let map = ref Env.empty in
@@ -72,7 +67,6 @@ let inst_types t1 t2 =
   in
   aux t1 t2 ; !map
 
-
 let rec inline_type (env: ty Env.t) ty : ty =
   match ty with
   | TVar {contents= Link t} -> inline_type env t
@@ -84,14 +78,12 @@ let rec inline_type (env: ty Env.t) ty : ty =
   | TOption r -> TOption (inline_type env r)
   | _ -> Console.error "unimplemented (inline_type)"
 
-
 let inline_type_app e1 e2 : ty =
   match (Typing.get_inner_type (oget e1.ety), oget e2.ety) with
   | TArrow (t1, t2), t3 ->
       let env = inst_types t1 t3 in
       inline_type env t2
   | _ -> Console.error "inlining internals (inline_type_app)"
-
 
 (* match get_inner_type (oget ty) with
   | TArrow (_, t2) -> t2
@@ -135,7 +127,6 @@ let rec inline_app env e1 e2 : exp =
   in
   exp
 
-
 and inline_branch_app env e2 (p, e) = (p, inline_app env e e2)
 
 and inline_exp (env: exp Env.t) (e: exp) : exp =
@@ -159,13 +150,11 @@ and inline_exp (env: exp Env.t) (e: exp) : exp =
       EMatch (inline_exp env e1, List.map (inline_branch env) bs) |> wrap e
   | ETy (e1, ty) -> ETy (inline_exp env e1, ty) |> wrap e
 
-
 (* TODO: right now this is assuming that patterns won't contain functions
    this will fail for example with an expression like:  Some (fun v -> v) *)
 and inline_branch env (p, e) =
   let env' = remove_all env p in
   (p, inline_exp env' e)
-
 
 let inline_declaration (env: exp Env.t) (d: declaration) =
   match d with
@@ -177,7 +166,6 @@ let inline_declaration (env: exp Env.t) (d: declaration) =
   | DTrans e -> (env, Some (DTrans (inline_exp env e)))
   | DInit e -> (env, Some (DInit (inline_exp env e)))
   | DATy _ | DNodes _ | DEdges _ -> (env, Some d)
-
 
 let rec inline_declarations (ds: declarations) =
   match get_attr_type ds with

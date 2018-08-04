@@ -37,7 +37,6 @@ let filename () =
       exit 0
   | Some f -> f
 
-
 let bound () = !sim_bound_flag
 
 let set_filename s = filename_flag := Some s
@@ -57,7 +56,6 @@ let commandline_processing () =
   let usage_msg = "SRP verification. Options available:" in
   Arg.parse speclist print_endline usage_msg
 
-
 let run_smt info ds =
   let decls = Renaming.alpha_convert_declarations ds in
   let decls = Inline.inline_declarations decls in
@@ -66,14 +64,13 @@ let run_smt info ds =
   match res with
   | Unsat -> ()
   | Unknown -> ()
-  | Sat map ->   
+  | Sat map ->
       NodeMap.iter
-        (fun k v -> 
-          match v with 
-          | None -> Printf.printf "%d:ModelUnavailable\n" k
-          | Some v -> Printf.printf "%d:%s\n" k (Printing.exp_to_string v))
+        (fun k v ->
+          match v with
+          | None -> Printf.printf "%d:(...)\n" k
+          | Some v -> Printf.printf "%d:%s\n" k (Printing.exp_to_string v) )
         map
-
 
 let main =
   let () = commandline_processing () in

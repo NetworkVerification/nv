@@ -19,11 +19,9 @@ let read lexbuf =
       in
       Console.error msg
 
-
 let read_from_in cin =
   let res = read (Lexing.from_channel cin) in
   close_in cin ; res
-
 
 let read_from_str str = Lexing.from_string str |> read
 
@@ -31,7 +29,6 @@ let read_from_file fname =
   let cin = open_in fname in
   let res = read (Lexing.from_channel cin) in
   close_in cin ; res
-
 
 let read_file fname : Console.info =
   let lines = ref [] in
@@ -55,7 +52,6 @@ let read_file fname : Console.info =
     close_in chan ;
     { input= Array.of_list (List.rev !lines)
     ; linenums= Array.of_list (List.rev !indices) }
-
 
 let parse fname =
   let t = read_file fname in

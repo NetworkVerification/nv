@@ -5,5 +5,4 @@ let extend (x: t) (y: t) : t =
   let f = max x.finish y.finish in
   {start= s; finish= f}
 
-
 let default = {start= -1; finish= -1}
