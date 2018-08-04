@@ -88,8 +88,9 @@ let rec ty_to_string_p prec t =
     | TInt i -> "int" ^ UInt32.to_string i
     | TArrow (t1, t2) -> ty_to_string_p p t1 ^ " -> " ^ ty_to_string_p prec t2
     | TTuple ts -> sep "*" (ty_to_string_p p) ts
-    | TOption t -> ty_to_string_p p t ^ " option"
-    | TMap (i, t) -> ty_to_string_p p t ^ " vec[" ^ UInt32.to_string i ^ "]"
+    | TOption t -> "option[" ^ ty_to_string_p p t ^ "]"
+    | TMap (i, t) ->
+        "dict[" ^ UInt32.to_string !i ^ "," ^ ty_to_string_p p t ^ "]"
   in
   if p < prec then s else "(" ^ s ^ ")"
 

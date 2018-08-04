@@ -28,17 +28,20 @@ let update (m, default, l) k v =
 let map f (m, default, l) = (Rep.map f m, f default, l)
 
 (* creates an array of length equal to the larger of the two inputs *)
-let merge f (m1, default1, i1) (m2, default2, i2) =
+(*('a -> 'b -> 'c) -> 'a t -> 'b t -> 'c t *)
+let merge (f: 'a -> 'b -> 'c) ((m1, default1, i1): 'a t)
+    ((m2, default2, i2): 'b t) : 'c t =
   let length = if i1 > i2 then i1 else i2 in
+  let default = f default1 default2 in
   let f_checked k m1v m2v =
     if not (in_bounds k length) then
-      failwith ("illegal key in map: " ^ UInt32.to_string k)
-    else f m1v m2v
-  in
-  let default =
-    match f (Some default1) (Some default2) with
-    | Some v -> v
-    | None -> failwith "bad merge function resulted in no default value"
+      Console.error ("illegal key in map: " ^ UInt32.to_string k)
+    else
+      match (m1v, m2v) with
+      | Some x, Some y -> Some (f x y)
+      | Some x, None -> Some (f x default2)
+      | None, Some y -> Some (f default1 y)
+      | None, None -> Some default
   in
   (Rep.merge f_checked m1 m2, default, length)
 

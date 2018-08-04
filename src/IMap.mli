@@ -18,6 +18,6 @@ val update : 'a t -> UInt32.t -> 'a -> 'a t
 
 val map : ('a -> 'b) -> 'a t -> 'b t
 
-val merge : ('a option -> 'b option -> 'c option) -> 'a t -> 'b t -> 'c t
+val merge : ('a -> 'b -> 'c) -> 'a t -> 'b t -> 'c t
 
 val equal : ('a -> 'a -> bool) -> 'a t -> 'a t -> bool

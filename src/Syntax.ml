@@ -21,7 +21,7 @@ type ty =
   | TArrow of ty * ty
   | TTuple of ty list
   | TOption of ty
-  | TMap of index * ty
+  | TMap of index ref * ty
 
 (* TMap (i,t) is a map from [0..i-1] to t *)
 and tyvar = Unbound of tyname * level | Link of ty

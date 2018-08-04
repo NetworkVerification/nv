@@ -4,6 +4,7 @@
 
 open Syntax
 open Printing
+open Unsigned
 
 let debug = true
 
@@ -52,6 +53,8 @@ let rec get_inner_type t : ty =
 
 
 let rec check_annot (e: exp) =
+  (* Printf.printf "expr: %s\n" (Printing.exp_to_string e) ;
+  Printf.printf "type: %s\n" (Printing.ty_to_string (oget e.ety)) ; *)
   ( match e.ety with
   | None ->
       Console.error
@@ -143,6 +146,12 @@ let rec unify info e t1 t2 : unit =
       | TInt i, TInt j when i = j -> true
       | TTuple ts1, TTuple ts2 -> try_unifies ts1 ts2
       | TOption t1, TOption t2 -> try_unify t1 t2
+      | TMap (i, t1), TMap (j, t2) when UInt32.to_int !i = 0 ->
+          i := !j ;
+          try_unify t1 t2
+      | TMap (i, t1), TMap (j, t2) when UInt32.to_int !j = 0 ->
+          j := !i ;
+          try_unify t1 t2
       | TMap (i1, t1), TMap (i2, t2) when i1 = i2 -> try_unify t1 t2
       | _, _ -> false
   in
@@ -270,15 +279,15 @@ let substitute (ty: ty) : ty =
 
 let op_typ op =
   match op with
-  | And -> ([], [TBool; TBool], TBool)
-  | Or -> ([], [TBool; TBool], TBool)
-  | Not -> ([], [TBool], TBool)
+  | And -> ([TBool; TBool], TBool)
+  | Or -> ([TBool; TBool], TBool)
+  | Not -> ([TBool], TBool)
   (* Unsigned Integer 32 operators *)
-  | UAdd -> ([], [tint; tint], tint)
-  | USub -> ([], [tint; tint], tint)
-  | UEq -> ([], [tint; tint], TBool)
-  | ULess -> ([], [tint; tint], TBool)
-  | ULeq -> ([], [tint; tint], TBool)
+  | UAdd -> ([tint; tint], tint)
+  | USub -> ([tint; tint], tint)
+  | UEq -> ([tint; tint], TBool)
+  | ULess -> ([tint; tint], TBool)
+  | ULeq -> ([tint; tint], TBool)
   (* Map operations *)
   | MCreate -> failwith "special type for create"
   | MGet -> failwith "special type for get"
@@ -287,8 +296,6 @@ let op_typ op =
   | MMerge -> failwith "special type for merge"
   | MFilter -> failwith "special type for filter"
 
-
-let check_empty l s = match l with _ :: _ -> failwith s | [] -> ()
 
 let texp (e, t) = {e; ety= Some t; espan= Span.default}
 
@@ -311,12 +318,59 @@ let rec infer_exp i info env (e: exp) : exp =
         let v, t = infer_value info env v |> textractv in
         texp (EVal v, t)
     | EOp (o, es) -> (
-      match o with
-      | MCreate | MGet | MSet | MMap | MMerge | MFilter ->
-          failwith "unimplemented map ops"
+      match (o, es) with
+      | MGet, [e1; e2] ->
+          let e1, mapty = infer_exp (i + 1) info env e1 |> textract in
+          let e2, indexty = infer_exp (i + 1) info env e2 |> textract in
+          let resty = fresh_tyvar () in
+          unify info e indexty tint ;
+          unify info e mapty (TMap (ref (UInt32.of_int 1), resty)) ;
+          texp (EOp (o, [e1; e2]), resty)
+      | MSet, [e1; e2; e3] ->
+          let e1, mapty = infer_exp (i + 1) info env e1 |> textract in
+          let e2, indexty = infer_exp (i + 1) info env e2 |> textract in
+          let e3, valty = infer_exp (i + 1) info env e3 |> textract in
+          let ty = fresh_tyvar () in
+          unify info e indexty tint ;
+          unify info e valty ty ;
+          unify info e mapty (TMap (ref (UInt32.of_int 0), ty)) ;
+          texp (EOp (o, [e1; e2; e3]), mapty)
+      | MCreate, [e1; e2] -> (
+        match e1.e with
+        | EVal {v= VUInt32 c} when UInt32.to_int c = 0 ->
+            Console.error "createMap called with size 0"
+        | EVal {v= VUInt32 c} ->
+            let e1, _ = infer_exp (i + 1) info env e1 |> textract in
+            let e2, defaultty = infer_exp (i + 1) info env e2 |> textract in
+            texp (EOp (o, [e1; e2]), TMap (ref c, defaultty))
+        | _ ->
+            Console.error_position info e1.espan
+              "parameter to createMap must be an integer constant" )
+      | MMap, [e1; e2] ->
+          let e1, fty = infer_exp (i + 1) info env e1 |> textract in
+          let e2, mapty = infer_exp (i + 1) info env e2 |> textract in
+          let ty = fresh_tyvar () in
+          unify info e mapty (TMap (ref (UInt32.of_int 0), ty)) ;
+          unify info e fty (TArrow (ty, ty)) ;
+          texp (EOp (o, [e1; e2]), mapty)
+      | MFilter, [e1; e2] ->
+          let e1, fty = infer_exp (i + 1) info env e1 |> textract in
+          let e2, mapty = infer_exp (i + 1) info env e2 |> textract in
+          let ty = fresh_tyvar () in
+          unify info e mapty (TMap (ref (UInt32.of_int 0), ty)) ;
+          unify info e fty (TArrow (tint, ty)) ;
+          texp (EOp (o, [e1; e2]), mapty)
+      | MMerge, [e1; e2; e3] ->
+          let e1, fty = infer_exp (i + 1) info env e1 |> textract in
+          let e2, mapty1 = infer_exp (i + 1) info env e2 |> textract in
+          let e3, mapty2 = infer_exp (i + 1) info env e3 |> textract in
+          let ty = fresh_tyvar () in
+          unify info e mapty1 (TMap (ref (UInt32.of_int 0), ty)) ;
+          unify info e mapty2 (TMap (ref (UInt32.of_int 0), ty)) ;
+          unify info e fty (TArrow (ty, TArrow (ty, ty))) ;
+          texp (EOp (o, [e1; e2; e3]), mapty1)
       | _ ->
-          let tvs, argtys, resty = op_typ o in
-          check_empty tvs "polymorphic operators not supported yet" ;
+          let argtys, resty = op_typ o in
           let es, tys = infer_exps (i + 1) info env es in
           unifies info e argtys tys ;
           texp (EOp (o, es), resty) )
@@ -394,7 +448,9 @@ and infer_exps i info env es =
 and tvalue (v, t) = {v; vty= Some t; vspan= Span.default}
 
 and textractv v =
-  match v.vty with None -> failwith "impossible" | Some ty -> (v, ty)
+  match v.vty with
+  | None -> Console.error "internal error (textractv)"
+  | Some ty -> (v, ty)
 
 
 and infer_value info env (v: Syntax.value) : Syntax.value =
@@ -402,7 +458,7 @@ and infer_value info env (v: Syntax.value) : Syntax.value =
   | VBool b -> tvalue (v.v, TBool)
   | VUInt32 i -> tvalue (v.v, tint)
   | VMap m ->
-      failwith "unimplemented"
+      Console.error "internal error (infer_value)"
       (* To DO *)
       (*
       let i = IMap.length m in
@@ -503,7 +559,6 @@ and infer_declaration i info env aty d : ty Env.t * declaration =
       enter_level () ;
       let e1, ty_e1 = infer_exp (i + 1) info env e1 |> textract in
       leave_level () ;
-      check_annot e1 ;
       (* (Env.update env var (oget e1.ety), DLet (var, e1)) *)
       let ty = generalize ty_e1 in
       (Env.update env x ty, DLet (x, Some ty, texp (e1.e, ty)))

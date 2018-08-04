@@ -133,7 +133,7 @@ tuple:
 ty3:
    | ty4             { $1 }
    | TOPTION LBRACKET ty3 RBRACKET { TOption $3 }
-   | TDICT LBRACKET NUM SEMI ty3 RBRACKET {TMap (snd $3, $5)}
+   | TDICT LBRACKET NUM SEMI ty3 RBRACKET {TMap (ref (snd $3), $5)}
 ;
 
 ty4:
