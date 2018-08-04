@@ -66,9 +66,12 @@ let run_smt info ds =
   match res with
   | Unsat -> ()
   | Unknown -> ()
-  | Sat map ->
+  | Sat map ->   
       NodeMap.iter
-        (fun k v -> Printf.printf "%d:%s\n" k (Printing.exp_to_string v))
+        (fun k v -> 
+          match v with 
+          | None -> Printf.printf "%d:ModelUnavailable\n" k
+          | Some v -> Printf.printf "%d:%s\n" k (Printing.exp_to_string v))
         map
 
 

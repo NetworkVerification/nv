@@ -28,7 +28,6 @@ let update_tys env tvs tys =
 
 
 (* Equality of values *)
-
 (* ignores type annotations when checking for equality *)
 let rec equal_val v1 v2 =
   match (v1.v, v2.v) with
@@ -152,8 +151,8 @@ and interp_op env op es =
       VMap (IMap.map (fun v -> apply c_env f v) m) |> value
   | MMerge, [{v= VClosure (c_env, f)}; {v= VMap m1}; {v= VMap m2}] ->
       (* TO DO:  Need to preserve types in VOptions here ? *)
-      let f_lifted v1 v2 = 
-        match apply c_env f v1 with 
+      let f_lifted v1 v2 =
+        match apply c_env f v1 with
         | {v= VClosure (c_env, f)} -> apply c_env f v2
         | _ -> Console.error "internal error (interp_op)"
       in

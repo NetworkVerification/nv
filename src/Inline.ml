@@ -1,7 +1,7 @@
 open Syntax
 
 let is_function_ty e =
-  match e.ety with None -> false | Some TArrow _ -> true | _ -> false
+  match Typing.get_inner_type (oget e.ety) with TArrow _ -> true | _ -> false
 
 
 let annot ty e = {e= e.e; ety= Some ty; espan= e.espan}

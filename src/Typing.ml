@@ -189,24 +189,15 @@ let generalize ty =
         let ty1 = gen ty1 in
         let ty2 = gen ty2 in
         TArrow (ty1, ty2)
-    | TTuple ts ->
-        let tys = gens ts in
-        TTuple tys
+    | TTuple ts -> TTuple (List.map gen ts)
     | TOption t ->
         let ty = gen t in
         TOption ty
     | TMap (i, t) ->
         let ty = gen t in
         TMap (i, ty)
-  and gens tys =
-    match tys with
-    | [] -> []
-    | ty1 :: tys ->
-        let ty1 = gen ty1 in
-        let tys = gens tys in
-        ty1 :: tys
   in
-  gen ty
+  match ty with TArrow _ -> gen ty | _ -> ty
 
 
 (* instantiation: replace schematic variables with fresh TVar *)
@@ -309,11 +300,7 @@ let rec infer_exp i info env (e: exp) : exp =
     | EVar x -> (
       match Env.lookup_opt env x with
       | None -> Console.error ("unbound variable " ^ Var.to_string x)
-      (* | Some TAll (tvs, t) ->
-          let ty, _ = inst_schema (tvs, t) in
-          texp (EVar x, ty) *)
-      | Some t ->
-          texp (e.e, substitute t) )
+      | Some t -> texp (e.e, substitute t) )
     | EVal v ->
         let v, t = infer_value info env v |> textractv in
         texp (EVal v, t)
@@ -330,10 +317,8 @@ let rec infer_exp i info env (e: exp) : exp =
           let e1, mapty = infer_exp (i + 1) info env e1 |> textract in
           let e2, indexty = infer_exp (i + 1) info env e2 |> textract in
           let e3, valty = infer_exp (i + 1) info env e3 |> textract in
-          let ty = fresh_tyvar () in
           unify info e indexty tint ;
-          unify info e valty ty ;
-          unify info e mapty (TMap (ref (UInt32.of_int 0), ty)) ;
+          unify info e mapty (TMap (ref (UInt32.of_int 0), valty)) ;
           texp (EOp (o, [e1; e2; e3]), mapty)
       | MCreate, [e1; e2] -> (
         match e1.e with
@@ -387,10 +372,6 @@ let rec infer_exp i info env (e: exp) : exp =
     | EApp (e1, e2) ->
         let e1, ty_fun = infer_exp (i + 1) info env e1 |> textract in
         let e2, ty_arg = infer_exp (i + 1) info env e2 |> textract in
-        (* let ty = substitute ty_fun in *)
-        (* Printf.printf "ty_fun: %s\n" (Printing.ty_to_string ty_fun) ;
-        Printf.printf "ty_arg: %s\n" (Printing.ty_to_string ty_arg) ;
-        Printf.printf "substituted: %s\n" (Printing.ty_to_string ty) ; *)
         let ty_res = fresh_tyvar () in
         unify info e ty_fun (TArrow (ty_arg, ty_res)) ;
         texp (EApp (e1, e2), ty_res)

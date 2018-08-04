@@ -1,0 +1,14 @@
+type attribute = dict[32; int]
+
+let nodes = 2
+
+let edges = {
+ 0=1;
+}
+
+let merge node x y =
+  combine (fun i j -> if i < j then i else j) x y
+
+let trans edge x = map (fun i -> i + 1) x
+
+let init node = createMap 32 0

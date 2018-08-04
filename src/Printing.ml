@@ -113,11 +113,11 @@ let op_to_string op =
   | UEq -> "="
   | ULess -> "<"
   | ULeq -> "<="
-  | MCreate -> "create"
+  | MCreate -> "createMap"
   | MGet -> "!"
   | MSet -> "set"
   | MMap -> "map"
-  | MMerge -> "merge"
+  | MMerge -> "combine"
   | MFilter -> "filter"
 
 
