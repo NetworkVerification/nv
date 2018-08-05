@@ -11,4 +11,6 @@ let merge node x y =
 
 let trans edge x = map (fun i -> i + 1) x
 
-let init node = createMap 32 0
+let init node = 
+  let m = createMap 32 10 in
+  if node = 0 then m[3 := 0] else m[5 := 0]

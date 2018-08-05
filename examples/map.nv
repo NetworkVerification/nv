@@ -1,13 +1,9 @@
 type attribute = dict[32; option[int]]
 
-let nodes = 4
+let nodes = 2
 
 let edges = {
- 0=1;
- 0=2;
- 1=2;
- 1=3;
- 2=3;
+  0=1;
 }
 
 let mapo f o =
@@ -33,5 +29,3 @@ let init node =
   match node with
   | 0 -> m[3 := Some 0]
   | 1 -> m[5 := Some 0]
-  | 2 -> m[7 := Some 0]
-  | 3 -> m[9 := Some 0]
