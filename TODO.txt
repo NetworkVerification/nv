@@ -6,11 +6,7 @@ A list of implementation items loosely organized by increasing difficulty and de
 
 ===========================================
 
-* Add symbolic variables of the form:
-    symbolic [ID] (: TYPE) = EXPR
-    the initialization is for the simulator (or a seed for a fuzzer etc.)
-    EXPR should not contain another symbolic variable for simplicity
-    e.g., if there is recursion that could be a problem
+* Check for recursion
 
 ===========================================
 
