@@ -64,13 +64,19 @@ let run_smt info ds =
   match res with
   | Unsat -> ()
   | Unknown -> ()
-  | Sat map ->
+  | Sat (symbolic_map, node_map) ->
+      StringMap.iter
+        (fun k v ->
+          match v with
+          | None -> Printf.printf "%s:(...)\n" k
+          | Some v -> Printf.printf "%s:%s\n" k (Printing.exp_to_string v) )
+        symbolic_map ;
       NodeMap.iter
         (fun k v ->
           match v with
           | None -> Printf.printf "%d:(...)\n" k
           | Some v -> Printf.printf "%d:%s\n" k (Printing.exp_to_string v) )
-        map
+        node_map
 
 let main =
   let () = commandline_processing () in

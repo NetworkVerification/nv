@@ -75,8 +75,8 @@ let rec check_annot (e: exp) =
 
 let check_annot_decl (d: declaration) =
   match d with
-  | DLet (_, tyo, e) -> check_annot e
-  | DMerge e | DTrans e | DInit e -> check_annot e
+  | DLet (_, _, e) | DSymbolic (_, e) | DMerge e | DTrans e | DInit e ->
+      check_annot e
   | DNodes _ | DEdges _ | DATy _ -> ()
 
 let rec check_annot_decls (ds: declarations) =
@@ -515,9 +515,14 @@ and infer_declaration i info env aty d : ty Env.t * declaration =
       enter_level () ;
       let e1, ty_e1 = infer_exp (i + 1) info env e1 |> textract in
       leave_level () ;
-      (* (Env.update env var (oget e1.ety), DLet (var, e1)) *)
       let ty = generalize ty_e1 in
       (Env.update env x ty, DLet (x, Some ty, texp (e1.e, ty)))
+  | DSymbolic (x, e1) ->
+      enter_level () ;
+      let e1, ty_e1 = infer_exp (i + 1) info env e1 |> textract in
+      leave_level () ;
+      let ty = generalize ty_e1 in
+      (Env.update env x ty, DSymbolic (x, texp (e1.e, ty)))
   | DMerge e ->
       let e' = infer_exp (i + 1) info env e in
       let ty = oget e'.ety in

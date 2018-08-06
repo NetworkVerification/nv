@@ -159,9 +159,9 @@ and inline_branch env (p, e) =
 let inline_declaration (env: exp Env.t) (d: declaration) =
   match d with
   | DLet (x, tyo, e) ->
-      (* let e = inline_exp env e in *)
       if is_function_ty e then (Env.update env x e, None)
       else (env, Some (DLet (x, tyo, e)))
+  | DSymbolic (x, e) -> (env, Some (DSymbolic (x, e)))
   | DMerge e -> (env, Some (DMerge (inline_exp env e)))
   | DTrans e -> (env, Some (DTrans (inline_exp env e)))
   | DInit e -> (env, Some (DInit (inline_exp env e)))

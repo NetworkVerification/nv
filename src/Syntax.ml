@@ -96,6 +96,7 @@ and env = {ty: ty Env.t; value: value Env.t}
 
 type declaration =
   | DLet of var * ty option * exp
+  | DSymbolic of var * exp
   | DATy of ty
   | DMerge of exp
   | DTrans of exp
@@ -187,3 +188,9 @@ let get_edges ds =
 
 let get_nodes ds =
   get_decl ds (fun d -> match d with DNodes i -> Some i | _ -> None)
+
+let get_symbolics ds =
+  List.fold_left
+    (fun acc d -> match d with DSymbolic (x, e) -> (x, e) :: acc | _ -> acc)
+    [] ds
+  |> List.rev

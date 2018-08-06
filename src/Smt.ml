@@ -2,7 +2,8 @@ open Unsigned
 open Syntax
 open Z3
 
-type smt_env = {solver: Z3.Solver.solver; ctx: Z3.context}
+type smt_env =
+  {solver: Z3.Solver.solver; ctx: Z3.context; symbolics: (Var.t * exp) list}
 
 let create_fresh descr s =
   Printf.sprintf "%s-%s" descr (Var.fresh s |> Var.to_string)
@@ -124,12 +125,18 @@ let mk_array ctx value = Z3Array.mk_const_array ctx (ty_to_sort ctx tint) value
 type array_info =
   {f: Sort.sort -> Sort.sort; make: Expr.expr -> Expr.expr; lift: bool}
 
+let is_symbolic syms x = List.exists (fun (y, e) -> Var.equals x y) syms
+
 let rec encode_exp_z3 descr env arr (e: exp) =
   (* Printf.printf "expr: %s\n" (Printing.exp_to_string e) ; *)
   match e.e with
   | EVar x ->
+      let name =
+        if is_symbolic env.symbolics x then Var.to_string x
+        else create_name descr x
+      in
       let sort = ty_to_sort env.ctx (oget e.ety) |> arr.f in
-      Z3.Expr.mk_const_s env.ctx (create_name descr x) sort
+      Z3.Expr.mk_const_s env.ctx name sort
   | EVal v -> encode_value_z3 descr env arr v
   | EOp (op, es) -> (
     match (op, es) with
@@ -573,6 +580,12 @@ let encode_z3_init str env e =
       (result, nodestr)
   | _ -> Console.error "internal error"
 
+module StringMap = Map.Make (struct
+  type t = string
+
+  let compare = String.compare
+end)
+
 module NodeMap = Map.Make (struct
   type t = int
 
@@ -603,7 +616,8 @@ let encode_z3 (ds: declarations) : smt_env =
   in
   let solver = Z3.Solver.mk_solver_t ctx t in
   (* let solver = Z3.Solver.mk_solver ctx None in *)
-  let env = {solver; ctx} in
+  let symbolics = get_symbolics ds in
+  let env = {solver; ctx; symbolics} in
   let emerge, etrans, einit, nodes, edges, aty =
     match
       ( get_merge ds
@@ -716,7 +730,15 @@ let rec z3_to_exp (e: Expr.expr) : Syntax.exp option =
           else None
     with _ -> None
 
-type smt_result = Unsat | Sat of exp option NodeMap.t | Unknown
+type smt_result =
+  | Unsat
+  | Sat of exp option StringMap.t * exp option NodeMap.t
+  | Unknown
+
+let eval env aty m str ty =
+  let l = Expr.mk_const_s env.ctx str (ty_to_sort env.ctx ty) in
+  let e = Model.eval m l true |> oget in
+  z3_to_exp e
 
 let solve ds =
   let num_nodes, aty =
@@ -737,14 +759,15 @@ let solve ds =
       | Some m ->
           (* print_endline (Model.to_string m) ; *)
           let map = ref NodeMap.empty in
+          let sym_map = ref StringMap.empty in
           for i = 0 to UInt32.to_int num_nodes - 1 do
-            let l =
-              Expr.mk_const_s env.ctx
-                (Printf.sprintf "label-%d" i)
-                (ty_to_sort env.ctx aty)
-            in
-            let e = Model.eval m l true |> oget in
-            let e = z3_to_exp e in
+            let e = eval env aty m (Printf.sprintf "label-%d" i) aty in
             map := NodeMap.add i e !map
           done ;
-          Sat !map
+          List.iter
+            (fun (x, e) ->
+              let name = Var.to_string x in
+              let e = eval env aty m name (oget e.ety) in
+              sym_map := StringMap.add name e !sym_map )
+            env.symbolics ;
+          Sat (!sym_map, !map)

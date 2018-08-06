@@ -248,6 +248,7 @@ let rec declaration_to_string d =
         match tyo with None -> "" | Some ty -> ":" ^ ty_to_string ty ^ " "
       in
       "let " ^ Var.to_string x ^ ty_str ^ " = " ^ exp_to_string e
+  | DSymbolic (x, e) -> "symbolic " ^ Var.to_string x ^ " = " ^ exp_to_string e
   | DMerge e -> "let merge = " ^ exp_to_string e
   | DTrans e -> "let trans = " ^ exp_to_string e
   | DNodes n -> "let nodes = " ^ UInt32.to_string n

@@ -31,6 +31,7 @@ rule token = parse
   | "then"       { THEN (position lexbuf) }
   | "else"       { ELSE (position lexbuf) }
   | "fun"        { FUN (position lexbuf) }
+  | "symbolic"   { SYMBOLIC (position lexbuf) }
   | "None"       { NONE (position lexbuf) }
   | "Some"       { SOME (position lexbuf) }
   | "edges"      { EDGES (position lexbuf) }
