@@ -2,243 +2,6 @@ open Unsigned
 open Syntax
 open Z3
 
-(* 
-type ('a, 'b, 'c) smt_encoding =
-  { merge: 'b
-  ; merge_args: 'a list
-  ; trans: 'b
-  ; trans_args: 'a list
-  ; init: 'b
-  ; init_args: 'a list
-  ; metadata: 'c }
-
-type smtlib_encoding = (string, string, string) smt_encoding
-
-let rec encode_exp (e: exp) : string * string =
-  match e.e with
-  | EVar x -> ("", Var.to_string x)
-  | EVal v -> ("", encode_value v.v)
-  | EOp (op, es) -> (
-    match op with
-    | And -> encode_op "and" es
-    | Or -> encode_op "or" es
-    | Not ->
-        let a, e = List.hd es |> encode_exp in
-        (a, Printf.sprintf "(not %s)" e)
-    | UAdd -> encode_op "bvadd" es
-    | USub -> encode_op "bvsub" es
-    | UEq -> encode_op "=" es
-    | ULess -> encode_op "bvult" es
-    | ULeq -> encode_op "bvule" es
-    | MCreate _ | MGet | MSet | MMap | MMerge ->
-        Console.error "unsupported map operation" )
-  | EIf (e1, e2, e3) ->
-      let a1, e1 = encode_exp e1 in
-      let a2, e2 = encode_exp e2 in
-      let a3, e3 = encode_exp e3 in
-      (a1 ^ a2 ^ a3, Printf.sprintf "(ite %s %s %s)" e1 e2 e3)
-  | ELet (x, e1, e2) ->
-      let xstr = Var.to_string x in
-      let a = create_const xstr (oget e1.ety) in
-      let a1, e1 = encode_exp e1 in
-      let a2, e2 = encode_exp e2 in
-      let a = Printf.sprintf "%s\n(assert (= %s %s))" a xstr e1 in
-      (a ^ a1 ^ a2, e2)
-  | ETuple es -> (
-    match es with
-    | [] -> Console.error "internal error (encode_exp)"
-    | [e] -> encode_exp e
-    | e :: es ->
-        let a, e1 = encode_exp e in
-        let b, e2 = encode_exp (ETuple es |> exp) in
-        (a ^ b, Printf.sprintf "(mk-pair %s %s)" e1 e2) )
-  | ESome e ->
-      let a, e = encode_exp e in
-      (a, Printf.sprintf "(some %s)" e)
-  | EMatch (e, bs) ->
-      let x = Var.fresh "match" in
-      let name = Var.to_string x in
-      let a = create_const name (oget e.ety) in
-      let b, e1 = encode_exp e in
-      let a = Printf.sprintf "%s%s\n(assert (= %s %s))" a b name e1 in
-      let c, e = encode_branches name bs (oget e.ety) in
-      (a ^ c, e)
-  | ETy (e, ty) -> encode_exp e
-  | EFun _ | EApp _ -> Console.error "function in smt encoding"
-
-
-and encode_op op_str es =
-  match es with
-  | [] -> Console.error "internal error (encode_op)"
-  | [e] -> encode_exp e
-  | e :: es ->
-      let a, e1 = encode_exp e in
-      let b, e2 = encode_op op_str es in
-      (a ^ b, Printf.sprintf "(%s %s %s)" op_str e1 e2)
-
-
-and encode_branches name bs (t: ty) =
-  match List.rev bs with
-  | [] -> Console.error "internal error (encode_branches)"
-  | (p, e) :: bs ->
-      let b, e = encode_exp e in
-      (* we make the last branch fire no matter what *)
-      let c, _ = encode_pattern name p t in
-      encode_branches_aux name (List.rev bs) (c ^ b, e) t
-
-
-(* I'm assuming here that the cases are exhaustive *)
-and encode_branches_aux name bs acc (t: ty) =
-  let a, acc = acc in
-  match bs with
-  | [] -> (a, acc)
-  | (p, e) :: bs ->
-      let b, e = encode_exp e in
-      let c, p = encode_pattern name p t in
-      let acc = Printf.sprintf "(ite %s %s %s)" p e acc in
-      encode_branches_aux name bs (c ^ b ^ a, acc) t
-
-
-and encode_pattern name p (t: ty) =
-  match (p, Typing.get_inner_type t) with
-  | PWild, _ -> ("", "true")
-  | PVar x, t ->
-      let local_name = Var.to_string x in
-      let a = create_const local_name t in
-      let binding =
-        Printf.sprintf "%s\n(assert (= %s %s))" a local_name name
-      in
-      (binding, "true")
-  | PBool b, TBool -> ("", Printf.sprintf "(= %s %s)" name (string_of_bool b))
-  | PUInt32 i, TInt _ ->
-      ("", Printf.sprintf "(= %s %s)" name (UInt32.to_string i))
-  | PTuple ps, TTuple ts -> (
-    match (ps, ts) with
-    | [p], [t] -> encode_pattern name p t
-    | p :: ps, t :: ts ->
-        let fst_name = Var.fresh "first" |> Var.to_string in
-        let fst = create_const fst_name t in
-        let snd_name = Var.fresh "second" |> Var.to_string in
-        let snd = create_const snd_name (TTuple ts) in
-        let fst_decl =
-          Printf.sprintf "%s\n(assert (= %s (first %s)))" fst fst_name name
-        in
-        let snd_decl =
-          Printf.sprintf "%s\n(assert (= %s (second %s)))" snd snd_name name
-        in
-        let a, p1 = encode_pattern fst_name p t in
-        let b, p2 = encode_pattern snd_name (PTuple ps) (TTuple ts) in
-        let condition = Printf.sprintf "(and %s %s)" p1 p2 in
-        (fst_decl ^ snd_decl ^ a ^ b, condition)
-    | _ -> Console.error "internal error (encode_pattern)" )
-  | POption None, TOption _ -> ("", Printf.sprintf "(is-none %s)" name)
-  | POption Some p, TOption t ->
-      let new_name = Var.fresh "option" |> Var.to_string in
-      let a = create_const new_name t in
-      let a = Printf.sprintf "%s\n(assert (= %s (val %s)))" a new_name name in
-      let b, p = encode_pattern new_name p t in
-      (a ^ b, Printf.sprintf "(and (is-some %s) %s)" name p)
-  | _ ->
-      Console.error
-        (Printf.sprintf "internal error (encode_pattern): (%s, %s)"
-           (Printing.pattern_to_string p)
-           (Printing.ty_to_string (Typing.get_inner_type t)))
-
-
-and encode_value v : string =
-  match v with
-  | VBool true -> "true"
-  | VBool false -> "false"
-  | VUInt32 i -> Printf.sprintf "(_ bv%d %s)" 32 (UInt32.to_string i)
-  | VTuple vs -> (
-    match vs with
-    | [] -> Console.error "internal error (encode_value)"
-    | [v] -> encode_value v.v
-    | v :: vs ->
-        Printf.sprintf "(mk-pair %s %s)" (encode_value v.v)
-          (encode_value (VTuple vs)) )
-  | VOption None -> "none"
-  | VOption Some v -> Printf.sprintf "(some %s)" (encode_value v.v)
-  | VClosure _ -> Console.error "internal error (closure in smt)"
-  | VMap _ -> Console.error "unimplemented: map"
-
-
-let defs =
-  "(declare-datatypes (T1 T2) ((Pair (mk-pair (first T1) (second T2)))))\n\
-   (declare-datatypes (T) ((Option none (some (val T)))))"
-
-
-let encode_smtlib (ds: declarations) : smtlib_encoding =
-  Var.reset () ;
-  match (get_merge ds, get_trans ds, get_init ds) with
-  | Some emerge, Some etrans, Some einit ->
-      let merge, mnode, x, y =
-        match emerge.e with
-        | EFun
-            { arg= node
-            ; argty= nodety
-            ; body=
-                { e=
-                    EFun
-                      { arg= x
-                      ; argty= xty
-                      ; body= {e= EFun {arg= y; argty= yty; body= exp}} } } } ->
-            let nodestr = Var.to_string node in
-            let xstr = Var.to_string x in
-            let ystr = Var.to_string y in
-            let xty, yty = (oget xty, oget yty) in
-            let nparam = create_const nodestr (oget nodety) in
-            let xparam = create_const xstr xty in
-            let yparam = create_const ystr yty in
-            let result = create_const "result" (oget exp.ety) in
-            let a, e = encode_exp exp in
-            ( Printf.sprintf "%s%s%s%s%s\n(assert (= result %s))" nparam xparam
-                yparam a result e
-            , nodestr
-            , xstr
-            , ystr )
-        | _ -> Console.error "internal error"
-      in
-      let trans, tnode, z =
-        match etrans.e with
-        | EFun
-            { arg= node
-            ; argty= nodety
-            ; body= {e= EFun {arg= x; argty= xty; body= exp}} } ->
-            let nodestr = Var.to_string node in
-            let xstr = Var.to_string x in
-            let xty = oget xty in
-            let nparam = create_const nodestr (oget nodety) in
-            let xparam = create_const xstr xty in
-            let result = create_const "result" (oget exp.ety) in
-            let a, e = encode_exp exp in
-            ( Printf.sprintf "%s%s%s%s\n(assert (= result %s))" nparam xparam a
-                result e
-            , nodestr
-            , xstr )
-        | _ -> Console.error "internal error"
-      in
-      let init, inode =
-        match einit.e with
-        | EFun {arg= node; argty= nodety; body= e} ->
-            let nodestr = Var.to_string node in
-            let nparam = create_const nodestr (oget nodety) in
-            let result = create_const "result" (oget e.ety) in
-            let a, e = encode_exp e in
-            ( Printf.sprintf "%s%s%s\n(assert (= result %s))" nparam a result e
-            , nodestr )
-        | _ -> Console.error "internal error"
-      in
-      { merge
-      ; merge_args= [mnode; x; y]
-      ; trans
-      ; trans_args= [tnode; z]
-      ; init
-      ; init_args= [inode]
-      ; metadata= defs }
-  | _ -> Console.error "attribute type not declared: type attribute = ..."
-*)
-
 type smt_env = {solver: Z3.Solver.solver; ctx: Z3.context}
 
 let create_fresh descr s =
@@ -246,11 +9,11 @@ let create_fresh descr s =
 
 let create_name descr n = Printf.sprintf "%s-%s" descr (Var.to_string n)
 
-let z3_int ctx i =
+let mk_int_u32 ctx i =
   Expr.mk_numeral_string ctx (UInt32.to_string i)
     (Arithmetic.Integer.mk_sort ctx)
 
-let mk_int ctx i = z3_int ctx (UInt32.of_int i)
+let mk_int ctx i = mk_int_u32 ctx (UInt32.of_int i)
 
 let mk_bool ctx b = Boolean.mk_val ctx b
 
@@ -356,10 +119,10 @@ let rec ty_to_sort ctx (ty: ty) : Z3.Sort.sort =
   | TMap (i, t) -> mk_array_sort ctx (ty_to_sort ctx t)
   | TVar _ | QVar _ | TArrow _ -> Console.error "internal error (ty_to_sort)"
 
-let create_const name ty =
-  Printf.sprintf "\n(declare-const %s (%s))" name (ty_to_smtlib ty)
+let mk_array ctx value = Z3Array.mk_const_array ctx (ty_to_sort ctx tint) value
 
-type array_info = {f: Sort.sort -> Sort.sort; lift: bool}
+type array_info =
+  {f: Sort.sort -> Sort.sort; make: Expr.expr -> Expr.expr; lift: bool}
 
 let rec encode_exp_z3 descr env arr (e: exp) =
   (* Printf.printf "expr: %s\n" (Printing.exp_to_string e) ; *)
@@ -440,7 +203,11 @@ let rec encode_exp_z3 descr env arr (e: exp) =
         let e3 = encode_exp_z3 descr env arr e3 in
         Z3Array.mk_store env.ctx e1 e2 e3
     | MMap, [{e= EFun {arg= x; argty= ty1; resty= ty2; body= e1}}; e2] ->
-        let arr2 = {f= mk_array_sort env.ctx; lift= true} in
+        let arr2 =
+          { f= (fun s -> mk_array_sort env.ctx (arr.f s))
+          ; make= (fun e -> mk_array env.ctx (arr.make e))
+          ; lift= true }
+        in
         let e1 = encode_exp_z3 descr env arr2 e1 in
         let e2 = encode_exp_z3 descr env arr e2 in
         let x = create_name descr x in
@@ -473,7 +240,11 @@ let rec encode_exp_z3 descr env arr (e: exp) =
                 ; body= {e= EFun {arg= y; argty= ty2; body= e1}} } }
         ; e2
         ; e3 ] ) ->
-        let arr2 = {f= mk_array_sort env.ctx; lift= true} in
+        let arr2 =
+          { f= (fun s -> mk_array_sort env.ctx (arr.f s))
+          ; make= (fun e -> mk_array env.ctx (arr.make e))
+          ; lift= true }
+        in
         let e1 = encode_exp_z3 descr env arr2 e1 in
         let e2 = encode_exp_z3 descr env arr e2 in
         let e3 = encode_exp_z3 descr env arr e3 in
@@ -588,13 +359,11 @@ and encode_branches_aux_z3 descr env arr name bs accze (t: ty) =
       in
       encode_branches_aux_z3 descr env arr name bs ze t
 
-and mk_array ctx value = Z3Array.mk_const_array ctx (ty_to_sort ctx tint) value
-
 and encode_pattern_z3 descr env arr zname p (t: ty) =
   let ty = Typing.get_inner_type t in
   match (p, ty) with
   | PWild, _ ->
-      if arr.lift then mk_array env.ctx (mk_bool env.ctx true)
+      if arr.lift then arr.make (mk_bool env.ctx true)
       else Boolean.mk_true env.ctx
   | PVar x, t ->
       let local_name = create_name descr x in
@@ -602,19 +371,19 @@ and encode_pattern_z3 descr env arr zname p (t: ty) =
         Expr.mk_const_s env.ctx local_name (ty_to_sort env.ctx t |> arr.f)
       in
       add env.solver [Boolean.mk_eq env.ctx za zname] ;
-      if arr.lift then mk_array env.ctx (mk_bool env.ctx true)
+      if arr.lift then arr.make (mk_bool env.ctx true)
       else Boolean.mk_true env.ctx
   | PBool b, TBool ->
       if arr.lift then
-        let a = mk_array env.ctx (mk_bool env.ctx b) in
+        let a = arr.make (mk_bool env.ctx b) in
         Z3Array.mk_map env.ctx (eq_f env.ctx (peel env.ctx zname)) [zname; a]
       else Boolean.mk_eq env.ctx zname (Boolean.mk_val env.ctx b)
   | PUInt32 i, TInt _ ->
       if arr.lift then
-        let a = mk_array env.ctx (z3_int env.ctx i) in
+        let a = arr.make (mk_int_u32 env.ctx i) in
         Z3Array.mk_map env.ctx (eq_f env.ctx (peel env.ctx zname)) [zname; a]
       else
-        let const = z3_int env.ctx i in
+        let const = mk_int_u32 env.ctx i in
         Boolean.mk_eq env.ctx zname const
   | PTuple ps, TTuple ts -> (
     match (ps, ts) with
@@ -651,7 +420,7 @@ and encode_pattern_z3 descr env arr zname p (t: ty) =
           else Boolean.mk_and env.ctx [acc; e]
         in
         let b = mk_bool env.ctx true in
-        let base = if arr.lift then mk_array env.ctx b else b in
+        let base = if arr.lift then arr.make b else b in
         List.fold_left f base matches )
   | POption None, TOption _ ->
       let opt_sort = ty_to_sort env.ctx t in
@@ -688,10 +457,10 @@ and encode_value_z3 descr env arr (v: Syntax.value) =
   match v.v with
   | VBool b ->
       let b = mk_bool env.ctx b in
-      if arr.lift then mk_array env.ctx b else b
+      if arr.lift then arr.make b else b
   | VUInt32 i ->
-      let i = z3_int env.ctx i in
-      if arr.lift then mk_array env.ctx i else i
+      let i = mk_int_u32 env.ctx i in
+      if arr.lift then arr.make i else i
   | VTuple vs -> (
     match oget v.vty with
     | TTuple ts ->
@@ -705,7 +474,7 @@ and encode_value_z3 descr env arr (v: Syntax.value) =
       let opt_sort = ty_to_sort env.ctx (oget v.vty) in
       let f = Datatype.get_constructors opt_sort |> List.hd in
       let e = Expr.mk_app env.ctx f [] in
-      if arr.lift then mk_array env.ctx e else e
+      if arr.lift then arr.make e else e
   | VOption (Some v1) ->
       let opt_sort = ty_to_sort env.ctx (oget v.vty) in
       let f = List.nth (Datatype.get_constructors opt_sort) 1 in
@@ -744,7 +513,9 @@ let encode_z3_merge str env e =
       in
       let e =
         Expr.simplify
-          (encode_exp_z3 str env {f= (fun x -> x); lift= false} exp)
+          (encode_exp_z3 str env
+             {f= (fun x -> x); make= (fun e -> e); lift= false}
+             exp)
           None
       in
       add env.solver [Boolean.mk_eq env.ctx result e] ;
@@ -771,7 +542,9 @@ let encode_z3_trans str env e =
       in
       let e =
         Expr.simplify
-          (encode_exp_z3 str env {f= (fun x -> x); lift= false} exp)
+          (encode_exp_z3 str env
+             {f= (fun x -> x); make= (fun e -> e); lift= false}
+             exp)
           None
       in
       add env.solver [Boolean.mk_eq env.ctx result e] ;
@@ -791,7 +564,9 @@ let encode_z3_init str env e =
       in
       let e =
         Expr.simplify
-          (encode_exp_z3 str env {f= (fun x -> x); lift= false} e)
+          (encode_exp_z3 str env
+             {f= (fun x -> x); make= (fun e -> e); lift= false}
+             e)
           None
       in
       add env.solver [Boolean.mk_eq env.ctx result e] ;
@@ -812,7 +587,7 @@ module EdgeMap = Map.Make (struct
     if cmp <> 0 then cmp else UInt32.compare b d
 end)
 
-let cfg = []
+let cfg = [("model_validate", "true")]
 
 let encode_z3 (ds: declarations) : smt_env =
   Var.reset () ;
@@ -870,8 +645,8 @@ let encode_z3 (ds: declarations) : smt_env =
           env etrans
       in
       trans_input_map := EdgeMap.add (i, j) x !trans_input_map ;
-      let ie = z3_int env.ctx i in
-      let je = z3_int env.ctx j in
+      let ie = mk_int_u32 env.ctx i in
+      let je = mk_int_u32 env.ctx j in
       let pair_sort =
         ty_to_sort env.ctx
           (TTuple [TInt (UInt32.of_int 32); TInt (UInt32.of_int 32)])
