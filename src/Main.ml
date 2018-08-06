@@ -59,8 +59,10 @@ let commandline_processing () =
 
 let run_smt info ds =
   let decls = Renaming.alpha_convert_declarations ds in
-  let decls = Inline.inline_declarations decls in
-  let decls = Typing.infer_declarations info decls in
+  let decls = Inline.inline_declarations info decls in
+  let decls = MapUnrolling.unroll info decls in
+  let decls = Inline.inline_declarations info decls in
+  print_endline (Printing.declarations_to_string decls) ;
   let res = Smt.solve decls in
   match res with
   | Unsat -> ()

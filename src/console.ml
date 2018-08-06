@@ -9,9 +9,21 @@ let get_position_opt idx info =
     info.linenums ;
   !position
 
+let show_message msg color label =
+  T.print_string [] "\n" ;
+  T.print_string [T.Foreground color] (label ^ ": ") ;
+  Printf.printf "%s\n" msg ;
+  T.print_string [] "\n"
+
+let error msg =
+  show_message msg T.Red "error" ;
+  exit 0
+
+let warning msg = show_message msg T.Yellow "warning"
+
 let get_position idx info =
   match get_position_opt idx info with
-  | None -> failwith "invalid index for get_position"
+  | None -> error "internal error (get_position)"
   | Some x -> x
 
 let get_line idx info = (info.input).(idx)
@@ -42,21 +54,9 @@ let show_message_position info (span: Span.t) msg color label =
   Printf.printf "%s\n" msg ;
   T.print_string [] border
 
-let show_message msg color label =
-  T.print_string [] "\n" ;
-  T.print_string [T.Foreground color] (label ^ ": ") ;
-  Printf.printf "%s\n" msg ;
-  T.print_string [] "\n"
-
 let error_position info span msg =
   show_message_position info span msg T.Red "error" ;
   exit 0
 
 let warning_position info span msg =
   show_message_position info span msg T.Yellow "warning"
-
-let error msg =
-  show_message msg T.Red "error" ;
-  exit 0
-
-let warning msg = show_message msg T.Yellow "warning"

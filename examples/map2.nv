@@ -14,3 +14,8 @@ let trans edge x = map (fun i -> i + 1) x
 let init node = 
   let m = createMap 32 10 in
   if node = 0 then m[3 := 0] else m
+
+let assert n x = 
+  match x[3] with 
+  | None -> false 
+  | _ -> true

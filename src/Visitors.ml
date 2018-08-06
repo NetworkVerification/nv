@@ -18,7 +18,13 @@ let rec iter_exp f (e: exp) =
 
 let iter_exp_decl f d =
   match d with
-  | DLet (_, _, e) | DMerge e | DTrans e | DInit e -> iter_exp (f d) e
+  | DLet (_, _, e)
+   |DMerge e
+   |DTrans e
+   |DInit e
+   |DAssert e
+   |DSymbolic (_, e) ->
+      iter_exp (f d) e
   | DATy _ | DNodes _ | DEdges _ -> ()
 
 let rec iter_exp_decls f ds = List.iter (iter_exp_decl f) ds

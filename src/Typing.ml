@@ -138,8 +138,8 @@ let rec unify info e t1 t2 : unit =
           occurs tv t' ;
           tv := Link t' ;
           true
-      | TVar {contents= Link t1}, t2 | t1, TVar {contents= Link t2} ->
-          try_unify t1 t2
+      | TVar {contents= Link t1}, t2 -> try_unify t1 t2
+      | t1, TVar {contents= Link t2} -> try_unify t1 t2
       | TArrow (tyl1, tyl2), TArrow (tyr1, tyr2) ->
           try_unify tyl1 tyr1 && try_unify tyl2 tyr2
       | TBool, TBool -> true
@@ -161,7 +161,8 @@ let rec unify info e t1 t2 : unit =
       Printf.sprintf "unable to unify types: %s and %s" (ty_to_string t1)
         (ty_to_string t2)
     in
-    Console.error_position info e.espan msg
+    (* Console.error_position info e.espan msg *)
+    Console.error msg
 
 and unifies info (e: exp) ts1 ts2 =
   match (ts1, ts2) with
@@ -202,12 +203,12 @@ let inst subst ty =
     match ty with
     | QVar name -> (
       try Env.lookup subst name with Env.Unbound_var x ->
-        failwith ("bad instantiation: " ^ Var.to_string x) )
+        Console.error ("bad instantiation: " ^ Var.to_string x) )
     | TVar {contents= Link ty} -> loop subst ty
     | TVar {contents= Unbound (name, _)} -> (
         if_debug ("found unbound tyvar " ^ Var.to_string name) ;
         try Env.lookup subst name with Env.Unbound_var x ->
-          failwith ("bad instantiation: " ^ Var.to_string x) )
+          Console.error ("bad instantiation: " ^ Var.to_string x) )
     | TBool | TInt _ -> ty
     | TArrow (ty1, ty2) ->
         let ty1 = loop subst ty1 in
@@ -273,19 +274,19 @@ let op_typ op =
   | ULess -> ([tint; tint], TBool)
   | ULeq -> ([tint; tint], TBool)
   (* Map operations *)
-  | MCreate -> failwith "special type for create"
-  | MGet -> failwith "special type for get"
-  | MSet -> failwith "special type for set"
-  | MMap -> failwith "special type for map"
-  | MMerge -> failwith "special type for merge"
-  | MFilter -> failwith "special type for filter"
+  | MCreate | MGet | MSet | MMap | MMerge | MFilter ->
+      Console.error "internal error (op_typ)"
 
 let texp (e, t) = {e; ety= Some t; espan= Span.default}
 
 let textract e =
-  match e.ety with None -> failwith "impossible" | Some ty -> (e, ty)
+  match e.ety with
+  | None -> Console.error "internal error (textract)"
+  | Some ty -> (e, ty)
 
 let rec infer_exp i info env (e: exp) : exp =
+  (* Printf.printf "%sinfer_exp: %s\n" (Console.repeat " " i)
+    (Printing.exp_to_string e) ; *)
   let exp =
     match e.e with
     | EVar x -> (
@@ -401,8 +402,7 @@ let rec infer_exp i info env (e: exp) : exp =
         unify info e t t1 ;
         texp (ETy (e, t1), t1)
   in
-  (* Printf.printf "infer_exp: %s\n" (Printing.exp_to_string e);
-  Printf.printf "type: %s\n"
+  (* Printf.printf "%stype: %s\n" (Console.repeat " " i)
     (Printing.ty_to_string (oget exp.ety)) ;
   check_annot exp ; *)
   exp
@@ -451,8 +451,7 @@ and infer_value info env (v: Syntax.value) : Syntax.value =
       let tv = fresh_tyvar () in
       unify info (val_to_exp v) t tv ;
       tvalue (VOption (Some v), TOption tv)
-  | VClosure cl ->
-      failwith "unimplemented: closure type inference because i am lazy"
+  | VClosure cl -> Console.error "internal error (infer_value)"
 
 and infer_values info env vs =
   match vs with
@@ -464,7 +463,7 @@ and infer_values info env vs =
 
 and infer_branches i info env exp tmatch bs =
   match bs with
-  | [] -> failwith "empty branches in infer branches"
+  | [] -> Console.error "internal error (infer branches)"
   | [(p, e)] ->
       let env2 = infer_pattern (i + 1) info env exp tmatch p in
       let e, t = infer_exp (i + 1) info env2 e |> textract in
