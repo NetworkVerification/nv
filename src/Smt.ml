@@ -766,6 +766,7 @@ let solve ds =
     | Some n, Some aty -> (n, aty)
     | _ -> Console.error "internal error (encode)"
   in
+  let eassert = get_assert ds in
   let env = encode_z3 ds in
   (* print_endline (Solver.to_string env.solver) ; *)
   let q = Solver.check env.solver [] in
@@ -787,11 +788,9 @@ let solve ds =
             map := NodeMap.add i e !map
           done ;
           for i = 0 to UInt32.to_int num_nodes - 1 do
-            let e =
-              eval env m (Printf.sprintf "assert-%d-result" i) TBool
-            in
-            match e with
-            | Some {e= EVal {v= VBool b}} ->
+            let e = eval env m (Printf.sprintf "assert-%d-result" i) TBool in
+            match (e, eassert) with
+            | Some {e= EVal {v= VBool b}}, Some _ ->
                 assertions := NodeMap.add i (Some b) !assertions
             | _ -> assertions := NodeMap.add i None !assertions
           done ;
