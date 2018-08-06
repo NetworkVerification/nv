@@ -100,9 +100,10 @@ type declaration =
   | DATy of ty
   | DMerge of exp
   | DTrans of exp
+  | DInit of exp
+  | DAssert of exp
   | DNodes of UInt32.t
   | DEdges of (UInt32.t * UInt32.t) list
-  | DInit of exp
 
 type declarations = declaration list
 
@@ -182,6 +183,9 @@ let get_trans ds =
 
 let get_init ds =
   get_decl ds (fun d -> match d with DInit e -> Some e | _ -> None)
+
+let get_assert ds =
+  get_decl ds (fun d -> match d with DAssert e -> Some e | _ -> None)
 
 let get_edges ds =
   get_decl ds (fun d -> match d with DEdges es -> Some es | _ -> None)

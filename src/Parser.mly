@@ -32,6 +32,7 @@
   let merge_identifier = "merge"
   let trans_identifier = "trans"
   let init_identifier = "init"
+  let assert_identifier = "assert"
     
   let global_let (id,params) body body_span span =
     let e = make_fun params body body_span span in
@@ -41,6 +42,8 @@
       DTrans e
     else if Var.name id = init_identifier then
       DInit e
+    else if Var.name id = assert_identifier then 
+      DAssert e
     else
       DLet (id, None, e)
   

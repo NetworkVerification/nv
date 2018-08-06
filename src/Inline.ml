@@ -165,6 +165,7 @@ let inline_declaration (env: exp Env.t) (d: declaration) =
   | DMerge e -> (env, Some (DMerge (inline_exp env e)))
   | DTrans e -> (env, Some (DTrans (inline_exp env e)))
   | DInit e -> (env, Some (DInit (inline_exp env e)))
+  | DAssert e -> (env, Some (DAssert (inline_exp env e)))
   | DATy _ | DNodes _ | DEdges _ -> (env, Some d)
 
 let rec inline_declarations (ds: declarations) =

@@ -22,6 +22,8 @@ let merge_ty aty = TArrow (node_ty, TArrow (aty, TArrow (aty, aty)))
 
 let trans_ty aty = TArrow (edge_ty, TArrow (aty, aty))
 
+let assert_ty aty = TArrow (node_ty, TArrow (aty, TBool))
+
 (* Region-like levels for efficient implementation of type generalization *)
 let current_level = ref 1
 
@@ -75,7 +77,12 @@ let rec check_annot (e: exp) =
 
 let check_annot_decl (d: declaration) =
   match d with
-  | DLet (_, _, e) | DSymbolic (_, e) | DMerge e | DTrans e | DInit e ->
+  | DLet (_, _, e)
+   |DSymbolic (_, e)
+   |DMerge e
+   |DTrans e
+   |DInit e
+   |DAssert e ->
       check_annot e
   | DNodes _ | DEdges _ | DATy _ -> ()
 
@@ -533,6 +540,11 @@ and infer_declaration i info env aty d : ty Env.t * declaration =
       let ty = oget e'.ety in
       unify info e ty (trans_ty aty) ;
       (Env.update env (Var.create "trans") ty, DTrans e')
+  | DAssert e ->
+      let e' = infer_exp (i + 1) info env e in
+      let ty = oget e'.ety in
+      unify info e ty (assert_ty aty) ;
+      (Env.update env (Var.create "assert") ty, DAssert e')
   | DInit e ->
       let e' = infer_exp (i + 1) info env e in
       let ty = oget e'.ety in

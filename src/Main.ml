@@ -7,6 +7,7 @@ open Typing
 open Renaming
 open Inline
 open Smt
+module T = ANSITerminal
 
 (* Command Line Arguments *)
 
@@ -64,7 +65,7 @@ let run_smt info ds =
   match res with
   | Unsat -> ()
   | Unknown -> ()
-  | Sat (symbolic_map, node_map) ->
+  | Sat (symbolic_map, node_map, assertion_map) ->
       StringMap.iter
         (fun k v ->
           match v with
@@ -76,7 +77,15 @@ let run_smt info ds =
           match v with
           | None -> Printf.printf "%d:(...)\n" k
           | Some v -> Printf.printf "%d:%s\n" k (Printing.exp_to_string v) )
-        node_map
+        node_map ;
+      NodeMap.iter
+        (fun k v ->
+          match v with
+          | None | Some true -> ()
+          | Some false ->
+              T.print_string [T.Foreground T.Red] "Failed: " ;
+              Printf.printf "assertion for node %d\n" k )
+        assertion_map
 
 let main =
   let () = commandline_processing () in
@@ -89,12 +98,19 @@ let main =
     print_endline "** End SRP Definition **" ) ;
   if verify () then run_smt info decls ;
   if simulate () then (
-    let solution, q =
+    let (solution, assertions), q =
       match bound () with
       | None -> (Srp.simulate_declarations decls, [])
       | Some b -> Srp.simulate_declarations_bound decls b
     in
     Srp.print_solution solution ;
+    Graph.VertexMap.iter
+      (fun n b ->
+        if not b then (
+          T.print_string [T.Foreground T.Red] "Failed: " ;
+          Printf.printf "assertion for node %s\n" (Unsigned.UInt32.to_string n) )
+        )
+      assertions ;
     match q with
     | [] -> ()
     | qs ->

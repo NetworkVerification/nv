@@ -1,7 +1,11 @@
 open Unsigned
 open Syntax
 
-type srp = {graph: Graph.t; trans: Syntax.closure; merge: Syntax.closure}
+type srp =
+  { graph: Graph.t
+  ; trans: Syntax.closure
+  ; merge: Syntax.closure
+  ; assertion: Syntax.closure option }
 
 (******************)
 (* SRP Simulation *)
@@ -38,6 +42,8 @@ type info =
     mutable m: Syntax.closure option
   ; (* merge *)
     mutable t: Syntax.closure option
+  ; (* assert *)
+    mutable a: Syntax.closure option
   ; (* trans *)
     mutable ns: UInt32.t option
   ; (* nodes *)
@@ -48,7 +54,13 @@ type info =
 
 let declarations_to_state ds =
   let info =
-    {env= Interp.empty_env; m= None; t= None; ns= None; es= None; init= None}
+    { env= Interp.empty_env
+    ; m= None
+    ; t= None
+    ; a= None
+    ; ns= None
+    ; es= None
+    ; init= None }
   in
   let if_none opt f msg =
     match opt with None -> f () | Some f -> Console.error msg
@@ -73,6 +85,13 @@ let declarations_to_state ds =
           | _ -> Console.error "trans was not evaluated to a closure"
         in
         if_none info.t get_trans "multiple trans functions"
+    | DAssert e ->
+        let get_assert () =
+          match (Interp.interp_env info.env e).v with
+          | VClosure cl -> info.a <- Some cl
+          | _ -> Console.error "assert was not evaluated to a closure"
+        in
+        if_none info.a get_assert "multiple assert functions"
     | DNodes n ->
         if_none info.ns
           (fun () -> info.ns <- Some n)
@@ -93,22 +112,20 @@ let declarations_to_state ds =
   in
   List.iter process_declaration ds ;
   match info with
-  | {env= _; m= Some mf; t= Some tf; ns= Some n; es= Some es; init= Some cl} ->
+  | {env= _; m= Some mf; t= Some tf; a; ns= Some n; es= Some es; init= Some cl} ->
       let srp =
-        {graph= Graph.add_edges (Graph.create n) es; trans= tf; merge= mf}
+        { graph= Graph.add_edges (Graph.create n) es
+        ; trans= tf
+        ; merge= mf
+        ; assertion= a }
       in
       let state = create_state n cl in
       (srp, state)
-  | {env= _; m= None; t= _; ns= _; es= _; init= _} ->
-      Console.error "missing merge function"
-  | {env= _; m= _; t= None; ns= _; es= _; init= _} ->
-      Console.error "missing trans function"
-  | {env= _; m= _; t= _; ns= None; es= _; init= _} ->
-      Console.error "missing nodes declaration"
-  | {env= _; m= _; t= _; ns= _; es= None; init= _} ->
-      Console.error "missing edges declaration"
-  | {env= _; m= _; t= _; ns= _; es= _; init= None} ->
-      Console.error "missing init declaration"
+  | {m= None} -> Console.error "missing merge function"
+  | {t= None} -> Console.error "missing trans function"
+  | {ns= None} -> Console.error "missing nodes declaration"
+  | {es= None} -> Console.error "missing edges declaration"
+  | {init= None} -> Console.error "missing init declaration"
 
 let solution_to_string s =
   Graph.vertex_map_to_string Printing.value_to_string s
@@ -164,10 +181,24 @@ let simulate_init_bound srp (s, q) k =
   in
   loop s q k
 
+let check_assertion srp node v =
+  match srp.assertion with
+  | None -> true
+  | Some a ->
+      let v = Interp.interp_closure a [value (VUInt32 node); v] in
+      match v.v with
+      | VBool b -> b
+      | _ -> Console.error "internal error (check_assertion)"
+
+let check_assertions srp vals =
+  Graph.VertexMap.mapi (fun n v -> check_assertion srp n v) vals
+
 let simulate_declarations ds =
   let srp, state = declarations_to_state ds in
-  simulate_init srp state
+  let vals = simulate_init srp state in
+  (vals, check_assertions srp vals)
 
 let simulate_declarations_bound ds k =
   let srp, state = declarations_to_state ds in
-  simulate_init_bound srp state k
+  let vals, q = simulate_init_bound srp state k in
+  ((vals, check_assertions srp vals), q)

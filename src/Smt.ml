@@ -580,6 +580,8 @@ let encode_z3_init str env e =
       (result, nodestr)
   | _ -> Console.error "internal error"
 
+let encode_z3_assert = encode_z3_trans
+
 module StringMap = Map.Make (struct
   type t = string
 
@@ -618,6 +620,7 @@ let encode_z3 (ds: declarations) : smt_env =
   (* let solver = Z3.Solver.mk_solver ctx None in *)
   let symbolics = get_symbolics ds in
   let env = {solver; ctx; symbolics} in
+  let eassert = get_assert ds in
   let emerge, etrans, einit, nodes, edges, aty =
     match
       ( get_merge ds
@@ -700,6 +703,22 @@ let encode_z3 (ds: declarations) : smt_env =
       let label = NodeMap.find (UInt32.to_int i) !labelling in
       add solver [Boolean.mk_eq ctx label x] )
     !trans_input_map ;
+  (* add assertions at the end *)
+  ( match eassert with
+  | None -> ()
+  | Some eassert ->
+      let all_good = ref (mk_bool ctx true) in
+      for i = 0 to UInt32.to_int nodes - 1 do
+        let label = NodeMap.find i !labelling in
+        let result, n, x =
+          encode_z3_assert (Printf.sprintf "assert-%d" i) env eassert
+        in
+        add solver [Boolean.mk_eq ctx x label] ;
+        add solver [Boolean.mk_eq ctx n (mk_int ctx i)] ;
+        let assertion_holds = Boolean.mk_eq ctx result (mk_bool ctx true) in
+        all_good := Boolean.mk_and ctx [!all_good; assertion_holds]
+      done ;
+      add solver [Boolean.mk_not ctx !all_good] ) ;
   env
 
 let rec z3_to_exp (e: Expr.expr) : Syntax.exp option =
@@ -732,10 +751,11 @@ let rec z3_to_exp (e: Expr.expr) : Syntax.exp option =
 
 type smt_result =
   | Unsat
-  | Sat of exp option StringMap.t * exp option NodeMap.t
+  | Sat of
+      exp option StringMap.t * exp option NodeMap.t * bool option NodeMap.t
   | Unknown
 
-let eval env aty m str ty =
+let eval env m str ty =
   let l = Expr.mk_const_s env.ctx str (ty_to_sort env.ctx ty) in
   let e = Model.eval m l true |> oget in
   z3_to_exp e
@@ -760,14 +780,25 @@ let solve ds =
           (* print_endline (Model.to_string m) ; *)
           let map = ref NodeMap.empty in
           let sym_map = ref StringMap.empty in
+          let assertions = ref NodeMap.empty in
+          (* grab the model from z3 *)
           for i = 0 to UInt32.to_int num_nodes - 1 do
-            let e = eval env aty m (Printf.sprintf "label-%d" i) aty in
+            let e = eval env m (Printf.sprintf "label-%d" i) aty in
             map := NodeMap.add i e !map
+          done ;
+          for i = 0 to UInt32.to_int num_nodes - 1 do
+            let e =
+              eval env m (Printf.sprintf "assert-%d-result" i) TBool
+            in
+            match e with
+            | Some {e= EVal {v= VBool b}} ->
+                assertions := NodeMap.add i (Some b) !assertions
+            | _ -> assertions := NodeMap.add i None !assertions
           done ;
           List.iter
             (fun (x, e) ->
               let name = Var.to_string x in
-              let e = eval env aty m name (oget e.ety) in
+              let e = eval env m name (oget e.ety) in
               sym_map := StringMap.add name e !sym_map )
             env.symbolics ;
-          Sat (!sym_map, !map)
+          Sat (!sym_map, !map, !assertions)
