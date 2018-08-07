@@ -19,8 +19,7 @@ let joinf =
   lam m (lam n (EOp (MMerge, [exp m; exp n])))
 
 let vecf =
-  let n = var "n" in
   let d = var "d" in
-  lam n (lam d (EOp (MCreate, [exp n; exp d])))
+  lam n (lam d (EOp (MCreate, [exp d])))
 
 let pervasives = [("map", mapf); ("join", joinf); ("vec", vecf)]

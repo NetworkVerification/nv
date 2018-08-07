@@ -113,7 +113,7 @@ let occurs tvr ty =
     | TBool | TInt _ -> ()
     | TTuple ts -> List.iter (occ tvr) ts
     | TOption t -> occ tvr t
-    | TMap (_, t) -> occ tvr t
+    | TMap t -> occ tvr t
   in
   try occ tvr ty with Occurs ->
     Console.error
@@ -146,13 +146,7 @@ let rec unify info e t1 t2 : unit =
       | TInt i, TInt j when i = j -> true
       | TTuple ts1, TTuple ts2 -> try_unifies ts1 ts2
       | TOption t1, TOption t2 -> try_unify t1 t2
-      | TMap (i, t1), TMap (j, t2) when UInt32.to_int !i = 0 ->
-          i := !j ;
-          try_unify t1 t2
-      | TMap (i, t1), TMap (j, t2) when UInt32.to_int !j = 0 ->
-          j := !i ;
-          try_unify t1 t2
-      | TMap (i1, t1), TMap (i2, t2) when i1 = i2 -> try_unify t1 t2
+      | TMap t1, TMap t2 -> try_unify t1 t2
       | _, _ -> false
   in
   if try_unify t1 t2 then ()
@@ -191,9 +185,9 @@ let generalize ty =
     | TOption t ->
         let ty = gen t in
         TOption ty
-    | TMap (i, t) ->
+    | TMap t ->
         let ty = gen t in
-        TMap (i, ty)
+        TMap ty
   in
   match ty with TArrow _ -> gen ty | _ -> ty
 
@@ -220,9 +214,9 @@ let inst subst ty =
     | TOption t ->
         let t = loop subst t in
         TOption t
-    | TMap (i, t) ->
+    | TMap t ->
         let t = loop subst t in
-        TMap (i, t)
+        TMap t
   and loops subst tys =
     match tys with
     | [] -> []
@@ -258,7 +252,7 @@ let substitute (ty: ty) : ty =
     | TArrow (ty1, ty2) -> TArrow (substitute_aux ty1, substitute_aux ty2)
     | TTuple ts -> TTuple (List.map substitute_aux ts)
     | TOption t -> TOption (substitute_aux t)
-    | TMap (i, t) -> TMap (i, substitute_aux t)
+    | TMap t -> TMap (substitute_aux t)
   in
   substitute_aux ty
 
@@ -285,7 +279,7 @@ let textract e =
   | Some ty -> (e, ty)
 
 let rec infer_exp i info env (e: exp) : exp =
-  (* Printf.printf "%sinfer_exp: %s\n" (Console.repeat " " i)
+  (* Printf.printf "infer_exp: %s\n"
     (Printing.exp_to_string e) ; *)
   let exp =
     match e.e with
@@ -303,38 +297,30 @@ let rec infer_exp i info env (e: exp) : exp =
           let e2, indexty = infer_exp (i + 1) info env e2 |> textract in
           let resty = fresh_tyvar () in
           unify info e indexty tint ;
-          unify info e mapty (TMap (ref (UInt32.of_int 1), resty)) ;
+          unify info e mapty (TMap resty) ;
           texp (EOp (o, [e1; e2]), resty)
       | MSet, [e1; e2; e3] ->
           let e1, mapty = infer_exp (i + 1) info env e1 |> textract in
           let e2, indexty = infer_exp (i + 1) info env e2 |> textract in
           let e3, valty = infer_exp (i + 1) info env e3 |> textract in
           unify info e indexty tint ;
-          unify info e mapty (TMap (ref (UInt32.of_int 0), valty)) ;
+          unify info e mapty (TMap valty) ;
           texp (EOp (o, [e1; e2; e3]), mapty)
-      | MCreate, [e1; e2] -> (
-        match e1.e with
-        | EVal {v= VUInt32 c} when UInt32.to_int c = 0 ->
-            Console.error "createMap called with size 0"
-        | EVal {v= VUInt32 c} ->
-            let e1, _ = infer_exp (i + 1) info env e1 |> textract in
-            let e2, defaultty = infer_exp (i + 1) info env e2 |> textract in
-            texp (EOp (o, [e1; e2]), TMap (ref c, defaultty))
-        | _ ->
-            Console.error_position info e1.espan
-              "parameter to createMap must be an integer constant" )
+      | MCreate, [e1] ->
+          let e1, defaultty = infer_exp (i + 1) info env e1 |> textract in
+          texp (EOp (o, [e1]), TMap defaultty)
       | MMap, [e1; e2] ->
           let e1, fty = infer_exp (i + 1) info env e1 |> textract in
           let e2, mapty = infer_exp (i + 1) info env e2 |> textract in
           let ty = fresh_tyvar () in
-          unify info e mapty (TMap (ref (UInt32.of_int 0), ty)) ;
+          unify info e mapty (TMap ty) ;
           unify info e fty (TArrow (ty, ty)) ;
           texp (EOp (o, [e1; e2]), mapty)
       | MFilter, [e1; e2] ->
           let e1, fty = infer_exp (i + 1) info env e1 |> textract in
           let e2, mapty = infer_exp (i + 1) info env e2 |> textract in
           let ty = fresh_tyvar () in
-          unify info e mapty (TMap (ref (UInt32.of_int 0), ty)) ;
+          unify info e mapty (TMap ty) ;
           unify info e fty (TArrow (tint, ty)) ;
           texp (EOp (o, [e1; e2]), mapty)
       | MMerge, [e1; e2; e3] ->
@@ -342,10 +328,13 @@ let rec infer_exp i info env (e: exp) : exp =
           let e2, mapty1 = infer_exp (i + 1) info env e2 |> textract in
           let e3, mapty2 = infer_exp (i + 1) info env e3 |> textract in
           let ty = fresh_tyvar () in
-          unify info e mapty1 (TMap (ref (UInt32.of_int 0), ty)) ;
-          unify info e mapty2 (TMap (ref (UInt32.of_int 0), ty)) ;
+          unify info e mapty1 (TMap ty) ;
+          unify info e mapty2 (TMap ty) ;
           unify info e fty (TArrow (ty, TArrow (ty, ty))) ;
           texp (EOp (o, [e1; e2; e3]), mapty1)
+      | MGet, _ | MSet, _ | MCreate, _ | MMap, _ | MFilter, _ | MMerge, _ ->
+          Console.error_position info e.espan
+            (Printf.sprintf "invalid number of parameters")
       | _ ->
           let argtys, resty = op_typ o in
           let es, tys = infer_exps (i + 1) info env es in

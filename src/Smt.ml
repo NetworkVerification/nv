@@ -117,7 +117,7 @@ let rec ty_to_sort ctx (ty: ty) : Z3.Sort.sort =
       in
       let name = Printf.sprintf "Pair%d%s" (List.length ts) name in
       Z3.Datatype.mk_sort_s ctx name [some]
-  | TMap (i, t) -> mk_array_sort ctx (ty_to_sort ctx t)
+  | TMap t -> mk_array_sort ctx (ty_to_sort ctx t)
   | TVar _ | QVar _ | TArrow _ -> Console.error "internal error (ty_to_sort)"
 
 let mk_array ctx value = Z3Array.mk_const_array ctx (ty_to_sort ctx tint) value
@@ -193,11 +193,11 @@ let rec encode_exp_z3 descr env arr (e: exp) =
           else Arithmetic.mk_le env.ctx
         in
         encode_op_z3 descr env f arr es
-    | MCreate, [_; e2] ->
+    | MCreate, [e1] ->
         if arr.lift then Console.error "not supported yet" ;
-        let e2 = encode_exp_z3 descr env arr e2 in
+        let e1 = encode_exp_z3 descr env arr e1 in
         let sort = Arithmetic.Integer.mk_sort env.ctx |> arr.f in
-        Z3Array.mk_const_array env.ctx sort e2
+        Z3Array.mk_const_array env.ctx sort e1
     | MGet, [e1; e2] ->
         if arr.lift then Console.error "not supported yet" ;
         let e1 = encode_exp_z3 descr env arr e1 in
@@ -299,7 +299,8 @@ let rec encode_exp_z3 descr env arr (e: exp) =
   | ELet (x, e1, e2) ->
       let xstr = create_name descr x in
       let za =
-        Expr.mk_const_s env.ctx xstr (oget e.ety |> ty_to_sort env.ctx |> arr.f)
+        Expr.mk_const_s env.ctx xstr
+          (oget e1.ety |> ty_to_sort env.ctx |> arr.f)
       in
       let ze1 = encode_exp_z3 descr env arr e1 in
       let ze2 = encode_exp_z3 descr env arr e2 in
@@ -604,7 +605,7 @@ end)
 
 let cfg = [("model_validate", "true")]
 
-let encode_z3 (ds: declarations) : smt_env =
+let encode_z3 (ds: declarations) sym_vars : smt_env =
   Var.reset () ;
   let ctx = Z3.mk_context cfg in
   let t1 = Tactic.mk_tactic ctx "simplify" in
@@ -719,6 +720,12 @@ let encode_z3 (ds: declarations) : smt_env =
         all_good := Boolean.mk_and ctx [!all_good; assertion_holds]
       done ;
       add solver [Boolean.mk_not ctx !all_good] ) ;
+  (* add the symbolic variable constraints *)
+  List.iter (fun (v,e) -> 
+    let v = Expr.mk_const_s ctx (Var.to_string v) (ty_to_sort ctx (oget e.ety)) in 
+    let e = encode_exp_z3 "" env {f= (fun x -> x); make= (fun e -> e); lift= false} e in
+    Solver.add solver [Boolean.mk_eq ctx v e]
+  ) sym_vars;
   env
 
 let rec z3_to_exp (e: Expr.expr) : Syntax.exp option =
@@ -760,14 +767,14 @@ let eval env m str ty =
   let e = Model.eval m l true |> oget in
   z3_to_exp e
 
-let solve ds =
+let solve ds ~symbolic_vars =
   let num_nodes, aty =
     match (get_nodes ds, get_attr_type ds) with
     | Some n, Some aty -> (n, aty)
     | _ -> Console.error "internal error (encode)"
   in
   let eassert = get_assert ds in
-  let env = encode_z3 ds in
+  let env = encode_z3 ds symbolic_vars in
   (* print_endline (Solver.to_string env.solver) ; *)
   let q = Solver.check env.solver [] in
   match q with

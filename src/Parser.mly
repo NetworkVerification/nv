@@ -137,7 +137,7 @@ tuple:
 ty3:
    | ty4             { $1 }
    | TOPTION LBRACKET ty3 RBRACKET { TOption $3 }
-   | TDICT LBRACKET NUM SEMI ty3 RBRACKET {TMap (ref (snd $3), $5)}
+   | TDICT LBRACKET ty3 RBRACKET {TMap $3}
 ;
 
 ty4:
@@ -194,7 +194,7 @@ expr2:
     | expr3                      { $1 }
     | MAP exprs2                 { exp (EOp (MMap, $2)) $1 }
     | FILTER exprs2              { exp (EOp (MFilter, $2)) $1 }
-    | COMBINE exprs2              { exp (EOp (MMerge, $2)) $1 }
+    | COMBINE exprs2             { exp (EOp (MMerge, $2)) $1 }
     | CREATEMAP exprs2           { exp (EOp (MCreate, $2)) $1 }
     | expr2 expr3                { exp (EApp ($1, $2)) (Span.extend $1.espan $2.espan) }
     | SOME expr3                 { exp (ESome $2) (Span.extend $1 $2.espan) }

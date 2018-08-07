@@ -21,7 +21,7 @@ type ty =
   | TArrow of ty * ty
   | TTuple of ty list
   | TOption of ty
-  | TMap of index ref * ty
+  | TMap of ty
 
 (* TMap (i,t) is a map from [0..i-1] to t *)
 and tyvar = Unbound of tyname * level | Link of ty
@@ -119,7 +119,7 @@ let arity op =
   | UEq -> 2
   | ULess -> 2
   | ULeq -> 2
-  | MCreate -> 2
+  | MCreate -> 1
   | MGet -> 2
   | MSet -> 3
   | MMap -> 2
