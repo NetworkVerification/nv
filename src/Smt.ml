@@ -721,11 +721,18 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
       done ;
       add solver [Boolean.mk_not ctx !all_good] ) ;
   (* add the symbolic variable constraints *)
-  List.iter (fun (v,e) -> 
-    let v = Expr.mk_const_s ctx (Var.to_string v) (ty_to_sort ctx (oget e.ety)) in 
-    let e = encode_exp_z3 "" env {f= (fun x -> x); make= (fun e -> e); lift= false} e in
-    Solver.add solver [Boolean.mk_eq ctx v e]
-  ) sym_vars;
+  List.iter
+    (fun (v, e) ->
+      let v =
+        Expr.mk_const_s ctx (Var.to_string v) (ty_to_sort ctx (oget e.ety))
+      in
+      let e =
+        encode_exp_z3 "" env
+          {f= (fun x -> x); make= (fun e -> e); lift= false}
+          e
+      in
+      Solver.add solver [Boolean.mk_eq ctx v e] )
+    sym_vars ;
   env
 
 let rec z3_to_exp (e: Expr.expr) : Syntax.exp option =

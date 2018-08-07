@@ -273,7 +273,9 @@ let unroll info ds =
   let variables = TypeMap.fold (fun _ es acc -> es @ acc) map [] in
   let symbolics = List.map (fun (k, e) -> Var.create k) variables in
   let symbolics = List.map (fun x -> DSymbolic (x, zero)) symbolics in
-  let variables = List.filter (fun (s,_) -> String.sub s 0 1 <> "d") variables in
-  let variables = List.map (fun (s,e) -> (Var.create s, e)) variables in 
+  let variables =
+    List.filter (fun (s, _) -> String.sub s 0 1 <> "d") variables
+  in
+  let variables = List.map (fun (s, e) -> (Var.create s, e)) variables in
   let ds = symbolics @ ds in
   (Typing.infer_declarations info ds, variables)
