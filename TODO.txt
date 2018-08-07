@@ -1,45 +1,7 @@
-A list of implementation items loosely organized by increasing difficulty and dependency order
-
-===========================================
 
 * Implement the map filter operation
 
-===========================================
-
 * Check for recursion
-
-===========================================
-
-* Translation that removes all maps from an expression for SMT. 
-  this is useful because it makes it a lot easier to solve for the 
-  SMT solver and because Z3 currently appears to have some bugs with 
-  the theory of arrays
-
-Idea: transform the program with 2 passes
-
-pass 1: collect all of the n map get operations
-        create n+1 symbolic variables
-        n of them correspond to the specific get operations (we will track these keys separately)
-        1 (d) corresponds to a generic key value
-        new type for attributes will replace all maps with n+1 arity tuple
-
-pass 2: 
-        walk through expression looking for map ops and replace:
-        createMap n e         --> (e,e,e,...)
-        m[e1 := e2]           --> (if d = e1 then e2 else m.0, if d_1 = e1 then e2 else m.1, ...)
-        m[e]                  --> m.i_e  if known index
-        m[e]                  --> m.0    e.g., otherwise (in assertion)
-        map f m               --> (f m.0, f m.1, ...)
-        merge f m1 m2         --> (f m1.0 m2.0, f m1.1 m2.1, ...)
-        filter f m default    --> (if f d then m.0 else default, ...)
-
-notes:
-------
-  * in assertions, we should not collect get statements 
-  * to avoid tons of unnecessary elements of tuples get should be based on the type
-    i.e., per type accumulate getters
-
-===========================================
 
 * Implement a BDD backend for state set computation
     Should we add to the language a way to say: "the map with everything"?

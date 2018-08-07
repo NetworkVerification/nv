@@ -57,13 +57,13 @@ let commandline_processing () =
   let usage_msg = "SRP verification. Options available:" in
   Arg.parse speclist print_endline usage_msg
 
-let optimize_maps = false
+let unroll_maps = true
 
 let run_smt info ds =
   let decls = Renaming.alpha_convert_declarations ds in
   let decls = Inline.inline_declarations info decls in
   let res =
-    if optimize_maps then
+    if unroll_maps then
       let decls, vars = MapUnrolling.unroll info decls in
       let decls = Inline.inline_declarations info decls in
       (* print_endline (Printing.declarations_to_string decls) ; *)

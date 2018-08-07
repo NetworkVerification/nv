@@ -18,4 +18,4 @@ let init node =
 let assert n x = 
   let y = x[2] in 
   let z = x[3] in 
-  (y < 10) || (z < 10)
+  (y < 10) && (z < 10)
