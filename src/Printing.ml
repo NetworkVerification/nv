@@ -105,7 +105,7 @@ let op_to_string op =
   | ULess -> "<"
   | ULeq -> "<="
   | MCreate -> "createMap"
-  | MGet -> "!"
+  | MGet -> "at"
   | MSet -> "set"
   | MMap -> "map"
   | MMerge -> "combine"

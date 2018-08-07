@@ -66,7 +66,6 @@ let run_smt info ds =
     if unroll_maps then
       let decls, vars = MapUnrolling.unroll info decls in
       let decls = Inline.inline_declarations info decls in
-      (* print_endline (Printing.declarations_to_string decls) ; *)
       Smt.solve decls ~symbolic_vars:vars
     else Smt.solve decls ~symbolic_vars:[]
   in

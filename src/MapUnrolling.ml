@@ -4,7 +4,7 @@ open Visitors
 module ExprSet = Set.Make (struct
   type t = string * exp
 
-  let compare = compare
+  let compare (_,a) (_,b) = compare a b
 end)
 
 module TypeMap = Map.Make (struct
@@ -80,7 +80,7 @@ let rec tuplify_exp tymap e : exp =
                   let keyvar = EVar (Var.create k) |> exp in
                   let pvar = EVar (Var.create p) |> exp in
                   let eq = EOp (UEq, [keyvar; tuplify_exp tymap e2]) |> exp in
-                  EIf (eq, e3, pvar) |> exp )
+                  EIf (eq, tuplify_exp tymap e3, pvar) |> exp )
                 ks
             in
             let es =
@@ -278,4 +278,5 @@ let unroll info ds =
   in
   let variables = List.map (fun (s, e) -> (Var.create s, e)) variables in
   let ds = symbolics @ ds in
+  (* print_endline (Printing.declarations_to_string ds) ; *)
   (Typing.infer_declarations info ds, variables)
