@@ -58,23 +58,17 @@ let commandline_processing () =
   let usage_msg = "SRP verification. Options available:" in
   Arg.parse speclist print_endline usage_msg
 
-let unroll_maps = true
+let unroll_maps = false
 
 let display_solution solution =
   StringMap.iter
-    (fun k v ->
-      match v with
-      | None -> Printf.printf "%s:(...)\n" k
-      | Some v -> Printf.printf "%s:%s\n" k (Printing.value_to_string v) )
+    (fun k v -> Printf.printf "%s:%s\n" k (Printing.value_to_string v))
     solution.symbolics ;
   Graph.VertexMap.iter
     (fun k v ->
-      match v with
-      | None -> Printf.printf "%s:(...)\n" (Unsigned.UInt32.to_string k)
-      | Some v ->
-          Printf.printf "%s:%s\n"
-            (Unsigned.UInt32.to_string k)
-            (Printing.value_to_string v) )
+      Printf.printf "%s:%s\n"
+        (Unsigned.UInt32.to_string k)
+        (Printing.value_to_string v) )
     solution.labels ;
   match solution.assertions with
   | None -> ()

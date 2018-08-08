@@ -602,7 +602,7 @@ module EdgeMap = Map.Make (struct
     if cmp <> 0 then cmp else UInt32.compare b d
 end)
 
-let cfg = [("model_validate", "true")]
+let cfg = [("model_compress", "false")]
 
 let encode_z3 (ds: declarations) sym_vars : smt_env =
   Var.reset () ;
@@ -735,35 +735,34 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
     sym_vars ;
   env
 
-let rec z3_to_exp (e: Expr.expr) : Syntax.value option =
+exception Model_conversion
+
+let rec z3_to_exp (e: Expr.expr) : Syntax.value =
   try
     let i = UInt32.of_string (Expr.to_string e) in
-    Some (VUInt32 i |> value)
+    VUInt32 i |> value
   with _ ->
-    try
-      let f = Expr.get_func_decl e in
-      let es = Expr.get_args e in
-      let name = FuncDecl.get_name f |> Symbol.to_string in
-      match name with
-      | "true" -> Some (VBool true |> value)
-      | "false" -> Some (VBool false |> value)
-      | "some" -> (
-          let v = z3_to_exp (List.hd es) in
-          match v with
-          | None -> None
-          | Some e -> Some (VOption (Some e) |> value) )
-      | "none" -> Some (VOption None |> value)
-      | _ ->
-          if String.length name >= 7 && String.sub name 0 7 = "mk-pair" then
-            let es = List.map z3_to_exp es in
-            if
-              List.exists
-                (fun e -> match e with None -> true | Some _ -> false)
-                es
-            then None
-            else Some (VTuple (List.map oget es) |> value)
-          else None
-    with _ -> None
+    let f = Expr.get_func_decl e in
+    let es = Expr.get_args e in
+    let name = FuncDecl.get_name f |> Symbol.to_string in
+    match (name, es) with
+    | "true", _ -> VBool true |> value
+    | "false", _ -> VBool false |> value
+    | "some", [e1] -> VOption (Some (z3_to_exp e1)) |> value
+    | "none", _ -> VOption None |> value
+    | "store", [e1; e2; e3] -> (
+        let v1 = z3_to_exp e1 in
+        let v2 = z3_to_exp e2 in
+        let v3 = z3_to_exp e3 in
+        match v1.v with
+        | VMap m -> VMap (IMap.update m v2 v3) |> value
+        | _ -> raise Model_conversion )
+    | "const", [e1] -> VMap (IMap.create compare_values (z3_to_exp e1)) |> value
+    | _ ->
+        if String.length name >= 7 && String.sub name 0 7 = "mk-pair" then
+          let es = List.map z3_to_exp es in
+          VTuple es |> value
+        else raise Model_conversion
 
 type smt_result = Unsat | Unknown | Sat of Solution.t
 
@@ -808,7 +807,7 @@ let solve ds ~symbolic_vars =
                     eval env m (Printf.sprintf "assert-%d-result" i) TBool
                   in
                   match (e, eassert) with
-                  | Some {v= VBool b}, Some _ ->
+                  | {v= VBool b}, Some _ ->
                       assertions :=
                         Graph.VertexMap.add (UInt32.of_int i) b !assertions
                   | _ -> Console.error "internal error ()"

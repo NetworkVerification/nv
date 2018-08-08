@@ -35,3 +35,5 @@ val to_string : ('a -> string) -> 'a t -> string
 (* return bindings as a list *)
 
 val to_list : 'a t -> (Var.t * 'a) list
+
+val compare: ('a -> 'a -> int) -> 'a t -> 'a t -> int

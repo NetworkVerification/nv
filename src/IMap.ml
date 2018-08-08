@@ -1,28 +1,19 @@
+open BatMap
 open Unsigned
 
-module Rep = Map.Make (struct
-  type t = UInt32.t
+type ('k, 'v) t = ('k, 'v) PMap.t * 'v
 
-  let compare = UInt32.compare
-end)
+let create cmp (default: 'v) : ('k, 'v) t = (PMap.create cmp, default)
 
-type 'a t = 'a Rep.t * 'a
+let find (m, default) k = PMap.find_default default k m
 
-let less i j = UInt32.compare i j = -1
+let update (m, default) k v = (PMap.add k v m, default)
 
-let create default : 'a t = (Rep.empty, default)
-
-let find (m, default) k =
-  match Rep.find_opt k m with None -> default | Some v -> v
-
-let update (m, default) k v = (Rep.add k v m, default)
-
-let map f (m, default) = (Rep.map f m, f default)
+let map f (m, default) = (PMap.map f m, f default)
 
 (* creates an array of length equal to the larger of the two inputs *)
 (*('a -> 'b -> 'c) -> 'a t -> 'b t -> 'c t *)
-let merge (f: 'a -> 'b -> 'c) ((m1, default1): 'a t) ((m2, default2): 'b t) :
-    'c t =
+let merge f (m1, default1) (m2, default2) =
   let default = f default1 default2 in
   let f_checked k m1v m2v =
     match (m1v, m2v) with
@@ -31,14 +22,20 @@ let merge (f: 'a -> 'b -> 'c) ((m1, default1): 'a t) ((m2, default2): 'b t) :
     | None, Some y -> Some (f default1 y)
     | None, None -> Some default
   in
-  (Rep.merge f_checked m1 m2, default)
+  (PMap.merge f_checked m1 m2, default)
 
 let equal equal_vals (m1, default1) (m2, default2) =
   let test_default () = equal_vals default1 default2 in
-  test_default () && Rep.equal equal_vals m1 m2
+  test_default () && PMap.equal equal_vals m1 m2
 
-let bindings (m, default) = (Rep.bindings m, default)
+let bindings (m, default) = (PMap.bindings m, default)
 
-let from_bindings (bs, default) =
-  let m = List.fold_left (fun m (i, d) -> Rep.add i d m) Rep.empty bs in
+let from_bindings cmp (bs, default) =
+  let m =
+    List.fold_left (fun m (i, d) -> PMap.add i d m) (PMap.create cmp) bs
+  in
   (m, default)
+
+let compare cmp (m1,d1) (m2,d2) = 
+  let c = PMap.compare cmp m1 m2 in 
+  if c <> 0 then c else cmp d1 d2

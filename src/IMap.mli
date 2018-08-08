@@ -1,19 +1,21 @@
-open Unsigned
+open BatMap
 
-type 'a t
+type ('k, 'v) t
 
-val create : 'a -> 'a t
+val create : ('k -> 'k -> int) -> 'v -> ('k, 'v) t
 
-val bindings : 'a t -> (UInt32.t * 'a) list * 'a
+val bindings : ('k, 'v) t -> ('k * 'v) list * 'v
 
-val from_bindings : (UInt32.t * 'a) list * 'a -> 'a t
+val from_bindings : ('k -> 'k -> int) -> ('k * 'v) list * 'v -> ('k, 'v) t
 
-val find : 'a t -> UInt32.t -> 'a
+val find : ('k, 'v) t -> 'k -> 'v
 
-val update : 'a t -> UInt32.t -> 'a -> 'a t
+val update : ('k, 'v) t -> 'k -> 'v -> ('k, 'v) t
 
-val map : ('a -> 'b) -> 'a t -> 'b t
+val map : ('v -> 'w) -> ('k, 'v) t -> ('k, 'w) t
 
-val merge : ('a -> 'b -> 'c) -> 'a t -> 'b t -> 'c t
+val merge : ('u -> 'v -> 'w) -> ('k, 'u) t -> ('k, 'v) t -> ('k, 'w) t
 
-val equal : ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
+val equal : ('v -> 'v -> bool) -> ('k, 'v) t -> ('k, 'v) t -> bool
+
+val compare : ('v -> 'v -> int) -> ('k, 'v) t -> ('k, 'v) t -> int

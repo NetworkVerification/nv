@@ -1,5 +1,5 @@
 (* Abstract syntax of SRP attribute processing expressions *)
-
+open BatMap
 open Unsigned
 
 (* indices into maps or map sizes must be static constants *)
@@ -23,35 +23,25 @@ type ty =
   | TOption of ty
   | TMap of ty * ty
 
-(* TMap (i,t) is a map from [0..i-1] to t *)
 and tyvar = Unbound of tyname * level | Link of ty
 
 type var = Var.t
 
 type op =
-  (* Boolean operators *)
   | And
   | Or
   | Not
-  (* Unsigned Integer 32 operators *)
   | UAdd
   | USub
   | UEq
   | ULess
   | ULeq
-  (* Map operations *)
   | MCreate
-  (* MCreate n -- creates map 0..n-1 with type ty *)
   | MGet
-  (* MGet m k = m[k] *)
   | MSet
-  (* MStore m k v = m[k]:=v *)
   | MMap
-  (* MMap f m = [f m[0]; f m[1]; ...] *)
   | MMerge
   | MFilter
-
-(* MMerge f m1 m2 = [f m1[0] m2[0]; ... ] *)
 
 type pattern =
   | PWild
@@ -64,7 +54,7 @@ type pattern =
 type v =
   | VBool of bool
   | VUInt32 of UInt32.t
-  | VMap of value IMap.t
+  | VMap of (value, value) IMap.t
   | VTuple of value list
   | VOption of value option
   | VClosure of closure
@@ -198,3 +188,43 @@ let get_symbolics ds =
     (fun acc d -> match d with DSymbolic (x, e) -> (x, e) :: acc | _ -> acc)
     [] ds
   |> List.rev
+
+let prec v =
+  match v.v with
+  | VBool _ -> 1
+  | VUInt32 _ -> 2
+  | VMap _ -> 3
+  | VTuple _ -> 4
+  | VOption _ -> 5
+  | VClosure _ -> 6
+
+let rec compare_values v1 v2 =
+  match (v1.v, v2.v) with
+  | VBool b1, VBool b2 -> Pervasives.compare b1 b2
+  | VUInt32 i1, VUInt32 i2 -> UInt32.compare i1 i2
+  | VMap m1, VMap m2 -> IMap.compare compare_values m1 m2
+  | VTuple vs1, VTuple vs2 -> compare_lists vs1 vs2
+  | VOption vo1, VOption vo2 -> (
+    match (vo1, vo2) with
+    | None, None -> 0
+    | None, Some _ -> -1
+    | Some _, None -> 1
+    | Some x, Some y -> compare_values x y )
+  | VClosure (e1, f1), VClosure (e2, f2) -> 
+      let {ty=ty1; value=value1} = e1 in 
+      let {ty=ty2; value=value2} = e2 in
+      let cmp = Env.compare Pervasives.compare ty1 ty1 in 
+      if cmp <> 0 then cmp else 
+      Env.compare compare_values value1 value2   
+  | _, _ -> prec v1 - prec v2
+
+and compare_lists vs1 vs2 =
+  match (vs1, vs2) with
+  | [], [] -> 0
+  | [], _ -> -1
+  | _, [] -> 1
+  | v1 :: vs1, v2 :: vs2 ->
+      let cmp = compare_values v1 v2 in
+      if cmp <> 0 then cmp else compare_lists vs1 vs2
+
+and compare_maps m1 m2 = PMap.compare compare_values m1 m2

@@ -160,7 +160,7 @@ and closure_to_string_p prec (env, {arg= x; argty= argt; resty= rest; body}) =
 
 and map_to_string sep_s term_s m =
   let binding_to_string (k, v) =
-    UInt32.to_string k ^ sep_s ^ value_to_string_p max_prec v
+    value_to_string_p max_prec k ^ sep_s ^ value_to_string_p max_prec v
   in
   let bs, default = IMap.bindings m in
   "{"

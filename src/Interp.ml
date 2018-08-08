@@ -135,9 +135,9 @@ and interp_op env op es =
       (if UInt32.compare i1 i2 = 0 then VBool true else VBool false) |> value
   | ULess, [{v= VUInt32 i1}; {v= VUInt32 i2}] ->
       (if UInt32.compare i1 i2 = -1 then VBool true else VBool false) |> value
-  | MCreate, [v] -> VMap (IMap.create v) |> value
-  | MGet, [{v= VMap m}; {v= VUInt32 i}] -> IMap.find m i
-  | MSet, [{v= VMap m}; {v= VUInt32 i}; v] -> VMap (IMap.update m i v) |> value
+  | MCreate, [v] -> VMap (IMap.create compare_values v) |> value
+  | MGet, [{v= VMap m}; v] -> IMap.find m v
+  | MSet, [{v= VMap m}; vkey; vval] -> VMap (IMap.update m vkey vval) |> value
   | MMap, [{v= VClosure (c_env, f)}; {v= VMap m}] ->
       VMap (IMap.map (fun v -> apply c_env f v) m) |> value
   | MMerge, [{v= VClosure (c_env, f)}; {v= VMap m1}; {v= VMap m2}] ->
