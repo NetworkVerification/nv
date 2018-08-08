@@ -70,7 +70,11 @@ let declarations_to_state ds =
   in
   let process_declaration d =
     match d with
-    | DLet (x, _, e) | DSymbolic (x, e) ->
+    | DLet (x, _, e) ->
+        let env = info.env in
+        let v = Interp.interp_env env e in
+        info.env <- Interp.update_value env x v
+    | DSymbolic (x, e) ->
         let env = info.env in
         let v = Interp.interp_env env e in
         info.env <- Interp.update_value env x v;

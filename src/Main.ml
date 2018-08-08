@@ -8,7 +8,6 @@ open Renaming
 open Inline
 open Smt
 open Solution
-module T = ANSITerminal
 
 (* Command Line Arguments *)
 
@@ -60,27 +59,6 @@ let commandline_processing () =
 
 let unroll_maps = true
 
-let display_solution solution =
-  StringMap.iter
-    (fun k v -> Printf.printf "%s:%s\n" k (Printing.value_to_string v))
-    solution.symbolics ;
-  Graph.VertexMap.iter
-    (fun k v ->
-      Printf.printf "%s:%s\n"
-        (Unsigned.UInt32.to_string k)
-        (Printing.value_to_string v) )
-    solution.labels ;
-  match solution.assertions with
-  | None -> ()
-  | Some m ->
-      Graph.VertexMap.iter
-        (fun k v ->
-          if not v then (
-            T.print_string [T.Foreground T.Red] "Failed: " ;
-            Printf.printf "assertion for node %s\n"
-              (Unsigned.UInt32.to_string k) ) )
-        m
-
 let rec apply_all s fs =
   match fs with [] -> s | f :: fs -> apply_all (f s) fs
 
@@ -100,7 +78,7 @@ let run_smt info ds =
   match res with
   | Unsat -> ()
   | Unknown -> ()
-  | Sat solution -> display_solution (apply_all solution (List.rev !fs))
+  | Sat solution -> print_solution (apply_all solution (List.rev !fs))
 
 let main =
   let () = commandline_processing () in
@@ -118,7 +96,7 @@ let main =
       | None -> (Srp.simulate_declarations decls, [])
       | Some b -> Srp.simulate_declarations_bound decls b
     in
-    display_solution solution;
+    print_solution solution;
     match q with
     | [] -> ()
     | qs ->
