@@ -209,8 +209,8 @@ let tuplify_decl tymap d =
   | DTrans e -> DTrans (tuplify_exp tymap e)
   | DInit e -> DInit (tuplify_exp tymap e)
   | DAssert e -> DAssert (tuplify_exp tymap e)
-  (* is this right? *)
-  | DSymbolic (x, e) -> DSymbolic (x, e)
+  | DSymbolic (x, Exp e) -> DSymbolic (x, Exp (tuplify_exp tymap e))
+  | DSymbolic (x, Ty ty) -> DSymbolic (x, Ty (tuplify_ty tymap ty))
   | DATy aty -> DATy (tuplify_ty tymap aty)
   | DNodes _ | DEdges _ -> d
 
@@ -269,15 +269,13 @@ let unroll info ds =
         v )
     map ; *)
   let ds = tuplify map ds in
-  (* TODO: FIXME *)
-  let zero = EVal (VUInt32 (Unsigned.UInt32.of_int 0) |> value) |> exp in
   let variables =
     TypeMap.fold
       (fun ty es acc -> List.map (fun (x, y) -> (ty, Var.create x, y)) es @ acc)
       map []
   in
   let symbolics =
-    List.map (fun (ty, x, _) -> DSymbolic (x, Ty ty)) variables
+    List.map (fun (ty, x, _) -> DSymbolic (x, Ty (tuplify_ty map ty))) variables
   in
   let variables =
     List.filter (fun (_, s, _) -> String.sub (Var.name s) 0 1 <> "d") variables

@@ -20,6 +20,8 @@ let verify_flag = ref false
 
 let verbose_flag = ref false
 
+let unroll_flag = ref false
+
 let debug_flag = ref false
 
 let filename_flag : string option ref = ref None
@@ -31,6 +33,8 @@ let simulate () = !simulate_flag
 let random_test () = !random_test_flag
 
 let verify () = !verify_flag
+
+let unroll_maps () = !unroll_flag
 
 let debug () = !debug_flag
 
@@ -58,12 +62,11 @@ let commandline_processing () =
     ; ("-r", Arg.Set random_test_flag, "Random test SRP definition file")
     ; ("-b", Arg.Int set_bound, "Bound on number of SRP simulation steps")
     ; ("-smt", Arg.Set verify_flag, "Verify the SRP definition file using SMT")
+    ; ("-unroll-maps", Arg.Set unroll_flag, "Try to optimize an SMT encoding by unrolling maps")
     ]
   in
   let usage_msg = "SRP verification. Options available:" in
   Arg.parse speclist print_endline usage_msg
-
-let unroll_maps = true
 
 let rec apply_all s fs =
   match fs with [] -> s | f :: fs -> apply_all (f s) fs
@@ -74,7 +77,7 @@ let run_smt info ds =
   fs := f :: !fs ;
   let decls = Inline.inline_declarations info decls in
   let res =
-    if unroll_maps then (
+    if unroll_maps () then (
       let decls, vars = MapUnrolling.unroll info decls in
       let decls = Inline.inline_declarations info decls in
       fs := f :: !fs ;
