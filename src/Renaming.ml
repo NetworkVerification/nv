@@ -97,7 +97,10 @@ let rec alpha_convert_aux bmap env (ds: declarations) : declarations =
 
 let update_symbolics bmap smap =
   StringMap.fold
-    (fun s v acc -> StringMap.add (StringMap.find s bmap) v acc)
+    (fun s v acc ->
+      match StringMap.find_opt s bmap with
+      | None -> StringMap.add s v acc
+      | Some k -> StringMap.add k v acc )
     smap StringMap.empty
 
 let adjust_solution bmap (s: Solution.t) =
@@ -106,5 +109,5 @@ let adjust_solution bmap (s: Solution.t) =
 let rec alpha_convert_declarations (ds: declarations) =
   Var.reset () ;
   let bmap = ref StringMap.empty in
-  let prog = alpha_convert_aux bmap Env.empty ds in 
+  let prog = alpha_convert_aux bmap Env.empty ds in
   (prog, adjust_solution !bmap)

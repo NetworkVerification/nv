@@ -60,13 +60,13 @@ let commandline_processing () =
 
 let unroll_maps = true
 
-let display_solution solution = 
+let display_solution solution =
   StringMap.iter
-  (fun k v ->
-    match v with
-    | None -> Printf.printf "%s:(...)\n" k
-    | Some v -> Printf.printf "%s:%s\n" k (Printing.value_to_string v) )
-  solution.symbolics ;
+    (fun k v ->
+      match v with
+      | None -> Printf.printf "%s:(...)\n" k
+      | Some v -> Printf.printf "%s:%s\n" k (Printing.value_to_string v) )
+    solution.symbolics ;
   Graph.VertexMap.iter
     (fun k v ->
       match v with
@@ -87,20 +87,26 @@ let display_solution solution =
               (Unsigned.UInt32.to_string k) ) )
         m
 
+let rec apply_all s fs =
+  match fs with [] -> s | f :: fs -> apply_all (f s) fs
+
 let run_smt info ds =
+  let fs = ref [] in
   let decls, f = Renaming.alpha_convert_declarations ds in
+  fs := f :: !fs ;
   let decls = Inline.inline_declarations info decls in
   let res =
-    if unroll_maps then
+    if unroll_maps then (
       let decls, vars = MapUnrolling.unroll info decls in
       let decls = Inline.inline_declarations info decls in
-      Smt.solve decls ~symbolic_vars:vars
+      fs := f :: !fs ;
+      Smt.solve decls ~symbolic_vars:vars )
     else Smt.solve decls ~symbolic_vars:[]
   in
   match res with
   | Unsat -> ()
   | Unknown -> ()
-  | Sat solution -> display_solution (f solution)
+  | Sat solution -> display_solution (apply_all solution (List.rev !fs))
 
 let main =
   let () = commandline_processing () in

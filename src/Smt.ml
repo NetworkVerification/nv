@@ -765,10 +765,7 @@ let rec z3_to_exp (e: Expr.expr) : Syntax.value option =
           else None
     with _ -> None
 
-type smt_result =
-  | Unsat
-  | Unknown
-  | Sat of Solution.t
+type smt_result = Unsat | Unknown | Sat of Solution.t
 
 let eval env m str ty =
   let l = Expr.mk_const_s env.ctx str (ty_to_sort env.ctx ty) in
@@ -824,4 +821,4 @@ let solve ds ~symbolic_vars =
               let e = eval env m name (oget e.ety) in
               sym_map := StringMap.add name e !sym_map )
             env.symbolics ;
-          Sat {symbolics=(!sym_map); labels=(!map); assertions}
+          Sat {symbolics= !sym_map; labels= !map; assertions}
