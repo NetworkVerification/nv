@@ -36,6 +36,6 @@ let from_bindings cmp (bs, default) =
   in
   (m, default)
 
-let compare cmp (m1,d1) (m2,d2) = 
-  let c = PMap.compare cmp m1 m2 in 
+let compare cmp (m1, d1) (m2, d2) =
+  let c = PMap.compare cmp m1 m2 in
   if c <> 0 then c else cmp d1 d2

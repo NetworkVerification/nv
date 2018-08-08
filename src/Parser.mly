@@ -149,7 +149,7 @@ letvars:
 
 component:
     | LET letvars EQ expr               { global_let $2 $4 $4.espan (Span.extend $1 $4.espan) }
-    | SYMBOLIC ID EQ expr               { DSymbolic (snd $2, $4) }
+    | SYMBOLIC ID EQ expr               { DSymbolic (snd $2, Exp $4) }
     | LET EDGES EQ LBRACE RBRACE        { DEdges [] }
     | LET EDGES EQ LBRACE edges RBRACE  { DEdges $5 }
     | LET NODES EQ NUM                  { DNodes (snd $4) }

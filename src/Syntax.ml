@@ -84,9 +84,11 @@ and closure = (env * func)
 
 and env = {ty: ty Env.t; value: value Env.t}
 
+and ty_or_exp = Ty of ty | Exp of exp
+
 type declaration =
   | DLet of var * ty option * exp
-  | DSymbolic of var * exp
+  | DSymbolic of var * ty_or_exp
   | DATy of ty
   | DMerge of exp
   | DTrans of exp
@@ -210,12 +212,11 @@ let rec compare_values v1 v2 =
     | None, Some _ -> -1
     | Some _, None -> 1
     | Some x, Some y -> compare_values x y )
-  | VClosure (e1, f1), VClosure (e2, f2) -> 
-      let {ty=ty1; value=value1} = e1 in 
-      let {ty=ty2; value=value2} = e2 in
-      let cmp = Env.compare Pervasives.compare ty1 ty1 in 
-      if cmp <> 0 then cmp else 
-      Env.compare compare_values value1 value2   
+  | VClosure (e1, f1), VClosure (e2, f2) ->
+      let {ty= ty1; value= value1} = e1 in
+      let {ty= ty2; value= value2} = e2 in
+      let cmp = Env.compare Pervasives.compare ty1 ty1 in
+      if cmp <> 0 then cmp else Env.compare compare_values value1 value2
   | _, _ -> prec v1 - prec v2
 
 and compare_lists vs1 vs2 =

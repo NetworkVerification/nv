@@ -23,8 +23,8 @@ let iter_exp_decl f d =
    |DTrans e
    |DInit e
    |DAssert e
-   |DSymbolic (_, e) ->
+   |DSymbolic (_, Exp e) ->
       iter_exp (f d) e
-  | DATy _ | DNodes _ | DEdges _ -> ()
+  | DATy _ | DNodes _ | DEdges _ | DSymbolic _ -> ()
 
 let rec iter_exp_decls f ds = List.iter (iter_exp_decl f) ds

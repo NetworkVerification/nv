@@ -4,7 +4,9 @@ open Solution
 open Z3
 
 type smt_env =
-  {solver: Z3.Solver.solver; ctx: Z3.context; symbolics: (Var.t * exp) list}
+  { solver: Z3.Solver.solver
+  ; ctx: Z3.context
+  ; symbolics: (Var.t * ty_or_exp) list }
 
 let create_fresh descr s =
   Printf.sprintf "%s-%s" descr (Var.fresh s |> Var.to_string)
@@ -757,7 +759,8 @@ let rec z3_to_exp (e: Expr.expr) : Syntax.value =
         match v1.v with
         | VMap m -> VMap (IMap.update m v2 v3) |> value
         | _ -> raise Model_conversion )
-    | "const", [e1] -> VMap (IMap.create compare_values (z3_to_exp e1)) |> value
+    | "const", [e1] ->
+        VMap (IMap.create compare_values (z3_to_exp e1)) |> value
     | _ ->
         if String.length name >= 7 && String.sub name 0 7 = "mk-pair" then
           let es = List.map z3_to_exp es in
@@ -816,8 +819,9 @@ let solve ds ~symbolic_vars =
           in
           List.iter
             (fun (x, e) ->
+              let ty = match e with Ty ty -> ty | Exp e -> oget e.ety in
               let name = Var.to_string x in
-              let e = eval env m name (oget e.ety) in
+              let e = eval env m name ty in
               sym_map := StringMap.add name e !sym_map )
             env.symbolics ;
           Sat {symbolics= !sym_map; labels= !map; assertions}

@@ -70,12 +70,16 @@ let alpha_convert_declaration bmap (env: Var.t Env.t) (d: declaration) =
       let env = Env.update env x y in
       let e = alpha_convert_exp env e in
       (env, DLet (y, tyo, e))
-  | DSymbolic (x, e) ->
+  | DSymbolic (x, Exp e) ->
       let y = fresh x in
       map_back bmap x y ;
       let env = Env.update env x y in
       let e = alpha_convert_exp env e in
-      (env, DSymbolic (y, e))
+      (env, DSymbolic (y, Exp e))
+  | DSymbolic (x, Ty ty) ->
+      let y = fresh x in
+      map_back bmap x y ;
+      (env, DSymbolic (y, Ty ty))
   | DMerge e -> (env, DMerge (alpha_convert_exp env e))
   | DTrans e -> (env, DTrans (alpha_convert_exp env e))
   | DInit e -> (env, DInit (alpha_convert_exp env e))

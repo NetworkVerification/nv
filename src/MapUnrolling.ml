@@ -271,13 +271,18 @@ let unroll info ds =
   let ds = tuplify map ds in
   (* TODO: FIXME *)
   let zero = EVal (VUInt32 (Unsigned.UInt32.of_int 0) |> value) |> exp in
-  let variables = TypeMap.fold (fun _ es acc -> es @ acc) map [] in
-  let symbolics = List.map (fun (k, e) -> Var.create k) variables in
-  let symbolics = List.map (fun x -> DSymbolic (x, zero)) symbolics in
   let variables =
-    List.filter (fun (s, _) -> String.sub s 0 1 <> "d") variables
+    TypeMap.fold
+      (fun ty es acc -> List.map (fun (x, y) -> (ty, Var.create x, y)) es @ acc)
+      map []
   in
-  let variables = List.map (fun (s, e) -> (Var.create s, e)) variables in
+  let symbolics =
+    List.map (fun (ty, x, _) -> DSymbolic (x, Ty ty)) variables
+  in
+  let variables =
+    List.filter (fun (_, s, _) -> String.sub (Var.name s) 0 1 <> "d") variables
+  in
+  let variables = List.map (fun (_, s, e) -> (s, e)) variables in
   let ds = symbolics @ ds in
   (* print_endline (Printing.declarations_to_string ds) ; *)
   (Typing.infer_declarations info ds, variables)

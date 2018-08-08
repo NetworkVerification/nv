@@ -50,9 +50,8 @@ type info =
   ; (* nodes *)
     mutable es: (UInt32.t * UInt32.t) list option
   ; (* edges *)
-    mutable init: Syntax.closure option
-  (* initial state *)
-  ; mutable syms: value StringMap.t}
+    mutable init: Syntax.closure option (* initial state *)
+  ; mutable syms: value StringMap.t }
 
 let declarations_to_state ds =
   let info =
@@ -63,7 +62,7 @@ let declarations_to_state ds =
     ; ns= None
     ; es= None
     ; init= None
-    ; syms=StringMap.empty }
+    ; syms= StringMap.empty }
   in
   let if_none opt f msg =
     match opt with None -> f () | Some f -> Console.error msg
@@ -74,11 +73,12 @@ let declarations_to_state ds =
         let env = info.env in
         let v = Interp.interp_env env e in
         info.env <- Interp.update_value env x v
-    | DSymbolic (x, e) ->
+    | DSymbolic (x, Exp e) ->
         let env = info.env in
         let v = Interp.interp_env env e in
-        info.env <- Interp.update_value env x v;
+        info.env <- Interp.update_value env x v ;
         info.syms <- StringMap.add (Var.name x) v info.syms
+    | DSymbolic (x, _) -> Console.error "internal error (process_declaration)"
     | DMerge e ->
         let get_merge () =
           match (Interp.interp_env info.env e).v with
@@ -203,10 +203,10 @@ let simulate_declarations ds =
   let srp, state, syms = declarations_to_state ds in
   let vals = simulate_init srp state in
   let asserts = check_assertions srp vals in
-  {labels=vals; symbolics=syms; assertions=Some asserts}
+  {labels= vals; symbolics= syms; assertions= Some asserts}
 
 let simulate_declarations_bound ds k =
   let srp, state, syms = declarations_to_state ds in
   let vals, q = simulate_init_bound srp state k in
   let asserts = check_assertions srp vals in
-  {labels=vals; symbolics=syms; assertions=Some asserts}, q
+  ({labels= vals; symbolics= syms; assertions= Some asserts}, q)

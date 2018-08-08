@@ -77,7 +77,7 @@ let run_smt info ds =
   in
   match res with
   | Unsat -> ()
-  | Unknown -> ()
+  | Unknown -> Console.error "SMT returned unknown"
   | Sat solution -> print_solution (apply_all solution (List.rev !fs))
 
 let main =
@@ -96,7 +96,7 @@ let main =
       | None -> (Srp.simulate_declarations decls, [])
       | Some b -> Srp.simulate_declarations_bound decls b
     in
-    print_solution solution;
+    print_solution solution ;
     match q with
     | [] -> ()
     | qs ->

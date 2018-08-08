@@ -36,4 +36,4 @@ val to_string : ('a -> string) -> 'a t -> string
 
 val to_list : 'a t -> (Var.t * 'a) list
 
-val compare: ('a -> 'a -> int) -> 'a t -> 'a t -> int
+val compare : ('a -> 'a -> int) -> 'a t -> 'a t -> int
