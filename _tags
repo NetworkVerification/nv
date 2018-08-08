@@ -1,1 +1,1 @@
-true: package(ounit), package(integers), package(z3), package(ANSITerminal), package(str), package(batteries)
+true: package(ounit), package(integers), package(z3), package(ANSITerminal), package(str), package(batteries), package(cudd)

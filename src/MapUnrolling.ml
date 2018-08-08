@@ -275,7 +275,9 @@ let unroll info ds =
       map []
   in
   let symbolics =
-    List.map (fun (ty, x, _) -> DSymbolic (x, Ty (tuplify_ty map ty))) variables
+    List.map
+      (fun (ty, x, _) -> DSymbolic (x, Ty (tuplify_ty map ty)))
+      variables
   in
   let variables =
     List.filter (fun (_, s, _) -> String.sub (Var.name s) 0 1 <> "d") variables

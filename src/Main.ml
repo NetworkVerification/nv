@@ -62,8 +62,9 @@ let commandline_processing () =
     ; ("-r", Arg.Set random_test_flag, "Random test SRP definition file")
     ; ("-b", Arg.Int set_bound, "Bound on number of SRP simulation steps")
     ; ("-smt", Arg.Set verify_flag, "Verify the SRP definition file using SMT")
-    ; ("-unroll-maps", Arg.Set unroll_flag, "Try to optimize an SMT encoding by unrolling maps")
-    ]
+    ; ( "-unroll-maps"
+      , Arg.Set unroll_flag
+      , "Try to optimize an SMT encoding by unrolling maps" ) ]
   in
   let usage_msg = "SRP verification. Options available:" in
   Arg.parse speclist print_endline usage_msg

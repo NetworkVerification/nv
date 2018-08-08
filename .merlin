@@ -2,4 +2,4 @@ S src
 S test
 B _build/src
 
-PKG integers oUnit z3 ANSITerminal str batteries
+PKG integers oUnit z3 ANSITerminal str batteries cudd
