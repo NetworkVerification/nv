@@ -105,60 +105,64 @@
 %start prog
 %type  <Syntax.declarations> prog
 
-%start expr
-%type <Syntax.exp> expr
+%start expreof
+%type <Syntax.exp> expreof
 
-%left PLUS SUB      /* lowest precedence */
-%left AND OR
+%right ELSE IN     /* lowest precedence */
+%right ARROW 
+%nonassoc GEQ GREATER LEQ LESS EQ
+%left PLUS SUB      
+%left AND OR 
 %right NOT
+%right SOME
 %left LBRACKET      /* highest precedence */
 
 %%
 
 ty:
-   | ty1 { $1 }
+   | ty1                                { $1 }
 ;
 
 ty1:
-   | ty2 { $1 }
-   | ty2 ARROW ty1 { TArrow ($1, $3) }
+   | ty2                                { $1 }
+   | ty2 ARROW ty1                      { TArrow ($1, $3) }
 ;
 
 ty2:
-   | ty3 { $1 }
-   | tuple { TTuple $1 }
+   | ty3                                { $1 }
+   | tuple                              { TTuple $1 }
 ;
 
 tuple:
-   | ty3 STAR ty3   { [$1;$3] }
-   | ty3 STAR tuple { $1::$3 }
+   | ty3 STAR ty3                       { [$1;$3] }
+   | ty3 STAR tuple                     { $1::$3 }
 ;
 
 ty3:
-   | ty4             { $1 }
-   | TOPTION LBRACKET ty3 RBRACKET { TOption $3 }
-   | TDICT LBRACKET ty3 RBRACKET {TMap $3}
+   | ty4                                { $1 }
+   | TOPTION LBRACKET ty3 RBRACKET      { TOption $3 }
+   | TDICT LBRACKET ty3 RBRACKET        {TMap $3}
 ;
 
 ty4:
-   | TBOOL          { TBool }
-   | TINT           { Syntax.tint }
-   | LPAREN ty RPAREN { $2 }
+   | TBOOL                              { TBool }
+   | TINT                               { Syntax.tint }
+   | LPAREN ty RPAREN                   { $2 }
 ;
 
 param:
-   | ID                         { (snd $1, None) }
-   | LPAREN ID COLON ty RPAREN  { (snd $2, Some $4) }
+   | ID                                 { (snd $1, None) }
+   | LPAREN ID COLON ty RPAREN          { (snd $2, Some $4) }
 ;
 
 params:
-    | param            { [$1] }
-    | param params     { $1::$2 }
+    | param                             { [$1] }
+    | param params                      { $1::$2 }
 ;
   
 letvars:
-    | ID        { (snd $1,[]) }
-    | ID params { (snd $1, $2) }
+    | ID                                { (snd $1,[]) }
+    | ID params                         { (snd $1, $2) }
 ;
 
 component:
@@ -171,117 +175,112 @@ component:
 ;
   
 components:
-    | component                           { [$1] }
-    | component components                { $1 :: $2 }
+    | component                         { [$1] }
+    | component components              { $1 :: $2 }
+;
+
+expreof:
+    expr EOF    { $1 }        
 ;
 
 expr:
-    | expr1                               { $1 }
-;
-
-expr1:
-    | expr2                               { $1 }
-    | LET letvars EQ expr IN expr1        { let span = (Span.extend $1 $6.espan) in
-                                            let (id, e) = local_let $2 $4 $4.espan span in 
-                                            exp (ELet (id, e, $6)) span }
-    | IF expr1 THEN expr ELSE expr1       { exp (EIf ($2, $4, $6)) (Span.extend $1 $6.espan) }
+    | LET letvars EQ expr IN expr       { let span = (Span.extend $1 $6.espan) in
+                                          let (id, e) = local_let $2 $4 $4.espan span in 
+                                          exp (ELet (id, e, $6)) span }
+    | IF expr THEN expr ELSE expr       { exp (EIf ($2, $4, $6)) (Span.extend $1 $6.espan) }
     (* TODO: span does not include the branches here *)
-    | MATCH expr WITH branches            { exp (EMatch ($2, $4)) (Span.extend $1 $3) }
-    | FUN params ARROW expr1              { make_fun $2 $4 $4.espan (Span.extend $1 $4.espan) }
+    | MATCH expr WITH branches          { exp (EMatch ($2, $4)) (Span.extend $1 $3) }
+    | FUN params ARROW expr             { make_fun $2 $4 $4.espan (Span.extend $1 $4.espan) }
+    | MAP exprsspace                    { exp (EOp (MMap, $2)) $1 }
+    | FILTER exprsspace                 { exp (EOp (MFilter, $2)) $1 }
+    | COMBINE exprsspace                { exp (EOp (MMerge, $2)) $1 }
+    | CREATEMAP exprsspace              { exp (EOp (MCreate, $2)) $1 }
+    | SOME expr                         { exp (ESome $2) (Span.extend $1 $2.espan) }
+    | NOT expr                          { exp (EOp (Not,[$2])) (Span.extend $1 $2.espan) }
+    | expr AND expr                     { exp (EOp (And, [$1;$3])) (Span.extend $1.espan $3.espan) }
+    | expr OR expr                      { exp (EOp (Or, [$1;$3])) (Span.extend $1.espan $3.espan) }
+    | expr PLUS expr                    { exp (EOp (UAdd, [$1;$3])) (Span.extend $1.espan $3.espan) }
+    | expr SUB expr                     { exp (EOp (USub, [$1;$3])) (Span.extend $1.espan $3.espan) }
+    | expr EQ expr                      { exp (EOp (UEq, [$1;$3])) (Span.extend $1.espan $3.espan) }
+    | expr LESS expr                    { exp (EOp (ULess, [$1;$3])) (Span.extend $1.espan $3.espan) }
+    | expr GREATER expr                 { exp (EOp (ULess, [$3;$1])) (Span.extend $1.espan $3.espan) }
+    | expr LEQ expr                     { exp (EOp (ULeq, [$1;$3])) (Span.extend $1.espan $3.espan) }
+    | expr GEQ expr                     { exp (EOp (ULeq, [$3;$1])) (Span.extend $1.espan $3.espan) }
+    | LPAREN expr COLON ty RPAREN       { exp (ETy ($2, $4)) (Span.extend $1 $5) }
+    | expr LBRACKET expr RBRACKET               { exp (EOp (MGet, [$1;$3])) (Span.extend $1.espan $4) }
+    | expr LBRACKET expr COLON EQ expr RBRACKET { exp (EOp (MSet, [$1;$3;$6])) (Span.extend $1.espan $7) }
+    | expr LBRACKET expr DOTDOT expr RBRACKET   
+                                        { let var = Var.create "k" in
+                                          let evar = exp (EVar var) (Span.extend $2 $6) in
+                                          let span = (Span.extend $1.espan $3.espan) in 
+                                          let lower = exp (EOp (ULeq, [$3; evar;])) span in
+                                          let upper = exp (EOp (ULeq, [evar; $5])) span in
+                                          let range = exp (EOp (And, [lower; upper])) span in
+                                          let span = (Span.extend $1.espan $6) in
+                                          let e = exp (EFun {arg=var; argty=None; resty=None; body=range}) span in
+                                          exp (EOp (MFilter, [e])) span }
+    | expr2                             { $1 }
 ;
 
 expr2:
-    | expr3                      { $1 }
-    | MAP exprs2                 { exp (EOp (MMap, $2)) $1 }
-    | FILTER exprs2              { exp (EOp (MFilter, $2)) $1 }
-    | COMBINE exprs2             { exp (EOp (MMerge, $2)) $1 }
-    | CREATEMAP exprs2           { exp (EOp (MCreate, $2)) $1 }
-    | expr2 expr3                { exp (EApp ($1, $2)) (Span.extend $1.espan $2.espan) }
-    | SOME expr3                 { exp (ESome $2) (Span.extend $1 $2.espan) }
+    | expr2 expr3                       { exp (EApp ($1, $2)) (Span.extend $1.espan $2.espan) }
+    | expr3                             { $1 }
 ;
 
 expr3:
-    | expr4                                      { $1 }
-    | NOT expr3                                  { exp (EOp (Not,[$2])) (Span.extend $1 $2.espan) }
-    | expr3 AND expr4                            { exp (EOp (And, [$1;$3])) (Span.extend $1.espan $3.espan) }
-    | expr3 OR expr4                             { exp (EOp (Or, [$1;$3])) (Span.extend $1.espan $3.espan) }
-    | expr3 PLUS expr4                           { exp (EOp (UAdd, [$1;$3])) (Span.extend $1.espan $3.espan) }
-    | expr3 SUB expr4                            { exp (EOp (USub, [$1;$3])) (Span.extend $1.espan $3.espan) }
-    | expr4 EQ expr4                             { exp (EOp (UEq, [$1;$3])) (Span.extend $1.espan $3.espan) }
-    | expr4 LESS expr4                           { exp (EOp (ULess, [$1;$3])) (Span.extend $1.espan $3.espan) }
-    | expr4 GREATER expr4                        { exp (EOp (ULess, [$3;$1])) (Span.extend $1.espan $3.espan) }
-    | expr4 LEQ expr4                            { exp (EOp (ULeq, [$1;$3])) (Span.extend $1.espan $3.espan) }
-    | expr4 GEQ expr4                            { exp (EOp (ULeq, [$3;$1])) (Span.extend $1.espan $3.espan) }
-    | expr3 LBRACKET expr RBRACKET               { exp (EOp (MGet, [$1;$3])) (Span.extend $1.espan $4) }
-    | expr3 LBRACKET expr COLON EQ expr RBRACKET { exp (EOp (MSet, [$1;$3;$6])) (Span.extend $1.espan $7) }
-    | expr3 LBRACKET expr DOTDOT expr RBRACKET   
-          { let var = Var.create "k" in
-            let evar = exp (EVar var) (Span.extend $2 $6) in
-            let span = (Span.extend $1.espan $3.espan) in 
-            let lower = exp (EOp (ULeq, [$3; evar;])) span in
-            let upper = exp (EOp (ULeq, [evar; $5])) span in
-            let range = exp (EOp (And, [lower; upper])) span in
-            let span = (Span.extend $1.espan $6) in
-            let e = exp (EFun {arg=var; argty=None; resty=None; body=range}) span in
-            exp (EOp (MFilter, [e])) span }
-
-;
-
-expr4:
-    | ID                       { exp (EVar (snd $1)) (fst $1) }
-    | NUM                      { e_val (VUInt32 (snd $1)) (fst $1) }
-    | TRUE                     { e_val (VBool true) $1 }
-    | FALSE                    { e_val (VBool false) $1 }
-    | NONE                     { e_val (VOption None) $1 }
-    | LPAREN exprs RPAREN      { tuple_it $2 (Span.extend $1 $3) }
-    | LPAREN expr COLON ty RPAREN { exp (ETy ($2, $4)) (Span.extend $1 $5) }
+    | ID                                { exp (EVar (snd $1)) (fst $1) }
+    | NUM                               { e_val (VUInt32 (snd $1)) (fst $1) }
+    | TRUE                              { e_val (VBool true) $1 }
+    | FALSE                             { e_val (VBool false) $1 }
+    | NONE                              { e_val (VOption None) $1 }
+    | LPAREN exprs RPAREN               { tuple_it $2 (Span.extend $1 $3) }
 ;
 	
 exprs:
-    | expr                     { [$1] }
-    | expr COMMA exprs         { $1 :: $3 }
+    | expr                              { [$1] }
+    | expr COMMA exprs                  { $1 :: $3 }
 ;
 
-exprs2:
-    | expr3                    { [$1] }
-    | expr3 exprs2              { $1 :: $2 }
+exprsspace:
+    | expr3                             { [$1] }
+    | expr3 exprsspace                  { $1 :: $2 }
 ;
 
 edge:
-    | NUM SUB NUM SEMI         { [(snd $1, snd $3)] }
-    | NUM EQ NUM SEMI          { [(snd $1, snd $3); (snd $3, snd $1)] }
+    | NUM SUB NUM SEMI                  { [(snd $1, snd $3)] }
+    | NUM EQ NUM SEMI                   { [(snd $1, snd $3); (snd $3, snd $1)] }
 ;
 
 edges:
-    | edge                     { $1 }
-    | edge edges               { $1 @ $2 }
+    | edge                              { $1 }
+    | edge edges                        { $1 @ $2 }
 ;
 
 pattern:
-    | UNDERSCORE               { PWild }
-    | ID                       { PVar (snd $1) }
-    | TRUE                     { PBool true }
-    | FALSE                    { PBool false }
-    | NUM                      { PUInt32 (snd $1) }
-    | LPAREN patterns RPAREN   { tuple_pattern $2 }
-    | NONE                     { POption None }
-    | SOME pattern             { POption (Some $2) }
+    | UNDERSCORE                        { PWild }
+    | ID                                { PVar (snd $1) }
+    | TRUE                              { PBool true }
+    | FALSE                             { PBool false }
+    | NUM                               { PUInt32 (snd $1) }
+    | LPAREN patterns RPAREN            { tuple_pattern $2 }
+    | NONE                              { POption None }
+    | SOME pattern                      { POption (Some $2) }
 ;
 
 patterns:
-    | pattern                  { [$1] }
-    | pattern COMMA patterns   { $1::$3 }
+    | pattern                           { [$1] }
+    | pattern COMMA patterns            { $1::$3 }
 ;
 
 branch:
-    | BAR pattern ARROW expr   { ($2, $4) }
+    | BAR pattern ARROW expr            { ($2, $4) }
 ;
 
 branches:
-    | branch                   { [$1] }
-    | branch branches          { $1::$2 }
+    | branch                            { [$1] }
+    | branch branches                   { $1::$2 }
 ;
 
 prog:
-    | components EOF           { $1 }
+    | components EOF                    { $1 }
 ;

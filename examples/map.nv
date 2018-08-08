@@ -1,4 +1,4 @@
-type attribute = dict[32; option[int]]
+type attribute = dict[option[int]]
 
 let nodes = 2
 
@@ -25,7 +25,7 @@ let trans edge x =
   map (fun x -> mapo (fun x -> x + 1) x) x
 
 let init node =
-  let m = createMap 32 None in
+  let m = createMap None in
   match node with
   | 0 -> m[3 := Some 0]
   | 1 -> m[5 := Some 0]
