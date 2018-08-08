@@ -131,38 +131,6 @@ tys:
   | ty                                  { [$1] }
   | ty COMMA tys                        { $1::$3 }
 ;
-(* 
-ty:
-   | ty1                                { $1 }
-;
-
-ty1:
-   | ty2                                { $1 }
-   | ty2 ARROW ty1                      { TArrow ($1, $3) }
-;
-
-ty2:
-   | ty3                                { $1 }
-   | tuple                              { TTuple $1 }
-;
-
-tuple:
-   | ty3 STAR ty3                       { [$1;$3] }
-   | ty3 STAR tuple                     { $1::$3 }
-;
-
-ty3:
-   | ty4                                { $1 }
-   | TOPTION LBRACKET ty3 RBRACKET      { TOption $3 }
-   | TDICT LBRACKET ty3 RBRACKET        {TMap $3}
-;
-
-ty4:
-   | TBOOL                              { TBool }
-   | TINT                               { Syntax.tint }
-   | LPAREN ty RPAREN                   { $2 }
-;
-*)
 
 param:
    | ID                                 { (snd $1, None) }

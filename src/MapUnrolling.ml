@@ -4,7 +4,7 @@ open Visitors
 module ExprSet = Set.Make (struct
   type t = string * exp
 
-  let compare (_,a) (_,b) = compare a b
+  let compare (_, a) (_, b) = compare a b
 end)
 
 module TypeMap = Map.Make (struct
@@ -22,7 +22,7 @@ let rec strip_ty ty =
   | TArrow (t1, t2) -> TArrow (strip_ty t1, strip_ty t2)
   | TTuple ts -> TTuple (List.map strip_ty ts)
   | TOption t -> TOption (strip_ty t)
-  | TMap (ty1,ty2) -> TMap (strip_ty ty1, strip_ty ty2)
+  | TMap (ty1, ty2) -> TMap (strip_ty ty1, strip_ty ty2)
   | QVar _ | TVar _ -> Console.error "internal error (strip_ty)"
 
 let tuple_count tymap ty =

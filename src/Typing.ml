@@ -113,7 +113,7 @@ let occurs tvr ty =
     | TBool | TInt _ -> ()
     | TTuple ts -> List.iter (occ tvr) ts
     | TOption t -> occ tvr t
-    | TMap (t1,t2) -> occ tvr t1; occ tvr t2
+    | TMap (t1, t2) -> occ tvr t1 ; occ tvr t2
   in
   try occ tvr ty with Occurs ->
     Console.error
@@ -146,7 +146,7 @@ let rec unify info e t1 t2 : unit =
       | TInt i, TInt j when i = j -> true
       | TTuple ts1, TTuple ts2 -> try_unifies ts1 ts2
       | TOption t1, TOption t2 -> try_unify t1 t2
-      | TMap (t1,t2), TMap (t3,t4) -> (try_unify t1 t3) && (try_unify t2 t4)
+      | TMap (t1, t2), TMap (t3, t4) -> try_unify t1 t3 && try_unify t2 t4
       | _, _ -> false
   in
   if try_unify t1 t2 then ()
@@ -214,10 +214,10 @@ let inst subst ty =
     | TOption t ->
         let t = loop subst t in
         TOption t
-    | TMap (ty1,ty2) ->
+    | TMap (ty1, ty2) ->
         let ty1 = loop subst ty1 in
         let ty2 = loop subst ty2 in
-        TMap (ty1,ty2)
+        TMap (ty1, ty2)
   and loops subst tys =
     match tys with
     | [] -> []
@@ -253,7 +253,7 @@ let substitute (ty: ty) : ty =
     | TArrow (ty1, ty2) -> TArrow (substitute_aux ty1, substitute_aux ty2)
     | TTuple ts -> TTuple (List.map substitute_aux ts)
     | TOption t -> TOption (substitute_aux t)
-    | TMap (ty1,ty2) -> TMap (substitute_aux ty1, substitute_aux ty2)
+    | TMap (ty1, ty2) -> TMap (substitute_aux ty1, substitute_aux ty2)
   in
   substitute_aux ty
 
@@ -308,7 +308,7 @@ let rec infer_exp i info env (e: exp) : exp =
           texp (EOp (o, [e1; e2; e3]), ty)
       | MCreate, [e1] ->
           let e1, valty = infer_exp (i + 1) info env e1 |> textract in
-          let keyty = fresh_tyvar () in 
+          let keyty = fresh_tyvar () in
           texp (EOp (o, [e1]), TMap (keyty, valty))
       | MMap, [e1; e2] ->
           let e1, fty = infer_exp (i + 1) info env e1 |> textract in
@@ -321,7 +321,7 @@ let rec infer_exp i info env (e: exp) : exp =
       | MFilter, [e1; e2] ->
           let e1, fty = infer_exp (i + 1) info env e1 |> textract in
           let e2, mapty = infer_exp (i + 1) info env e2 |> textract in
-          let keyty = fresh_tyvar () in 
+          let keyty = fresh_tyvar () in
           let valty = fresh_tyvar () in
           unify info e mapty (TMap (keyty, valty)) ;
           unify info e fty (TArrow (keyty, TBool)) ;
@@ -332,8 +332,8 @@ let rec infer_exp i info env (e: exp) : exp =
           let e3, mapty2 = infer_exp (i + 1) info env e3 |> textract in
           let keyty = fresh_tyvar () in
           let valty = fresh_tyvar () in
-          unify info e mapty1 (TMap (keyty,valty)) ;
-          unify info e mapty2 (TMap (keyty,valty)) ;
+          unify info e mapty1 (TMap (keyty, valty)) ;
+          unify info e mapty2 (TMap (keyty, valty)) ;
           unify info e fty (TArrow (valty, TArrow (valty, valty))) ;
           texp (EOp (o, [e1; e2; e3]), mapty1)
       | MGet, _ | MSet, _ | MCreate, _ | MMap, _ | MFilter, _ | MMerge, _ ->
