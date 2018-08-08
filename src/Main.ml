@@ -6,12 +6,15 @@ open Interp
 open Typing
 open Renaming
 open Inline
+open Quickcheck
 open Smt
 open Solution
 
 (* Command Line Arguments *)
 
 let simulate_flag = ref false
+
+let random_test_flag = ref false
 
 let verify_flag = ref false
 
@@ -24,6 +27,8 @@ let filename_flag : string option ref = ref None
 let sim_bound_flag : int option ref = ref None
 
 let simulate () = !simulate_flag
+
+let random_test () = !random_test_flag
 
 let verify () = !verify_flag
 
@@ -50,6 +55,7 @@ let commandline_processing () =
     ; ("-f", Arg.String set_filename, "SRP definition file")
     ; ("-v", Arg.Set verbose_flag, "Print SRP definition file")
     ; ("-s", Arg.Set simulate_flag, "Simulate SRP definition file")
+    ; ("-r", Arg.Set random_test_flag, "Random test SRP definition file")
     ; ("-b", Arg.Int set_bound, "Bound on number of SRP simulation steps")
     ; ("-smt", Arg.Set verify_flag, "Verify the SRP definition file using SMT")
     ]
@@ -90,6 +96,9 @@ let main =
     print_endline (Printing.declarations_to_string ds) ;
     print_endline "** End SRP Definition **" ) ;
   if verify () then run_smt info decls ;
+  ( if random_test () then
+      let sol = Quickcheck.check decls 10 in
+      match sol with None -> () | Some sol -> print_solution sol ) ;
   if simulate () then (
     let solution, q =
       match bound () with
