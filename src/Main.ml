@@ -58,7 +58,7 @@ let commandline_processing () =
   let usage_msg = "SRP verification. Options available:" in
   Arg.parse speclist print_endline usage_msg
 
-let unroll_maps = false
+let unroll_maps = true
 
 let display_solution solution =
   StringMap.iter
@@ -113,19 +113,12 @@ let main =
     print_endline "** End SRP Definition **" ) ;
   if verify () then run_smt info decls ;
   if simulate () then (
-    let (solution, assertions), q =
+    let solution, q =
       match bound () with
       | None -> (Srp.simulate_declarations decls, [])
       | Some b -> Srp.simulate_declarations_bound decls b
     in
-    Srp.print_solution solution ;
-    Graph.VertexMap.iter
-      (fun n b ->
-        if not b then (
-          T.print_string [T.Foreground T.Red] "Failed: " ;
-          Printf.printf "assertion for node %s\n" (Unsigned.UInt32.to_string n) )
-        )
-      assertions ;
+    display_solution solution;
     match q with
     | [] -> ()
     | qs ->

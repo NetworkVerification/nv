@@ -1,4 +1,5 @@
 open Unsigned
+open Solution
 open Syntax
 
 type srp =
@@ -50,7 +51,8 @@ type info =
     mutable es: (UInt32.t * UInt32.t) list option
   ; (* edges *)
     mutable init: Syntax.closure option
-  (* initial state *) }
+  (* initial state *)
+  ; mutable syms: value StringMap.t}
 
 let declarations_to_state ds =
   let info =
@@ -60,7 +62,8 @@ let declarations_to_state ds =
     ; a= None
     ; ns= None
     ; es= None
-    ; init= None }
+    ; init= None
+    ; syms=StringMap.empty }
   in
   let if_none opt f msg =
     match opt with None -> f () | Some f -> Console.error msg
@@ -70,7 +73,8 @@ let declarations_to_state ds =
     | DLet (x, _, e) | DSymbolic (x, e) ->
         let env = info.env in
         let v = Interp.interp_env env e in
-        info.env <- Interp.update_value env x v
+        info.env <- Interp.update_value env x v;
+        info.syms <- StringMap.add (Var.name x) v info.syms
     | DMerge e ->
         let get_merge () =
           match (Interp.interp_env info.env e).v with
@@ -120,7 +124,7 @@ let declarations_to_state ds =
         ; assertion= a }
       in
       let state = create_state n cl in
-      (srp, state)
+      (srp, state, info.syms)
   | {m= None} -> Console.error "missing merge function"
   | {t= None} -> Console.error "missing trans function"
   | {ns= None} -> Console.error "missing nodes declaration"
@@ -129,8 +133,6 @@ let declarations_to_state ds =
 
 let solution_to_string s =
   Graph.vertex_map_to_string Printing.value_to_string s
-
-let print_solution s = Graph.print_vertex_map Printing.value_to_string s
 
 let get_attribute v s =
   let find_opt v m =
@@ -194,11 +196,13 @@ let check_assertions srp vals =
   Graph.VertexMap.mapi (fun n v -> check_assertion srp n v) vals
 
 let simulate_declarations ds =
-  let srp, state = declarations_to_state ds in
+  let srp, state, syms = declarations_to_state ds in
   let vals = simulate_init srp state in
-  (vals, check_assertions srp vals)
+  let asserts = check_assertions srp vals in
+  {labels=vals; symbolics=syms; assertions=Some asserts}
 
 let simulate_declarations_bound ds k =
-  let srp, state = declarations_to_state ds in
+  let srp, state, syms = declarations_to_state ds in
   let vals, q = simulate_init_bound srp state k in
-  ((vals, check_assertions srp vals), q)
+  let asserts = check_assertions srp vals in
+  {labels=vals; symbolics=syms; assertions=Some asserts}, q
