@@ -97,7 +97,7 @@ let main =
     print_endline "** End SRP Definition **" ) ;
   if verify () then run_smt info decls ;
   ( if random_test () then
-      let sol = Quickcheck.check decls 10 in
+      let sol = Quickcheck.check decls ~iterations:10 in
       match sol with None -> () | Some sol -> print_solution sol ) ;
   if simulate () then (
     let solution, q =
