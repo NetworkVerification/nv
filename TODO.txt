@@ -5,3 +5,5 @@
 
 * Implement a BDD backend for state set computation
     Should we add to the language a way to say: "the map with everything"?
+
+* For each program transformation, create a way to map back to the correct solution

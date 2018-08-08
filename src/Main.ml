@@ -7,6 +7,7 @@ open Typing
 open Renaming
 open Inline
 open Smt
+open Solution
 module T = ANSITerminal
 
 (* Command Line Arguments *)
@@ -59,8 +60,35 @@ let commandline_processing () =
 
 let unroll_maps = true
 
+let display_solution solution = 
+  StringMap.iter
+  (fun k v ->
+    match v with
+    | None -> Printf.printf "%s:(...)\n" k
+    | Some v -> Printf.printf "%s:%s\n" k (Printing.value_to_string v) )
+  solution.symbolics ;
+  Graph.VertexMap.iter
+    (fun k v ->
+      match v with
+      | None -> Printf.printf "%s:(...)\n" (Unsigned.UInt32.to_string k)
+      | Some v ->
+          Printf.printf "%s:%s\n"
+            (Unsigned.UInt32.to_string k)
+            (Printing.value_to_string v) )
+    solution.labels ;
+  match solution.assertions with
+  | None -> ()
+  | Some m ->
+      Graph.VertexMap.iter
+        (fun k v ->
+          if not v then (
+            T.print_string [T.Foreground T.Red] "Failed: " ;
+            Printf.printf "assertion for node %s\n"
+              (Unsigned.UInt32.to_string k) ) )
+        m
+
 let run_smt info ds =
-  let decls = Renaming.alpha_convert_declarations ds in
+  let decls, f = Renaming.alpha_convert_declarations ds in
   let decls = Inline.inline_declarations info decls in
   let res =
     if unroll_maps then
@@ -72,27 +100,7 @@ let run_smt info ds =
   match res with
   | Unsat -> ()
   | Unknown -> ()
-  | Sat (symbolic_map, node_map, assertion_map) ->
-      StringMap.iter
-        (fun k v ->
-          match v with
-          | None -> Printf.printf "%s:(...)\n" k
-          | Some v -> Printf.printf "%s:%s\n" k (Printing.exp_to_string v) )
-        symbolic_map ;
-      NodeMap.iter
-        (fun k v ->
-          match v with
-          | None -> Printf.printf "%d:(...)\n" k
-          | Some v -> Printf.printf "%d:%s\n" k (Printing.exp_to_string v) )
-        node_map ;
-      NodeMap.iter
-        (fun k v ->
-          match v with
-          | None | Some true -> ()
-          | Some false ->
-              T.print_string [T.Foreground T.Red] "Failed: " ;
-              Printf.printf "assertion for node %d\n" k )
-        assertion_map
+  | Sat solution -> display_solution (f solution)
 
 let main =
   let () = commandline_processing () in

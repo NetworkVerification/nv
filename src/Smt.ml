@@ -1,5 +1,6 @@
 open Unsigned
 open Syntax
+open Solution
 open Z3
 
 type smt_env =
@@ -593,18 +594,6 @@ let encode_z3_init str env e =
 
 let encode_z3_assert = encode_z3_trans
 
-module StringMap = Map.Make (struct
-  type t = string
-
-  let compare = String.compare
-end)
-
-module NodeMap = Map.Make (struct
-  type t = int
-
-  let compare = compare
-end)
-
 module EdgeMap = Map.Make (struct
   type t = UInt32.t * UInt32.t
 
@@ -648,24 +637,22 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
           "missing definition of nodes, edges, merge, trans or init"
   in
   (* map each node to the init result variable *)
-  let init_map = ref NodeMap.empty in
+  let init_map = ref Graph.VertexMap.empty in
   for i = 0 to UInt32.to_int nodes - 1 do
     let init, n = encode_z3_init (Printf.sprintf "init-%d" i) env einit in
     add env.solver [Boolean.mk_eq env.ctx n (mk_int ctx i)] ;
-    init_map := NodeMap.add i init !init_map
+    init_map := Graph.VertexMap.add (UInt32.of_int i) init !init_map
   done ;
   (* map each edge to transfer function result *)
-  let incoming_map = ref NodeMap.empty in
+  let incoming_map = ref Graph.VertexMap.empty in
   let trans_map = ref EdgeMap.empty in
   let trans_input_map = ref EdgeMap.empty in
   List.iter
     (fun (i, j) ->
       ( try
-          let idxs = NodeMap.find (UInt32.to_int j) !incoming_map in
-          incoming_map :=
-            NodeMap.add (UInt32.to_int j) ((i, j) :: idxs) !incoming_map
-        with _ ->
-          incoming_map := NodeMap.add (UInt32.to_int j) [(i, j)] !incoming_map
+          let idxs = Graph.VertexMap.find j !incoming_map in
+          incoming_map := Graph.VertexMap.add j ((i, j) :: idxs) !incoming_map
+        with _ -> incoming_map := Graph.VertexMap.add j [(i, j)] !incoming_map
       ) ;
       let trans, e, x =
         encode_z3_trans
@@ -684,10 +671,13 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
       trans_map := EdgeMap.add (i, j) trans !trans_map )
     edges ;
   (* compute the labelling as the merge of all inputs *)
-  let labelling = ref NodeMap.empty in
+  let labelling = ref Graph.VertexMap.empty in
   for i = 0 to UInt32.to_int nodes - 1 do
-    let init = NodeMap.find i !init_map in
-    let in_edges = try NodeMap.find i !incoming_map with Not_found -> [] in
+    let init = Graph.VertexMap.find (UInt32.of_int i) !init_map in
+    let in_edges =
+      try Graph.VertexMap.find (UInt32.of_int i) !incoming_map
+      with Not_found -> []
+    in
     let idx = ref 0 in
     let merged =
       List.fold_left
@@ -706,12 +696,12 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
       Expr.mk_const_s ctx (Printf.sprintf "label-%d" i) (ty_to_sort ctx aty)
     in
     add solver [Boolean.mk_eq ctx l merged] ;
-    labelling := NodeMap.add i l !labelling
+    labelling := Graph.VertexMap.add (UInt32.of_int i) l !labelling
   done ;
   (* Propagate labels across edges outputs *)
   EdgeMap.iter
     (fun (i, j) x ->
-      let label = NodeMap.find (UInt32.to_int i) !labelling in
+      let label = Graph.VertexMap.find i !labelling in
       add solver [Boolean.mk_eq ctx label x] )
     !trans_input_map ;
   (* add assertions at the end *)
@@ -720,7 +710,7 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
   | Some eassert ->
       let all_good = ref (mk_bool ctx true) in
       for i = 0 to UInt32.to_int nodes - 1 do
-        let label = NodeMap.find i !labelling in
+        let label = Graph.VertexMap.find (UInt32.of_int i) !labelling in
         let result, n, x =
           encode_z3_assert (Printf.sprintf "assert-%d" i) env eassert
         in
@@ -745,22 +735,24 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
     sym_vars ;
   env
 
-let rec z3_to_exp (e: Expr.expr) : Syntax.exp option =
+let rec z3_to_exp (e: Expr.expr) : Syntax.value option =
   try
     let i = UInt32.of_string (Expr.to_string e) in
-    Some (EVal (VUInt32 i |> value) |> exp)
+    Some (VUInt32 i |> value)
   with _ ->
     try
       let f = Expr.get_func_decl e in
       let es = Expr.get_args e in
       let name = FuncDecl.get_name f |> Symbol.to_string in
       match name with
-      | "true" -> Some (EVal (VBool true |> value) |> exp)
-      | "false" -> Some (EVal (VBool false |> value) |> exp)
+      | "true" -> Some (VBool true |> value)
+      | "false" -> Some (VBool false |> value)
       | "some" -> (
-          let e = z3_to_exp (List.hd es) in
-          match e with None -> None | Some e -> Some (ESome e |> exp) )
-      | "none" -> Some (EVal (VOption None |> value) |> exp)
+          let v = z3_to_exp (List.hd es) in
+          match v with
+          | None -> None
+          | Some e -> Some (VOption (Some e) |> value) )
+      | "none" -> Some (VOption None |> value)
       | _ ->
           if String.length name >= 7 && String.sub name 0 7 = "mk-pair" then
             let es = List.map z3_to_exp es in
@@ -769,15 +761,14 @@ let rec z3_to_exp (e: Expr.expr) : Syntax.exp option =
                 (fun e -> match e with None -> true | Some _ -> false)
                 es
             then None
-            else Some (ETuple (List.map oget es) |> exp)
+            else Some (VTuple (List.map oget es) |> value)
           else None
     with _ -> None
 
 type smt_result =
   | Unsat
-  | Sat of
-      exp option StringMap.t * exp option NodeMap.t * bool option NodeMap.t
   | Unknown
+  | Sat of Solution.t
 
 let eval env m str ty =
   let l = Expr.mk_const_s env.ctx str (ty_to_sort env.ctx ty) in
@@ -803,25 +794,34 @@ let solve ds ~symbolic_vars =
       | None -> Console.error "internal error (encode)"
       | Some m ->
           (* print_endline (Model.to_string m) ; *)
-          let map = ref NodeMap.empty in
+          let map = ref Graph.VertexMap.empty in
           let sym_map = ref StringMap.empty in
-          let assertions = ref NodeMap.empty in
           (* grab the model from z3 *)
           for i = 0 to UInt32.to_int num_nodes - 1 do
             let e = eval env m (Printf.sprintf "label-%d" i) aty in
-            map := NodeMap.add i e !map
+            map := Graph.VertexMap.add (UInt32.of_int i) e !map
           done ;
-          for i = 0 to UInt32.to_int num_nodes - 1 do
-            let e = eval env m (Printf.sprintf "assert-%d-result" i) TBool in
-            match (e, eassert) with
-            | Some {e= EVal {v= VBool b}}, Some _ ->
-                assertions := NodeMap.add i (Some b) !assertions
-            | _ -> assertions := NodeMap.add i None !assertions
-          done ;
+          let assertions =
+            match eassert with
+            | None -> None
+            | Some _ ->
+                let assertions = ref Graph.VertexMap.empty in
+                for i = 0 to UInt32.to_int num_nodes - 1 do
+                  let e =
+                    eval env m (Printf.sprintf "assert-%d-result" i) TBool
+                  in
+                  match (e, eassert) with
+                  | Some {v= VBool b}, Some _ ->
+                      assertions :=
+                        Graph.VertexMap.add (UInt32.of_int i) b !assertions
+                  | _ -> Console.error "internal error ()"
+                done ;
+                Some !assertions
+          in
           List.iter
             (fun (x, e) ->
               let name = Var.to_string x in
               let e = eval env m name (oget e.ety) in
               sym_map := StringMap.add name e !sym_map )
             env.symbolics ;
-          Sat (!sym_map, !map, !assertions)
+          Sat {symbolics=(!sym_map); labels=(!map); assertions}
