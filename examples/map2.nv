@@ -1,4 +1,4 @@
-type attribute = dict[int]
+type attribute = dict[int,int]
 
 let nodes = 2
 

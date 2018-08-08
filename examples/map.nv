@@ -1,4 +1,4 @@
-type attribute = dict[option[int]]
+type attribute = dict[int,option[int]]
 
 let nodes = 2
 
@@ -29,5 +29,3 @@ let init node =
   match node with
   | 0 -> m[3 := Some 0]
   | 1 -> m[5 := Some 0]
-
-

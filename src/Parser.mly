@@ -85,7 +85,6 @@
 %token <Span.t> RBRACE 
 %token <Span.t> COMMA 
 %token <Span.t> UNDERSCORE 
-%token <Span.t> STAR 
 %token <Span.t> CREATEMAP
 %token <Span.t> MAP
 %token <Span.t> FILTER
@@ -119,6 +118,20 @@
 
 %%
 
+ty: 
+   | ty ARROW ty                        { TArrow ($1,$3) }
+   | TBOOL                              { TBool }
+   | TINT                               { Syntax.tint }
+   | LPAREN tys RPAREN                  { if List.length $2 = 1 then List.hd $2 else TTuple $2 }
+   | TOPTION LBRACKET ty RBRACKET       { TOption $3 }
+   | TDICT LBRACKET ty COMMA ty RBRACKET{ TMap ($3,$5) }
+;
+
+tys: 
+  | ty                                  { [$1] }
+  | ty COMMA tys                        { $1::$3 }
+;
+(* 
 ty:
    | ty1                                { $1 }
 ;
@@ -149,6 +162,7 @@ ty4:
    | TINT                               { Syntax.tint }
    | LPAREN ty RPAREN                   { $2 }
 ;
+*)
 
 param:
    | ID                                 { (snd $1, None) }

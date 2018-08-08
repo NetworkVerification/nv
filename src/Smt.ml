@@ -77,8 +77,8 @@ let rec ty_to_smtlib (ty: ty) : string =
         (Printf.sprintf "internal error (ty_to_smtlib): %s"
            (Printing.ty_to_string ty))
 
-let mk_array_sort ctx sort =
-  Z3Array.mk_sort ctx (Arithmetic.Integer.mk_sort ctx) sort
+let mk_array_sort ctx sort1 sort2 =
+  Z3Array.mk_sort ctx sort1 sort2
 
 let rec ty_to_sort ctx (ty: ty) : Z3.Sort.sort =
   match ty with
@@ -117,7 +117,7 @@ let rec ty_to_sort ctx (ty: ty) : Z3.Sort.sort =
       in
       let name = Printf.sprintf "Pair%d%s" (List.length ts) name in
       Z3.Datatype.mk_sort_s ctx name [some]
-  | TMap t -> mk_array_sort ctx (ty_to_sort ctx t)
+  | TMap (ty1,ty2) -> mk_array_sort ctx (ty_to_sort ctx ty1) (ty_to_sort ctx ty2)
   | TVar _ | QVar _ | TArrow _ -> Console.error "internal error (ty_to_sort)"
 
 let mk_array ctx value = Z3Array.mk_const_array ctx (ty_to_sort ctx tint) value
@@ -210,8 +210,13 @@ let rec encode_exp_z3 descr env arr (e: exp) =
         let e3 = encode_exp_z3 descr env arr e3 in
         Z3Array.mk_store env.ctx e1 e2 e3
     | MMap, [{e= EFun {arg= x; argty= ty1; resty= ty2; body= e1}}; e2] ->
+        let keysort =
+          match Typing.get_inner_type (oget e2.ety) with 
+          | TMap (ty,_) -> ty_to_sort env.ctx ty
+          | _ -> Console.error "internal error (encode_exp_z3)"
+        in
         let arr2 =
-          { f= (fun s -> mk_array_sort env.ctx (arr.f s))
+          { f= (fun s -> mk_array_sort env.ctx keysort (arr.f s))
           ; make= (fun e -> mk_array env.ctx (arr.make e))
           ; lift= true }
         in
@@ -247,8 +252,13 @@ let rec encode_exp_z3 descr env arr (e: exp) =
                 ; body= {e= EFun {arg= y; argty= ty2; body= e1}} } }
         ; e2
         ; e3 ] ) ->
+        let keysort =
+          match Typing.get_inner_type (oget e2.ety) with 
+          | TMap (ty,_) -> ty_to_sort env.ctx ty
+          | _ -> Console.error "internal error (encode_exp_z3)"
+        in
         let arr2 =
-          { f= (fun s -> mk_array_sort env.ctx (arr.f s))
+          { f= (fun s -> mk_array_sort env.ctx keysort (arr.f s))
           ; make= (fun e -> mk_array env.ctx (arr.make e))
           ; lift= true }
         in

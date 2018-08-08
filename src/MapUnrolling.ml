@@ -22,7 +22,7 @@ let rec strip_ty ty =
   | TArrow (t1, t2) -> TArrow (strip_ty t1, strip_ty t2)
   | TTuple ts -> TTuple (List.map strip_ty ts)
   | TOption t -> TOption (strip_ty t)
-  | TMap t -> TMap (strip_ty t)
+  | TMap (ty1,ty2) -> TMap (strip_ty ty1, strip_ty ty2)
   | QVar _ | TVar _ -> Console.error "internal error (strip_ty)"
 
 let tuple_count tymap ty =
@@ -46,10 +46,10 @@ let rec tuplify_ty tymap ty =
   | TArrow (t1, t2) -> TArrow (tuplify_ty tymap t1, tuplify_ty tymap t2)
   | TTuple ts -> TTuple (List.map (tuplify_ty tymap) ts)
   | TOption t -> TOption (tuplify_ty tymap t)
-  | TMap t ->
-      let t = tuplify_ty tymap t in
+  | TMap (_, ty2) ->
+      let t2 = tuplify_ty tymap ty2 in
       let count = tuple_count tymap ty in
-      if count = 1 then t else TTuple (repeat t count)
+      if count = 1 then t2 else TTuple (repeat t2 count)
   | QVar _ | TVar _ -> Console.error "internal error (tuplify_ty)"
 
 let rec tuplify_exp tymap e : exp =
@@ -269,6 +269,7 @@ let unroll info ds =
         v )
     map ; *)
   let ds = tuplify map ds in
+  (* TODO: FIXME *)
   let zero = EVal (VUInt32 (Unsigned.UInt32.of_int 0) |> value) |> exp in
   let variables = TypeMap.fold (fun _ es acc -> es @ acc) map [] in
   let symbolics = List.map (fun (k, e) -> Var.create k) variables in
