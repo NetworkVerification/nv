@@ -8,6 +8,7 @@ let edges = {
 
 symbolic fail = createDict false
 
+
 let merge node x y =
   match (x,y) with 
   | (None, _) -> y 
