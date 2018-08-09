@@ -84,6 +84,7 @@ let alpha_convert_declaration bmap (env: Var.t Env.t) (d: declaration) =
   | DTrans e -> (env, DTrans (alpha_convert_exp env e))
   | DInit e -> (env, DInit (alpha_convert_exp env e))
   | DAssert e -> (env, DAssert (alpha_convert_exp env e))
+  | DRequire e -> (env, DRequire (alpha_convert_exp env e))
   | DATy _ | DNodes _ | DEdges _ -> (env, d)
 
 let rec alpha_convert_aux bmap env (ds: declarations) : declarations =

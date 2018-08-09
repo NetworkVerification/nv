@@ -25,7 +25,7 @@ let trans edge x =
   map (fun x -> mapo (fun x -> x + 1) x) x
 
 let init node =
-  let m = createMap None in
+  let m = createDict None in
   match node with
   | 0 -> m[3 := Some 0]
   | 1 -> m[5 := Some 0]

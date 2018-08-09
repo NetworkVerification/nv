@@ -735,6 +735,17 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
       in
       Solver.add solver [Boolean.mk_eq ctx v e] )
     sym_vars ;
+  (* add the require clauses *)
+  let rs = get_requires ds in
+  List.iter
+    (fun e ->
+      let e =
+        encode_exp_z3 "" env
+          {f= (fun x -> x); make= (fun e -> e); lift= false}
+          e
+      in
+      Solver.add solver [e] )
+    rs ;
   env
 
 exception Model_conversion

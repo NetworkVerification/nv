@@ -44,13 +44,19 @@ let check_assertions (sol: Solution.t) =
   | None -> true
   | Some ass -> Graph.VertexMap.for_all (fun _ b -> b) ass
 
-let rec check_aux ds iters acc =
+let rec check_aux ds iters num_rejected acc =
   match (iters, acc) with
   | 0, _ | _, Some _ -> acc
   | _ ->
-      let ds = random_symbolics ds 1 in
-      let sol = Srp.simulate_declarations ds in
-      if check_assertions sol then None else Some sol
+      let ds' = random_symbolics ds 1 in
+      try
+        let sol = Srp.simulate_declarations ds' in
+        if check_assertions sol then check_aux ds (iters - 1) num_rejected None
+        else Some sol
+      with Srp.Require_false ->
+        incr num_rejected ;
+        check_aux ds (iters - 1) num_rejected None
 
 let check ds ~iterations : Solution.t option =
-  check_aux ds (iterations + 1) None
+  let num_rejected = ref 0 in
+  check_aux ds (iterations + 1) num_rejected None

@@ -255,6 +255,7 @@ let rec declaration_to_string d =
   | DMerge e -> "let merge = " ^ exp_to_string e
   | DTrans e -> "let trans = " ^ exp_to_string e
   | DAssert e -> "let assert = " ^ exp_to_string e
+  | DRequire e -> "require " ^ exp_to_string e
   | DNodes n -> "let nodes = " ^ UInt32.to_string n
   | DEdges es ->
       "let edges = {"

@@ -217,6 +217,7 @@ let tuplify_decl tymap d =
   | DTrans e -> DTrans (tuplify_exp tymap e)
   | DInit e -> DInit (tuplify_exp tymap e)
   | DAssert e -> DAssert (tuplify_exp tymap e)
+  | DRequire e -> DRequire (tuplify_exp tymap e)
   | DSymbolic (x, Exp e) -> DSymbolic (x, Exp (tuplify_exp tymap e))
   | DSymbolic (x, Ty ty) -> DSymbolic (x, Ty (tuplify_ty tymap ty))
   | DATy aty -> DATy (tuplify_ty tymap aty)

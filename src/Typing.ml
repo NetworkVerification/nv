@@ -82,7 +82,8 @@ let check_annot_decl (d: declaration) =
    |DMerge e
    |DTrans e
    |DInit e
-   |DAssert e ->
+   |DAssert e
+   |DRequire e ->
       check_annot e
   | DNodes _ | DEdges _ | DATy _ | DSymbolic _ -> ()
 
@@ -540,6 +541,11 @@ and infer_declaration i info env aty d : ty Env.t * declaration =
       let ty = oget e'.ety in
       unify info e ty (assert_ty aty) ;
       (Env.update env (Var.create "assert") ty, DAssert e')
+  | DRequire e ->
+      let e' = infer_exp (i + 1) info env e in
+      let ty = oget e'.ety in
+      unify info e ty TBool ;
+      (Env.update env (Var.create "require") ty, DRequire e')
   | DInit e ->
       let e' = infer_exp (i + 1) info env e in
       let ty = oget e'.ety in

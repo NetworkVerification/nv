@@ -91,6 +91,7 @@ type declaration =
   | DTrans of exp
   | DInit of exp
   | DAssert of exp
+  | DRequire of exp
   | DNodes of UInt32.t
   | DEdges of (UInt32.t * UInt32.t) list
 
@@ -185,6 +186,12 @@ let get_nodes ds =
 let get_symbolics ds =
   List.fold_left
     (fun acc d -> match d with DSymbolic (x, e) -> (x, e) :: acc | _ -> acc)
+    [] ds
+  |> List.rev
+
+let get_requires ds =
+  List.fold_left
+    (fun acc d -> match d with DRequire e -> e :: acc | _ -> acc)
     [] ds
   |> List.rev
 

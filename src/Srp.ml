@@ -53,6 +53,8 @@ type info =
     mutable init: Syntax.closure option (* initial state *)
   ; mutable syms: value StringMap.t }
 
+exception Require_false
+
 let declarations_to_state ds =
   let info =
     { env= Interp.empty_env
@@ -116,6 +118,10 @@ let declarations_to_state ds =
         in
         if_none info.init get_initializer
           "multiple initialization declarations"
+    | DRequire e -> (
+      match (Interp.interp_env info.env e).v with
+      | VBool true -> ()
+      | _ -> raise Require_false )
     | DATy _ -> ()
   in
   List.iter process_declaration ds ;

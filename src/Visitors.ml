@@ -23,6 +23,7 @@ let iter_exp_decl f d =
    |DTrans e
    |DInit e
    |DAssert e
+   |DRequire e
    |DSymbolic (_, Exp e) ->
       iter_exp (f d) e
   | DATy _ | DNodes _ | DEdges _ | DSymbolic _ -> ()
