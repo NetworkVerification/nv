@@ -57,9 +57,11 @@ rule token = parse
   | "->"         { ARROW (position lexbuf) }
   | ".."         { DOTDOT (position lexbuf) }
   | "!"          { NOT (position lexbuf) }
-  | ","          { COMMA (position lexbuf) }
+  | ","          { COMMA (position lexbuf) } 
   | "+"          { PLUS (position lexbuf) }
   | "-"          { SUB (position lexbuf) }
+  | "<="         { LEQ (position lexbuf) }
+  | ">="         { GEQ (position lexbuf) }
   | "="          { EQ (position lexbuf) }
   | "<"          { LESS (position lexbuf) }
   | ">"          { GREATER (position lexbuf) }

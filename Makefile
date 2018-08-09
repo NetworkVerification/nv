@@ -4,7 +4,8 @@ MLFILES= src/*.ml src/*.mli test/*.ml \
 
 default:  src/Main
 
-all: 
+all:
+	ocamlformat -i $(MLFILES)
 	$(BUILD) src/Main.native
 	mv Main.native /usr/local/bin/srp
 

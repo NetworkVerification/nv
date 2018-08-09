@@ -11,7 +11,9 @@ type smt_env =
 let create_fresh descr s =
   Printf.sprintf "%s-%s" descr (Var.fresh s |> Var.to_string)
 
-let create_name descr n = Printf.sprintf "%s-%s" descr (Var.to_string n)
+let create_name descr n =
+  if descr = "" then Var.to_string n
+  else Printf.sprintf "%s-%s" descr (Var.to_string n)
 
 let mk_int_u32 ctx i =
   Expr.mk_numeral_string ctx (UInt32.to_string i)

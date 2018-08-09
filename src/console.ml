@@ -11,7 +11,7 @@ let get_position_opt idx info =
 
 let show_message msg color label =
   T.print_string [] "\n" ;
-  T.print_string [T.Foreground color] (label ^ ": ") ;
+  T.print_string [T.Foreground color; T.Bold] (label ^ ": ") ;
   Printf.printf "%s\n" msg ;
   T.print_string [] "\n"
 
@@ -50,7 +50,7 @@ let show_message_position info (span: Span.t) msg color label =
   if l2 - l1 = 0 then show_line info l1 (Some (c1, c2, color))
   else for i = l1 to l2 do show_line info i None done ;
   T.print_string [] "\n" ;
-  T.print_string [T.Foreground color] (label ^ ": ") ;
+  T.print_string [T.Foreground color; T.Bold] (label ^ ": ") ;
   Printf.printf "%s\n" msg ;
   T.print_string [] border
 

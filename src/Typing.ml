@@ -287,7 +287,9 @@ let rec infer_exp i info env (e: exp) : exp =
     match e.e with
     | EVar x -> (
       match Env.lookup_opt env x with
-      | None -> Console.error ("unbound variable " ^ Var.to_string x)
+      | None ->
+          Console.error_position info e.espan
+            ("unbound variable " ^ Var.to_string x)
       | Some t -> texp (e.e, substitute t) )
     | EVal v ->
         let v, t = infer_value info env v |> textractv in

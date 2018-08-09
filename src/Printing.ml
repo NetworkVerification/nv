@@ -162,15 +162,19 @@ and map_to_string sep_s term_s m =
   let binding_to_string (k, v) =
     value_to_string_p max_prec k ^ sep_s ^ value_to_string_p max_prec v
   in
-  let bs, _ = IMap.bindings m in
-  "[" ^ term term_s binding_to_string bs ^ "..]"
+  let bs, default = IMap.bindings m in
+  "["
+  ^ term term_s binding_to_string bs
+  ^ "default:="
+  ^ value_to_string_p max_prec default
+  ^ "]"
 
 and value_to_string_p prec v =
   match v.v with
   | VBool true -> "true"
   | VBool false -> "false"
   | VUInt32 i -> UInt32.to_string i
-  | VMap m -> map_to_string ":=" ";" m
+  | VMap m -> map_to_string ":=" "," m
   | VTuple vs -> "(" ^ comma_sep (value_to_string_p max_prec) vs ^ ")"
   | VOption None -> "None"
   | VOption (Some v) ->

@@ -135,6 +135,9 @@ and interp_op env op es =
       (if UInt32.compare i1 i2 = 0 then VBool true else VBool false) |> value
   | ULess, [{v= VUInt32 i1}; {v= VUInt32 i2}] ->
       (if UInt32.compare i1 i2 = -1 then VBool true else VBool false) |> value
+  | ULeq, [{v= VUInt32 i1}; {v= VUInt32 i2}] ->
+      (if not (UInt32.compare i1 i2 = 1) then VBool true else VBool false)
+      |> value
   | MCreate, [v] -> VMap (IMap.create compare_values v) |> value
   | MGet, [{v= VMap m}; v] -> IMap.find m v
   | MSet, [{v= VMap m}; vkey; vval] -> VMap (IMap.update m vkey vval) |> value
@@ -148,7 +151,10 @@ and interp_op env op es =
         | _ -> Console.error "internal error (interp_op)"
       in
       VMap (IMap.merge f_lifted m1 m2) |> value
-  | _, _ -> Console.error "bad operator application"
+  | _, _ ->
+      Console.error
+        (Printf.sprintf "bad operator application: %s"
+           (Printing.op_to_string op))
 
 and apply env f v = interp_exp (update_value env f.arg v) f.body
 

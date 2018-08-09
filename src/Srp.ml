@@ -80,7 +80,12 @@ let declarations_to_state ds =
         let v = Interp.interp_env env e in
         info.env <- Interp.update_value env x v ;
         info.syms <- StringMap.add (Var.name x) v info.syms
-    | DSymbolic (x, _) -> Console.error "internal error (process_declaration)"
+    | DSymbolic (x, Ty ty) ->
+        let env = info.env in
+        let e = EVal (Generators.default_value ty) |> exp in
+        let v = Interp.interp_env env e in
+        info.env <- Interp.update_value env x v ;
+        info.syms <- StringMap.add (Var.name x) v info.syms
     | DMerge e ->
         let get_merge () =
           match (Interp.interp_env info.env e).v with
