@@ -92,6 +92,18 @@ let rec check_annot_decls (ds: declarations) =
   | [] -> ()
   | d :: ds -> check_annot_decl d ; check_annot_decls ds
 
+exception Invalid_type
+
+let rec strip_ty ty =
+  match ty with
+  | TVar {contents= Link t} -> strip_ty t
+  | TBool | TInt _ -> ty
+  | TArrow (t1, t2) -> TArrow (strip_ty t1, strip_ty t2)
+  | TTuple ts -> TTuple (List.map strip_ty ts)
+  | TOption t -> TOption (strip_ty t)
+  | TMap (ty1, ty2) -> TMap (strip_ty ty1, strip_ty ty2)
+  | QVar _ | TVar _ -> raise Invalid_type
+
 let tyname () = Var.fresh "a"
 
 exception Occurs

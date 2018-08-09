@@ -1,11 +1,6 @@
 open Graph
 open ANSITerminal
-
-module StringMap = Map.Make (struct
-  type t = string
-
-  let compare = String.compare
-end)
+open Collections
 
 type t =
   { symbolics: Syntax.value StringMap.t

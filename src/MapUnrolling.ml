@@ -1,3 +1,4 @@
+open Collections
 open Solution
 open Syntax
 open Visitors
@@ -15,26 +16,10 @@ module ExprSet = Set.Make (struct
   let compare (_, a) (_, b) = compare a b
 end)
 
-module TypeMap = Map.Make (struct
-  type t = ty
-
-  let compare = compare
-end)
-
 let rec repeat x i = if i = 0 then [] else x :: repeat x (i - 1)
 
-let rec strip_ty ty =
-  match ty with
-  | TVar {contents= Link t} -> strip_ty t
-  | TBool | TInt _ -> ty
-  | TArrow (t1, t2) -> TArrow (strip_ty t1, strip_ty t2)
-  | TTuple ts -> TTuple (List.map strip_ty ts)
-  | TOption t -> TOption (strip_ty t)
-  | TMap (ty1, ty2) -> TMap (strip_ty ty1, strip_ty ty2)
-  | QVar _ | TVar _ -> Console.error "internal error (strip_ty)"
-
 let tuple_count tymap ty =
-  let es = TypeMap.find (strip_ty ty) tymap in
+  let es = TypeMap.find (Typing.strip_ty ty) tymap in
   List.length es
 
 let create_pattern_names count =
@@ -76,7 +61,7 @@ let rec tuplify_exp tymap e : exp =
     | MSet, [e1; e2; e3] -> (
         (* m[e1 := e2] --> (if d = e1 then e2 else m.0, if d_1 = e1 then e2 else m.1, ...) *)
         let ty = oget e.ety in
-        match TypeMap.find_opt (strip_ty ty) tymap with
+        match TypeMap.find_opt (Typing.strip_ty ty) tymap with
         | None ->
             (* TODO: what if setter is used in assert statement? *)
             Console.error "internal error (tuplify_exp)"
@@ -99,7 +84,7 @@ let rec tuplify_exp tymap e : exp =
     | MGet, [e1; e2] -> (
         (* m[e] --> m.i_e  if known index else m.0 *)
         let ty = oget e1.ety in
-        match TypeMap.find_opt (strip_ty ty) tymap with
+        match TypeMap.find_opt (Typing.strip_ty ty) tymap with
         | None -> Console.error "internal error (tuplify_exp)"
         | Some es ->
             let ps = create_pattern_names (List.length es) in
@@ -119,7 +104,7 @@ let rec tuplify_exp tymap e : exp =
     | MMap, [e1; e2] -> (
         (* map f m --> (f m.0, f m.1, ...) *)
         let ty = oget e.ety in
-        match TypeMap.find_opt (strip_ty ty) tymap with
+        match TypeMap.find_opt (Typing.strip_ty ty) tymap with
         | None -> Console.error "internal error (tuplify_exp)"
         | Some es ->
             let ks, _ = List.split es in
@@ -139,8 +124,8 @@ let rec tuplify_exp tymap e : exp =
         (* merge f m1 m2 --> (f m1.0 m2.0, f m1.1 m2.1, ...) *)
         let ty1, ty2 = (oget e2.ety, oget e3.ety) in
         match
-          ( TypeMap.find_opt (strip_ty ty1) tymap
-          , TypeMap.find_opt (strip_ty ty2) tymap )
+          ( TypeMap.find_opt (Typing.strip_ty ty1) tymap
+          , TypeMap.find_opt (Typing.strip_ty ty2) tymap )
         with
         | Some es1, Some es2 ->
             let ks1, _ = List.split es1 in
@@ -227,14 +212,14 @@ let tuplify tymap ds = List.map (tuplify_decl tymap) ds
 
 let update_with tymap ty e =
   try
-    let es = TypeMap.find (strip_ty ty) tymap in
+    let es = TypeMap.find (Typing.strip_ty ty) tymap in
     TypeMap.add ty (ExprSet.add e es) tymap
   with _ -> TypeMap.add ty (ExprSet.singleton e) tymap
 
 let collect_all_map_tys ds =
   let all_tys = ref TypeMap.empty in
   let f d e =
-    let ty = strip_ty (oget e.ety) in
+    let ty = Typing.strip_ty (oget e.ety) in
     match Typing.get_inner_type ty with
     | TMap _ -> all_tys := TypeMap.add ty () !all_tys
     | _ -> ()
@@ -248,7 +233,7 @@ let collect_map_gets ds map =
     (* | DAssert _, _ -> () *)
     | _, EOp (MGet, [e1; e2]) ->
         let symkey = Var.fresh "key" |> Var.to_string in
-        map := update_with !map (oget e1.ety |> strip_ty) (symkey, e2)
+        map := update_with !map (oget e1.ety |> Typing.strip_ty) (symkey, e2)
     | _ -> ()
   in
   Visitors.iter_exp_decls f ds ;
@@ -269,7 +254,7 @@ let drop_syms variables s _ =
 let map_back orig_sym_types (map: ExprSet.elt list TypeMap.t) variables ds
     (sol: Solution.t) : Solution.t =
   let rec aux ty v : value =
-    let ty = strip_ty ty in
+    let ty = Typing.strip_ty ty in
     match (ty, v.v) with
     | TMap (ty1, ty2), _ -> (
         let es = TypeMap.find ty map in
@@ -293,10 +278,10 @@ let map_back orig_sym_types (map: ExprSet.elt list TypeMap.t) variables ds
         VTuple vs |> value
     | _ -> Console.error "internal error (map_back)"
   in
-  let aty = oget (get_attr_type ds) |> strip_ty in
+  let aty = oget (get_attr_type ds) |> Typing.strip_ty in
   let update_labels ls = Graph.VertexMap.map (fun v -> aux aty v) ls in
   let update_symbolics sol =
-    let syms = Solution.StringMap.filter (drop_syms variables) sol.symbolics in
+    let syms = StringMap.filter (drop_syms variables) sol.symbolics in
     StringMap.mapi (fun k v -> aux (StringMap.find k orig_sym_types) v) syms
   in
   {sol with labels= update_labels sol.labels; symbolics= update_symbolics sol}

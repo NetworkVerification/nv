@@ -1,5 +1,5 @@
+open Collections
 open Syntax
-open Solution
 
 let map_back bmap x y =
   bmap := StringMap.add (Var.to_string y) (Var.name x) !bmap

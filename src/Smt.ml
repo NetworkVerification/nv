@@ -1,3 +1,4 @@
+open Collections
 open Unsigned
 open Syntax
 open Solution

@@ -1,16 +1,15 @@
 open Cudd
+open Syntax
 
-type bdd_index =
+type key_index =
   | IBool of int
   | IInt of int list
-  | ITuple of bdd_index list
-  | IOption of int * bdd_index
-  | IMap of bdd_index
+  | ITuple of key_index list
+  | IOption of int * key_index
+  | IMap of key_index
 [@@deriving eq, ord, show]
 
-type sset =
-  | SSBase of bdd_index * unit Bdd.t
-  | SSMap of bdd_index * sset Mtbdd.t
+type sset = SSBase of value | SSMap of key_index * sset Mtbdd.t
 
 let rec hash_bdd_index bi =
   match bi with
@@ -23,15 +22,14 @@ let rec hash_bdd_index bi =
 
 let rec hash_sset (s: sset) : int =
   match s with
-  | SSBase (ii, bdd) -> Bdd.topvar bdd
+  | SSBase v -> Hashtbl.hash v
   | SSMap (ii, mbdd) -> Mtbdd.topvar mbdd
 
 let rec equal_sset s1 s2 =
   match (s1, s2) with
-  | SSBase (i1, b1), SSBase (i2, b2) ->
-      Bdd.is_equal b1 b2 && equal_bdd_index i1 i2
+  | SSBase v1, SSBase v2 -> compare_values v1 v2 = 0
   | SSMap (i1, m1), SSMap (i2, m2) ->
-      Mtbdd.is_equal m1 m2 && equal_bdd_index i1 i2
+      Mtbdd.is_equal m1 m2 && equal_key_index i1 i2
   | _, _ -> false
 
 let manager = Man.make_v ()

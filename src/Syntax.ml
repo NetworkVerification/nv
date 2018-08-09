@@ -136,6 +136,20 @@ let ty_func tyargs body = (tyargs, body)
 
 let lam x body = exp (EFun (func x body))
 
+let rec is_value e =
+  match e.e with
+  | EVal _ -> true
+  | ETuple es -> List.for_all is_value es
+  | ESome e -> is_value e
+  | _ -> false
+
+let rec to_value e =
+  match e.e with
+  | EVal v -> v
+  | ETuple es -> {v= VTuple (List.map to_value es); vspan= e.espan; vty= e.ety}
+  | ESome e1 -> {v= VOption (Some (to_value e1)); vspan= e.espan; vty= e.ety}
+  | _ -> Console.error "internal error (to_value)"
+
 let oget (x: 'a option) : 'a =
   match x with None -> Console.error "internal error (oget)" | Some y -> y
 
