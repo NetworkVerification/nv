@@ -10,17 +10,22 @@ let edges = {
  2=3;
 }
 
-symbolic fail01 = false 
-symbolic fail02 = false 
-symbolic fail12 = false
-symbolic fail13 = false 
-symbolic fail23 = false
+symbolic fail01 : bool
+symbolic fail02 : bool
+symbolic fail12 : bool
+symbolic fail13 : bool 
+symbolic fail23 : bool
 
 let bool2int b = if b then 1 else 0 
 
 require 
-  let k = (bool2int fail01) + (bool2int fail02) + (bool2int fail12) + (bool2int fail13) + (bool2int fail23) in 
-  k < 3
+  let k = (bool2int fail01) + 
+          (bool2int fail02) + 
+	  (bool2int fail12) + 
+	  (bool2int fail13) + 
+	  (bool2int fail23) 
+  in 
+  k <= 2
 
 let mapo f o =
   match o with
