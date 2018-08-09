@@ -81,7 +81,6 @@ let run_smt info ds =
   let res =
     if unroll_maps () then (
       let decls, vars, f = MapUnrolling.unroll info decls in
-      Printf.printf "baz\n";
       let decls = Inline.inline_declarations info decls in
       fs := f :: !fs ;
       Smt.solve decls ~symbolic_vars:vars )
