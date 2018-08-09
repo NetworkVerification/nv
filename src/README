@@ -7,4 +7,3 @@ opam install z3
 opam install menhir
 opam install mlcuddidl
 opam install ppx_deriving
-opam install ppx_hash
