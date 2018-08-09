@@ -172,6 +172,11 @@ expr:
     | LET letvars EQ expr IN expr       { let span = (Span.extend $1 $6.espan) in
                                           let (id, e) = local_let $2 $4 $4.espan span in 
                                           exp (ELet (id, e, $6)) span }
+    | LET LPAREN patterns RPAREN EQ expr IN expr
+                                        { let p = tuple_pattern $3 in 
+                                          let e = EMatch ($6, [(p,$8)]) in 
+                                          let span = Span.extend $1 $8.espan in 
+                                          exp e span }
     | IF expr THEN expr ELSE expr       { exp (EIf ($2, $4, $6)) (Span.extend $1 $6.espan) }
     (* TODO: span does not include the branches here *)
     | MATCH expr WITH branches          { exp (EMatch ($2, $4)) (Span.extend $1 $3) }
