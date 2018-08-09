@@ -12,12 +12,9 @@ type tyname = Var.t
 
 type ty =
   | TVar of tyvar ref
-  (* schematic variable to be unified *)
   | QVar of tyname
-  (* prenex quantified variable *)
   | TBool
   | TInt of index
-  (* index is number of bits in Int type: 32 for now *)
   | TArrow of ty * ty
   | TTuple of ty list
   | TOption of ty

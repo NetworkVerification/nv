@@ -1,6 +1,16 @@
 open Cudd
 
-(* TODO: generalize this as to allow other types of state sets? *)
+type index_info = 
+  | IBool of int 
+  | IInt of int list
+  | ITuple of index_info list 
+  | IOption of int * index_info 
+  [@@deriving eq, ord, show]
+
+(* type state_set = 
+  | SSBase of index_info * unit Bdd.t
+  | SSMap of index_info * state_set Mtbdd.t *)
+
 type state_set =
   | SSBool of unit Bdd.t
   | SSInt of unit Bdd.t list
@@ -20,6 +30,7 @@ let rec hash (s: state_set) : int =
   | SSOption (tag, s) -> 31 * Bdd.topvar tag + hash s
   | SSMap mbdd -> Mtbdd.topvar mbdd
 
+  
 let rec equal s1 s2 = 
   match s1, s2 with 
   | SSBool b1, SSBool b2 -> Bdd.is_equal b1 b2
@@ -43,9 +54,12 @@ and equal_list ls1 ls2 =
 
 let manager = Man.make_v ()
 
+(* Bdd.ithvar manager ... *)
+(* Mtbdd.cst manager tbl 3 *)
+
 let tbl = Mtbdd.make_table ~hash:hash ~equal:equal
 
-let foo (x: state_set Cudd.Mtbdd.t) =
-  Cudd.Mapleaf.mapleaf1
+let foo (x: state_set Mtbdd.t) : state_set Mtbdd.t =
+  Mapleaf.mapleaf1
     (fun a -> Cudd.Mtbdd.unique tbl (Cudd.Mtbdd.get a))
     x

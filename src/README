@@ -5,4 +5,6 @@ opam install ounit
 opam install ansiterminal
 opam install z3
 opam install menhir
-opem install mlcuddidl
+opam install mlcuddidl
+opam install ppx_deriving
+opam install ppx_hash

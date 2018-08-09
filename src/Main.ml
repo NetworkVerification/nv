@@ -9,6 +9,7 @@ open Inline
 open Quickcheck
 open Smt
 open Solution
+open StateSet
 
 (* Command Line Arguments *)
 
