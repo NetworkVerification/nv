@@ -2,10 +2,12 @@ open Solution
 open Syntax
 open Visitors
 
-(* TODO: this might not work in certain cases. 
+(* TODO: 
+   the symbolic key might not work in certain cases. 
    for example, if you have type (dict[int,int], dict[int,int]) 
    A type can't have multiple dicts with the same value type or else 
-   we might reuse the same key across multiple dictionaries. *)
+   we might reuse the same symbolic key across multiple dictionaries.
+   *)
 
 module ExprSet = Set.Make (struct
   type t = string * exp
@@ -259,9 +261,14 @@ let lookup s sol = StringMap.find (Var.create s |> Var.to_string) sol.symbolics
 let build_value_map sol acc (vv, (s, _)) : (value, value) IMap.t =
   IMap.update acc (lookup s sol) vv
 
-let map_back (map: ExprSet.elt list TypeMap.t) variables ds (sol: Solution.t) :
-    Solution.t =
+let drop_syms variables s _ =
+  List.exists (fun (_, k, _) -> String.equal (Var.to_string k) s) variables
+  |> not
+
+let map_back orig_sym_types (map: ExprSet.elt list TypeMap.t) variables ds
+    (sol: Solution.t) : Solution.t =
   let rec aux ty v : value =
+    let ty = strip_ty ty in
     match (ty, v.v) with
     | TMap (ty1, ty2), _ -> (
         let es = TypeMap.find ty map in
@@ -275,7 +282,7 @@ let map_back (map: ExprSet.elt list TypeMap.t) variables ds (sol: Solution.t) :
         | _, [(s, _)] ->
             let map = IMap.update base (lookup s sol) v in
             VMap map |> value
-        | _ -> Console.error "internal error (map_back)" )
+        | _ -> Console.error "internal error (map_back1)" )
     | TBool, VBool _ -> v
     | TInt _, VUInt32 _ -> v
     | TOption t, VOption None -> v
@@ -288,18 +295,29 @@ let map_back (map: ExprSet.elt list TypeMap.t) variables ds (sol: Solution.t) :
   let aty = oget (get_attr_type ds) |> strip_ty in
   let update_labels ls = Graph.VertexMap.map (fun v -> aux aty v) ls in
   let update_symbolics sol =
-    Solution.StringMap.filter
-      (fun s _ ->
-        List.exists
-          (fun (_, k, _) -> String.equal (Var.to_string k) s)
-          variables
-        |> not )
-      sol.symbolics
+    let syms = Solution.StringMap.filter (drop_syms variables) sol.symbolics in
+    StringMap.mapi (fun k v -> aux (StringMap.find k orig_sym_types) v) syms
   in
   {sol with labels= update_labels sol.labels; symbolics= update_symbolics sol}
 
+let collect_all_symbolics_d d =
+  match d with
+  | DSymbolic (x, Exp e) -> StringMap.singleton (Var.to_string x) (oget e.ety)
+  | DSymbolic (x, Ty ty) -> StringMap.singleton (Var.to_string x) ty
+  | _ -> StringMap.empty
+
+let rec collect_all_symbolics ds =
+  match ds with
+  | [] -> StringMap.empty
+  | d :: ds ->
+      StringMap.union
+        (fun _ _ _ -> None)
+        (collect_all_symbolics_d d)
+        (collect_all_symbolics ds)
+
 let unroll info ds =
   let all_tys = collect_all_map_tys ds in
+  let orig_sym_types = collect_all_symbolics ds in
   let map = ref TypeMap.empty in
   TypeMap.iter
     (fun ty _ ->
@@ -337,4 +355,6 @@ let unroll info ds =
   let vs = List.map (fun (_, s, e) -> (s, e)) vs in
   let decls = symbolics @ decls in
   (* print_endline (Printing.declarations_to_string decls) ; *)
-  (Typing.infer_declarations info decls, vs, map_back map variables ds)
+  ( Typing.infer_declarations info decls
+  , vs
+  , map_back orig_sym_types map variables ds )

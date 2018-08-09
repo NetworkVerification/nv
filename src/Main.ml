@@ -89,7 +89,7 @@ let run_smt info ds =
   match res with
   | Unsat -> ()
   | Unknown -> Console.error "SMT returned unknown"
-  | Sat solution -> print_solution (apply_all solution (List.rev !fs))
+  | Sat solution -> print_solution (apply_all solution !fs)
 
 let main =
   let () = commandline_processing () in

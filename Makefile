@@ -4,6 +4,13 @@ MLFILES= src/*.ml src/*.mli test/*.ml \
 
 default:  src/Main
 
+all: 
+	$(BUILD) src/Main.native
+	mv Main.native /usr/local/bin/srp
+
+install:
+	mv Main.native /usr/local/bin/srp
+
 build: $(MLFILES)
 	$(BUILD) src/Main.native
 
