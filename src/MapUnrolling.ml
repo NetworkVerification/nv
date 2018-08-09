@@ -1,5 +1,11 @@
+open Solution
 open Syntax
 open Visitors
+
+(* TODO: this might not work in certain cases. 
+   for example, if you have type (dict[int,int], dict[int,int]) 
+   A type can't have multiple dicts with the same value type or else 
+   we might reuse the same key across multiple dictionaries. *)
 
 module ExprSet = Set.Make (struct
   type t = string * exp
@@ -248,7 +254,50 @@ let collect_map_gets ds map =
 let sort_keys es =
   ExprSet.elements es |> List.stable_sort (fun (k1, _) (k2, _) -> compare k1 k2)
 
-(* collect a map from type to set of expressions *)
+let lookup s sol = StringMap.find (Var.create s |> Var.to_string) sol.symbolics
+
+let build_value_map sol acc (vv, (s, _)) : (value, value) IMap.t =
+  IMap.update acc (lookup s sol) vv
+
+let map_back (map: ExprSet.elt list TypeMap.t) variables ds (sol: Solution.t) :
+    Solution.t =
+  let rec aux ty v : value =
+    match (ty, v.v) with
+    | TMap (ty1, ty2), _ -> (
+        let es = TypeMap.find ty map in
+        let default = Quickcheck.random_value ty2 1 in
+        let base = IMap.create compare_values default in
+        match (v.v, es) with
+        | VTuple vs, _ ->
+            let zip = List.combine vs es in
+            let map = List.fold_left (build_value_map sol) base zip in
+            VMap map |> value
+        | _, [(s, _)] ->
+            let map = IMap.update base (lookup s sol) v in
+            VMap map |> value
+        | _ -> Console.error "internal error (map_back)" )
+    | TBool, VBool _ -> v
+    | TInt _, VUInt32 _ -> v
+    | TOption t, VOption None -> v
+    | TOption t, VOption (Some v) -> VOption (Some (aux t v)) |> value
+    | TTuple ts, VTuple vs ->
+        let vs = List.map (fun (t, v) -> aux t v) (List.combine ts vs) in
+        VTuple vs |> value
+    | _ -> Console.error "internal error (map_back)"
+  in
+  let aty = oget (get_attr_type ds) |> strip_ty in
+  let update_labels ls = Graph.VertexMap.map (fun v -> aux aty v) ls in
+  let update_symbolics sol =
+    Solution.StringMap.filter
+      (fun s _ ->
+        List.exists
+          (fun (_, k, _) -> String.equal (Var.to_string k) s)
+          variables
+        |> not )
+      sol.symbolics
+  in
+  {sol with labels= update_labels sol.labels; symbolics= update_symbolics sol}
+
 let unroll info ds =
   let all_tys = collect_all_map_tys ds in
   let map = ref TypeMap.empty in
@@ -268,7 +317,7 @@ let unroll info ds =
           Printf.printf "  value: (%s,%s)\n" k (Printing.exp_to_string e) )
         v )
     map ; *)
-  let ds = tuplify map ds in
+  let decls = tuplify map ds in
   let variables =
     TypeMap.fold
       (fun ty es acc -> List.map (fun (x, y) -> (ty, Var.create x, y)) es @ acc)
@@ -276,13 +325,16 @@ let unroll info ds =
   in
   let symbolics =
     List.map
-      (fun (ty, x, _) -> DSymbolic (x, Ty (tuplify_ty map ty)))
+      (fun (ty, x, _) ->
+        match Typing.get_inner_type ty with
+        | TMap (ty, _) -> DSymbolic (x, Ty (tuplify_ty map ty))
+        | _ -> Console.error "internal error (unroll)" )
       variables
   in
-  let variables =
+  let vs =
     List.filter (fun (_, s, _) -> String.sub (Var.name s) 0 1 <> "d") variables
   in
-  let variables = List.map (fun (_, s, e) -> (s, e)) variables in
-  let ds = symbolics @ ds in
-  (* print_endline (Printing.declarations_to_string ds) ; *)
-  (Typing.infer_declarations info ds, variables)
+  let vs = List.map (fun (_, s, e) -> (s, e)) vs in
+  let decls = symbolics @ decls in
+  (* print_endline (Printing.declarations_to_string decls) ; *)
+  (Typing.infer_declarations info decls, vs, map_back map variables ds)

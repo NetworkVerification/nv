@@ -23,8 +23,10 @@ let print_solution solution =
         (Unsigned.UInt32.to_string k)
         (Printing.value_to_string v) )
     solution.labels ;
-  match solution.assertions with
-  | None -> ()
+  ( match solution.assertions with
+  | None ->
+      print_string [green; Bold] "Success: " ;
+      Printf.printf "all assertions passed\n"
   | Some m ->
       let all_pass = Graph.VertexMap.for_all (fun _ b -> b) m in
       if all_pass then (
@@ -37,5 +39,5 @@ let print_solution solution =
               print_string [red; Bold] "Failed: " ;
               Printf.printf "assertion for node %s\n"
                 (Unsigned.UInt32.to_string k) ) )
-          m ;
-      print_newline ()
+          m ) ;
+  print_newline ()

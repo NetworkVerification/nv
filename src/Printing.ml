@@ -250,7 +250,8 @@ let rec declaration_to_string d =
       "let " ^ Var.to_string x ^ ty_str ^ " = " ^ exp_to_string e
   | DSymbolic (x, Exp e) ->
       "symbolic " ^ Var.to_string x ^ " = " ^ exp_to_string e
-  | DSymbolic (x, _) -> "symbolic " ^ Var.to_string x
+  | DSymbolic (x, Ty ty) ->
+      "symbolic " ^ Var.to_string x ^ " : " ^ ty_to_string ty
   | DMerge e -> "let merge = " ^ exp_to_string e
   | DTrans e -> "let trans = " ^ exp_to_string e
   | DAssert e -> "let assert = " ^ exp_to_string e

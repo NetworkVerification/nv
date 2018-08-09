@@ -80,7 +80,7 @@ let run_smt info ds =
   let decls = Inline.inline_declarations info decls in
   let res =
     if unroll_maps () then (
-      let decls, vars = MapUnrolling.unroll info decls in
+      let decls, vars, f = MapUnrolling.unroll info decls in
       let decls = Inline.inline_declarations info decls in
       fs := f :: !fs ;
       Smt.solve decls ~symbolic_vars:vars )
