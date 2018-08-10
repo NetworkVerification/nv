@@ -108,7 +108,7 @@ let run_test info ds =
       let ds, f = Renaming.alpha_convert_declarations ds in
       fs := f :: !fs ;
       let ds = Inline.inline_declarations info ds in
-      Quickcheck.check_smart info ds ~iterations:10 )
+      Quickcheck.check_smart info ds ~iterations:20 )
     else Quickcheck.check_random ds ~iterations:300
   in
   match sol with

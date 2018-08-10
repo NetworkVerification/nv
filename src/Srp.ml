@@ -56,7 +56,7 @@ type info =
 
 exception Require_false
 
-let declarations_to_state ds =
+let declarations_to_state ds ~throw_requires =
   let info =
     { env= Interp.empty_env
     ; m= None
@@ -127,7 +127,10 @@ let declarations_to_state ds =
     | DRequire e -> (
       match (Interp.interp_env info.env e).v with
       | VBool true -> ()
-      | _ -> raise Require_false )
+      | _ -> 
+          if throw_requires then 
+            raise Require_false 
+          else Console.warning "requires condition not satisified by inital state" )
     | DATy _ -> ()
   in
   List.iter process_declaration ds ;
@@ -211,14 +214,16 @@ let check_assertion srp node v =
 let check_assertions srp vals =
   Graph.VertexMap.mapi (fun n v -> check_assertion srp n v) vals
 
-let simulate_declarations ds =
-  let srp, state, syms = declarations_to_state ds in
+let simulate_declarations ?throw_requires ds =
+  let throw = match throw_requires with None -> false | Some b -> b in
+  let srp, state, syms = declarations_to_state ds ~throw_requires:throw in
   let vals = simulate_init srp state in
   let asserts = check_assertions srp vals in
   {labels= vals; symbolics= syms; assertions= Some asserts}
 
-let simulate_declarations_bound ds k =
-  let srp, state, syms = declarations_to_state ds in
+let simulate_declarations_bound ?throw_requires ds k =
+  let throw = match throw_requires with None -> false | Some b -> b in
+  let srp, state, syms = declarations_to_state ds ~throw_requires:throw in
   let vals, q = simulate_init_bound srp state k in
   let asserts = check_assertions srp vals in
   ({labels= vals; symbolics= syms; assertions= Some asserts}, q)

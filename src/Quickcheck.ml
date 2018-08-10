@@ -47,7 +47,7 @@ let rec check_aux info iters acc =
       | None -> None
       | Some ds' ->
         try
-          let sol = Srp.simulate_declarations ds' in
+          let sol = Srp.simulate_declarations ~throw_requires:true ds' in
           if check_assertions sol then
             check_aux {info with iterations= info.iterations - 1} iters None
           else Some (sol, iters - info.iterations + 1)

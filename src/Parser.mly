@@ -110,9 +110,9 @@
 
 %right ELSE IN     /* lowest precedence */
 %right ARROW 
+%left AND OR 
 %nonassoc GEQ GREATER LEQ LESS EQ
 %left PLUS SUB      
-%left AND OR 
 %right NOT
 %right SOME
 %left LBRACKET      /* highest precedence */
@@ -152,6 +152,8 @@ component:
     | LET letvars EQ expr               { global_let $2 $4 $4.espan (Span.extend $1 $4.espan) }
     | SYMBOLIC ID EQ expr               { DSymbolic (snd $2, Exp $4) }
     | SYMBOLIC ID COLON ty              { DSymbolic (snd $2, Ty $4) }
+    | SYMBOLIC ID COLON ty EQ expr      { let ety = exp (ETy ($6, $4)) $6.espan in
+                                          DSymbolic (snd $2, Exp ety) }
     | REQUIRE expr                      { DRequire $2 }
     | LET EDGES EQ LBRACE RBRACE        { DEdges [] }
     | LET EDGES EQ LBRACE edges RBRACE  { DEdges $5 }
