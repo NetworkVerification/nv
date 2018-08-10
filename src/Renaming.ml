@@ -1,7 +1,8 @@
 open Collections
 open Syntax
 
-let map_back bmap x y = bmap := StringMap.add (Var.to_string y) (Var.name x) !bmap
+let map_back bmap x y =
+  bmap := StringMap.add (Var.to_string y) (Var.name x) !bmap
 
 let fresh x = Var.fresh (Var.to_string x)
 

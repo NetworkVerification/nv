@@ -138,7 +138,8 @@ let rec encode_exp_z3 descr env arr (e: exp) =
   match e.e with
   | EVar x ->
       let name =
-        if is_symbolic env.symbolics x then Var.to_string x else create_name descr x
+        if is_symbolic env.symbolics x then Var.to_string x
+        else create_name descr x
       in
       let sort = ty_to_sort env.ctx (oget e.ety) |> arr.f in
       Z3.Expr.mk_const_s env.ctx name sort
