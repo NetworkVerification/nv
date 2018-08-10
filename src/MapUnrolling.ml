@@ -3,13 +3,6 @@ open Solution
 open Syntax
 open Visitors
 
-(* TODO: 
-   the symbolic key might not work in certain cases. 
-   for example, if you have type (dict[int,int], dict[int,int]) 
-   A type can't have multiple dicts with the same value type or else 
-   we might reuse the same symbolic key across multiple dictionaries.
-   *)
-
 module ExprSet = Set.Make (struct
   type t = string * exp
 
@@ -313,7 +306,7 @@ let check_constants (map: ExprSet.t TypeMap.t) =
     map
 
 let unroll info ds =
-  let all_tys = collect_all_map_tys ds in
+  (* let all_tys = collect_all_map_tys ds in *)
   let orig_sym_types = collect_all_symbolics ds in
   let map = ref TypeMap.empty in
   (* TypeMap.iter
@@ -325,14 +318,6 @@ let unroll info ds =
   let map = collect_map_gets ds map in
   check_constants map ;
   let map = TypeMap.map sort_keys map in
-  (* TypeMap.iter
-    (fun k v ->
-      Printf.printf "key: %s\n" (Printing.ty_to_string k) ;
-      List.iter
-        (fun (k, e) ->
-          Printf.printf "  value: (%s,%s)\n" k (Printing.exp_to_string e) )
-        v )
-    map ; *)
   let decls = tuplify map ds in
   let variables =
     TypeMap.fold

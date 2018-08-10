@@ -80,7 +80,7 @@ let commandline_processing () =
     ; ("-smt", Arg.Set verify_flag, "Verify the SRP definition file using SMT")
     ; ( "-unroll-maps"
       , Arg.Set unroll_flag
-      , "Try to optimize an SMT encoding by unrolling maps" ) ]
+      , "Try to optimize SMT by unrolling maps" ) ]
   in
   let usage_msg = "SRP verification. Options available:" in
   Arg.parse speclist print_endline usage_msg
@@ -89,36 +89,36 @@ let rec apply_all s fs =
   match fs with [] -> s | f :: fs -> apply_all (f s) fs
 
 let run_smt info ds =
-  let fs = ref [init_renamer] in
+  let fs = [init_renamer] in
   let decls, f = Renaming.alpha_convert_declarations ds in
-  fs := f :: !fs ;
+  let fs = f :: fs in
   let decls = Inline.inline_declarations info decls in
-  let res =
+  let res, fs =
     if unroll_maps () then (
       try
         let decls, vars, f = MapUnrolling.unroll info decls in
         let decls = Inline.inline_declarations info decls in
-        fs := f :: !fs ;
-        Smt.solve decls ~symbolic_vars:vars
+        let fs = f :: fs in
+        (Smt.solve decls ~symbolic_vars:vars, fs)
       with MapUnrolling.Cannot_unroll _ ->
         Console.warning "unable to unroll map due to non constant index:" ;
-        Smt.solve decls ~symbolic_vars:[] )
-    else Smt.solve decls ~symbolic_vars:[]
+        (Smt.solve decls ~symbolic_vars:[], fs) )
+    else (Smt.solve decls ~symbolic_vars:[], fs)
   in
   match res with
   | Unsat -> ()
   | Unknown -> Console.error "SMT returned unknown"
-  | Sat solution -> print_solution (apply_all solution !fs)
+  | Sat solution -> print_solution (apply_all solution fs)
 
 let run_test info ds =
-  let fs = ref [init_renamer] in
-  let sol, stats =
-    if smart_gen () then (
+  let fs = [init_renamer] in
+  let (sol, stats), fs =
+    if smart_gen () then
       let ds, f = Renaming.alpha_convert_declarations ds in
-      fs := f :: !fs ;
+      let fs = f :: fs in
       let ds = Inline.inline_declarations info ds in
-      Quickcheck.check_smart info ds ~iterations:20 )
-    else Quickcheck.check_random ds ~iterations:300
+      (Quickcheck.check_smart info ds ~iterations:20, fs)
+    else (Quickcheck.check_random ds ~iterations:300, fs)
   in
   match sol with
   | None -> ()
@@ -128,9 +128,9 @@ let run_test info ds =
       Printf.printf "%d\n" stats.iterations ;
       print_string [Bold] "Rejected: " ;
       Printf.printf "%d\n" stats.num_rejected ;
-      print_solution (apply_all sol !fs)
+      print_solution (apply_all sol fs)
 
-let run_simulator decls =
+let run_simulator info decls =
   let fs = [init_renamer] in
   try
     let solution, q =
@@ -159,4 +159,4 @@ let main =
     print_endline "** End SRP Definition **" ) ;
   if verify () then run_smt info decls ;
   if random_test () then run_test info decls ;
-  if simulate () then run_simulator decls
+  if simulate () then run_simulator info decls
