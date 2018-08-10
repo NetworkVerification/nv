@@ -242,7 +242,11 @@ let collect_map_gets ds map =
 let sort_keys es =
   ExprSet.elements es |> List.stable_sort (fun (k1, _) (k2, _) -> compare k1 k2)
 
-let lookup s sol = StringMap.find (Var.create s |> Var.to_string) sol.symbolics
+let lookup s sol = 
+  Printf.printf "lookup %s\n" s;
+  let ret = StringMap.find (Var.create s |> Var.to_string) sol.symbolics in 
+  Printf.printf "done";
+  ret
 
 let build_value_map sol acc (vv, (s, _)) : (value, value) IMap.t =
   IMap.update acc (lookup s sol) vv
@@ -253,6 +257,7 @@ let drop_syms variables s _ =
 
 let map_back orig_sym_types (map: ExprSet.elt list TypeMap.t) variables ds
     (sol: Solution.t) : Solution.t =
+    
   let rec aux ty v : value =
     let ty = Typing.strip_ty ty in
     match (ty, v.v) with
@@ -288,8 +293,8 @@ let map_back orig_sym_types (map: ExprSet.elt list TypeMap.t) variables ds
 
 let collect_all_symbolics_d d =
   match d with
-  | DSymbolic (x, Exp e) -> StringMap.singleton (Var.to_string x) (oget e.ety)
-  | DSymbolic (x, Ty ty) -> StringMap.singleton (Var.to_string x) ty
+  | DSymbolic (x, Exp e) -> StringMap.singleton (Var.name x) (oget e.ety)
+  | DSymbolic (x, Ty ty) -> StringMap.singleton (Var.name x) ty
   | _ -> StringMap.empty
 
 let rec collect_all_symbolics ds =

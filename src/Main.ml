@@ -86,13 +86,13 @@ let run_smt info ds =
   let decls = Inline.inline_declarations info decls in
   let res =
     if unroll_maps () then (
-      try 
+      try
         let decls, vars, f = MapUnrolling.unroll info decls in
         let decls = Inline.inline_declarations info decls in
         fs := f :: !fs ;
         Smt.solve decls ~symbolic_vars:vars
-      with _ -> 
-        Console.warning "unable to unroll map due to non constant index";
+      with _ ->
+        Console.warning "unable to unroll map due to non constant index" ;
         Smt.solve decls ~symbolic_vars:[] )
     else Smt.solve decls ~symbolic_vars:[]
   in
@@ -132,17 +132,19 @@ let main =
     print_endline "** End SRP Definition **" ) ;
   if verify () then run_smt info decls ;
   if random_test () then run_test info decls ;
-  if simulate () then (
-    let solution, q =
-      match bound () with
-      | None -> (Srp.simulate_declarations decls, [])
-      | Some b -> Srp.simulate_declarations_bound decls b
-    in
-    print_solution solution ;
-    match q with
-    | [] -> ()
-    | qs ->
-        print_string [] "non-quiescent nodes:" ;
-        List.iter
-          (fun q -> print_string [] (Unsigned.UInt32.to_string q ^ ";"))
-          qs )
+  if simulate () then
+    try
+      let solution, q =
+        match bound () with
+        | None -> (Srp.simulate_declarations decls, [])
+        | Some b -> Srp.simulate_declarations_bound decls b
+      in
+      print_solution solution ;
+      match q with
+      | [] -> ()
+      | qs ->
+          print_string [] "non-quiescent nodes:" ;
+          List.iter
+            (fun q -> print_string [] (Unsigned.UInt32.to_string q ^ ";"))
+            qs
+    with Srp.Require_false -> Console.error "required conditions not satisfied"

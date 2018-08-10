@@ -47,7 +47,7 @@ let rec check_aux info iters acc =
       | None -> None
       | Some ds' ->
         try
-          let sol = Srp.simulate_declarations ~throw_requires:true ds' in
+          let sol = Srp.simulate_declarations ds' in
           if check_assertions sol then
             check_aux {info with iterations= info.iterations - 1} iters None
           else Some (sol, iters - info.iterations + 1)
@@ -74,7 +74,7 @@ let var_map ds =
       match d with
       | DSymbolic (x, te) ->
           let ty = match te with Exp e -> oget e.ety | Ty ty -> ty in
-          map := StringMap.add (Var.to_string x) (x, ty) !map
+          map := StringMap.add (Var.name x) (x, ty) !map
       | _ -> () )
     ds ;
   !map

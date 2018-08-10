@@ -10,7 +10,7 @@ let edges = {
  2=3;
 }
 
-symbolic d : int
+symbolic d : int = 5
 
 require d >= 1 && d <= 6
 
