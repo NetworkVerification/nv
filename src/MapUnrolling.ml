@@ -301,13 +301,14 @@ let rec collect_all_symbolics ds =
         (collect_all_symbolics_d d)
         (collect_all_symbolics ds)
 
-exception Cannot_unroll
+exception Cannot_unroll of exp
 
 let check_constants (map: ExprSet.t TypeMap.t) =
   TypeMap.iter
     (fun _ es ->
       ExprSet.iter
-        (fun (_, e) -> match e.e with EVal _ -> () | _ -> raise Cannot_unroll)
+        (fun (_, e) ->
+          match e.e with EVal _ -> () | _ -> raise (Cannot_unroll e) )
         es )
     map
 
@@ -315,12 +316,12 @@ let unroll info ds =
   let all_tys = collect_all_map_tys ds in
   let orig_sym_types = collect_all_symbolics ds in
   let map = ref TypeMap.empty in
-  TypeMap.iter
+  (* TypeMap.iter
     (fun ty _ ->
       let var = Var.fresh "dkey" in
       let e = ExprSet.singleton (Var.to_string var, EVar var |> exp) in
       map := TypeMap.add ty e !map )
-    all_tys ;
+    all_tys ; *)
   let map = collect_map_gets ds map in
   check_constants map ;
   let map = TypeMap.map sort_keys map in

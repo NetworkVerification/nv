@@ -100,8 +100,8 @@ let run_smt info ds =
         let decls = Inline.inline_declarations info decls in
         fs := f :: !fs ;
         Smt.solve decls ~symbolic_vars:vars
-      with _ ->
-        Console.warning "unable to unroll map due to non constant index" ;
+      with MapUnrolling.Cannot_unroll _ ->
+        Console.warning "unable to unroll map due to non constant index:" ;
         Smt.solve decls ~symbolic_vars:[] )
     else Smt.solve decls ~symbolic_vars:[]
   in
@@ -130,7 +130,7 @@ let run_test info ds =
       Printf.printf "%d\n" stats.num_rejected ;
       print_solution (apply_all sol !fs)
 
-let run_simulator decls = 
+let run_simulator decls =
   let fs = [init_renamer] in
   try
     let solution, q =
