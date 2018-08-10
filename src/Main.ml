@@ -86,10 +86,14 @@ let run_smt info ds =
   let decls = Inline.inline_declarations info decls in
   let res =
     if unroll_maps () then (
-      let decls, vars, f = MapUnrolling.unroll info decls in
-      let decls = Inline.inline_declarations info decls in
-      fs := f :: !fs ;
-      Smt.solve decls ~symbolic_vars:vars )
+      try 
+        let decls, vars, f = MapUnrolling.unroll info decls in
+        let decls = Inline.inline_declarations info decls in
+        fs := f :: !fs ;
+        Smt.solve decls ~symbolic_vars:vars
+      with _ -> 
+        Console.warning "unable to unroll map due to non constant index";
+        Smt.solve decls ~symbolic_vars:[] )
     else Smt.solve decls ~symbolic_vars:[]
   in
   match res with

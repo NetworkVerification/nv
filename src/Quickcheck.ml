@@ -126,16 +126,12 @@ let check_random ds ~iterations =
     in
     (ds, Some ds')
   in
-  let info =
-    {decls= ds; iterations= iterations; num_rejected; generator}
-  in
+  let info = {decls= ds; iterations; num_rejected; generator} in
   check info iterations num_rejected
 
 let check_smart info ds ~iterations =
   let prog_constants = collect_all_values ds in
   let num_rejected = ref 0 in
   let generator ds = smart_symbolics info prog_constants (var_map ds) ds in
-  let info =
-    {decls= ds; iterations= iterations; num_rejected; generator}
-  in
+  let info = {decls= ds; iterations; num_rejected; generator} in
   check info iterations (ref 0)
