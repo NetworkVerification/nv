@@ -6,6 +6,12 @@ module StringMap = Map.Make (struct
   let compare = String.compare
 end)
 
+module VarMap = Map.Make (struct
+  type t = Var.t
+
+  let compare = compare
+end)
+
 module TypeMap = Map.Make (struct
   type t = ty
 

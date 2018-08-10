@@ -2,6 +2,8 @@ open BatMap
 
 type ('k, 'v) t
 
+val default : ('k, 'v) t -> 'v
+
 val create : ('k -> 'k -> int) -> 'v -> ('k, 'v) t
 
 val bindings : ('k, 'v) t -> ('k * 'v) list * 'v

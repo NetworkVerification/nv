@@ -3,6 +3,8 @@ open Unsigned
 
 type ('k, 'v) t = ('k, 'v) PMap.t * 'v
 
+let default (_, default) = default
+
 let create cmp (default: 'v) : ('k, 'v) t = (PMap.create cmp, default)
 
 let find (m, default) k = PMap.find_default default k m

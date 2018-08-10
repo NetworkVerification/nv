@@ -52,6 +52,23 @@ let reset_tyvars () =
 let rec get_inner_type t : ty =
   match t with TVar {contents= Link t} -> get_inner_type t | _ -> t
 
+let annot ty e = {e= e.e; ety= Some ty; espan= e.espan}
+
+let rec check_annot_val (v: value) =
+  ( match v.vty with
+  | None ->
+      Console.error
+        (Printf.sprintf "internal type annotation missing: %s\n"
+           (Printing.value_to_string v))
+  | Some _ -> () ) ;
+  match v.v with
+  | VOption (Some v) -> check_annot_val v
+  | VTuple vs -> List.iter check_annot_val vs
+  | VMap map ->
+      let bs, _ = IMap.bindings map in
+      List.iter (fun (v1, v2) -> check_annot_val v1 ; check_annot_val v2) bs
+  | _ -> ()
+
 let rec check_annot (e: exp) =
   (* Printf.printf "expr: %s\n" (Printing.exp_to_string e) ;
   Printf.printf "type: %s\n" (Printing.ty_to_string (oget e.ety)) ; *)
@@ -62,7 +79,8 @@ let rec check_annot (e: exp) =
            (Printing.exp_to_string e))
   | Some _ -> () ) ;
   match e.e with
-  | EVar _ | EVal _ -> ()
+  | EVar _ -> ()
+  | EVal v -> check_annot_val v
   | EOp (op, es) -> List.iter check_annot es
   | EFun f -> check_annot f.body
   | EApp (e1, e2) -> check_annot e1 ; check_annot e2
@@ -278,11 +296,10 @@ let op_typ op =
   (* Unsigned Integer 32 operators *)
   | UAdd -> ([tint; tint], tint)
   | USub -> ([tint; tint], tint)
-  | UEq -> ([tint; tint], TBool)
   | ULess -> ([tint; tint], TBool)
   | ULeq -> ([tint; tint], TBool)
   (* Map operations *)
-  | MCreate | MGet | MSet | MMap | MMerge | MFilter ->
+  | MCreate | MGet | MSet | MMap | MMerge | MFilter | UEq ->
       Console.error "internal error (op_typ)"
 
 let texp (e, t) = {e; ety= Some t; espan= Span.default}
@@ -293,8 +310,7 @@ let textract e =
   | Some ty -> (e, ty)
 
 let rec infer_exp i info env (e: exp) : exp =
-  (* Printf.printf "infer_exp: %s\n"
-    (Printing.exp_to_string e) ; *)
+  (* Printf.printf "infer_exp: %s\n" (Printing.exp_to_string e) ; *)
   let exp =
     match e.e with
     | EVar x -> (
@@ -354,6 +370,11 @@ let rec infer_exp i info env (e: exp) : exp =
       | MGet, _ | MSet, _ | MCreate, _ | MMap, _ | MFilter, _ | MMerge, _ ->
           Console.error_position info e.espan
             (Printf.sprintf "invalid number of parameters")
+      | UEq, [e1; e2] ->
+          let e1, ty1 = infer_exp (i + 1) info env e1 |> textract in
+          let e2, ty2 = infer_exp (i + 1) info env e2 |> textract in
+          unify info e ty1 ty2 ;
+          texp (EOp (o, [e1; e2]), TBool)
       | _ ->
           let argtys, resty = op_typ o in
           let es, tys = infer_exps (i + 1) info env es in
@@ -410,7 +431,7 @@ let rec infer_exp i info env (e: exp) : exp =
         unify info e t t1 ;
         texp (ETy (e, t1), t1)
   in
-  (* Printf.printf "%stype: %s\n" (Console.repeat " " i)
+  (* Printf.printf "type: %s\n"
     (Printing.ty_to_string (oget exp.ety)) ;
   check_annot exp ; *)
   exp
@@ -431,23 +452,34 @@ and textractv v =
   | Some ty -> (v, ty)
 
 and infer_value info env (v: Syntax.value) : Syntax.value =
+  (* Printf.printf "infer_value: %s\n" (Printing.value_to_string v) ; *)
   match v.v with
   | VBool b -> tvalue (v.v, TBool)
   | VUInt32 i -> tvalue (v.v, tint)
-  | VMap m ->
-      Console.error "internal error (infer_value)"
-      (* To DO *)
-      (*
-      let i = IMap.length m in
-      let (vs, default) = IMap.bindings m in
-      let (default, t) = infer_value env default in
-      let (vs, ts) = infer_values env (List.map (fun (_,v) -> v) vs) in
-      let tv = fresh_tyvar () in
-      unify t tv;
-      List.iter (fun t -> unify t tv) ts;
-      let t = TMap (i, tv) in
-      let m = IMap.from_bindings i (vs,default) in
-      (VMap (m, Some tv), t) *)
+  | VMap m -> (
+      let vs, default = IMap.bindings m in
+      let default, dty = infer_value info env default |> textractv in
+      match vs with
+      | [] ->
+          let ty = fresh_tyvar () in
+          let map = IMap.create compare_values default in
+          tvalue (VMap map, TMap (ty, dty))
+      | (kv, vv) :: _ ->
+          let kv, kvty = infer_value info env kv |> textractv in
+          let vv, vvty = infer_value info env vv |> textractv in
+          unify info (val_to_exp v) vvty dty ;
+          let vs =
+            List.map
+              (fun (kv2, vv2) ->
+                let kv2, kvty2 = infer_value info env kv2 |> textractv in
+                let vv2, vvty2 = infer_value info env vv2 |> textractv in
+                unify info (val_to_exp v) kvty kvty2 ;
+                unify info (val_to_exp v) vvty vvty2 ;
+                (kv2, vv2) )
+              vs
+          in
+          let map = IMap.from_bindings compare_values (vs, default) in
+          tvalue (VMap map, TMap (kvty, vvty)) )
   | VTuple vs ->
       let vs, ts = infer_values info env vs in
       tvalue (VTuple vs, TTuple ts)
@@ -558,8 +590,7 @@ and infer_declaration i info env aty d : ty Env.t * declaration =
   | DRequire e ->
       let e' = infer_exp (i + 1) info env e in
       let ty = oget e'.ety in
-      unify info e ty TBool ;
-      (Env.update env (Var.create "require") ty, DRequire e')
+      unify info e ty TBool ; (env, DRequire e')
   | DInit e ->
       let e' = infer_exp (i + 1) info env e in
       let ty = oget e'.ety in

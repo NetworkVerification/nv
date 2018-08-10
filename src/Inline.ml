@@ -1,9 +1,8 @@
 open Syntax
+open Typing
 
 let is_function_ty e =
   match Typing.get_inner_type (oget e.ety) with TArrow _ -> true | _ -> false
-
-let annot ty e = {e= e.e; ety= Some ty; espan= e.espan}
 
 let rec has_var p x =
   match p with

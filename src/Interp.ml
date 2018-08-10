@@ -131,8 +131,8 @@ and interp_op env op es =
   | Not, [{v= VBool b1}] -> VBool (not b1) |> value
   | UAdd, [{v= VUInt32 i1}; {v= VUInt32 i2}] ->
       VUInt32 (UInt32.add i1 i2) |> value
-  | UEq, [{v= VUInt32 i1}; {v= VUInt32 i2}] ->
-      (if UInt32.compare i1 i2 = 0 then VBool true else VBool false) |> value
+  | UEq, [v1; v2] ->
+      (if compare_values v1 v2 = 0 then VBool true else VBool false) |> value
   | ULess, [{v= VUInt32 i1}; {v= VUInt32 i2}] ->
       (if UInt32.compare i1 i2 = -1 then VBool true else VBool false) |> value
   | ULeq, [{v= VUInt32 i1}; {v= VUInt32 i2}] ->
