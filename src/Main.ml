@@ -59,6 +59,15 @@ let set_filename s = filename_flag := Some s
 
 let set_bound n = sim_bound_flag := Some n
 
+let init_renamer sol =
+  let drop_zero s = String.sub s 0 (String.length s - 1) in
+  let syms =
+    Collections.StringMap.fold
+      (fun s v acc -> Collections.StringMap.add (drop_zero s) v acc)
+      sol.symbolics Collections.StringMap.empty
+  in
+  {sol with symbolics= syms}
+
 let commandline_processing () =
   let speclist =
     [ ("-d", Arg.Set debug_flag, "Enables debugging mode")
@@ -80,7 +89,7 @@ let rec apply_all s fs =
   match fs with [] -> s | f :: fs -> apply_all (f s) fs
 
 let run_smt info ds =
-  let fs = ref [] in
+  let fs = ref [init_renamer] in
   let decls, f = Renaming.alpha_convert_declarations ds in
   fs := f :: !fs ;
   let decls = Inline.inline_declarations info decls in
@@ -102,7 +111,7 @@ let run_smt info ds =
   | Sat solution -> print_solution (apply_all solution !fs)
 
 let run_test info ds =
-  let fs = ref [] in
+  let fs = ref [init_renamer] in
   let sol, stats =
     if smart_gen () then (
       let ds, f = Renaming.alpha_convert_declarations ds in
