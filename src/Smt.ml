@@ -138,8 +138,7 @@ let rec encode_exp_z3 descr env arr (e: exp) =
   match e.e with
   | EVar x ->
       let name =
-        if is_symbolic env.symbolics x then Var.to_string x
-        else create_name descr x
+        if is_symbolic env.symbolics x then Var.to_string x else create_name descr x
       in
       let sort = ty_to_sort env.ctx (oget e.ety) |> arr.f in
       Z3.Expr.mk_const_s env.ctx name sort
@@ -801,7 +800,7 @@ let build_symbolic_assignment env m =
   List.iter
     (fun (x, e) ->
       let ty = match e with Ty ty -> ty | Exp e -> oget e.ety in
-      let name = Var.name x in
+      let name = Var.to_string x in
       let e = eval env m name ty in
       sym_map := StringMap.add name e !sym_map )
     env.symbolics ;

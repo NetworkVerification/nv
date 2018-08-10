@@ -74,7 +74,7 @@ let var_map ds =
       match d with
       | DSymbolic (x, te) ->
           let ty = match te with Exp e -> oget e.ety | Ty ty -> ty in
-          map := StringMap.add (Var.name x) (x, ty) !map
+          map := StringMap.add (Var.to_string x) (x, ty) !map
       | _ -> () )
     ds ;
   !map

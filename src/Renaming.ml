@@ -1,8 +1,7 @@
 open Collections
 open Syntax
 
-let map_back bmap x y =
-  bmap := StringMap.add (Var.name y) (Var.name x) !bmap
+let map_back bmap x y = bmap := StringMap.add (Var.to_string y) (Var.name x) !bmap
 
 let fresh x = Var.fresh (Var.to_string x)
 
@@ -100,8 +99,7 @@ let update_symbolics bmap smap =
     (fun s v acc ->
       match StringMap.find_opt s bmap with
       | None -> StringMap.add s v acc
-      | Some k -> 
-            StringMap.add k v acc )
+      | Some k -> StringMap.add k v acc )
     smap StringMap.empty
 
 let adjust_solution bmap (s: Solution.t) =
