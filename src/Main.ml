@@ -130,6 +130,24 @@ let run_test info ds =
       Printf.printf "%d\n" stats.num_rejected ;
       print_solution (apply_all sol !fs)
 
+let run_simulator decls = 
+  let fs = [init_renamer] in
+  try
+    let solution, q =
+      match bound () with
+      | None -> (Srp.simulate_declarations decls, [])
+      | Some b -> Srp.simulate_declarations_bound decls b
+    in
+    print_solution (apply_all solution fs) ;
+    match q with
+    | [] -> ()
+    | qs ->
+        print_string [] "non-quiescent nodes:" ;
+        List.iter
+          (fun q -> print_string [] (Unsigned.UInt32.to_string q ^ ";"))
+          qs
+  with Srp.Require_false -> Console.error "required conditions not satisfied"
+
 let main =
   let () = commandline_processing () in
   let ds, info = Input.parse (filename ()) in
@@ -141,19 +159,4 @@ let main =
     print_endline "** End SRP Definition **" ) ;
   if verify () then run_smt info decls ;
   if random_test () then run_test info decls ;
-  if simulate () then
-    try
-      let solution, q =
-        match bound () with
-        | None -> (Srp.simulate_declarations decls, [])
-        | Some b -> Srp.simulate_declarations_bound decls b
-      in
-      print_solution solution ;
-      match q with
-      | [] -> ()
-      | qs ->
-          print_string [] "non-quiescent nodes:" ;
-          List.iter
-            (fun q -> print_string [] (Unsigned.UInt32.to_string q ^ ";"))
-            qs
-    with Srp.Require_false -> Console.error "required conditions not satisfied"
+  if simulate () then run_simulator decls
