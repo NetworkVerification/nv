@@ -8,7 +8,7 @@ open Unsigned
     3. preprocessing of filter statements 
     4. map set and get operations *)
 
-type bdd_map = {map: Syntax.value Mtbdd.t; ty: ty}
+type t = {map: Syntax.value Mtbdd.t; ty: ty}
 
 let mgr = Man.make_v ()
 
@@ -106,13 +106,12 @@ let bdd_to_value (guard: Bdd.vt) (ty: ty) : value =
     else None)
   (fun b1 b2 -> b1 && b2) *)
 
-let map (f: value -> value) ({map= vdd; ty}: bdd_map) : bdd_map =
+let map (f: value -> value) ({map= vdd; ty}: t) : t =
   let g x = f (Mtbdd.get x) |> Mtbdd.unique tbl in
   let map = Mapleaf.mapleaf1 g vdd in
   {map; ty}
 
-let mapWhen (pred: Bdd.vt -> bool) (f: value -> value)
-    ({map= vdd; ty}: bdd_map) : bdd_map =
+let map_when (pred: Bdd.vt -> bool) (f: value -> value) ({map= vdd; ty}: t) : t =
   let map =
     Mapleaf.combineleaf1
       ~default:(Vdd._background (Vdd.manager vdd))
@@ -123,18 +122,22 @@ let mapWhen (pred: Bdd.vt -> bool) (f: value -> value)
   in
   {map; ty}
 
-let merge (f: value -> value -> value) ({map= x; ty= ty1}: bdd_map)
-    ({map= y; ty= ty2}: bdd_map) : bdd_map =
+let map_when (pred: value -> bool) (f: value -> value) ({map= vdd; ty}: t) : t =
+  let p bdd = pred (bdd_to_value bdd ty) in 
+  map_when p f {map=vdd; ty}
+
+let merge (f: value -> value -> value) ({map= x; ty= ty1}: t)
+    ({map= y; ty= ty2}: t) : t =
   let g x y = f (Mtbdd.get x) (Mtbdd.get y) |> Mtbdd.unique tbl in
   let map = Mapleaf.mapleaf2 g x y in
   {map; ty= ty1}
 
-let get (v: value) ({map; ty}: bdd_map) : value =
+let get (v: value) ({map; ty}: t) : value =
   let bdd = value_to_bdd v in
   let for_key = Mtbdd.constrain map bdd in
   Mtbdd.pick_leaf for_key
 
-let set (k: value) (v: value) ({map; ty}: bdd_map) : bdd_map =
+let set (k: value) (v: value) ({map; ty}: t) : t =
   let leaf = Mtbdd.cst mgr tbl v in
   let key = value_to_bdd k in
   let map = Mtbdd.ite key leaf map in
@@ -144,4 +147,4 @@ let compare_maps bm1 bm2 = Mtbdd.topvar bm1.map - Mtbdd.topvar bm2.map
 
 let equal_maps bm1 bm2 = compare bm1 bm2 = 0
 
-let hash_maps bm = Mtbdd.topvar bm.map
+let hash_map bm = Mtbdd.topvar bm.map
