@@ -129,8 +129,19 @@ let merge (f: value -> value -> value) ({map= x; ty= ty1}: bdd_map)
   let map = Mapleaf.mapleaf2 g x y in
   {map; ty= ty1}
 
-let compare bm1 bm2 = (Mtbdd.topvar bm1.map) - (Mtbdd.topvar bm2.map)
+let get (v: value) ({map; ty}: bdd_map) : value =
+  let bdd = value_to_bdd v in
+  let for_key = Mtbdd.constrain map bdd in
+  Mtbdd.pick_leaf for_key
 
-let equal bm1 bm2 = compare bm1 bm2 = 0
+let set (k: value) (v: value) ({map; ty}: bdd_map) : bdd_map =
+  let leaf = Mtbdd.cst mgr tbl v in
+  let key = value_to_bdd k in
+  let map = Mtbdd.ite key leaf map in
+  {map; ty}
 
-let hash bm = Mtbdd.topvar bm.map
+let compare_maps bm1 bm2 = Mtbdd.topvar bm1.map - Mtbdd.topvar bm2.map
+
+let equal_maps bm1 bm2 = compare bm1 bm2 = 0
+
+let hash_maps bm = Mtbdd.topvar bm.map
