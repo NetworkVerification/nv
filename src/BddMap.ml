@@ -12,8 +12,6 @@ type bdd_map = {map: Syntax.value Mtbdd.t; ty: ty}
 
 let mgr = Man.make_v ()
 
-(* Mtbdd.cst manager tbl 3 *)
-
 let tbl = Mtbdd.make_table ~hash:hash_value ~equal:equal_values
 
 let nth_bit x i = x land (1 lsl i) <> 0
@@ -63,14 +61,22 @@ let value_to_bdd (v: value) : Bdd.vt =
   bdd
 
 let tbool_to_bool tb =
-  match tb with Man.False -> false | Man.True | Man.Top -> true
+  match tb with Man.False | Man.Top -> false | Man.True -> true
 
 let bdd_to_value (guard: Bdd.vt) (ty: ty) : value =
   let vars = Bdd.pick_minterm guard in
   let rec aux idx ty =
     match Typing.get_inner_type ty with
     | TBool -> (VBool (tbool_to_bool vars.(idx)) |> value, idx + 1)
-    | TInt _ -> failwith ""
+    | TInt _ ->
+        let acc = ref UInt32.zero in
+        for i = 0 to 31 do
+          let bit = tbool_to_bool vars.(idx + i) in
+          if bit then
+            let add = UInt32.shift_left UInt32.one i in
+            acc := UInt32.add !acc add
+        done ;
+        (value (VUInt32 !acc), idx + 32)
     | TTuple ts ->
         let vs, i =
           List.fold_left
@@ -122,3 +128,9 @@ let merge (f: value -> value -> value) ({map= x; ty= ty1}: bdd_map)
   let g x y = f (Mtbdd.get x) (Mtbdd.get y) |> Mtbdd.unique tbl in
   let map = Mapleaf.mapleaf2 g x y in
   {map; ty= ty1}
+
+let compare bm1 bm2 = (Mtbdd.topvar bm1.map) - (Mtbdd.topvar bm2.map)
+
+let equal bm1 bm2 = compare bm1 bm2 = 0
+
+let hash bm = Mtbdd.topvar bm.map
