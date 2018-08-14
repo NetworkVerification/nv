@@ -1,6 +1,7 @@
 (* Driver *)
 
 open ANSITerminal
+open BddMap
 open Cmdline
 open Syntax
 open Printing
@@ -11,7 +12,6 @@ open Inline
 open Quickcheck
 open Smt
 open Solution
-open StateSet
 
 let init_renamer sol =
   let drop_zero s = String.sub s 0 (String.length s - 1) in
