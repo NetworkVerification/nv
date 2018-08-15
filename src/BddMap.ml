@@ -8,7 +8,7 @@ open Unsigned
     3. preprocessing of filter statements 
     4. map set and get operations *)
 
-type t = {map: Syntax.value Mtbdd.t; ty: ty}
+type t = Syntax.value Mtbdd.t
 
 let mgr = Man.make_v ()
 
@@ -106,45 +106,45 @@ let bdd_to_value (guard: Bdd.vt) (ty: ty) : value =
     else None)
   (fun b1 b2 -> b1 && b2) *)
 
-let map (f: value -> value) ({map= vdd; ty}: t) : t =
+let map (f: value -> value) (vdd: t) : t =
   let g x = f (Mtbdd.get x) |> Mtbdd.unique tbl in
-  let map = Mapleaf.mapleaf1 g vdd in
-  {map; ty}
+  Mapleaf.mapleaf1 g vdd
 
-let map_when (pred: Bdd.vt -> bool) (f: value -> value) ({map= vdd; ty}: t) : t =
-  let map =
-    Mapleaf.combineleaf1
-      ~default:(Vdd._background (Vdd.manager vdd))
-      ~combine:Mapleaf.combineretractive
-      (fun g leaf ->
-        (g, if pred g then f (Mtbdd.get leaf) |> Mtbdd.unique tbl else leaf) )
-      vdd
-  in
-  {map; ty}
+let map_when (pred: Bdd.vt -> bool) (f: value -> value) (vdd: t) : t =
+  Mapleaf.combineleaf1
+    ~default:(Vdd._background (Vdd.manager vdd))
+    ~combine:Mapleaf.combineretractive
+    (fun g leaf ->
+      (g, if pred g then f (Mtbdd.get leaf) |> Mtbdd.unique tbl else leaf) )
+    vdd
 
-let map_when (pred: value -> bool) (f: value -> value) ({map= vdd; ty}: t) : t =
-  let p bdd = pred (bdd_to_value bdd ty) in 
-  map_when p f {map=vdd; ty}
+let map_when (ty: ty) (pred: value -> bool) (f: value -> value) (vdd: t) : t =
+  let p bdd = pred (bdd_to_value bdd ty) in
+  map_when p f vdd
 
-let merge (f: value -> value -> value) ({map= x; ty= ty1}: t)
-    ({map= y; ty= ty2}: t) : t =
+let merge (f: value -> value -> value) (x: t) (y: t) : t =
   let g x y = f (Mtbdd.get x) (Mtbdd.get y) |> Mtbdd.unique tbl in
-  let map = Mapleaf.mapleaf2 g x y in
-  {map; ty= ty1}
+  Mapleaf.mapleaf2 g x y
 
-let get (v: value) ({map; ty}: t) : value =
+let find (map: t) (v: value) : value =
   let bdd = value_to_bdd v in
   let for_key = Mtbdd.constrain map bdd in
   Mtbdd.pick_leaf for_key
 
-let set (k: value) (v: value) ({map; ty}: t) : t =
+let update (map: t) (k: value) (v: value) : t =
   let leaf = Mtbdd.cst mgr tbl v in
   let key = value_to_bdd k in
-  let map = Mtbdd.ite key leaf map in
-  {map; ty}
+  Mtbdd.ite key leaf map
 
-let compare_maps bm1 bm2 = Mtbdd.topvar bm1.map - Mtbdd.topvar bm2.map
+let create (v: value) : t = Mtbdd.cst mgr tbl v
+
+let bindings (map: t) : (value * value) list = failwith ""
+
+let from_bindings ((bs, default): (value * value) list * value) : t =
+  failwith ""
+
+let compare_maps bm1 bm2 = Mtbdd.topvar bm1 - Mtbdd.topvar bm2
 
 let equal_maps bm1 bm2 = compare bm1 bm2 = 0
 
-let hash_map bm = Mtbdd.topvar bm.map
+let hash_map bm = Mtbdd.topvar bm

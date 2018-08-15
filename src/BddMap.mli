@@ -2,18 +2,24 @@ open Syntax
 
 type t
 
-val map: (value -> value) -> t -> t 
+val create : value -> t
 
-val map_when: (value -> bool) -> (value -> value) -> t -> t
+val bindings : t -> (value * value) list
 
-val merge: (value -> value -> value) -> t -> t -> t
+val from_bindings : (value * value) list * value -> t
 
-val get: value -> t -> value
+val map : (value -> value) -> t -> t
 
-val set: value -> value -> t -> t
+val map_when : ty -> (value -> bool) -> (value -> value) -> t -> t
 
-val compare_maps: t -> t -> int
+val merge : (value -> value -> value) -> t -> t -> t
 
-val equal_maps: t -> t -> bool
+val find : t -> value -> value
 
-val hash_map: t -> int
+val update : t -> value -> value -> t
+
+val compare_maps : t -> t -> int
+
+val equal_maps : t -> t -> bool
+
+val hash_map : t -> int
