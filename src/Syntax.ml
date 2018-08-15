@@ -254,10 +254,15 @@ let rec hash_value v =
   match v.v with
   | VBool b -> if b then 1 else 0
   | VUInt32 i -> UInt32.to_int i
-  | VMap m -> 5
+  | VMap m -> failwith ""
   | VTuple vs -> List.fold_left (fun acc v -> (31 * acc) + hash_value v) 0 vs
   | VOption vo -> (
-    match vo with None -> 0 | Some x -> 1 + (31 * hash_value x) )
+    match vo with None -> 5 | Some x -> 7 + (31 * hash_value x) )
   | VClosure (e1, f1) ->
-      let {ty= ty1; value= value1} = e1 in
-      4
+      let {ty= ty1; value= v} = e1 in
+      let vs = Env.to_list v in
+      List.fold_left
+        (fun acc (x, v) ->
+          let x = Hashtbl.hash (Var.to_string x) in
+          (31 * acc) + (5 * x) + hash_value v )
+        0 vs

@@ -8,9 +8,16 @@ open Unsigned
     3. preprocessing of filter statements 
     4. map set and get operations *)
 
-type t = Syntax.value Mtbdd.t
+type t = Syntax.value Mtbdd.t * ty
 
-let mgr = Man.make_v ~numVars:32 ()
+let mgr = ref None
+
+let init sz = mgr := Some (Man.make_v ~numVars:sz ())
+
+let get_mgr () =
+  match !mgr with
+  | None -> Console.error "Internal error (bdd map size not initialized)"
+  | Some mgr -> mgr
 
 let tbl = Mtbdd.make_table ~hash:hash_value ~equal:equal_values
 
@@ -21,11 +28,13 @@ let get_bit (x: UInt32.t) (i: int) : bool =
   nth_bit x i
 
 let mk_int i idx =
-  let acc = ref (Bdd.dtrue mgr) in
+  let acc = ref (Bdd.dtrue (get_mgr ())) in
   for j = 0 to 31 do
-    let var = Bdd.ithvar mgr (idx + j) in
+    let var = Bdd.ithvar (get_mgr ()) (idx + j) in
     let bit = get_bit i j in
-    let bdd = if bit then Bdd.dtrue mgr else Bdd.dfalse mgr in
+    let bdd =
+      if bit then Bdd.dtrue (get_mgr ()) else Bdd.dfalse (get_mgr ())
+    in
     acc := Bdd.dand !acc (Bdd.eq var bdd)
   done ;
   !acc
@@ -34,25 +43,25 @@ let value_to_bdd (v: value) : Bdd.vt =
   let rec aux v idx =
     match v.v with
     | VBool b ->
-        let var = Bdd.ithvar mgr idx in
+        let var = Bdd.ithvar (get_mgr ()) idx in
         ((if b then var else Bdd.dnot var), idx + 1)
     | VUInt32 i -> (mk_int i idx, idx + 32)
     | VTuple vs ->
-        let base = Bdd.dtrue mgr in
+        let base = Bdd.dtrue (get_mgr ()) in
         List.fold_left
           (fun (bdd_acc, idx) v ->
             let bdd, i = aux v idx in
             (Bdd.dand bdd_acc bdd, i) )
           (base, idx) vs
     | VOption None ->
-        let var = Bdd.ithvar mgr idx in
-        let tag = Bdd.eq var (Bdd.dfalse mgr) in
+        let var = Bdd.ithvar (get_mgr ()) idx in
+        let tag = Bdd.eq var (Bdd.dfalse (get_mgr ())) in
         let dv = Generators.default_value (oget v.vty) in
         let value, idx = aux dv (idx + 1) in
         (Bdd.dand tag value, idx)
     | VOption (Some dv) ->
-        let var = Bdd.ithvar mgr idx in
-        let tag = Bdd.eq var (Bdd.dfalse mgr) in
+        let var = Bdd.ithvar (get_mgr ()) idx in
+        let tag = Bdd.eq var (Bdd.dtrue (get_mgr ())) in
         let value, idx = aux dv (idx + 1) in
         (Bdd.dand tag value, idx)
     | VMap _ | VClosure _ -> Console.error "internal error (value_to_bdd)"
@@ -109,39 +118,40 @@ let bdd_to_value (guard: Bdd.vt) (ty: ty) : value =
     else None)
   (fun b1 b2 -> b1 && b2) *)
 
-let map (f: value -> value) (vdd: t) : t =
+let map (f: value -> value) ((vdd, ty): t) : t =
   let g x = f (Mtbdd.get x) |> Mtbdd.unique tbl in
-  Mapleaf.mapleaf1 g vdd
+  (Mapleaf.mapleaf1 g vdd, ty)
 
-let map_when (pred: Bdd.vt -> bool) (f: value -> value) (vdd: t) : t =
-  Mapleaf.combineleaf1
-    ~default:(Vdd._background (Vdd.manager vdd))
-    ~combine:Mapleaf.combineretractive
-    (fun g leaf ->
-      (g, if pred g then f (Mtbdd.get leaf) |> Mtbdd.unique tbl else leaf) )
-    vdd
+let map_when (pred: Bdd.vt -> bool) (f: value -> value) ((vdd, ty): t) : t =
+  ( Mapleaf.combineleaf1
+      ~default:(Vdd._background (Vdd.manager vdd))
+      ~combine:Mapleaf.combineretractive
+      (fun g leaf ->
+        (g, if pred g then f (Mtbdd.get leaf) |> Mtbdd.unique tbl else leaf) )
+      vdd
+  , ty )
 
-let map_when (pred: value -> bool) (f: value -> value) (vdd: t) (ty: ty) : t =
+let map_when (pred: value -> bool) (f: value -> value) ((vdd, ty): t) : t =
   let p bdd = pred (bdd_to_value bdd ty) in
-  map_when p f vdd
+  map_when p f (vdd, ty)
 
-let merge (f: value -> value -> value) (x: t) (y: t) : t =
+let merge (f: value -> value -> value) ((x, tyx): t) ((y, tyy): t) : t =
   let g x y = f (Mtbdd.get x) (Mtbdd.get y) |> Mtbdd.unique tbl in
-  Mapleaf.mapleaf2 g x y
+  (Mapleaf.mapleaf2 g x y, tyx)
 
-let find (map: t) (v: value) : value =
+let find ((map, _): t) (v: value) : value =
   let bdd = value_to_bdd v in
   let for_key = Mtbdd.constrain map bdd in
   Mtbdd.pick_leaf for_key
 
-let update (map: t) (k: value) (v: value) : t =
-  let leaf = Mtbdd.cst mgr tbl v in
+let update ((map, ty): t) (k: value) (v: value) : t =
+  let leaf = Mtbdd.cst (get_mgr ()) tbl v in
   let key = value_to_bdd k in
-  Mtbdd.ite key leaf map
+  (Mtbdd.ite key leaf map, ty)
 
-let create (v: value) : t = Mtbdd.cst mgr tbl v
+let create ~key_ty:ty (v: value) : t = (Mtbdd.cst (get_mgr ()) tbl v, ty)
 
-let bindings (map: t) (ty: ty) : (value * value) list =
+let bindings ((map, ty): t) : (value * value) list =
   let bs = ref [] in
   Mtbdd.iter_cube
     (fun vars v ->
@@ -154,14 +164,14 @@ let bindings (map: t) (ty: ty) : (value * value) list =
 let from_bindings ((bs, default): (value * value) list * value) : t =
   failwith ""
 
-let compare_maps bm1 bm2 = Mtbdd.topvar bm1 - Mtbdd.topvar bm2
+let compare_maps (bm1, _) (bm2, _) = Mtbdd.topvar bm1 - Mtbdd.topvar bm2
 
 let equal_maps bm1 bm2 = compare bm1 bm2 = 0
 
-let hash_map bm = Mtbdd.topvar bm
+let hash_map (bm, _) = Mtbdd.topvar bm
 
-let show_map bm ty =
-  let bs = bindings bm ty in
+let show_map bm =
+  let bs = bindings bm in
   let str =
     List.fold_left
       (fun acc (k, v) ->

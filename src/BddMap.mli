@@ -2,15 +2,17 @@ open Syntax
 
 type t
 
-val create : value -> t
+val init : int -> unit
 
-val bindings : t -> ty -> (value * value) list
+val create : key_ty:ty -> value -> t
+
+val bindings : t -> (value * value) list
 
 val from_bindings : (value * value) list * value -> t
 
 val map : (value -> value) -> t -> t
 
-val map_when : (value -> bool) -> (value -> value) -> t -> ty -> t
+val map_when : (value -> bool) -> (value -> value) -> t -> t
 
 val merge : (value -> value -> value) -> t -> t -> t
 
@@ -24,4 +26,4 @@ val equal_maps : t -> t -> bool
 
 val hash_map : t -> int
 
-val show_map : t -> ty -> string
+val show_map : t -> string
