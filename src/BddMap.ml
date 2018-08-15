@@ -10,14 +10,25 @@ open Unsigned
 
 type t = Syntax.value Mtbdd.t * ty
 
-let mgr = ref None
+let mgr = Man.make_v ()
 
-let init sz = mgr := Some (Man.make_v ~numVars:sz ())
+let set_size sz =
+  let num_vars = Man.get_bddvar_nb mgr in
+  if num_vars < sz then
+    for i = 1 to sz - num_vars do ignore (Bdd.newvar mgr) done
 
-let get_mgr () =
-  match !mgr with
-  | None -> Console.error "Internal error (bdd map size not initialized)"
-  | Some mgr -> mgr
+let ithvar i =
+  set_size (i + 1) ;
+  Bdd.ithvar mgr i
+
+let rec ty_to_size ty =
+  match Typing.get_inner_type ty with
+  | TBool -> 1
+  | TInt _ -> 32
+  | TOption tyo -> 1 + ty_to_size tyo
+  | TTuple ts -> List.fold_left (fun acc t -> acc + ty_to_size t) 0 ts
+  | TArrow _ | TMap _ | TVar _ | QVar _ ->
+      Console.error "internal error (ty_to_size)"
 
 let tbl = Mtbdd.make_table ~hash:hash_value ~equal:equal_values
 
@@ -28,13 +39,11 @@ let get_bit (x: UInt32.t) (i: int) : bool =
   nth_bit x i
 
 let mk_int i idx =
-  let acc = ref (Bdd.dtrue (get_mgr ())) in
+  let acc = ref (Bdd.dtrue mgr) in
   for j = 0 to 31 do
-    let var = Bdd.ithvar (get_mgr ()) (idx + j) in
+    let var = ithvar (idx + j) in
     let bit = get_bit i j in
-    let bdd =
-      if bit then Bdd.dtrue (get_mgr ()) else Bdd.dfalse (get_mgr ())
-    in
+    let bdd = if bit then Bdd.dtrue mgr else Bdd.dfalse mgr in
     acc := Bdd.dand !acc (Bdd.eq var bdd)
   done ;
   !acc
@@ -43,25 +52,25 @@ let value_to_bdd (v: value) : Bdd.vt =
   let rec aux v idx =
     match v.v with
     | VBool b ->
-        let var = Bdd.ithvar (get_mgr ()) idx in
+        let var = ithvar idx in
         ((if b then var else Bdd.dnot var), idx + 1)
     | VUInt32 i -> (mk_int i idx, idx + 32)
     | VTuple vs ->
-        let base = Bdd.dtrue (get_mgr ()) in
+        let base = Bdd.dtrue mgr in
         List.fold_left
           (fun (bdd_acc, idx) v ->
             let bdd, i = aux v idx in
             (Bdd.dand bdd_acc bdd, i) )
           (base, idx) vs
     | VOption None ->
-        let var = Bdd.ithvar (get_mgr ()) idx in
-        let tag = Bdd.eq var (Bdd.dfalse (get_mgr ())) in
+        let var = ithvar idx in
+        let tag = Bdd.eq var (Bdd.dfalse mgr) in
         let dv = Generators.default_value (oget v.vty) in
         let value, idx = aux dv (idx + 1) in
         (Bdd.dand tag value, idx)
     | VOption (Some dv) ->
-        let var = Bdd.ithvar (get_mgr ()) idx in
-        let tag = Bdd.eq var (Bdd.dtrue (get_mgr ())) in
+        let var = ithvar idx in
+        let tag = Bdd.eq var (Bdd.dtrue mgr) in
         let value, idx = aux dv (idx + 1) in
         (Bdd.dand tag value, idx)
     | VMap _ | VClosure _ -> Console.error "internal error (value_to_bdd)"
@@ -145,11 +154,13 @@ let find ((map, _): t) (v: value) : value =
   Mtbdd.pick_leaf for_key
 
 let update ((map, ty): t) (k: value) (v: value) : t =
-  let leaf = Mtbdd.cst (get_mgr ()) tbl v in
+  let leaf = Mtbdd.cst mgr tbl v in
   let key = value_to_bdd k in
   (Mtbdd.ite key leaf map, ty)
 
-let create ~key_ty:ty (v: value) : t = (Mtbdd.cst (get_mgr ()) tbl v, ty)
+let create ~key_ty:ty (v: value) : t =
+  set_size (ty_to_size ty) ;
+  (Mtbdd.cst mgr tbl v, ty)
 
 let bindings ((map, ty): t) : (value * value) list =
   let bs = ref [] in

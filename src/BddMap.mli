@@ -2,8 +2,6 @@ open Syntax
 
 type t
 
-val init : int -> unit
-
 val create : key_ty:ty -> value -> t
 
 val bindings : t -> (value * value) list

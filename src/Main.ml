@@ -86,7 +86,6 @@ let run_simulator cfg info decls =
   with Srp.Require_false -> Console.error "required conditions not satisfied"
 
 (* let test_bdd () =
-  BddMap.init 33 ;
   let zero = Unsigned.UInt32.zero in
   let one = Unsigned.UInt32.of_int 5 in
   let v1 = value (VOption (Some (VUInt32 zero |> value))) in
