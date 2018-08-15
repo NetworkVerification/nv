@@ -20,15 +20,6 @@ build: $(MLFILES)
 %: %.ml
 	$(BUILD) $@.native
 
-simple: $(MLFILES)
-	./Main.native -f "examples/simple.nv" -v -s
-
-diamond: $(MLFILES)
-	./Main.native -f "examples/diamond.nv" -v -s
-
-diamond-ospf: $(MLFILES)
-	./Main.native -f "examples/diamond-ospf.nv" -v -s
-
 run_tests: tests
 	./Interp_test.native
 

@@ -5,8 +5,7 @@ open Unsigned
 (* TODO: 
     1. optimize variable ordering
     2. more efficient operations
-    3. preprocessing of filter statements 
-    4. map set and get operations *)
+    3. preprocessing of filter statements *)
 
 type t = Syntax.value Mtbdd.t * ty
 
@@ -162,22 +161,20 @@ let create ~key_ty:ty (v: value) : t =
   set_size (ty_to_size ty) ;
   (Mtbdd.cst mgr tbl v, ty)
 
-let count_tops arr = 
-  Array.fold_left (fun acc tb -> 
-    match tb with 
-    | Man.Top -> acc + 1 
-    | _ -> acc
-  ) 0 arr
+let count_tops arr =
+  Array.fold_left
+    (fun acc tb -> match tb with Man.Top -> acc + 1 | _ -> acc)
+    0 arr
 
-let pick_default_value map = 
-  let count = ref (-1) in 
+let pick_default_value map =
+  let count = ref (-1) in
   let value = ref None in
-  Mtbdd.iter_cube (fun vars v -> 
-    let c = count_tops vars in 
-    (if c > !count then 
-      count := c;
-      value := Some v)
-  ) map;
+  Mtbdd.iter_cube
+    (fun vars v ->
+      let c = count_tops vars in
+      if c > !count then count := c ;
+      value := Some v )
+    map ;
   oget !value
 
 let bindings ((map, ty): t) : (value * value) list * value =
@@ -186,11 +183,11 @@ let bindings ((map, ty): t) : (value * value) list * value =
   Mtbdd.iter_cube
     (fun vars v ->
       (* Array.iteri (fun i x -> Printf.printf "vars %d is %b\n" i (tbool_to_bool x)) vars; *)
-      if compare_values v dv <> 0 then 
-        (let k = vars_to_value vars ty in
-        bs := (k, v) :: !bs) )
+      if compare_values v dv <> 0 then
+        let k = vars_to_value vars ty in
+        bs := (k, v) :: !bs )
     map ;
-  !bs, dv
+  (!bs, dv)
 
 let from_bindings ((bs, default): (value * value) list * value) : t =
   failwith ""

@@ -109,7 +109,7 @@ let test_bdd () =
   Printf.printf "%s\n" (BddMap.show_map map)
 
 let main =
-  test_bdd ();
+  test_bdd () ;
   let cfg, rest = argparse default "example" Sys.argv in
   let file = rest.(0) in
   let ds, info = Input.parse file in
