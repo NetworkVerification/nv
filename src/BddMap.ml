@@ -10,7 +10,7 @@ open Unsigned
 
 type t = Syntax.value Mtbdd.t
 
-let mgr = Man.make_v ()
+let mgr = Man.make_v ~numVars:32 ()
 
 let tbl = Mtbdd.make_table ~hash:hash_value ~equal:equal_values
 
@@ -63,8 +63,7 @@ let value_to_bdd (v: value) : Bdd.vt =
 let tbool_to_bool tb =
   match tb with Man.False | Man.Top -> false | Man.True -> true
 
-let bdd_to_value (guard: Bdd.vt) (ty: ty) : value =
-  let vars = Bdd.pick_minterm guard in
+let vars_to_value vars ty =
   let rec aux idx ty =
     match Typing.get_inner_type ty with
     | TBool -> (VBool (tbool_to_bool vars.(idx)) |> value, idx + 1)
@@ -98,6 +97,10 @@ let bdd_to_value (guard: Bdd.vt) (ty: ty) : value =
   in
   fst (aux 0 ty)
 
+let bdd_to_value (guard: Bdd.vt) (ty: ty) : value =
+  let vars = Bdd.pick_minterm guard in
+  vars_to_value vars ty
+
 (* let res = User.map_op2
   ~commutative:true ~idempotent:true
   ~special:(fun bdd1 bdd2 ->
@@ -118,7 +121,7 @@ let map_when (pred: Bdd.vt -> bool) (f: value -> value) (vdd: t) : t =
       (g, if pred g then f (Mtbdd.get leaf) |> Mtbdd.unique tbl else leaf) )
     vdd
 
-let map_when (ty: ty) (pred: value -> bool) (f: value -> value) (vdd: t) : t =
+let map_when (pred: value -> bool) (f: value -> value) (vdd: t) (ty: ty) : t =
   let p bdd = pred (bdd_to_value bdd ty) in
   map_when p f vdd
 
@@ -138,7 +141,15 @@ let update (map: t) (k: value) (v: value) : t =
 
 let create (v: value) : t = Mtbdd.cst mgr tbl v
 
-let bindings (map: t) : (value * value) list = failwith ""
+let bindings (map: t) (ty: ty) : (value * value) list =
+  let bs = ref [] in
+  Mtbdd.iter_cube
+    (fun vars v ->
+      (* Array.iteri (fun i x -> Printf.printf "vars %d is %b\n" i (tbool_to_bool x)) vars; *)
+      let k = vars_to_value vars ty in
+      bs := (k, v) :: !bs )
+    map ;
+  !bs
 
 let from_bindings ((bs, default): (value * value) list * value) : t =
   failwith ""
@@ -148,3 +159,17 @@ let compare_maps bm1 bm2 = Mtbdd.topvar bm1 - Mtbdd.topvar bm2
 let equal_maps bm1 bm2 = compare bm1 bm2 = 0
 
 let hash_map bm = Mtbdd.topvar bm
+
+let show_map bm ty =
+  let bs = bindings bm ty in
+  let str =
+    List.fold_left
+      (fun acc (k, v) ->
+        let sep = if acc = "" then "" else ";" in
+        Printf.sprintf "(%s,%s)%s%s"
+          (Printing.value_to_string k)
+          (Printing.value_to_string v)
+          sep acc )
+      "" bs
+  in
+  Printf.sprintf "[%s; ...]" str
