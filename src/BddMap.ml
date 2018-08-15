@@ -162,15 +162,35 @@ let create ~key_ty:ty (v: value) : t =
   set_size (ty_to_size ty) ;
   (Mtbdd.cst mgr tbl v, ty)
 
-let bindings ((map, ty): t) : (value * value) list =
+let count_tops arr = 
+  Array.fold_left (fun acc tb -> 
+    match tb with 
+    | Man.Top -> acc + 1 
+    | _ -> acc
+  ) 0 arr
+
+let pick_default_value map = 
+  let count = ref (-1) in 
+  let value = ref None in
+  Mtbdd.iter_cube (fun vars v -> 
+    let c = count_tops vars in 
+    (if c > !count then 
+      count := c;
+      value := Some v)
+  ) map;
+  oget !value
+
+let bindings ((map, ty): t) : (value * value) list * value =
   let bs = ref [] in
+  let dv = pick_default_value map in
   Mtbdd.iter_cube
     (fun vars v ->
       (* Array.iteri (fun i x -> Printf.printf "vars %d is %b\n" i (tbool_to_bool x)) vars; *)
-      let k = vars_to_value vars ty in
-      bs := (k, v) :: !bs )
+      if compare_values v dv <> 0 then 
+        (let k = vars_to_value vars ty in
+        bs := (k, v) :: !bs) )
     map ;
-  !bs
+  !bs, dv
 
 let from_bindings ((bs, default): (value * value) list * value) : t =
   failwith ""
@@ -182,15 +202,16 @@ let equal_maps bm1 bm2 = compare bm1 bm2 = 0
 let hash_map (bm, _) = Mtbdd.topvar bm
 
 let show_map bm =
-  let bs = bindings bm in
+  let bs, dv = bindings bm in
   let str =
     List.fold_left
       (fun acc (k, v) ->
         let sep = if acc = "" then "" else ";" in
-        Printf.sprintf "(%s,%s)%s%s"
+        Printf.sprintf "%s:=%s%s%s"
           (Printing.value_to_string k)
           (Printing.value_to_string v)
           sep acc )
       "" bs
   in
-  Printf.sprintf "[%s; ...]" str
+  let str = if str = "" then "" else str ^ ";...;" in
+  Printf.sprintf "[%sdefault=%s]" str (Printing.value_to_string dv)

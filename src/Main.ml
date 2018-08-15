@@ -85,7 +85,7 @@ let run_simulator cfg info decls =
           qs
   with Srp.Require_false -> Console.error "required conditions not satisfied"
 
-(* let test_bdd () =
+let test_bdd () =
   let zero = Unsigned.UInt32.zero in
   let one = Unsigned.UInt32.of_int 5 in
   let v1 = value (VOption (Some (VUInt32 zero |> value))) in
@@ -106,9 +106,10 @@ let run_simulator cfg info decls =
     (Printing.value_to_string v1)
     (Printing.value_to_string y) ;
   let map = BddMap.map (fun v -> value (VBool true)) map in
-  Printf.printf "%s\n" (BddMap.show_map map) *)
+  Printf.printf "%s\n" (BddMap.show_map map)
 
 let main =
+  test_bdd ();
   let cfg, rest = argparse default "example" Sys.argv in
   let file = rest.(0) in
   let ds, info = Input.parse file in

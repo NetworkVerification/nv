@@ -4,7 +4,7 @@ type t
 
 val create : key_ty:ty -> value -> t
 
-val bindings : t -> (value * value) list
+val bindings : t -> (value * value) list * value
 
 val from_bindings : (value * value) list * value -> t
 
