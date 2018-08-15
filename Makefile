@@ -20,6 +20,10 @@ build: $(MLFILES)
 %: %.ml
 	$(BUILD) $@.native
 
+test: $(MLFILES)
+	$(BUILD) src/Test.native
+	./Test.native
+
 run_tests: tests
 	./Interp_test.native
 

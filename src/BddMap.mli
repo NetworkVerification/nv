@@ -6,7 +6,7 @@ val create : key_ty:ty -> value -> t
 
 val bindings : t -> (value * value) list * value
 
-val from_bindings : (value * value) list * value -> t
+val from_bindings : key_ty:ty -> (value * value) list * value -> t
 
 val map : (value -> value) -> t -> t
 

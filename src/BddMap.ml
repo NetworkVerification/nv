@@ -189,8 +189,9 @@ let bindings ((map, ty): t) : (value * value) list * value =
     map ;
   (!bs, dv)
 
-let from_bindings ((bs, default): (value * value) list * value) : t =
-  failwith ""
+let from_bindings ~key_ty:ty ((bs, default): (value * value) list * value) : t =
+  let map = create ~key_ty:ty default in
+  List.fold_left (fun acc (k, v) -> update acc k v) map bs
 
 let compare_maps (bm1, _) (bm2, _) = Mtbdd.topvar bm1 - Mtbdd.topvar bm2
 
@@ -211,4 +212,8 @@ let show_map bm =
       "" bs
   in
   let str = if str = "" then "" else str ^ ";...;" in
-  Printf.sprintf "[%sdefault=%s]" str (Printing.value_to_string dv)
+  Printf.sprintf "[%sdefault:=%s]" str (Printing.value_to_string dv)
+
+module Tests = struct
+  
+end
