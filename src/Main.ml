@@ -1,7 +1,6 @@
 (* Driver *)
 
 open ANSITerminal
-open BddMap
 open Cmdline
 open Syntax
 open Printing

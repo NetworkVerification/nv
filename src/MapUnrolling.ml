@@ -251,7 +251,7 @@ let map_back orig_sym_types (map: ExprSet.elt list TypeMap.t) variables ds
     match (ty, v.v) with
     | TMap (ty1, ty2), _ -> (
         let es = TypeMap.find ty map in
-        let default = Generators.default_value ty2 in
+        let default = default_value ty2 in
         let base = IMap.create compare_values default in
         match (v.v, es) with
         | VTuple vs, _ ->

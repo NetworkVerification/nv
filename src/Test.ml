@@ -40,7 +40,7 @@ let assert_equal_values =
   assert_equal ~cmp:equal_values ~printer:Printing.value_to_string
 
 let assert_equal_maps =
-  assert_equal ~cmp:BddMap.equal_maps ~printer:BddMap.show_map
+  assert_equal ~cmp:BddMap.equal_maps (* ~printer:BddMap.show_map *)
 
 let test1 _ =
   let v1 = zero_opt in

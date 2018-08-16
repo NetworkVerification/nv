@@ -5,19 +5,6 @@ open Unsigned
 
 (* TODO: add a hints option to bias for constants that appear in the program *)
 
-let rec default_value ty =
-  let v =
-    match ty with
-    | TBool -> VBool false
-    | TInt _ -> VUInt32 (UInt32.of_int 0)
-    | TTuple ts -> VTuple (List.map default_value ts)
-    | TOption ty -> VOption None
-    | TMap (ty1, ty2) -> VMap (IMap.create compare_values (default_value ty2))
-    | TVar _ | QVar _ | TArrow _ ->
-        Console.error "internal error (default_value)"
-  in
-  value v
-
 let rec random_value hints max_map_size ty =
   let i = Random.int 10 in
   match (TypeMap.find_opt ty hints, i < 9) with
