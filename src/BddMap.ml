@@ -116,7 +116,7 @@ module BddFunc = struct
     let aux xs ys =
       let var3 = ref (Bdd.dfalse mgr) in
       let var4 = Array.make 32 (Bdd.dfalse mgr) in
-      for var5 = Array.length xs - 1 downto 0 do
+      for var5 = 0 to Array.length xs - 1 do
         var4.(var5) <- Bdd.xor xs.(var5) ys.(var5) ;
         var4.(var5) <- Bdd.xor var4.(var5) !var3 ;
         let var6 = Bdd.dor xs.(var5) ys.(var5) in
@@ -130,6 +130,27 @@ module BddFunc = struct
     match (x, y) with
     | BInt xs, BInt ys -> BInt (aux xs ys)
     | _ -> Console.error "internal error (add)"
+
+
+  (* let sub (x: bdd_value) (y: bdd_value) : bdd_value =
+    let aux xs ys =
+      let var3 = ref (Bdd.dfalse mgr) in
+      let var4 = Array.make 32 (Bdd.dfalse mgr) in
+      for var5 = 0 to Array.length xs - 1 do
+        var4.(var5) <- Bdd.xor xs.(var5) ys.(var5) ;
+        var4.(var5) <- Bdd.xor var4.(var5) !var3 ;
+        let var6 = Bdd.dor xs.(var5) !var3 in
+        let var7 = Bdd.dand (Bdd.dnot xs.(var5)) var6 in
+        let var6 = Bdd.dand xs.(var5) ys.(var5) in
+        let var6 = Bdd.dand var6 !var3 in
+        let var6 = Bdd.dor var6 var7 in
+        var3 := var6
+      done ;
+      var4
+    in
+    match (x, y) with
+    | BInt xs, BInt ys -> BInt (aux xs ys)
+    | _ -> Console.error "internal error (sub)" *)
 
   let leq (x: bdd_value) (y: bdd_value) : bdd_value =
     let less x y = Bdd.dand (Bdd.dnot x) y in
@@ -168,9 +189,9 @@ module BddFunc = struct
       | Not, [e1] -> eval_bool_op1 env Bdd.dnot e1
       | UEq, [e1; e2] -> eq (eval env e1) (eval env e2)
       | UAdd, [e1; e2] -> add (eval env e1) (eval env e2)
-      | USub, [e1; e2] -> Console.error "subtraction not implemented"
       | ULess, [e1; e2] -> lt (eval env e1) (eval env e2)
       | ULeq, [e1; e2] -> leq (eval env e1) (eval env e2)
+      | USub, [e1; e2] -> Console.error "subtraction not implemented"
       | _ -> Console.error "internal error (eval)" )
     | EIf (e1, e2, e3) -> (
         let v1 = eval env e1 in
