@@ -286,19 +286,18 @@ let rec default_value ty =
 
 (* Include the map type here to avoid circular dependency *)
 
-module BddUtils = struct 
-
+module BddUtils = struct
   let mgr = Man.make_v ()
-  
+
   let set_size sz =
     let num_vars = Man.get_bddvar_nb mgr in
     if num_vars < sz then
       for i = 1 to sz - num_vars do ignore (Bdd.newvar mgr) done
-  
+
   let ithvar i =
     set_size (i + 1) ;
     Bdd.ithvar mgr i
-  
+
   let rec ty_to_size ty =
     match get_inner_type ty with
     | TBool -> 1
@@ -307,18 +306,18 @@ module BddUtils = struct
     | TTuple ts -> List.fold_left (fun acc t -> acc + ty_to_size t) 0 ts
     | TArrow _ | TMap _ | TVar _ | QVar _ ->
         Console.error "internal error (ty_to_size)"
-  
+
   let tbl = Mtbdd.make_table ~hash:hash_value ~equal:equal_values
-  
+
   let tbl_bool =
     Mtbdd.make_table ~hash:(fun b -> if b then 1 else 0) ~equal:( = )
-  
+
   let nth_bit x i = x land (1 lsl i) <> 0
-  
+
   let get_bit (x: UInt32.t) (i: int) : bool =
     let x = UInt32.to_int x in
     nth_bit x i
-  
+
   let mk_int i idx =
     let acc = ref (Bdd.dtrue mgr) in
     for j = 0 to 31 do
@@ -328,7 +327,7 @@ module BddUtils = struct
       acc := Bdd.dand !acc (Bdd.eq var bdd)
     done ;
     !acc
-  
+
   let value_to_bdd (v: value) : Bdd.vt =
     let rec aux v idx =
       match v.v with
@@ -358,10 +357,10 @@ module BddUtils = struct
     in
     let bdd, _ = aux v 0 in
     bdd
-  
+
   let tbool_to_bool tb =
     match tb with Man.False | Man.Top -> false | Man.True -> true
-  
+
   let vars_to_value vars ty =
     let rec aux idx ty =
       match get_inner_type ty with
@@ -395,22 +394,22 @@ module BddUtils = struct
           Console.error "internal error (bdd_to_value)"
     in
     fst (aux 0 ty)
-  
+
   let bdd_to_value (guard: Bdd.vt) (ty: ty) : value =
     let vars = Bdd.pick_minterm guard in
     vars_to_value vars ty
-  
 end
 
 module BddMap = struct
   module B = BddUtils
+
   (* TODO: 
       1. optimize variable ordering
       2. more efficient operations
       3. preprocessing of filter statements *)
-  
+
   type t = value Mtbdd.t * ty
-  
+
   (* let res = User.map_op2
     ~commutative:true ~idempotent:true
     ~special:(fun bdd1 bdd2 ->
@@ -418,41 +417,43 @@ module BddMap = struct
       else if Vdd.is_cst bdd2 && Vdd.dval bdd2 = false then Some(bdd2)
       else None)
     (fun b1 b2 -> b1 && b2) *)
-  
+
   let map (f: value -> value) ((vdd, ty): t) : t =
     let g x = f (Mtbdd.get x) |> Mtbdd.unique B.tbl in
     (Mapleaf.mapleaf1 g vdd, ty)
-  
+
   let map_when (pred: Bdd.vt) (f: value -> value) ((vdd, ty): t) : t =
-    let f b v = if Mtbdd.get b then f (Mtbdd.get v) |> Mtbdd.unique B.tbl else v in
+    let f b v =
+      if Mtbdd.get b then f (Mtbdd.get v) |> Mtbdd.unique B.tbl else v
+    in
     let tru = Mtbdd.cst B.mgr B.tbl_bool true in
     let fal = Mtbdd.cst B.mgr B.tbl_bool false in
     let pred = Mtbdd.ite pred tru fal in
     (Mapleaf.mapleaf2 f pred vdd, ty)
-  
+
   let merge (f: value -> value -> value) ((x, tyx): t) ((y, tyy): t) : t =
     let g x y = f (Mtbdd.get x) (Mtbdd.get y) |> Mtbdd.unique B.tbl in
     (Mapleaf.mapleaf2 g x y, tyx)
-  
+
   let find ((map, _): t) (v: value) : value =
     let bdd = B.value_to_bdd v in
     let for_key = Mtbdd.constrain map bdd in
     Mtbdd.pick_leaf for_key
-  
+
   let update ((map, ty): t) (k: value) (v: value) : t =
     let leaf = Mtbdd.cst B.mgr B.tbl v in
     let key = B.value_to_bdd k in
     (Mtbdd.ite key leaf map, ty)
-  
+
   let create ~key_ty:ty (v: value) : t =
     B.set_size (B.ty_to_size ty) ;
     (Mtbdd.cst B.mgr B.tbl v, ty)
-  
+
   let count_tops arr =
     Array.fold_left
       (fun acc tb -> match tb with Man.Top -> acc + 1 | _ -> acc)
       0 arr
-  
+
   let pick_default_value map =
     let count = ref (-1) in
     let value = ref None in
@@ -463,7 +464,7 @@ module BddMap = struct
         value := Some v )
       map ;
     oget !value
-  
+
   let bindings ((map, ty): t) : (value * value) list * value =
     let bs = ref [] in
     let dv = pick_default_value map in
@@ -475,15 +476,16 @@ module BddMap = struct
           bs := (k, v) :: !bs )
       map ;
     (!bs, dv)
-  
-  let from_bindings ~key_ty:ty ((bs, default): (value * value) list * value) : t =
+
+  let from_bindings ~key_ty:ty ((bs, default): (value * value) list * value) :
+      t =
     let map = create ~key_ty:ty default in
     List.fold_left (fun acc (k, v) -> update acc k v) map bs
-    
-  let equal_maps (bm1,_) (bm2,_) = Mtbdd.is_equal bm1 bm2
-  
+
+  let equal_maps (bm1, _) (bm2, _) = Mtbdd.is_equal bm1 bm2
+
   let hash_map (bm, _) = Mtbdd.topvar bm
-  
+
   (* let show_map bm =
     let bs, dv = bindings bm in
     let str =
@@ -498,101 +500,100 @@ module BddMap = struct
     in
     let str = if str = "" then "" else str ^ ";...;" in
     Printf.sprintf "[%sdefault:=%s]" str (Printing.value_to_string dv) *)
-  
-  end
+end
 
-  module BddFunc = struct
-    module B = BddUtils
+module BddFunc = struct
+  module B = BddUtils
 
-    type t =
-      | BBool of Bdd.vt
-      | BInt of Bdd.vt array
-      | BTuple of t list
-      | BOption of Bdd.vt * t
-    
-    let bdd_of_bool b = if b then Bdd.dtrue B.mgr else Bdd.dfalse B.mgr
-    
-    let create_value (ty: ty) : t =
-      let rec aux i ty =
-        match get_inner_type ty with
-        | TBool -> (BBool (B.ithvar i), i + 1)
-        | TInt _ -> (BInt (Array.init 32 (fun j -> B.ithvar (i + j))), i + 32)
-        | TTuple ts ->
-            let bs, idx =
-              List.fold_left
-                (fun (ls, idx) t ->
-                  let v, i = aux idx t in
-                  (v :: ls, i) )
-                ([], i) ts
-            in
-            (BTuple (List.rev bs), idx)
-        | TOption ty ->
-            let v, idx = aux (i + 1) ty in
-            (BOption (B.ithvar i, v), idx)
-        | TArrow _ | QVar _ | TVar _ | TMap _ ->
-            Console.error "internal error (create_value)"
-      in
-      let ret, _ = aux 0 ty in
-      ret
-    
-    let rec ite (b: Bdd.vt) (x: t) (y: t) : t =
-      match (x, y) with
-      | BBool m, BBool n -> BBool (Bdd.ite b m n)
-      | BInt ms, BInt ns ->
-          let both = List.combine (Array.to_list ms) (Array.to_list ns) in
-          let ite = List.map (fun (m, n) -> Bdd.ite b m n) both in
-          BInt (Array.of_list ite)
-      | BOption (tag1, m), BOption (tag2, n) ->
-          let tag = Bdd.ite b tag1 tag2 in
-          BOption (tag, ite b m n)
-      | BTuple ms, BTuple ns ->
-          let both = List.combine ms ns in
-          let ite = List.map (fun (m, n) -> ite b m n) both in
-          BTuple ite
-      | _ -> Console.error "internal error (ite)"
-    
-    let rec eq (x: t) (y: t) : t =
-      let rec aux x y : Bdd.vt =
-        match (x, y) with
-        | BBool b1, BBool b2 -> Bdd.eq b1 b2
-        | BInt bs1, BInt bs2 ->
-            let both = List.combine (Array.to_list bs1) (Array.to_list bs2) in
+  type t =
+    | BBool of Bdd.vt
+    | BInt of Bdd.vt array
+    | BTuple of t list
+    | BOption of Bdd.vt * t
+
+  let bdd_of_bool b = if b then Bdd.dtrue B.mgr else Bdd.dfalse B.mgr
+
+  let create_value (ty: ty) : t =
+    let rec aux i ty =
+      match get_inner_type ty with
+      | TBool -> (BBool (B.ithvar i), i + 1)
+      | TInt _ -> (BInt (Array.init 32 (fun j -> B.ithvar (i + j))), i + 32)
+      | TTuple ts ->
+          let bs, idx =
             List.fold_left
-              (fun acc (b1, b2) -> Bdd.dand acc (Bdd.eq b1 b2))
-              (Bdd.dtrue B.mgr) both
-        | BOption (tag1, b1), BOption (tag2, b2) ->
-            let tags = Bdd.eq tag1 tag2 in
-            let values = aux b1 b2 in
-            Bdd.dand tags values
-        | BTuple bs1, BTuple bs2 ->
-            let both = List.combine bs1 bs2 in
-            List.fold_left
-              (fun acc (b1, b2) -> Bdd.dand acc (aux b1 b2))
-              (Bdd.dtrue B.mgr) both
-        | _ -> Console.error "internal error (eq)"
-      in
-      BBool (aux x y)
-    
-    let add (x: t) (y: t) : t =
-      let aux xs ys =
-        let var3 = ref (Bdd.dfalse B.mgr) in
-        let var4 = Array.make 32 (Bdd.dfalse B.mgr) in
-        for var5 = 0 to Array.length xs - 1 do
-          var4.(var5) <- Bdd.xor xs.(var5) ys.(var5) ;
-          var4.(var5) <- Bdd.xor var4.(var5) !var3 ;
-          let var6 = Bdd.dor xs.(var5) ys.(var5) in
-          let var6 = Bdd.dand var6 !var3 in
-          let var7 = Bdd.dand xs.(var5) ys.(var5) in
-          let var7 = Bdd.dor var7 var6 in
-          var3 := var7
-        done ;
-        var4
-      in
+              (fun (ls, idx) t ->
+                let v, i = aux idx t in
+                (v :: ls, i) )
+              ([], i) ts
+          in
+          (BTuple (List.rev bs), idx)
+      | TOption ty ->
+          let v, idx = aux (i + 1) ty in
+          (BOption (B.ithvar i, v), idx)
+      | TArrow _ | QVar _ | TVar _ | TMap _ ->
+          Console.error "internal error (create_value)"
+    in
+    let ret, _ = aux 0 ty in
+    ret
+
+  let rec ite (b: Bdd.vt) (x: t) (y: t) : t =
+    match (x, y) with
+    | BBool m, BBool n -> BBool (Bdd.ite b m n)
+    | BInt ms, BInt ns ->
+        let both = List.combine (Array.to_list ms) (Array.to_list ns) in
+        let ite = List.map (fun (m, n) -> Bdd.ite b m n) both in
+        BInt (Array.of_list ite)
+    | BOption (tag1, m), BOption (tag2, n) ->
+        let tag = Bdd.ite b tag1 tag2 in
+        BOption (tag, ite b m n)
+    | BTuple ms, BTuple ns ->
+        let both = List.combine ms ns in
+        let ite = List.map (fun (m, n) -> ite b m n) both in
+        BTuple ite
+    | _ -> Console.error "internal error (ite)"
+
+  let rec eq (x: t) (y: t) : t =
+    let rec aux x y : Bdd.vt =
       match (x, y) with
-      | BInt xs, BInt ys -> BInt (aux xs ys)
-      | _ -> Console.error "internal error (add)"
-    
-    (* let sub (x: bdd_value) (y: bdd_value) : bdd_value =
+      | BBool b1, BBool b2 -> Bdd.eq b1 b2
+      | BInt bs1, BInt bs2 ->
+          let both = List.combine (Array.to_list bs1) (Array.to_list bs2) in
+          List.fold_left
+            (fun acc (b1, b2) -> Bdd.dand acc (Bdd.eq b1 b2))
+            (Bdd.dtrue B.mgr) both
+      | BOption (tag1, b1), BOption (tag2, b2) ->
+          let tags = Bdd.eq tag1 tag2 in
+          let values = aux b1 b2 in
+          Bdd.dand tags values
+      | BTuple bs1, BTuple bs2 ->
+          let both = List.combine bs1 bs2 in
+          List.fold_left
+            (fun acc (b1, b2) -> Bdd.dand acc (aux b1 b2))
+            (Bdd.dtrue B.mgr) both
+      | _ -> Console.error "internal error (eq)"
+    in
+    BBool (aux x y)
+
+  let add (x: t) (y: t) : t =
+    let aux xs ys =
+      let var3 = ref (Bdd.dfalse B.mgr) in
+      let var4 = Array.make 32 (Bdd.dfalse B.mgr) in
+      for var5 = 0 to Array.length xs - 1 do
+        var4.(var5) <- Bdd.xor xs.(var5) ys.(var5) ;
+        var4.(var5) <- Bdd.xor var4.(var5) !var3 ;
+        let var6 = Bdd.dor xs.(var5) ys.(var5) in
+        let var6 = Bdd.dand var6 !var3 in
+        let var7 = Bdd.dand xs.(var5) ys.(var5) in
+        let var7 = Bdd.dor var7 var6 in
+        var3 := var7
+      done ;
+      var4
+    in
+    match (x, y) with
+    | BInt xs, BInt ys -> BInt (aux xs ys)
+    | _ -> Console.error "internal error (add)"
+
+  (* let sub (x: bdd_value) (y: bdd_value) : bdd_value =
         let aux xs ys =
           let var3 = ref (Bdd.dfalse mgr) in
           let var4 = Array.make 32 (Bdd.dfalse mgr) in
@@ -611,98 +612,97 @@ module BddMap = struct
         match (x, y) with
         | BInt xs, BInt ys -> BInt (aux xs ys)
         | _ -> Console.error "internal error (sub)" *)
-    
-    let leq (x: t) (y: t) : t =
-      let less x y = Bdd.dand (Bdd.dnot x) y in
-      let aux xs ys =
-        let acc = ref (Bdd.dtrue B.mgr) in
-        for i = 0 to Array.length xs - 1 do
-          let x = xs.(i) in
-          let y = ys.(i) in
-          acc := Bdd.dor (less x y) (Bdd.dand !acc (Bdd.eq x y))
-        done ;
-        !acc
-      in
-      match (x, y) with
-      | BInt xs, BInt ys -> BBool (aux xs ys)
-      | _ -> Console.error "internal error (leq)"
-    
-    let lt (x: t) (y: t) : t =
-      match (leq x y, eq x y) with
-      | BBool b1, BBool b2 ->
-          let b = Bdd.dand b1 (Bdd.dnot b2) in
-          BBool b
-      | _ -> Console.error "internal error (lt)"
-    
-    let rec eval (env: t Env.t) (e: exp) : t =
-      match e.e with
-      | ETy (e1, _) -> eval env e1
-      | EVar x -> (
-        match Env.lookup_opt env x with
-        | None -> Console.error "internal error (eval)"
-        | Some v -> v )
-      | EVal v -> eval_value env v
-      | EOp (op, es) -> (
-        match (op, es) with
-        | And, [e1; e2] -> eval_bool_op2 env Bdd.dand e1 e2
-        | Or, [e1; e2] -> eval_bool_op2 env Bdd.dor e1 e2
-        | Not, [e1] -> eval_bool_op1 env Bdd.dnot e1
-        | UEq, [e1; e2] -> eq (eval env e1) (eval env e2)
-        | UAdd, [e1; e2] -> add (eval env e1) (eval env e2)
-        | ULess, [e1; e2] -> lt (eval env e1) (eval env e2)
-        | ULeq, [e1; e2] -> leq (eval env e1) (eval env e2)
-        | USub, [e1; e2] -> Console.error "subtraction not implemented"
+
+  let leq (x: t) (y: t) : t =
+    let less x y = Bdd.dand (Bdd.dnot x) y in
+    let aux xs ys =
+      let acc = ref (Bdd.dtrue B.mgr) in
+      for i = 0 to Array.length xs - 1 do
+        let x = xs.(i) in
+        let y = ys.(i) in
+        acc := Bdd.dor (less x y) (Bdd.dand !acc (Bdd.eq x y))
+      done ;
+      !acc
+    in
+    match (x, y) with
+    | BInt xs, BInt ys -> BBool (aux xs ys)
+    | _ -> Console.error "internal error (leq)"
+
+  let lt (x: t) (y: t) : t =
+    match (leq x y, eq x y) with
+    | BBool b1, BBool b2 ->
+        let b = Bdd.dand b1 (Bdd.dnot b2) in
+        BBool b
+    | _ -> Console.error "internal error (lt)"
+
+  let rec eval (env: t Env.t) (e: exp) : t =
+    match e.e with
+    | ETy (e1, _) -> eval env e1
+    | EVar x -> (
+      match Env.lookup_opt env x with
+      | None -> Console.error "internal error (eval)"
+      | Some v -> v )
+    | EVal v -> eval_value env v
+    | EOp (op, es) -> (
+      match (op, es) with
+      | And, [e1; e2] -> eval_bool_op2 env Bdd.dand e1 e2
+      | Or, [e1; e2] -> eval_bool_op2 env Bdd.dor e1 e2
+      | Not, [e1] -> eval_bool_op1 env Bdd.dnot e1
+      | UEq, [e1; e2] -> eq (eval env e1) (eval env e2)
+      | UAdd, [e1; e2] -> add (eval env e1) (eval env e2)
+      | ULess, [e1; e2] -> lt (eval env e1) (eval env e2)
+      | ULeq, [e1; e2] -> leq (eval env e1) (eval env e2)
+      | USub, [e1; e2] -> Console.error "subtraction not implemented"
+      | _ -> Console.error "internal error (eval)" )
+    | EIf (e1, e2, e3) -> (
+        let v1 = eval env e1 in
+        let v2 = eval env e2 in
+        let v3 = eval env e3 in
+        match v1 with
+        | BBool b -> ite b v2 v3
         | _ -> Console.error "internal error (eval)" )
-      | EIf (e1, e2, e3) -> (
-          let v1 = eval env e1 in
-          let v2 = eval env e2 in
-          let v3 = eval env e3 in
-          match v1 with
-          | BBool b -> ite b v2 v3
-          | _ -> Console.error "internal error (eval)" )
-      | ELet (x, e1, e2) ->
-          let v1 = eval env e1 in
-          eval (Env.update env x v1) e2
-      | ETuple es ->
-          let vs = List.map (eval env) es in
-          BTuple vs
-      | ESome e -> BOption (Bdd.dtrue B.mgr, eval env e)
-      | EMatch (e1, brances) -> failwith ""
-      | EFun _ | EApp _ -> failwith ""
-    
-    and eval_bool_op1 env f e1 =
-      let v1 = eval env e1 in
-      match v1 with
-      | BBool b1 -> BBool (f b1)
-      | _ -> Console.error "internal error (eval)"
-    
-    and eval_bool_op2 env f e1 e2 =
-      let v1 = eval env e1 in
-      let v2 = eval env e2 in
-      match (v1, v2) with
-      | BBool b1, BBool b2 -> BBool (f b1 b2)
-      | _ -> Console.error "internal error (eval)"
-    
-    and eval_value env (v: value) =
-      match v.v with
-      | VBool b -> BBool (bdd_of_bool b)
-      | VUInt32 i ->
-          let bs =
-            Array.init 32 (fun j ->
-                let bit = B.get_bit i j in
-                bdd_of_bool bit )
-          in
-          BInt bs
-      | VOption None ->
-          let ty =
-            match get_inner_type (oget v.vty) with
-            | TOption ty -> ty
-            | _ -> Console.error "internal error (eval_value)"
-          in
-          let dv = default_value ty in
-          BOption (Bdd.dfalse B.mgr, eval_value env dv)
-      | VOption (Some v) -> BOption (Bdd.dtrue B.mgr, eval_value env v)
-      | VTuple vs -> BTuple (List.map (eval_value env) vs)
-      | VMap _ | VClosure _ -> Console.error "internal error (eval_value)"
-    
-    end
+    | ELet (x, e1, e2) ->
+        let v1 = eval env e1 in
+        eval (Env.update env x v1) e2
+    | ETuple es ->
+        let vs = List.map (eval env) es in
+        BTuple vs
+    | ESome e -> BOption (Bdd.dtrue B.mgr, eval env e)
+    | EMatch (e1, brances) -> failwith ""
+    | EFun _ | EApp _ -> failwith ""
+
+  and eval_bool_op1 env f e1 =
+    let v1 = eval env e1 in
+    match v1 with
+    | BBool b1 -> BBool (f b1)
+    | _ -> Console.error "internal error (eval)"
+
+  and eval_bool_op2 env f e1 e2 =
+    let v1 = eval env e1 in
+    let v2 = eval env e2 in
+    match (v1, v2) with
+    | BBool b1, BBool b2 -> BBool (f b1 b2)
+    | _ -> Console.error "internal error (eval)"
+
+  and eval_value env (v: value) =
+    match v.v with
+    | VBool b -> BBool (bdd_of_bool b)
+    | VUInt32 i ->
+        let bs =
+          Array.init 32 (fun j ->
+              let bit = B.get_bit i j in
+              bdd_of_bool bit )
+        in
+        BInt bs
+    | VOption None ->
+        let ty =
+          match get_inner_type (oget v.vty) with
+          | TOption ty -> ty
+          | _ -> Console.error "internal error (eval_value)"
+        in
+        let dv = default_value ty in
+        BOption (Bdd.dfalse B.mgr, eval_value env dv)
+    | VOption (Some v) -> BOption (Bdd.dtrue B.mgr, eval_value env v)
+    | VTuple vs -> BTuple (List.map (eval_value env) vs)
+    | VMap _ | VClosure _ -> Console.error "internal error (eval_value)"
+end
