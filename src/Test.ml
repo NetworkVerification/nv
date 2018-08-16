@@ -6,13 +6,21 @@ open Unsigned
 
 let zero_u = Unsigned.UInt32.zero
 
+let one_u = Unsigned.UInt32.one
+
 let two_u = Unsigned.UInt32.of_int 2
+
+let three_u = Unsigned.UInt32.of_int 3
 
 let five_u = Unsigned.UInt32.of_int 5
 
 let zero = VUInt32 zero_u |> value
 
+let one = VUInt32 one_u |> value
+
 let two = VUInt32 two_u |> value
+
+let three = VUInt32 three_u |> value
 
 let five = VUInt32 five_u |> value
 
@@ -104,17 +112,32 @@ let test4 _ =
     bs
 
 let test5 _ =
-  let v1 = zero in
-  let v2 = five in
+  let v0 = zero in
+  let v1 = one in
+  let v2 = two in
+  let v3 = three in
+  let v5 = five in
   let bt = tru in
   let bf = fal in
+  let x = Var.create "x" in
+  let var = exp (EVar x) in
+  let cmp = exp (EOp (ULeq, [var; exp (EVal two)])) in
+  let init_x = BddMap.BddFunc.create_value ty_int in
+  let env = Env.update Env.empty x init_x in
+  let value = BddMap.BddFunc.eval env cmp in
+  let value = match value with BBool b -> b | _ -> failwith "" in
   let map = BddMap.create ~key_ty:ty_int bf in
-  let map =
-    BddMap.map_when (fun k -> compare_values k v2 = 0) (fun _ -> bt) map
-  in
-  let x = BddMap.find map v1 in
-  let y = BddMap.find map v2 in
-  assert_equal_values x bf ; assert_equal_values y bt
+  let map = BddMap.map_when value (fun _ -> bt) map in
+  let x0 = BddMap.find map v0 in
+  let x1 = BddMap.find map v1 in
+  let x2 = BddMap.find map v2 in
+  let x3 = BddMap.find map v3 in
+  let x5 = BddMap.find map v5 in
+  assert_equal_values x0 bt ;
+  assert_equal_values x1 bt ;
+  assert_equal_values x2 bt ;
+  assert_equal_values x3 bf ;
+  assert_equal_values x5 bf
 
 (* Name the test cases and group them together *)
 let suite =
@@ -123,6 +146,6 @@ let suite =
        ; "BddMap with nested types" >:: test2
        ; "BddMap merge/equality" >:: test3
        ; "BddMap from/to bindings" >:: test4
-       (* ; "BddMap map_when condition" >:: test5 *) ]
+       ; "BddMap map_when condition" >:: test5 ]
 
 let () = run_test_tt_main suite
