@@ -49,9 +49,6 @@ let reset_tyvars () =
   (* DPW: don't need to do this *)
   level_reset ()
 
-let rec get_inner_type t : ty =
-  match t with TVar {contents= Link t} -> get_inner_type t | _ -> t
-
 let annot ty e = {e= e.e; ety= Some ty; espan= e.espan}
 
 let rec check_annot_val (v: value) =

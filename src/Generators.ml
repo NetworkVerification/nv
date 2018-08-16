@@ -25,7 +25,7 @@ let rec random_value hints max_map_size ty =
       let x = Random.int (ValueSet.cardinal vs) in
       List.nth (ValueSet.elements vs) x
   | _ ->
-    match Typing.get_inner_type ty with
+    match get_inner_type ty with
     | TBool -> VBool (Random.bool ()) |> value
     | TInt _ ->
         let x = UInt32.of_int64 (Random.int64 Int64.max_int) in

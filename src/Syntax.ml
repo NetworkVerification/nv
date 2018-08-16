@@ -266,3 +266,6 @@ let rec hash_value v =
           let x = Hashtbl.hash (Var.to_string x) in
           (31 * acc) + (5 * x) + hash_value v )
         0 vs
+
+let rec get_inner_type t : ty =
+  match t with TVar {contents= Link t} -> get_inner_type t | _ -> t

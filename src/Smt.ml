@@ -217,7 +217,7 @@ let rec encode_exp_z3 descr env arr (e: exp) =
         Z3Array.mk_store env.ctx e1 e2 e3
     | MMap, [{e= EFun {arg= x; argty= ty1; resty= ty2; body= e1}}; e2] ->
         let keysort =
-          match Typing.get_inner_type (oget e2.ety) with
+          match get_inner_type (oget e2.ety) with
           | TMap (ty, _) -> ty_to_sort env.ctx ty
           | _ -> Console.error "internal error (encode_exp_z3)"
         in
@@ -259,7 +259,7 @@ let rec encode_exp_z3 descr env arr (e: exp) =
         ; e2
         ; e3 ] ) ->
         let keysort =
-          match Typing.get_inner_type (oget e2.ety) with
+          match get_inner_type (oget e2.ety) with
           | TMap (ty, _) -> ty_to_sort env.ctx ty
           | _ -> Console.error "internal error (encode_exp_z3)"
         in
@@ -384,7 +384,7 @@ and encode_branches_aux_z3 descr env arr name bs accze (t: ty) =
       encode_branches_aux_z3 descr env arr name bs ze t
 
 and encode_pattern_z3 descr env arr zname p (t: ty) =
-  let ty = Typing.get_inner_type t in
+  let ty = get_inner_type t in
   match (p, ty) with
   | PWild, _ ->
       if arr.lift then arr.make (mk_bool env.ctx true)
@@ -475,7 +475,7 @@ and encode_pattern_z3 descr env arr zname p (t: ty) =
       Console.error
         (Printf.sprintf "internal error (encode_pattern): (%s, %s)"
            (Printing.pattern_to_string p)
-           (Printing.ty_to_string (Typing.get_inner_type t)))
+           (Printing.ty_to_string (get_inner_type t)))
 
 and encode_value_z3 descr env arr (v: Syntax.value) =
   (* Printf.printf "value: %s\n" (Printing.value_to_string v) ; *)
@@ -512,7 +512,7 @@ and encode_value_z3 descr env arr (v: Syntax.value) =
       let bs, d = IMap.bindings map in
       let zd = encode_value_z3 descr env arr d in
       let keysort =
-        match Typing.get_inner_type (oget v.vty) with
+        match get_inner_type (oget v.vty) with
         | TMap (ty, _) -> ty_to_sort env.ctx ty
         | _ -> Console.error "internal error (encode_exp_value)"
       in

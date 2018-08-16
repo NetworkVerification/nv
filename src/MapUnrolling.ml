@@ -213,7 +213,7 @@ let collect_all_map_tys ds =
   let all_tys = ref TypeMap.empty in
   let f d e =
     let ty = Typing.strip_ty (oget e.ety) in
-    match Typing.get_inner_type ty with
+    match get_inner_type ty with
     | TMap _ -> all_tys := TypeMap.add ty () !all_tys
     | _ -> ()
   in
@@ -327,7 +327,7 @@ let unroll info ds =
   let symbolics =
     List.map
       (fun (ty, x, _) ->
-        match Typing.get_inner_type ty with
+        match get_inner_type ty with
         | TMap (ty, _) -> DSymbolic (x, Ty (tuplify_ty map ty))
         | _ -> Console.error "internal error (unroll)" )
       variables
