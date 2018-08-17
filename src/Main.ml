@@ -1,5 +1,3 @@
-(* Driver *)
-
 open ANSITerminal
 open Cmdline
 open Syntax
@@ -93,6 +91,7 @@ let main =
   let ds, info = Input.parse file in
   let decls = Typing.infer_declarations info ds in
   Typing.check_annot_decls decls ;
+  Wellformed.check info decls ;
   if cfg.verbose then (
     print_endline "** SRP Definition **" ;
     print_endline (Printing.declarations_to_string ds) ;
