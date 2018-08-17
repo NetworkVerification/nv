@@ -237,8 +237,7 @@ let sort_keys es =
 
 let lookup s sol = StringMap.find (Var.create s |> Var.to_string) sol.symbolics
 
-let build_value_map sol acc (vv, (s, _)) : (value, value) IMap.t =
-  IMap.update acc (lookup s sol) vv
+let build_value_map sol acc (vv, (s, _)) = BddMap.update acc (lookup s sol) vv
 
 let drop_syms variables s _ =
   List.exists (fun (_, k, _) -> String.equal (Var.to_string k) s) variables
@@ -252,14 +251,14 @@ let map_back orig_sym_types (map: ExprSet.elt list TypeMap.t) variables ds
     | TMap (ty1, ty2), _ -> (
         let es = TypeMap.find ty map in
         let default = default_value ty2 in
-        let base = IMap.create compare_values default in
+        let base = BddMap.create ~key_ty:ty1 default in
         match (v.v, es) with
         | VTuple vs, _ ->
             let zip = List.combine vs es in
             let map = List.fold_left (build_value_map sol) base zip in
             VMap map |> value
         | _, [(s, _)] ->
-            let map = IMap.update base (lookup s sol) v in
+            let map = BddMap.update base (lookup s sol) v in
             VMap map |> value
         | _ -> Console.error "internal error (map_back1)" )
     | TBool, VBool _ -> v

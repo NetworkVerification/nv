@@ -49,8 +49,6 @@ let reset_tyvars () =
   (* DPW: don't need to do this *)
   level_reset ()
 
-let annot ty e = {e= e.e; ety= Some ty; espan= e.espan}
-
 let rec check_annot_val (v: value) =
   ( match v.vty with
   | None ->
@@ -62,7 +60,7 @@ let rec check_annot_val (v: value) =
   | VOption (Some v) -> check_annot_val v
   | VTuple vs -> List.iter check_annot_val vs
   | VMap map ->
-      let bs, _ = IMap.bindings map in
+      let bs, _ = BddMap.bindings map in
       List.iter (fun (v1, v2) -> check_annot_val v1 ; check_annot_val v2) bs
   | _ -> ()
 
@@ -450,45 +448,49 @@ and textractv v =
 
 and infer_value info env (v: Syntax.value) : Syntax.value =
   (* Printf.printf "infer_value: %s\n" (Printing.value_to_string v) ; *)
-  match v.v with
-  | VBool b -> tvalue (v.v, TBool)
-  | VUInt32 i -> tvalue (v.v, tint)
-  | VMap m -> (
-      let vs, default = IMap.bindings m in
-      let default, dty = infer_value info env default |> textractv in
-      match vs with
-      | [] ->
-          let ty = fresh_tyvar () in
-          let map = IMap.create compare_values default in
-          tvalue (VMap map, TMap (ty, dty))
-      | (kv, vv) :: _ ->
-          let kv, kvty = infer_value info env kv |> textractv in
-          let vv, vvty = infer_value info env vv |> textractv in
-          unify info (val_to_exp v) vvty dty ;
-          let vs =
-            List.map
-              (fun (kv2, vv2) ->
-                let kv2, kvty2 = infer_value info env kv2 |> textractv in
-                let vv2, vvty2 = infer_value info env vv2 |> textractv in
-                unify info (val_to_exp v) kvty kvty2 ;
-                unify info (val_to_exp v) vvty vvty2 ;
-                (kv2, vv2) )
-              vs
-          in
-          let map = IMap.from_bindings compare_values (vs, default) in
-          tvalue (VMap map, TMap (kvty, vvty)) )
-  | VTuple vs ->
-      let vs, ts = infer_values info env vs in
-      tvalue (VTuple vs, TTuple ts)
-  | VOption None ->
-      let tv = fresh_tyvar () in
-      tvalue (VOption None, TOption tv)
-  | VOption (Some v) ->
-      let v, t = infer_value info env v |> textractv in
-      let tv = fresh_tyvar () in
-      unify info (val_to_exp v) t tv ;
-      tvalue (VOption (Some v), TOption tv)
-  | VClosure cl -> Console.error "internal error (infer_value)"
+  let ret =
+    match v.v with
+    | VBool b -> tvalue (v.v, TBool)
+    | VUInt32 i -> tvalue (v.v, tint)
+    | VMap m -> (
+        let vs, default = BddMap.bindings m in
+        let default, dty = infer_value info env default |> textractv in
+        match vs with
+        | [] ->
+            let ty = fresh_tyvar () in
+            let map = BddMap.create ~key_ty:ty default in
+            tvalue (VMap map, TMap (ty, dty))
+        | (kv, vv) :: _ ->
+            let kv, kvty = infer_value info env kv |> textractv in
+            let vv, vvty = infer_value info env vv |> textractv in
+            unify info (val_to_exp v) vvty dty ;
+            let vs =
+              List.map
+                (fun (kv2, vv2) ->
+                  let kv2, kvty2 = infer_value info env kv2 |> textractv in
+                  let vv2, vvty2 = infer_value info env vv2 |> textractv in
+                  unify info (val_to_exp v) kvty kvty2 ;
+                  unify info (val_to_exp v) vvty vvty2 ;
+                  (kv2, vv2) )
+                vs
+            in
+            let map = BddMap.from_bindings ~key_ty:kvty (vs, default) in
+            tvalue (VMap map, TMap (kvty, vvty)) )
+    | VTuple vs ->
+        let vs, ts = infer_values info env vs in
+        tvalue (VTuple vs, TTuple ts)
+    | VOption None ->
+        let tv = fresh_tyvar () in
+        tvalue (VOption None, TOption tv)
+    | VOption (Some v) ->
+        let v, t = infer_value info env v |> textractv in
+        let tv = fresh_tyvar () in
+        unify info (val_to_exp v) t tv ;
+        tvalue (VOption (Some v), TOption tv)
+    | VClosure cl -> Console.error "internal error (infer_value)"
+  in
+  (* Printf.printf "Type: %s\n" (Printing.ty_to_string (oget ret.vty)) ; *)
+  ret
 
 and infer_values info env vs =
   match vs with

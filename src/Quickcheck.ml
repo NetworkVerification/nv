@@ -95,7 +95,6 @@ let add_blocking_require info ds map var_map =
   let d = DRequire neq in
   let ds = ds @ [d] in
   let ds = Typing.infer_declarations info ds in
-  Typing.check_annot_decls ds ;
   ds
 
 let smart_symbolics info prog_constants var_map ds =

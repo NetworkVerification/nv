@@ -27,3 +27,5 @@ let to_string entry_to_string env =
 let to_list env = M.bindings env
 
 let compare = M.compare
+
+let equal = M.equal

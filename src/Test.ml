@@ -39,7 +39,7 @@ let fal = value (VBool false)
 let assert_equal_values =
   assert_equal ~cmp:equal_values ~printer:Printing.value_to_string
 
-let assert_equal_maps = assert_equal ~cmp:BddMap.equal_maps
+let assert_equal_maps = assert_equal ~cmp:BddMap.equal
 
 (* ~printer:BddMap.show_map *)
 

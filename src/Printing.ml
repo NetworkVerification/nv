@@ -162,7 +162,7 @@ and map_to_string sep_s term_s m =
   let binding_to_string (k, v) =
     value_to_string_p max_prec k ^ sep_s ^ value_to_string_p max_prec v
   in
-  let bs, default = IMap.bindings m in
+  let bs, default = BddMap.bindings m in
   "["
   ^ term term_s binding_to_string bs
   ^ "default:="

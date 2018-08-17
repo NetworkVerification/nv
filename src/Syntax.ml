@@ -52,10 +52,12 @@ type pattern =
 type v =
   | VBool of bool
   | VUInt32 of UInt32.t
-  | VMap of (value, value) IMap.t
+  | VMap of mtbdd
   | VTuple of value list
   | VOption of value option
   | VClosure of closure
+
+and mtbdd = (value Mtbdd.t * ty)
 
 and value = {v: v; vty: ty option; vspan: Span.t}
 
@@ -137,6 +139,10 @@ let ty_func tyargs body = (tyargs, body)
 
 let lam x body = exp (EFun (func x body))
 
+let annot ty e = {e= e.e; ety= Some ty; espan= e.espan}
+
+let annotv ty v = {v= v.v; vty= Some ty; vspan= v.vspan}
+
 let rec is_value e =
   match e.e with
   | EVal _ -> true
@@ -210,46 +216,42 @@ let get_requires ds =
     [] ds
   |> List.rev
 
-let prec v =
-  match v.v with
-  | VBool _ -> 1
-  | VUInt32 _ -> 2
-  | VMap _ -> 3
-  | VTuple _ -> 4
-  | VOption _ -> 5
-  | VClosure _ -> 6
+let rec equal_values (v1: value) (v2:value) = 
+  equal_vs v1.v v2.v
 
-let rec compare_values v1 v2 =
-  match (v1.v, v2.v) with
-  | VBool b1, VBool b2 -> Pervasives.compare b1 b2
-  | VUInt32 i1, VUInt32 i2 -> UInt32.compare i1 i2
-  | VMap m1, VMap m2 -> IMap.compare compare_values m1 m2
-  | VTuple vs1, VTuple vs2 -> compare_lists vs1 vs2
+and equal_vs v1 v2 =
+  match (v1, v2) with
+  | VBool b1, VBool b2 -> b1 = b2
+  | VUInt32 i1, VUInt32 i2 -> UInt32.compare i1 i2 = 0
+  | VMap (m1, _), VMap (m2, _) -> Mtbdd.is_equal m1 m2
+  | VTuple vs1, VTuple vs2 -> equal_lists vs1 vs2
   | VOption vo1, VOption vo2 -> (
     match (vo1, vo2) with
-    | None, None -> 0
-    | None, Some _ -> -1
-    | Some _, None -> 1
-    | Some x, Some y -> compare_values x y )
+    | None, None -> true
+    | None, Some _ -> false
+    | Some _, None -> false
+    | Some x, Some y -> equal_values x y )
   | VClosure (e1, f1), VClosure (e2, f2) ->
       let {ty= ty1; value= value1} = e1 in
       let {ty= ty2; value= value2} = e2 in
       let cmp = Env.compare Pervasives.compare ty1 ty1 in
-      if cmp <> 0 then cmp else Env.compare compare_values value1 value2
-  | _, _ -> prec v1 - prec v2
+      if cmp <> 0 then false
+      else
+        let cmp = Env.equal equal_values value1 value2 in
+        cmp && equal_funcs f1 f2
+  | _, _ -> false
 
-and compare_lists vs1 vs2 =
+(* TODO: check equal expressions *)
+and equal_funcs f1 f2 =
+  let {arg= x; argty= tyx; resty= resx; body= e1} = f1 in
+  let {arg= y; argty= tyy; resty= resy; body= e2} = f2 in
+  Var.equals x y
+
+and equal_lists vs1 vs2 =
   match (vs1, vs2) with
-  | [], [] -> 0
-  | [], _ -> -1
-  | _, [] -> 1
-  | v1 :: vs1, v2 :: vs2 ->
-      let cmp = compare_values v1 v2 in
-      if cmp <> 0 then cmp else compare_lists vs1 vs2
-
-and compare_maps m1 m2 = PMap.compare compare_values m1 m2
-
-let equal_values v1 v2 = compare_values v1 v2 = 0
+  | [], [] -> true
+  | [], _ | _, [] -> false
+  | v1 :: vs1, v2 :: vs2 -> equal_values v1 v2 && equal_lists vs1 vs2
 
 let rec hash_value v =
   match v.v with
@@ -270,19 +272,6 @@ let rec hash_value v =
 
 let rec get_inner_type t : ty =
   match t with TVar {contents= Link t} -> get_inner_type t | _ -> t
-
-let rec default_value ty =
-  let v =
-    match ty with
-    | TBool -> VBool false
-    | TInt _ -> VUInt32 (UInt32.of_int 0)
-    | TTuple ts -> VTuple (List.map default_value ts)
-    | TOption ty -> VOption None
-    | TMap (ty1, ty2) -> VMap (IMap.create compare_values (default_value ty2))
-    | TVar _ | QVar _ | TArrow _ ->
-        Console.error "internal error (default_value)"
-  in
-  value v
 
 (* Include the map type here to avoid circular dependency *)
 
@@ -328,29 +317,68 @@ module BddUtils = struct
     done ;
     !acc
 
+  let tbool_to_bool tb =
+    match tb with Man.False | Man.Top -> false | Man.True -> true
+end
+
+module BddMap = struct
+  module B = BddUtils
+
+  (* TODO: 
+      1. optimize variable ordering
+      2. more efficient operations
+      3. preprocessing of filter statements *)
+
+  type t = mtbdd
+
+  (* let res = User.map_op2
+    ~commutative:true ~idempotent:true
+    ~special:(fun bdd1 bdd2 ->
+      if Vdd.is_cst bdd1 && Vdd.dval bdd1 = false then Some(bdd1)
+      else if Vdd.is_cst bdd2 && Vdd.dval bdd2 = false then Some(bdd2)
+      else None)
+    (fun b1 b2 -> b1 && b2) *)
+
+  let create ~key_ty:ty (v: value) : t =
+    B.set_size (B.ty_to_size ty) ;
+    (Mtbdd.cst B.mgr B.tbl v, ty)
+
+  let rec default_value ty =
+    let v =
+      match ty with
+      | TBool -> VBool false
+      | TInt _ -> VUInt32 (UInt32.of_int 0)
+      | TTuple ts -> VTuple (List.map default_value ts)
+      | TOption ty -> VOption None
+      | TMap (ty1, ty2) -> VMap (create ~key_ty:ty1 (default_value ty2))
+      | TVar _ | QVar _ | TArrow _ ->
+          Console.error "internal error (default_value)"
+    in
+    value v
+
   let value_to_bdd (v: value) : Bdd.vt =
     let rec aux v idx =
       match v.v with
       | VBool b ->
-          let var = ithvar idx in
+          let var = B.ithvar idx in
           ((if b then var else Bdd.dnot var), idx + 1)
-      | VUInt32 i -> (mk_int i idx, idx + 32)
+      | VUInt32 i -> (B.mk_int i idx, idx + 32)
       | VTuple vs ->
-          let base = Bdd.dtrue mgr in
+          let base = Bdd.dtrue B.mgr in
           List.fold_left
             (fun (bdd_acc, idx) v ->
               let bdd, i = aux v idx in
               (Bdd.dand bdd_acc bdd, i) )
             (base, idx) vs
       | VOption None ->
-          let var = ithvar idx in
-          let tag = Bdd.eq var (Bdd.dfalse mgr) in
+          let var = B.ithvar idx in
+          let tag = Bdd.eq var (Bdd.dfalse B.mgr) in
           let dv = default_value (oget v.vty) in
           let value, idx = aux dv (idx + 1) in
           (Bdd.dand tag value, idx)
       | VOption (Some dv) ->
-          let var = ithvar idx in
-          let tag = Bdd.eq var (Bdd.dtrue mgr) in
+          let var = B.ithvar idx in
+          let tag = Bdd.eq var (Bdd.dtrue B.mgr) in
           let value, idx = aux dv (idx + 1) in
           (Bdd.dand tag value, idx)
       | VMap _ | VClosure _ -> Console.error "internal error (value_to_bdd)"
@@ -358,17 +386,15 @@ module BddUtils = struct
     let bdd, _ = aux v 0 in
     bdd
 
-  let tbool_to_bool tb =
-    match tb with Man.False | Man.Top -> false | Man.True -> true
-
   let vars_to_value vars ty =
     let rec aux idx ty =
-      match get_inner_type ty with
-      | TBool -> (VBool (tbool_to_bool vars.(idx)) |> value, idx + 1)
+      let (v,i) = match get_inner_type ty with
+      | TBool ->
+          (VBool (B.tbool_to_bool vars.(idx)) |> value, idx + 1)
       | TInt _ ->
           let acc = ref UInt32.zero in
           for i = 0 to 31 do
-            let bit = tbool_to_bool vars.(idx + i) in
+            let bit = B.tbool_to_bool vars.(idx + i) in
             if bit then
               let add = UInt32.shift_left UInt32.one i in
               acc := UInt32.add !acc add
@@ -384,7 +410,7 @@ module BddUtils = struct
           in
           (value (VTuple (List.rev vs)), i)
       | TOption tyo ->
-          let tag = tbool_to_bool vars.(idx) in
+          let tag = B.tbool_to_bool vars.(idx) in
           let v, i = aux (idx + 1) tyo in
           let v =
             if tag then VOption (Some v) |> value else value (VOption None)
@@ -392,31 +418,14 @@ module BddUtils = struct
           (v, i)
       | TArrow _ | TMap _ | TVar _ | QVar _ ->
           Console.error "internal error (bdd_to_value)"
+      in
+      annotv ty v, i
     in
     fst (aux 0 ty)
 
   let bdd_to_value (guard: Bdd.vt) (ty: ty) : value =
     let vars = Bdd.pick_minterm guard in
     vars_to_value vars ty
-end
-
-module BddMap = struct
-  module B = BddUtils
-
-  (* TODO: 
-      1. optimize variable ordering
-      2. more efficient operations
-      3. preprocessing of filter statements *)
-
-  type t = value Mtbdd.t * ty
-
-  (* let res = User.map_op2
-    ~commutative:true ~idempotent:true
-    ~special:(fun bdd1 bdd2 ->
-      if Vdd.is_cst bdd1 && Vdd.dval bdd1 = false then Some(bdd1)
-      else if Vdd.is_cst bdd2 && Vdd.dval bdd2 = false then Some(bdd2)
-      else None)
-    (fun b1 b2 -> b1 && b2) *)
 
   let map (f: value -> value) ((vdd, ty): t) : t =
     let g x = f (Mtbdd.get x) |> Mtbdd.unique B.tbl in
@@ -436,18 +445,14 @@ module BddMap = struct
     (Mapleaf.mapleaf2 g x y, tyx)
 
   let find ((map, _): t) (v: value) : value =
-    let bdd = B.value_to_bdd v in
+    let bdd = value_to_bdd v in
     let for_key = Mtbdd.constrain map bdd in
     Mtbdd.pick_leaf for_key
 
   let update ((map, ty): t) (k: value) (v: value) : t =
     let leaf = Mtbdd.cst B.mgr B.tbl v in
-    let key = B.value_to_bdd k in
+    let key = value_to_bdd k in
     (Mtbdd.ite key leaf map, ty)
-
-  let create ~key_ty:ty (v: value) : t =
-    B.set_size (B.ty_to_size ty) ;
-    (Mtbdd.cst B.mgr B.tbl v, ty)
 
   let count_tops arr =
     Array.fold_left
@@ -471,8 +476,8 @@ module BddMap = struct
     Mtbdd.iter_cube
       (fun vars v ->
         (* Array.iteri (fun i x -> Printf.printf "vars %d is %b\n" i (tbool_to_bool x)) vars; *)
-        if compare_values v dv <> 0 then
-          let k = B.vars_to_value vars ty in
+        if not (equal_values v dv) then
+          let k = vars_to_value vars ty in
           bs := (k, v) :: !bs )
       map ;
     (!bs, dv)
@@ -482,9 +487,9 @@ module BddMap = struct
     let map = create ~key_ty:ty default in
     List.fold_left (fun acc (k, v) -> update acc k v) map bs
 
-  let equal_maps (bm1, _) (bm2, _) = Mtbdd.is_equal bm1 bm2
+  let equal (bm1, _) (bm2, _) = Mtbdd.is_equal bm1 bm2
 
-  let hash_map (bm, _) = Mtbdd.topvar bm
+  let hash (bm, _) = Mtbdd.topvar bm
 
   (* let show_map bm =
     let bs, dv = bindings bm in
@@ -700,9 +705,11 @@ module BddFunc = struct
           | TOption ty -> ty
           | _ -> Console.error "internal error (eval_value)"
         in
-        let dv = default_value ty in
+        let dv = BddMap.default_value ty in
         BOption (Bdd.dfalse B.mgr, eval_value env dv)
     | VOption (Some v) -> BOption (Bdd.dtrue B.mgr, eval_value env v)
     | VTuple vs -> BTuple (List.map (eval_value env) vs)
     | VMap _ | VClosure _ -> Console.error "internal error (eval_value)"
 end
+
+let default_value = BddMap.default_value

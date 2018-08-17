@@ -32,7 +32,7 @@ let rec equal_val v1 v2 =
   match (v1.v, v2.v) with
   | VBool b1, VBool b2 -> b1 = b2
   | VUInt32 i1, VUInt32 i2 -> UInt32.compare i1 i2 = 0
-  | VMap m1, VMap m2 -> IMap.equal equal_val m1 m2
+  | VMap m1, VMap m2 -> BddMap.equal m1 m2
   | VTuple vs1, VTuple vs2 -> equal_vals vs1 vs2
   | VOption None, VOption None -> true
   | VOption (Some v1), VOption (Some v2) -> equal_val v1 v2
@@ -92,7 +92,7 @@ let rec interp_exp env e =
              (Var.to_string x))
     | Some v -> v )
   | EVal v -> v
-  | EOp (op, es) -> interp_op env op es
+  | EOp (op, es) -> interp_op env (oget e.ety) op es
   | EFun f -> value (VClosure (env, f))
   | EApp (e1, e2) -> (
       let v1 = interp_exp env e1 in
@@ -119,7 +119,7 @@ let rec interp_exp env e =
             ( "value " ^ value_to_string v
             ^ " did not match any pattern in match statement" )
 
-and interp_op env op es =
+and interp_op env ty op es =
   if arity op != List.length es then
     Console.error
       (sprintf "operation %s has arity %d not arity %d" (op_to_string op)
@@ -132,17 +132,21 @@ and interp_op env op es =
   | UAdd, [{v= VUInt32 i1}; {v= VUInt32 i2}] ->
       VUInt32 (UInt32.add i1 i2) |> value
   | UEq, [v1; v2] ->
-      (if compare_values v1 v2 = 0 then VBool true else VBool false) |> value
+      (if equal_values v1 v2 then VBool true else VBool false) |> value
   | ULess, [{v= VUInt32 i1}; {v= VUInt32 i2}] ->
       (if UInt32.compare i1 i2 = -1 then VBool true else VBool false) |> value
   | ULeq, [{v= VUInt32 i1}; {v= VUInt32 i2}] ->
       (if not (UInt32.compare i1 i2 = 1) then VBool true else VBool false)
       |> value
-  | MCreate, [v] -> VMap (IMap.create compare_values v) |> value
-  | MGet, [{v= VMap m}; v] -> IMap.find m v
-  | MSet, [{v= VMap m}; vkey; vval] -> VMap (IMap.update m vkey vval) |> value
+  | MCreate, [v] -> (
+    match get_inner_type ty with
+    | TMap (kty, _) -> VMap (BddMap.create ~key_ty:kty v) |> value
+    | _ -> Console.error "runtime error: missing map key type" )
+  | MGet, [{v= VMap m}; v] -> BddMap.find m v
+  | MSet, [{v= VMap m}; vkey; vval] ->
+      VMap (BddMap.update m vkey vval) |> value
   | MMap, [{v= VClosure (c_env, f)}; {v= VMap m}] ->
-      VMap (IMap.map (fun v -> apply c_env f v) m) |> value
+      VMap (BddMap.map (fun v -> apply c_env f v) m) |> value
   | MMerge, [{v= VClosure (c_env, f)}; {v= VMap m1}; {v= VMap m2}] ->
       (* TO DO:  Need to preserve types in VOptions here ? *)
       let f_lifted v1 v2 =
@@ -150,7 +154,7 @@ and interp_op env op es =
         | {v= VClosure (c_env, f)} -> apply c_env f v2
         | _ -> Console.error "internal error (interp_op)"
       in
-      VMap (IMap.merge f_lifted m1 m2) |> value
+      VMap (BddMap.merge f_lifted m1 m2) |> value
   | _, _ ->
       Console.error
         (Printf.sprintf "bad operator application: %s"

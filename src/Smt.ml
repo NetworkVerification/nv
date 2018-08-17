@@ -509,7 +509,7 @@ and encode_value_z3 descr env arr (v: Syntax.value) =
   | VClosure _ -> Console.error "internal error (closure in smt)"
   | VMap map ->
       if arr.lift then Console.error "internal error (lifted vmap)" ;
-      let bs, d = IMap.bindings map in
+      let bs, d = BddMap.bindings map in
       let zd = encode_value_z3 descr env arr d in
       let keysort =
         match get_inner_type (oget v.vty) with
@@ -761,6 +761,73 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
 
 exception Model_conversion
 
+let is_num (c: char) =
+  c = '0' || c = '1' || c = '2' || c = '3' || c = '4' || c = '5' || c = '6'
+  || c = '7' || c = '8' || c = '9'
+
+let grab_int str : int * string =
+  let len = String.length str in
+  let idx = ref (-1) in
+  for i = 0 to len - 1 do
+    let c = str.[i] in
+    if not (is_num c) && !idx < 0 then idx := i
+  done ;
+  let num = String.sub str 0 !idx in
+  let remaining = String.sub str !idx (len - !idx) in
+  (int_of_string num, remaining)
+
+let starts_with s1 s2 =
+  let len1 = String.length s1 in
+  let len2 = String.length s2 in
+  if len1 < len2 then false
+  else
+    let pfx = String.sub s1 0 len2 in
+    pfx = s2
+
+let rec parse_custom_type s : ty * string =
+  let len = String.length s in
+  if starts_with s "Option" then
+    let remaining = String.sub s 6 (len - 6) in
+    let ty, r = parse_custom_type remaining in
+    (TOption ty, r)
+  else if starts_with s "Pair" then
+    let remaining = String.sub s 4 (len - 4) in
+    let count, remaining = grab_int remaining in
+    let tys, r = parse_list count remaining in
+    (TTuple tys, r)
+  else if starts_with s "Int" then
+    let remaining = if len = 3 then "" else String.sub s 3 (len - 3) in
+    (TInt (UInt32.of_int 32), remaining)
+  else if starts_with s "Bool" then
+    let remaining = if len = 4 then "" else String.sub s 4 (len - 4) in
+    (TBool, remaining)
+  else Console.error (Printf.sprintf "parse_custom_type: %s" s)
+
+and parse_list n s =
+  if n = 0 then ([], s)
+  else
+    let ty, s = parse_custom_type s in
+    let rest, s = parse_list (n - 1) s in
+    (ty :: rest, s)
+
+let sort_to_ty s =
+  let rec aux str =
+    let has_parens = String.sub str 0 1 = "(" in
+    let str =
+      if has_parens then String.sub str 1 (String.length str - 2) else str
+    in
+    let strs = String.split_on_char ' ' str in
+    match strs with
+    | ["Int"] -> TInt (UInt32.of_int 32)
+    | ["Bool"] -> TBool
+    | ["Array"; k; v] -> TMap (aux k, aux v)
+    | [x] ->
+        let ty, _ = parse_custom_type x in
+        ty
+    | _ -> Console.error "cannot convert SMT sort to type"
+  in
+  aux (Sort.to_string s)
+
 let rec z3_to_value (e: Expr.expr) : Syntax.value =
   try
     let i = UInt32.of_string (Expr.to_string e) in
@@ -779,10 +846,15 @@ let rec z3_to_value (e: Expr.expr) : Syntax.value =
         let v2 = z3_to_value e2 in
         let v3 = z3_to_value e3 in
         match v1.v with
-        | VMap m -> VMap (IMap.update m v2 v3) |> value
+        | VMap m -> VMap (BddMap.update m v2 v3) |> value
         | _ -> raise Model_conversion )
     | "const", [e1] ->
-        VMap (IMap.create compare_values (z3_to_value e1)) |> value
+        let sort = Z3.Expr.get_sort e in
+        let ty = sort_to_ty sort in
+        ( match get_inner_type ty with
+        | TMap (kty, _) -> VMap (BddMap.create ~key_ty:kty (z3_to_value e1))
+        | _ -> Console.error "internal error (z3_to_exp)" )
+        |> value
     | _ ->
         if String.length name >= 7 && String.sub name 0 7 = "mk-pair" then
           let es = List.map z3_to_value es in

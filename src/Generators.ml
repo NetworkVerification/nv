@@ -26,12 +26,12 @@ let rec random_value hints max_map_size ty =
         else VOption (Some (random_value hints max_map_size ty)) |> value
     | TMap (ty1, ty2) ->
         let default = random_value hints max_map_size ty2 in
-        let map = ref (IMap.create compare_values default) in
+        let map = ref (BddMap.create ~key_ty:ty1 default) in
         let x = Random.int max_map_size in
         for i = 1 to x do
           let k = random_value hints max_map_size ty1 in
           let v = random_value hints max_map_size ty2 in
-          map := IMap.update !map k v
+          map := BddMap.update !map k v
         done ;
         VMap !map |> value
     | QVar _ | TVar _ -> Console.error "internal error (random_value)"
