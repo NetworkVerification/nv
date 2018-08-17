@@ -86,7 +86,7 @@ let run_simulator cfg info decls =
     Console.error "required conditions not satisfied"
 
 let main =
-  let cfg, rest = argparse default "example" Sys.argv in
+  let cfg, rest = argparse default "nv" Sys.argv in
   if cfg.debug then Printexc.record_backtrace true ;
   let file = rest.(0) in
   let ds, info = Input.parse file in
