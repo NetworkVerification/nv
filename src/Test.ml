@@ -108,7 +108,9 @@ let test4 _ =
   List.iter
     (fun b ->
       let k1, v1 = b in
-      let k2, v2 = List.find (( = ) b) vs in
+      let k2, v2 =
+        List.find (fun (k2, v2) -> equal_values k1 k2 && equal_values v1 v2) vs
+      in
       assert_equal_values k1 k2 ; assert_equal_values v1 v2 )
     bs
 

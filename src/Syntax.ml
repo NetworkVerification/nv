@@ -216,8 +216,7 @@ let get_requires ds =
     [] ds
   |> List.rev
 
-let rec equal_values (v1: value) (v2:value) = 
-  equal_vs v1.v v2.v
+let rec equal_values (v1: value) (v2: value) = equal_vs v1.v v2.v
 
 and equal_vs v1 v2 =
   match (v1, v2) with
@@ -388,38 +387,38 @@ module BddMap = struct
 
   let vars_to_value vars ty =
     let rec aux idx ty =
-      let (v,i) = match get_inner_type ty with
-      | TBool ->
-          (VBool (B.tbool_to_bool vars.(idx)) |> value, idx + 1)
-      | TInt _ ->
-          let acc = ref UInt32.zero in
-          for i = 0 to 31 do
-            let bit = B.tbool_to_bool vars.(idx + i) in
-            if bit then
-              let add = UInt32.shift_left UInt32.one i in
-              acc := UInt32.add !acc add
-          done ;
-          (value (VUInt32 !acc), idx + 32)
-      | TTuple ts ->
-          let vs, i =
-            List.fold_left
-              (fun (vs, idx) ty ->
-                let v, i = aux idx ty in
-                (v :: vs, i) )
-              ([], idx) ts
-          in
-          (value (VTuple (List.rev vs)), i)
-      | TOption tyo ->
-          let tag = B.tbool_to_bool vars.(idx) in
-          let v, i = aux (idx + 1) tyo in
-          let v =
-            if tag then VOption (Some v) |> value else value (VOption None)
-          in
-          (v, i)
-      | TArrow _ | TMap _ | TVar _ | QVar _ ->
-          Console.error "internal error (bdd_to_value)"
+      let v, i =
+        match get_inner_type ty with
+        | TBool -> (VBool (B.tbool_to_bool vars.(idx)) |> value, idx + 1)
+        | TInt _ ->
+            let acc = ref UInt32.zero in
+            for i = 0 to 31 do
+              let bit = B.tbool_to_bool vars.(idx + i) in
+              if bit then
+                let add = UInt32.shift_left UInt32.one i in
+                acc := UInt32.add !acc add
+            done ;
+            (value (VUInt32 !acc), idx + 32)
+        | TTuple ts ->
+            let vs, i =
+              List.fold_left
+                (fun (vs, idx) ty ->
+                  let v, i = aux idx ty in
+                  (v :: vs, i) )
+                ([], idx) ts
+            in
+            (value (VTuple (List.rev vs)), i)
+        | TOption tyo ->
+            let tag = B.tbool_to_bool vars.(idx) in
+            let v, i = aux (idx + 1) tyo in
+            let v =
+              if tag then VOption (Some v) |> value else value (VOption None)
+            in
+            (v, i)
+        | TArrow _ | TMap _ | TVar _ | QVar _ ->
+            Console.error "internal error (bdd_to_value)"
       in
-      annotv ty v, i
+      (annotv ty v, i)
     in
     fst (aux 0 ty)
 
