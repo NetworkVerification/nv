@@ -3,9 +3,7 @@ open Random
 open Syntax
 open Unsigned
 
-(* TODO: add a hints option to bias for constants that appear in the program *)
-
-let rec random_value hints max_map_size ty =
+let rec random_value ~hints ~max_map_size ty =
   let i = Random.int 10 in
   match (TypeMap.find_opt ty hints, i < 9) with
   | Some vs, true ->
