@@ -121,8 +121,6 @@ let arity op =
 
 (* Useful constructors *)
 
-let ( ~> ) ty ty = TArrow (ty, ty)
-
 let tint = TInt (UInt32.of_int 32)
 
 let exp (e: e) : exp = {e; ety= None; espan= Span.default}
@@ -134,8 +132,6 @@ let value (v: v) : value = {v; vty= None; vspan= Span.default}
 let e_val (x: v) : exp = exp (EVal (value x))
 
 let func x body = {arg= x; argty= None; resty= None; body}
-
-let ty_func tyargs body = (tyargs, body)
 
 let lam x body = exp (EFun (func x body))
 
