@@ -1,6 +1,3 @@
-(* Interpreter for SRP attribute processing language *)
-(* TO DO:  Use type environment to substitute types for type vars as we interpret *)
-
 open Unsigned
 open Syntax
 open Printing
@@ -163,8 +160,6 @@ and interp_op env ty op es =
 and apply env f v = interp_exp (update_value env f.arg v) f.body
 
 let interp e = interp_exp empty_env e
-
-let interp_env env e = interp_exp env e
 
 let interp_closure cl (args: value list) =
   interp (Syntax.apply_closure cl args)

@@ -74,36 +74,36 @@ let declarations_to_state ds ~throw_requires =
     match d with
     | DLet (x, _, e) ->
         let env = info.env in
-        let v = Interp.interp_env env e in
+        let v = Interp.interp_exp env e in
         info.env <- Interp.update_value env x v
     | DSymbolic (x, Exp e) ->
         let env = info.env in
-        let v = Interp.interp_env env e in
+        let v = Interp.interp_exp env e in
         info.env <- Interp.update_value env x v ;
         info.syms <- StringMap.add (Var.to_string x) v info.syms
     | DSymbolic (x, Ty ty) ->
         let env = info.env in
         let e = EVal (default_value ty) |> exp in
-        let v = Interp.interp_env env e in
+        let v = Interp.interp_exp env e in
         info.env <- Interp.update_value env x v ;
         info.syms <- StringMap.add (Var.to_string x) v info.syms
     | DMerge e ->
         let get_merge () =
-          match (Interp.interp_env info.env e).v with
+          match (Interp.interp_exp info.env e).v with
           | VClosure cl -> info.m <- Some cl
           | _ -> Console.error "merge was not evaluated to a closure"
         in
         if_none info.m get_merge "multiple merge functions"
     | DTrans e ->
         let get_trans () =
-          match (Interp.interp_env info.env e).v with
+          match (Interp.interp_exp info.env e).v with
           | VClosure cl -> info.t <- Some cl
           | _ -> Console.error "trans was not evaluated to a closure"
         in
         if_none info.t get_trans "multiple trans functions"
     | DAssert e ->
         let get_assert () =
-          match (Interp.interp_env info.env e).v with
+          match (Interp.interp_exp info.env e).v with
           | VClosure cl -> info.a <- Some cl
           | _ -> Console.error "assert was not evaluated to a closure"
         in
@@ -118,14 +118,14 @@ let declarations_to_state ds ~throw_requires =
           "multiple edges declarations"
     | DInit e ->
         let get_initializer () =
-          match (Interp.interp_env info.env e).v with
+          match (Interp.interp_exp info.env e).v with
           | VClosure cl -> info.init <- Some cl
           | _ -> Console.error "init was not evaluated to a closure"
         in
         if_none info.init get_initializer
           "multiple initialization declarations"
     | DRequire e -> (
-      match (Interp.interp_env info.env e).v with
+      match (Interp.interp_exp info.env e).v with
       | VBool true -> ()
       | _ ->
           if throw_requires then raise Require_false
@@ -175,7 +175,7 @@ let simulate_step {graph= g; trans; merge} s x =
       Interp.interp_closure merge
         [neighbor; n_old_attribute; n_incoming_attribute]
     in
-    if Interp.equal_val n_old_attribute n_new_attribute then (s, todo)
+    if equal_values n_old_attribute n_new_attribute then (s, todo)
     else (Graph.VertexMap.add n n_new_attribute s, n :: todo)
   in
   let initial_attribute = get_attribute x s in
