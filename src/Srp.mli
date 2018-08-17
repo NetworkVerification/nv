@@ -11,4 +11,5 @@ type queue = Graph.Vertex.t list
 
 val simulate_declarations : declarations -> Solution.t
 
-val simulate_declarations_bound : declarations -> int -> Solution.t * queue
+val simulate_declarations_bound :
+  declarations -> int -> Solution.t * queue

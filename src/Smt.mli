@@ -14,4 +14,5 @@ val z3_to_value : Z3.Expr.expr -> value
 
 val symvar_assign : declarations -> value StringMap.t option
 
-val solve : ?symbolic_vars:(Var.t * exp) list -> declarations -> smt_result
+val solve :
+  ?symbolic_vars:(Var.t * exp) list -> declarations -> smt_result

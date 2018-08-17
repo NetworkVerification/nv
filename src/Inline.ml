@@ -2,13 +2,16 @@ open Syntax
 open Typing
 
 let is_function_ty e =
-  match get_inner_type (oget e.ety) with TArrow _ -> true | _ -> false
+  match get_inner_type (oget e.ety) with
+  | TArrow _ -> true
+  | _ -> false
 
 let rec has_var p x =
   match p with
   | PWild | PBool _ | PUInt32 _ -> false
   | PVar y -> Var.equals x y
-  | PTuple ps -> List.fold_left (fun acc p -> acc || has_var p x) false ps
+  | PTuple ps ->
+      List.fold_left (fun acc p -> acc || has_var p x) false ps
   | POption None -> false
   | POption (Some p) -> has_var p x
 
@@ -16,7 +19,8 @@ let rec remove_all env p =
   match p with
   | PWild | PBool _ | PUInt32 _ -> env
   | PVar x -> Env.remove env x
-  | PTuple ps -> List.fold_left (fun acc p -> remove_all acc p) env ps
+  | PTuple ps ->
+      List.fold_left (fun acc p -> remove_all acc p) env ps
   | POption None -> env
   | POption (Some p) -> remove_all env p
 
@@ -26,19 +30,23 @@ let rec substitute x e1 e2 =
   | EFun f ->
       if Var.equals x f.arg then e1
       else EFun {f with body= substitute x f.body e2} |> wrap e1
-  | EApp (e3, e4) -> EApp (substitute x e3 e2, substitute x e4 e2) |> wrap e1
+  | EApp (e3, e4) ->
+      EApp (substitute x e3 e2, substitute x e4 e2) |> wrap e1
   | EIf (e3, e4, e5) ->
       EIf (substitute x e3 e2, substitute x e4 e2, substitute x e5 e2)
       |> wrap e1
   | ELet (y, e3, e4) ->
       if Var.equals x y then e1
-      else ELet (x, substitute x e3 e2, substitute x e4 e2) |> wrap e1
+      else
+        ELet (x, substitute x e3 e2, substitute x e4 e2) |> wrap e1
   | ETy (e1, ty) -> ETy (substitute x e1 e2, ty) |> wrap e1
   | EMatch (e, bs) ->
-      EMatch (substitute x e e2, List.map (substitute_pattern x e2) bs)
+      EMatch
+        (substitute x e e2, List.map (substitute_pattern x e2) bs)
       |> wrap e1
   | ESome e -> ESome (substitute x e e2) |> wrap e1
-  | ETuple es -> ETuple (List.map (fun e -> substitute x e e2) es) |> wrap e1
+  | ETuple es ->
+      ETuple (List.map (fun e -> substitute x e e2) es) |> wrap e1
   | EOp (op, es) ->
       EOp (op, List.map (fun e -> substitute x e e2) es) |> wrap e1
   | EVal _ -> e1
@@ -50,7 +58,8 @@ let inst_types t1 t2 =
   let map = ref Env.empty in
   let rec aux t1 t2 =
     match (t1, t2) with
-    | TVar {contents= Link r}, s | r, TVar {contents= Link s} -> aux r s
+    | TVar {contents= Link r}, s | r, TVar {contents= Link s} ->
+        aux r s
     | QVar x, t | TVar {contents= Unbound (x, _)}, t ->
         map := Env.update !map x t
     | TBool, TBool -> ()
@@ -62,7 +71,8 @@ let inst_types t1 t2 =
     | _ ->
         Console.error
           (Printf.sprintf "unimplemented (inst_types): (%s, %s)"
-             (Printing.ty_to_string t1) (Printing.ty_to_string t2))
+             (Printing.ty_to_string t1)
+             (Printing.ty_to_string t2))
   in
   aux t1 t2 ; !map
 
@@ -96,7 +106,8 @@ let rec inline_app env e1 e2 : exp =
     match e1.e with
     | EVar x -> (
       match Env.lookup_opt env x with
-      | None -> EApp (e1, e2) |> wrap e1 |> annot (inline_type_app e1 e2)
+      | None ->
+          EApp (e1, e2) |> wrap e1 |> annot (inline_type_app e1 e2)
       | Some e -> inline_app env e e2 )
     | EFun f ->
         let e = substitute f.arg f.body e2 |> annot (oget f.resty) in
@@ -108,7 +119,9 @@ let rec inline_app env e1 e2 : exp =
     | ELet (x, e3, e4) ->
         let e5 =
           inline_exp env
-            (EApp (e4, e2) |> wrap e4 |> annot (inline_type_app e4 e2))
+            ( EApp (e4, e2)
+            |> wrap e4
+            |> annot (inline_type_app e4 e2) )
         in
         ELet (x, e3, e5) |> wrap e1
     | ETy (e1, ty) -> inline_app env e1 e2
@@ -119,10 +132,12 @@ let rec inline_app env e1 e2 : exp =
         match branches with
         | [] -> Console.error "internal error"
         | (p, eb) :: _ -> e |> annot (oget eb.ety) )
-    | EApp _ -> EApp (e1, e2) |> wrap e1 |> annot (inline_type_app e1 e2)
+    | EApp _ ->
+        EApp (e1, e2) |> wrap e1 |> annot (inline_type_app e1 e2)
     | ESome _ | ETuple _ | EOp _ | EVal _ ->
         Console.error
-          (Printf.sprintf "inline_app: %s" (Printing.exp_to_string e1))
+          (Printf.sprintf "inline_app: %s"
+             (Printing.exp_to_string e1))
   in
   exp
 
@@ -130,15 +145,18 @@ and inline_branch_app env e2 (p, e) = (p, inline_app env e e2)
 
 and inline_exp (env: exp Env.t) (e: exp) : exp =
   match e.e with
-  | EVar x -> ( match Env.lookup_opt env x with None -> e | Some e1 -> e1 )
+  | EVar x -> (
+    match Env.lookup_opt env x with None -> e | Some e1 -> e1 )
   | EVal v -> e
   | EOp (op, es) -> EOp (op, List.map (inline_exp env) es) |> wrap e
   | EFun f ->
       let body = inline_exp env f.body in
       EFun {f with body} |> wrap e
-  | EApp (e1, e2) -> inline_app env (inline_exp env e1) (inline_exp env e2)
+  | EApp (e1, e2) ->
+      inline_app env (inline_exp env e1) (inline_exp env e2)
   | EIf (e1, e2, e3) ->
-      EIf (inline_exp env e1, inline_exp env e2, inline_exp env e3) |> wrap e
+      EIf (inline_exp env e1, inline_exp env e2, inline_exp env e3)
+      |> wrap e
   | ELet (x, e1, e2) ->
       let e1' = inline_exp env e1 in
       if is_function_ty e1 then inline_exp (Env.update env x e1') e2
@@ -146,7 +164,8 @@ and inline_exp (env: exp Env.t) (e: exp) : exp =
   | ETuple es -> ETuple (List.map (inline_exp env) es) |> wrap e
   | ESome e1 -> ESome (inline_exp env e1) |> wrap e
   | EMatch (e1, bs) ->
-      EMatch (inline_exp env e1, List.map (inline_branch env) bs) |> wrap e
+      EMatch (inline_exp env e1, List.map (inline_branch env) bs)
+      |> wrap e
   | ETy (e1, ty) -> ETy (inline_exp env e1, ty) |> wrap e
 
 (* TODO: right now this is assuming that patterns won't contain functions
@@ -171,7 +190,9 @@ let inline_declaration (env: exp Env.t) (d: declaration) =
 let rec inline_declarations info (ds: declarations) =
   let ds =
     match get_attr_type ds with
-    | None -> Console.error "attribute type not declared: type attribute = ..."
+    | None ->
+        Console.error
+          "attribute type not declared: type attribute = ..."
     | Some ty -> inline_declarations_aux Env.empty ds
   in
   Typing.infer_declarations info ds

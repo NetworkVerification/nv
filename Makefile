@@ -7,7 +7,7 @@ FORMATFILES+=$(shell find src/ -name "*.mli")
 default:  src/Main
 
 all:
-	ocamlformat -i $(FORMATFILES)
+	ocamlformat -i --margin=70 $(FORMATFILES)
 	$(BUILD) src/Main.native
 	mv Main.native /usr/local/bin/nv
 
@@ -32,4 +32,4 @@ clean:
 	rm -Rf *~ src/*~ test/*~ examples/*~
 
 format:
-	ocamlformat -i $(FORMATFILES)
+	ocamlformat -i --margin=70 $(FORMATFILES)

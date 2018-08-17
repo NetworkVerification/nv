@@ -95,9 +95,12 @@ let rec ty_to_sort ctx (ty: ty) : Z3.Sort.sort =
       let v = Z3.Symbol.mk_string ctx "val" in
       let ty = ty_to_sort ctx t in
       let some =
-        Z3.Datatype.mk_constructor_s ctx "some" issome [v] [Some ty] [0]
+        Z3.Datatype.mk_constructor_s ctx "some" issome [v] [Some ty]
+          [0]
       in
-      let none = Z3.Datatype.mk_constructor_s ctx "none" isnone [] [] [] in
+      let none =
+        Z3.Datatype.mk_constructor_s ctx "none" isnone [] [] []
+      in
       let name = Printf.sprintf "Option%s" (Z3.Sort.to_string ty) in
       Z3.Datatype.mk_sort_s ctx name [none; some]
   | TBool -> Z3.Boolean.mk_sort ctx
@@ -106,7 +109,8 @@ let rec ty_to_sort ctx (ty: ty) : Z3.Sort.sort =
       let istup = Z3.Symbol.mk_string ctx "is-pair" in
       let getters =
         List.mapi
-          (fun i _ -> Z3.Symbol.mk_string ctx (Printf.sprintf "proj%d" i))
+          (fun i _ ->
+            Z3.Symbol.mk_string ctx (Printf.sprintf "proj%d" i) )
           ts
       in
       let tys = List.map (ty_to_sort ctx) ts in
@@ -124,14 +128,18 @@ let rec ty_to_sort ctx (ty: ty) : Z3.Sort.sort =
       Z3.Datatype.mk_sort_s ctx name [some]
   | TMap (ty1, ty2) ->
       mk_array_sort ctx (ty_to_sort ctx ty1) (ty_to_sort ctx ty2)
-  | TVar _ | QVar _ | TArrow _ -> Console.error "internal error (ty_to_sort)"
+  | TVar _ | QVar _ | TArrow _ ->
+      Console.error "internal error (ty_to_sort)"
 
 let mk_array ctx sort value = Z3Array.mk_const_array ctx sort value
 
 type array_info =
-  {f: Sort.sort -> Sort.sort; make: Expr.expr -> Expr.expr; lift: bool}
+  { f: Sort.sort -> Sort.sort
+  ; make: Expr.expr -> Expr.expr
+  ; lift: bool }
 
-let is_symbolic syms x = List.exists (fun (y, e) -> Var.equals x y) syms
+let is_symbolic syms x =
+  List.exists (fun (y, e) -> Var.equals x y) syms
 
 let rec encode_exp_z3 descr env arr (e: exp) =
   (* Printf.printf "expr: %s\n" (Printing.exp_to_string e) ; *)
@@ -181,7 +189,9 @@ let rec encode_exp_z3 descr env arr (e: exp) =
     | UEq, _ ->
         let f =
           if arr.lift then fun e1 e2 ->
-            Z3Array.mk_map env.ctx (eq_f env.ctx (peel env.ctx e1)) [e1; e2]
+            Z3Array.mk_map env.ctx
+              (eq_f env.ctx (peel env.ctx e1))
+              [e1; e2]
           else Boolean.mk_eq env.ctx
         in
         encode_op_z3 descr env f arr es
@@ -301,7 +311,8 @@ let rec encode_exp_z3 descr env arr (e: exp) =
         in
         add env.solver [q] ;
         Z3Array.mk_map env.ctx f [e2; e3] *)
-    | MFilter, _ -> Console.error "unsupported: filter in smt encoding"
+    | MFilter, _ ->
+        Console.error "unsupported: filter in smt encoding"
     | _ -> Console.error "internal error (encode_exp_z3)" )
   | EIf (e1, e2, e3) ->
       let ze1 = encode_exp_z3 descr env arr e1 in
@@ -341,7 +352,8 @@ let rec encode_exp_z3 descr env arr (e: exp) =
   | EMatch (e, bs) ->
       let name = create_fresh descr "match" in
       let za =
-        Expr.mk_const_s env.ctx name (oget e.ety |> ty_to_sort env.ctx |> arr.f)
+        Expr.mk_const_s env.ctx name
+          (oget e.ety |> ty_to_sort env.ctx |> arr.f)
       in
       let ze1 = encode_exp_z3 descr env arr e in
       add env.solver [Boolean.mk_eq env.ctx za ze1] ;
@@ -392,7 +404,8 @@ and encode_pattern_z3 descr env arr zname p (t: ty) =
   | PVar x, t ->
       let local_name = create_name descr x in
       let za =
-        Expr.mk_const_s env.ctx local_name (ty_to_sort env.ctx t |> arr.f)
+        Expr.mk_const_s env.ctx local_name
+          (ty_to_sort env.ctx t |> arr.f)
       in
       add env.solver [Boolean.mk_eq env.ctx za zname] ;
       if arr.lift then arr.make (mk_bool env.ctx true)
@@ -400,12 +413,16 @@ and encode_pattern_z3 descr env arr zname p (t: ty) =
   | PBool b, TBool ->
       if arr.lift then
         let a = arr.make (mk_bool env.ctx b) in
-        Z3Array.mk_map env.ctx (eq_f env.ctx (peel env.ctx zname)) [zname; a]
+        Z3Array.mk_map env.ctx
+          (eq_f env.ctx (peel env.ctx zname))
+          [zname; a]
       else Boolean.mk_eq env.ctx zname (Boolean.mk_val env.ctx b)
   | PUInt32 i, TInt _ ->
       if arr.lift then
         let a = arr.make (mk_int_u32 env.ctx i) in
-        Z3Array.mk_map env.ctx (eq_f env.ctx (peel env.ctx zname)) [zname; a]
+        Z3Array.mk_map env.ctx
+          (eq_f env.ctx (peel env.ctx zname))
+          [zname; a]
       else
         let const = mk_int_u32 env.ctx i in
         Boolean.mk_eq env.ctx zname const
@@ -440,7 +457,8 @@ and encode_pattern_z3 descr env arr zname p (t: ty) =
             (List.combine ps znames)
         in
         let f acc e =
-          if arr.lift then Z3Array.mk_map env.ctx (and_f env.ctx) [acc; e]
+          if arr.lift then
+            Z3Array.mk_map env.ctx (and_f env.ctx) [acc; e]
           else Boolean.mk_and env.ctx [acc; e]
         in
         let b = mk_bool env.ctx true in
@@ -454,7 +472,8 @@ and encode_pattern_z3 descr env arr zname p (t: ty) =
   | POption (Some p), TOption t ->
       let new_name = create_fresh descr "option" in
       let za =
-        Expr.mk_const_s env.ctx new_name (ty_to_sort env.ctx t |> arr.f)
+        Expr.mk_const_s env.ctx new_name
+          (ty_to_sort env.ctx t |> arr.f)
       in
       let opt_sort = ty_to_sort env.ctx ty in
       let get_val =
@@ -470,7 +489,9 @@ and encode_pattern_z3 descr env arr zname p (t: ty) =
       if arr.lift then
         let e = Z3Array.mk_map env.ctx is_some [zname] in
         Z3Array.mk_map env.ctx (and_f env.ctx) [e; zp]
-      else Boolean.mk_and env.ctx [Expr.mk_app env.ctx is_some [zname]; zp]
+      else
+        Boolean.mk_and env.ctx
+          [Expr.mk_app env.ctx is_some [zname]; zp]
   | _ ->
       Console.error
         (Printf.sprintf "internal error (encode_pattern): (%s, %s)"
@@ -526,7 +547,9 @@ and encode_value_z3 descr env arr (v: Syntax.value) =
 
 let encode_exp_z3 env str e =
   Expr.simplify
-    (encode_exp_z3 str env {f= (fun x -> x); make= (fun e -> e); lift= false} e)
+    (encode_exp_z3 str env
+       {f= (fun x -> x); make= (fun e -> e); lift= false}
+       e)
     None
 
 let exp_to_z3 = encode_exp_z3
@@ -541,7 +564,8 @@ let encode_z3_merge str env e =
               EFun
                 { arg= x
                 ; argty= xty
-                ; body= {e= EFun {arg= y; argty= yty; body= exp}} } } } ->
+                ; body= {e= EFun {arg= y; argty= yty; body= exp}} }
+          } } ->
       let nodestr =
         Expr.mk_const_s env.ctx (create_name str node)
           (ty_to_sort env.ctx (oget nodety))
@@ -556,7 +580,8 @@ let encode_z3_merge str env e =
       in
       let name = Printf.sprintf "%s-result" str in
       let result =
-        Expr.mk_const_s env.ctx name (oget exp.ety |> ty_to_sort env.ctx)
+        Expr.mk_const_s env.ctx name
+          (oget exp.ety |> ty_to_sort env.ctx)
       in
       let e = encode_exp_z3 env str exp in
       add env.solver [Boolean.mk_eq env.ctx result e] ;
@@ -579,7 +604,8 @@ let encode_z3_trans str env e =
       in
       let name = Printf.sprintf "%s-result" str in
       let result =
-        Expr.mk_const_s env.ctx name (oget exp.ety |> ty_to_sort env.ctx)
+        Expr.mk_const_s env.ctx name
+          (oget exp.ety |> ty_to_sort env.ctx)
       in
       let e = encode_exp_z3 env str exp in
       add env.solver [Boolean.mk_eq env.ctx result e] ;
@@ -595,7 +621,8 @@ let encode_z3_init str env e =
       in
       let name = Printf.sprintf "%s-result" str in
       let result =
-        Expr.mk_const_s env.ctx name (oget e.ety |> ty_to_sort env.ctx)
+        Expr.mk_const_s env.ctx name
+          (oget e.ety |> ty_to_sort env.ctx)
       in
       let e = encode_exp_z3 env str e in
       add env.solver [Boolean.mk_eq env.ctx result e] ;
@@ -670,7 +697,9 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
   (* map each node to the init result variable *)
   let init_map = ref Graph.VertexMap.empty in
   for i = 0 to UInt32.to_int nodes - 1 do
-    let init, n = encode_z3_init (Printf.sprintf "init-%d" i) env einit in
+    let init, n =
+      encode_z3_init (Printf.sprintf "init-%d" i) env einit
+    in
     add env.solver [Boolean.mk_eq env.ctx n (mk_int env.ctx i)] ;
     init_map := Graph.VertexMap.add (UInt32.of_int i) init !init_map
   done ;
@@ -682,12 +711,15 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
     (fun (i, j) ->
       ( try
           let idxs = Graph.VertexMap.find j !incoming_map in
-          incoming_map := Graph.VertexMap.add j ((i, j) :: idxs) !incoming_map
-        with _ -> incoming_map := Graph.VertexMap.add j [(i, j)] !incoming_map
-      ) ;
+          incoming_map :=
+            Graph.VertexMap.add j ((i, j) :: idxs) !incoming_map
+        with _ ->
+          incoming_map :=
+            Graph.VertexMap.add j [(i, j)] !incoming_map ) ;
       let trans, e, x =
         encode_z3_trans
-          (Printf.sprintf "trans-%d-%d" (UInt32.to_int i) (UInt32.to_int j))
+          (Printf.sprintf "trans-%d-%d" (UInt32.to_int i)
+             (UInt32.to_int j))
           env etrans
       in
       trans_input_map := EdgeMap.add (i, j) x !trans_input_map ;
@@ -698,7 +730,8 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
           (TTuple [TInt (UInt32.of_int 32); TInt (UInt32.of_int 32)])
       in
       let f = Datatype.get_constructors pair_sort |> List.hd in
-      add env.solver [Boolean.mk_eq env.ctx e (Expr.mk_app env.ctx f [ie; je])] ;
+      add env.solver
+        [Boolean.mk_eq env.ctx e (Expr.mk_app env.ctx f [ie; je])] ;
       trans_map := EdgeMap.add (i, j) trans !trans_map )
     edges ;
   (* compute the labelling as the merge of all inputs *)
@@ -716,7 +749,9 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
           incr idx ;
           let trans = EdgeMap.find (x, y) !trans_map in
           let str = Printf.sprintf "merge-%d-%d" i !idx in
-          let merge_result, n, x, y = encode_z3_merge str env emerge in
+          let merge_result, n, x, y =
+            encode_z3_merge str env emerge
+          in
           add env.solver [Boolean.mk_eq env.ctx trans x] ;
           add env.solver [Boolean.mk_eq env.ctx acc y] ;
           add env.solver [Boolean.mk_eq env.ctx n (mk_int env.ctx i)] ;
@@ -743,7 +778,9 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
   | Some eassert ->
       let all_good = ref (mk_bool env.ctx true) in
       for i = 0 to UInt32.to_int nodes - 1 do
-        let label = Graph.VertexMap.find (UInt32.of_int i) !labelling in
+        let label =
+          Graph.VertexMap.find (UInt32.of_int i) !labelling
+        in
         let result, n, x =
           encode_z3_assert (Printf.sprintf "assert-%d" i) env eassert
         in
@@ -752,7 +789,8 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
         let assertion_holds =
           Boolean.mk_eq env.ctx result (mk_bool env.ctx true)
         in
-        all_good := Boolean.mk_and env.ctx [!all_good; assertion_holds]
+        all_good :=
+          Boolean.mk_and env.ctx [!all_good; assertion_holds]
       done ;
       add env.solver [Boolean.mk_not env.ctx !all_good] ) ;
   (* add the symbolic variable constraints *)
@@ -762,8 +800,8 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
 exception Model_conversion
 
 let is_num (c: char) =
-  c = '0' || c = '1' || c = '2' || c = '3' || c = '4' || c = '5' || c = '6'
-  || c = '7' || c = '8' || c = '9'
+  c = '0' || c = '1' || c = '2' || c = '3' || c = '4' || c = '5'
+  || c = '6' || c = '7' || c = '8' || c = '9'
 
 let grab_int str : int * string =
   let len = String.length str in
@@ -796,10 +834,14 @@ let rec parse_custom_type s : ty * string =
     let tys, r = parse_list count remaining in
     (TTuple tys, r)
   else if starts_with s "Int" then
-    let remaining = if len = 3 then "" else String.sub s 3 (len - 3) in
+    let remaining =
+      if len = 3 then "" else String.sub s 3 (len - 3)
+    in
     (TInt (UInt32.of_int 32), remaining)
   else if starts_with s "Bool" then
-    let remaining = if len = 4 then "" else String.sub s 4 (len - 4) in
+    let remaining =
+      if len = 4 then "" else String.sub s 4 (len - 4)
+    in
     (TBool, remaining)
   else Console.error (Printf.sprintf "parse_custom_type: %s" s)
 
@@ -814,7 +856,8 @@ let sort_to_ty s =
   let rec aux str =
     let has_parens = String.sub str 0 1 = "(" in
     let str =
-      if has_parens then String.sub str 1 (String.length str - 2) else str
+      if has_parens then String.sub str 1 (String.length str - 2)
+      else str
     in
     let strs = String.split_on_char ' ' str in
     match strs with
@@ -852,11 +895,13 @@ let rec z3_to_value (e: Expr.expr) : Syntax.value =
         let sort = Z3.Expr.get_sort e in
         let ty = sort_to_ty sort in
         ( match get_inner_type ty with
-        | TMap (kty, _) -> VMap (BddMap.create ~key_ty:kty (z3_to_value e1))
+        | TMap (kty, _) ->
+            VMap (BddMap.create ~key_ty:kty (z3_to_value e1))
         | _ -> Console.error "internal error (z3_to_exp)" )
         |> value
     | _ ->
-        if String.length name >= 7 && String.sub name 0 7 = "mk-pair" then
+        if String.length name >= 7 && String.sub name 0 7 = "mk-pair"
+        then
           let es = List.map z3_to_value es in
           VTuple es |> value
         else raise Model_conversion
@@ -896,11 +941,16 @@ let build_result m env aty num_nodes eassert =
         | Some _ ->
             let assertions = ref Graph.VertexMap.empty in
             for i = 0 to UInt32.to_int num_nodes - 1 do
-              let e = eval env m (Printf.sprintf "assert-%d-result" i) TBool in
+              let e =
+                eval env m
+                  (Printf.sprintf "assert-%d-result" i)
+                  TBool
+              in
               match (e, eassert) with
               | {v= VBool b}, Some _ ->
                   assertions :=
-                    Graph.VertexMap.add (UInt32.of_int i) b !assertions
+                    Graph.VertexMap.add (UInt32.of_int i) b
+                      !assertions
               | _ -> Console.error "internal error ()"
             done ;
             Some !assertions
@@ -923,7 +973,9 @@ let symvar_assign ds : value StringMap.t option =
       | Some m -> Some (build_symbolic_assignment env m)
 
 let solve ?symbolic_vars ds =
-  let sym_vars = match symbolic_vars with None -> [] | Some ls -> ls in
+  let sym_vars =
+    match symbolic_vars with None -> [] | Some ls -> ls
+  in
   let num_nodes, aty =
     match (get_nodes ds, get_attr_type ds) with
     | Some n, Some aty -> (n, aty)

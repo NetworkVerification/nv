@@ -17,7 +17,8 @@ module Edge = struct
 end
 
 (* OCaml 4.06 contains find_opt and update built in. upgrade compiler. *)
-let find_opt v m = try Some (VertexMap.find v m) with Not_found -> None
+let find_opt v m =
+  try Some (VertexMap.find v m) with Not_found -> None
 
 let update v f m =
   match f (find_opt v m) with
@@ -32,7 +33,8 @@ let vertex_map_to_string elem_to_string m =
 
 let print_vertex_map elem_to_string m =
   VertexMap.iter
-    (fun k v -> print_endline (UInt32.to_string k ^ ":" ^ elem_to_string v))
+    (fun k v ->
+      print_endline (UInt32.to_string k ^ ":" ^ elem_to_string v) )
     m
 
 (* a graph as ajacency list * # of vertices *)
@@ -49,17 +51,21 @@ let edges (m, i) =
     List.fold_left (fun a w -> (v, w) :: a) [] neighbors
   in
   List.rev
-    (VertexMap.fold (fun v neighbors a -> my_edges v neighbors @ a) m [])
+    (VertexMap.fold
+       (fun v neighbors a -> my_edges v neighbors @ a)
+       m [])
 
 (* a vertex v does not belong to a graph's set of vertices *)
 exception BadVertex of UInt32.t
 
 let good_vertex (m, i) v =
-  if UInt32.compare v UInt32.zero < 0 || not (UInt32.compare i v > 0) then
-    raise (BadVertex v)
+  if UInt32.compare v UInt32.zero < 0 || not (UInt32.compare i v > 0)
+  then raise (BadVertex v)
 
 let good_graph g =
-  List.iter (fun (v, w) -> good_vertex g v ; good_vertex g w) (edges g)
+  List.iter
+    (fun (v, w) -> good_vertex g v ; good_vertex g w)
+    (edges g)
 
 (* add_edge g e adds directed edge e to g *)
 let add_edge (m, i) (v, w) =
@@ -73,7 +79,9 @@ let add_edge (m, i) (v, w) =
   (update v f m, i)
 
 let rec add_edges g edges =
-  match edges with [] -> g | e :: edges -> add_edges (add_edge g e) edges
+  match edges with
+  | [] -> g
+  | e :: edges -> add_edges (add_edge g e) edges
 
 (* add_edge g e adds directed edge e to g *)
 let remove_edge (m, i) (v, w) =
@@ -83,7 +91,9 @@ let remove_edge (m, i) (v, w) =
     match adj with
     | None -> adj
     | Some ns ->
-      match List.filter (fun a -> not (UInt32.compare a w = 0)) ns with
+      match
+        List.filter (fun a -> not (UInt32.compare a w = 0)) ns
+      with
       | [] -> None
       | ns' -> Some ns'
   in
@@ -98,7 +108,8 @@ let print g =
   Printf.printf "%d\n" (UInt32.to_int (num_vertices g)) ;
   List.iter
     (fun (v, w) ->
-      Printf.printf "%d -> %d\n" (UInt32.to_int v) (UInt32.to_int w) )
+      Printf.printf "%d -> %d\n" (UInt32.to_int v) (UInt32.to_int w)
+      )
     (edges g)
 
 let to_string g =
@@ -108,7 +119,8 @@ let to_string g =
     | [] -> ()
     | (v, w) :: rest ->
         Buffer.add_string b
-          (Printf.sprintf "%d -> %d\n" (UInt32.to_int v) (UInt32.to_int w)) ;
+          (Printf.sprintf "%d -> %d\n" (UInt32.to_int v)
+             (UInt32.to_int w)) ;
         add_edges rest
   in
   Buffer.add_string b (UInt32.to_string (num_vertices g) ^ "\n") ;

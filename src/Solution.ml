@@ -10,7 +10,8 @@ type t =
 let print_solution solution =
   print_newline () ;
   StringMap.iter
-    (fun k v -> Printf.printf "%s:%s\n" k (Printing.value_to_string v))
+    (fun k v ->
+      Printf.printf "%s:%s\n" k (Printing.value_to_string v) )
     solution.symbolics ;
   Graph.VertexMap.iter
     (fun k v ->

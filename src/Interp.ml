@@ -10,7 +10,8 @@ let empty_env = {ty= Env.empty; value= Env.empty}
 
 let update_value env x v = {env with value= Env.update env.value x v}
 
-let update_values env venv = {env with value= Env.updates env.value venv}
+let update_values env venv =
+  {env with value= Env.updates env.value venv}
 
 let update_ty env x t = {env with ty= Env.update env.ty x t}
 
@@ -40,7 +41,8 @@ let rec equal_val v1 v2 =
 and equal_vals vs1 vs2 =
   match (vs1, vs2) with
   | [], [] -> true
-  | v1 :: rest1, v2 :: rest2 -> equal_val v1 v2 && equal_vals rest1 rest2
+  | v1 :: rest1, v2 :: rest2 ->
+      equal_val v1 v2 && equal_vals rest1 rest2
   | _, _ -> false
 
 (* Expression and operator interpreters *)
@@ -95,7 +97,8 @@ let rec interp_exp env e =
       let v1 = interp_exp env e1 in
       let v2 = interp_exp env e2 in
       match v1.v with
-      | VClosure (c_env, f) -> interp_exp (update_value c_env f.arg v2) f.body
+      | VClosure (c_env, f) ->
+          interp_exp (update_value c_env f.arg v2) f.body
       | _ -> Console.error "bad functional application" )
   | EIf (e1, e2, e3) -> (
     match (interp_exp env e1).v with
@@ -119,8 +122,8 @@ let rec interp_exp env e =
 and interp_op env ty op es =
   if arity op != List.length es then
     Console.error
-      (sprintf "operation %s has arity %d not arity %d" (op_to_string op)
-         (arity op) (List.length es)) ;
+      (sprintf "operation %s has arity %d not arity %d"
+         (op_to_string op) (arity op) (List.length es)) ;
   let vs = List.map (interp_exp env) es in
   match (op, vs) with
   | And, [{v= VBool b1}; {v= VBool b2}] -> VBool (b1 && b2) |> value
@@ -129,11 +132,14 @@ and interp_op env ty op es =
   | UAdd, [{v= VUInt32 i1}; {v= VUInt32 i2}] ->
       VUInt32 (UInt32.add i1 i2) |> value
   | UEq, [v1; v2] ->
-      (if equal_values v1 v2 then VBool true else VBool false) |> value
+      (if equal_values v1 v2 then VBool true else VBool false)
+      |> value
   | ULess, [{v= VUInt32 i1}; {v= VUInt32 i2}] ->
-      (if UInt32.compare i1 i2 = -1 then VBool true else VBool false) |> value
+      (if UInt32.compare i1 i2 = -1 then VBool true else VBool false)
+      |> value
   | ULeq, [{v= VUInt32 i1}; {v= VUInt32 i2}] ->
-      (if not (UInt32.compare i1 i2 = 1) then VBool true else VBool false)
+      ( if not (UInt32.compare i1 i2 = 1) then VBool true
+      else VBool false )
       |> value
   | MCreate, [v] -> (
     match get_inner_type ty with

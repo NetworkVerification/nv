@@ -37,7 +37,8 @@ let run_smt cfg info ds =
         let fs = f :: fs in
         (Smt.solve decls ~symbolic_vars:vars, fs)
       with MapUnrolling.Cannot_unroll _ ->
-        Console.warning "unable to unroll map due to non constant index:" ;
+        Console.warning
+          "unable to unroll map due to non constant index:" ;
         (Smt.solve decls ~symbolic_vars:[], fs) )
     else (Smt.solve decls ~symbolic_vars:[], fs)
   in
@@ -80,9 +81,11 @@ let run_simulator cfg info decls =
     | qs ->
         print_string [] "non-quiescent nodes:" ;
         List.iter
-          (fun q -> print_string [] (Unsigned.UInt32.to_string q ^ ";"))
+          (fun q ->
+            print_string [] (Unsigned.UInt32.to_string q ^ ";") )
           qs
-  with Srp.Require_false -> Console.error "required conditions not satisfied"
+  with Srp.Require_false ->
+    Console.error "required conditions not satisfied"
 
 let main =
   let cfg, rest = argparse default "example" Sys.argv in

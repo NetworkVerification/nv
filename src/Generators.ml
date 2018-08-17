@@ -16,12 +16,15 @@ let rec random_value ~hints ~max_map_size ty =
         let x = UInt32.of_int64 (Random.int64 Int64.max_int) in
         VUInt32 x |> value
     | TTuple ts ->
-        VTuple (List.map (fun ty -> random_value hints max_map_size ty) ts)
+        VTuple
+          (List.map (fun ty -> random_value hints max_map_size ty) ts)
         |> value
     | TOption ty ->
         let b = Random.bool () in
         if b then VOption None |> value
-        else VOption (Some (random_value hints max_map_size ty)) |> value
+        else
+          VOption (Some (random_value hints max_map_size ty))
+          |> value
     | TMap (ty1, ty2) ->
         let default = random_value hints max_map_size ty2 in
         let map = ref (BddMap.create ~key_ty:ty1 default) in
@@ -32,7 +35,8 @@ let rec random_value ~hints ~max_map_size ty =
           map := BddMap.update !map k v
         done ;
         VMap !map |> value
-    | QVar _ | TVar _ -> Console.error "internal error (random_value)"
+    | QVar _ | TVar _ ->
+        Console.error "internal error (random_value)"
     | TArrow (ty1, ty2) -> Console.error "unimplemented"
 
 let random_symbolic hints max_map_size d =
@@ -46,6 +50,8 @@ let random_symbolic hints max_map_size d =
   | _ -> d
 
 let random_symbolics ?hints ?max_map_size ds =
-  let hints = match hints with None -> TypeMap.empty | Some hs -> hs in
+  let hints =
+    match hints with None -> TypeMap.empty | Some hs -> hs
+  in
   let sz = match max_map_size with None -> 3 | Some x -> x in
   List.map (random_symbolic hints sz) ds

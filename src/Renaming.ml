@@ -6,7 +6,8 @@ let map_back bmap x y =
 
 let fresh x = Var.fresh (Var.to_string x)
 
-let rec update_pattern (env: Var.t Env.t) (p: pattern) : pattern * Var.t Env.t =
+let rec update_pattern (env: Var.t Env.t) (p: pattern) :
+    pattern * Var.t Env.t =
   match p with
   | PWild | PBool _ | PUInt32 _ -> (p, env)
   | PVar x ->
@@ -31,13 +32,15 @@ let rec alpha_convert_exp (env: Var.t Env.t) (e: exp) =
   | EVar x -> EVar (Env.lookup env x) |> wrap e
   | EVal v -> e
   | EOp (op, es) ->
-      EOp (op, List.map (fun e -> alpha_convert_exp env e) es) |> wrap e
+      EOp (op, List.map (fun e -> alpha_convert_exp env e) es)
+      |> wrap e
   | EFun f ->
       let x = fresh f.arg in
       let e' = alpha_convert_exp (Env.update env f.arg x) f.body in
       EFun {f with arg= x; body= e'} |> wrap e
   | EApp (e1, e2) ->
-      EApp (alpha_convert_exp env e1, alpha_convert_exp env e2) |> wrap e
+      EApp (alpha_convert_exp env e1, alpha_convert_exp env e2)
+      |> wrap e
   | EIf (e1, e2, e3) ->
       EIf
         ( alpha_convert_exp env e1
@@ -50,7 +53,8 @@ let rec alpha_convert_exp (env: Var.t Env.t) (e: exp) =
       let e2' = alpha_convert_exp (Env.update env x y) e2 in
       ELet (y, e1', e2') |> wrap e
   | ETuple es ->
-      ETuple (List.map (fun e -> alpha_convert_exp env e) es) |> wrap e
+      ETuple (List.map (fun e -> alpha_convert_exp env e) es)
+      |> wrap e
   | ESome e1 -> ESome (alpha_convert_exp env e1) |> wrap e
   | EMatch (e, bs) ->
       let bs' =
@@ -63,7 +67,8 @@ let rec alpha_convert_exp (env: Var.t Env.t) (e: exp) =
       EMatch (alpha_convert_exp env e, bs') |> wrap e
   | ETy (e1, ty) -> ETy (alpha_convert_exp env e1, ty) |> wrap e
 
-let alpha_convert_declaration bmap (env: Var.t Env.t) (d: declaration) =
+let alpha_convert_declaration bmap (env: Var.t Env.t)
+    (d: declaration) =
   match d with
   | DLet (x, tyo, e) ->
       let y = fresh x in

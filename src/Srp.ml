@@ -105,7 +105,8 @@ let declarations_to_state ds ~throw_requires =
         let get_assert () =
           match (Interp.interp_exp info.env e).v with
           | VClosure cl -> info.a <- Some cl
-          | _ -> Console.error "assert was not evaluated to a closure"
+          | _ ->
+              Console.error "assert was not evaluated to a closure"
         in
         if_none info.a get_assert "multiple assert functions"
     | DNodes n ->
@@ -130,13 +131,19 @@ let declarations_to_state ds ~throw_requires =
       | _ ->
           if throw_requires then raise Require_false
           else
-            Console.warning "requires condition not satisified by inital state"
-      )
+            Console.warning
+              "requires condition not satisified by inital state" )
     | DATy _ -> ()
   in
   List.iter process_declaration ds ;
   match info with
-  | {env= _; m= Some mf; t= Some tf; a; ns= Some n; es= Some es; init= Some cl} ->
+  | { env= _
+    ; m= Some mf
+    ; t= Some tf
+    ; a
+    ; ns= Some n
+    ; es= Some es
+    ; init= Some cl } ->
       let srp =
         { graph= Graph.add_edges (Graph.create n) es
         ; trans= tf
@@ -159,7 +166,8 @@ let get_attribute v s =
     try Some (Graph.VertexMap.find v m) with Not_found -> None
   in
   match find_opt v s with
-  | None -> Console.error ("no attribute at vertex " ^ UInt32.to_string v)
+  | None ->
+      Console.error ("no attribute at vertex " ^ UInt32.to_string v)
   | Some a -> a
 
 let simulate_step {graph= g; trans; merge} s x =
@@ -216,13 +224,17 @@ let check_assertions srp vals =
   Graph.VertexMap.mapi (fun n v -> check_assertion srp n v) vals
 
 let simulate_declarations ds =
-  let srp, state, syms = declarations_to_state ds ~throw_requires:true in
+  let srp, state, syms =
+    declarations_to_state ds ~throw_requires:true
+  in
   let vals = simulate_init srp state in
   let asserts = check_assertions srp vals in
   {labels= vals; symbolics= syms; assertions= Some asserts}
 
 let simulate_declarations_bound ds k =
-  let srp, state, syms = declarations_to_state ds ~throw_requires:true in
+  let srp, state, syms =
+    declarations_to_state ds ~throw_requires:true
+  in
   let vals, q = simulate_init_bound srp state k in
   let asserts = check_assertions srp vals in
   ({labels= vals; symbolics= syms; assertions= Some asserts}, q)

@@ -49,11 +49,15 @@ let rec check_aux info iters acc =
         try
           let sol = Srp.simulate_declarations ds' in
           if check_assertions sol then
-            check_aux {info with iterations= info.iterations - 1} iters None
+            check_aux
+              {info with iterations= info.iterations - 1}
+              iters None
           else Some (sol, iters - info.iterations + 1)
         with Srp.Require_false ->
           incr info.num_rejected ;
-          check_aux {info with iterations= info.iterations - 1} iters None
+          check_aux
+            {info with iterations= info.iterations - 1}
+            iters None
 
 let smart_symbolic prog_constants map d =
   match d with
@@ -73,7 +77,9 @@ let var_map ds =
     (fun d ->
       match d with
       | DSymbolic (x, te) ->
-          let ty = match te with Exp e -> oget e.ety | Ty ty -> ty in
+          let ty =
+            match te with Exp e -> oget e.ety | Ty ty -> ty
+          in
           map := StringMap.add (Var.to_string x) (x, ty) !map
       | _ -> () )
     ds ;
@@ -120,8 +126,8 @@ let check_random ds ~iterations =
   let num_rejected = ref 0 in
   let generator ds =
     let ds' =
-      random_symbolics ~max_map_size:default_max_map_size ~hints:prog_constants
-        ds
+      random_symbolics ~max_map_size:default_max_map_size
+        ~hints:prog_constants ds
     in
     (ds, Some ds')
   in
@@ -131,6 +137,8 @@ let check_random ds ~iterations =
 let check_smart info ds ~iterations =
   let prog_constants = collect_all_values ds in
   let num_rejected = ref 0 in
-  let generator ds = smart_symbolics info prog_constants (var_map ds) ds in
+  let generator ds =
+    smart_symbolics info prog_constants (var_map ds) ds
+  in
   let info = {decls= ds; iterations; num_rejected; generator} in
   check info iterations (ref 0)

@@ -32,7 +32,9 @@ let bindings (m, default) = (PMap.bindings m, default)
 
 let from_bindings cmp (bs, default) =
   let m =
-    List.fold_left (fun m (i, d) -> PMap.add i d m) (PMap.create cmp) bs
+    List.fold_left
+      (fun m (i, d) -> PMap.add i d m)
+      (PMap.create cmp) bs
   in
   (m, default)
 

@@ -58,7 +58,8 @@ let test1 _ =
   let map = BddMap.map (fun v -> value (VBool true)) map in
   let x = BddMap.find map v2 in
   let y = BddMap.find map v1 in
-  assert_equal_values x bt ; assert_equal_values y bt
+  assert_equal_values x bt ;
+  assert_equal_values y bt
 
 let test2 _ =
   let k1 = value (VTuple [zero_opt; five_opt]) in
@@ -70,7 +71,8 @@ let test2 _ =
   let map = BddMap.update map k1 v2 in
   let x = BddMap.find map k1 in
   let y = BddMap.find map k2 in
-  assert_equal_values x v2 ; assert_equal_values y v1
+  assert_equal_values x v2 ;
+  assert_equal_values y v1
 
 let test3 _ =
   let k1 = value (VTuple [zero; five]) in
@@ -109,9 +111,12 @@ let test4 _ =
     (fun b ->
       let k1, v1 = b in
       let k2, v2 =
-        List.find (fun (k2, v2) -> equal_values k1 k2 && equal_values v1 v2) vs
+        List.find
+          (fun (k2, v2) -> equal_values k1 k2 && equal_values v1 v2)
+          vs
       in
-      assert_equal_values k1 k2 ; assert_equal_values v1 v2 )
+      assert_equal_values k1 k2 ;
+      assert_equal_values v1 v2 )
     bs
 
 let test5 _ =

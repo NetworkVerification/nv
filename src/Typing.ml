@@ -10,7 +10,8 @@ let debug = true
 
 let if_debug s = if debug then print_endline s else ()
 
-let val_to_exp (v: value) : exp = {e= EVal v; ety= v.vty; espan= v.vspan}
+let val_to_exp (v: value) : exp =
+  {e= EVal v; ety= v.vty; espan= v.vspan}
 
 let node_ty = tint
 
@@ -61,7 +62,9 @@ let rec check_annot_val (v: value) =
   | VTuple vs -> List.iter check_annot_val vs
   | VMap map ->
       let bs, _ = BddMap.bindings map in
-      List.iter (fun (v1, v2) -> check_annot_val v1 ; check_annot_val v2) bs
+      List.iter
+        (fun (v1, v2) -> check_annot_val v1 ; check_annot_val v2)
+        bs
   | _ -> ()
 
 let rec check_annot (e: exp) =
@@ -79,7 +82,8 @@ let rec check_annot (e: exp) =
   | EOp (op, es) -> List.iter check_annot es
   | EFun f -> check_annot f.body
   | EApp (e1, e2) -> check_annot e1 ; check_annot e2
-  | EIf (e1, e2, e3) -> check_annot e1 ; check_annot e2 ; check_annot e3
+  | EIf (e1, e2, e3) ->
+      check_annot e1 ; check_annot e2 ; check_annot e3
   | ELet (_, e1, e2) -> check_annot e1 ; check_annot e2
   | ETuple es -> List.iter check_annot es
   | ESome e -> check_annot e
@@ -154,7 +158,8 @@ let rec unify info e t1 t2 : unit =
     match (ts1, ts2) with
     | [], [] -> true
     | t1 :: ts1, t2 :: ts2 -> try_unify t1 t2 && try_unifies ts1 ts2
-    | _, _ -> Console.error "wrong number of components in unification"
+    | _, _ ->
+        Console.error "wrong number of components in unification"
   and try_unify t1 t2 : bool =
     if t1 == t2 then true (* t1 and t2 are physically the same *)
     else
@@ -172,21 +177,23 @@ let rec unify info e t1 t2 : unit =
       | TInt i, TInt j when i = j -> true
       | TTuple ts1, TTuple ts2 -> try_unifies ts1 ts2
       | TOption t1, TOption t2 -> try_unify t1 t2
-      | TMap (t1, t2), TMap (t3, t4) -> try_unify t1 t3 && try_unify t2 t4
+      | TMap (t1, t2), TMap (t3, t4) ->
+          try_unify t1 t3 && try_unify t2 t4
       | _, _ -> false
   in
   if try_unify t1 t2 then ()
   else
     let msg =
-      Printf.sprintf "unable to unify types: %s and %s" (ty_to_string t1)
-        (ty_to_string t2)
+      Printf.sprintf "unable to unify types: %s and %s"
+        (ty_to_string t1) (ty_to_string t2)
     in
     Console.error_position info e.espan msg
 
 and unifies info (e: exp) ts1 ts2 =
   match (ts1, ts2) with
   | [], [] -> ()
-  | t1 :: ts1, t2 :: ts2 -> unify info e t1 t2 ; unifies info e ts1 ts2
+  | t1 :: ts1, t2 :: ts2 ->
+      unify info e t1 t2 ; unifies info e ts1 ts2
   | _, _ -> Console.error "wrong number of components in unification"
 
 let unify_opt info (e: exp) topt1 t2 =
@@ -195,12 +202,14 @@ let unify_opt info (e: exp) topt1 t2 =
 let generalize ty =
   let rec gen ty =
     match ty with
-    | TVar {contents= Unbound (name, l)} when l > !current_level -> QVar name
+    | TVar {contents= Unbound (name, l)} when l > !current_level ->
+        QVar name
     | TVar {contents= Link ty} -> gen ty
     | TVar _ | TBool | TInt _ -> ty
     | QVar q ->
         if_debug
-          ("qvar " ^ Var.to_string q ^ " appears in generalization check") ;
+          ( "qvar " ^ Var.to_string q
+          ^ " appears in generalization check" ) ;
         ty
     | TArrow (ty1, ty2) ->
         let ty1 = gen ty1 in
@@ -276,7 +285,8 @@ let substitute (ty: ty) : ty =
           ty
       | Some ty -> ty )
     | TVar _ | TBool | TInt _ -> ty
-    | TArrow (ty1, ty2) -> TArrow (substitute_aux ty1, substitute_aux ty2)
+    | TArrow (ty1, ty2) ->
+        TArrow (substitute_aux ty1, substitute_aux ty2)
     | TTuple ts -> TTuple (List.map substitute_aux ts)
     | TOption t -> TOption (substitute_aux t)
     | TMap (ty1, ty2) -> TMap (substitute_aux ty1, substitute_aux ty2)
@@ -320,25 +330,39 @@ let rec infer_exp i info env (e: exp) : exp =
     | EOp (o, es) -> (
       match (o, es) with
       | MGet, [e1; e2] ->
-          let e1, mapty = infer_exp (i + 1) info env e1 |> textract in
-          let e2, keyty = infer_exp (i + 1) info env e2 |> textract in
+          let e1, mapty =
+            infer_exp (i + 1) info env e1 |> textract
+          in
+          let e2, keyty =
+            infer_exp (i + 1) info env e2 |> textract
+          in
           let valty = fresh_tyvar () in
           unify info e mapty (TMap (keyty, valty)) ;
           texp (EOp (o, [e1; e2]), valty)
       | MSet, [e1; e2; e3] ->
-          let e1, mapty = infer_exp (i + 1) info env e1 |> textract in
-          let e2, keyty = infer_exp (i + 1) info env e2 |> textract in
-          let e3, valty = infer_exp (i + 1) info env e3 |> textract in
+          let e1, mapty =
+            infer_exp (i + 1) info env e1 |> textract
+          in
+          let e2, keyty =
+            infer_exp (i + 1) info env e2 |> textract
+          in
+          let e3, valty =
+            infer_exp (i + 1) info env e3 |> textract
+          in
           let ty = TMap (keyty, valty) in
           unify info e mapty ty ;
           texp (EOp (o, [e1; e2; e3]), ty)
       | MCreate, [e1] ->
-          let e1, valty = infer_exp (i + 1) info env e1 |> textract in
+          let e1, valty =
+            infer_exp (i + 1) info env e1 |> textract
+          in
           let keyty = fresh_tyvar () in
           texp (EOp (o, [e1]), TMap (keyty, valty))
       | MMap, [e1; e2] ->
           let e1, fty = infer_exp (i + 1) info env e1 |> textract in
-          let e2, mapty = infer_exp (i + 1) info env e2 |> textract in
+          let e2, mapty =
+            infer_exp (i + 1) info env e2 |> textract
+          in
           let keyty = fresh_tyvar () in
           let valty = fresh_tyvar () in
           unify info e mapty (TMap (keyty, valty)) ;
@@ -346,7 +370,9 @@ let rec infer_exp i info env (e: exp) : exp =
           texp (EOp (o, [e1; e2]), mapty)
       | MFilter, [e1; e2] ->
           let e1, fty = infer_exp (i + 1) info env e1 |> textract in
-          let e2, mapty = infer_exp (i + 1) info env e2 |> textract in
+          let e2, mapty =
+            infer_exp (i + 1) info env e2 |> textract
+          in
           let keyty = fresh_tyvar () in
           let valty = fresh_tyvar () in
           unify info e mapty (TMap (keyty, valty)) ;
@@ -354,15 +380,24 @@ let rec infer_exp i info env (e: exp) : exp =
           texp (EOp (o, [e1; e2]), mapty)
       | MMerge, [e1; e2; e3] ->
           let e1, fty = infer_exp (i + 1) info env e1 |> textract in
-          let e2, mapty1 = infer_exp (i + 1) info env e2 |> textract in
-          let e3, mapty2 = infer_exp (i + 1) info env e3 |> textract in
+          let e2, mapty1 =
+            infer_exp (i + 1) info env e2 |> textract
+          in
+          let e3, mapty2 =
+            infer_exp (i + 1) info env e3 |> textract
+          in
           let keyty = fresh_tyvar () in
           let valty = fresh_tyvar () in
           unify info e mapty1 (TMap (keyty, valty)) ;
           unify info e mapty2 (TMap (keyty, valty)) ;
           unify info e fty (TArrow (valty, TArrow (valty, valty))) ;
           texp (EOp (o, [e1; e2; e3]), mapty1)
-      | MGet, _ | MSet, _ | MCreate, _ | MMap, _ | MFilter, _ | MMerge, _ ->
+      | MGet, _
+       |MSet, _
+       |MCreate, _
+       |MMap, _
+       |MFilter, _
+       |MMerge, _ ->
           Console.error_position info e.espan
             (Printf.sprintf "invalid number of parameters")
       | UEq, [e1; e2] ->
@@ -378,7 +413,8 @@ let rec infer_exp i info env (e: exp) : exp =
     | EFun {arg= x; argty; resty; body} ->
         let ty_x = fresh_tyvar () in
         let e, ty_e =
-          infer_exp (i + 1) info (Env.update env x ty_x) body |> textract
+          infer_exp (i + 1) info (Env.update env x ty_x) body
+          |> textract
         in
         unify_opt info e argty ty_x ;
         unify_opt info e resty ty_e ;
@@ -419,7 +455,9 @@ let rec infer_exp i info env (e: exp) : exp =
         texp (ESome e, TOption t)
     | EMatch (e, branches) ->
         let e, tmatch = infer_exp (i + 1) info env e |> textract in
-        let branches, t = infer_branches (i + 1) info env e tmatch branches in
+        let branches, t =
+          infer_branches (i + 1) info env e tmatch branches
+        in
         texp (EMatch (e, branches), t)
     | ETy (e, t) ->
         let e, t1 = infer_exp (i + 1) info env e |> textract in
@@ -454,7 +492,9 @@ and infer_value info env (v: Syntax.value) : Syntax.value =
     | VUInt32 i -> tvalue (v.v, tint)
     | VMap m -> (
         let vs, default = BddMap.bindings m in
-        let default, dty = infer_value info env default |> textractv in
+        let default, dty =
+          infer_value info env default |> textractv
+        in
         match vs with
         | [] ->
             let ty = fresh_tyvar () in
@@ -467,14 +507,20 @@ and infer_value info env (v: Syntax.value) : Syntax.value =
             let vs =
               List.map
                 (fun (kv2, vv2) ->
-                  let kv2, kvty2 = infer_value info env kv2 |> textractv in
-                  let vv2, vvty2 = infer_value info env vv2 |> textractv in
+                  let kv2, kvty2 =
+                    infer_value info env kv2 |> textractv
+                  in
+                  let vv2, vvty2 =
+                    infer_value info env vv2 |> textractv
+                  in
                   unify info (val_to_exp v) kvty kvty2 ;
                   unify info (val_to_exp v) vvty vvty2 ;
                   (kv2, vv2) )
                 vs
             in
-            let map = BddMap.from_bindings ~key_ty:kvty (vs, default) in
+            let map =
+              BddMap.from_bindings ~key_ty:kvty (vs, default)
+            in
             tvalue (VMap map, TMap (kvty, vvty)) )
     | VTuple vs ->
         let vs, ts = infer_values info env vs in
@@ -508,7 +554,9 @@ and infer_branches i info env exp tmatch bs =
       let e, t = infer_exp (i + 1) info env2 e |> textract in
       ([(p, e)], t)
   | (p, e) :: bs ->
-      let bs, tbranch = infer_branches (i + 1) info env exp tmatch bs in
+      let bs, tbranch =
+        infer_branches (i + 1) info env exp tmatch bs
+      in
       let env2 = infer_pattern (i + 1) info env exp tmatch p in
       let e, t = infer_exp (i + 1) info env2 e |> textract in
       unify info e t tbranch ;
@@ -519,8 +567,12 @@ and infer_pattern i info env e tmatch p =
   match p with
   | PWild -> env
   | PVar x -> Env.update env x tmatch
-  | PBool _ -> unify info e tmatch TBool ; env
-  | PUInt32 _ -> unify info e tmatch tint ; env
+  | PBool _ ->
+      unify info e tmatch TBool ;
+      env
+  | PUInt32 _ ->
+      unify info e tmatch tint ;
+      env
   | PTuple ps ->
       let ts = List.map (fun p -> fresh_tyvar ()) ps in
       let ty = TTuple ts in
@@ -544,10 +596,13 @@ and infer_patterns i info env e ts ps =
 
 and infer_declarations i info (ds: declarations) : declarations =
   match get_attr_type ds with
-  | None -> Console.error "attribute type not declared: type attribute = ..."
+  | None ->
+      Console.error
+        "attribute type not declared: type attribute = ..."
   | Some ty -> infer_declarations_aux (i + 1) info Env.empty ty ds
 
-and infer_declarations_aux i info env aty (ds: declarations) : declarations =
+and infer_declarations_aux i info env aty (ds: declarations) :
+    declarations =
   match ds with
   | [] -> []
   | d :: ds' ->
@@ -608,16 +663,21 @@ and valid_pattern env p =
     | None -> Env.update env x ()
     | Some _ ->
         Console.error
-          ("variable " ^ Var.to_string x ^ " appears twice in pattern") )
+          ( "variable " ^ Var.to_string x
+          ^ " appears twice in pattern" ) )
   | PBool _ | PUInt32 _ -> env
   | PTuple ps -> valid_patterns env ps
   | POption None -> env
   | POption (Some p) -> valid_pattern env p
 
 and valid_patterns env p =
-  match p with [] -> env | p :: ps -> valid_patterns (valid_pattern env p) ps
+  match p with
+  | [] -> env
+  | p :: ps -> valid_patterns (valid_pattern env p) ps
 
 let infer_declarations info (ds: declarations) : declarations =
   match get_attr_type ds with
-  | None -> Console.error "attribute type not declared: type attribute = ..."
+  | None ->
+      Console.error
+        "attribute type not declared: type attribute = ..."
   | Some ty -> infer_declarations_aux 0 info Env.empty ty ds

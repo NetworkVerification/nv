@@ -80,17 +80,20 @@ let rec ty_to_string_p prec t =
     | QVar name -> "{" ^ Var.to_string name ^ "}"
     | TBool -> "bool"
     | TInt i -> "int" ^ UInt32.to_string i
-    | TArrow (t1, t2) -> ty_to_string_p p t1 ^ " -> " ^ ty_to_string_p prec t2
+    | TArrow (t1, t2) ->
+        ty_to_string_p p t1 ^ " -> " ^ ty_to_string_p prec t2
     | TTuple ts -> sep "*" (ty_to_string_p p) ts
     | TOption t -> "option[" ^ ty_to_string_p p t ^ "]"
     | TMap (t1, t2) ->
-        "dict[" ^ ty_to_string_p p t1 ^ "," ^ ty_to_string_p p t2 ^ "]"
+        "dict[" ^ ty_to_string_p p t1 ^ "," ^ ty_to_string_p p t2
+        ^ "]"
   in
   if p < prec then s else "(" ^ s ^ ")"
 
 and tyvar_to_string tv =
   match tv with
-  | Unbound (name, l) -> Var.to_string name ^ "[" ^ string_of_int l ^ "]"
+  | Unbound (name, l) ->
+      Var.to_string name ^ "[" ^ string_of_int l ^ "]"
   | Link ty -> "<" ^ ty_to_string_p max_prec ty ^ ">"
 
 let ty_to_string t = ty_to_string_p max_prec t
@@ -140,10 +143,13 @@ and func_to_string_p prec {arg= x; argty= argt; resty= rest; body} =
   let s_res =
     match rest with None -> "" | Some t -> " : " ^ ty_to_string t
   in
-  let s = "fun " ^ s_arg ^ s_res ^ " -> " ^ exp_to_string_p max_prec body in
+  let s =
+    "fun " ^ s_arg ^ s_res ^ " -> " ^ exp_to_string_p max_prec body
+  in
   if prec < max_prec then "(" ^ s ^ ")" else s
 
-and closure_to_string_p prec (env, {arg= x; argty= argt; resty= rest; body}) =
+and closure_to_string_p prec
+    (env, {arg= x; argty= argt; resty= rest; body}) =
   let s_arg =
     match argt with
     | None -> Var.to_string x
@@ -160,7 +166,9 @@ and closure_to_string_p prec (env, {arg= x; argty= argt; resty= rest; body}) =
 
 and map_to_string sep_s term_s m =
   let binding_to_string (k, v) =
-    value_to_string_p max_prec k ^ sep_s ^ value_to_string_p max_prec v
+    value_to_string_p max_prec k
+    ^ sep_s
+    ^ value_to_string_p max_prec v
   in
   let bs, default = BddMap.bindings m in
   "["
@@ -175,7 +183,8 @@ and value_to_string_p prec v =
   | VBool false -> "false"
   | VUInt32 i -> UInt32.to_string i
   | VMap m -> map_to_string ":=" "," m
-  | VTuple vs -> "(" ^ comma_sep (value_to_string_p max_prec) vs ^ ")"
+  | VTuple vs ->
+      "(" ^ comma_sep (value_to_string_p max_prec) vs ^ ")"
   | VOption None -> "None"
   | VOption (Some v) ->
       let s = "Some(" ^ value_to_string_p max_prec v ^ ")" in
@@ -202,12 +211,15 @@ and exp_to_string_p prec e =
         "let " ^ Var.to_string x ^ "="
         ^ exp_to_string_p max_prec e1
         ^ " in " ^ exp_to_string_p prec e2
-    | ETuple es -> "(" ^ comma_sep (exp_to_string_p max_prec) es ^ ")"
+    | ETuple es ->
+        "(" ^ comma_sep (exp_to_string_p max_prec) es ^ ")"
     | ESome e -> "Some(" ^ exp_to_string_p prec e ^ ")"
     | EMatch (e1, bs) ->
         "(match "
         ^ exp_to_string_p max_prec e1
-        ^ " with " ^ branches_to_string prec bs ^ ")"
+        ^ " with "
+        ^ branches_to_string prec bs
+        ^ ")"
     | ETy (e, t) -> exp_to_string_p prec e ^ ty_to_string t
   in
   if p > prec then "(" ^ s ^ ")" else s
@@ -222,7 +234,9 @@ and branches_to_string prec bs =
 
 and op_args_to_string prec p op es =
   if is_keyword_op op then
-    op_to_string op ^ "(" ^ comma_sep (exp_to_string_p max_prec) es ^ ")"
+    op_to_string op ^ "("
+    ^ comma_sep (exp_to_string_p max_prec) es
+    ^ ")"
   else
     match es with
     | [] -> op_to_string op ^ "()" (* should not happen *)
@@ -231,7 +245,9 @@ and op_args_to_string prec p op es =
         exp_to_string_p p e1 ^ " " ^ op_to_string op ^ " "
         ^ exp_to_string_p prec e2
     | es ->
-        op_to_string op ^ "(" ^ comma_sep (exp_to_string_p max_prec) es ^ ")"
+        op_to_string op ^ "("
+        ^ comma_sep (exp_to_string_p max_prec) es
+        ^ ")"
 
 let value_to_string v = value_to_string_p max_prec v
 
@@ -245,7 +261,9 @@ let rec declaration_to_string d =
   match d with
   | DLet (x, tyo, e) ->
       let ty_str =
-        match tyo with None -> "" | Some ty -> ":" ^ ty_to_string ty ^ " "
+        match tyo with
+        | None -> ""
+        | Some ty -> ":" ^ ty_to_string ty ^ " "
       in
       "let " ^ Var.to_string x ^ ty_str ^ " = " ^ exp_to_string e
   | DSymbolic (x, Exp e) ->
@@ -260,7 +278,8 @@ let rec declaration_to_string d =
   | DEdges es ->
       "let edges = {"
       ^ List.fold_right
-          (fun (u, v) s -> UInt32.to_string u ^ "=" ^ UInt32.to_string v ^ ";")
+          (fun (u, v) s ->
+            UInt32.to_string u ^ "=" ^ UInt32.to_string v ^ ";" )
           es ""
       ^ "}"
   | DInit e -> "let init = " ^ exp_to_string e
@@ -269,4 +288,5 @@ let rec declaration_to_string d =
 let rec declarations_to_string ds =
   match ds with
   | [] -> ""
-  | d :: ds -> declaration_to_string d ^ "\n" ^ declarations_to_string ds
+  | d :: ds ->
+      declaration_to_string d ^ "\n" ^ declarations_to_string ds

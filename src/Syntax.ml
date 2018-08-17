@@ -3,6 +3,8 @@ open BatMap
 open Cudd
 open Unsigned
 
+let optimize_bdd_ops = true
+
 (* indices into maps or map sizes must be static constants *)
 type index = UInt32.t
 
@@ -149,12 +151,16 @@ let rec is_value e =
 let rec to_value e =
   match e.e with
   | EVal v -> v
-  | ETuple es -> {v= VTuple (List.map to_value es); vspan= e.espan; vty= e.ety}
-  | ESome e1 -> {v= VOption (Some (to_value e1)); vspan= e.espan; vty= e.ety}
+  | ETuple es ->
+      {v= VTuple (List.map to_value es); vspan= e.espan; vty= e.ety}
+  | ESome e1 ->
+      {v= VOption (Some (to_value e1)); vspan= e.espan; vty= e.ety}
   | _ -> Console.error "internal error (to_value)"
 
 let oget (x: 'a option) : 'a =
-  match x with None -> Console.error "internal error (oget)" | Some y -> y
+  match x with
+  | None -> Console.error "internal error (oget)"
+  | Some y -> y
 
 let rec lams params body =
   match params with
@@ -174,7 +180,9 @@ let apply_closure cl (args: value list) =
 let get_decl ds f =
   try
     let daty : declaration =
-      List.find (fun d -> match f d with None -> false | Some _ -> true) ds
+      List.find
+        (fun d -> match f d with None -> false | Some _ -> true)
+        ds
     in
     f daty
   with _ -> None
@@ -192,17 +200,20 @@ let get_init ds =
   get_decl ds (fun d -> match d with DInit e -> Some e | _ -> None)
 
 let get_assert ds =
-  get_decl ds (fun d -> match d with DAssert e -> Some e | _ -> None)
+  get_decl ds (fun d ->
+      match d with DAssert e -> Some e | _ -> None )
 
 let get_edges ds =
-  get_decl ds (fun d -> match d with DEdges es -> Some es | _ -> None)
+  get_decl ds (fun d ->
+      match d with DEdges es -> Some es | _ -> None )
 
 let get_nodes ds =
   get_decl ds (fun d -> match d with DNodes i -> Some i | _ -> None)
 
 let get_symbolics ds =
   List.fold_left
-    (fun acc d -> match d with DSymbolic (x, e) -> (x, e) :: acc | _ -> acc)
+    (fun acc d ->
+      match d with DSymbolic (x, e) -> (x, e) :: acc | _ -> acc )
     [] ds
   |> List.rev
 
@@ -253,7 +264,8 @@ let rec hash_value v =
   | VBool b -> if b then 1 else 0
   | VUInt32 i -> UInt32.to_int i
   | VMap m -> failwith "unimplemented map hashl"
-  | VTuple vs -> List.fold_left (fun acc v -> (31 * acc) + hash_value v) 0 vs
+  | VTuple vs ->
+      List.fold_left (fun acc v -> (31 * acc) + hash_value v) 0 vs
   | VOption vo -> (
     match vo with None -> 5 | Some x -> 7 + (31 * hash_value x) )
   | VClosure (e1, f1) ->
@@ -287,7 +299,8 @@ module BddUtils = struct
     | TBool -> 1
     | TInt _ -> 32
     | TOption tyo -> 1 + ty_to_size tyo
-    | TTuple ts -> List.fold_left (fun acc t -> acc + ty_to_size t) 0 ts
+    | TTuple ts ->
+        List.fold_left (fun acc t -> acc + ty_to_size t) 0 ts
     | TArrow _ | TMap _ | TVar _ | QVar _ ->
         Console.error "internal error (ty_to_size)"
 
@@ -345,7 +358,8 @@ module BddMap = struct
       | TInt _ -> VUInt32 (UInt32.of_int 0)
       | TTuple ts -> VTuple (List.map default_value ts)
       | TOption ty -> VOption None
-      | TMap (ty1, ty2) -> VMap (create ~key_ty:ty1 (default_value ty2))
+      | TMap (ty1, ty2) ->
+          VMap (create ~key_ty:ty1 (default_value ty2))
       | TVar _ | QVar _ | TArrow _ ->
           Console.error "internal error (default_value)"
     in
@@ -376,7 +390,8 @@ module BddMap = struct
           let tag = Bdd.eq var (Bdd.dtrue B.mgr) in
           let value, idx = aux dv (idx + 1) in
           (Bdd.dand tag value, idx)
-      | VMap _ | VClosure _ -> Console.error "internal error (value_to_bdd)"
+      | VMap _ | VClosure _ ->
+          Console.error "internal error (value_to_bdd)"
     in
     let bdd, _ = aux v 0 in
     bdd
@@ -385,7 +400,8 @@ module BddMap = struct
     let rec aux idx ty =
       let v, i =
         match get_inner_type ty with
-        | TBool -> (VBool (B.tbool_to_bool vars.(idx)) |> value, idx + 1)
+        | TBool ->
+            (VBool (B.tbool_to_bool vars.(idx)) |> value, idx + 1)
         | TInt _ ->
             let acc = ref UInt32.zero in
             for i = 0 to 31 do
@@ -408,7 +424,8 @@ module BddMap = struct
             let tag = B.tbool_to_bool vars.(idx) in
             let v, i = aux (idx + 1) tyo in
             let v =
-              if tag then VOption (Some v) |> value else value (VOption None)
+              if tag then VOption (Some v) |> value
+              else value (VOption None)
             in
             (v, i)
         | TArrow _ | TMap _ | TVar _ | QVar _ ->
@@ -426,34 +443,43 @@ module BddMap = struct
 
   let map (f: value -> value) ((vdd, ty): t) : t =
     let g x = f (Mtbdd.get x) |> Mtbdd.unique B.tbl in
-    (Mapleaf.mapleaf1 g vdd, ty)
+    if optimize_bdd_ops then
+      let res = User.map_op1 ~memo:map_cache g in
+      (res vdd, ty)
+    else (Mapleaf.mapleaf1 g vdd, ty)
 
-  let map (f: value -> value) ((vdd, ty): t) : t =
-    let g x = f (Mtbdd.get x) |> Mtbdd.unique B.tbl in
-    let res = User.map_op1 ~memo:map_cache g in
-    (res vdd, ty)
+  let map_when_cache = Memo.Cache (Cache.create2 ())
 
   let map_when (pred: Bdd.vt) (f: value -> value) ((vdd, ty): t) : t =
-    let f b v =
-      if Mtbdd.get b then f (Mtbdd.get v) |> Mtbdd.unique B.tbl else v
+    let g b v =
+      if Mtbdd.get b then f (Mtbdd.get v) |> Mtbdd.unique B.tbl
+      else v
     in
     let tru = Mtbdd.cst B.mgr B.tbl_bool true in
     let fal = Mtbdd.cst B.mgr B.tbl_bool false in
     let pred = Mtbdd.ite pred tru fal in
-    (Mapleaf.mapleaf2 f pred vdd, ty)
+    if optimize_bdd_ops then
+      let res =
+        User.map_op2 ~memo:map_when_cache ~commutative:false
+          ~idempotent:false g
+      in
+      (res pred vdd, ty)
+    else (Mapleaf.mapleaf2 g pred vdd, ty)
 
   let merge_cache = Memo.Cache (Cache.create2 ())
 
-  let merge (f: value -> value -> value) ((x, tyx): t) ((y, tyy): t) : t =
-    let g x y = f (Mtbdd.get x) (Mtbdd.get y) |> Mtbdd.unique B.tbl in
-    (Mapleaf.mapleaf2 g x y, tyx)
-
-  let merge (f: value -> value -> value) ((x, tyx): t) ((y, tyy): t) : t =
-    let g x y = f (Mtbdd.get x) (Mtbdd.get y) |> Mtbdd.unique B.tbl in
-    let res =
-      User.map_op2 ~memo:merge_cache ~commutative:false ~idempotent:false g
+  let merge (f: value -> value -> value) ((x, tyx): t) ((y, tyy): t)
+      : t =
+    let g x y =
+      f (Mtbdd.get x) (Mtbdd.get y) |> Mtbdd.unique B.tbl
     in
-    (res x y, tyx)
+    if optimize_bdd_ops then
+      let res =
+        User.map_op2 ~memo:merge_cache ~commutative:false
+          ~idempotent:false g
+      in
+      (res x y, tyx)
+    else (Mapleaf.mapleaf2 g x y, tyx)
 
   let find ((map, _): t) (v: value) : value =
     let bdd = value_to_bdd v in
@@ -492,8 +518,8 @@ module BddMap = struct
       map ;
     (!bs, dv)
 
-  let from_bindings ~key_ty:ty ((bs, default): (value * value) list * value) :
-      t =
+  let from_bindings ~key_ty:ty
+      ((bs, default): (value * value) list * value) : t =
     let map = create ~key_ty:ty default in
     List.fold_left (fun acc (k, v) -> update acc k v) map bs
 
@@ -515,7 +541,8 @@ module BddFunc = struct
     let rec aux i ty =
       match get_inner_type ty with
       | TBool -> (BBool (B.ithvar i), i + 1)
-      | TInt _ -> (BInt (Array.init 32 (fun j -> B.ithvar (i + j))), i + 32)
+      | TInt _ ->
+          (BInt (Array.init 32 (fun j -> B.ithvar (i + j))), i + 32)
       | TTuple ts ->
           let bs, idx =
             List.fold_left
@@ -538,7 +565,9 @@ module BddFunc = struct
     match (x, y) with
     | BBool m, BBool n -> BBool (Bdd.ite b m n)
     | BInt ms, BInt ns ->
-        let both = List.combine (Array.to_list ms) (Array.to_list ns) in
+        let both =
+          List.combine (Array.to_list ms) (Array.to_list ns)
+        in
         let ite = List.map (fun (m, n) -> Bdd.ite b m n) both in
         BInt (Array.of_list ite)
     | BOption (tag1, m), BOption (tag2, n) ->
@@ -555,7 +584,9 @@ module BddFunc = struct
       match (x, y) with
       | BBool b1, BBool b2 -> Bdd.eq b1 b2
       | BInt bs1, BInt bs2 ->
-          let both = List.combine (Array.to_list bs1) (Array.to_list bs2) in
+          let both =
+            List.combine (Array.to_list bs1) (Array.to_list bs2)
+          in
           List.fold_left
             (fun acc (b1, b2) -> Bdd.dand acc (Bdd.eq b1 b2))
             (Bdd.dtrue B.mgr) both
@@ -702,7 +733,8 @@ module BddFunc = struct
         BOption (Bdd.dfalse B.mgr, eval_value env dv)
     | VOption (Some v) -> BOption (Bdd.dtrue B.mgr, eval_value env v)
     | VTuple vs -> BTuple (List.map (eval_value env) vs)
-    | VMap _ | VClosure _ -> Console.error "internal error (eval_value)"
+    | VMap _ | VClosure _ ->
+        Console.error "internal error (eval_value)"
 end
 
 let default_value = BddMap.default_value

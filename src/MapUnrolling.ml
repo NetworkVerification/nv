@@ -29,7 +29,8 @@ let rec tuplify_ty tymap ty =
   | TVar {contents= Link t} -> tuplify_ty tymap t
   | TBool -> ty
   | TInt _ -> ty
-  | TArrow (t1, t2) -> TArrow (tuplify_ty tymap t1, tuplify_ty tymap t2)
+  | TArrow (t1, t2) ->
+      TArrow (tuplify_ty tymap t1, tuplify_ty tymap t2)
   | TTuple ts -> TTuple (List.map (tuplify_ty tymap) ts)
   | TOption t -> TOption (tuplify_ty tymap t)
   | TMap (_, ty2) ->
@@ -42,7 +43,14 @@ let rec tuplify_exp tymap e : exp =
   match e.e with
   | EOp (op, es) -> (
     match (op, es) with
-    | And, _ | Or, _ | Not, _ | UAdd, _ | USub, _ | UEq, _ | ULess, _ | ULeq, _ ->
+    | And, _
+     |Or, _
+     |Not, _
+     |UAdd, _
+     |USub, _
+     |UEq, _
+     |ULess, _
+     |ULeq, _ ->
         EOp (op, List.map (tuplify_exp tymap) es) |> exp
     | MCreate, [e1] ->
         (* createMap n e --> (e,e,e,...) *)
@@ -65,14 +73,19 @@ let rec tuplify_exp tymap e : exp =
                 (fun (k, p) ->
                   let keyvar = EVar (Var.create k) |> exp in
                   let pvar = EVar (Var.create p) |> exp in
-                  let eq = EOp (UEq, [keyvar; tuplify_exp tymap e2]) |> exp in
+                  let eq =
+                    EOp (UEq, [keyvar; tuplify_exp tymap e2]) |> exp
+                  in
                   EIf (eq, tuplify_exp tymap e3, pvar) |> exp )
                 ks
             in
             let es =
-              if List.length es = 1 then List.hd es else ETuple es |> exp
+              if List.length es = 1 then List.hd es
+              else ETuple es |> exp
             in
-            let ps = if List.length ps = 1 then List.hd ps else PTuple ps in
+            let ps =
+              if List.length ps = 1 then List.hd ps else PTuple ps
+            in
             EMatch (tuplify_exp tymap e1, [(ps, es)]) |> exp )
     | MGet, [e1; e2] -> (
         (* m[e] --> m.i_e  if known index else m.0 *)
@@ -82,7 +95,9 @@ let rec tuplify_exp tymap e : exp =
         | Some es ->
             let ps = create_pattern_names (List.length es) in
             let zip = List.combine ps es in
-            let entry = List.find_opt (fun (p, (_, e)) -> e = e2) zip in
+            let entry =
+              List.find_opt (fun (p, (_, e)) -> e = e2) zip
+            in
             let e =
               match entry with
               | None ->
@@ -92,7 +107,9 @@ let rec tuplify_exp tymap e : exp =
               | Some (p, _) -> EVar (Var.create p) |> exp
             in
             let ps = List.map (fun n -> PVar (Var.create n)) ps in
-            let ps = if List.length ps = 1 then List.hd ps else PTuple ps in
+            let ps =
+              if List.length ps = 1 then List.hd ps else PTuple ps
+            in
             EMatch (tuplify_exp tymap e1, [(ps, e)]) |> exp )
     | MMap, [e1; e2] -> (
         (* map f m --> (f m.0, f m.1, ...) *)
@@ -109,9 +126,12 @@ let rec tuplify_exp tymap e : exp =
                 ks
             in
             let es =
-              if List.length es = 1 then List.hd es else ETuple es |> exp
+              if List.length es = 1 then List.hd es
+              else ETuple es |> exp
             in
-            let ps = if List.length ps = 1 then List.hd ps else PTuple ps in
+            let ps =
+              if List.length ps = 1 then List.hd ps else PTuple ps
+            in
             EMatch (tuplify_exp tymap e2, [(ps, es)]) |> exp )
     | MMerge, [e1; e2; e3] -> (
         (* merge f m1 m2 --> (f m1.0 m2.0, f m1.1 m2.1, ...) *)
@@ -128,12 +148,14 @@ let rec tuplify_exp tymap e : exp =
                 (fun (k1, p1) (k2, p2) ->
                   let pvar1 = EVar (Var.create p1) |> exp in
                   let pvar2 = EVar (Var.create p2) |> exp in
-                  EApp (EApp (tuplify_exp tymap e1, pvar1) |> exp, pvar2)
+                  EApp
+                    (EApp (tuplify_exp tymap e1, pvar1) |> exp, pvar2)
                   |> exp )
                 ks1 ks2
             in
             let es =
-              if List.length es = 1 then List.hd es else ETuple es |> exp
+              if List.length es = 1 then List.hd es
+              else ETuple es |> exp
             in
             let ps1 =
               if List.length ps1 = 1 then List.hd ps1 else PTuple ps1
@@ -142,18 +164,24 @@ let rec tuplify_exp tymap e : exp =
               if List.length ps2 = 1 then List.hd ps2 else PTuple ps2
             in
             EMatch
-              ( ETuple [tuplify_exp tymap e2; tuplify_exp tymap e3] |> exp
+              ( ETuple [tuplify_exp tymap e2; tuplify_exp tymap e3]
+                |> exp
               , [(PTuple [ps1; ps2], es)] )
             |> exp
         | _ -> Console.error "internal error (tuplify_exp)" )
     | MFilter, [e1; e2] -> failwith ""
     | _ -> Console.error "internal error (tuplify_exp)" )
   | EFun f ->
-      EFun {f with argty= None; resty= None; body= tuplify_exp tymap f.body}
+      EFun
+        { f with
+          argty= None; resty= None; body= tuplify_exp tymap f.body }
       |> exp
   | EApp (e1, e2) -> failwith ""
   | EIf (e1, e2, e3) ->
-      EIf (tuplify_exp tymap e1, tuplify_exp tymap e2, tuplify_exp tymap e3)
+      EIf
+        ( tuplify_exp tymap e1
+        , tuplify_exp tymap e2
+        , tuplify_exp tymap e3 )
       |> exp
   | ELet (x, e1, e2) ->
       ELet (x, tuplify_exp tymap e1, tuplify_exp tymap e2) |> exp
@@ -226,25 +254,33 @@ let collect_map_gets ds map =
     (* | DAssert _, _ -> () *)
     | _, EOp (MGet, [e1; e2]) ->
         let symkey = Var.fresh "key" |> Var.to_string in
-        map := update_with !map (oget e1.ety |> Typing.strip_ty) (symkey, e2)
+        map :=
+          update_with !map
+            (oget e1.ety |> Typing.strip_ty)
+            (symkey, e2)
     | _ -> ()
   in
   Visitors.iter_exp_decls f ds ;
   !map
 
 let sort_keys es =
-  ExprSet.elements es |> List.stable_sort (fun (k1, _) (k2, _) -> compare k1 k2)
+  ExprSet.elements es
+  |> List.stable_sort (fun (k1, _) (k2, _) -> compare k1 k2)
 
-let lookup s sol = StringMap.find (Var.create s |> Var.to_string) sol.symbolics
+let lookup s sol =
+  StringMap.find (Var.create s |> Var.to_string) sol.symbolics
 
-let build_value_map sol acc (vv, (s, _)) = BddMap.update acc (lookup s sol) vv
+let build_value_map sol acc (vv, (s, _)) =
+  BddMap.update acc (lookup s sol) vv
 
 let drop_syms variables s _ =
-  List.exists (fun (_, k, _) -> String.equal (Var.to_string k) s) variables
+  List.exists
+    (fun (_, k, _) -> String.equal (Var.to_string k) s)
+    variables
   |> not
 
-let map_back orig_sym_types (map: ExprSet.elt list TypeMap.t) variables ds
-    (sol: Solution.t) : Solution.t =
+let map_back orig_sym_types (map: ExprSet.elt list TypeMap.t)
+    variables ds (sol: Solution.t) : Solution.t =
   let rec aux ty v : value =
     let ty = Typing.strip_ty ty in
     match (ty, v.v) with
@@ -255,7 +291,9 @@ let map_back orig_sym_types (map: ExprSet.elt list TypeMap.t) variables ds
         match (v.v, es) with
         | VTuple vs, _ ->
             let zip = List.combine vs es in
-            let map = List.fold_left (build_value_map sol) base zip in
+            let map =
+              List.fold_left (build_value_map sol) base zip
+            in
             VMap map |> value
         | _, [(s, _)] ->
             let map = BddMap.update base (lookup s sol) v in
@@ -264,23 +302,35 @@ let map_back orig_sym_types (map: ExprSet.elt list TypeMap.t) variables ds
     | TBool, VBool _ -> v
     | TInt _, VUInt32 _ -> v
     | TOption t, VOption None -> v
-    | TOption t, VOption (Some v) -> VOption (Some (aux t v)) |> value
+    | TOption t, VOption (Some v) ->
+        VOption (Some (aux t v)) |> value
     | TTuple ts, VTuple vs ->
-        let vs = List.map (fun (t, v) -> aux t v) (List.combine ts vs) in
+        let vs =
+          List.map (fun (t, v) -> aux t v) (List.combine ts vs)
+        in
         VTuple vs |> value
     | _ -> Console.error "internal error (map_back)"
   in
   let aty = oget (get_attr_type ds) |> Typing.strip_ty in
-  let update_labels ls = Graph.VertexMap.map (fun v -> aux aty v) ls in
-  let update_symbolics sol =
-    let syms = StringMap.filter (drop_syms variables) sol.symbolics in
-    StringMap.mapi (fun k v -> aux (StringMap.find k orig_sym_types) v) syms
+  let update_labels ls =
+    Graph.VertexMap.map (fun v -> aux aty v) ls
   in
-  {sol with labels= update_labels sol.labels; symbolics= update_symbolics sol}
+  let update_symbolics sol =
+    let syms =
+      StringMap.filter (drop_syms variables) sol.symbolics
+    in
+    StringMap.mapi
+      (fun k v -> aux (StringMap.find k orig_sym_types) v)
+      syms
+  in
+  { sol with
+    labels= update_labels sol.labels; symbolics= update_symbolics sol
+  }
 
 let collect_all_symbolics_d d =
   match d with
-  | DSymbolic (x, Exp e) -> StringMap.singleton (Var.to_string x) (oget e.ety)
+  | DSymbolic (x, Exp e) ->
+      StringMap.singleton (Var.to_string x) (oget e.ety)
   | DSymbolic (x, Ty ty) -> StringMap.singleton (Var.to_string x) ty
   | _ -> StringMap.empty
 
@@ -300,7 +350,9 @@ let check_constants (map: ExprSet.t TypeMap.t) =
     (fun _ es ->
       ExprSet.iter
         (fun (_, e) ->
-          match e.e with EVal _ -> () | _ -> raise (Cannot_unroll e) )
+          match e.e with
+          | EVal _ -> ()
+          | _ -> raise (Cannot_unroll e) )
         es )
     map
 
@@ -320,7 +372,8 @@ let unroll info ds =
   let decls = tuplify map ds in
   let variables =
     TypeMap.fold
-      (fun ty es acc -> List.map (fun (x, y) -> (ty, Var.create x, y)) es @ acc)
+      (fun ty es acc ->
+        List.map (fun (x, y) -> (ty, Var.create x, y)) es @ acc )
       map []
   in
   let symbolics =
@@ -332,7 +385,9 @@ let unroll info ds =
       variables
   in
   let vs =
-    List.filter (fun (_, s, _) -> String.sub (Var.name s) 0 1 <> "d") variables
+    List.filter
+      (fun (_, s, _) -> String.sub (Var.name s) 0 1 <> "d")
+      variables
   in
   let vs = List.map (fun (_, s, e) -> (s, e)) vs in
   let decls = symbolics @ decls in

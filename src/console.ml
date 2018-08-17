@@ -5,7 +5,8 @@ type info = {input: string array; linenums: (int * int) array}
 let get_position_opt idx info =
   let position = ref None in
   Array.iteri
-    (fun i (s, e) -> if idx >= s && idx <= e then position := Some (i, idx - s))
+    (fun i (s, e) ->
+      if idx >= s && idx <= e then position := Some (i, idx - s) )
     info.linenums ;
   !position
 
@@ -37,7 +38,9 @@ let show_line info line_num underline =
   match underline with
   | None -> ()
   | Some (c1, c2, color) ->
-      let num_space = (string_of_int line_num |> String.length) + 3 + c1 in
+      let num_space =
+        (string_of_int line_num |> String.length) + 3 + c1
+      in
       Printf.printf "%s" (repeat " " num_space) ;
       T.print_string [T.Foreground color] (repeat "~" (c2 - c1)) ;
       Printf.printf "\n"
