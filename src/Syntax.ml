@@ -256,7 +256,7 @@ let rec hash_value v =
   match v.v with
   | VBool b -> if b then 1 else 0
   | VUInt32 i -> UInt32.to_int i
-  | VMap m -> failwith ""
+  | VMap m -> failwith "unimplemented map hashl"
   | VTuple vs -> List.fold_left (fun acc v -> (31 * acc) + hash_value v) 0 vs
   | VOption vo -> (
     match vo with None -> 5 | Some x -> 7 + (31 * hash_value x) )
@@ -487,8 +487,6 @@ module BddMap = struct
     List.fold_left (fun acc (k, v) -> update acc k v) map bs
 
   let equal (bm1, _) (bm2, _) = Mtbdd.is_equal bm1 bm2
-
-  let hash (bm, _) = Mtbdd.topvar bm
 
   (* let show_map bm =
     let bs, dv = bindings bm in
