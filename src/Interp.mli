@@ -2,6 +2,8 @@ open Syntax
 
 val empty_env : env
 
+val apply : env -> func -> value -> value
+
 val update_value : env -> Var.t -> value -> env
 
 val interp_exp : env -> exp -> value

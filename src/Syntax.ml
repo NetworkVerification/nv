@@ -422,9 +422,16 @@ module BddMap = struct
     let vars = Bdd.pick_minterm guard in
     vars_to_value vars ty
 
+  let map_cache = Memo.Cache (Cache.create1 ())
+
   let map (f: value -> value) ((vdd, ty): t) : t =
     let g x = f (Mtbdd.get x) |> Mtbdd.unique B.tbl in
     (Mapleaf.mapleaf1 g vdd, ty)
+
+  let map (f: value -> value) ((vdd, ty): t) : t =
+    let g x = f (Mtbdd.get x) |> Mtbdd.unique B.tbl in
+    let res = User.map_op1 ~memo:map_cache g in
+    (res vdd, ty)
 
   let map_when (pred: Bdd.vt) (f: value -> value) ((vdd, ty): t) : t =
     let f b v =
@@ -435,9 +442,18 @@ module BddMap = struct
     let pred = Mtbdd.ite pred tru fal in
     (Mapleaf.mapleaf2 f pred vdd, ty)
 
+  let merge_cache = Memo.Cache (Cache.create2 ())
+
   let merge (f: value -> value -> value) ((x, tyx): t) ((y, tyy): t) : t =
     let g x y = f (Mtbdd.get x) (Mtbdd.get y) |> Mtbdd.unique B.tbl in
     (Mapleaf.mapleaf2 g x y, tyx)
+
+  let merge (f: value -> value -> value) ((x, tyx): t) ((y, tyy): t) : t =
+    let g x y = f (Mtbdd.get x) (Mtbdd.get y) |> Mtbdd.unique B.tbl in
+    let res =
+      User.map_op2 ~memo:merge_cache ~commutative:false ~idempotent:false g
+    in
+    (res x y, tyx)
 
   let find ((map, _): t) (v: value) : value =
     let bdd = value_to_bdd v in
@@ -470,7 +486,6 @@ module BddMap = struct
     let dv = pick_default_value map in
     Mtbdd.iter_cube
       (fun vars v ->
-        (* Array.iteri (fun i x -> Printf.printf "vars %d is %b\n" i (tbool_to_bool x)) vars; *)
         if not (equal_values v dv) then
           let k = vars_to_value vars ty in
           bs := (k, v) :: !bs )
@@ -483,21 +498,6 @@ module BddMap = struct
     List.fold_left (fun acc (k, v) -> update acc k v) map bs
 
   let equal (bm1, _) (bm2, _) = Mtbdd.is_equal bm1 bm2
-
-  (* let show_map bm =
-    let bs, dv = bindings bm in
-    let str =
-      List.fold_left
-        (fun acc (k, v) ->
-          let sep = if acc = "" then "" else ";" in
-          Printf.sprintf "%s:=%s%s%s"
-            (Printing.value_to_string k)
-            (Printing.value_to_string v)
-            sep acc )
-        "" bs
-    in
-    let str = if str = "" then "" else str ^ ";...;" in
-    Printf.sprintf "[%sdefault:=%s]" str (Printing.value_to_string dv) *)
 end
 
 module BddFunc = struct

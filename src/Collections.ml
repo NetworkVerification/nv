@@ -23,3 +23,9 @@ module ValueSet = Set.Make (struct
 
   let compare = compare
 end)
+
+module ValueMap = Map.Make (struct
+  type t = value
+
+  let compare = compare
+end)
