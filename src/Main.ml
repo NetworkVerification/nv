@@ -87,6 +87,7 @@ let run_simulator cfg info decls =
 
 let main =
   let cfg, rest = argparse default "example" Sys.argv in
+  if cfg.debug then Printexc.record_backtrace true ;
   let file = rest.(0) in
   let ds, info = Input.parse file in
   let decls = Typing.infer_declarations info ds in

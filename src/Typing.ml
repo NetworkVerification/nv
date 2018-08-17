@@ -158,8 +158,7 @@ let rec unify info e t1 t2 : unit =
     match (ts1, ts2) with
     | [], [] -> true
     | t1 :: ts1, t2 :: ts2 -> try_unify t1 t2 && try_unifies ts1 ts2
-    | _, _ ->
-        Console.error "wrong number of components in unification"
+    | _, _ -> false
   and try_unify t1 t2 : bool =
     if t1 == t2 then true (* t1 and t2 are physically the same *)
     else
@@ -305,13 +304,13 @@ let op_typ op =
   | ULeq -> ([tint; tint], TBool)
   (* Map operations *)
   | MCreate | MGet | MSet | MMap | MMerge | MFilter | UEq ->
-      Console.error "internal error (op_typ)"
+      failwith "internal error (op_typ)"
 
 let texp (e, t, span) = {e; ety= Some t; espan= span}
 
 let textract e =
   match e.ety with
-  | None -> Console.error "internal error (textract)"
+  | None -> failwith "internal error (textract)"
   | Some ty -> (e, ty)
 
 let rec infer_exp i info env (e: exp) : exp =
@@ -482,7 +481,7 @@ and tvalue (v, t, span) = {v; vty= Some t; vspan= span}
 
 and textractv v =
   match v.vty with
-  | None -> Console.error "internal error (textractv)"
+  | None -> failwith "internal error (textractv)"
   | Some ty -> (v, ty)
 
 and infer_value info env (v: Syntax.value) : Syntax.value =
@@ -534,7 +533,7 @@ and infer_value info env (v: Syntax.value) : Syntax.value =
         let tv = fresh_tyvar () in
         unify info (val_to_exp v) t tv ;
         tvalue (VOption (Some v), TOption tv, v.vspan)
-    | VClosure cl -> Console.error "internal error (infer_value)"
+    | VClosure cl -> failwith "internal error (infer_value)"
   in
   (* Printf.printf "Type: %s\n" (Printing.ty_to_string (oget ret.vty)) ; *)
   ret
@@ -549,7 +548,7 @@ and infer_values info env vs =
 
 and infer_branches i info env exp tmatch bs =
   match bs with
-  | [] -> Console.error "internal error (infer branches)"
+  | [] -> failwith "internal error (infer branches)"
   | [(p, e)] ->
       let env2 = infer_pattern (i + 1) info env exp tmatch p in
       let e, t = infer_exp (i + 1) info env2 e |> textract in

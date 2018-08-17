@@ -71,15 +71,15 @@ let rec ty_to_smtlib (ty: ty) : string =
   | TInt i -> Printf.sprintf "_ BitVec %s" (UInt32.to_string i)
   | TTuple ts -> (
     match ts with
-    | [] -> Console.error "empty tuple"
+    | [] -> failwith "empty tuple"
     | [t] -> ty_to_smtlib t
     | t :: ts ->
         Printf.sprintf "Pair (%s) (%s)" (ty_to_smtlib t)
           (ty_to_smtlib (TTuple ts)) )
   | TOption ty -> Printf.sprintf "Option (%s)" (ty_to_smtlib ty)
-  | TMap _ -> Console.error "unimplemented"
+  | TMap _ -> failwith "unimplemented"
   | TVar _ | QVar _ | TArrow _ ->
-      Console.error
+      failwith
         (Printf.sprintf "internal error (ty_to_smtlib): %s"
            (Printing.ty_to_string ty))
 
@@ -129,7 +129,7 @@ let rec ty_to_sort ctx (ty: ty) : Z3.Sort.sort =
   | TMap (ty1, ty2) ->
       mk_array_sort ctx (ty_to_sort ctx ty1) (ty_to_sort ctx ty2)
   | TVar _ | QVar _ | TArrow _ ->
-      Console.error "internal error (ty_to_sort)"
+      failwith "internal error (ty_to_sort)"
 
 let mk_array ctx sort value = Z3Array.mk_const_array ctx sort value
 
@@ -210,17 +210,17 @@ let rec encode_exp_z3 descr env arr (e: exp) =
         in
         encode_op_z3 descr env f arr es
     | MCreate, [e1] ->
-        if arr.lift then Console.error "not supported yet" ;
+        if arr.lift then failwith "not supported yet" ;
         let e1 = encode_exp_z3 descr env arr e1 in
         let sort = Arithmetic.Integer.mk_sort env.ctx |> arr.f in
         Z3Array.mk_const_array env.ctx sort e1
     | MGet, [e1; e2] ->
-        if arr.lift then Console.error "not supported yet" ;
+        if arr.lift then failwith "not supported yet" ;
         let e1 = encode_exp_z3 descr env arr e1 in
         let e2 = encode_exp_z3 descr env arr e2 in
         Z3Array.mk_select env.ctx e1 e2
     | MSet, [e1; e2; e3] ->
-        if arr.lift then Console.error "not supported yet" ;
+        if arr.lift then failwith "not supported yet" ;
         let e1 = encode_exp_z3 descr env arr e1 in
         let e2 = encode_exp_z3 descr env arr e2 in
         let e3 = encode_exp_z3 descr env arr e3 in
@@ -229,7 +229,7 @@ let rec encode_exp_z3 descr env arr (e: exp) =
         let keysort =
           match get_inner_type (oget e2.ety) with
           | TMap (ty, _) -> ty_to_sort env.ctx ty
-          | _ -> Console.error "internal error (encode_exp_z3)"
+          | _ -> failwith "internal error (encode_exp_z3)"
         in
         let arr2 =
           { f= (fun s -> mk_array_sort env.ctx keysort (arr.f s))
@@ -271,7 +271,7 @@ let rec encode_exp_z3 descr env arr (e: exp) =
         let keysort =
           match get_inner_type (oget e2.ety) with
           | TMap (ty, _) -> ty_to_sort env.ctx ty
-          | _ -> Console.error "internal error (encode_exp_z3)"
+          | _ -> failwith "internal error (encode_exp_z3)"
         in
         let arr2 =
           { f= (fun s -> mk_array_sort env.ctx keysort (arr.f s))
@@ -311,9 +311,8 @@ let rec encode_exp_z3 descr env arr (e: exp) =
         in
         add env.solver [q] ;
         Z3Array.mk_map env.ctx f [e2; e3] *)
-    | MFilter, _ ->
-        Console.error "unsupported: filter in smt encoding"
-    | _ -> Console.error "internal error (encode_exp_z3)" )
+    | MFilter, _ -> failwith "unsupported: filter in smt encoding"
+    | _ -> failwith "internal error (encode_exp_z3)" )
   | EIf (e1, e2, e3) ->
       let ze1 = encode_exp_z3 descr env arr e1 in
       let ze2 = encode_exp_z3 descr env arr e2 in
@@ -342,7 +341,7 @@ let rec encode_exp_z3 descr env arr (e: exp) =
           let f = Datatype.get_constructors pair_sort |> List.hd in
           if arr.lift then Z3Array.mk_map env.ctx f zes
           else Expr.mk_app env.ctx f zes
-      | _ -> Console.error "internal error (encode_exp_z3)" )
+      | _ -> failwith "internal error (encode_exp_z3)" )
   | ESome e1 ->
       let ty = oget e.ety |> ty_to_sort env.ctx in
       let f = List.nth (Datatype.get_constructors ty) 1 in
@@ -359,11 +358,11 @@ let rec encode_exp_z3 descr env arr (e: exp) =
       add env.solver [Boolean.mk_eq env.ctx za ze1] ;
       encode_branches_z3 descr env arr za bs (oget e.ety)
   | ETy (e, ty) -> encode_exp_z3 descr env arr e
-  | EFun _ | EApp _ -> Console.error "function in smt encoding"
+  | EFun _ | EApp _ -> failwith "function in smt encoding"
 
 and encode_op_z3 descr env f arr es =
   match es with
-  | [] -> Console.error "internal error (encode_op)"
+  | [] -> failwith "internal error (encode_op)"
   | [e] -> encode_exp_z3 descr env arr e
   | e :: es ->
       let ze1 = encode_exp_z3 descr env arr e in
@@ -372,7 +371,7 @@ and encode_op_z3 descr env f arr es =
 
 and encode_branches_z3 descr env arr name bs (t: ty) =
   match List.rev bs with
-  | [] -> Console.error "internal error (encode_branches)"
+  | [] -> failwith "internal error (encode_branches)"
   | (p, e) :: bs ->
       let ze = encode_exp_z3 descr env arr e in
       (* we make the last branch fire no matter what *)
@@ -515,7 +514,7 @@ and encode_value_z3 descr env arr (v: Syntax.value) =
         let f = Datatype.get_constructors pair_sort |> List.hd in
         if arr.lift then Z3Array.mk_map env.ctx f zes
         else Expr.mk_app env.ctx f zes
-    | _ -> Console.error "internal error (encode_value)" )
+    | _ -> failwith "internal error (encode_value)" )
   | VOption None ->
       let opt_sort = ty_to_sort env.ctx (oget v.vty) |> arr.f in
       let f = Datatype.get_constructors opt_sort |> List.hd in
@@ -527,15 +526,15 @@ and encode_value_z3 descr env arr (v: Syntax.value) =
       let zv = encode_value_z3 descr env arr v1 in
       if arr.lift then Z3Array.mk_map env.ctx f [zv]
       else Expr.mk_app env.ctx f [zv]
-  | VClosure _ -> Console.error "internal error (closure in smt)"
+  | VClosure _ -> failwith "internal error (closure in smt)"
   | VMap map ->
-      if arr.lift then Console.error "internal error (lifted vmap)" ;
+      if arr.lift then failwith "internal error (lifted vmap)" ;
       let bs, d = BddMap.bindings map in
       let zd = encode_value_z3 descr env arr d in
       let keysort =
         match get_inner_type (oget v.vty) with
         | TMap (ty, _) -> ty_to_sort env.ctx ty
-        | _ -> Console.error "internal error (encode_exp_value)"
+        | _ -> failwith "internal error (encode_exp_value)"
       in
       let a = mk_array env.ctx keysort zd in
       List.fold_left
@@ -586,7 +585,7 @@ let encode_z3_merge str env e =
       let e = encode_exp_z3 env str exp in
       add env.solver [Boolean.mk_eq env.ctx result e] ;
       (result, nodestr, xstr, ystr)
-  | _ -> Console.error "internal error"
+  | _ -> failwith "internal error (encode_z3_merge)"
 
 let encode_z3_trans str env e =
   match e.e with
@@ -610,7 +609,7 @@ let encode_z3_trans str env e =
       let e = encode_exp_z3 env str exp in
       add env.solver [Boolean.mk_eq env.ctx result e] ;
       (result, edgestr, xstr)
-  | _ -> Console.error "internal error"
+  | _ -> failwith "internal error"
 
 let encode_z3_init str env e =
   match e.e with
@@ -627,7 +626,7 @@ let encode_z3_init str env e =
       let e = encode_exp_z3 env str e in
       add env.solver [Boolean.mk_eq env.ctx result e] ;
       (result, nodestr)
-  | _ -> Console.error "internal error"
+  | _ -> failwith "internal error"
 
 let encode_z3_assert = encode_z3_trans
 
@@ -843,7 +842,7 @@ let rec parse_custom_type s : ty * string =
       if len = 4 then "" else String.sub s 4 (len - 4)
     in
     (TBool, remaining)
-  else Console.error (Printf.sprintf "parse_custom_type: %s" s)
+  else failwith (Printf.sprintf "parse_custom_type: %s" s)
 
 and parse_list n s =
   if n = 0 then ([], s)
@@ -867,7 +866,7 @@ let sort_to_ty s =
     | [x] ->
         let ty, _ = parse_custom_type x in
         ty
-    | _ -> Console.error "cannot convert SMT sort to type"
+    | _ -> failwith "cannot convert SMT sort to type"
   in
   aux (Sort.to_string s)
 
@@ -897,7 +896,7 @@ let rec z3_to_value (e: Expr.expr) : Syntax.value =
         ( match get_inner_type ty with
         | TMap (kty, _) ->
             VMap (BddMap.create ~key_ty:kty (z3_to_value e1))
-        | _ -> Console.error "internal error (z3_to_exp)" )
+        | _ -> failwith "internal error (z3_to_exp)" )
         |> value
     | _ ->
         if String.length name >= 7 && String.sub name 0 7 = "mk-pair"
@@ -926,7 +925,7 @@ let build_symbolic_assignment env m =
 
 let build_result m env aty num_nodes eassert =
   match m with
-  | None -> Console.error "internal error (encode)"
+  | None -> failwith "internal error (encode)"
   | Some m ->
       (* print_endline (Model.to_string m) ; *)
       let map = ref Graph.VertexMap.empty in
@@ -951,7 +950,7 @@ let build_result m env aty num_nodes eassert =
                   assertions :=
                     Graph.VertexMap.add (UInt32.of_int i) b
                       !assertions
-              | _ -> Console.error "internal error ()"
+              | _ -> failwith "internal error (build_result)"
             done ;
             Some !assertions
       in
@@ -969,7 +968,7 @@ let symvar_assign ds : value StringMap.t option =
   | SATISFIABLE ->
       let m = Solver.get_model env.solver in
       match m with
-      | None -> Console.error "internal error (find_sym_init)"
+      | None -> failwith "internal error (find_sym_init)"
       | Some m -> Some (build_symbolic_assignment env m)
 
 let solve ?symbolic_vars ds =
@@ -979,7 +978,7 @@ let solve ?symbolic_vars ds =
   let num_nodes, aty =
     match (get_nodes ds, get_attr_type ds) with
     | Some n, Some aty -> (n, aty)
-    | _ -> Console.error "internal error (encode)"
+    | _ -> failwith "internal error (encode)"
   in
   let eassert = get_assert ds in
   let env = encode_z3 ds sym_vars in

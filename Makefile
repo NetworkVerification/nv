@@ -17,6 +17,9 @@ install:
 build: $(MLFILES)
 	$(BUILD) src/Main.native
 
+debug: $(MLFILES)
+	$(BUILD) -tag 'debug' src/Main.native
+
 %: %.ml
 	$(BUILD) $@.native
 

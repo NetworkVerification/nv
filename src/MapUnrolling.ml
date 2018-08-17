@@ -37,7 +37,7 @@ let rec tuplify_ty tymap ty =
       let t2 = tuplify_ty tymap ty2 in
       let count = tuple_count tymap ty in
       if count = 1 then t2 else TTuple (repeat t2 count)
-  | QVar _ | TVar _ -> Console.error "internal error (tuplify_ty)"
+  | QVar _ | TVar _ -> failwith "internal error (tuplify_ty)"
 
 let rec tuplify_exp tymap e : exp =
   match e.e with
@@ -65,7 +65,7 @@ let rec tuplify_exp tymap e : exp =
         match TypeMap.find_opt (Typing.strip_ty ty) tymap with
         | None ->
             (* TODO: what if setter is used in assert statement? *)
-            Console.error "internal error (tuplify_exp)"
+            failwith "internal error (tuplify_exp)"
         | Some es ->
             let ks, _ = List.split es in
             let ps, es =
@@ -91,7 +91,7 @@ let rec tuplify_exp tymap e : exp =
         (* m[e] --> m.i_e  if known index else m.0 *)
         let ty = oget e1.ety in
         match TypeMap.find_opt (Typing.strip_ty ty) tymap with
-        | None -> Console.error "internal error (tuplify_exp)"
+        | None -> failwith "internal error (tuplify_exp)"
         | Some es ->
             let ps = create_pattern_names (List.length es) in
             let zip = List.combine ps es in
@@ -115,7 +115,7 @@ let rec tuplify_exp tymap e : exp =
         (* map f m --> (f m.0, f m.1, ...) *)
         let ty = oget e.ety in
         match TypeMap.find_opt (Typing.strip_ty ty) tymap with
-        | None -> Console.error "internal error (tuplify_exp)"
+        | None -> failwith "internal error (tuplify_exp)"
         | Some es ->
             let ks, _ = List.split es in
             let ps, es =
@@ -168,9 +168,9 @@ let rec tuplify_exp tymap e : exp =
                 |> exp
               , [(PTuple [ps1; ps2], es)] )
             |> exp
-        | _ -> Console.error "internal error (tuplify_exp)" )
-    | MFilter, [e1; e2] -> failwith ""
-    | _ -> Console.error "internal error (tuplify_exp)" )
+        | _ -> failwith "internal error (tuplify_exp)" )
+    | MFilter, [e1; e2] -> failwith "unimplemented: mfilter"
+    | _ -> failwith "internal error (tuplify_exp)" )
   | EFun f ->
       EFun
         { f with
@@ -298,7 +298,7 @@ let map_back orig_sym_types (map: ExprSet.elt list TypeMap.t)
         | _, [(s, _)] ->
             let map = BddMap.update base (lookup s sol) v in
             VMap map |> value
-        | _ -> Console.error "internal error (map_back1)" )
+        | _ -> failwith "internal error (map_back1)" )
     | TBool, VBool _ -> v
     | TInt _, VUInt32 _ -> v
     | TOption t, VOption None -> v
@@ -309,7 +309,7 @@ let map_back orig_sym_types (map: ExprSet.elt list TypeMap.t)
           List.map (fun (t, v) -> aux t v) (List.combine ts vs)
         in
         VTuple vs |> value
-    | _ -> Console.error "internal error (map_back)"
+    | _ -> failwith "internal error (map_back)"
   in
   let aty = oget (get_attr_type ds) |> Typing.strip_ty in
   let update_labels ls =
@@ -381,7 +381,7 @@ let unroll info ds =
       (fun (ty, x, _) ->
         match get_inner_type ty with
         | TMap (ty, _) -> DSymbolic (x, Ty (tuplify_ty map ty))
-        | _ -> Console.error "internal error (unroll)" )
+        | _ -> failwith "internal error (unroll)" )
       variables
   in
   let vs =

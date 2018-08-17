@@ -69,7 +69,7 @@ let inst_types t1 t2 =
         List.combine ts1 ts2 |> List.iter (fun (r, s) -> aux r s)
     | TOption r, TOption s -> aux r s
     | _ ->
-        Console.error
+        failwith
           (Printf.sprintf "unimplemented (inst_types): (%s, %s)"
              (Printing.ty_to_string t1)
              (Printing.ty_to_string t2))
@@ -85,18 +85,14 @@ let rec inline_type (env: ty Env.t) ty : ty =
   | TArrow (r, s) -> TArrow (inline_type env r, inline_type env s)
   | TTuple ts -> TTuple (List.map (inline_type env) ts)
   | TOption r -> TOption (inline_type env r)
-  | _ -> Console.error "unimplemented (inline_type)"
+  | _ -> failwith "unimplemented (inline_type)"
 
 let inline_type_app e1 e2 : ty =
   match (get_inner_type (oget e1.ety), oget e2.ety) with
   | TArrow (t1, t2), t3 ->
       let env = inst_types t1 t3 in
       inline_type env t2
-  | _ -> Console.error "inlining internals (inline_type_app)"
-
-(* match get_inner_type (oget ty) with
-  | TArrow (_, t2) -> t2
-  | _ -> Console.error "inlining internals: %s\n" *)
+  | _ -> failwith "inlining internals (inline_type_app)"
 
 let rec inline_app env e1 e2 : exp =
   (* Printf.printf "inline_app e1: %s\ninline_app e2: %s)\n"
@@ -130,12 +126,12 @@ let rec inline_app env e1 e2 : exp =
         let branches = List.map (inline_branch_app env e2) bs in
         let e = EMatch (e, branches) |> wrap e1 in
         match branches with
-        | [] -> Console.error "internal error"
+        | [] -> failwith "internal error"
         | (p, eb) :: _ -> e |> annot (oget eb.ety) )
     | EApp _ ->
         EApp (e1, e2) |> wrap e1 |> annot (inline_type_app e1 e2)
     | ESome _ | ETuple _ | EOp _ | EVal _ ->
-        Console.error
+        failwith
           (Printf.sprintf "inline_app: %s"
              (Printing.exp_to_string e1))
   in
@@ -191,8 +187,7 @@ let rec inline_declarations info (ds: declarations) =
   let ds =
     match get_attr_type ds with
     | None ->
-        Console.error
-          "attribute type not declared: type attribute = ..."
+        failwith "attribute type not declared: type attribute = ..."
     | Some ty -> inline_declarations_aux Env.empty ds
   in
   Typing.infer_declarations info ds

@@ -35,9 +35,8 @@ let rec random_value ~hints ~max_map_size ty =
           map := BddMap.update !map k v
         done ;
         VMap !map |> value
-    | QVar _ | TVar _ ->
-        Console.error "internal error (random_value)"
-    | TArrow (ty1, ty2) -> Console.error "unimplemented"
+    | QVar _ | TVar _ -> failwith "internal error (random_value)"
+    | TArrow (ty1, ty2) -> failwith "unimplemented"
 
 let random_symbolic hints max_map_size d =
   match d with

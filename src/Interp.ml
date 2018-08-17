@@ -20,7 +20,7 @@ let update_tys env tvs tys =
     match (tvs, tys) with
     | [], [] -> tenv
     | tv :: tvs, ty :: tys -> loop (Env.update tenv tv ty) tvs tys
-    | _, _ -> Console.error "wrong arity in type application"
+    | _, _ -> failwith "wrong arity in type application"
   in
   {env with ty= loop env.ty tvs tys}
 
@@ -34,8 +34,8 @@ let rec equal_val v1 v2 =
   | VTuple vs1, VTuple vs2 -> equal_vals vs1 vs2
   | VOption None, VOption None -> true
   | VOption (Some v1), VOption (Some v2) -> equal_val v1 v2
-  | VClosure _, _ -> Console.error "internal error (equal_val)"
-  | _, VClosure _ -> Console.error "internal error (equal_val)"
+  | VClosure _, _ -> failwith "internal error (equal_val)"
+  | _, VClosure _ -> failwith "internal error (equal_val)"
   | _, _ -> false
 
 and equal_vals vs1 vs2 =
@@ -86,7 +86,7 @@ let rec interp_exp env e =
   | EVar x -> (
     match Env.lookup_opt env.value x with
     | None ->
-        Console.error
+        failwith
           (Printf.sprintf "runtime exception - unbound variable: %s"
              (Var.to_string x))
     | Some v -> v )
@@ -99,12 +99,12 @@ let rec interp_exp env e =
       match v1.v with
       | VClosure (c_env, f) ->
           interp_exp (update_value c_env f.arg v2) f.body
-      | _ -> Console.error "bad functional application" )
+      | _ -> failwith "bad functional application" )
   | EIf (e1, e2, e3) -> (
     match (interp_exp env e1).v with
     | VBool true -> interp_exp env e2
     | VBool false -> interp_exp env e3
-    | _ -> Console.error "bad if condition" )
+    | _ -> failwith "bad if condition" )
   | ELet (x, e1, e2) ->
       let v1 = interp_exp env e1 in
       interp_exp (update_value env x v1) e2
@@ -115,13 +115,13 @@ let rec interp_exp env e =
       match match_branches branches v with
       | Some (env2, e) -> interp_exp (update_values env env2) e
       | None ->
-          Console.error
+          failwith
             ( "value " ^ value_to_string v
             ^ " did not match any pattern in match statement" )
 
 and interp_op env ty op es =
   if arity op != List.length es then
-    Console.error
+    failwith
       (sprintf "operation %s has arity %d not arity %d"
          (op_to_string op) (arity op) (List.length es)) ;
   let vs = List.map (interp_exp env) es in
@@ -144,7 +144,7 @@ and interp_op env ty op es =
   | MCreate, [v] -> (
     match get_inner_type ty with
     | TMap (kty, _) -> VMap (BddMap.create ~key_ty:kty v) |> value
-    | _ -> Console.error "runtime error: missing map key type" )
+    | _ -> failwith "runtime error: missing map key type" )
   | MGet, [{v= VMap m}; v] -> BddMap.find m v
   | MSet, [{v= VMap m}; vkey; vval] ->
       VMap (BddMap.update m vkey vval) |> value
@@ -155,11 +155,11 @@ and interp_op env ty op es =
       let f_lifted v1 v2 =
         match apply c_env f v1 with
         | {v= VClosure (c_env, f)} -> apply c_env f v2
-        | _ -> Console.error "internal error (interp_op)"
+        | _ -> failwith "internal error (interp_op)"
       in
       VMap (BddMap.merge f_lifted m1 m2) |> value
   | _, _ ->
-      Console.error
+      failwith
         (Printf.sprintf "bad operator application: %s"
            (Printing.op_to_string op))
 

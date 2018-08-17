@@ -155,22 +155,22 @@ let rec to_value e =
       {v= VTuple (List.map to_value es); vspan= e.espan; vty= e.ety}
   | ESome e1 ->
       {v= VOption (Some (to_value e1)); vspan= e.espan; vty= e.ety}
-  | _ -> Console.error "internal error (to_value)"
+  | _ -> failwith "internal error (to_value)"
 
 let oget (x: 'a option) : 'a =
   match x with
-  | None -> Console.error "internal error (oget)"
+  | None -> failwith "internal error (oget)"
   | Some y -> y
 
 let rec lams params body =
   match params with
-  | [] -> Console.error "lams: no parameters"
+  | [] -> failwith "lams: no parameters"
   | [p] -> lam p body
   | p :: params -> lam p (lams params body)
 
 let rec apps f args : exp =
   match args with
-  | [] -> Console.error "apps: no arguments"
+  | [] -> failwith "apps: no arguments"
   | [a] -> exp (EApp (f, a))
   | a :: args -> apps (exp (EApp (f, a))) args
 
@@ -302,7 +302,7 @@ module BddUtils = struct
     | TTuple ts ->
         List.fold_left (fun acc t -> acc + ty_to_size t) 0 ts
     | TArrow _ | TMap _ | TVar _ | QVar _ ->
-        Console.error "internal error (ty_to_size)"
+        failwith "internal error (ty_to_size)"
 
   let tbl = Mtbdd.make_table ~hash:hash_value ~equal:equal_values
 
@@ -361,7 +361,7 @@ module BddMap = struct
       | TMap (ty1, ty2) ->
           VMap (create ~key_ty:ty1 (default_value ty2))
       | TVar _ | QVar _ | TArrow _ ->
-          Console.error "internal error (default_value)"
+          failwith "internal error (default_value)"
     in
     value v
 
@@ -391,7 +391,7 @@ module BddMap = struct
           let value, idx = aux dv (idx + 1) in
           (Bdd.dand tag value, idx)
       | VMap _ | VClosure _ ->
-          Console.error "internal error (value_to_bdd)"
+          failwith "internal error (value_to_bdd)"
     in
     let bdd, _ = aux v 0 in
     bdd
@@ -429,7 +429,7 @@ module BddMap = struct
             in
             (v, i)
         | TArrow _ | TMap _ | TVar _ | QVar _ ->
-            Console.error "internal error (bdd_to_value)"
+            failwith "internal error (bdd_to_value)"
       in
       (annotv ty v, i)
     in
@@ -556,7 +556,7 @@ module BddFunc = struct
           let v, idx = aux (i + 1) ty in
           (BOption (B.ithvar i, v), idx)
       | TArrow _ | QVar _ | TVar _ | TMap _ ->
-          Console.error "internal error (create_value)"
+          failwith "internal error (create_value)"
     in
     let ret, _ = aux 0 ty in
     ret
@@ -577,7 +577,7 @@ module BddFunc = struct
         let both = List.combine ms ns in
         let ite = List.map (fun (m, n) -> ite b m n) both in
         BTuple ite
-    | _ -> Console.error "internal error (ite)"
+    | _ -> failwith "internal error (ite)"
 
   let rec eq (x: t) (y: t) : t =
     let rec aux x y : Bdd.vt =
@@ -599,7 +599,7 @@ module BddFunc = struct
           List.fold_left
             (fun acc (b1, b2) -> Bdd.dand acc (aux b1 b2))
             (Bdd.dtrue B.mgr) both
-      | _ -> Console.error "internal error (eq)"
+      | _ -> failwith "internal error (eq)"
     in
     BBool (aux x y)
 
@@ -620,7 +620,7 @@ module BddFunc = struct
     in
     match (x, y) with
     | BInt xs, BInt ys -> BInt (aux xs ys)
-    | _ -> Console.error "internal error (add)"
+    | _ -> failwith "internal error (add)"
 
   (* let sub (x: bdd_value) (y: bdd_value) : bdd_value =
         let aux xs ys =
@@ -640,7 +640,7 @@ module BddFunc = struct
         in
         match (x, y) with
         | BInt xs, BInt ys -> BInt (aux xs ys)
-        | _ -> Console.error "internal error (sub)" *)
+        | _ -> failwith "internal error (sub)" *)
 
   let leq (x: t) (y: t) : t =
     let less x y = Bdd.dand (Bdd.dnot x) y in
@@ -655,21 +655,21 @@ module BddFunc = struct
     in
     match (x, y) with
     | BInt xs, BInt ys -> BBool (aux xs ys)
-    | _ -> Console.error "internal error (leq)"
+    | _ -> failwith "internal error (leq)"
 
   let lt (x: t) (y: t) : t =
     match (leq x y, eq x y) with
     | BBool b1, BBool b2 ->
         let b = Bdd.dand b1 (Bdd.dnot b2) in
         BBool b
-    | _ -> Console.error "internal error (lt)"
+    | _ -> failwith "internal error (lt)"
 
   let rec eval (env: t Env.t) (e: exp) : t =
     match e.e with
     | ETy (e1, _) -> eval env e1
     | EVar x -> (
       match Env.lookup_opt env x with
-      | None -> Console.error "internal error (eval)"
+      | None -> failwith "internal error (eval)"
       | Some v -> v )
     | EVal v -> eval_value env v
     | EOp (op, es) -> (
@@ -681,15 +681,15 @@ module BddFunc = struct
       | UAdd, [e1; e2] -> add (eval env e1) (eval env e2)
       | ULess, [e1; e2] -> lt (eval env e1) (eval env e2)
       | ULeq, [e1; e2] -> leq (eval env e1) (eval env e2)
-      | USub, [e1; e2] -> Console.error "subtraction not implemented"
-      | _ -> Console.error "internal error (eval)" )
+      | USub, [e1; e2] -> failwith "subtraction not implemented"
+      | _ -> failwith "internal error (eval)" )
     | EIf (e1, e2, e3) -> (
         let v1 = eval env e1 in
         let v2 = eval env e2 in
         let v3 = eval env e3 in
         match v1 with
         | BBool b -> ite b v2 v3
-        | _ -> Console.error "internal error (eval)" )
+        | _ -> failwith "internal error (eval)" )
     | ELet (x, e1, e2) ->
         let v1 = eval env e1 in
         eval (Env.update env x v1) e2
@@ -704,14 +704,14 @@ module BddFunc = struct
     let v1 = eval env e1 in
     match v1 with
     | BBool b1 -> BBool (f b1)
-    | _ -> Console.error "internal error (eval)"
+    | _ -> failwith "internal error (eval)"
 
   and eval_bool_op2 env f e1 e2 =
     let v1 = eval env e1 in
     let v2 = eval env e2 in
     match (v1, v2) with
     | BBool b1, BBool b2 -> BBool (f b1 b2)
-    | _ -> Console.error "internal error (eval)"
+    | _ -> failwith "internal error (eval)"
 
   and eval_value env (v: value) =
     match v.v with
@@ -727,14 +727,13 @@ module BddFunc = struct
         let ty =
           match get_inner_type (oget v.vty) with
           | TOption ty -> ty
-          | _ -> Console.error "internal error (eval_value)"
+          | _ -> failwith "internal error (eval_value)"
         in
         let dv = BddMap.default_value ty in
         BOption (Bdd.dfalse B.mgr, eval_value env dv)
     | VOption (Some v) -> BOption (Bdd.dtrue B.mgr, eval_value env v)
     | VTuple vs -> BTuple (List.map (eval_value env) vs)
-    | VMap _ | VClosure _ ->
-        Console.error "internal error (eval_value)"
+    | VMap _ | VClosure _ -> failwith "internal error (eval_value)"
 end
 
 let default_value = BddMap.default_value

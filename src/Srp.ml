@@ -91,22 +91,21 @@ let declarations_to_state ds ~throw_requires =
         let get_merge () =
           match (Interp.interp_exp info.env e).v with
           | VClosure cl -> info.m <- Some cl
-          | _ -> Console.error "merge was not evaluated to a closure"
+          | _ -> failwith "merge was not evaluated to a closure"
         in
         if_none info.m get_merge "multiple merge functions"
     | DTrans e ->
         let get_trans () =
           match (Interp.interp_exp info.env e).v with
           | VClosure cl -> info.t <- Some cl
-          | _ -> Console.error "trans was not evaluated to a closure"
+          | _ -> failwith "trans was not evaluated to a closure"
         in
         if_none info.t get_trans "multiple trans functions"
     | DAssert e ->
         let get_assert () =
           match (Interp.interp_exp info.env e).v with
           | VClosure cl -> info.a <- Some cl
-          | _ ->
-              Console.error "assert was not evaluated to a closure"
+          | _ -> failwith "assert was not evaluated to a closure"
         in
         if_none info.a get_assert "multiple assert functions"
     | DNodes n ->
@@ -121,7 +120,7 @@ let declarations_to_state ds ~throw_requires =
         let get_initializer () =
           match (Interp.interp_exp info.env e).v with
           | VClosure cl -> info.init <- Some cl
-          | _ -> Console.error "init was not evaluated to a closure"
+          | _ -> failwith "init was not evaluated to a closure"
         in
         if_none info.init get_initializer
           "multiple initialization declarations"
@@ -166,8 +165,7 @@ let get_attribute v s =
     try Some (Graph.VertexMap.find v m) with Not_found -> None
   in
   match find_opt v s with
-  | None ->
-      Console.error ("no attribute at vertex " ^ UInt32.to_string v)
+  | None -> failwith ("no attribute at vertex " ^ UInt32.to_string v)
   | Some a -> a
 
 let simulate_step {graph= g; trans; merge} s x =
@@ -218,7 +216,7 @@ let check_assertion srp node v =
       let v = Interp.interp_closure a [value (VUInt32 node); v] in
       match v.v with
       | VBool b -> b
-      | _ -> Console.error "internal error (check_assertion)"
+      | _ -> failwith "internal error (check_assertion)"
 
 let check_assertions srp vals =
   Graph.VertexMap.mapi (fun n v -> check_assertion srp n v) vals
