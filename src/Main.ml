@@ -52,8 +52,8 @@ let run_test cfg info ds =
       let ds, f = Renaming.alpha_convert_declarations ds in
       let fs = f :: fs in
       let ds = Inline.inline_declarations info ds in
-      (Quickcheck.check_smart info ds ~iterations:20, fs)
-    else (Quickcheck.check_random ds ~iterations:300, fs)
+      (Quickcheck.check_smart info ds ~iterations:cfg.ntests, fs)
+    else (Quickcheck.check_random ds ~iterations:cfg.ntests, fs)
   in
   match sol with
   | None -> ()
@@ -87,6 +87,8 @@ let run_simulator cfg info decls =
 
 let main =
   let cfg, rest = argparse default "nv" Sys.argv in
+  Cmdline.set_cfg cfg ;
+  Printf.printf "%b\b" cfg.no_caching;
   if cfg.debug then Printexc.record_backtrace true ;
   let file = rest.(0) in
   let ds, info = Input.parse file in

@@ -3,8 +3,6 @@ open BatMap
 open Cudd
 open Unsigned
 
-let optimize_bdd_ops = true
-
 (* indices into maps or map sizes must be static constants *)
 type index = UInt32.t
 
@@ -442,15 +440,17 @@ module BddMap = struct
   let map_cache = Memo.Cache (Cache.create1 ())
 
   let map (f: value -> value) ((vdd, ty): t) : t =
+    let cfg = Cmdline.get_cfg () in
     let g x = f (Mtbdd.get x) |> Mtbdd.unique B.tbl in
-    if optimize_bdd_ops then
+    if cfg.no_caching then (Mapleaf.mapleaf1 g vdd, ty)
+    else
       let res = User.map_op1 ~memo:map_cache g in
       (res vdd, ty)
-    else (Mapleaf.mapleaf1 g vdd, ty)
 
   let map_when_cache = Memo.Cache (Cache.create2 ())
 
   let map_when (pred: Bdd.vt) (f: value -> value) ((vdd, ty): t) : t =
+    let cfg = Cmdline.get_cfg () in
     let g b v =
       if Mtbdd.get b then f (Mtbdd.get v) |> Mtbdd.unique B.tbl
       else v
@@ -458,28 +458,28 @@ module BddMap = struct
     let tru = Mtbdd.cst B.mgr B.tbl_bool true in
     let fal = Mtbdd.cst B.mgr B.tbl_bool false in
     let pred = Mtbdd.ite pred tru fal in
-    if optimize_bdd_ops then
+    if cfg.no_caching then (Mapleaf.mapleaf2 g pred vdd, ty)
+    else
       let res =
         User.map_op2 ~memo:map_when_cache ~commutative:false
           ~idempotent:false g
       in
       (res pred vdd, ty)
-    else (Mapleaf.mapleaf2 g pred vdd, ty)
 
   let merge_cache = Memo.Cache (Cache.create2 ())
 
-  let merge (f: value -> value -> value) ((x, tyx): t) ((y, tyy): t)
-      : t =
+  let merge (f: value -> value -> value) (x, tyx) (y, tyy) : t =
+    let cfg = Cmdline.get_cfg () in
     let g x y =
       f (Mtbdd.get x) (Mtbdd.get y) |> Mtbdd.unique B.tbl
     in
-    if optimize_bdd_ops then
+    if cfg.no_caching then (Mapleaf.mapleaf2 g x y, tyx)
+    else
       let res =
         User.map_op2 ~memo:merge_cache ~commutative:false
           ~idempotent:false g
       in
       (res x y, tyx)
-    else (Mapleaf.mapleaf2 g x y, tyx)
 
   let find ((map, _): t) (v: value) : value =
     let bdd = value_to_bdd v in
