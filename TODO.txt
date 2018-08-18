@@ -1,12 +1,9 @@
 
 * Implement the map filter operation
 
+* Check for captured variables in mapIf
+
 * Check for recursion
-
-* Implement a BDD backend for state set computation
-    Should we add to the language a way to say: "the map with everything"?
-
-* Random test data should bias towards constants used in the program
 
 * General way to shrink an SRP model by simplifying the symbolic variables
   Related: can we figure out, in the interpreter, what values are unused?

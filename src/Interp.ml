@@ -158,6 +158,18 @@ and interp_op env ty op es =
         | _ -> failwith "internal error (interp_op)"
       in
       VMap (BddMap.merge f_lifted m1 m2) |> value
+  | ( MMapFilter
+    , [ {v= VClosure (c_env1, f1)}
+      ; {v= VClosure (c_env2, f2)}
+      ; {v= VMap m} ] )
+    -> (
+      let bddf = BddFunc.create_value (oget f1.argty) in
+      let env = Env.update Env.empty f1.arg bddf in
+      let bddf = BddFunc.eval env f1.body in
+      let f v = apply c_env2 f2 v in
+      match bddf with
+      | BBool bdd -> VMap (BddMap.map_when bdd f m) |> value
+      | _ -> failwith "impossible" )
   | _, _ ->
       failwith
         (Printf.sprintf "bad operator application: %s"
