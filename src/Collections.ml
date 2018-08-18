@@ -12,6 +12,12 @@ module VarMap = Map.Make (struct
   let compare = compare
 end)
 
+module VarSet = Set.Make (struct
+  type t = Var.t
+
+  let compare = compare
+end)
+
 module TypeMap = Map.Make (struct
   type t = ty
 
