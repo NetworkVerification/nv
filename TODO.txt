@@ -1,7 +1,5 @@
 * Add a command line flag to export to json
 
-* Implement the map filter operation for SMT
-
 * Implement the map filter operation for map unrolling
 
 * Check for recursion

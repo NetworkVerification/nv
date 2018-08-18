@@ -9,7 +9,7 @@ let edges = {
 let merge node x y = x union y
 
 let trans edge x = 
-  if edge = (0,1) then filter (fun k -> true) x  else x 
+  if edge = (0,1) then filter (fun k -> k=3) x  else x 
 
 let init node =
   let m = {} in
