@@ -1,7 +1,13 @@
 
-* Implement the map filter operation
+* Implement the map filter operation for SMT
 
 * Check for captured variables in mapIf
+
+* Cache the bdd transfer function for the function
+
+* Cache and create only a single operation per function
+
+* Fix the bugs in the optimized version of the mtbdd ops
 
 * Check for recursion
 
