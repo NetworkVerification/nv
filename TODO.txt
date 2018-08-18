@@ -1,16 +1,9 @@
+* Add a command line flag to export to json
 
 * Implement the map filter operation for SMT
-
-* Check for captured variables in mapIf
-
-* Cache the bdd transfer function for the function
-
-* Cache and create only a single operation per function
-
-* Fix the bugs in the optimized version of the mtbdd ops
 
 * Check for recursion
 
 * General way to shrink an SRP model by simplifying the symbolic variables
   Related: can we figure out, in the interpreter, what values are unused?
-  Then we can remove these from the symbolic values etc.
+  Then we can remove these from the symbolic values etc or use it for fuzzing.

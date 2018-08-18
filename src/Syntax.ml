@@ -755,8 +755,49 @@ module BddFunc = struct
         let vs = List.map (eval env) es in
         BTuple vs
     | ESome e -> BOption (Bdd.dtrue B.mgr, eval env e)
-    | EMatch (e1, brances) -> failwith ""
-    | EFun _ | EApp _ -> failwith ""
+    | EMatch (e1, branches) -> (
+        let bddf = eval env e1 in
+        match branches with
+        | [] -> failwith "impossible"
+        | (p, e) :: bs ->
+            let x = eval env e in
+            let _, x =
+              List.fold_left
+                (fun (env, x) (p, e) ->
+                  let env, cond = eval_branch env bddf p in
+                  (env, ite cond (eval env e) x) )
+                (env, x) bs
+            in
+            x )
+    | EFun _ | EApp _ -> failwith "internal error (eval)"
+
+  and eval_branch env bddf p : t Env.t * Bdd.vt =
+    match (p, bddf) with
+    | PWild, _ -> (env, Bdd.dtrue B.mgr)
+    | PVar v, _ -> (Env.update env v bddf, Bdd.dtrue B.mgr)
+    | PBool true, BBool bdd -> (env, bdd)
+    | PBool false, BBool bdd -> (env, Bdd.dnot bdd)
+    | PUInt32 i, BInt bi ->
+        let cond = ref (Bdd.dtrue B.mgr) in
+        for j = 0 to 31 do
+          let b = B.get_bit i j in
+          let bdd = if b then bi.(j) else Bdd.dnot bi.(j) in
+          cond := Bdd.dand !cond bdd
+        done ;
+        (env, !cond)
+    | PTuple ps, BTuple bs ->
+        let zip = List.combine ps bs in
+        List.fold_left
+          (fun (env, pred) (p, b) ->
+            let env', pred' = eval_branch env b p in
+            (env', Bdd.dand pred pred') )
+          (env, Bdd.dtrue B.mgr)
+          zip
+    | POption None, BOption (tag, bo) -> (env, Bdd.dnot tag)
+    | POption (Some p), BOption (tag, bo) ->
+        let env, cond = eval_branch env bo p in
+        (env, Bdd.dand tag cond)
+    | _ -> failwith "internal error (eval_branch)"
 
   and eval_bool_op1 env f e1 =
     let v1 = eval env e1 in
