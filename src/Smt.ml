@@ -917,14 +917,14 @@ let rec z3_to_value m (e: Expr.expr) : Syntax.value =
         match v1.v with
         | VMap m -> VMap (BddMap.update m v2 v3) |> value
         | _ -> raise Model_conversion )
-    | "const", [e1] ->
+    | "const", [e1] -> (
         let sort = Z3.Expr.get_sort e in
         let ty = sort_to_ty sort in
-        ( match get_inner_type ty with
+        match get_inner_type ty with
         | TMap (kty, _) ->
-            VMap (BddMap.create ~key_ty:kty (z3_to_value m e1))
+            let e1 = z3_to_value m e1 in
+            VMap (BddMap.create ~key_ty:kty e1) |> value
         | _ -> failwith "internal error (z3_to_exp)" )
-        |> value
     | "as-array", _ -> (
         let x = FuncDecl.get_parameters f |> List.hd in
         let f = FuncDecl.Parameter.get_func_decl x in
@@ -933,22 +933,36 @@ let rec z3_to_value m (e: Expr.expr) : Syntax.value =
         | None -> failwith "impossible"
         | Some x ->
             let e = Model.FuncInterp.get_else x in
-            z3_to_value m e )
-    (* | "or", [e1;e2] -> 
-        let v1 = z3_to_value m e1 in 
-        let v2 = z3_to_value m e2 in 
-        v1
-    | "=", [_;e2] -> 
-        let v2 = z3_to_value m e2 in
-        VMap (BddMap.create ~key_ty:ty v2) |> value *)
+            let e = z3_to_exp m e in
+            let env = {ty= Env.empty; value= Env.empty} in
+            let key = Var.create "key" in
+            let func =
+              {arg= key; argty= None; resty= None; body= e}
+            in
+            VClosure (env, func) |> value )
     | _ ->
-        (* Printf.printf "name: %s\n" name;
-        List.iter (fun e -> Printf.printf " %s\n" (Expr.to_string e)) es; *)
         if String.length name >= 7 && String.sub name 0 7 = "mk-pair"
         then
           let es = List.map (z3_to_value m) es in
           VTuple es |> value
         else raise Model_conversion
+
+and z3_to_exp m (e: Expr.expr) : Syntax.exp =
+  try exp (EVal (z3_to_value m e)) with _ ->
+    try
+      let f = Expr.get_func_decl e in
+      let es = Expr.get_args e in
+      let name = FuncDecl.get_name f |> Symbol.to_string in
+      match (name, es) with
+      | "not", [e1] -> exp (EOp (Not, [z3_to_exp m e1]))
+      | "and", [e1; e2] ->
+          exp (EOp (And, [z3_to_exp m e1; z3_to_exp m e2]))
+      | "or", [e1; e2] ->
+          exp (EOp (Or, [z3_to_exp m e1; z3_to_exp m e2]))
+      | "=", [e1; e2] ->
+          exp (EOp (UEq, [z3_to_exp m e1; z3_to_exp m e2]))
+      | _ -> raise Model_conversion
+    with _ -> exp (EVar (Var.create "key"))
 
 type smt_result = Unsat | Unknown | Sat of Solution.t
 
