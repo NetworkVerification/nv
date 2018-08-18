@@ -278,6 +278,7 @@ let rec hash_value v =
 let rec get_inner_type t : ty =
   match t with TVar {contents= Link t} -> get_inner_type t | _ -> t
 
+  
 (* Include the map type here to avoid circular dependency *)
 
 module BddUtils = struct
@@ -464,6 +465,49 @@ module BddMap = struct
 
   let mapw_op_cache = ref ExpMap.empty
 
+  let count_tops arr =
+    Array.fold_left
+      (fun acc tb -> match tb with Man.Top -> acc + 1 | _ -> acc)
+      0 arr
+
+  let pick_default_value map =
+    let count = ref (-1) in
+    let value = ref None in
+    Mtbdd.iter_cube
+      (fun vars v ->
+        let c = count_tops vars in
+        if c > !count then count := c ;
+        value := Some v )
+      map ;
+    oget !value
+
+  let rec expand (vars: Man.tbool list) : Man.tbool list list =
+    match vars with 
+    | [] -> [[]]
+    | Man.Top :: xs -> 
+        let vars = expand xs in
+        let trus = List.map (fun v -> Man.False :: v) vars in
+        let fals = List.map (fun v -> Man.True :: v) vars in
+        fals @ trus
+    | x :: xs ->
+        let vars = expand xs in 
+        List.map (fun v -> x :: v) vars 
+
+  let bindings ((map, ty): t) : (value * value) list * value =
+    let bs = ref [] in
+    let dv = pick_default_value map in
+    Mtbdd.iter_cube
+      (fun vars v ->
+        let lst = Array.to_list vars in
+        let expanded = if count_tops vars <= 5 then expand lst else [lst] in
+        List.iter (fun vars -> 
+          if not (equal_values v dv) then
+          let k = vars_to_value (Array.of_list vars) ty in
+          bs := (k, v) :: !bs
+        ) expanded)
+      map ;
+    (!bs, dv)
+
   let map_when ~op_key (pred: Bdd.vt) (f: value -> value)
       ((vdd, ty): t) : t =
     let cfg = Cmdline.get_cfg () in
@@ -474,6 +518,7 @@ module BddMap = struct
     let tru = Mtbdd.cst B.mgr B.tbl_bool true in
     let fal = Mtbdd.cst B.mgr B.tbl_bool false in
     let pred = Mtbdd.ite pred tru fal in
+
     if cfg.no_caching then (Mapleaf.mapleaf2 g pred vdd, ty)
     else
       let op =
@@ -529,33 +574,6 @@ module BddMap = struct
     let leaf = Mtbdd.cst B.mgr B.tbl v in
     let key = value_to_bdd k in
     (Mtbdd.ite key leaf map, ty)
-
-  let count_tops arr =
-    Array.fold_left
-      (fun acc tb -> match tb with Man.Top -> acc + 1 | _ -> acc)
-      0 arr
-
-  let pick_default_value map =
-    let count = ref (-1) in
-    let value = ref None in
-    Mtbdd.iter_cube
-      (fun vars v ->
-        let c = count_tops vars in
-        if c > !count then count := c ;
-        value := Some v )
-      map ;
-    oget !value
-
-  let bindings ((map, ty): t) : (value * value) list * value =
-    let bs = ref [] in
-    let dv = pick_default_value map in
-    Mtbdd.iter_cube
-      (fun vars v ->
-        if not (equal_values v dv) then
-          let k = vars_to_value vars ty in
-          bs := (k, v) :: !bs )
-      map ;
-    (!bs, dv)
 
   let from_bindings ~key_ty:ty
       ((bs, default): (value * value) list * value) : t =
