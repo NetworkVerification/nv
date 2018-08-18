@@ -226,40 +226,49 @@ let rec encode_exp_z3 descr env arr (e: exp) =
         let e3 = encode_exp_z3 descr env arr e3 in
         Z3Array.mk_store env.ctx e1 e2 e3
     | MMap, [{e= EFun {arg= x; argty= ty1; resty= ty2; body= e1}}; e2] ->
-        let keysort =
-          match get_inner_type (oget e2.ety) with
-          | TMap (ty, _) -> ty_to_sort env.ctx ty
-          | _ -> failwith "internal error (encode_exp_z3)"
+        let e, _ = make_map env descr arr x (e1, ty1) e2 in
+        e
+    | ( MMapFilter
+      , [ {e= EFun {arg= k; argty= kty; resty= vty; body= ke}}
+        ; {e= EFun {arg= x; argty= ty1; resty= ty2; body= e1}}
+        ; e2 ] ) ->
+        let e, eparam = make_map env descr arr x (e1, ty1) e2 in
+        let name = Var.fresh "map-result" |> Var.to_string in
+        let name = if descr = "" then name else descr ^ "-" ^ name in
+        let result =
+          Expr.mk_const_s env.ctx name (Expr.get_sort e)
         in
-        let arr2 =
-          { f= (fun s -> mk_array_sort env.ctx keysort (arr.f s))
-          ; make= (fun e -> mk_array env.ctx keysort (arr.make e))
-          ; lift= true }
+        add env.solver [Boolean.mk_eq env.ctx result e] ;
+        let i = Var.fresh "i" |> Var.to_string in
+        let i = Symbol.mk_string env.ctx i in
+        let iarg =
+          Expr.mk_const env.ctx i (ty_to_sort env.ctx (oget kty))
         in
-        let e1 = encode_exp_z3 descr env arr2 e1 in
-        let e2 = encode_exp_z3 descr env arr e2 in
-        let x = create_name descr x in
-        let xty = ty_to_sort env.ctx (oget ty1) |> arr2.f in
-        let xarg = Expr.mk_const_s env.ctx x xty in
-        Solver.add env.solver [Boolean.mk_eq env.ctx xarg e2] ;
-        e1
-        (* let sort1 = ty_to_sort env.ctx (oget ty1) in
-        let e1 = encode_exp_z3 descr env e1 in
-        let e2 = encode_exp_z3 descr env e2 in
-        let name = create_fresh descr "map" in
-        let x = create_name descr x in
-        let x = Symbol.mk_string env.ctx x in
-        let xarg = Expr.mk_const env.ctx x (ty_to_sort env.ctx (oget ty1)) in
-        let f = FuncDecl.mk_func_decl_s env.ctx name [sort1] sort1 in
-        let app = Expr.mk_app env.ctx f [xarg] in
-        let body = Boolean.mk_eq env.ctx app e1 in
+        let nname = Var.fresh "map-if-result" |> Var.to_string in
+        let nname =
+          if descr = "" then name else descr ^ "-" ^ nname
+        in
+        let nresult =
+          Expr.mk_const_s env.ctx nname (Expr.get_sort e)
+        in
+        let cond = encode_exp_z3 descr env arr ke in
+        let body =
+          Boolean.mk_ite env.ctx cond
+            (Boolean.mk_eq env.ctx
+               (Z3Array.mk_select env.ctx nresult iarg)
+               (Z3Array.mk_select env.ctx result iarg))
+            (Boolean.mk_eq env.ctx
+               (Z3Array.mk_select env.ctx nresult iarg)
+               (Z3Array.mk_select env.ctx eparam iarg))
+        in
         (* note: do not use mk_forall, appears to be broken *)
         let q =
-          Quantifier.mk_forall_const env.ctx [xarg] body None [] [] None None
+          Quantifier.mk_forall_const env.ctx [iarg] body None [] []
+            None None
           |> Quantifier.expr_of_quantifier
         in
         add env.solver [q] ;
-        Z3Array.mk_map env.ctx f [e2] *)
+        nresult
     | ( MMerge
       , [ { e=
               EFun
@@ -311,7 +320,6 @@ let rec encode_exp_z3 descr env arr (e: exp) =
         in
         add env.solver [q] ;
         Z3Array.mk_map env.ctx f [e2; e3] *)
-    | MMapFilter, _ -> failwith "unsupported: filter in smt encoding"
     | _ -> failwith "internal error (encode_exp_z3)" )
   | EIf (e1, e2, e3) ->
       let ze1 = encode_exp_z3 descr env arr e1 in
@@ -359,6 +367,25 @@ let rec encode_exp_z3 descr env arr (e: exp) =
       encode_branches_z3 descr env arr za bs (oget e.ety)
   | ETy (e, ty) -> encode_exp_z3 descr env arr e
   | EFun _ | EApp _ -> failwith "function in smt encoding"
+
+and make_map env descr arr x (e1, ty1) e2 =
+  let keysort =
+    match get_inner_type (oget e2.ety) with
+    | TMap (ty, _) -> ty_to_sort env.ctx ty
+    | _ -> failwith "internal error (encode_exp_z3)"
+  in
+  let arr2 =
+    { f= (fun s -> mk_array_sort env.ctx keysort (arr.f s))
+    ; make= (fun e -> mk_array env.ctx keysort (arr.make e))
+    ; lift= true }
+  in
+  let e1 = encode_exp_z3 descr env arr2 e1 in
+  let e2 = encode_exp_z3 descr env arr e2 in
+  let x = create_name descr x in
+  let xty = ty_to_sort env.ctx (oget ty1) |> arr2.f in
+  let xarg = Expr.mk_const_s env.ctx x xty in
+  Solver.add env.solver [Boolean.mk_eq env.ctx xarg e2] ;
+  (e1, xarg)
 
 and encode_op_z3 descr env f arr es =
   match es with
@@ -509,19 +536,19 @@ and encode_value_z3 descr env arr (v: Syntax.value) =
   | VTuple vs -> (
     match oget v.vty with
     | TTuple ts ->
-        let pair_sort = ty_to_sort env.ctx (oget v.vty) |> arr.f in
+        let pair_sort = ty_to_sort env.ctx (oget v.vty) in
         let zes = List.map (encode_value_z3 descr env arr) vs in
         let f = Datatype.get_constructors pair_sort |> List.hd in
         if arr.lift then Z3Array.mk_map env.ctx f zes
         else Expr.mk_app env.ctx f zes
     | _ -> failwith "internal error (encode_value)" )
   | VOption None ->
-      let opt_sort = ty_to_sort env.ctx (oget v.vty) |> arr.f in
+      let opt_sort = ty_to_sort env.ctx (oget v.vty) in
       let f = Datatype.get_constructors opt_sort |> List.hd in
       let e = Expr.mk_app env.ctx f [] in
       if arr.lift then arr.make e else e
   | VOption (Some v1) ->
-      let opt_sort = ty_to_sort env.ctx (oget v.vty) |> arr.f in
+      let opt_sort = ty_to_sort env.ctx (oget v.vty) in
       let f = List.nth (Datatype.get_constructors opt_sort) 1 in
       let zv = encode_value_z3 descr env arr v1 in
       if arr.lift then Z3Array.mk_map env.ctx f [zv]
@@ -870,7 +897,7 @@ let sort_to_ty s =
   in
   aux (Sort.to_string s)
 
-let rec z3_to_value (e: Expr.expr) : Syntax.value =
+let rec z3_to_value m (e: Expr.expr) : Syntax.value =
   try
     let i = UInt32.of_string (Expr.to_string e) in
     VUInt32 i |> value
@@ -881,12 +908,12 @@ let rec z3_to_value (e: Expr.expr) : Syntax.value =
     match (name, es) with
     | "true", _ -> VBool true |> value
     | "false", _ -> VBool false |> value
-    | "some", [e1] -> VOption (Some (z3_to_value e1)) |> value
+    | "some", [e1] -> VOption (Some (z3_to_value m e1)) |> value
     | "none", _ -> VOption None |> value
     | "store", [e1; e2; e3] -> (
-        let v1 = z3_to_value e1 in
-        let v2 = z3_to_value e2 in
-        let v3 = z3_to_value e3 in
+        let v1 = z3_to_value m e1 in
+        let v2 = z3_to_value m e2 in
+        let v3 = z3_to_value m e3 in
         match v1.v with
         | VMap m -> VMap (BddMap.update m v2 v3) |> value
         | _ -> raise Model_conversion )
@@ -895,13 +922,31 @@ let rec z3_to_value (e: Expr.expr) : Syntax.value =
         let ty = sort_to_ty sort in
         ( match get_inner_type ty with
         | TMap (kty, _) ->
-            VMap (BddMap.create ~key_ty:kty (z3_to_value e1))
+            VMap (BddMap.create ~key_ty:kty (z3_to_value m e1))
         | _ -> failwith "internal error (z3_to_exp)" )
         |> value
+    | "as-array", _ -> (
+        let x = FuncDecl.get_parameters f |> List.hd in
+        let f = FuncDecl.Parameter.get_func_decl x in
+        let y = Model.get_func_interp m f in
+        match y with
+        | None -> failwith "impossible"
+        | Some x ->
+            let e = Model.FuncInterp.get_else x in
+            z3_to_value m e )
+    (* | "or", [e1;e2] -> 
+        let v1 = z3_to_value m e1 in 
+        let v2 = z3_to_value m e2 in 
+        v1
+    | "=", [_;e2] -> 
+        let v2 = z3_to_value m e2 in
+        VMap (BddMap.create ~key_ty:ty v2) |> value *)
     | _ ->
+        (* Printf.printf "name: %s\n" name;
+        List.iter (fun e -> Printf.printf " %s\n" (Expr.to_string e)) es; *)
         if String.length name >= 7 && String.sub name 0 7 = "mk-pair"
         then
-          let es = List.map z3_to_value es in
+          let es = List.map (z3_to_value m) es in
           VTuple es |> value
         else raise Model_conversion
 
@@ -910,7 +955,7 @@ type smt_result = Unsat | Unknown | Sat of Solution.t
 let eval env m str ty =
   let l = Expr.mk_const_s env.ctx str (ty_to_sort env.ctx ty) in
   let e = Model.eval m l true |> oget in
-  z3_to_value e
+  z3_to_value m e
 
 let build_symbolic_assignment env m =
   let sym_map = ref StringMap.empty in

@@ -10,7 +10,7 @@ type smt_result = Unsat | Unknown | Sat of Solution.t
 
 val exp_to_z3 : smt_env -> string -> exp -> Z3.Expr.expr
 
-val z3_to_value : Z3.Expr.expr -> value
+val z3_to_value : Z3.Model.model -> Z3.Expr.expr -> value
 
 val symvar_assign : declarations -> value StringMap.t option
 

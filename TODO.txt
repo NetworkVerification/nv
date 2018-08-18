@@ -2,6 +2,8 @@
 
 * Implement the map filter operation for SMT
 
+* Implement the map filter operation for map unrolling
+
 * Check for recursion
 
 * General way to shrink an SRP model by simplifying the symbolic variables
