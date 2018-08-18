@@ -41,8 +41,13 @@ rule token = parse
   | "require"    { REQUIRE (position lexbuf) }
   | "createDict" { CREATEMAP (position lexbuf) }
   | "map"        { MAP (position lexbuf) }
-  | "filter"     { FILTER (position lexbuf) }
+  | "mapIf"      { MAPIF (position lexbuf) }
   | "combine"    { COMBINE (position lexbuf) }
+  | "union"      { UNION (position lexbuf) }
+  | "inter"      { INTER (position lexbuf) }
+  | "filter"     { FILTER (position lexbuf) }
+  | "minus"      { MINUS (position lexbuf) }
+  | "set"        { TSET (position lexbuf) }
   | "dict"       { TDICT (position lexbuf) }
   | "option"     { TOPTION (position lexbuf) }
   | "int"        { TINT (position lexbuf) }
@@ -55,7 +60,6 @@ rule token = parse
   | "||"         { OR (position lexbuf) }
   | "|"          { BAR (position lexbuf) }
   | "->"         { ARROW (position lexbuf) }
-  | ".."         { DOTDOT (position lexbuf) }
   | "!"          { NOT (position lexbuf) }
   | ","          { COMMA (position lexbuf) } 
   | "+"          { PLUS (position lexbuf) }

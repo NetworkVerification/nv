@@ -1,0 +1,18 @@
+type attribute = set[int]
+
+let nodes = 2
+
+let edges = {
+  0=1;
+}
+
+let merge node x y = x union y
+
+let trans edge x = 
+  (* if edge = (0,1) then filter (fun k -> true) x  else *) x 
+
+let init node =
+  let m = {} in
+  match node with
+  | 0 -> m[3 := true]
+  | 1 -> m[5 := true]

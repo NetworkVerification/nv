@@ -38,8 +38,8 @@ type op =
   | MGet
   | MSet
   | MMap
+  | MMapFilter
   | MMerge
-  | MFilter
 
 type pattern =
   | PWild
@@ -116,8 +116,8 @@ let arity op =
   | MGet -> 2
   | MSet -> 3
   | MMap -> 2
+  | MMapFilter -> 3
   | MMerge -> 3
-  | MFilter -> 2
 
 (* Useful constructors *)
 
@@ -460,15 +460,22 @@ module BddMap = struct
     let pred = Mtbdd.ite pred tru fal in
     if cfg.no_caching then (Mapleaf.mapleaf2 g pred vdd, ty)
     else
+      let special =
+        if cfg.no_cutoff then fun _ _ -> None
+        else fun bdd1 bdd2 ->
+          if Vdd.is_cst bdd1 && not (Mtbdd.get (Vdd.dval bdd1)) then
+            Some bdd2
+          else None
+      in
       let res =
         User.map_op2 ~memo:map_when_cache ~commutative:false
-          ~idempotent:false g
+          ~idempotent:false ~special g
       in
       (res pred vdd, ty)
 
   let merge_cache = Memo.Cache (Cache.create2 ())
 
-  let merge (f: value -> value -> value) (x, tyx) (y, tyy) : t =
+  let merge (f: value -> value -> value) (x, tyx) (y, _) : t =
     let cfg = Cmdline.get_cfg () in
     let g x y =
       f (Mtbdd.get x) (Mtbdd.get y) |> Mtbdd.unique B.tbl

@@ -311,7 +311,7 @@ let rec encode_exp_z3 descr env arr (e: exp) =
         in
         add env.solver [q] ;
         Z3Array.mk_map env.ctx f [e2; e3] *)
-    | MFilter, _ -> failwith "unsupported: filter in smt encoding"
+    | MMapFilter, _ -> failwith "unsupported: filter in smt encoding"
     | _ -> failwith "internal error (encode_exp_z3)" )
   | EIf (e1, e2, e3) ->
       let ze1 = encode_exp_z3 descr env arr e1 in

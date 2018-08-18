@@ -169,7 +169,7 @@ let rec tuplify_exp tymap e : exp =
               , [(PTuple [ps1; ps2], es)] )
             |> exp
         | _ -> failwith "internal error (tuplify_exp)" )
-    | MFilter, [e1; e2] -> failwith "unimplemented: mfilter"
+    | MMapFilter, [e1; e2; e3] -> failwith "unimplemented: mfilter"
     | _ -> failwith "internal error (tuplify_exp)" )
   | EFun f ->
       EFun

@@ -46,6 +46,19 @@
       DAssert e
     else
       DLet (id, None, e)
+
+  let make_set exprs span = 
+    let tru = exp (EVal (value (VBool true) span)) span in
+    let rec updates e exprs = 
+        match exprs with 
+        | [] -> e
+        | expr :: tl -> 
+            let e = exp (EOp (MSet, [e; expr; tru])) span in 
+            updates e tl
+    in
+    let e = exp (EVal (value (VBool false) span)) span in
+    let e = exp (EOp (MCreate, [e])) span in
+    updates e exprs
   
 %}
 
@@ -75,7 +88,6 @@
 %token <Span.t> WITH
 %token <Span.t> BAR 
 %token <Span.t> ARROW 
-%token <Span.t> DOTDOT
 %token <Span.t> SEMI 
 %token <Span.t> LPAREN 
 %token <Span.t> RPAREN 
@@ -87,7 +99,7 @@
 %token <Span.t> UNDERSCORE 
 %token <Span.t> CREATEMAP
 %token <Span.t> MAP
-%token <Span.t> FILTER
+%token <Span.t> MAPIF
 %token <Span.t> COMBINE
 %token <Span.t> TOPTION 
 %token <Span.t> TDICT
@@ -100,6 +112,12 @@
 %token <Span.t> NODES
 %token <Span.t> SYMBOLIC
 %token <Span.t> REQUIRE
+%token <Span.t> UNION
+%token <Span.t> INTER
+%token <Span.t> MINUS
+%token <Span.t> FILTER
+%token <Span.t> TSET
+
 %token EOF
 
 %start prog
@@ -112,7 +130,7 @@
 %right ARROW 
 %left AND OR 
 %nonassoc GEQ GREATER LEQ LESS EQ
-%left PLUS SUB      
+%left PLUS SUB UNION INTER MINUS  
 %right NOT
 %right SOME
 %left LBRACKET      /* highest precedence */
@@ -126,6 +144,7 @@ ty:
    | LPAREN tys RPAREN                  { if List.length $2 = 1 then List.hd $2 else TTuple $2 }
    | TOPTION LBRACKET ty RBRACKET       { TOption $3 }
    | TDICT LBRACKET ty COMMA ty RBRACKET{ TMap ($3,$5) }
+   | TSET LBRACKET ty RBRACKET          { TMap ($3,TBool) }
 ;
 
 tys: 
@@ -184,7 +203,7 @@ expr:
     | MATCH expr WITH branches          { exp (EMatch ($2, $4)) (Span.extend $1 $3) }
     | FUN params ARROW expr             { make_fun $2 $4 $4.espan (Span.extend $1 $4.espan) }
     | MAP exprsspace                    { exp (EOp (MMap, $2)) $1 }
-    | FILTER exprsspace                 { exp (EOp (MFilter, $2)) $1 }
+    | MAPIF exprsspace                  { exp (EOp (MMapFilter, $2)) $1 }
     | COMBINE exprsspace                { exp (EOp (MMerge, $2)) $1 }
     | CREATEMAP exprsspace              { exp (EOp (MCreate, $2)) $1 }
     | SOME expr                         { exp (ESome $2) (Span.extend $1 $2.espan) }
@@ -201,16 +220,39 @@ expr:
     | LPAREN expr COLON ty RPAREN       { exp (ETy ($2, $4)) (Span.extend $1 $5) }
     | expr LBRACKET expr RBRACKET               { exp (EOp (MGet, [$1;$3])) (Span.extend $1.espan $4) }
     | expr LBRACKET expr COLON EQ expr RBRACKET { exp (EOp (MSet, [$1;$3;$6])) (Span.extend $1.espan $7) }
-    | expr LBRACKET expr DOTDOT expr RBRACKET   
-                                        { let var = Var.create "k" in
-                                          let evar = exp (EVar var) (Span.extend $2 $6) in
-                                          let span = (Span.extend $1.espan $3.espan) in 
-                                          let lower = exp (EOp (ULeq, [$3; evar;])) span in
-                                          let upper = exp (EOp (ULeq, [evar; $5])) span in
-                                          let range = exp (EOp (And, [lower; upper])) span in
-                                          let span = (Span.extend $1.espan $6) in
-                                          let e = exp (EFun {arg=var; argty=None; resty=None; body=range}) span in
-                                          exp (EOp (MFilter, [e])) span }
+    | expr UNION expr                   { let varx = Var.fresh "x" in 
+                                          let vary = Var.fresh "y" in
+                                          let x = exp (EVar varx) $2 in 
+                                          let y = exp (EVar vary) $2 in
+                                          let e = exp (EOp (Or, [x;y])) $2 in
+                                          let e = exp (EFun {arg=vary;argty=None;resty=None;body=e}) $2 in
+                                          let e = exp (EFun {arg=varx;argty=None;resty=None;body=e}) $2 in
+                                          exp (EOp (MMerge, [e;$1;$3])) (Span.extend $1.espan $3.espan) }
+    | expr INTER expr                   { let varx = Var.fresh "x" in 
+                                          let vary = Var.fresh "y" in
+                                          let x = exp (EVar varx) $2 in 
+                                          let y = exp (EVar vary) $2 in
+                                          let e = exp (EOp (And, [x;y])) $2 in
+                                          let e = exp (EFun {arg=vary;argty=None;resty=None;body=e}) $2 in
+                                          let e = exp (EFun {arg=varx;argty=None;resty=None;body=e}) $2 in
+                                          exp (EOp (MMerge, [e;$1;$3])) (Span.extend $1.espan $3.espan) }
+    | expr MINUS expr                   { let varx = Var.fresh "x" in 
+                                          let vary = Var.fresh "y" in
+                                          let x = exp (EVar varx) $2 in 
+                                          let y = exp (EVar vary) $2 in
+                                          let e = exp (EOp (Not, [y])) $2 in
+                                          let e = exp (EOp (And, [x;e])) $2 in
+                                          let e = exp (EFun {arg=vary;argty=None;resty=None;body=e}) $2 in
+                                          let e = exp (EFun {arg=varx;argty=None;resty=None;body=e}) $2 in
+                                          exp (EOp (MMerge, [e;$1;$3])) (Span.extend $1.espan $3.espan) }
+    | FILTER exprsspace                 { let span = $1 in
+                                          let vark = Var.fresh "k" in 
+                                          let e = exp (EVal (value (VBool false) span)) span in
+                                          let e = exp (EFun {arg=vark;argty=None;resty=None;body=e}) span in
+                                          let args = match $2 with hd :: tl -> hd::e::tl | _ -> [e] in
+                                          exp (EOp (MMapFilter, args)) $1 }
+    | LBRACE exprs RBRACE               { make_set $2 (Span.extend $1 $3) }
+    | LBRACE RBRACE                     { make_set [] (Span.extend $1 $2) }
     | expr2                             { $1 }
 ;
 

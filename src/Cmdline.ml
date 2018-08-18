@@ -1,6 +1,6 @@
 
 type t =
-  { debug: bool       [@short "-d"]    (** enable debugging of nv                  *)
+  { debug: bool       [@short "-d"]    (** enable a debugging backtrace for nv     *)
   ; verbose: bool     [@short "-v"]    (** print out the policy definition file    *)
   ; simulate: bool    [@short "-s"]    (** simulate the network on given inputs    *)
   ; bound: int option                  (** bound the number of simulation steps    *)
@@ -9,7 +9,8 @@ type t =
   ; smart_gen: bool   [@short "-g"]    (** generate relevant randomized inputs     *)
   ; smt: bool         [@short "-m"]    (** search for bugs using an smt solver     *)
   ; unroll_maps: bool [@short "-u"]    (** unroll dictionaries into finite values  *)
-  ; no_caching: bool                   (** disables mtbdd operation caching        *)}
+  ; no_caching: bool                   (** disables mtbdd operation caching        *)
+  ; no_cutoff: bool                    (** disables mtbdd early termination        *)}
 [@@deriving
   show
   , argparse
@@ -26,7 +27,8 @@ let default =
   ; smart_gen= false
   ; smt= false
   ; unroll_maps= false
-  ; no_caching=false }
+  ; no_caching=false
+  ; no_cutoff=false }
 
 let cfg = ref default 
 

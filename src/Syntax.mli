@@ -34,8 +34,8 @@ type op =
   | MGet
   | MSet
   | MMap
+  | MMapFilter
   | MMerge
-  | MFilter
 
 type pattern =
   | PWild

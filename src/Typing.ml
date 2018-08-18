@@ -303,7 +303,7 @@ let op_typ op =
   | ULess -> ([tint; tint], TBool)
   | ULeq -> ([tint; tint], TBool)
   (* Map operations *)
-  | MCreate | MGet | MSet | MMap | MMerge | MFilter | UEq ->
+  | MCreate | MGet | MSet | MMap | MMerge | MMapFilter | UEq ->
       failwith "internal error (op_typ)"
 
 let texp (e, t, span) = {e; ety= Some t; espan= span}
@@ -367,16 +367,18 @@ let rec infer_exp i info env (e: exp) : exp =
           unify info e mapty (TMap (keyty, valty)) ;
           unify info e fty (TArrow (valty, valty)) ;
           texp (EOp (o, [e1; e2]), mapty, e.espan)
-      | MFilter, [e1; e2] ->
-          let e1, fty = infer_exp (i + 1) info env e1 |> textract in
-          let e2, mapty =
-            infer_exp (i + 1) info env e2 |> textract
+      | MMapFilter, [e1; e2; e3] ->
+          let e1, kty = infer_exp (i + 1) info env e1 |> textract in
+          let e2, vty = infer_exp (i + 1) info env e2 |> textract in
+          let e3, mapty =
+            infer_exp (i + 1) info env e3 |> textract
           in
           let keyty = fresh_tyvar () in
           let valty = fresh_tyvar () in
           unify info e mapty (TMap (keyty, valty)) ;
-          unify info e fty (TArrow (keyty, TBool)) ;
-          texp (EOp (o, [e1; e2]), mapty, e.espan)
+          unify info e kty (TArrow (keyty, TBool)) ;
+          unify info e vty (TArrow (valty, valty)) ;
+          texp (EOp (o, [e1; e2; e3]), mapty, e.espan)
       | MMerge, [e1; e2; e3] ->
           let e1, fty = infer_exp (i + 1) info env e1 |> textract in
           let e2, mapty1 =
@@ -391,12 +393,7 @@ let rec infer_exp i info env (e: exp) : exp =
           unify info e mapty2 (TMap (keyty, valty)) ;
           unify info e fty (TArrow (valty, TArrow (valty, valty))) ;
           texp (EOp (o, [e1; e2; e3]), mapty1, e.espan)
-      | MGet, _
-       |MSet, _
-       |MCreate, _
-       |MMap, _
-       |MFilter, _
-       |MMerge, _ ->
+      | MGet, _ | MSet, _ | MCreate, _ | MMap, _ | MMerge, _ ->
           Console.error_position info e.espan
             (Printf.sprintf "invalid number of parameters")
       | UEq, [e1; e2] ->

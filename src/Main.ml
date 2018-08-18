@@ -81,7 +81,8 @@ let run_simulator cfg info decls =
         List.iter
           (fun q ->
             print_string [] (Unsigned.UInt32.to_string q ^ ";") )
-          qs
+          qs ;
+        print_newline ()
   with Srp.Require_false ->
     Console.error "required conditions not satisfied"
 
