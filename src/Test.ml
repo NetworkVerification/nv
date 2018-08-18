@@ -36,6 +36,8 @@ let tru = value (VBool true)
 
 let fal = value (VBool false)
 
+let new_key () = exp (EVar (Var.fresh "x"))
+
 let assert_equal_values =
   assert_equal ~cmp:equal_values ~printer:Printing.value_to_string
 
@@ -55,7 +57,8 @@ let test1 _ =
   let y = BddMap.find map v1 in
   assert_equal_values x bt ;
   assert_equal_values y bf ;
-  let map = BddMap.map (fun v -> value (VBool true)) map in
+  let e = new_key () in
+  let map = BddMap.map ~op_key:e (fun v -> value (VBool true)) map in
   let x = BddMap.find map v2 in
   let y = BddMap.find map v1 in
   assert_equal_values x bt ;
@@ -82,8 +85,9 @@ let test3 _ =
   let ty = TTuple [ty_int; ty_int] in
   let map1 = BddMap.create ~key_ty:ty v1 in
   let map2 = BddMap.create ~key_ty:ty v2 in
+  let e = exp (EVar (Var.create "x")) in
   let merged =
-    BddMap.merge
+    BddMap.merge ~op_key:e
       (fun v1 v2 ->
         match (v1.v, v2.v) with
         | VOption None, VOption (Some _) -> v2
@@ -135,7 +139,8 @@ let test5 _ =
   let value = BddFunc.eval env cmp in
   let value = match value with BBool b -> b | _ -> failwith "" in
   let map = BddMap.create ~key_ty:ty_int bf in
-  let map = BddMap.map_when value (fun _ -> bt) map in
+  let e = new_key () in
+  let map = BddMap.map_when ~op_key:e value (fun _ -> bt) map in
   let x0 = BddMap.find map v0 in
   let x1 = BddMap.find map v1 in
   let x2 = BddMap.find map v2 in
@@ -164,7 +169,8 @@ let test6 _ =
   let value = BddFunc.eval env cmp in
   let value = match value with BBool b -> b | _ -> failwith "" in
   let map = BddMap.create ~key_ty:ty_int bf in
-  let map = BddMap.map_when value (fun _ -> bt) map in
+  let e = new_key () in
+  let map = BddMap.map_when ~op_key:e value (fun _ -> bt) map in
   let x0 = BddMap.find map v0 in
   let x1 = BddMap.find map v1 in
   let x2 = BddMap.find map v2 in
@@ -195,7 +201,8 @@ let test7 _ =
   let value = BddFunc.eval env e in
   let value = match value with BBool b -> b | _ -> failwith "" in
   let map = BddMap.create ~key_ty:ty_int bf in
-  let map = BddMap.map_when value (fun _ -> bt) map in
+  let e = new_key () in
+  let map = BddMap.map_when ~op_key:e value (fun _ -> bt) map in
   let x0 = BddMap.find map v0 in
   let x1 = BddMap.find map v1 in
   let x2 = BddMap.find map v2 in

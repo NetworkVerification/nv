@@ -228,16 +228,16 @@ expr:
                                           let e = exp (EFun {arg=vary;argty=None;resty=None;body=e}) $2 in
                                           let e = exp (EFun {arg=varx;argty=None;resty=None;body=e}) $2 in
                                           exp (EOp (MMerge, [e;$1;$3])) (Span.extend $1.espan $3.espan) }
-    | expr INTER expr                   { let varx = Var.fresh "x" in 
-                                          let vary = Var.fresh "y" in
+    | expr INTER expr                   { let varx = Var.create "x" in 
+                                          let vary = Var.create "y" in
                                           let x = exp (EVar varx) $2 in 
                                           let y = exp (EVar vary) $2 in
                                           let e = exp (EOp (And, [x;y])) $2 in
                                           let e = exp (EFun {arg=vary;argty=None;resty=None;body=e}) $2 in
                                           let e = exp (EFun {arg=varx;argty=None;resty=None;body=e}) $2 in
                                           exp (EOp (MMerge, [e;$1;$3])) (Span.extend $1.espan $3.espan) }
-    | expr MINUS expr                   { let varx = Var.fresh "x" in 
-                                          let vary = Var.fresh "y" in
+    | expr MINUS expr                   { let varx = Var.create "x" in 
+                                          let vary = Var.create "y" in
                                           let x = exp (EVar varx) $2 in 
                                           let y = exp (EVar vary) $2 in
                                           let e = exp (EOp (Not, [y])) $2 in
@@ -246,7 +246,7 @@ expr:
                                           let e = exp (EFun {arg=varx;argty=None;resty=None;body=e}) $2 in
                                           exp (EOp (MMerge, [e;$1;$3])) (Span.extend $1.espan $3.espan) }
     | FILTER exprsspace                 { let span = $1 in
-                                          let vark = Var.fresh "k" in 
+                                          let vark = Var.create "k" in 
                                           let e = exp (EVal (value (VBool false) span)) span in
                                           let e = exp (EFun {arg=vark;argty=None;resty=None;body=e}) span in
                                           let args = match $2 with hd :: tl -> hd::e::tl | _ -> [e] in

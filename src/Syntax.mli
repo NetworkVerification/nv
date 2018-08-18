@@ -159,11 +159,11 @@ module BddMap : sig
 
   val create : key_ty:ty -> value -> t
 
-  val map : (value -> value) -> t -> t
+  val map : op_key:exp -> (value -> value) -> t -> t
 
-  val map_when : Bdd.vt -> (value -> value) -> t -> t
+  val map_when : op_key:exp -> Bdd.vt -> (value -> value) -> t -> t
 
-  val merge : (value -> value -> value) -> t -> t -> t
+  val merge : op_key:exp -> (value -> value -> value) -> t -> t -> t
 
   val find : t -> value -> value
 

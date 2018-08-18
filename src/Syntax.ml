@@ -437,19 +437,35 @@ module BddMap = struct
     let vars = Bdd.pick_minterm guard in
     vars_to_value vars ty
 
-  let map_cache = Memo.Cache (Cache.create1 ())
+  module ExpMap = Map.Make (struct
+    type t = exp
 
-  let map (f: value -> value) ((vdd, ty): t) : t =
+    let compare = Pervasives.compare
+  end)
+
+  let map_cache = ref ExpMap.empty
+
+  let map ~op_key (f: value -> value) ((vdd, ty): t) : t =
     let cfg = Cmdline.get_cfg () in
     let g x = f (Mtbdd.get x) |> Mtbdd.unique B.tbl in
     if cfg.no_caching then (Mapleaf.mapleaf1 g vdd, ty)
     else
-      let res = User.map_op1 ~memo:map_cache g in
-      (res vdd, ty)
+      let op =
+        match ExpMap.find_opt op_key !map_cache with
+        | None ->
+            let o =
+              User.make_op1 ~memo:(Memo.Cache (Cache.create1 ())) g
+            in
+            map_cache := ExpMap.add op_key o !map_cache ;
+            o
+        | Some op -> op
+      in
+      (User.apply_op1 op vdd, ty)
 
-  let map_when_cache = Memo.Cache (Cache.create2 ())
+  let mapw_op_cache = ref ExpMap.empty
 
-  let map_when (pred: Bdd.vt) (f: value -> value) ((vdd, ty): t) : t =
+  let map_when ~op_key (pred: Bdd.vt) (f: value -> value)
+      ((vdd, ty): t) : t =
     let cfg = Cmdline.get_cfg () in
     let g b v =
       if Mtbdd.get b then f (Mtbdd.get v) |> Mtbdd.unique B.tbl
@@ -460,33 +476,49 @@ module BddMap = struct
     let pred = Mtbdd.ite pred tru fal in
     if cfg.no_caching then (Mapleaf.mapleaf2 g pred vdd, ty)
     else
-      let special =
-        if cfg.no_cutoff then fun _ _ -> None
-        else fun bdd1 bdd2 ->
-          if Vdd.is_cst bdd1 && not (Mtbdd.get (Vdd.dval bdd1)) then
-            Some bdd2
-          else None
+      let op =
+        match ExpMap.find_opt op_key !mapw_op_cache with
+        | None ->
+            let special =
+              if cfg.no_cutoff then fun _ _ -> None
+              else fun bdd1 bdd2 ->
+                if Vdd.is_cst bdd1 && not (Mtbdd.get (Vdd.dval bdd1))
+                then Some bdd2
+                else None
+            in
+            let op =
+              User.make_op2
+                ~memo:(Memo.Cache (Cache.create2 ()))
+                ~commutative:false ~idempotent:false ~special g
+            in
+            mapw_op_cache := ExpMap.add op_key op !mapw_op_cache ;
+            op
+        | Some op -> op
       in
-      let res =
-        User.map_op2 ~memo:map_when_cache ~commutative:false
-          ~idempotent:false ~special g
-      in
-      (res pred vdd, ty)
+      (User.apply_op2 op pred vdd, ty)
 
-  let merge_cache = Memo.Cache (Cache.create2 ())
+  let merge_op_cache = ref ExpMap.empty
 
-  let merge (f: value -> value -> value) (x, tyx) (y, _) : t =
+  let merge ~op_key (f: value -> value -> value) (x, tyx) (y, _) : t =
     let cfg = Cmdline.get_cfg () in
     let g x y =
       f (Mtbdd.get x) (Mtbdd.get y) |> Mtbdd.unique B.tbl
     in
     if cfg.no_caching then (Mapleaf.mapleaf2 g x y, tyx)
     else
-      let res =
-        User.map_op2 ~memo:merge_cache ~commutative:false
-          ~idempotent:false g
+      let op =
+        match ExpMap.find_opt op_key !merge_op_cache with
+        | None ->
+            let o =
+              User.make_op2
+                ~memo:(Memo.Cache (Cache.create2 ()))
+                ~commutative:false ~idempotent:false g
+            in
+            merge_op_cache := ExpMap.add op_key o !merge_op_cache ;
+            o
+        | Some op -> op
       in
-      (res x y, tyx)
+      (User.apply_op2 op x y, tyx)
 
   let find ((map, _): t) (v: value) : value =
     let bdd = value_to_bdd v in

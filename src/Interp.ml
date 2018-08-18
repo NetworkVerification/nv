@@ -149,7 +149,8 @@ and interp_op env ty op es =
   | MSet, [{v= VMap m}; vkey; vval] ->
       VMap (BddMap.update m vkey vval) |> value
   | MMap, [{v= VClosure (c_env, f)}; {v= VMap m}] ->
-      VMap (BddMap.map (fun v -> apply c_env f v) m) |> value
+      VMap (BddMap.map ~op_key:f.body (fun v -> apply c_env f v) m)
+      |> value
   | MMerge, [{v= VClosure (c_env, f)}; {v= VMap m1}; {v= VMap m2}] ->
       (* TO DO:  Need to preserve types in VOptions here ? *)
       let f_lifted v1 v2 =
@@ -157,7 +158,7 @@ and interp_op env ty op es =
         | {v= VClosure (c_env, f)} -> apply c_env f v2
         | _ -> failwith "internal error (interp_op)"
       in
-      VMap (BddMap.merge f_lifted m1 m2) |> value
+      VMap (BddMap.merge ~op_key:f.body f_lifted m1 m2) |> value
   | ( MMapFilter
     , [ {v= VClosure (c_env1, f1)}
       ; {v= VClosure (c_env2, f2)}
@@ -168,7 +169,8 @@ and interp_op env ty op es =
       let bddf = BddFunc.eval env f1.body in
       let f v = apply c_env2 f2 v in
       match bddf with
-      | BBool bdd -> VMap (BddMap.map_when bdd f m) |> value
+      | BBool bdd ->
+          VMap (BddMap.map_when ~op_key:f2.body bdd f m) |> value
       | _ -> failwith "impossible" )
   | _, _ ->
       failwith
