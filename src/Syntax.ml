@@ -278,7 +278,6 @@ let rec hash_value v =
 let rec get_inner_type t : ty =
   match t with TVar {contents= Link t} -> get_inner_type t | _ -> t
 
-  
 (* Include the map type here to avoid circular dependency *)
 
 module BddUtils = struct
@@ -482,16 +481,16 @@ module BddMap = struct
     oget !value
 
   let rec expand (vars: Man.tbool list) : Man.tbool list list =
-    match vars with 
+    match vars with
     | [] -> [[]]
-    | Man.Top :: xs -> 
+    | Man.Top :: xs ->
         let vars = expand xs in
         let trus = List.map (fun v -> Man.False :: v) vars in
         let fals = List.map (fun v -> Man.True :: v) vars in
         fals @ trus
     | x :: xs ->
-        let vars = expand xs in 
-        List.map (fun v -> x :: v) vars 
+        let vars = expand xs in
+        List.map (fun v -> x :: v) vars
 
   let bindings ((map, ty): t) : (value * value) list * value =
     let bs = ref [] in
@@ -499,12 +498,15 @@ module BddMap = struct
     Mtbdd.iter_cube
       (fun vars v ->
         let lst = Array.to_list vars in
-        let expanded = if count_tops vars <= 5 then expand lst else [lst] in
-        List.iter (fun vars -> 
-          if not (equal_values v dv) then
-          let k = vars_to_value (Array.of_list vars) ty in
-          bs := (k, v) :: !bs
-        ) expanded)
+        let expanded =
+          if count_tops vars <= 5 then expand lst else [lst]
+        in
+        List.iter
+          (fun vars ->
+            if not (equal_values v dv) then
+              let k = vars_to_value (Array.of_list vars) ty in
+              bs := (k, v) :: !bs )
+          expanded )
       map ;
     (!bs, dv)
 
@@ -518,7 +520,6 @@ module BddMap = struct
     let tru = Mtbdd.cst B.mgr B.tbl_bool true in
     let fal = Mtbdd.cst B.mgr B.tbl_bool false in
     let pred = Mtbdd.ite pred tru fal in
-
     if cfg.no_caching then (Mapleaf.mapleaf2 g pred vdd, ty)
     else
       let op =
