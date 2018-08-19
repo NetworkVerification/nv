@@ -954,11 +954,19 @@ and z3_to_exp m (e: Expr.expr) : Syntax.exp =
       let es = Expr.get_args e in
       let name = FuncDecl.get_name f |> Symbol.to_string in
       match (name, es) with
+      | "ite", [e1; e2; e3] ->
+          exp (EIf (z3_to_exp m e1, z3_to_exp m e2, z3_to_exp m e3))
       | "not", [e1] -> exp (EOp (Not, [z3_to_exp m e1]))
-      | "and", [e1; e2] ->
-          exp (EOp (And, [z3_to_exp m e1; z3_to_exp m e2]))
-      | "or", [e1; e2] ->
-          exp (EOp (Or, [z3_to_exp m e1; z3_to_exp m e2]))
+      | "and", _ ->
+          let base = exp (EVal (value (VBool true))) in
+          List.fold_left
+            (fun e1 e2 -> exp (EOp (And, [e1; z3_to_exp m e2])))
+            base es
+      | "or", _ ->
+          let base = exp (EVal (value (VBool false))) in
+          List.fold_left
+            (fun e1 e2 -> exp (EOp (Or, [e1; z3_to_exp m e2])))
+            base es
       | "=", [e1; e2] ->
           exp (EOp (UEq, [z3_to_exp m e1; z3_to_exp m e2]))
       | _ -> raise Model_conversion
@@ -986,7 +994,7 @@ let build_result m env aty num_nodes eassert =
   match m with
   | None -> failwith "internal error (encode)"
   | Some m ->
-      (* print_endline (Model.to_string m) ; *)
+      print_endline (Model.to_string m) ;
       let map = ref Graph.VertexMap.empty in
       (* grab the model from z3 *)
       for i = 0 to UInt32.to_int num_nodes - 1 do

@@ -132,7 +132,9 @@ let rec value_env_to_string env =
   Env.to_string (value_to_string_p max_prec) env.value
 
 and env_to_string env =
-  "[" ^ ty_env_to_string env ^ "|" ^ value_env_to_string env ^ "] "
+  if env.ty = Env.empty && env.value = Env.empty then " "
+  else
+    "[" ^ ty_env_to_string env ^ "|" ^ value_env_to_string env ^ "] "
 
 and func_to_string_p prec {arg= x; argty= argt; resty= rest; body} =
   let s_arg =
