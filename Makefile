@@ -20,6 +20,9 @@ build: $(MLFILES)
 debug: $(MLFILES)
 	$(BUILD) -tag 'debug' src/Main.native
 
+profile: $(MLFILES)
+	$(BUILD) -tag 'profile' src/Main.native
+
 %: %.ml
 	$(BUILD) $@.native
 
