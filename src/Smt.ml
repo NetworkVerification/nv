@@ -239,7 +239,7 @@ let rec encode_exp_z3 descr env arr (e: exp) =
           Expr.mk_const_s env.ctx name (Expr.get_sort e)
         in
         add env.solver [Boolean.mk_eq env.ctx result e] ;
-        let i = Var.fresh "i" |> Var.to_string in
+        let i = create_name descr k in
         let i = Symbol.mk_string env.ctx i in
         let iarg =
           Expr.mk_const env.ctx i (ty_to_sort env.ctx (oget kty))
@@ -957,13 +957,13 @@ and z3_to_exp m (e: Expr.expr) : Syntax.exp =
       | "ite", [e1; e2; e3] ->
           exp (EIf (z3_to_exp m e1, z3_to_exp m e2, z3_to_exp m e3))
       | "not", [e1] -> exp (EOp (Not, [z3_to_exp m e1]))
-      | "and", _ ->
-          let base = exp (EVal (value (VBool true))) in
+      | "and", e :: es ->
+          let base = z3_to_exp m e in
           List.fold_left
             (fun e1 e2 -> exp (EOp (And, [e1; z3_to_exp m e2])))
             base es
-      | "or", _ ->
-          let base = exp (EVal (value (VBool false))) in
+      | "or", e :: es ->
+          let base = z3_to_exp m e in
           List.fold_left
             (fun e1 e2 -> exp (EOp (Or, [e1; z3_to_exp m e2])))
             base es
@@ -994,7 +994,7 @@ let build_result m env aty num_nodes eassert =
   match m with
   | None -> failwith "internal error (encode)"
   | Some m ->
-      print_endline (Model.to_string m) ;
+      (* print_endline (Model.to_string m) ; *)
       let map = ref Graph.VertexMap.empty in
       (* grab the model from z3 *)
       for i = 0 to UInt32.to_int num_nodes - 1 do

@@ -24,7 +24,7 @@ let warning msg = show_message msg T.Yellow "warning"
 
 let get_position idx info =
   match get_position_opt idx info with
-  | None -> error "internal error (get_position)"
+  | None -> failwith "internal error (get_position)"
   | Some x -> x
 
 let get_line idx info = (info.input).(idx)

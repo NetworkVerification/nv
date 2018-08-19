@@ -34,9 +34,13 @@ let run_smt cfg info ds =
         let decls = Inline.inline_declarations info decls in
         let fs = f :: fs in
         (Smt.solve decls ~symbolic_vars:vars, fs)
-      with MapUnrolling.Cannot_unroll _ ->
-        Console.warning
-          "unable to unroll map due to non constant index:" ;
+      with MapUnrolling.Cannot_unroll e ->
+        let msg =
+          Printf.sprintf
+            "unable to unroll map due to non constant index: %s"
+            (Printing.exp_to_string e)
+        in
+        Console.warning msg ;
         (Smt.solve decls ~symbolic_vars:[], fs) )
     else (Smt.solve decls ~symbolic_vars:[], fs)
   in

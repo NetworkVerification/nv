@@ -12,8 +12,10 @@ end)
 let rec repeat x i = if i = 0 then [] else x :: repeat x (i - 1)
 
 let tuple_count tymap ty =
-  let es = TypeMap.find (Typing.strip_ty ty) tymap in
-  List.length es
+  let ty = Typing.strip_ty ty in
+  match TypeMap.find_opt ty tymap with
+  | None -> 0
+  | Some es -> List.length es
 
 let create_pattern_names count =
   let names = ref [] in
@@ -65,7 +67,7 @@ let rec tuplify_exp tymap e : exp =
         match TypeMap.find_opt (Typing.strip_ty ty) tymap with
         | None ->
             (* TODO: what if setter is used in assert statement? *)
-            failwith "internal error (tuplify_exp)"
+            failwith "internal error (tuplify_exp: mset)"
         | Some es ->
             let ks, _ = List.split es in
             let ps, es =
@@ -91,7 +93,7 @@ let rec tuplify_exp tymap e : exp =
         (* m[e] --> m.i_e  if known index else m.0 *)
         let ty = oget e1.ety in
         match TypeMap.find_opt (Typing.strip_ty ty) tymap with
-        | None -> failwith "internal error (tuplify_exp)"
+        | None -> failwith "internal error (tuplify_exp: mget)"
         | Some es ->
             let ps = create_pattern_names (List.length es) in
             let zip = List.combine ps es in
@@ -111,28 +113,11 @@ let rec tuplify_exp tymap e : exp =
               if List.length ps = 1 then List.hd ps else PTuple ps
             in
             EMatch (tuplify_exp tymap e1, [(ps, e)]) |> exp )
-    | MMap, [e1; e2] -> (
+    | MMap, [e1; e2] ->
         (* map f m --> (f m.0, f m.1, ...) *)
-        let ty = oget e.ety in
-        match TypeMap.find_opt (Typing.strip_ty ty) tymap with
-        | None -> failwith "internal error (tuplify_exp)"
-        | Some es ->
-            let ks, _ = List.split es in
-            let ps, es =
-              unpack
-                (fun (k, p) ->
-                  let pvar = EVar (Var.create p) |> exp in
-                  EApp (tuplify_exp tymap e1, pvar) |> exp )
-                ks
-            in
-            let es =
-              if List.length es = 1 then List.hd es
-              else ETuple es |> exp
-            in
-            let ps =
-              if List.length ps = 1 then List.hd ps else PTuple ps
-            in
-            EMatch (tuplify_exp tymap e2, [(ps, es)]) |> exp )
+        mk_map tymap e e1 e2 ~filter:None
+    | MMapFilter, [e1; e2; e3] ->
+        mk_map tymap e e2 e3 ~filter:(Some e1)
     | MMerge, [e1; e2; e3] -> (
         (* merge f m1 m2 --> (f m1.0 m2.0, f m1.1 m2.1, ...) *)
         let ty1, ty2 = (oget e2.ety, oget e3.ety) in
@@ -168,9 +153,8 @@ let rec tuplify_exp tymap e : exp =
                 |> exp
               , [(PTuple [ps1; ps2], es)] )
             |> exp
-        | _ -> failwith "internal error (tuplify_exp)" )
-    | MMapFilter, [e1; e2; e3] -> failwith "unimplemented: mfilter"
-    | _ -> failwith "internal error (tuplify_exp)" )
+        | _ -> failwith "internal error (tuplify_exp: mmerge)" )
+    | _ -> failwith "internal error (tuplify_exp: no match)" )
   | EFun f ->
       EFun
         { f with
@@ -192,6 +176,35 @@ let rec tuplify_exp tymap e : exp =
   | ETy (e, ty) -> tuplify_exp tymap e
   | EVal _ -> (* no way to construct a map value directly *) exp e.e
   | EVar _ -> exp e.e
+
+and mk_map tymap e e1 e2 ~filter =
+  let ty = oget e.ety in
+  match TypeMap.find_opt (Typing.strip_ty ty) tymap with
+  | None -> failwith "internal error (tuplify_exp: mmap)"
+  | Some es ->
+      let ks, _ = List.split es in
+      let ps, es =
+        unpack
+          (fun (k, p) ->
+            let key = EVar (Var.create k) |> exp in
+            let pvar = EVar (Var.create p) |> exp in
+            let eapp = EApp (tuplify_exp tymap e1, pvar) |> exp in
+            match filter with
+            | None -> eapp
+            | Some e3 ->
+                let cond =
+                  EApp (tuplify_exp tymap e3, key) |> exp
+                in
+                EIf (cond, eapp, pvar) |> exp )
+          ks
+      in
+      let es =
+        if List.length es = 1 then List.hd es else ETuple es |> exp
+      in
+      let ps =
+        if List.length ps = 1 then List.hd ps else PTuple ps
+      in
+      EMatch (tuplify_exp tymap e2, [(ps, es)]) |> exp
 
 (* no way to pattern match a map, so just keep patterns *)
 and tuplify_branches tymap bs =
@@ -345,29 +358,34 @@ let rec collect_all_symbolics ds =
 
 exception Cannot_unroll of exp
 
-let check_constants (map: ExprSet.t TypeMap.t) =
+let check_constants (map: ExprSet.t TypeMap.t) vars =
   TypeMap.iter
     (fun _ es ->
       ExprSet.iter
         (fun (_, e) ->
           match e.e with
           | EVal _ -> ()
+          | EVar v when VarSet.mem v vars -> ()
           | _ -> raise (Cannot_unroll e) )
         es )
     map
 
 let unroll info ds =
-  (* let all_tys = collect_all_map_tys ds in *)
   let orig_sym_types = collect_all_symbolics ds in
   let map = ref TypeMap.empty in
-  (* TypeMap.iter
+  let all_tys = collect_all_map_tys ds in
+  let vars = ref VarSet.empty in
+  TypeMap.iter
     (fun ty _ ->
       let var = Var.fresh "dkey" in
-      let e = ExprSet.singleton (Var.to_string var, EVar var |> exp) in
+      vars := VarSet.add var !vars ;
+      let e =
+        ExprSet.singleton (Var.to_string var, EVar var |> exp)
+      in
       map := TypeMap.add ty e !map )
-    all_tys ; *)
+    all_tys ;
   let map = collect_map_gets ds map in
-  check_constants map ;
+  check_constants map !vars ;
   let map = TypeMap.map sort_keys map in
   let decls = tuplify map ds in
   let variables =
