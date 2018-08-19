@@ -558,7 +558,12 @@ module BddMap = struct
             let o =
               User.make_op2
                 ~memo:(Memo.Cache (Cache.create2 ()))
-                ~commutative:false ~idempotent:false g
+                ~commutative:false ~idempotent:false
+                (* ~special:(fun bdd1 bdd2 ->
+                if Vdd.is_cst bdd1 && Mtbdd.get (Vdd.dval bdd1) = none then Some(bdd1)
+                else if Vdd.is_cst bdd2 && Mtbdd.get (Vdd.dval bdd2) = none then Some(bdd2)
+                else None) *)
+                g
             in
             merge_op_cache := ExpMap.add op_key o !merge_op_cache ;
             o

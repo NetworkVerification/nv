@@ -1,9 +1,9 @@
+* get a semi-large example to test performance with
+
 * Add optional annotations about commutativity, idempotency, or identity for 
   merge/transfer. This will let us optimize the bdd operations quite a bit 
 
 * Add a command line flag to export to json
-
-* Implement the map filter operation for map unrolling
 
 * Check for recursion
 

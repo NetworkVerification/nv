@@ -192,9 +192,7 @@ and mk_map tymap e e1 e2 ~filter =
             match filter with
             | None -> eapp
             | Some e3 ->
-                let cond =
-                  EApp (tuplify_exp tymap e3, key) |> exp
-                in
+                let cond = EApp (tuplify_exp tymap e3, key) |> exp in
                 EIf (cond, eapp, pvar) |> exp )
           ks
       in

@@ -1,0 +1,66 @@
+type attribute = dict[int, option[int]]
+
+let nodes = 20
+
+let edges = {
+ 0=2;
+ 0=3;
+ 1=2;
+ 1=3;
+ 4=6;
+ 4=7;
+ 5=6;
+ 5=7;
+ 8=10;
+ 8=11;
+ 9=10;
+ 9=11;
+ 12=14;
+ 12=15;
+ 13=14;
+ 13=15;
+ 2=16;
+ 2=17;
+ 3=18;
+ 4=19;
+ 6=16;
+ 6=17;
+ 7=18;
+ 7=19;
+ 10=16;
+ 10=17;
+ 11=18;
+ 11=19;
+ 14=16;
+ 14=17;
+ 15=18;
+ 15=19;
+}
+
+let mapo f o =
+  match o with
+  | None -> None
+  | Some x -> Some (f x)
+
+let mapbetter f o1 o2 =
+  match (o1, o2) with
+  | (None, x) -> x
+  | (x , None) -> x
+  | (Some x, Some y) -> Some (f x y)
+      
+let merge node x y =
+  combine (fun x y -> mapbetter (fun x y -> if x < y then x else y) x y) x y
+
+let trans edge x =
+  map (fun x -> mapo (fun x -> x + 1) x) x
+
+let ip_of_node node = node
+
+let init node =
+  let m = createDict None in
+  m[(ip_of_node node) := Some 0]
+
+let assert node x =
+  match x[19] with 
+  | None -> false 
+  | Some _ -> false
