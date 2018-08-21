@@ -55,7 +55,8 @@ type v = private
 
 and mtbdd = value Mtbdd.t * ty
 
-and value = private {v: v; vty: ty option; vspan: Span.t}
+and value = private
+  {v: v; vty: ty option; vspan: Span.t; vtag: int; vhkey: int}
 
 and e = private
   | EVar of var
@@ -70,7 +71,8 @@ and e = private
   | EMatch of exp * branches
   | ETy of exp * ty
 
-and exp = private {e: e; ety: ty option; espan: Span.t}
+and exp = private
+  {e: e; ety: ty option; espan: Span.t; etag: int; ehkey: int}
 
 and branches = (pattern * exp) list
 

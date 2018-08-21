@@ -58,7 +58,8 @@ type v =
   | VOption of value option
   | VClosure of closure
 
-and value = {v: v; vty: ty option; vspan: Span.t}
+and value =
+  {v: v; vty: ty option; vspan: Span.t; vtag: int; vhkey: int}
 
 and mtbdd = (value Mtbdd.t * ty)
 
@@ -75,7 +76,7 @@ and e =
   | EMatch of exp * branches
   | ETy of exp * ty
 
-and exp = {e: e; ety: ty option; espan: Span.t}
+and exp = {e: e; ety: ty option; espan: Span.t; etag: int; ehkey: int}
 
 and branches = (pattern * exp) list
 
@@ -101,71 +102,32 @@ type declaration =
 
 type declarations = declaration list
 
-(* equality / hashing *)
-
-let rec equal_values (v1: value) (v2: value) = equal_vs v1.v v2.v
-
-and equal_vs v1 v2 =
-  match (v1, v2) with
-  | VBool b1, VBool b2 -> b1 = b2
-  | VUInt32 i1, VUInt32 i2 -> UInt32.compare i1 i2 = 0
-  | VMap (m1, _), VMap (m2, _) -> Mtbdd.is_equal m1 m2
-  | VTuple vs1, VTuple vs2 -> equal_lists vs1 vs2
-  | VOption vo1, VOption vo2 -> (
-    match (vo1, vo2) with
-    | None, None -> true
-    | None, Some _ -> false
-    | Some _, None -> false
-    | Some x, Some y -> equal_values x y )
-  | VClosure (e1, f1), VClosure (e2, f2) ->
-      let {ty= ty1; value= value1} = e1 in
-      let {ty= ty2; value= value2} = e2 in
-      let cmp = Env.compare Pervasives.compare ty1 ty1 in
-      if cmp <> 0 then false
-      else
-        let cmp = Env.equal equal_values value1 value2 in
-        cmp && equal_funcs f1 f2
-  | _, _ -> false
-
-(* TODO: check equal expressions *)
-and equal_funcs f1 f2 =
-  let {arg= x; argty= tyx; resty= resx; body= e1} = f1 in
-  let {arg= y; argty= tyy; resty= resy; body= e2} = f2 in
-  Var.equals x y
-
-and equal_lists vs1 vs2 =
-  match (vs1, vs2) with
-  | [], [] -> true
-  | [], _ | _, [] -> false
-  | v1 :: vs1, v2 :: vs2 -> equal_values v1 v2 && equal_lists vs1 vs2
-
-let rec hash_value v = hash_v v.v
-
-and hash_v v =
-  match v with
-  | VBool b -> if b then 1 else 0
-  | VUInt32 i -> UInt32.to_int i
-  | VMap m -> failwith "unimplemented map hashl"
-  | VTuple vs ->
-      List.fold_left (fun acc v -> (31 * acc) + hash_value v) 0 vs
-  | VOption vo -> (
-    match vo with None -> 5 | Some x -> 7 + (31 * hash_value x) )
-  | VClosure (e1, f1) ->
-      let {ty= ty1; value= v} = e1 in
-      let vs = Env.to_list v in
-      List.fold_left
-        (fun acc (x, v) ->
-          let x = Hashtbl.hash (Var.to_string x) in
-          (31 * acc) + (5 * x) + hash_value v )
-        0 vs
-
 (* hashconsing information/tables *)
-(* let meta_v : (v, value) meta = 
-    { hash=hash_v
-    ; equal=equal_vs
-    ; node=(fun v -> v.v)
-    ; make: tag:int -> hkey:int -> 'a -> 'b
-    ; hkey: 'b -> int } *)
+
+let meta_v : (v, value) meta =
+  { hash= Hashtbl.hash
+  ; equal= ( = )
+  ; node= (fun v -> v.v)
+  ; make=
+      (fun ~tag ~hkey v ->
+        {v; vty= None; vspan= Span.default; vtag= tag; vhkey= hkey}
+        )
+  ; hkey= (fun v -> v.vhkey) }
+
+let meta_e : (e, exp) meta =
+  { hash= Hashtbl.hash
+  ; equal= ( = )
+  ; node= (fun e -> e.e)
+  ; make=
+      (fun ~tag ~hkey e ->
+        {e; ety= None; espan= Span.default; etag= tag; ehkey= hkey}
+        )
+  ; hkey= (fun e -> e.ehkey) }
+
+let tbl_v = Hashcons.create meta_v 7
+
+let tbl_e = Hashcons.create meta_e 7
+
 (* Utilities *)
 
 let arity op =
@@ -189,9 +151,17 @@ let arity op =
 
 let tint = TInt (UInt32.of_int 32)
 
-let exp e = {e; ety= None; espan= Span.default}
+let exp e =
+  let cfg = Cmdline.get_cfg () in
+  if cfg.no_hashcons then
+    {e; ety= None; espan= Span.default; etag= 0; ehkey= 0}
+  else Hashcons.hashcons tbl_e e
 
-let value v = {v; vty= None; vspan= Span.default}
+let value v =
+  let cfg = Cmdline.get_cfg () in
+  if cfg.no_hashcons then
+    {v; vty= None; vspan= Span.default; vtag= 0; vhkey= 0}
+  else Hashcons.hashcons tbl_v v
 
 let aexp (e, t, span) = {e with ety= t; espan= span}
 
@@ -334,6 +304,72 @@ let get_requires ds =
 
 let rec get_inner_type t : ty =
   match t with TVar {contents= Link t} -> get_inner_type t | _ -> t
+
+(* equality / hashing *)
+
+let rec equal_values (v1: value) (v2: value) = equal_vs v1.v v2.v
+
+and equal_vs v1 v2 =
+  match (v1, v2) with
+  | VBool b1, VBool b2 -> b1 = b2
+  | VUInt32 i1, VUInt32 i2 -> UInt32.compare i1 i2 = 0
+  | VMap (m1, _), VMap (m2, _) -> Mtbdd.is_equal m1 m2
+  | VTuple vs1, VTuple vs2 -> equal_lists vs1 vs2
+  | VOption vo1, VOption vo2 -> (
+    match (vo1, vo2) with
+    | None, None -> true
+    | None, Some _ -> false
+    | Some _, None -> false
+    | Some x, Some y -> equal_values x y )
+  | VClosure (e1, f1), VClosure (e2, f2) ->
+      let {ty= ty1; value= value1} = e1 in
+      let {ty= ty2; value= value2} = e2 in
+      let cmp = Env.compare Pervasives.compare ty1 ty1 in
+      if cmp <> 0 then false
+      else
+        let cmp = Env.equal equal_values value1 value2 in
+        cmp && equal_funcs f1 f2
+  | _, _ -> false
+
+(* TODO: check equal expressions *)
+and equal_funcs f1 f2 =
+  let {arg= x; argty= tyx; resty= resx; body= e1} = f1 in
+  let {arg= y; argty= tyy; resty= resy; body= e2} = f2 in
+  Var.equals x y
+
+and equal_lists vs1 vs2 =
+  match (vs1, vs2) with
+  | [], [] -> true
+  | [], _ | _, [] -> false
+  | v1 :: vs1, v2 :: vs2 -> equal_values v1 v2 && equal_lists vs1 vs2
+
+let rec hash_value v : int = hash_v v.v
+
+and hash_v v =
+  match v with
+  | VBool b -> if b then 1 else 0
+  | VUInt32 i -> UInt32.to_int i
+  | VMap m -> Hashtbl.hash m
+  | VTuple vs ->
+      List.fold_left (fun acc v -> (31 * acc) + hash_value v) 0 vs
+  | VOption vo -> (
+    match vo with None -> 5 | Some x -> 7 + (31 * hash_value x) )
+  | VClosure (e1, f1) ->
+      let {ty= ty1; value= v} = e1 in
+      let vs = Env.to_list v in
+      List.fold_left
+        (fun acc (x, v) ->
+          let x = Hashtbl.hash (Var.to_string x) in
+          (31 * acc) + (5 * x) + hash_value v )
+        0 vs
+
+let equal_values v1 v2 =
+  let cfg = Cmdline.get_cfg () in
+  if cfg.no_hashcons then equal_values v1 v2 else v1.vtag = v2.vtag
+
+let hash_value v : int =
+  let cfg = Cmdline.get_cfg () in
+  if cfg.no_hashcons then hash_value v else v.vhkey
 
 (* Include the map type here to avoid circular dependency *)
 
