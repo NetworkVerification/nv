@@ -1,14 +1,15 @@
 open ANSITerminal
 open Cmdline
-open Syntax
-open Printing
-open Interp
-open Typing
-open Renaming
 open Inline
+open Interp
+open Hashcons
+open Printing
 open Quickcheck
+open Renaming
 open Smt
 open Solution
+open Syntax
+open Typing
 
 let init_renamer sol =
   let drop_zero s = String.sub s 0 (String.length s - 1) in
