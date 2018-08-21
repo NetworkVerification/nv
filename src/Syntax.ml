@@ -1,6 +1,7 @@
 (* Abstract syntax of SRP attribute processing expressions *)
 open BatMap
 open Cudd
+open Hashcons
 open Unsigned
 
 (* indices into maps or map sizes must be static constants *)
@@ -100,6 +101,71 @@ type declaration =
 
 type declarations = declaration list
 
+(* equality / hashing *)
+
+let rec equal_values (v1: value) (v2: value) = equal_vs v1.v v2.v
+
+and equal_vs v1 v2 =
+  match (v1, v2) with
+  | VBool b1, VBool b2 -> b1 = b2
+  | VUInt32 i1, VUInt32 i2 -> UInt32.compare i1 i2 = 0
+  | VMap (m1, _), VMap (m2, _) -> Mtbdd.is_equal m1 m2
+  | VTuple vs1, VTuple vs2 -> equal_lists vs1 vs2
+  | VOption vo1, VOption vo2 -> (
+    match (vo1, vo2) with
+    | None, None -> true
+    | None, Some _ -> false
+    | Some _, None -> false
+    | Some x, Some y -> equal_values x y )
+  | VClosure (e1, f1), VClosure (e2, f2) ->
+      let {ty= ty1; value= value1} = e1 in
+      let {ty= ty2; value= value2} = e2 in
+      let cmp = Env.compare Pervasives.compare ty1 ty1 in
+      if cmp <> 0 then false
+      else
+        let cmp = Env.equal equal_values value1 value2 in
+        cmp && equal_funcs f1 f2
+  | _, _ -> false
+
+(* TODO: check equal expressions *)
+and equal_funcs f1 f2 =
+  let {arg= x; argty= tyx; resty= resx; body= e1} = f1 in
+  let {arg= y; argty= tyy; resty= resy; body= e2} = f2 in
+  Var.equals x y
+
+and equal_lists vs1 vs2 =
+  match (vs1, vs2) with
+  | [], [] -> true
+  | [], _ | _, [] -> false
+  | v1 :: vs1, v2 :: vs2 -> equal_values v1 v2 && equal_lists vs1 vs2
+
+let rec hash_value v = hash_v v.v
+
+and hash_v v =
+  match v with
+  | VBool b -> if b then 1 else 0
+  | VUInt32 i -> UInt32.to_int i
+  | VMap m -> failwith "unimplemented map hashl"
+  | VTuple vs ->
+      List.fold_left (fun acc v -> (31 * acc) + hash_value v) 0 vs
+  | VOption vo -> (
+    match vo with None -> 5 | Some x -> 7 + (31 * hash_value x) )
+  | VClosure (e1, f1) ->
+      let {ty= ty1; value= v} = e1 in
+      let vs = Env.to_list v in
+      List.fold_left
+        (fun acc (x, v) ->
+          let x = Hashtbl.hash (Var.to_string x) in
+          (31 * acc) + (5 * x) + hash_value v )
+        0 vs
+
+(* hashconsing information/tables *)
+(* let meta_v : (v, value) meta = 
+    { hash=hash_v
+    ; equal=equal_vs
+    ; node=(fun v -> v.v)
+    ; make: tag:int -> hkey:int -> 'a -> 'b
+    ; hkey: 'b -> int } *)
 (* Utilities *)
 
 let arity op =
@@ -265,60 +331,6 @@ let get_requires ds =
     (fun acc d -> match d with DRequire e -> e :: acc | _ -> acc)
     [] ds
   |> List.rev
-
-let rec equal_values (v1: value) (v2: value) = equal_vs v1.v v2.v
-
-and equal_vs v1 v2 =
-  match (v1, v2) with
-  | VBool b1, VBool b2 -> b1 = b2
-  | VUInt32 i1, VUInt32 i2 -> UInt32.compare i1 i2 = 0
-  | VMap (m1, _), VMap (m2, _) -> Mtbdd.is_equal m1 m2
-  | VTuple vs1, VTuple vs2 -> equal_lists vs1 vs2
-  | VOption vo1, VOption vo2 -> (
-    match (vo1, vo2) with
-    | None, None -> true
-    | None, Some _ -> false
-    | Some _, None -> false
-    | Some x, Some y -> equal_values x y )
-  | VClosure (e1, f1), VClosure (e2, f2) ->
-      let {ty= ty1; value= value1} = e1 in
-      let {ty= ty2; value= value2} = e2 in
-      let cmp = Env.compare Pervasives.compare ty1 ty1 in
-      if cmp <> 0 then false
-      else
-        let cmp = Env.equal equal_values value1 value2 in
-        cmp && equal_funcs f1 f2
-  | _, _ -> false
-
-(* TODO: check equal expressions *)
-and equal_funcs f1 f2 =
-  let {arg= x; argty= tyx; resty= resx; body= e1} = f1 in
-  let {arg= y; argty= tyy; resty= resy; body= e2} = f2 in
-  Var.equals x y
-
-and equal_lists vs1 vs2 =
-  match (vs1, vs2) with
-  | [], [] -> true
-  | [], _ | _, [] -> false
-  | v1 :: vs1, v2 :: vs2 -> equal_values v1 v2 && equal_lists vs1 vs2
-
-let rec hash_value v =
-  match v.v with
-  | VBool b -> if b then 1 else 0
-  | VUInt32 i -> UInt32.to_int i
-  | VMap m -> failwith "unimplemented map hashl"
-  | VTuple vs ->
-      List.fold_left (fun acc v -> (31 * acc) + hash_value v) 0 vs
-  | VOption vo -> (
-    match vo with None -> 5 | Some x -> 7 + (31 * hash_value x) )
-  | VClosure (e1, f1) ->
-      let {ty= ty1; value= v} = e1 in
-      let vs = Env.to_list v in
-      List.fold_left
-        (fun acc (x, v) ->
-          let x = Hashtbl.hash (Var.to_string x) in
-          (31 * acc) + (5 * x) + hash_value v )
-        0 vs
 
 let rec get_inner_type t : ty =
   match t with TVar {contents= Link t} -> get_inner_type t | _ -> t

@@ -17,7 +17,7 @@
 type ('a, 'b) meta =
   { hash: 'a -> int
   ; equal: 'a -> 'a -> bool
-  ; node: 'a -> 'b
+  ; node: 'b -> 'a
   ; make: tag:int -> hkey:int -> 'a -> 'b
   ; hkey: 'b -> int }
 

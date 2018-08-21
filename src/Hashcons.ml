@@ -21,13 +21,13 @@ let gentag =
 type ('a, 'b) meta =
   { hash: 'a -> int
   ; equal: 'a -> 'a -> bool
-  ; node: 'a -> 'b
+  ; node: 'b -> 'a
   ; make: tag:int -> hkey:int -> 'a -> 'b
   ; hkey: 'b -> int }
 
 type ('a, 'b) table =
   { meta: ('a, 'b) meta
-  ; mutable table: 'a Weak.t array
+  ; mutable table: 'b Weak.t array
   ; mutable totsize: int
   ; mutable limit: int }
 
@@ -117,7 +117,7 @@ let hashcons (t: ('a, 'b) table) (d: 'a) : 'b =
   let sz = Weak.length bucket in
   let rec loop i =
     if i >= sz then (
-      let hnode = t.meta.make ~tag:(gentag ()) ~hkey d in
+      let hnode : 'b = t.meta.make ~tag:(gentag ()) ~hkey d in
       add t hnode ; hnode )
     else
       match Weak.get_copy bucket i with
