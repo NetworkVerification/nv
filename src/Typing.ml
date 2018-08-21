@@ -460,8 +460,7 @@ let rec infer_exp i info env (e: exp) : exp =
         unify info e t t1 ;
         texp (ety e t1, t1, e.espan)
   in
-  (* Printf.printf "type: %s\n"
-    (Printing.ty_to_string (oget exp.ety)) ;
+  (* Printf.printf "type: %s\n" (Printing.ty_to_string (oget exp.ety)) ;
   check_annot exp ; *)
   exp
 

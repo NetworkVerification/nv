@@ -102,11 +102,216 @@ type declaration =
 
 type declarations = declaration list
 
+(* equality / hashing *)
+
+let rec equal_values ~cmp_meta (v1: value) (v2: value) =
+  let cfg = Cmdline.get_cfg () in
+  let b =
+    if cfg.hashcons then v1.vtag = v2.vtag
+    else equal_vs ~cmp_meta v1.v v2.v
+  in
+  if cmp_meta then
+    v1.vty = v2.vty && v1.vspan = v2.vspan && v1.vtag = v2.vtag
+    && v1.vhkey = v2.vhkey && b
+  else b
+
+and equal_vs ~cmp_meta v1 v2 =
+  match (v1, v2) with
+  | VBool b1, VBool b2 -> b1 = b2
+  | VUInt32 i1, VUInt32 i2 -> UInt32.compare i1 i2 = 0
+  | VMap (m1, ty1), VMap (m2, ty2) ->
+      Mtbdd.is_equal m1 m2 && ty1 = ty2
+  | VTuple vs1, VTuple vs2 -> equal_lists ~cmp_meta vs1 vs2
+  | VOption vo1, VOption vo2 -> (
+    match (vo1, vo2) with
+    | None, None -> true
+    | None, Some _ -> false
+    | Some _, None -> false
+    | Some x, Some y -> equal_values ~cmp_meta x y )
+  | VClosure (e1, f1), VClosure (e2, f2) ->
+      let {ty= ty1; value= value1} = e1 in
+      let {ty= ty2; value= value2} = e2 in
+      let cmpTy = Env.compare Pervasives.compare ty1 ty1 in
+      if cmpTy <> 0 then false
+      else
+        let cmp = Env.equal (equal_values ~cmp_meta) value1 value2 in
+        cmp && equal_funcs ~cmp_meta f1 f2
+  | _, _ -> false
+
+and equal_lists ~cmp_meta vs1 vs2 =
+  match (vs1, vs2) with
+  | [], [] -> true
+  | [], _ | _, [] -> false
+  | v1 :: vs1, v2 :: vs2 ->
+      equal_values ~cmp_meta v1 v2 && equal_lists ~cmp_meta vs1 vs2
+
+and equal_exps ~cmp_meta (e1: exp) (e2: exp) =
+  let cfg = Cmdline.get_cfg () in
+  let b =
+    if cfg.hashcons then e1.etag = e2.etag
+    else equal_es ~cmp_meta e1.e e2.e
+  in
+  if cmp_meta then
+    b && e1.ety = e2.ety && e1.espan = e2.espan && e1.etag = e2.etag
+    && e1.ehkey = e2.ehkey
+  else b
+
+and equal_es ~cmp_meta e1 e2 =
+  match (e1, e2) with
+  | EVar x1, EVar x2 -> Var.equals x1 x2
+  | EVal v1, EVal v2 -> equal_values ~cmp_meta v1 v2
+  | EOp (op1, es1), EOp (op2, es2) ->
+      op1 = op2 && equal_lists_es ~cmp_meta es1 es2
+  | EFun f1, EFun f2 -> equal_funcs ~cmp_meta f1 f2
+  | EApp (e1, e2), EApp (e3, e4) ->
+      equal_exps ~cmp_meta e1 e3 && equal_exps ~cmp_meta e2 e4
+  | EIf (e1, e2, e3), EIf (e4, e5, e6) ->
+      equal_exps ~cmp_meta e1 e4
+      && equal_exps ~cmp_meta e2 e5
+      && equal_exps ~cmp_meta e3 e6
+  | ELet (x1, e1, e2), ELet (x2, e3, e4) ->
+      Var.equals x1 x2
+      && equal_exps ~cmp_meta e1 e3
+      && equal_exps ~cmp_meta e2 e4
+  | ETuple es1, ETuple es2 -> equal_lists_es ~cmp_meta es1 es2
+  | ESome e1, ESome e2 -> equal_exps ~cmp_meta e1 e2
+  | EMatch (e1, bs1), EMatch (e2, bs2) ->
+      equal_exps ~cmp_meta e1 e2 && equal_branches ~cmp_meta bs1 bs2
+  | ETy (e1, ty1), ETy (e2, ty2) ->
+      equal_exps ~cmp_meta e1 e2 && ty1 = ty2
+  | _, _ -> false
+
+and equal_lists_es ~cmp_meta es1 es2 =
+  match (es1, es1) with
+  | [], [] -> true
+  | [], _ | _, [] -> false
+  | e1 :: es1, e2 :: es2 ->
+      equal_exps ~cmp_meta e1 e2 && equal_lists_es ~cmp_meta es1 es2
+
+and equal_branches ~cmp_meta bs1 bs2 =
+  match (bs1, bs2) with
+  | [], [] -> true
+  | [], _ | _, [] -> false
+  | (p1, e1) :: bs1, (p2, e2) :: bs2 ->
+      p1 = p2
+      && equal_exps ~cmp_meta e1 e2
+      && equal_branches ~cmp_meta bs1 bs2
+
+and equal_funcs ~cmp_meta f1 f2 =
+  let {arg= x; argty= aty1; resty= rty1; body= e1} = f1 in
+  let {arg= y; argty= aty2; resty= rty2; body= e2} = f2 in
+  let b = if cmp_meta then aty1 = aty2 && rty1 = rty2 else true in
+  b && Var.equals x y && equal_exps ~cmp_meta e1 e2
+
+let rec hash_value ~hash_meta v : int =
+  let cfg = Cmdline.get_cfg () in
+  let m =
+    if hash_meta then Hashtbl.hash (v.vty, v.vspan, v.vtag, v.vhkey)
+    else 0
+  in
+  if cfg.hashcons then v.vhkey + m else hash_v ~hash_meta v.v + m
+
+and hash_v ~hash_meta v =
+  match v with
+  | VBool b -> if b then 1 else 0
+  | VUInt32 i -> UInt32.to_int i + 1
+  | VMap m -> Hashtbl.hash m + 2
+  | VTuple vs ->
+      List.fold_left
+        (fun acc v -> acc + hash_value ~hash_meta v)
+        0 vs
+      + 3
+  | VOption vo -> (
+    match vo with None -> 5 | Some x -> hash_value ~hash_meta x + 4 )
+  | VClosure (e1, f1) ->
+      let {ty= ty1; value= v} = e1 in
+      let vs = Env.to_list v in
+      let acc =
+        List.fold_left
+          (fun acc (x, v) ->
+            let x = Hashtbl.hash (Var.to_string x) in
+            acc + x + hash_value ~hash_meta v )
+          0 vs
+      in
+      acc + 5
+
+and hash_exp ~hash_meta e =
+  let cfg = Cmdline.get_cfg () in
+  let m =
+    if hash_meta then Hashtbl.hash (e.ety, e.espan, e.etag, e.ehkey)
+    else 0
+  in
+  if cfg.hashcons then e.ehkey + m else hash_e ~hash_meta e.e + m
+
+and hash_e ~hash_meta e =
+  match e with
+  | EVar x -> hash_var x
+  | EVal v -> hash_value ~hash_meta v + 1
+  | EOp (op, es) -> hash_op op + hash_es ~hash_meta es + 2
+  | EFun f ->
+      let i =
+        if hash_meta then Hashtbl.hash (f.argty, f.resty) else 0
+      in
+      hash_var f.arg + hash_exp ~hash_meta f.body + i + 3
+  | EApp (e1, e2) ->
+      hash_exp ~hash_meta e1 + hash_exp ~hash_meta e2 + 4
+  | EIf (e1, e2, e3) ->
+      hash_exp ~hash_meta e1 + hash_exp ~hash_meta e2
+      + hash_exp ~hash_meta e3 + 5
+  | ELet (x, e1, e2) ->
+      hash_var x + hash_exp ~hash_meta e1 + hash_exp ~hash_meta e2
+      + 6
+  | ETuple es -> hash_es ~hash_meta es + 7
+  | ESome e -> hash_exp ~hash_meta e + 8
+  | EMatch (e, bs) ->
+      hash_exp ~hash_meta e + hash_branches ~hash_meta bs + 9
+  | ETy (e, ty) -> hash_exp ~hash_meta e + Hashtbl.hash ty + 10
+
+and hash_var x = Hashtbl.hash x
+
+and hash_es ~hash_meta es =
+  List.fold_left (fun acc e -> acc + hash_exp ~hash_meta e) 0 es
+
+and hash_branches ~hash_meta bs =
+  List.fold_left
+    (fun acc (p, e) -> acc + hash_pattern p + hash_exp ~hash_meta e)
+    0 bs
+
+and hash_pattern p =
+  match p with
+  | PWild -> 1
+  | PVar x -> hash_var x + 2
+  | PBool b -> (if b then 1 else 0) + 3
+  | PUInt32 i -> Hashtbl.hash i + 4
+  | PTuple ps -> hash_patterns ps + 5
+  | POption None -> 6
+  | POption (Some p) -> hash_pattern p + 7
+
+and hash_patterns ps =
+  List.fold_left (fun acc p -> acc + hash_pattern p) 0 ps
+
+and hash_op op =
+  match op with
+  | And -> 1
+  | Or -> 2
+  | Not -> 3
+  | UAdd -> 4
+  | USub -> 5
+  | UEq -> 6
+  | ULess -> 7
+  | ULeq -> 8
+  | MCreate -> 9
+  | MGet -> 10
+  | MSet -> 11
+  | MMap -> 12
+  | MMapFilter -> 13
+  | MMerge -> 14
+
 (* hashconsing information/tables *)
 
 let meta_v : (v, value) meta =
-  { hash= Hashtbl.hash
-  ; equal= ( = )
+  { hash= hash_v ~hash_meta:true
+  ; equal= equal_vs ~cmp_meta:true
   ; node= (fun v -> v.v)
   ; make=
       (fun ~tag ~hkey v ->
@@ -115,8 +320,8 @@ let meta_v : (v, value) meta =
   ; hkey= (fun v -> v.vhkey) }
 
 let meta_e : (e, exp) meta =
-  { hash= Hashtbl.hash
-  ; equal= ( = )
+  { hash= hash_e ~hash_meta:true
+  ; equal= equal_es ~cmp_meta:true
   ; node= (fun e -> e.e)
   ; make=
       (fun ~tag ~hkey e ->
@@ -153,15 +358,13 @@ let tint = TInt (UInt32.of_int 32)
 
 let exp e =
   let cfg = Cmdline.get_cfg () in
-  if cfg.no_hashcons then
-    {e; ety= None; espan= Span.default; etag= 0; ehkey= 0}
-  else Hashcons.hashcons tbl_e e
+  if cfg.hashcons then Hashcons.hashcons tbl_e e
+  else {e; ety= None; espan= Span.default; etag= 0; ehkey= 0}
 
 let value v =
   let cfg = Cmdline.get_cfg () in
-  if cfg.no_hashcons then
-    {v; vty= None; vspan= Span.default; vtag= 0; vhkey= 0}
-  else Hashcons.hashcons tbl_v v
+  if cfg.hashcons then Hashcons.hashcons tbl_v v
+  else {v; vty= None; vspan= Span.default; vtag= 0; vhkey= 0}
 
 let aexp (e, t, span) = {e with ety= t; espan= span}
 
@@ -305,72 +508,6 @@ let get_requires ds =
 let rec get_inner_type t : ty =
   match t with TVar {contents= Link t} -> get_inner_type t | _ -> t
 
-(* equality / hashing *)
-
-let rec equal_values (v1: value) (v2: value) = equal_vs v1.v v2.v
-
-and equal_vs v1 v2 =
-  match (v1, v2) with
-  | VBool b1, VBool b2 -> b1 = b2
-  | VUInt32 i1, VUInt32 i2 -> UInt32.compare i1 i2 = 0
-  | VMap (m1, _), VMap (m2, _) -> Mtbdd.is_equal m1 m2
-  | VTuple vs1, VTuple vs2 -> equal_lists vs1 vs2
-  | VOption vo1, VOption vo2 -> (
-    match (vo1, vo2) with
-    | None, None -> true
-    | None, Some _ -> false
-    | Some _, None -> false
-    | Some x, Some y -> equal_values x y )
-  | VClosure (e1, f1), VClosure (e2, f2) ->
-      let {ty= ty1; value= value1} = e1 in
-      let {ty= ty2; value= value2} = e2 in
-      let cmp = Env.compare Pervasives.compare ty1 ty1 in
-      if cmp <> 0 then false
-      else
-        let cmp = Env.equal equal_values value1 value2 in
-        cmp && equal_funcs f1 f2
-  | _, _ -> false
-
-(* TODO: check equal expressions *)
-and equal_funcs f1 f2 =
-  let {arg= x; argty= tyx; resty= resx; body= e1} = f1 in
-  let {arg= y; argty= tyy; resty= resy; body= e2} = f2 in
-  Var.equals x y
-
-and equal_lists vs1 vs2 =
-  match (vs1, vs2) with
-  | [], [] -> true
-  | [], _ | _, [] -> false
-  | v1 :: vs1, v2 :: vs2 -> equal_values v1 v2 && equal_lists vs1 vs2
-
-let rec hash_value v : int = hash_v v.v
-
-and hash_v v =
-  match v with
-  | VBool b -> if b then 1 else 0
-  | VUInt32 i -> UInt32.to_int i
-  | VMap m -> Hashtbl.hash m
-  | VTuple vs ->
-      List.fold_left (fun acc v -> (31 * acc) + hash_value v) 0 vs
-  | VOption vo -> (
-    match vo with None -> 5 | Some x -> 7 + (31 * hash_value x) )
-  | VClosure (e1, f1) ->
-      let {ty= ty1; value= v} = e1 in
-      let vs = Env.to_list v in
-      List.fold_left
-        (fun acc (x, v) ->
-          let x = Hashtbl.hash (Var.to_string x) in
-          (31 * acc) + (5 * x) + hash_value v )
-        0 vs
-
-let equal_values v1 v2 =
-  let cfg = Cmdline.get_cfg () in
-  if cfg.no_hashcons then equal_values v1 v2 else v1.vtag = v2.vtag
-
-let hash_value v : int =
-  let cfg = Cmdline.get_cfg () in
-  if cfg.no_hashcons then hash_value v else v.vhkey
-
 (* Include the map type here to avoid circular dependency *)
 
 module BddUtils = struct
@@ -395,7 +532,10 @@ module BddUtils = struct
     | TArrow _ | TMap _ | TVar _ | QVar _ ->
         failwith "internal error (ty_to_size)"
 
-  let tbl = Mtbdd.make_table ~hash:hash_value ~equal:equal_values
+  let tbl =
+    Mtbdd.make_table
+      ~hash:(hash_value ~hash_meta:false)
+      ~equal:(equal_values ~cmp_meta:false)
 
   let tbl_bool =
     Mtbdd.make_table ~hash:(fun b -> if b then 1 else 0) ~equal:( = )
@@ -596,7 +736,7 @@ module BddMap = struct
         in
         List.iter
           (fun vars ->
-            if not (equal_values v dv) then
+            if not (equal_values ~cmp_meta:false v dv) then
               let k = vars_to_value (Array.of_list vars) ty in
               bs := (k, v) :: !bs )
           expanded )

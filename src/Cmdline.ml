@@ -9,7 +9,7 @@ type t =
   ; smart_gen: bool   [@short "-g"]    (** generate relevant randomized inputs     *)
   ; smt: bool         [@short "-m"]    (** search for bugs using an smt solver     *)
   ; unroll_maps: bool [@short "-u"]    (** try to unroll dictionaries as tuples    *)
-  ; no_hashcons: bool                  (** disables hashconsing of ast terms       *)
+  ; hashcons: bool    [@short "-c"]    (** enables hashconsing of all ast terms    *)
   ; no_caching: bool                   (** disables mtbdd operation caching        *)
   ; no_cutoff: bool                    (** disables mtbdd early termination        *)}
 [@@deriving
@@ -28,7 +28,7 @@ let default =
   ; smart_gen= false
   ; smt= false
   ; unroll_maps= false
-  ; no_hashcons=false
+  ; hashcons=false
   ; no_caching=false
   ; no_cutoff=false }
 

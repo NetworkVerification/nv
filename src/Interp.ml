@@ -140,7 +140,8 @@ and interp_op env ty op es =
   | UAdd, [{v= VUInt32 i1}; {v= VUInt32 i2}] ->
       vint (UInt32.add i1 i2)
   | UEq, [v1; v2] ->
-      if equal_values v1 v2 then vbool true else vbool false
+      if equal_values ~cmp_meta:false v1 v2 then vbool true
+      else vbool false
   | ULess, [{v= VUInt32 i1}; {v= VUInt32 i2}] ->
       if UInt32.compare i1 i2 = -1 then vbool true else vbool false
   | ULeq, [{v= VUInt32 i1}; {v= VUInt32 i2}] ->

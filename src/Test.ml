@@ -39,7 +39,9 @@ let fal = vbool false
 let new_key () = evar (Var.fresh "x")
 
 let assert_equal_values =
-  assert_equal ~cmp:equal_values ~printer:Printing.value_to_string
+  assert_equal
+    ~cmp:(equal_values ~cmp_meta:false)
+    ~printer:Printing.value_to_string
 
 let assert_equal_maps = assert_equal ~cmp:BddMap.equal
 
@@ -116,7 +118,9 @@ let test4 _ =
       let k1, v1 = b in
       let k2, v2 =
         List.find
-          (fun (k2, v2) -> equal_values k1 k2 && equal_values v1 v2)
+          (fun (k2, v2) ->
+            equal_values ~cmp_meta:false k1 k2
+            && equal_values ~cmp_meta:false v1 v2 )
           vs
       in
       assert_equal_values k1 k2 ;

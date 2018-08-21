@@ -181,7 +181,8 @@ let simulate_step {graph= g; trans; merge} s x =
       Interp.interp_closure merge
         [neighbor; n_old_attribute; n_incoming_attribute]
     in
-    if equal_values n_old_attribute n_new_attribute then (s, todo)
+    if equal_values ~cmp_meta:false n_old_attribute n_new_attribute
+    then (s, todo)
     else (Graph.VertexMap.add n n_new_attribute s, n :: todo)
   in
   let initial_attribute = get_attribute x s in
