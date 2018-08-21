@@ -900,22 +900,22 @@ let sort_to_ty s =
 let rec z3_to_value m (e: Expr.expr) : Syntax.value =
   try
     let i = UInt32.of_string (Expr.to_string e) in
-    VUInt32 i |> value
+    vint i |> value
   with _ ->
     let f = Expr.get_func_decl e in
     let es = Expr.get_args e in
     let name = FuncDecl.get_name f |> Symbol.to_string in
     match (name, es) with
-    | "true", _ -> VBool true |> value
-    | "false", _ -> VBool false |> value
-    | "some", [e1] -> VOption (Some (z3_to_value m e1)) |> value
-    | "none", _ -> VOption None |> value
+    | "true", _ -> vbool true |> value
+    | "false", _ -> vbool false |> value
+    | "some", [e1] -> voption (Some (z3_to_value m e1)) |> value
+    | "none", _ -> voption None |> value
     | "store", [e1; e2; e3] -> (
         let v1 = z3_to_value m e1 in
         let v2 = z3_to_value m e2 in
         let v3 = z3_to_value m e3 in
         match v1.v with
-        | VMap m -> VMap (BddMap.update m v2 v3) |> value
+        | VMap m -> vmap (BddMap.update m v2 v3) |> value
         | _ -> raise Model_conversion )
     | "const", [e1] -> (
         let sort = Z3.Expr.get_sort e in
@@ -923,7 +923,7 @@ let rec z3_to_value m (e: Expr.expr) : Syntax.value =
         match get_inner_type ty with
         | TMap (kty, _) ->
             let e1 = z3_to_value m e1 in
-            VMap (BddMap.create ~key_ty:kty e1) |> value
+            vmap (BddMap.create ~key_ty:kty e1) |> value
         | _ -> failwith "internal error (z3_to_exp)" )
     | "as-array", _ -> (
         let x = FuncDecl.get_parameters f |> List.hd in
@@ -939,38 +939,39 @@ let rec z3_to_value m (e: Expr.expr) : Syntax.value =
             let func =
               {arg= key; argty= None; resty= None; body= e}
             in
-            VClosure (env, func) |> value )
+            vclosure (env, func) |> value )
     | _ ->
         if String.length name >= 7 && String.sub name 0 7 = "mk-pair"
         then
           let es = List.map (z3_to_value m) es in
-          VTuple es |> value
+          vtuple es |> value
         else raise Model_conversion
 
 and z3_to_exp m (e: Expr.expr) : Syntax.exp =
-  try exp (EVal (z3_to_value m e)) with _ ->
+  try exp (e_val (z3_to_value m e)) with _ ->
     try
       let f = Expr.get_func_decl e in
       let es = Expr.get_args e in
       let name = FuncDecl.get_name f |> Symbol.to_string in
       match (name, es) with
       | "ite", [e1; e2; e3] ->
-          exp (EIf (z3_to_exp m e1, z3_to_exp m e2, z3_to_exp m e3))
-      | "not", [e1] -> exp (EOp (Not, [z3_to_exp m e1]))
+          exp
+            (eif (z3_to_exp m e1) (z3_to_exp m e2) (z3_to_exp m e3))
+      | "not", [e1] -> exp (eop Not [z3_to_exp m e1])
       | "and", e :: es ->
           let base = z3_to_exp m e in
           List.fold_left
-            (fun e1 e2 -> exp (EOp (And, [e1; z3_to_exp m e2])))
+            (fun e1 e2 -> exp (eop And [e1; z3_to_exp m e2]))
             base es
       | "or", e :: es ->
           let base = z3_to_exp m e in
           List.fold_left
-            (fun e1 e2 -> exp (EOp (Or, [e1; z3_to_exp m e2])))
+            (fun e1 e2 -> exp (eop Or [e1; z3_to_exp m e2]))
             base es
       | "=", [e1; e2] ->
-          exp (EOp (UEq, [z3_to_exp m e1; z3_to_exp m e2]))
+          exp (eop UEq [z3_to_exp m e1; z3_to_exp m e2])
       | _ -> raise Model_conversion
-    with _ -> exp (EVar (Var.create "key"))
+    with _ -> exp (evar (Var.create "key"))
 
 type smt_result = Unsat | Unknown | Sat of Solution.t
 

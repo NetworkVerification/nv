@@ -100,7 +100,7 @@ let rec interp_exp env e =
     | Some v -> v )
   | EVal v -> v
   | EOp (op, es) -> interp_op env (oget e.ety) op es
-  | EFun f -> value (VClosure (env, f))
+  | EFun f -> value (vclosure (env, f))
   | EApp (e1, e2) -> (
       let v1 = interp_exp env e1 in
       let v2 = interp_exp env e2 in
@@ -116,8 +116,8 @@ let rec interp_exp env e =
   | ELet (x, e1, e2) ->
       let v1 = interp_exp env e1 in
       interp_exp (update_value env x v1) e2
-  | ETuple es -> value (VTuple (List.map (interp_exp env) es))
-  | ESome e -> value (VOption (Some (interp_exp env e)))
+  | ETuple es -> value (vtuple (List.map (interp_exp env) es))
+  | ESome e -> value (voption (Some (interp_exp env e)))
   | EMatch (e1, branches) ->
       let v = interp_exp env e1 in
       match match_branches branches v with
@@ -134,30 +134,30 @@ and interp_op env ty op es =
          (op_to_string op) (arity op) (List.length es)) ;
   let vs = List.map (interp_exp env) es in
   match (op, vs) with
-  | And, [{v= VBool b1}; {v= VBool b2}] -> VBool (b1 && b2) |> value
-  | Or, [{v= VBool b1}; {v= VBool b2}] -> VBool (b1 || b2) |> value
-  | Not, [{v= VBool b1}] -> VBool (not b1) |> value
+  | And, [{v= VBool b1}; {v= VBool b2}] -> vbool (b1 && b2) |> value
+  | Or, [{v= VBool b1}; {v= VBool b2}] -> vbool (b1 || b2) |> value
+  | Not, [{v= VBool b1}] -> vbool (not b1) |> value
   | UAdd, [{v= VUInt32 i1}; {v= VUInt32 i2}] ->
-      VUInt32 (UInt32.add i1 i2) |> value
+      vint (UInt32.add i1 i2) |> value
   | UEq, [v1; v2] ->
-      (if equal_values v1 v2 then VBool true else VBool false)
+      (if equal_values v1 v2 then vbool true else vbool false)
       |> value
   | ULess, [{v= VUInt32 i1}; {v= VUInt32 i2}] ->
-      (if UInt32.compare i1 i2 = -1 then VBool true else VBool false)
+      (if UInt32.compare i1 i2 = -1 then vbool true else vbool false)
       |> value
   | ULeq, [{v= VUInt32 i1}; {v= VUInt32 i2}] ->
-      ( if not (UInt32.compare i1 i2 = 1) then VBool true
-      else VBool false )
+      ( if not (UInt32.compare i1 i2 = 1) then vbool true
+      else vbool false )
       |> value
   | MCreate, [v] -> (
     match get_inner_type ty with
-    | TMap (kty, _) -> VMap (BddMap.create ~key_ty:kty v) |> value
+    | TMap (kty, _) -> vmap (BddMap.create ~key_ty:kty v) |> value
     | _ -> failwith "runtime error: missing map key type" )
   | MGet, [{v= VMap m}; v] -> BddMap.find m v
   | MSet, [{v= VMap m}; vkey; vval] ->
-      VMap (BddMap.update m vkey vval) |> value
+      vmap (BddMap.update m vkey vval) |> value
   | MMap, [{v= VClosure (c_env, f)}; {v= VMap m}] ->
-      VMap (BddMap.map ~op_key:f.body (fun v -> apply c_env f v) m)
+      vmap (BddMap.map ~op_key:f.body (fun v -> apply c_env f v) m)
       |> value
   | MMerge, [{v= VClosure (c_env, f)}; {v= VMap m1}; {v= VMap m2}] ->
       (* TO DO:  Need to preserve types in VOptions here ? *)
@@ -166,7 +166,7 @@ and interp_op env ty op es =
         | {v= VClosure (c_env, f)} -> apply c_env f v2
         | _ -> failwith "internal error (interp_op)"
       in
-      VMap (BddMap.merge ~op_key:f.body f_lifted m1 m2) |> value
+      vmap (BddMap.merge ~op_key:f.body f_lifted m1 m2) |> value
   | ( MMapFilter
     , [ {v= VClosure (c_env1, f1)}
       ; {v= VClosure (c_env2, f2)}
@@ -185,7 +185,7 @@ and interp_op env ty op es =
       let f v = apply c_env2 f2 v in
       match bddf with
       | BBool bdd ->
-          VMap (BddMap.map_when ~op_key:f2.body bdd f m) |> value
+          vmap (BddMap.map_when ~op_key:f2.body bdd f m) |> value
       | _ -> failwith "impossible" )
   | _, _ ->
       failwith

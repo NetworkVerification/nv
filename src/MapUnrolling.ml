@@ -53,14 +53,14 @@ let rec tuplify_exp tymap e : exp =
      |UEq, _
      |ULess, _
      |ULeq, _ ->
-        EOp (op, List.map (tuplify_exp tymap) es) |> exp
+        eop op (List.map (tuplify_exp tymap) es) |> exp
     | MCreate, [e1] ->
         (* createMap n e --> (e,e,e,...) *)
         let ty = oget e.ety in
         let count = tuple_count tymap ty in
         let e1 = tuplify_exp tymap e1 in
         let es = repeat e1 count in
-        if count = 1 then List.hd es else ETuple es |> exp
+        if count = 1 then List.hd es else etuple es |> exp
     | MSet, [e1; e2; e3] -> (
         (* m[e1 := e2] --> (if d = e1 then e2 else m.0, if d_1 = e1 then e2 else m.1, ...) *)
         let ty = oget e.ety in
@@ -73,22 +73,22 @@ let rec tuplify_exp tymap e : exp =
             let ps, es =
               unpack
                 (fun (k, p) ->
-                  let keyvar = EVar (Var.create k) |> exp in
-                  let pvar = EVar (Var.create p) |> exp in
+                  let keyvar = evar (Var.create k) |> exp in
+                  let pvar = evar (Var.create p) |> exp in
                   let eq =
-                    EOp (UEq, [keyvar; tuplify_exp tymap e2]) |> exp
+                    eop UEq [keyvar; tuplify_exp tymap e2] |> exp
                   in
-                  EIf (eq, tuplify_exp tymap e3, pvar) |> exp )
+                  eif eq (tuplify_exp tymap e3) pvar |> exp )
                 ks
             in
             let es =
               if List.length es = 1 then List.hd es
-              else ETuple es |> exp
+              else etuple es |> exp
             in
             let ps =
               if List.length ps = 1 then List.hd ps else PTuple ps
             in
-            EMatch (tuplify_exp tymap e1, [(ps, es)]) |> exp )
+            ematch (tuplify_exp tymap e1) [(ps, es)] |> exp )
     | MGet, [e1; e2] -> (
         (* m[e] --> m.i_e  if known index else m.0 *)
         let ty = oget e1.ety in
@@ -105,14 +105,14 @@ let rec tuplify_exp tymap e : exp =
               | None ->
                   (* TODO: not right yet, something with e2 *)
                   let p = List.hd ps in
-                  EVar (Var.create p) |> exp
-              | Some (p, _) -> EVar (Var.create p) |> exp
+                  evar (Var.create p) |> exp
+              | Some (p, _) -> evar (Var.create p) |> exp
             in
             let ps = List.map (fun n -> PVar (Var.create n)) ps in
             let ps =
               if List.length ps = 1 then List.hd ps else PTuple ps
             in
-            EMatch (tuplify_exp tymap e1, [(ps, e)]) |> exp )
+            ematch (tuplify_exp tymap e1) [(ps, e)] |> exp )
     | MMap, [e1; e2] ->
         (* map f m --> (f m.0, f m.1, ...) *)
         mk_map tymap e e1 e2 ~filter:None
@@ -131,16 +131,17 @@ let rec tuplify_exp tymap e : exp =
             let ps1, ps2, es =
               unpack2
                 (fun (k1, p1) (k2, p2) ->
-                  let pvar1 = EVar (Var.create p1) |> exp in
-                  let pvar2 = EVar (Var.create p2) |> exp in
-                  EApp
-                    (EApp (tuplify_exp tymap e1, pvar1) |> exp, pvar2)
+                  let pvar1 = evar (Var.create p1) |> exp in
+                  let pvar2 = evar (Var.create p2) |> exp in
+                  eapp
+                    (eapp (tuplify_exp tymap e1) pvar1 |> exp)
+                    pvar2
                   |> exp )
                 ks1 ks2
             in
             let es =
               if List.length es = 1 then List.hd es
-              else ETuple es |> exp
+              else etuple es |> exp
             in
             let ps1 =
               if List.length ps1 = 1 then List.hd ps1 else PTuple ps1
@@ -148,31 +149,29 @@ let rec tuplify_exp tymap e : exp =
             let ps2 =
               if List.length ps2 = 1 then List.hd ps2 else PTuple ps2
             in
-            EMatch
-              ( ETuple [tuplify_exp tymap e2; tuplify_exp tymap e3]
-                |> exp
-              , [(PTuple [ps1; ps2], es)] )
+            ematch
+              ( etuple [tuplify_exp tymap e2; tuplify_exp tymap e3]
+              |> exp )
+              [(PTuple [ps1; ps2], es)]
             |> exp
         | _ -> failwith "internal error (tuplify_exp: mmerge)" )
     | _ -> failwith "internal error (tuplify_exp: no match)" )
   | EFun f ->
-      EFun
+      efun
         { f with
           argty= None; resty= None; body= tuplify_exp tymap f.body }
       |> exp
   | EApp (e1, e2) -> failwith ""
   | EIf (e1, e2, e3) ->
-      EIf
-        ( tuplify_exp tymap e1
-        , tuplify_exp tymap e2
-        , tuplify_exp tymap e3 )
+      eif (tuplify_exp tymap e1) (tuplify_exp tymap e2)
+        (tuplify_exp tymap e3)
       |> exp
   | ELet (x, e1, e2) ->
-      ELet (x, tuplify_exp tymap e1, tuplify_exp tymap e2) |> exp
-  | ETuple es -> ETuple (List.map (tuplify_exp tymap) es) |> exp
-  | ESome e -> ESome (tuplify_exp tymap e) |> exp
+      elet x (tuplify_exp tymap e1) (tuplify_exp tymap e2) |> exp
+  | ETuple es -> etuple (List.map (tuplify_exp tymap) es) |> exp
+  | ESome e -> esome (tuplify_exp tymap e) |> exp
   | EMatch (e, bs) ->
-      EMatch (tuplify_exp tymap e, tuplify_branches tymap bs) |> exp
+      ematch (tuplify_exp tymap e) (tuplify_branches tymap bs) |> exp
   | ETy (e, ty) -> tuplify_exp tymap e
   | EVal _ -> (* no way to construct a map value directly *) exp e.e
   | EVar _ -> exp e.e
@@ -186,23 +185,23 @@ and mk_map tymap e e1 e2 ~filter =
       let ps, es =
         unpack
           (fun (k, p) ->
-            let key = EVar (Var.create k) |> exp in
-            let pvar = EVar (Var.create p) |> exp in
-            let eapp = EApp (tuplify_exp tymap e1, pvar) |> exp in
+            let key = evar (Var.create k) |> exp in
+            let pvar = evar (Var.create p) |> exp in
+            let ea = eapp (tuplify_exp tymap e1) pvar |> exp in
             match filter with
-            | None -> eapp
+            | None -> ea
             | Some e3 ->
-                let cond = EApp (tuplify_exp tymap e3, key) |> exp in
-                EIf (cond, eapp, pvar) |> exp )
+                let cond = eapp (tuplify_exp tymap e3) key |> exp in
+                eif cond ea pvar |> exp )
           ks
       in
       let es =
-        if List.length es = 1 then List.hd es else ETuple es |> exp
+        if List.length es = 1 then List.hd es else etuple es |> exp
       in
       let ps =
         if List.length ps = 1 then List.hd ps else PTuple ps
       in
-      EMatch (tuplify_exp tymap e2, [(ps, es)]) |> exp
+      ematch (tuplify_exp tymap e2) [(ps, es)] |> exp
 
 (* no way to pattern match a map, so just keep patterns *)
 and tuplify_branches tymap bs =
@@ -305,21 +304,21 @@ let map_back orig_sym_types (map: ExprSet.elt list TypeMap.t)
             let map =
               List.fold_left (build_value_map sol) base zip
             in
-            VMap map |> value
+            vmap map |> value
         | _, [(s, _)] ->
             let map = BddMap.update base (lookup s sol) v in
-            VMap map |> value
+            vmap map |> value
         | _ -> failwith "internal error (map_back1)" )
     | TBool, VBool _ -> v
     | TInt _, VUInt32 _ -> v
     | TOption t, VOption None -> v
     | TOption t, VOption (Some v) ->
-        VOption (Some (aux t v)) |> value
+        voption (Some (aux t v)) |> value
     | TTuple ts, VTuple vs ->
         let vs =
           List.map (fun (t, v) -> aux t v) (List.combine ts vs)
         in
-        VTuple vs |> value
+        vtuple vs |> value
     | _ -> failwith "internal error (map_back)"
   in
   let aty = oget (get_attr_type ds) |> Typing.strip_ty in
@@ -378,7 +377,7 @@ let unroll info ds =
       let var = Var.fresh "dkey" in
       vars := VarSet.add var !vars ;
       let e =
-        ExprSet.singleton (Var.to_string var, EVar var |> exp)
+        ExprSet.singleton (Var.to_string var, evar var |> exp)
       in
       map := TypeMap.add ty e !map )
     all_tys ;

@@ -8,7 +8,7 @@ type t =
   ; ntests: int                        (** number of random test cases to try      *)
   ; smart_gen: bool   [@short "-g"]    (** generate relevant randomized inputs     *)
   ; smt: bool         [@short "-m"]    (** search for bugs using an smt solver     *)
-  ; unroll_maps: bool [@short "-u"]    (** unroll dictionaries into finite values  *)
+  ; unroll_maps: bool [@short "-u"]    (** try to unroll dictionaries as tuples  *)
   ; no_caching: bool                   (** disables mtbdd operation caching        *)
   ; no_cutoff: bool                    (** disables mtbdd early termination        *)}
 [@@deriving

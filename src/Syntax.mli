@@ -45,7 +45,7 @@ type pattern =
   | PTuple of pattern list
   | POption of pattern option
 
-type v =
+type v = private
   | VBool of bool
   | VUInt32 of UInt32.t
   | VMap of mtbdd
@@ -55,9 +55,9 @@ type v =
 
 and mtbdd = value Mtbdd.t * ty
 
-and value = {v: v; vty: ty option; vspan: Span.t}
+and value = private {v: v; vty: ty option; vspan: Span.t}
 
-and e =
+and e = private
   | EVar of var
   | EVal of value
   | EOp of op * exp list
@@ -70,7 +70,7 @@ and e =
   | EMatch of exp * branches
   | ETy of exp * ty
 
-and exp = {e: e; ety: ty option; espan: Span.t}
+and exp = private {e: e; ety: ty option; espan: Span.t}
 
 and branches = (pattern * exp) list
 
@@ -96,6 +96,42 @@ type declaration =
 
 type declarations = declaration list
 
+(* Constructors *)
+
+val vbool : bool -> v
+
+val vint : UInt32.t -> v
+
+val vmap : mtbdd -> v
+
+val vtuple : value list -> v
+
+val voption : value option -> v
+
+val vclosure : closure -> v
+
+val evar : var -> e
+
+val e_val : value -> e
+
+val eop : op -> exp list -> e
+
+val efun : func -> e
+
+val eapp : exp -> exp -> e
+
+val eif : exp -> exp -> exp -> e
+
+val elet : Var.t -> exp -> exp -> e
+
+val etuple : exp list -> e
+
+val esome : exp -> e
+
+val ematch : exp -> branches -> e
+
+val ety : exp -> ty -> e
+
 (* Utilities *)
 
 val arity : op -> int
@@ -104,11 +140,17 @@ val tint : ty
 
 val exp : e -> exp
 
+val aexp : e * ty option * Span.t -> exp
+
 val wrap : exp -> e -> exp
 
 val value : v -> value
 
-val e_val : v -> exp
+val avalue : v * ty option * Span.t -> value
+
+val exp_of_v : v -> exp
+
+val exp_of_value : value -> exp
 
 val func : var -> exp -> func
 

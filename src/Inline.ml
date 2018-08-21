@@ -29,26 +29,27 @@ let rec substitute x e1 e2 =
   | EVar y -> if Var.equals x y then e2 else e1
   | EFun f ->
       if Var.equals x f.arg then e1
-      else EFun {f with body= substitute x f.body e2} |> wrap e1
+      else efun {f with body= substitute x f.body e2} |> wrap e1
   | EApp (e3, e4) ->
-      EApp (substitute x e3 e2, substitute x e4 e2) |> wrap e1
+      eapp (substitute x e3 e2) (substitute x e4 e2) |> wrap e1
   | EIf (e3, e4, e5) ->
-      EIf (substitute x e3 e2, substitute x e4 e2, substitute x e5 e2)
+      eif (substitute x e3 e2) (substitute x e4 e2)
+        (substitute x e5 e2)
       |> wrap e1
   | ELet (y, e3, e4) ->
       if Var.equals x y then e1
       else
-        ELet (x, substitute x e3 e2, substitute x e4 e2) |> wrap e1
-  | ETy (e1, ty) -> ETy (substitute x e1 e2, ty) |> wrap e1
+        elet x (substitute x e3 e2) (substitute x e4 e2) |> wrap e1
+  | ETy (e1, ty) -> ety (substitute x e1 e2) ty |> wrap e1
   | EMatch (e, bs) ->
-      EMatch
-        (substitute x e e2, List.map (substitute_pattern x e2) bs)
+      ematch (substitute x e e2)
+        (List.map (substitute_pattern x e2) bs)
       |> wrap e1
-  | ESome e -> ESome (substitute x e e2) |> wrap e1
+  | ESome e -> esome (substitute x e e2) |> wrap e1
   | ETuple es ->
-      ETuple (List.map (fun e -> substitute x e e2) es) |> wrap e1
+      etuple (List.map (fun e -> substitute x e e2) es) |> wrap e1
   | EOp (op, es) ->
-      EOp (op, List.map (fun e -> substitute x e e2) es) |> wrap e1
+      eop op (List.map (fun e -> substitute x e e2) es) |> wrap e1
   | EVal _ -> e1
 
 and substitute_pattern x e2 (p, e) =
@@ -103,7 +104,7 @@ let rec inline_app env e1 e2 : exp =
     | EVar x -> (
       match Env.lookup_opt env x with
       | None ->
-          EApp (e1, e2) |> wrap e1 |> annot (inline_type_app e1 e2)
+          eapp e1 e2 |> wrap e1 |> annot (inline_type_app e1 e2)
       | Some e -> inline_app env e e2 )
     | EFun f ->
         let e = substitute f.arg f.body e2 |> annot (oget f.resty) in
@@ -111,25 +112,23 @@ let rec inline_app env e1 e2 : exp =
     | EIf (e3, e4, e5) ->
         let etrue = inline_app env e4 e2 in
         let efalse = inline_app env e5 e2 in
-        EIf (e3, etrue, efalse) |> wrap e1 |> annot (oget etrue.ety)
+        eif e3 etrue efalse |> wrap e1 |> annot (oget etrue.ety)
     | ELet (x, e3, e4) ->
         let e5 =
           inline_exp env
-            ( EApp (e4, e2)
-            |> wrap e4
-            |> annot (inline_type_app e4 e2) )
+            (eapp e4 e2 |> wrap e4 |> annot (inline_type_app e4 e2))
         in
-        ELet (x, e3, e5) |> wrap e1
+        elet x e3 e5 |> wrap e1
     | ETy (e1, ty) -> inline_app env e1 e2
     | EMatch (e, bs) -> (
         let e = inline_exp env e in
         let branches = List.map (inline_branch_app env e2) bs in
-        let e = EMatch (e, branches) |> wrap e1 in
+        let e = ematch e branches |> wrap e1 in
         match branches with
         | [] -> failwith "internal error"
         | (p, eb) :: _ -> e |> annot (oget eb.ety) )
     | EApp _ ->
-        EApp (e1, e2) |> wrap e1 |> annot (inline_type_app e1 e2)
+        eapp e1 e2 |> wrap e1 |> annot (inline_type_app e1 e2)
     | ESome _ | ETuple _ | EOp _ | EVal _ ->
         failwith
           (Printf.sprintf "inline_app: %s"
@@ -144,25 +143,25 @@ and inline_exp (env: exp Env.t) (e: exp) : exp =
   | EVar x -> (
     match Env.lookup_opt env x with None -> e | Some e1 -> e1 )
   | EVal v -> e
-  | EOp (op, es) -> EOp (op, List.map (inline_exp env) es) |> wrap e
+  | EOp (op, es) -> eop op (List.map (inline_exp env) es) |> wrap e
   | EFun f ->
       let body = inline_exp env f.body in
-      EFun {f with body} |> wrap e
+      efun {f with body} |> wrap e
   | EApp (e1, e2) ->
       inline_app env (inline_exp env e1) (inline_exp env e2)
   | EIf (e1, e2, e3) ->
-      EIf (inline_exp env e1, inline_exp env e2, inline_exp env e3)
+      eif (inline_exp env e1) (inline_exp env e2) (inline_exp env e3)
       |> wrap e
   | ELet (x, e1, e2) ->
       let e1' = inline_exp env e1 in
       if is_function_ty e1 then inline_exp (Env.update env x e1') e2
-      else ELet (x, e1', inline_exp env e2) |> wrap e
-  | ETuple es -> ETuple (List.map (inline_exp env) es) |> wrap e
-  | ESome e1 -> ESome (inline_exp env e1) |> wrap e
+      else elet x e1' (inline_exp env e2) |> wrap e
+  | ETuple es -> etuple (List.map (inline_exp env) es) |> wrap e
+  | ESome e1 -> esome (inline_exp env e1) |> wrap e
   | EMatch (e1, bs) ->
-      EMatch (inline_exp env e1, List.map (inline_branch env) bs)
+      ematch (inline_exp env e1) (List.map (inline_branch env) bs)
       |> wrap e
-  | ETy (e1, ty) -> ETy (inline_exp env e1, ty) |> wrap e
+  | ETy (e1, ty) -> ety (inline_exp env e1) ty |> wrap e
 
 (* TODO: right now this is assuming that patterns won't contain functions
    this will fail for example with an expression like:  Some (fun v -> v) *)

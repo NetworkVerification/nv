@@ -14,29 +14,29 @@ let three_u = Unsigned.UInt32.of_int 3
 
 let five_u = Unsigned.UInt32.of_int 5
 
-let zero = VUInt32 zero_u |> value
+let zero = vint zero_u |> value
 
-let one = VUInt32 one_u |> value
+let one = vint one_u |> value
 
-let two = VUInt32 two_u |> value
+let two = vint two_u |> value
 
-let three = VUInt32 three_u |> value
+let three = vint three_u |> value
 
-let five = VUInt32 five_u |> value
+let five = vint five_u |> value
 
-let zero_opt = value (VOption (Some zero))
+let zero_opt = value (voption (Some zero))
 
-let two_opt = value (VOption (Some two))
+let two_opt = value (voption (Some two))
 
-let five_opt = value (VOption (Some five))
+let five_opt = value (voption (Some five))
 
 let ty_int = TInt zero_u
 
-let tru = value (VBool true)
+let tru = value (vbool true)
 
-let fal = value (VBool false)
+let fal = value (vbool false)
 
-let new_key () = exp (EVar (Var.fresh "x"))
+let new_key () = exp (evar (Var.fresh "x"))
 
 let assert_equal_values =
   assert_equal ~cmp:equal_values ~printer:Printing.value_to_string
@@ -58,17 +58,17 @@ let test1 _ =
   assert_equal_values x bt ;
   assert_equal_values y bf ;
   let e = new_key () in
-  let map = BddMap.map ~op_key:e (fun v -> value (VBool true)) map in
+  let map = BddMap.map ~op_key:e (fun v -> value (vbool true)) map in
   let x = BddMap.find map v2 in
   let y = BddMap.find map v1 in
   assert_equal_values x bt ;
   assert_equal_values y bt
 
 let test2 _ =
-  let k1 = value (VTuple [zero_opt; five_opt]) in
-  let k2 = value (VTuple [zero_opt; zero_opt]) in
-  let v1 = value (VOption None) in
-  let v2 = value (VOption (Some two_opt)) in
+  let k1 = value (vtuple [zero_opt; five_opt]) in
+  let k2 = value (vtuple [zero_opt; zero_opt]) in
+  let v1 = value (voption None) in
+  let v2 = value (voption (Some two_opt)) in
   let ty = TTuple [ty_int; ty_int] in
   let map = BddMap.create ~key_ty:ty v1 in
   let map = BddMap.update map k1 v2 in
@@ -78,14 +78,14 @@ let test2 _ =
   assert_equal_values y v1
 
 let test3 _ =
-  let k1 = value (VTuple [zero; five]) in
-  let k2 = value (VTuple [zero; zero]) in
-  let v1 = value (VOption None) in
-  let v2 = value (VOption (Some two)) in
+  let k1 = value (vtuple [zero; five]) in
+  let k2 = value (vtuple [zero; zero]) in
+  let v1 = value (voption None) in
+  let v2 = value (voption (Some two)) in
   let ty = TTuple [ty_int; ty_int] in
   let map1 = BddMap.create ~key_ty:ty v1 in
   let map2 = BddMap.create ~key_ty:ty v2 in
-  let e = exp (EVar (Var.create "x")) in
+  let e = exp (evar (Var.create "x")) in
   let merged =
     BddMap.merge ~op_key:e
       (fun v1 v2 ->
@@ -102,11 +102,11 @@ let test3 _ =
   assert_equal_maps merged map2
 
 let test4 _ =
-  let default = value (VOption None) in
+  let default = value (voption None) in
   let k1 = zero in
   let k2 = two in
-  let v1 = value (VOption (Some zero)) in
-  let v2 = value (VOption (Some two)) in
+  let v1 = value (voption (Some zero)) in
+  let v2 = value (voption (Some two)) in
   let vs = [(k1, v1); (k2, v2)] in
   let map = BddMap.from_bindings ~key_ty:ty_int (vs, default) in
   let bs, df = BddMap.bindings map in
@@ -132,8 +132,8 @@ let test5 _ =
   let bt = tru in
   let bf = fal in
   let x = Var.create "x" in
-  let var = exp (EVar x) in
-  let cmp = exp (EOp (ULeq, [var; exp (EVal two)])) in
+  let var = exp (evar x) in
+  let cmp = exp (eop ULeq [var; exp (e_val two)]) in
   let init_x = BddFunc.create_value ty_int in
   let env = Env.update Env.empty x init_x in
   let value = BddFunc.eval env cmp in
@@ -161,9 +161,9 @@ let test6 _ =
   let bt = tru in
   let bf = fal in
   let x = Var.create "x" in
-  let var = exp (EVar x) in
-  let sum = EOp (UAdd, [var; exp (EVal one)]) |> exp in
-  let cmp = exp (EOp (ULess, [sum; exp (EVal two)])) in
+  let var = exp (evar x) in
+  let sum = eop UAdd [var; exp (e_val one)] |> exp in
+  let cmp = exp (eop ULess [sum; exp (e_val two)]) in
   let init_x = BddFunc.create_value ty_int in
   let env = Env.update Env.empty x init_x in
   let value = BddFunc.eval env cmp in
@@ -191,11 +191,11 @@ let test7 _ =
   let bt = tru in
   let bf = fal in
   let x = Var.create "x" in
-  let var = exp (EVar x) in
-  let e1 = exp (EOp (ULess, [var; exp (EVal three)])) in
-  let e2 = exp (EOp (ULess, [var; exp (EVal five)])) in
-  let e3 = exp (EOp (ULess, [var; exp (EVal two)])) in
-  let e = EIf (e1, e2, e3) |> exp in
+  let var = exp (evar x) in
+  let e1 = exp (eop ULess [var; exp (e_val three)]) in
+  let e2 = exp (eop ULess [var; exp (e_val five)]) in
+  let e3 = exp (eop ULess [var; exp (e_val two)]) in
+  let e = eif e1 e2 e3 |> exp in
   let init_x = BddFunc.create_value ty_int in
   let env = Env.update Env.empty x init_x in
   let value = BddFunc.eval env e in

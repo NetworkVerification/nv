@@ -2,16 +2,16 @@
   open Syntax
   open Unsigned
 
-  let exp e span : exp = {e=e; ety=None; espan=span}
-
-  let value v span : value = {v=v; vty=None; vspan=span}
-
-  let e_val v span : exp = exp (EVal (value v span)) span
+  let exp e span : exp = aexp (e,None,span)
+  
+  let value v span : value = avalue (v,None,span) 
+  
+  let to_value v span : exp = exp (e_val (value v span)) span
 
   let tuple_it es (span : Span.t) : exp =
     match es with
     | [e] -> exp e.e span
-    | es -> exp (ETuple es) span
+    | es -> exp (etuple es) span
 
   let tuple_pattern ps =
     match ps with
@@ -23,7 +23,7 @@
     match params with
 	| [] -> body
 	| (x,tyopt)::rest -> 
-        let e = EFun {arg=x; argty=tyopt; resty=None; body=make_fun rest body body_span body_span} in
+        let e = efun {arg=x; argty=tyopt; resty=None; body=make_fun rest body body_span body_span} in
         exp e span
     
   let local_let (id,params) body body_span span =
@@ -48,16 +48,16 @@
       DLet (id, None, e)
 
   let make_set exprs span = 
-    let tru = exp (EVal (value (VBool true) span)) span in
+    let tru = exp (e_val (value (vbool true) span)) span in
     let rec updates e exprs = 
         match exprs with 
         | [] -> e
         | expr :: tl -> 
-            let e = exp (EOp (MSet, [e; expr; tru])) span in 
+            let e = exp (eop MSet [e; expr; tru]) span in 
             updates e tl
     in
-    let e = exp (EVal (value (VBool false) span)) span in
-    let e = exp (EOp (MCreate, [e])) span in
+    let e = exp (e_val (value (vbool false) span)) span in
+    let e = exp (eop MCreate [e]) span in
     updates e exprs
   
 %}
@@ -171,7 +171,7 @@ component:
     | LET letvars EQ expr               { global_let $2 $4 $4.espan (Span.extend $1 $4.espan) }
     | SYMBOLIC ID EQ expr               { DSymbolic (snd $2, Exp $4) }
     | SYMBOLIC ID COLON ty              { DSymbolic (snd $2, Ty $4) }
-    | SYMBOLIC ID COLON ty EQ expr      { let ety = exp (ETy ($6, $4)) $6.espan in
+    | SYMBOLIC ID COLON ty EQ expr      { let ety = exp (ety $6 $4) $6.espan in
                                           DSymbolic (snd $2, Exp ety) }
     | REQUIRE expr                      { DRequire $2 }
     | LET EDGES EQ LBRACE RBRACE        { DEdges [] }
@@ -192,81 +192,81 @@ expreof:
 expr:
     | LET letvars EQ expr IN expr       { let span = (Span.extend $1 $6.espan) in
                                           let (id, e) = local_let $2 $4 $4.espan span in 
-                                          exp (ELet (id, e, $6)) span }
+                                          exp (elet id e $6) span }
     | LET LPAREN patterns RPAREN EQ expr IN expr
                                         { let p = tuple_pattern $3 in 
-                                          let e = EMatch ($6, [(p,$8)]) in 
+                                          let e = ematch $6 [(p,$8)] in 
                                           let span = Span.extend $1 $8.espan in 
                                           exp e span }
-    | IF expr THEN expr ELSE expr       { exp (EIf ($2, $4, $6)) (Span.extend $1 $6.espan) }
+    | IF expr THEN expr ELSE expr       { exp (eif $2 $4 $6) (Span.extend $1 $6.espan) }
     (* TODO: span does not include the branches here *)
-    | MATCH expr WITH branches          { exp (EMatch ($2, $4)) (Span.extend $1 $3) }
+    | MATCH expr WITH branches          { exp (ematch $2 $4) (Span.extend $1 $3) }
     | FUN params ARROW expr             { make_fun $2 $4 $4.espan (Span.extend $1 $4.espan) }
-    | MAP exprsspace                    { exp (EOp (MMap, $2)) $1 }
-    | MAPIF exprsspace                  { exp (EOp (MMapFilter, $2)) $1 }
-    | COMBINE exprsspace                { exp (EOp (MMerge, $2)) $1 }
-    | CREATEMAP exprsspace              { exp (EOp (MCreate, $2)) $1 }
-    | SOME expr                         { exp (ESome $2) (Span.extend $1 $2.espan) }
-    | NOT expr                          { exp (EOp (Not,[$2])) (Span.extend $1 $2.espan) }
-    | expr AND expr                     { exp (EOp (And, [$1;$3])) (Span.extend $1.espan $3.espan) }
-    | expr OR expr                      { exp (EOp (Or, [$1;$3])) (Span.extend $1.espan $3.espan) }
-    | expr PLUS expr                    { exp (EOp (UAdd, [$1;$3])) (Span.extend $1.espan $3.espan) }
-    | expr SUB expr                     { exp (EOp (USub, [$1;$3])) (Span.extend $1.espan $3.espan) }
-    | expr EQ expr                      { exp (EOp (UEq, [$1;$3])) (Span.extend $1.espan $3.espan) }
-    | expr LESS expr                    { exp (EOp (ULess, [$1;$3])) (Span.extend $1.espan $3.espan) }
-    | expr GREATER expr                 { exp (EOp (ULess, [$3;$1])) (Span.extend $1.espan $3.espan) }
-    | expr LEQ expr                     { exp (EOp (ULeq, [$1;$3])) (Span.extend $1.espan $3.espan) }
-    | expr GEQ expr                     { exp (EOp (ULeq, [$3;$1])) (Span.extend $1.espan $3.espan) }
-    | LPAREN expr COLON ty RPAREN       { exp (ETy ($2, $4)) (Span.extend $1 $5) }
-    | expr LBRACKET expr RBRACKET               { exp (EOp (MGet, [$1;$3])) (Span.extend $1.espan $4) }
-    | expr LBRACKET expr COLON EQ expr RBRACKET { exp (EOp (MSet, [$1;$3;$6])) (Span.extend $1.espan $7) }
+    | MAP exprsspace                    { exp (eop MMap $2) $1 }
+    | MAPIF exprsspace                  { exp (eop MMapFilter $2) $1 }
+    | COMBINE exprsspace                { exp (eop MMerge $2) $1 }
+    | CREATEMAP exprsspace              { exp (eop MCreate $2) $1 }
+    | SOME expr                         { exp (esome $2) (Span.extend $1 $2.espan) }
+    | NOT expr                          { exp (eop Not [$2]) (Span.extend $1 $2.espan) }
+    | expr AND expr                     { exp (eop And [$1;$3]) (Span.extend $1.espan $3.espan) }
+    | expr OR expr                      { exp (eop Or [$1;$3]) (Span.extend $1.espan $3.espan) }
+    | expr PLUS expr                    { exp (eop UAdd [$1;$3]) (Span.extend $1.espan $3.espan) }
+    | expr SUB expr                     { exp (eop USub [$1;$3]) (Span.extend $1.espan $3.espan) }
+    | expr EQ expr                      { exp (eop UEq [$1;$3]) (Span.extend $1.espan $3.espan) }
+    | expr LESS expr                    { exp (eop ULess [$1;$3]) (Span.extend $1.espan $3.espan) }
+    | expr GREATER expr                 { exp (eop ULess [$3;$1]) (Span.extend $1.espan $3.espan) }
+    | expr LEQ expr                     { exp (eop ULeq [$1;$3]) (Span.extend $1.espan $3.espan) }
+    | expr GEQ expr                     { exp (eop ULeq [$3;$1]) (Span.extend $1.espan $3.espan) }
+    | LPAREN expr COLON ty RPAREN       { exp (ety $2 $4) (Span.extend $1 $5) }
+    | expr LBRACKET expr RBRACKET               { exp (eop MGet [$1;$3]) (Span.extend $1.espan $4) }
+    | expr LBRACKET expr COLON EQ expr RBRACKET { exp (eop MSet [$1;$3;$6]) (Span.extend $1.espan $7) }
     | expr UNION expr                   { let varx = Var.fresh "x" in 
                                           let vary = Var.fresh "y" in
-                                          let x = exp (EVar varx) $2 in 
-                                          let y = exp (EVar vary) $2 in
-                                          let e = exp (EOp (Or, [x;y])) $2 in
-                                          let e = exp (EFun {arg=vary;argty=None;resty=None;body=e}) $2 in
-                                          let e = exp (EFun {arg=varx;argty=None;resty=None;body=e}) $2 in
-                                          exp (EOp (MMerge, [e;$1;$3])) (Span.extend $1.espan $3.espan) }
+                                          let x = exp (evar varx) $2 in 
+                                          let y = exp (evar vary) $2 in
+                                          let e = exp (eop Or [x;y]) $2 in
+                                          let e = exp (efun {arg=vary;argty=None;resty=None;body=e}) $2 in
+                                          let e = exp (efun {arg=varx;argty=None;resty=None;body=e}) $2 in
+                                          exp (eop MMerge [e;$1;$3]) (Span.extend $1.espan $3.espan) }
     | expr INTER expr                   { let varx = Var.create "x" in 
                                           let vary = Var.create "y" in
-                                          let x = exp (EVar varx) $2 in 
-                                          let y = exp (EVar vary) $2 in
-                                          let e = exp (EOp (And, [x;y])) $2 in
-                                          let e = exp (EFun {arg=vary;argty=None;resty=None;body=e}) $2 in
-                                          let e = exp (EFun {arg=varx;argty=None;resty=None;body=e}) $2 in
-                                          exp (EOp (MMerge, [e;$1;$3])) (Span.extend $1.espan $3.espan) }
+                                          let x = exp (evar varx) $2 in 
+                                          let y = exp (evar vary) $2 in
+                                          let e = exp (eop And [x;y]) $2 in
+                                          let e = exp (efun {arg=vary;argty=None;resty=None;body=e}) $2 in
+                                          let e = exp (efun {arg=varx;argty=None;resty=None;body=e}) $2 in
+                                          exp (eop MMerge [e;$1;$3]) (Span.extend $1.espan $3.espan) }
     | expr MINUS expr                   { let varx = Var.create "x" in 
                                           let vary = Var.create "y" in
-                                          let x = exp (EVar varx) $2 in 
-                                          let y = exp (EVar vary) $2 in
-                                          let e = exp (EOp (Not, [y])) $2 in
-                                          let e = exp (EOp (And, [x;e])) $2 in
-                                          let e = exp (EFun {arg=vary;argty=None;resty=None;body=e}) $2 in
-                                          let e = exp (EFun {arg=varx;argty=None;resty=None;body=e}) $2 in
-                                          exp (EOp (MMerge, [e;$1;$3])) (Span.extend $1.espan $3.espan) }
+                                          let x = exp (evar varx) $2 in 
+                                          let y = exp (evar vary) $2 in
+                                          let e = exp (eop Not [y]) $2 in
+                                          let e = exp (eop And [x;e]) $2 in
+                                          let e = exp (efun {arg=vary;argty=None;resty=None;body=e}) $2 in
+                                          let e = exp (efun {arg=varx;argty=None;resty=None;body=e}) $2 in
+                                          exp (eop MMerge [e;$1;$3]) (Span.extend $1.espan $3.espan) }
     | FILTER exprsspace                 { let span = $1 in
                                           let vark = Var.create "k" in 
-                                          let e = exp (EVal (value (VBool false) span)) span in
-                                          let e = exp (EFun {arg=vark;argty=None;resty=None;body=e}) span in
+                                          let e = exp (e_val (value (vbool false) span)) span in
+                                          let e = exp (efun {arg=vark;argty=None;resty=None;body=e}) span in
                                           let args = match $2 with hd :: tl -> hd::e::tl | _ -> [e] in
-                                          exp (EOp (MMapFilter, args)) $1 }
+                                          exp (eop MMapFilter args) $1 }
     | LBRACE exprs RBRACE               { make_set $2 (Span.extend $1 $3) }
     | LBRACE RBRACE                     { make_set [] (Span.extend $1 $2) }
     | expr2                             { $1 }
 ;
 
 expr2:
-    | expr2 expr3                       { exp (EApp ($1, $2)) (Span.extend $1.espan $2.espan) }
+    | expr2 expr3                       { exp (eapp $1 $2) (Span.extend $1.espan $2.espan) }
     | expr3                             { $1 }
 ;
 
 expr3:
-    | ID                                { exp (EVar (snd $1)) (fst $1) }
-    | NUM                               { e_val (VUInt32 (snd $1)) (fst $1) }
-    | TRUE                              { e_val (VBool true) $1 }
-    | FALSE                             { e_val (VBool false) $1 }
-    | NONE                              { e_val (VOption None) $1 }
+    | ID                                { exp (evar (snd $1)) (fst $1) }
+    | NUM                               { to_value (vint (snd $1)) (fst $1) }
+    | TRUE                              { to_value (vbool true) $1 }
+    | FALSE                             { to_value (vbool false) $1 }
+    | NONE                              { to_value (voption None) $1 }
     | LPAREN exprs RPAREN               { tuple_it $2 (Span.extend $1 $3) }
 ;
 	

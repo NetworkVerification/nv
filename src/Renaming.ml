@@ -29,33 +29,33 @@ let rec alpha_convert_exp (env: Var.t Env.t) (e: exp) =
   (* Printf.printf "expr: %s\n" (Printing.exp_to_string e);
   Printf.printf "type: %s\n" (Printing.ty_to_string (oget e.ety)); *)
   match e.e with
-  | EVar x -> EVar (Env.lookup env x) |> wrap e
+  | EVar x -> evar (Env.lookup env x) |> wrap e
   | EVal v -> e
   | EOp (op, es) ->
-      EOp (op, List.map (fun e -> alpha_convert_exp env e) es)
+      eop op (List.map (fun e -> alpha_convert_exp env e) es)
       |> wrap e
   | EFun f ->
       let x = fresh f.arg in
       let e' = alpha_convert_exp (Env.update env f.arg x) f.body in
-      EFun {f with arg= x; body= e'} |> wrap e
+      efun {f with arg= x; body= e'} |> wrap e
   | EApp (e1, e2) ->
-      EApp (alpha_convert_exp env e1, alpha_convert_exp env e2)
+      eapp (alpha_convert_exp env e1) (alpha_convert_exp env e2)
       |> wrap e
   | EIf (e1, e2, e3) ->
-      EIf
-        ( alpha_convert_exp env e1
-        , alpha_convert_exp env e2
-        , alpha_convert_exp env e3 )
+      eif
+        (alpha_convert_exp env e1)
+        (alpha_convert_exp env e2)
+        (alpha_convert_exp env e3)
       |> wrap e
   | ELet (x, e1, e2) ->
       let e1' = alpha_convert_exp env e1 in
       let y = fresh x in
       let e2' = alpha_convert_exp (Env.update env x y) e2 in
-      ELet (y, e1', e2') |> wrap e
+      elet y e1' e2' |> wrap e
   | ETuple es ->
-      ETuple (List.map (fun e -> alpha_convert_exp env e) es)
+      etuple (List.map (fun e -> alpha_convert_exp env e) es)
       |> wrap e
-  | ESome e1 -> ESome (alpha_convert_exp env e1) |> wrap e
+  | ESome e1 -> esome (alpha_convert_exp env e1) |> wrap e
   | EMatch (e, bs) ->
       let bs' =
         List.map
@@ -64,8 +64,8 @@ let rec alpha_convert_exp (env: Var.t Env.t) (e: exp) =
             (p, alpha_convert_exp env e) )
           bs
       in
-      EMatch (alpha_convert_exp env e, bs') |> wrap e
-  | ETy (e1, ty) -> ETy (alpha_convert_exp env e1, ty) |> wrap e
+      ematch (alpha_convert_exp env e) bs' |> wrap e
+  | ETy (e1, ty) -> ety (alpha_convert_exp env e1) ty |> wrap e
 
 let alpha_convert_declaration bmap (env: Var.t Env.t)
     (d: declaration) =

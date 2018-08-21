@@ -11,19 +11,19 @@ let rec random_value ~hints ~max_map_size ty =
       List.nth (ValueSet.elements vs) x
   | _ ->
     match get_inner_type ty with
-    | TBool -> VBool (Random.bool ()) |> value
+    | TBool -> vbool (Random.bool ()) |> value
     | TInt _ ->
         let x = UInt32.of_int64 (Random.int64 Int64.max_int) in
-        VUInt32 x |> value
+        vint x |> value
     | TTuple ts ->
-        VTuple
+        vtuple
           (List.map (fun ty -> random_value hints max_map_size ty) ts)
         |> value
     | TOption ty ->
         let b = Random.bool () in
-        if b then VOption None |> value
+        if b then voption None |> value
         else
-          VOption (Some (random_value hints max_map_size ty))
+          voption (Some (random_value hints max_map_size ty))
           |> value
     | TMap (ty1, ty2) ->
         let default = random_value hints max_map_size ty2 in
@@ -34,7 +34,7 @@ let rec random_value ~hints ~max_map_size ty =
           let v = random_value hints max_map_size ty2 in
           map := BddMap.update !map k v
         done ;
-        VMap !map |> value
+        vmap !map |> value
     | QVar _ | TVar _ -> failwith "internal error (random_value)"
     | TArrow (ty1, ty2) -> failwith "unimplemented"
 
@@ -42,7 +42,7 @@ let random_symbolic hints max_map_size d =
   match d with
   | DSymbolic (x, te) ->
       let ty = match te with Ty ty -> ty | Exp e -> oget e.ety in
-      let e = EVal (random_value hints max_map_size ty) |> exp in
+      let e = e_val (random_value hints max_map_size ty) |> exp in
       (* Printf.printf "Random for %s is now %s\n" (Var.to_string x)
         (Printing.exp_to_string e) ; *)
       DSymbolic (x, Exp e)

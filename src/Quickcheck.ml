@@ -68,7 +68,7 @@ let smart_symbolic prog_constants map d =
         | None -> random_value prog_constants default_max_map_size ty
         | Some v -> v
       in
-      DSymbolic (x, Exp (EVal v |> exp))
+      DSymbolic (x, Exp (e_val v |> exp))
   | _ -> d
 
 let var_map ds =
@@ -86,18 +86,18 @@ let var_map ds =
   !map
 
 let add_blocking_require info ds map var_map =
-  let base = EVal (VBool true |> value) |> exp in
+  let base = e_val (vbool true |> value) |> exp in
   let e =
     StringMap.fold
       (fun x v acc ->
         let var, ty = StringMap.find x var_map in
-        let var = EVar var |> exp in
-        let v = EVal v |> exp in
-        let eq = EOp (UEq, [var; v]) |> exp in
-        EOp (And, [acc; eq]) |> exp )
+        let var = evar var |> exp in
+        let v = e_val v |> exp in
+        let eq = eop UEq [var; v] |> exp in
+        eop And [acc; eq] |> exp )
       map base
   in
-  let neq = EOp (Not, [e]) |> exp in
+  let neq = eop Not [e] |> exp in
   let d = DRequire neq in
   let ds = ds @ [d] in
   let ds = Typing.infer_declarations info ds in

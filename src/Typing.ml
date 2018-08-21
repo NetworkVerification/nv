@@ -10,9 +10,6 @@ let debug = true
 
 let if_debug s = if debug then print_endline s else ()
 
-let val_to_exp (v: value) : exp =
-  {e= EVal v; ety= v.vty; espan= v.vspan}
-
 let node_ty = tint
 
 let edge_ty = TTuple [node_ty; node_ty]
@@ -306,7 +303,9 @@ let op_typ op =
   | MCreate | MGet | MSet | MMap | MMerge | MMapFilter | UEq ->
       failwith "internal error (op_typ)"
 
-let texp (e, t, span) = {e; ety= Some t; espan= span}
+let texp (e, ty, span) = aexp (e, Some ty, span)
+
+let tvalue (v, ty, span) = avalue (v, Some ty, span)
 
 let textract e =
   match e.ety with
@@ -325,7 +324,7 @@ let rec infer_exp i info env (e: exp) : exp =
       | Some t -> texp (e.e, substitute t, e.espan) )
     | EVal v ->
         let v, t = infer_value info env v |> textractv in
-        texp (EVal v, t, e.espan)
+        texp (e_val v, t, e.espan)
     | EOp (o, es) -> (
       match (o, es) with
       | MGet, [e1; e2] ->
@@ -337,7 +336,7 @@ let rec infer_exp i info env (e: exp) : exp =
           in
           let valty = fresh_tyvar () in
           unify info e mapty (TMap (keyty, valty)) ;
-          texp (EOp (o, [e1; e2]), valty, e.espan)
+          texp (eop o [e1; e2], valty, e.espan)
       | MSet, [e1; e2; e3] ->
           let e1, mapty =
             infer_exp (i + 1) info env e1 |> textract
@@ -350,13 +349,13 @@ let rec infer_exp i info env (e: exp) : exp =
           in
           let ty = TMap (keyty, valty) in
           unify info e mapty ty ;
-          texp (EOp (o, [e1; e2; e3]), ty, e.espan)
+          texp (eop o [e1; e2; e3], ty, e.espan)
       | MCreate, [e1] ->
           let e1, valty =
             infer_exp (i + 1) info env e1 |> textract
           in
           let keyty = fresh_tyvar () in
-          texp (EOp (o, [e1]), TMap (keyty, valty), e.espan)
+          texp (eop o [e1], TMap (keyty, valty), e.espan)
       | MMap, [e1; e2] ->
           let e1, fty = infer_exp (i + 1) info env e1 |> textract in
           let e2, mapty =
@@ -366,7 +365,7 @@ let rec infer_exp i info env (e: exp) : exp =
           let valty = fresh_tyvar () in
           unify info e mapty (TMap (keyty, valty)) ;
           unify info e fty (TArrow (valty, valty)) ;
-          texp (EOp (o, [e1; e2]), mapty, e.espan)
+          texp (eop o [e1; e2], mapty, e.espan)
       | MMapFilter, [e1; e2; e3] ->
           let e1, kty = infer_exp (i + 1) info env e1 |> textract in
           let e2, vty = infer_exp (i + 1) info env e2 |> textract in
@@ -378,7 +377,7 @@ let rec infer_exp i info env (e: exp) : exp =
           unify info e mapty (TMap (keyty, valty)) ;
           unify info e kty (TArrow (keyty, TBool)) ;
           unify info e vty (TArrow (valty, valty)) ;
-          texp (EOp (o, [e1; e2; e3]), mapty, e.espan)
+          texp (eop o [e1; e2; e3], mapty, e.espan)
       | MMerge, [e1; e2; e3] ->
           let e1, fty = infer_exp (i + 1) info env e1 |> textract in
           let e2, mapty1 =
@@ -392,7 +391,7 @@ let rec infer_exp i info env (e: exp) : exp =
           unify info e mapty1 (TMap (keyty, valty)) ;
           unify info e mapty2 (TMap (keyty, valty)) ;
           unify info e fty (TArrow (valty, TArrow (valty, valty))) ;
-          texp (EOp (o, [e1; e2; e3]), mapty1, e.espan)
+          texp (eop o [e1; e2; e3], mapty1, e.espan)
       | MGet, _ | MSet, _ | MCreate, _ | MMap, _ | MMerge, _ ->
           Console.error_position info e.espan
             (Printf.sprintf "invalid number of parameters")
@@ -400,12 +399,12 @@ let rec infer_exp i info env (e: exp) : exp =
           let e1, ty1 = infer_exp (i + 1) info env e1 |> textract in
           let e2, ty2 = infer_exp (i + 1) info env e2 |> textract in
           unify info e ty1 ty2 ;
-          texp (EOp (o, [e1; e2]), TBool, e.espan)
+          texp (eop o [e1; e2], TBool, e.espan)
       | _ ->
           let argtys, resty = op_typ o in
           let es, tys = infer_exps (i + 1) info env es in
           unifies info e argtys tys ;
-          texp (EOp (o, es), resty, e.espan) )
+          texp (eop o es, resty, e.espan) )
     | EFun {arg= x; argty; resty; body} ->
         let ty_x = fresh_tyvar () in
         let e, ty_e =
@@ -415,7 +414,7 @@ let rec infer_exp i info env (e: exp) : exp =
         unify_opt info e argty ty_x ;
         unify_opt info e resty ty_e ;
         texp
-          ( EFun {arg= x; argty= Some ty_x; resty= Some ty_e; body= e}
+          ( efun {arg= x; argty= Some ty_x; resty= Some ty_e; body= e}
           , TArrow (ty_x, ty_e)
           , e.espan )
     | EApp (e1, e2) ->
@@ -423,14 +422,14 @@ let rec infer_exp i info env (e: exp) : exp =
         let e2, ty_arg = infer_exp (i + 1) info env e2 |> textract in
         let ty_res = fresh_tyvar () in
         unify info e ty_fun (TArrow (ty_arg, ty_res)) ;
-        texp (EApp (e1, e2), ty_res, e.espan)
+        texp (eapp e1 e2, ty_res, e.espan)
     | EIf (e1, e2, e3) ->
         let e1, tcond = infer_exp (i + 1) info env e1 |> textract in
         let e2, ty2 = infer_exp (i + 1) info env e2 |> textract in
         let e3, ty3 = infer_exp (i + 1) info env e3 |> textract in
         unify info e1 TBool tcond ;
         unify info e ty2 ty3 ;
-        texp (EIf (e1, e2, e3), ty2, e.espan)
+        texp (eif e1 e2 e3, ty2, e.espan)
     | ELet (x, e1, e2) ->
         (* TO DO? Could traverse the term e1 again replacing TVars with QVars of the same name.
            Did not do this for now. *)
@@ -441,25 +440,25 @@ let rec infer_exp i info env (e: exp) : exp =
         let e2, ty_e2 =
           infer_exp (i + 1) info (Env.update env x ty) e2 |> textract
         in
-        texp (ELet (x, e1, e2), ty_e2, e.espan)
+        texp (elet x e1 e2, ty_e2, e.espan)
         (* NOTE:  Changes order of evaluation if e is not a value;
 						        If we have effects, value restriction needed. *)
     | ETuple es ->
         let es, tys = infer_exps (i + 1) info env es in
-        texp (ETuple es, TTuple tys, e.espan)
+        texp (etuple es, TTuple tys, e.espan)
     | ESome e ->
         let e, t = infer_exp (i + 1) info env e |> textract in
-        texp (ESome e, TOption t, e.espan)
+        texp (esome e, TOption t, e.espan)
     | EMatch (e, branches) ->
         let e, tmatch = infer_exp (i + 1) info env e |> textract in
         let branches, t =
           infer_branches (i + 1) info env e tmatch branches
         in
-        texp (EMatch (e, branches), t, e.espan)
+        texp (ematch e branches, t, e.espan)
     | ETy (e, t) ->
         let e, t1 = infer_exp (i + 1) info env e |> textract in
         unify info e t t1 ;
-        texp (ETy (e, t1), t1, e.espan)
+        texp (ety e t1, t1, e.espan)
   in
   (* Printf.printf "type: %s\n"
     (Printing.ty_to_string (oget exp.ety)) ;
@@ -473,8 +472,6 @@ and infer_exps i info env es =
       let e, ty = infer_exp (i + 1) info env e |> textract in
       let es, tys = infer_exps (i + 1) info env es in
       (e :: es, ty :: tys)
-
-and tvalue (v, t, span) = {v; vty= Some t; vspan= span}
 
 and textractv v =
   match v.vty with
@@ -496,11 +493,11 @@ and infer_value info env (v: Syntax.value) : Syntax.value =
         | [] ->
             let ty = fresh_tyvar () in
             let map = BddMap.create ~key_ty:ty default in
-            tvalue (VMap map, TMap (ty, dty), v.vspan)
+            tvalue (vmap map, TMap (ty, dty), v.vspan)
         | (kv, vv) :: _ ->
             let kv, kvty = infer_value info env kv |> textractv in
             let vv, vvty = infer_value info env vv |> textractv in
-            unify info (val_to_exp v) vvty dty ;
+            unify info (exp_of_value v) vvty dty ;
             let vs =
               List.map
                 (fun (kv2, vv2) ->
@@ -510,26 +507,26 @@ and infer_value info env (v: Syntax.value) : Syntax.value =
                   let vv2, vvty2 =
                     infer_value info env vv2 |> textractv
                   in
-                  unify info (val_to_exp v) kvty kvty2 ;
-                  unify info (val_to_exp v) vvty vvty2 ;
+                  unify info (exp_of_value v) kvty kvty2 ;
+                  unify info (exp_of_value v) vvty vvty2 ;
                   (kv2, vv2) )
                 vs
             in
             let map =
               BddMap.from_bindings ~key_ty:kvty (vs, default)
             in
-            tvalue (VMap map, TMap (kvty, vvty), v.vspan) )
+            tvalue (vmap map, TMap (kvty, vvty), v.vspan) )
     | VTuple vs ->
         let vs, ts = infer_values info env vs in
-        tvalue (VTuple vs, TTuple ts, v.vspan)
+        tvalue (vtuple vs, TTuple ts, v.vspan)
     | VOption None ->
         let tv = fresh_tyvar () in
-        tvalue (VOption None, TOption tv, v.vspan)
+        tvalue (voption None, TOption tv, v.vspan)
     | VOption (Some v) ->
         let v, t = infer_value info env v |> textractv in
         let tv = fresh_tyvar () in
-        unify info (val_to_exp v) t tv ;
-        tvalue (VOption (Some v), TOption tv, v.vspan)
+        unify info (exp_of_value v) t tv ;
+        tvalue (voption (Some v), TOption tv, v.vspan)
     | VClosure cl -> failwith "internal error (infer_value)"
   in
   (* Printf.printf "Type: %s\n" (Printing.ty_to_string (oget ret.vty)) ; *)

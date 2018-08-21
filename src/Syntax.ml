@@ -57,9 +57,9 @@ type v =
   | VOption of value option
   | VClosure of closure
 
-and mtbdd = (value Mtbdd.t * ty)
-
 and value = {v: v; vty: ty option; vspan: Span.t}
+
+and mtbdd = (value Mtbdd.t * ty)
 
 and e =
   | EVar of var
@@ -100,6 +100,42 @@ type declaration =
 
 type declarations = declaration list
 
+(* Constructors *)
+
+let vbool b = VBool b
+
+let vint i = VUInt32 i
+
+let vmap m = VMap m
+
+let vtuple vs = VTuple vs
+
+let voption vo = VOption vo
+
+let vclosure c = VClosure c
+
+let evar x = EVar x
+
+let e_val v = EVal v
+
+let eop op es = EOp (op, es)
+
+let efun f = EFun f
+
+let eapp e1 e2 = EApp (e1, e2)
+
+let eif e1 e2 e3 = EIf (e1, e2, e3)
+
+let elet x e1 e2 = ELet (x, e1, e2)
+
+let etuple es = ETuple es
+
+let esome e = ESome e
+
+let ematch e bs = EMatch (e, bs)
+
+let ety e ty = ETy (e, ty)
+
 (* Utilities *)
 
 let arity op =
@@ -125,11 +161,18 @@ let tint = TInt (UInt32.of_int 32)
 
 let exp (e: e) : exp = {e; ety= None; espan= Span.default}
 
+let aexp (e, t, span) = {e; ety= t; espan= span}
+
 let wrap exp e = {e; ety= exp.ety; espan= exp.espan}
 
 let value (v: v) : value = {v; vty= None; vspan= Span.default}
 
-let e_val (x: v) : exp = exp (EVal (value x))
+let avalue (v, t, span) = {v; vty= t; vspan= span}
+
+let exp_of_v (x: v) : exp = exp (EVal (value x))
+
+let exp_of_value (v: value) : exp =
+  {e= EVal v; ety= v.vty; espan= v.vspan}
 
 let func x body = {arg= x; argty= None; resty= None; body}
 
@@ -173,7 +216,9 @@ let rec apps f args : exp =
   | a :: args -> apps (exp (EApp (f, a))) args
 
 let apply_closure cl (args: value list) =
-  apps (e_val (VClosure cl)) (List.map (fun a -> exp (EVal a)) args)
+  apps
+    (exp_of_v (VClosure cl))
+    (List.map (fun a -> exp (EVal a)) args)
 
 let get_decl ds f =
   try
