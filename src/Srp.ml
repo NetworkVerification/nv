@@ -30,7 +30,7 @@ let create_state n cl =
       let next_q = next_n :: q in
       let next_m =
         Graph.VertexMap.add next_n
-          (Interp.interp_closure cl [vint next_n |> value])
+          (Interp.interp_closure cl [vint next_n])
           m
       in
       loop next_n next_q next_m
@@ -83,7 +83,7 @@ let declarations_to_state ds ~throw_requires =
         info.syms <- StringMap.add (Var.to_string x) v info.syms
     | DSymbolic (x, Ty ty) ->
         let env = info.env in
-        let e = e_val (default_value ty) |> exp in
+        let e = e_val (default_value ty) in
         let v = Interp.interp_exp env e in
         info.env <- Interp.update_value env x v ;
         info.syms <- StringMap.add (Var.to_string x) v info.syms
@@ -170,9 +170,9 @@ let get_attribute v s =
 
 let simulate_step {graph= g; trans; merge} s x =
   let do_neighbor initial_attribute (s, todo) n =
-    let neighbor = value (vint n) in
-    let origin = value (vint x) in
-    let edge = value (vtuple [origin; neighbor]) in
+    let neighbor = vint n in
+    let origin = vint x in
+    let edge = vtuple [origin; neighbor] in
     let n_incoming_attribute =
       Interp.interp_closure trans [edge; initial_attribute]
     in
@@ -213,7 +213,7 @@ let check_assertion srp node v =
   match srp.assertion with
   | None -> true
   | Some a ->
-      let v = Interp.interp_closure a [value (vint node); v] in
+      let v = Interp.interp_closure a [vint node; v] in
       match v.v with
       | VBool b -> b
       | _ -> failwith "internal error (check_assertion)"

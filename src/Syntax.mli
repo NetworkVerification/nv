@@ -98,39 +98,39 @@ type declarations = declaration list
 
 (* Constructors *)
 
-val vbool : bool -> v
+val vbool : bool -> value
 
-val vint : UInt32.t -> v
+val vint : UInt32.t -> value
 
-val vmap : mtbdd -> v
+val vmap : mtbdd -> value
 
-val vtuple : value list -> v
+val vtuple : value list -> value
 
-val voption : value option -> v
+val voption : value option -> value
 
-val vclosure : closure -> v
+val vclosure : closure -> value
 
-val evar : var -> e
+val evar : var -> exp
 
-val e_val : value -> e
+val e_val : value -> exp
 
-val eop : op -> exp list -> e
+val eop : op -> exp list -> exp
 
-val efun : func -> e
+val efun : func -> exp
 
-val eapp : exp -> exp -> e
+val eapp : exp -> exp -> exp
 
-val eif : exp -> exp -> exp -> e
+val eif : exp -> exp -> exp -> exp
 
-val elet : Var.t -> exp -> exp -> e
+val elet : Var.t -> exp -> exp -> exp
 
-val etuple : exp list -> e
+val etuple : exp list -> exp
 
-val esome : exp -> e
+val esome : exp -> exp
 
-val ematch : exp -> branches -> e
+val ematch : exp -> branches -> exp
 
-val ety : exp -> ty -> e
+val ety : exp -> ty -> exp
 
 (* Utilities *)
 
@@ -142,7 +142,7 @@ val exp : e -> exp
 
 val aexp : e * ty option * Span.t -> exp
 
-val wrap : exp -> e -> exp
+val wrap : exp -> exp -> exp
 
 val value : v -> value
 

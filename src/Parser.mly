@@ -2,15 +2,15 @@
   open Syntax
   open Unsigned
 
-  let exp e span : exp = aexp (e,None,span)
+  let exp e span : exp = aexp (e.e, None, span)
   
-  let value v span : value = avalue (v,None,span) 
+  let value v span : value = avalue (v.v, None, span) 
   
   let to_value v span : exp = exp (e_val (value v span)) span
 
   let tuple_it es (span : Span.t) : exp =
     match es with
-    | [e] -> exp e.e span
+    | [e] -> exp e span
     | es -> exp (etuple es) span
 
   let tuple_pattern ps =

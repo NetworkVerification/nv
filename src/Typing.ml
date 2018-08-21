@@ -303,9 +303,9 @@ let op_typ op =
   | MCreate | MGet | MSet | MMap | MMerge | MMapFilter | UEq ->
       failwith "internal error (op_typ)"
 
-let texp (e, ty, span) = aexp (e, Some ty, span)
+let texp (e, ty, span) = aexp (e.e, Some ty, span)
 
-let tvalue (v, ty, span) = avalue (v, Some ty, span)
+let tvalue (v, ty, span) = avalue (v.v, Some ty, span)
 
 let textract e =
   match e.ety with
@@ -321,7 +321,7 @@ let rec infer_exp i info env (e: exp) : exp =
       | None ->
           Console.error_position info e.espan
             ("unbound variable " ^ Var.to_string x)
-      | Some t -> texp (e.e, substitute t, e.espan) )
+      | Some t -> texp (e, substitute t, e.espan) )
     | EVal v ->
         let v, t = infer_value info env v |> textractv in
         texp (e_val v, t, e.espan)
@@ -482,8 +482,8 @@ and infer_value info env (v: Syntax.value) : Syntax.value =
   (* Printf.printf "infer_value: %s\n" (Printing.value_to_string v) ; *)
   let ret =
     match v.v with
-    | VBool b -> tvalue (v.v, TBool, v.vspan)
-    | VUInt32 i -> tvalue (v.v, tint, v.vspan)
+    | VBool b -> tvalue (v, TBool, v.vspan)
+    | VUInt32 i -> tvalue (v, tint, v.vspan)
     | VMap m -> (
         let vs, default = BddMap.bindings m in
         let default, dty =
@@ -611,7 +611,7 @@ and infer_declaration i info env aty d : ty Env.t * declaration =
       leave_level () ;
       let ty = generalize ty_e1 in
       ( Env.update env x ty
-      , DLet (x, Some ty, texp (e1.e, ty, e1.espan)) )
+      , DLet (x, Some ty, texp (e1, ty, e1.espan)) )
   | DSymbolic (x, e1) -> (
     match e1 with
     | Exp e1 ->
@@ -620,7 +620,7 @@ and infer_declaration i info env aty d : ty Env.t * declaration =
         leave_level () ;
         let ty = generalize ty_e1 in
         ( Env.update env x ty
-        , DSymbolic (x, Exp (texp (e1.e, ty, e1.espan))) )
+        , DSymbolic (x, Exp (texp (e1, ty, e1.espan))) )
     | Ty ty -> (Env.update env x ty, DSymbolic (x, e1)) )
   | DMerge e ->
       let e' = infer_exp (i + 1) info env e in
