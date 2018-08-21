@@ -303,9 +303,9 @@ let op_typ op =
   | MCreate | MGet | MSet | MMap | MMerge | MMapFilter | UEq ->
       failwith "internal error (op_typ)"
 
-let texp (e, ty, span) = aexp (e.e, Some ty, span)
+let texp (e, ty, span) = aexp (e, Some ty, span)
 
-let tvalue (v, ty, span) = avalue (v.v, Some ty, span)
+let tvalue (v, ty, span) = avalue (v, Some ty, span)
 
 let textract e =
   match e.ety with

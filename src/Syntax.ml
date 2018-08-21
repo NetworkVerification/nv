@@ -123,28 +123,51 @@ let arity op =
 
 let tint = TInt (UInt32.of_int 32)
 
-let exp (e: e) : exp = {e; ety= None; espan= Span.default}
+let exp e = {e; ety= None; espan= Span.default}
 
-let aexp (e, t, span) = {e; ety= t; espan= span}
+let value v = {v; vty= None; vspan= Span.default}
 
-let wrap exp e = {e= e.e; ety= exp.ety; espan= exp.espan}
+let aexp (e, t, span) = {e with ety= t; espan= span}
 
-let value (v: v) : value = {v; vty= None; vspan= Span.default}
+let avalue (v, t, span) = {v with vty= t; vspan= span}
 
-let avalue (v, t, span) = {v; vty= t; vspan= span}
+let wrap exp e = {e with ety= exp.ety; espan= exp.espan}
 
-let exp_of_v (x: v) : exp = exp (EVal (value x))
+(* Constructors *)
 
-let exp_of_value (v: value) : exp =
-  {e= EVal v; ety= v.vty; espan= v.vspan}
+let vbool b = value (VBool b)
 
-let func x body = {arg= x; argty= None; resty= None; body}
+let vint i = value (VUInt32 i)
 
-let lam x body = exp (EFun (func x body))
+let vmap m = value (VMap m)
 
-let annot ty e = {e= e.e; ety= Some ty; espan= e.espan}
+let vtuple vs = value (VTuple vs)
 
-let annotv ty v = {v= v.v; vty= Some ty; vspan= v.vspan}
+let voption vo = value (VOption vo)
+
+let vclosure c = value (VClosure c)
+
+let evar x = exp (EVar x)
+
+let e_val v = exp (EVal v)
+
+let eop op es = exp (EOp (op, es))
+
+let efun f = exp (EFun f)
+
+let eapp e1 e2 = exp (EApp (e1, e2))
+
+let eif e1 e2 e3 = exp (EIf (e1, e2, e3))
+
+let elet x e1 e2 = exp (ELet (x, e1, e2))
+
+let etuple es = exp (ETuple es)
+
+let esome e = exp (ESome e)
+
+let ematch e bs = exp (EMatch (e, bs))
+
+let ety e ty = exp (ETy (e, ty))
 
 let rec is_value e =
   match e.e with
@@ -157,10 +180,23 @@ let rec to_value e =
   match e.e with
   | EVal v -> v
   | ETuple es ->
-      {v= VTuple (List.map to_value es); vspan= e.espan; vty= e.ety}
-  | ESome e1 ->
-      {v= VOption (Some (to_value e1)); vspan= e.espan; vty= e.ety}
+      avalue (vtuple (List.map to_value es), e.ety, e.espan)
+  | ESome e1 -> avalue (voption (Some (to_value e1)), e.ety, e.espan)
   | _ -> failwith "internal error (to_value)"
+
+let exp_of_v x = exp (EVal (value x))
+
+let exp_of_value v =
+  let e = e_val v in
+  {e with ety= v.vty; espan= v.vspan}
+
+let func x body = {arg= x; argty= None; resty= None; body}
+
+let lam x body = exp (EFun (func x body))
+
+let annot ty e = {e with ety= Some ty; espan= e.espan}
+
+let annotv ty v = {v with vty= Some ty; vspan= v.vspan}
 
 let oget (x: 'a option) : 'a =
   match x with
@@ -229,42 +265,6 @@ let get_requires ds =
     (fun acc d -> match d with DRequire e -> e :: acc | _ -> acc)
     [] ds
   |> List.rev
-
-(* Constructors *)
-
-let vbool b = value (VBool b)
-
-let vint i = value (VUInt32 i)
-
-let vmap m = value (VMap m)
-
-let vtuple vs = value (VTuple vs)
-
-let voption vo = value (VOption vo)
-
-let vclosure c = value (VClosure c)
-
-let evar x = exp (EVar x)
-
-let e_val v = exp (EVal v)
-
-let eop op es = exp (EOp (op, es))
-
-let efun f = exp (EFun f)
-
-let eapp e1 e2 = exp (EApp (e1, e2))
-
-let eif e1 e2 e3 = exp (EIf (e1, e2, e3))
-
-let elet x e1 e2 = exp (ELet (x, e1, e2))
-
-let etuple es = exp (ETuple es)
-
-let esome e = exp (ESome e)
-
-let ematch e bs = exp (EMatch (e, bs))
-
-let ety e ty = exp (ETy (e, ty))
 
 let rec equal_values (v1: value) (v2: value) = equal_vs v1.v v2.v
 

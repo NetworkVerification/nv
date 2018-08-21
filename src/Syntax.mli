@@ -140,13 +140,17 @@ val tint : ty
 
 val exp : e -> exp
 
-val aexp : e * ty option * Span.t -> exp
-
-val wrap : exp -> exp -> exp
-
 val value : v -> value
 
-val avalue : v * ty option * Span.t -> value
+val aexp : exp * ty option * Span.t -> exp
+
+val avalue : value * ty option * Span.t -> value
+
+val annot : ty -> exp -> exp
+
+val annotv : ty -> value -> value
+
+val wrap : exp -> exp -> exp
 
 val exp_of_v : v -> exp
 
@@ -155,10 +159,6 @@ val exp_of_value : value -> exp
 val func : var -> exp -> func
 
 val lam : var -> exp -> exp
-
-val annot : ty -> exp -> exp
-
-val annotv : ty -> value -> value
 
 val is_value : exp -> bool
 
