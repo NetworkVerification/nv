@@ -605,6 +605,25 @@ let get_requires ds =
 let rec get_inner_type t : ty =
   match t with TVar {contents= Link t} -> get_inner_type t | _ -> t
 
+(* Memoization *)
+
+module Memoize = struct
+  let memoize cmp (f: 'a -> 'b) : 'a -> 'b =
+    let cfg = Cmdline.get_cfg () in
+    if cfg.hashcons then (
+      let map = ref (PMap.create cmp) in
+      fun x ->
+        try PMap.find x !map with _ ->
+          let ret = f x in
+          map := PMap.add x ret !map ;
+          ret )
+    else f
+
+  let memoize_value = memoize (fun v1 v2 -> v1.vtag - v2.vtag)
+
+  let memoize_exp = memoize (fun e1 e2 -> e1.etag - e2.etag)
+end
+
 (* Include the map type here to avoid circular dependency *)
 
 module BddUtils = struct
@@ -724,6 +743,8 @@ module BddMap = struct
     let bdd, _ = aux v 0 in
     bdd
 
+  let value_to_bdd = Memoize.memoize_value value_to_bdd
+
   let vars_to_value vars ty =
     let rec aux idx ty =
       let v, i =
@@ -763,14 +784,13 @@ module BddMap = struct
     in
     fst (aux 0 ty)
 
-  let bdd_to_value (guard: Bdd.vt) (ty: ty) : value =
-    let vars = Bdd.pick_minterm guard in
-    vars_to_value vars ty
-
   module ExpMap = Map.Make (struct
     type t = exp
 
-    let compare = Pervasives.compare
+    let compare x y =
+      let cfg = Cmdline.get_cfg () in
+      if cfg.hashcons then x.etag - y.etag
+      else Pervasives.compare x y
   end)
 
   let map_cache = ref ExpMap.empty
