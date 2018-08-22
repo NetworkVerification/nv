@@ -727,12 +727,13 @@ let rec get_inner_type t : ty =
 module Memoize = struct
   let memoize cmp (f: 'a -> 'b) : 'a -> 'b =
     let map = ref (BatMap.PMap.create cmp) in
+    let num_hits = ref 0 in
     fun x ->
       let cfg = Cmdline.get_cfg () in
       if cfg.hashcons then (
         try
           let ret = BatMap.PMap.find x !map in
-          ret
+          incr num_hits ; ret
         with _ ->
           let ret = f x in
           map := BatMap.PMap.add x ret !map ;
