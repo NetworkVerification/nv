@@ -725,7 +725,7 @@ let rec get_inner_type t : ty =
 module type MEMOIZER = sig
   type t
 
-  val memoize : (t -> 'a) -> t -> 'a
+  val memoize : size:int -> (t -> 'a) -> t -> 'a
 end
 
 module Memoize (K : Lru_cache.Key) :
@@ -735,8 +735,8 @@ struct
 
   type t = K.t
 
-  let memoize (f: 'a -> 'b) : 'a -> 'b =
-    let map = L.init 1000 in
+  let memoize ~size (f: 'a -> 'b) : 'a -> 'b =
+    let map = L.init size in
     fun x ->
       let cfg = Cmdline.get_cfg () in
       if cfg.hashcons && cfg.memoize then L.get map x f else f x
@@ -1038,29 +1038,95 @@ module BddMap = struct
       in
       (User.apply_op2 op pred vdd, ty)
 
-  let merge_op_cache = ref ExpMap.empty
+  module MergeMap = Map.Make (struct
+    type t = exp * (value * value * value * value) option
 
-  let merge ~op_key (f: value -> value -> value) (x, tyx) (y, _) : t =
+    let compare_exps x y =
+      let cfg = Cmdline.get_cfg () in
+      if cfg.hashcons then x.etag - y.etag
+      else Pervasives.compare x y
+
+    let compare_v4 (v1, v2, v3, v4) (v1', v2', v3', v4') =
+      let cmp = compare_values v1 v1' in
+      if cmp <> 0 then cmp
+      else
+        let cmp = compare_values v2 v2' in
+        if cmp <> 0 then cmp
+        else
+          let cmp = compare_values v3 v3' in
+          if cmp <> 0 then cmp else compare_values v4 v4'
+
+    let compare (e1, vs1) (e2, vs2) =
+      let cmp = compare_exps e1 e2 in
+      if cmp <> 0 then cmp
+      else
+        match (vs1, vs2) with
+        | None, None -> 0
+        | None, Some _ -> -1
+        | Some _, None -> 1
+        | Some x, Some y -> compare_v4 x y
+  end)
+
+  let unwrap x =
+    match x with
+    | {v= VOption (Some v)} -> (true, v)
+    | _ -> (false, vbool false)
+
+  let merge_op_cache = ref MergeMap.empty
+
+  let merge ?opt ~op_key (f: value -> value -> value) ((x, tyx): t)
+      ((y, _): t) : t =
     let cfg = Cmdline.get_cfg () in
     let g x y =
       f (Mtbdd.get x) (Mtbdd.get y) |> Mtbdd.unique B.tbl
     in
     if cfg.no_caching then (Mapleaf.mapleaf2 g x y, tyx)
     else
+      let key = (op_key, opt) in
       let op =
-        match ExpMap.find_opt op_key !merge_op_cache with
+        match MergeMap.find_opt key !merge_op_cache with
         | None ->
+            let special =
+              match (opt, cfg.no_cutoff) with
+              | None, _ | _, true -> fun _ _ -> None
+              | Some (el0, el1, er0, er1), false ->
+                  let bl0, vl0 = unwrap el0 in
+                  let bl1, vl1 = unwrap el1 in
+                  let br0, vr0 = unwrap er0 in
+                  let br1, vr1 = unwrap er1 in
+                  fun left right ->
+                    if
+                      bl0 && Vdd.is_cst left
+                      && equal_values ~cmp_meta:false
+                           (Mtbdd.get (Vdd.dval left))
+                           vl0
+                    then Some right
+                    else if
+                      bl1 && Vdd.is_cst left
+                      && equal_values ~cmp_meta:false
+                           (Mtbdd.get (Vdd.dval left))
+                           vl1
+                    then Some left
+                    else if
+                      br0 && Vdd.is_cst right
+                      && equal_values ~cmp_meta:false
+                           (Mtbdd.get (Vdd.dval right))
+                           vr0
+                    then Some left
+                    else if
+                      br1 && Vdd.is_cst right
+                      && equal_values ~cmp_meta:false
+                           (Mtbdd.get (Vdd.dval right))
+                           vr1
+                    then Some right
+                    else None
+            in
             let o =
               User.make_op2
                 ~memo:(Memo.Cache (Cache.create2 ()))
-                ~commutative:false ~idempotent:false
-                (* ~special:(fun bdd1 bdd2 ->
-                if Vdd.is_cst bdd1 && Mtbdd.get (Vdd.dval bdd1) = none then Some(bdd1)
-                else if Vdd.is_cst bdd2 && Mtbdd.get (Vdd.dval bdd2) = none then Some(bdd2)
-                else None) *)
-                g
+                ~commutative:false ~idempotent:false ~special g
             in
-            merge_op_cache := ExpMap.add op_key o !merge_op_cache ;
+            merge_op_cache := MergeMap.add key o !merge_op_cache ;
             o
         | Some op -> op
       in

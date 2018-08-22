@@ -128,10 +128,10 @@ let rec interp_exp env e =
             ^ " did not match any pattern in match statement" )
 
 and interp_op env ty op es =
-  if arity op != List.length es then
+  (* if arity op != List.length es then
     failwith
       (sprintf "operation %s has arity %d not arity %d"
-         (op_to_string op) (arity op) (List.length es)) ;
+         (op_to_string op) (arity op) (List.length es)) ; *)
   let vs = List.map (interp_exp env) es in
   match (op, vs) with
   | And, [{v= VBool b1}; {v= VBool b2}] -> vbool (b1 && b2)
@@ -156,14 +156,21 @@ and interp_op env ty op es =
       vmap (BddMap.update m vkey vval)
   | MMap, [{v= VClosure (c_env, f)}; {v= VMap m}] ->
       vmap (BddMap.map ~op_key:f.body (fun v -> apply c_env f v) m)
-  | MMerge, [{v= VClosure (c_env, f)}; {v= VMap m1}; {v= VMap m2}] ->
+  | ( MMerge
+    , {v= VClosure (c_env, f)}
+      :: {v= VMap m1} :: {v= VMap m2} :: rest )
+    -> (
       (* TO DO:  Need to preserve types in VOptions here ? *)
       let f_lifted v1 v2 =
         match apply c_env f v1 with
         | {v= VClosure (c_env, f)} -> apply c_env f v2
         | _ -> failwith "internal error (interp_op)"
       in
-      vmap (BddMap.merge ~op_key:f.body f_lifted m1 m2)
+      match rest with
+      | [el0; el1; er0; er1] ->
+          let opt = (el0, el1, er0, er1) in
+          vmap (BddMap.merge ~opt ~op_key:f.body f_lifted m1 m2)
+      | _ -> vmap (BddMap.merge ~op_key:f.body f_lifted m1 m2) )
   | ( MMapFilter
     , [ {v= VClosure (c_env1, f1)}
       ; {v= VClosure (c_env2, f2)}
@@ -192,7 +199,7 @@ and apply env f v = interp_exp (update_value env f.arg v) f.body
 
 let interp e = interp_exp empty_env e
 
-let interp = MemoizeExp.memoize interp
+let interp = MemoizeExp.memoize ~size:1000 interp
 
 let interp_closure cl (args: value list) =
   interp (Syntax.apply_closure cl args)

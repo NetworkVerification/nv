@@ -205,7 +205,7 @@ val get_inner_type : ty -> ty
 module type MEMOIZER = sig
   type t
 
-  val memoize : (t -> 'a) -> t -> 'a
+  val memoize : size:int -> (t -> 'a) -> t -> 'a
 end
 
 module MemoizeValue : MEMOIZER with type t = value
@@ -221,7 +221,13 @@ module BddMap : sig
 
   val map_when : op_key:exp -> Bdd.vt -> (value -> value) -> t -> t
 
-  val merge : op_key:exp -> (value -> value -> value) -> t -> t -> t
+  val merge :
+       ?opt:value * value * value * value
+    -> op_key:exp
+    -> (value -> value -> value)
+    -> t
+    -> t
+    -> t
 
   val find : t -> value -> value
 

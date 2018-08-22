@@ -378,7 +378,16 @@ let rec infer_exp i info env (e: exp) : exp =
           unify info e kty (TArrow (keyty, TBool)) ;
           unify info e vty (TArrow (valty, valty)) ;
           texp (eop o [e1; e2; e3], mapty, e.espan)
-      | MMerge, [e1; e2; e3] ->
+      | MMerge, _ ->
+          let (e1, e2, e3), rest =
+            match es with
+            | [e1; e2; e3] -> ((e1, e2, e3), None)
+            | [e1; e2; e3; el0; el1; er0; er1] ->
+                ((e1, e2, e3), Some (el0, el1, er0, er1))
+            | _ ->
+                Console.error_position info e.espan
+                  (Printf.sprintf "invalid number of parameters")
+          in
           let e1, fty = infer_exp (i + 1) info env e1 |> textract in
           let e2, mapty1 =
             infer_exp (i + 1) info env e2 |> textract
@@ -391,8 +400,30 @@ let rec infer_exp i info env (e: exp) : exp =
           unify info e mapty1 (TMap (keyty, valty)) ;
           unify info e mapty2 (TMap (keyty, valty)) ;
           unify info e fty (TArrow (valty, TArrow (valty, valty))) ;
-          texp (eop o [e1; e2; e3], mapty1, e.espan)
-      | MGet, _ | MSet, _ | MCreate, _ | MMap, _ | MMerge, _ ->
+          let es =
+            match rest with
+            | None -> []
+            | Some (el0, el1, er0, er1) ->
+                let el0, tyl0 =
+                  infer_exp (i + 1) info env el0 |> textract
+                in
+                let el1, tyl1 =
+                  infer_exp (i + 1) info env el1 |> textract
+                in
+                let er0, tyr0 =
+                  infer_exp (i + 1) info env er0 |> textract
+                in
+                let er1, tyr1 =
+                  infer_exp (i + 1) info env er1 |> textract
+                in
+                unify info e tyl0 (TOption valty) ;
+                unify info e tyl1 (TOption valty) ;
+                unify info e tyr0 (TOption valty) ;
+                unify info e tyr1 (TOption valty) ;
+                [el0; el1; er0; er1]
+          in
+          texp (eop o ([e1; e2; e3] @ es), mapty1, e.espan)
+      | MGet, _ | MSet, _ | MCreate, _ | MMap, _ ->
           Console.error_position info e.espan
             (Printf.sprintf "invalid number of parameters")
       | UEq, [e1; e2] ->

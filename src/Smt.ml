@@ -270,13 +270,12 @@ let rec encode_exp_z3 descr env arr (e: exp) =
         add env.solver [q] ;
         nresult
     | ( MMerge
-      , [ { e=
-              EFun
-                { arg= x
-                ; argty= ty1
-                ; body= {e= EFun {arg= y; argty= ty2; body= e1}} } }
-        ; e2
-        ; e3 ] ) ->
+      , { e=
+            EFun
+              { arg= x
+              ; argty= ty1
+              ; body= {e= EFun {arg= y; argty= ty2; body= e1}} } }
+        :: e2 :: e3 :: _ ) ->
         let keysort =
           match get_inner_type (oget e2.ety) with
           | TMap (ty, _) -> ty_to_sort env.ctx ty

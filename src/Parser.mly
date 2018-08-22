@@ -220,23 +220,35 @@ expr:
     | LPAREN expr COLON ty RPAREN       { exp (ety $2 $4) (Span.extend $1 $5) }
     | expr LBRACKET expr RBRACKET               { exp (eop MGet [$1;$3]) (Span.extend $1.espan $4) }
     | expr LBRACKET expr COLON EQ expr RBRACKET { exp (eop MSet [$1;$3;$6]) (Span.extend $1.espan $7) }
-    | expr UNION expr                   { let varx = Var.fresh "x" in 
+    | expr UNION expr                   { let el0 = exp (e_val (voption (Some (vbool false)))) $2 in
+                                          let el1 = exp (e_val (voption (Some (vbool true)))) $2 in 
+                                          let er0 = el0 in
+                                          let er1 = el1 in
+                                          let varx = Var.fresh "x" in 
                                           let vary = Var.fresh "y" in
                                           let x = exp (evar varx) $2 in 
                                           let y = exp (evar vary) $2 in
                                           let e = exp (eop Or [x;y]) $2 in
                                           let e = exp (efun {arg=vary;argty=None;resty=None;body=e}) $2 in
                                           let e = exp (efun {arg=varx;argty=None;resty=None;body=e}) $2 in
-                                          exp (eop MMerge [e;$1;$3]) (Span.extend $1.espan $3.espan) }
-    | expr INTER expr                   { let varx = Var.create "x" in 
+                                          exp (eop MMerge [e;$1;$3;el0;el1;er0;er1]) (Span.extend $1.espan $3.espan) }
+    | expr INTER expr                   { let el0 = exp (e_val (voption (Some (vbool true)))) $2 in
+                                          let el1 = exp (e_val (voption (Some (vbool false)))) $2 in 
+                                          let er0 = el0 in
+                                          let er1 = el1 in
+                                          let varx = Var.create "x" in 
                                           let vary = Var.create "y" in
                                           let x = exp (evar varx) $2 in 
                                           let y = exp (evar vary) $2 in
                                           let e = exp (eop And [x;y]) $2 in
                                           let e = exp (efun {arg=vary;argty=None;resty=None;body=e}) $2 in
                                           let e = exp (efun {arg=varx;argty=None;resty=None;body=e}) $2 in
-                                          exp (eop MMerge [e;$1;$3]) (Span.extend $1.espan $3.espan) }
-    | expr MINUS expr                   { let varx = Var.create "x" in 
+                                          exp (eop MMerge [e;$1;$3;el0;el1;er0;er1]) (Span.extend $1.espan $3.espan) }
+    | expr MINUS expr                   { let el0 = exp (e_val (voption None)) $2 in
+                                          let el1 = exp (e_val (voption (Some (vbool false)))) $2 in 
+                                          let er0 = exp (e_val (voption (Some (vbool false)))) $2 in
+                                          let er1 = el0 in
+                                          let varx = Var.create "x" in 
                                           let vary = Var.create "y" in
                                           let x = exp (evar varx) $2 in 
                                           let y = exp (evar vary) $2 in
@@ -244,7 +256,7 @@ expr:
                                           let e = exp (eop And [x;e]) $2 in
                                           let e = exp (efun {arg=vary;argty=None;resty=None;body=e}) $2 in
                                           let e = exp (efun {arg=varx;argty=None;resty=None;body=e}) $2 in
-                                          exp (eop MMerge [e;$1;$3]) (Span.extend $1.espan $3.espan) }
+                                          exp (eop MMerge [e;$1;$3;el0;el1;er0;er1]) (Span.extend $1.espan $3.espan) }
     | FILTER exprsspace                 { let span = $1 in
                                           let vark = Var.create "k" in 
                                           let e = exp (e_val (value (vbool false) span)) span in

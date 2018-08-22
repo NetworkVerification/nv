@@ -115,7 +115,7 @@ let rec tuplify_exp tymap e : exp =
         mk_map tymap e e1 e2 ~filter:None
     | MMapFilter, [e1; e2; e3] ->
         mk_map tymap e e2 e3 ~filter:(Some e1)
-    | MMerge, [e1; e2; e3] -> (
+    | MMerge, [e1; e2; e3] | MMerge, [e1; e2; e3; _; _; _; _] -> (
         (* merge f m1 m2 --> (f m1.0 m2.0, f m1.1 m2.1, ...) *)
         let ty1, ty2 = (oget e2.ety, oget e3.ety) in
         match

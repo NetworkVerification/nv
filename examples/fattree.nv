@@ -10,7 +10,7 @@ let edges = {
  4=6;
  4=7;
  5=6;
- 5=7;
+ 5=7; 
  8=10;
  8=11;
  9=10;
@@ -49,7 +49,7 @@ let mapbetter f o1 o2 =
   | (Some x, Some y) -> Some (f x y)
       
 let merge node x y =
-  combine (fun x y -> mapbetter (fun x y -> if x < y then x else y) x y) x y
+  combine (fun x y -> mapbetter (fun x y -> if x < y then x else y) x y) x y (Some None) None (Some None) None
 
 let trans edge x =
   map (fun x -> mapo (fun x -> x + 1) x) x
