@@ -192,7 +192,7 @@ and apply env f v = interp_exp (update_value env f.arg v) f.body
 
 let interp e = interp_exp empty_env e
 
-let interp = Memoize.memoize compare_exps interp
+let interp = MemoizeExp.memoize interp
 
 let interp_closure cl (args: value list) =
   interp (Syntax.apply_closure cl args)

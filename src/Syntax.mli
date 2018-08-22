@@ -202,9 +202,15 @@ val compare_exps : exp -> exp -> int
 
 val get_inner_type : ty -> ty
 
-module Memoize : sig
-  val memoize : ('a -> 'a -> int) -> ('a -> 'b) -> 'a -> 'b
+module type MEMOIZER = sig
+  type t
+
+  val memoize : (t -> 'a) -> t -> 'a
 end
+
+module MemoizeValue : MEMOIZER with type t = value
+
+module MemoizeExp : MEMOIZER with type t = exp
 
 module BddMap : sig
   type t = mtbdd

@@ -1,5 +1,3 @@
-* Memoize computations when hashconsing is turned on?
-
 * get a semi-large example to test performance with
 
 * Add optional annotations about commutativity, idempotency, or identity for 

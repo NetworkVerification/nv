@@ -669,9 +669,7 @@ let rec apps f args : exp =
   | a :: args -> apps (exp (EApp (f, a))) args
 
 let apply_closure cl (args: value list) =
-  apps
-    (exp_of_v (VClosure cl))
-    (List.map (fun a -> exp (EVal a)) args)
+  apps (exp_of_v (VClosure cl)) (List.map (fun a -> e_val a) args)
 
 let get_decl ds f =
   try
@@ -724,22 +722,44 @@ let rec get_inner_type t : ty =
 
 (* Memoization *)
 
-module Memoize = struct
-  let memoize cmp (f: 'a -> 'b) : 'a -> 'b =
-    let map = ref (BatMap.PMap.create cmp) in
-    let num_hits = ref 0 in
+module type MEMOIZER = sig
+  type t
+
+  val memoize : (t -> 'a) -> t -> 'a
+end
+
+module Memoize (K : Lru_cache.Key) :
+  MEMOIZER with type t = K.t =
+struct
+  module L = Lru_cache.Make (K)
+
+  type t = K.t
+
+  let memoize (f: 'a -> 'b) : 'a -> 'b =
+    let map = L.init 1000 in
     fun x ->
       let cfg = Cmdline.get_cfg () in
-      if cfg.hashcons then (
-        try
-          let ret = BatMap.PMap.find x !map in
-          incr num_hits ; ret
-        with _ ->
-          let ret = f x in
-          map := BatMap.PMap.add x ret !map ;
-          ret )
-      else f x
+      if cfg.hashcons && cfg.memoize then L.get map x f else f x
 end
+
+module VKey = struct
+  type t = value
+
+  let compare v1 v2 = v1.vtag - v2.vtag
+
+  let witness = vbool true
+end
+
+module EKey = struct
+  type t = exp
+
+  let compare e1 e2 = e1.etag - e2.etag
+
+  let witness = e_val (vbool true)
+end
+
+module MemoizeValue = Memoize (VKey)
+module MemoizeExp = Memoize (EKey)
 
 let compare_values v1 v2 =
   let cfg = Cmdline.get_cfg () in

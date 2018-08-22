@@ -10,6 +10,7 @@ type t =
   ; smt: bool         [@short "-m"]    (** search for bugs using an smt solver     *)
   ; unroll_maps: bool [@short "-u"]    (** try to unroll dictionaries as tuples    *)
   ; hashcons: bool    [@short "-c"]    (** enables hashconsing of all ast terms    *)
+  ; memoize: bool     [@short "-z"]    (** memoizes the interpreter for reuse      *)
   ; no_caching: bool                   (** disables mtbdd operation caching        *)
   ; no_cutoff: bool                    (** disables mtbdd early termination        *)}
 [@@deriving
@@ -29,6 +30,7 @@ let default =
   ; smt= false
   ; unroll_maps= false
   ; hashcons=false
+  ; memoize = false
   ; no_caching=false
   ; no_cutoff=false }
 
