@@ -196,7 +196,15 @@ val equal_values : cmp_meta:bool -> value -> value -> bool
 
 val hash_value : hash_meta:bool -> value -> int
 
+val compare_values : value -> value -> int
+
+val compare_exps : exp -> exp -> int
+
 val get_inner_type : ty -> ty
+
+module Memoize : sig
+  val memoize : ('a -> 'a -> int) -> ('a -> 'b) -> 'a -> 'b
+end
 
 module BddMap : sig
   type t = mtbdd
