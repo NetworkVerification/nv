@@ -1,6 +1,6 @@
 (* Program Variables *)
 
-type t
+type t [@@deriving show]
 
 val create : string -> t
 

@@ -68,7 +68,7 @@ let rec ty_to_smtlib (ty: ty) : string =
   match ty with
   | TVar {contents= Link t} -> ty_to_smtlib t
   | TBool -> "Bool"
-  | TInt i -> Printf.sprintf "_ BitVec %s" (UInt32.to_string i)
+  | TInt i -> Printf.sprintf "_ BitVec %s" (string_of_int i)
   | TTuple ts -> (
     match ts with
     | [] -> failwith "empty tuple"
@@ -752,8 +752,7 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
       let ie = mk_int_u32 env.ctx i in
       let je = mk_int_u32 env.ctx j in
       let pair_sort =
-        ty_to_sort env.ctx
-          (TTuple [TInt (UInt32.of_int 32); TInt (UInt32.of_int 32)])
+        ty_to_sort env.ctx (TTuple [TInt 32; TInt 32])
       in
       let f = Datatype.get_constructors pair_sort |> List.hd in
       add env.solver
@@ -863,7 +862,7 @@ let rec parse_custom_type s : ty * string =
     let remaining =
       if len = 3 then "" else String.sub s 3 (len - 3)
     in
-    (TInt (UInt32.of_int 32), remaining)
+    (TInt 32, remaining)
   else if starts_with s "Bool" then
     let remaining =
       if len = 4 then "" else String.sub s 4 (len - 4)
@@ -887,7 +886,7 @@ let sort_to_ty s =
     in
     let strs = String.split_on_char ' ' str in
     match strs with
-    | ["Int"] -> TInt (UInt32.of_int 32)
+    | ["Int"] -> TInt 32
     | ["Bool"] -> TBool
     | ["Array"; k; v] -> TMap (aux k, aux v)
     | [x] ->

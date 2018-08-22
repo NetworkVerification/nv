@@ -1,4 +1,4 @@
-type t = {start: int; finish: int}
+type t = {start: int; finish: int} [@@deriving show]
 
 let extend (x: t) (y: t) : t =
   let s = min x.start y.start in

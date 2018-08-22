@@ -79,7 +79,7 @@ let rec ty_to_string_p prec t =
     | TVar {contents= tv} -> tyvar_to_string tv
     | QVar name -> "{" ^ Var.to_string name ^ "}"
     | TBool -> "bool"
-    | TInt i -> "int" ^ UInt32.to_string i
+    | TInt i -> "int" ^ string_of_int i
     | TArrow (t1, t2) ->
         ty_to_string_p p t1 ^ " -> " ^ ty_to_string_p prec t2
     | TTuple ts -> sep "*" (ty_to_string_p p) ts

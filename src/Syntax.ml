@@ -5,7 +5,7 @@ open Hashcons
 open Unsigned
 
 (* indices into maps or map sizes must be static constants *)
-type index = UInt32.t
+type index = int
 
 (* see:  http://okmij.org/ftp/ML/generalization.html *)
 type level = int
@@ -41,6 +41,7 @@ type op =
   | MMap
   | MMapFilter
   | MMerge
+[@@deriving show]
 
 type pattern =
   | PWild
@@ -102,6 +103,114 @@ type declaration =
 
 type declarations = declaration list
 
+(* structural printing *)
+
+let show_span (span: Span.t) =
+  Printf.sprintf "(%d,%d)" span.start span.finish
+
+let show_opt s o =
+  match o with
+  | None -> "None"
+  | Some x -> Printf.sprintf "Some (%s)" (s x)
+
+let show_list s ls =
+  "[" ^ List.fold_left (fun acc x -> acc ^ "," ^ s x) "" ls ^ "]"
+
+let rec show_ty ty =
+  match ty with
+  | TVar tyvar -> (
+    match !tyvar with
+    | Unbound (name, _) ->
+        Printf.sprintf "TVar (Unbound %s)" (Var.to_string name)
+    | Link t -> show_ty t )
+  | QVar name -> Printf.sprintf "QVar (%s)" (Var.to_string name)
+  | TBool -> "TBool"
+  | TInt _ -> "TInt"
+  | TArrow (ty1, ty2) ->
+      Printf.sprintf "TArrow (%s,%s)" (show_ty ty1) (show_ty ty2)
+  | TTuple ts ->
+      let str = show_list show_ty ts in
+      Printf.sprintf "TTuple %s" str
+  | TOption t -> Printf.sprintf "TOption (%s)" (show_ty t)
+  | TMap (ty1, ty2) ->
+      Printf.sprintf "TMap (%s,%s)" (show_ty ty1) (show_ty ty2)
+
+let rec show_exp e =
+  Printf.sprintf "{e=%s; ety=%s; espan=%s; etag=%d; ehkey=%d}"
+    (show_e e.e)
+    (show_opt show_ty e.ety)
+    (show_span e.espan) e.etag e.ehkey
+
+and show_e e =
+  match e with
+  | EVar x -> Printf.sprintf "EVar %s" (Var.to_string x)
+  | EVal v -> Printf.sprintf "EVal (%s)" (show_value v)
+  | EOp (op, es) ->
+      Printf.sprintf "EOp (%s,%s)" (show_op op)
+        (show_list show_exp es)
+  | EFun f -> Printf.sprintf "EFun %s" (show_func f)
+  | EApp (e1, e2) ->
+      Printf.sprintf "EApp (%s,%s)" (show_exp e1) (show_exp e2)
+  | EIf (e1, e2, e3) ->
+      Printf.sprintf "EIf (%s,%s,%s)" (show_exp e1) (show_exp e2)
+        (show_exp e3)
+  | ELet (x, e1, e2) ->
+      Printf.sprintf "ELet (%s,%s,%s)" (Var.to_string x)
+        (show_exp e1) (show_exp e2)
+  | ETuple es -> Printf.sprintf "ETuple %s" (show_list show_exp es)
+  | ESome e -> Printf.sprintf "ESome (%s)" (show_exp e)
+  | EMatch (e, bs) ->
+      Printf.sprintf "EMatch (%s,%s)" (show_exp e)
+        (show_list show_branch bs)
+  | ETy (e, ty) ->
+      Printf.sprintf "ETy (%s,%s)" (show_exp e) (show_ty ty)
+
+and show_func f =
+  Printf.sprintf "{arg=%s; argty=%s; resty=%s; body=%s}"
+    (Var.to_string f.arg)
+    (show_opt show_ty f.argty)
+    (show_opt show_ty f.resty)
+    (show_exp f.body)
+
+and show_branch (p, e) =
+  Printf.sprintf "(%s,%s)" (show_pattern p) (show_exp e)
+
+and show_pattern p =
+  match p with
+  | PWild -> "PWild"
+  | PVar x -> Printf.sprintf "PVar %s" (Var.to_string x)
+  | PBool b -> Printf.sprintf "PBool %b" b
+  | PUInt32 _ -> "PUInt32"
+  | PTuple ps ->
+      Printf.sprintf "PTuple %s" (show_list show_pattern ps)
+  | POption None -> "POption None"
+  | POption (Some p) ->
+      Printf.sprintf "POption (Some %s)" (show_pattern p)
+
+and show_value v =
+  Printf.sprintf "{e=%s; ety=%s; espan=%s; etag=%d; ehkey=%d}"
+    (show_v v.v)
+    (show_opt show_ty v.vty)
+    (show_span v.vspan) v.vtag v.vhkey
+
+and show_v v =
+  match v with
+  | VBool b -> Printf.sprintf "VBool %b" b
+  | VUInt32 i -> Printf.sprintf "VInt %s" (UInt32.to_string i)
+  | VMap m -> "VMap <opaque>"
+  | VTuple vs -> Printf.sprintf "VTuple %s" (show_list show_value vs)
+  | VOption vo ->
+      Printf.sprintf "VOption (%s)" (show_opt show_value vo)
+  | VClosure c -> Printf.sprintf "VClosure %s" (show_closure c)
+
+and show_closure (e, f) =
+  Printf.sprintf "{env=%s; func=%s}" (show_env e) (show_func f)
+
+and show_env e =
+  Printf.sprintf "{ty=%s; value=%s}"
+    (Env.to_string show_ty e.ty)
+    (Env.to_string show_value e.value)
+
 (* equality / hashing *)
 
 let rec equal_values ~cmp_meta (v1: value) (v2: value) =
@@ -110,10 +219,7 @@ let rec equal_values ~cmp_meta (v1: value) (v2: value) =
     if cfg.hashcons then v1.vtag = v2.vtag
     else equal_vs ~cmp_meta v1.v v2.v
   in
-  if cmp_meta then
-    v1.vty = v2.vty && v1.vspan = v2.vspan && v1.vtag = v2.vtag
-    && v1.vhkey = v2.vhkey && b
-  else b
+  if cmp_meta then v1.vty = v2.vty && v1.vspan = v2.vspan && b else b
 
 and equal_vs ~cmp_meta v1 v2 =
   match (v1, v2) with
@@ -151,10 +257,7 @@ and equal_exps ~cmp_meta (e1: exp) (e2: exp) =
     if cfg.hashcons then e1.etag = e2.etag
     else equal_es ~cmp_meta e1.e e2.e
   in
-  if cmp_meta then
-    b && e1.ety = e2.ety && e1.espan = e2.espan && e1.etag = e2.etag
-    && e1.ehkey = e2.ehkey
-  else b
+  if cmp_meta then b && e1.ety = e2.ety && e1.espan = e2.espan else b
 
 and equal_es ~cmp_meta e1 e2 =
   match (e1, e2) with
@@ -182,7 +285,7 @@ and equal_es ~cmp_meta e1 e2 =
   | _, _ -> false
 
 and equal_lists_es ~cmp_meta es1 es2 =
-  match (es1, es1) with
+  match (es1, es2) with
   | [], [] -> true
   | [], _ | _, [] -> false
   | e1 :: es1, e2 :: es2 ->
@@ -205,10 +308,7 @@ and equal_funcs ~cmp_meta f1 f2 =
 
 let rec hash_value ~hash_meta v : int =
   let cfg = Cmdline.get_cfg () in
-  let m =
-    if hash_meta then Hashtbl.hash (v.vty, v.vspan, v.vtag, v.vhkey)
-    else 0
-  in
+  let m = if hash_meta then Hashtbl.hash (v.vty, v.vspan) else 0 in
   if cfg.hashcons then v.vhkey + m else hash_v ~hash_meta v.v + m
 
 and hash_v ~hash_meta v =
@@ -237,10 +337,7 @@ and hash_v ~hash_meta v =
 
 and hash_exp ~hash_meta e =
   let cfg = Cmdline.get_cfg () in
-  let m =
-    if hash_meta then Hashtbl.hash (e.ety, e.espan, e.etag, e.ehkey)
-    else 0
-  in
+  let m = if hash_meta then Hashtbl.hash (e.ety, e.espan) else 0 in
   if cfg.hashcons then e.ehkey + m else hash_e ~hash_meta e.e + m
 
 and hash_e ~hash_meta e =
@@ -354,7 +451,7 @@ let arity op =
 
 (* Useful constructors *)
 
-let tint = TInt (UInt32.of_int 32)
+let tint = TInt 32
 
 let exp e =
   let cfg = Cmdline.get_cfg () in

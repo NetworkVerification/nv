@@ -1,7 +1,7 @@
 open Cudd
 open Unsigned
 
-type index = UInt32.t
+type index = int
 
 type level = int
 

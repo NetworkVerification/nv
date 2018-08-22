@@ -30,7 +30,7 @@ let two_opt = voption (Some two)
 
 let five_opt = voption (Some five)
 
-let ty_int = TInt zero_u
+let ty_int = TInt 32
 
 let tru = vbool true
 

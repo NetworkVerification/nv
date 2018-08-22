@@ -1,4 +1,4 @@
-type t = string * int
+type t = string * int [@@deriving show]
 
 let counter = ref 0
 
