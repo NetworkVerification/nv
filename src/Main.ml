@@ -75,18 +75,21 @@ let run_simulator cfg info decls =
   try
     let solution, q =
       match cfg.bound with
-      | None -> (Srp.simulate_declarations decls, [])
+      | None ->
+          ( Srp.simulate_declarations decls
+          , QueueSet.empty Unsigned.UInt32.compare )
       | Some b -> Srp.simulate_declarations_bound decls b
     in
     print_solution (apply_all solution fs) ;
-    match q with
-    | [] -> ()
-    | qs ->
+    match QueueSet.pop q with
+    | None -> ()
+    | Some _ ->
         print_string [] "non-quiescent nodes:" ;
-        List.iter
+        QueueSet.iter
           (fun q ->
             print_string [] (Unsigned.UInt32.to_string q ^ ";") )
-          qs ;
+          q ;
+        print_newline () ;
         print_newline ()
   with Srp.Require_false ->
     Console.error "required conditions not satisfied"

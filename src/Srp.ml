@@ -13,7 +13,7 @@ type srp =
 (* SRP Simulation *)
 (******************)
 
-module S = Map.Make(UInt32)
+module S = Map.Make (UInt32)
 
 exception Simulation_error of string
 
@@ -21,15 +21,15 @@ exception Simulation_error of string
 (* Solution Invariant: All valid graph vertices are associated with an attribute initially (and always) *)
 type solution = value Graph.VertexMap.t
 
-type queue = Graph.Vertex.t list
+type queue = Graph.Vertex.t QueueSet.queue
 
 type state = solution * queue
 
 let create_state n cl : state =
-  let rec loop n q m =
+  let rec loop n (q: UInt32.t QueueSet.queue) m =
     if UInt32.compare n UInt32.zero > 0 then
       let next_n = UInt32.pred n in
-      let next_q = next_n :: q in
+      let next_q = QueueSet.add q next_n in
       let next_m =
         Graph.VertexMap.add next_n
           (Interp.interp_closure cl [vint next_n])
@@ -38,7 +38,7 @@ let create_state n cl : state =
       loop next_n next_q next_m
     else (m, q)
   in
-  loop n [] Graph.VertexMap.empty
+  loop n (QueueSet.empty UInt32.compare) Graph.VertexMap.empty
 
 type info =
   { mutable env: Syntax.env
@@ -193,22 +193,22 @@ let simulate_step {graph= g; trans; merge} s x =
 
 (* simulate srp s q simulates srp starting with initial state (s,q) *)
 let rec simulate_init srp ((s, q): state) =
-  match q with
-  | [] -> s
-  | next :: rest ->
+  match QueueSet.pop q with
+  | None -> s
+  | Some (next, rest) ->
       let s', more = simulate_step srp s next in
-      simulate_init srp (s', rest @ more)
+      simulate_init srp (s', QueueSet.add_all rest more)
 
 (* simulate for at most k steps *)
 let simulate_init_bound srp ((s, q): state) k =
   let rec loop s q k =
     if k <= 0 then (s, q)
     else
-      match q with
-      | [] -> (s, [])
-      | next :: rest ->
+      match QueueSet.pop q with
+      | None -> (s, q)
+      | Some (next, rest) ->
           let s', more = simulate_step srp s next in
-          loop s' (rest @ more) (k - 1)
+          loop s' (QueueSet.add_all rest more) (k - 1)
   in
   loop s q k
 
