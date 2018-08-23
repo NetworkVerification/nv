@@ -10,17 +10,17 @@ type t =
 let print_solution solution =
   let cfg = Cmdline.get_cfg () in
   print_newline () ;
-  StringMap.iter
-    (fun k v ->
-      Printf.printf "%s:%s\n" k (Printing.value_to_string v) )
-    solution.symbolics ;
-  if cfg.verbose then
+  if cfg.verbose then (
+    StringMap.iter
+      (fun k v ->
+        Printf.printf "%s:%s\n" k (Printing.value_to_string v) )
+      solution.symbolics ;
     Graph.VertexMap.iter
       (fun k v ->
         Printf.printf "%s:%s\n"
           (Unsigned.UInt32.to_string k)
           (Printing.value_to_string v) )
-      solution.labels ;
+      solution.labels ) ;
   ( match solution.assertions with
   | None ->
       print_string [green; Bold] "Success: " ;
