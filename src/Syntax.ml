@@ -3,6 +3,14 @@ open Cudd
 open Hashcons
 open Unsigned
 
+module Mtbdd = struct
+  include Mtbdd
+
+  let compare _ = Pervasives.compare
+
+  let hash = Hashtbl.hash
+end
+
 (* indices into maps or map sizes must be static constants *)
 type index = int
 
@@ -40,7 +48,7 @@ type op =
   | MMap
   | MMapFilter
   | MMerge
-[@@deriving show, eq]
+[@@deriving show, ord, eq]
 
 type pattern =
   | PWild

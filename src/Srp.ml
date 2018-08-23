@@ -13,6 +13,8 @@ type srp =
 (* SRP Simulation *)
 (******************)
 
+module S = Map.Make(UInt32)
+
 exception Simulation_error of string
 
 (* Simulation States *)
@@ -23,7 +25,7 @@ type queue = Graph.Vertex.t list
 
 type state = solution * queue
 
-let create_state n cl =
+let create_state n cl : state =
   let rec loop n q m =
     if UInt32.compare n UInt32.zero > 0 then
       let next_n = UInt32.pred n in
@@ -190,15 +192,15 @@ let simulate_step {graph= g; trans; merge} s x =
   List.fold_left (do_neighbor initial_attribute) (s, []) neighbors
 
 (* simulate srp s q simulates srp starting with initial state (s,q) *)
-let rec simulate_init srp (s, q) =
+let rec simulate_init srp ((s, q): state) =
   match q with
   | [] -> s
   | next :: rest ->
       let s', more = simulate_step srp s next in
-      simulate_init srp (s', more @ rest)
+      simulate_init srp (s', rest @ more)
 
 (* simulate for at most k steps *)
-let simulate_init_bound srp (s, q) k =
+let simulate_init_bound srp ((s, q): state) k =
   let rec loop s q k =
     if k <= 0 then (s, q)
     else
@@ -206,7 +208,7 @@ let simulate_init_bound srp (s, q) k =
       | [] -> (s, [])
       | next :: rest ->
           let s', more = simulate_step srp s next in
-          loop s' (more @ rest) (k - 1)
+          loop s' (rest @ more) (k - 1)
   in
   loop s q k
 

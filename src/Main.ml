@@ -100,10 +100,6 @@ let main =
   let decls = Typing.infer_declarations info ds in
   Typing.check_annot_decls decls ;
   Wellformed.check info decls ;
-  if cfg.verbose then (
-    print_endline "** SRP Definition **" ;
-    print_endline (Printing.declarations_to_string ds) ;
-    print_endline "** End SRP Definition **" ) ;
   if cfg.smt then run_smt cfg info decls ;
   if cfg.random_test then run_test cfg info decls ;
   if cfg.simulate then run_simulator cfg info decls

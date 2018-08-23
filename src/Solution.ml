@@ -8,17 +8,19 @@ type t =
   ; assertions: bool VertexMap.t option }
 
 let print_solution solution =
+  let cfg = Cmdline.get_cfg () in
   print_newline () ;
   StringMap.iter
     (fun k v ->
       Printf.printf "%s:%s\n" k (Printing.value_to_string v) )
     solution.symbolics ;
-  Graph.VertexMap.iter
-    (fun k v ->
-      Printf.printf "%s:%s\n"
-        (Unsigned.UInt32.to_string k)
-        (Printing.value_to_string v) )
-    solution.labels ;
+  if cfg.verbose then
+    Graph.VertexMap.iter
+      (fun k v ->
+        Printf.printf "%s:%s\n"
+          (Unsigned.UInt32.to_string k)
+          (Printing.value_to_string v) )
+      solution.labels ;
   ( match solution.assertions with
   | None ->
       print_string [green; Bold] "Success: " ;
