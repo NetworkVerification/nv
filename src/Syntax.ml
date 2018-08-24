@@ -940,10 +940,7 @@ module BddMap = struct
   module ExpMap = Map.Make (struct
     type t = exp
 
-    let compare x y =
-      let cfg = Cmdline.get_cfg () in
-      if cfg.hashcons then x.etag - y.etag
-      else Pervasives.compare x y
+    let compare = Pervasives.compare
   end)
 
   let map_cache = ref ExpMap.empty
@@ -1049,30 +1046,7 @@ module BddMap = struct
   module MergeMap = Map.Make (struct
     type t = exp * (value * value * value * value) option
 
-    let compare_exps x y =
-      let cfg = Cmdline.get_cfg () in
-      if cfg.hashcons then x.etag - y.etag
-      else Pervasives.compare x y
-
-    let compare_v4 (v1, v2, v3, v4) (v1', v2', v3', v4') =
-      let cmp = compare_values v1 v1' in
-      if cmp <> 0 then cmp
-      else
-        let cmp = compare_values v2 v2' in
-        if cmp <> 0 then cmp
-        else
-          let cmp = compare_values v3 v3' in
-          if cmp <> 0 then cmp else compare_values v4 v4'
-
-    let compare (e1, vs1) (e2, vs2) =
-      let cmp = compare_exps e1 e2 in
-      if cmp <> 0 then cmp
-      else
-        match (vs1, vs2) with
-        | None, None -> 0
-        | None, Some _ -> -1
-        | Some _, None -> 1
-        | Some x, Some y -> compare_v4 x y
+    let compare = Pervasives.compare
   end)
 
   let unwrap x =
