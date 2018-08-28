@@ -20,9 +20,11 @@ let mapbetter f o1 o2 =
   | (None, x) -> x
   | (x , None) -> x
   | (Some x, Some y) -> Some (f x y)
-      
+     
+let min x y = if x < y then x else y
+
 let merge node x y =
-  mapbetter (fun x y -> if x < y then x else y) x y
+  mapbetter min x y
 
 let trans edge x =
   mapo (fun x -> x + 1) x
