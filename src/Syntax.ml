@@ -954,8 +954,6 @@ module BddMap = struct
       in
       (User.apply_op1 op vdd, ty)
 
-  let mapw_op_cache = ref ExpMap.empty
-
   let count_tops arr =
     Array.fold_left
       (fun acc tb -> match tb with Man.Top -> acc + 1 | _ -> acc)
@@ -1002,16 +1000,15 @@ module BddMap = struct
       map ;
     (!bs, dv)
 
-  let map_when ~op_key (pred: Bdd.vt) (f: value -> value)
+  let mapw_op_cache = ref ExpMap.empty
+
+  let map_when ~op_key (pred: bool Mtbdd.t) (f: value -> value)
       ((vdd, ty): t) : t =
     let cfg = Cmdline.get_cfg () in
     let g b v =
       if Mtbdd.get b then f (Mtbdd.get v) |> Mtbdd.unique B.tbl
       else v
     in
-    let tru = Mtbdd.cst B.mgr B.tbl_bool true in
-    let fal = Mtbdd.cst B.mgr B.tbl_bool false in
-    let pred = Mtbdd.ite pred tru fal in
     if cfg.no_caching then (Mapleaf.mapleaf2 g pred vdd, ty)
     else
       let op =
@@ -1134,6 +1131,11 @@ module BddFunc = struct
     | BOption of Bdd.vt * t
 
   let bdd_of_bool b = if b then Bdd.dtrue B.mgr else Bdd.dfalse B.mgr
+
+  let wrap_mtbdd bdd =
+    let tru = Mtbdd.cst B.mgr B.tbl_bool true in
+    let fal = Mtbdd.cst B.mgr B.tbl_bool false in
+    Mtbdd.ite bdd tru fal
 
   let create_value (ty: ty) : t =
     let rec aux i ty =

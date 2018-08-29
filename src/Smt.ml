@@ -269,6 +269,7 @@ let rec encode_exp_z3 descr env arr (e: exp) =
         in
         add env.solver [q] ;
         nresult
+    | MMapFilter, _ -> failwith "non-closure in mapIf for SMT"
     | ( MMerge
       , { e=
             EFun
@@ -298,27 +299,6 @@ let rec encode_exp_z3 descr env arr (e: exp) =
         Solver.add env.solver [Boolean.mk_eq env.ctx xarg e2] ;
         Solver.add env.solver [Boolean.mk_eq env.ctx yarg e3] ;
         e1
-        (* let sort1 = ty_to_sort env.ctx (oget ty1) in
-        let e1 = encode_exp_z3 descr env e1 in
-        let e2 = encode_exp_z3 descr env e2 in
-        let e3 = encode_exp_z3 descr env e3 in
-        let name = create_fresh descr "combine" in
-        let x = create_name descr x in
-        let x = Symbol.mk_string env.ctx x in
-        let y = create_name descr y in
-        let y = Symbol.mk_string env.ctx y in
-        let f = FuncDecl.mk_func_decl_s env.ctx name [sort1; sort1] sort1 in
-        let xarg = Expr.mk_const env.ctx x (ty_to_sort env.ctx (oget ty1)) in
-        let yarg = Expr.mk_const env.ctx y (ty_to_sort env.ctx (oget ty2)) in
-        let app = Expr.mk_app env.ctx f [xarg; yarg] in
-        let body = Boolean.mk_eq env.ctx app e1 in
-        let q =
-          Quantifier.mk_forall_const env.ctx [xarg; yarg] body None [] [] None
-            None
-          |> Quantifier.expr_of_quantifier
-        in
-        add env.solver [q] ;
-        Z3Array.mk_map env.ctx f [e2; e3] *)
     | _ -> failwith "internal error (encode_exp_z3)" )
   | EIf (e1, e2, e3) ->
       let ze1 = encode_exp_z3 descr env arr e1 in

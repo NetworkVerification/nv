@@ -219,7 +219,8 @@ module BddMap : sig
 
   val map : op_key:exp -> (value -> value) -> t -> t
 
-  val map_when : op_key:exp -> Bdd.vt -> (value -> value) -> t -> t
+  val map_when :
+    op_key:exp -> bool Mtbdd.t -> (value -> value) -> t -> t
 
   val merge :
        ?opt:value * value * value * value
@@ -252,6 +253,8 @@ module BddFunc : sig
   val eval : t Env.t -> exp -> t
 
   val eval_value : t Env.t -> value -> t
+
+  val wrap_mtbdd : Bdd.vt -> bool Mtbdd.t
 end
 
 val default_value : ty -> value

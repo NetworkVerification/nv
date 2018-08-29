@@ -174,22 +174,24 @@ and interp_op env ty op es =
   | ( MMapFilter
     , [ {v= VClosure (c_env1, f1)}
       ; {v= VClosure (c_env2, f2)}
-      ; {v= VMap m} ] )
-    -> (
-      let bddf =
+      ; {v= VMap m} ] ) ->
+      let mtbdd =
         match ExpMap.find_opt f1.body !bddfunc_cache with
-        | None ->
+        | None -> (
             let bddf = BddFunc.create_value (oget f1.argty) in
             let env = Env.update Env.empty f1.arg bddf in
             let bddf = BddFunc.eval env f1.body in
-            bddfunc_cache := ExpMap.add f1.body bddf !bddfunc_cache ;
-            bddf
+            match bddf with
+            | BBool bdd ->
+                let mtbdd = BddFunc.wrap_mtbdd bdd in
+                bddfunc_cache :=
+                  ExpMap.add f1.body mtbdd !bddfunc_cache ;
+                mtbdd
+            | _ -> failwith "impossible" )
         | Some bddf -> bddf
       in
       let f v = apply c_env2 f2 v in
-      match bddf with
-      | BBool bdd -> vmap (BddMap.map_when ~op_key:f2.body bdd f m)
-      | _ -> failwith "impossible" )
+      vmap (BddMap.map_when ~op_key:f2.body mtbdd f m)
   | _, _ ->
       failwith
         (Printf.sprintf "bad operator application: %s"
