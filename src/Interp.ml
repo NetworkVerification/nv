@@ -88,8 +88,6 @@ end)
 
 let build_env (env: env) (free_vars: Var.t BatSet.PSet.t) :
     value BatSet.PSet.t =
-  (* BatSet.PSet.iter (fun v -> Printf.printf "free_var: %s\n" (Var.to_string v)) free_vars;
-  print_newline (); *)
   let base = BatSet.PSet.create compare_values in
   BatSet.PSet.fold
     (fun v acc ->
