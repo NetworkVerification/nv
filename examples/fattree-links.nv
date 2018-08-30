@@ -1,0 +1,36 @@
+type attribute = dict[int, option[set[(int,int)]]]
+
+let nodes = 2
+
+let edges = {
+ 0=1;
+}
+
+let min x y = if x < y then x else y
+
+let mergeAux x y = 
+  match (x,y) with 
+  | (None, None) -> None 
+  | (None, Some _) -> y
+  | (Some _, None) -> x
+  | (Some ls1, Some ls2) -> Some (ls1 union ls2)
+
+let merge node x y = combine mergeAux x y
+
+let transAux edge v =
+  let (a,b) = edge in
+  match v with 
+  | None -> None 
+  | Some ls -> Some (ls[edge := true])
+
+let trans edge x =
+  map (transAux edge) x
+
+let init node =
+  let m = createDict None in
+  m[node := Some {}]
+
+let assert node x = 
+  match x[1] with 
+  | None -> false 
+  | Some _ -> true

@@ -202,6 +202,8 @@ val compare_exps : exp -> exp -> int
 
 val get_inner_type : ty -> ty
 
+val free : Var.t BatSet.PSet.t -> exp -> Var.t BatSet.PSet.t
+
 module type MEMOIZER = sig
   type t
 
@@ -217,14 +219,19 @@ module BddMap : sig
 
   val create : key_ty:ty -> value -> t
 
-  val map : op_key:exp -> (value -> value) -> t -> t
+  val map :
+    op_key:exp * value BatSet.PSet.t -> (value -> value) -> t -> t
 
   val map_when :
-    op_key:exp -> bool Mtbdd.t -> (value -> value) -> t -> t
+       op_key:exp * value BatSet.PSet.t
+    -> bool Mtbdd.t
+    -> (value -> value)
+    -> t
+    -> t
 
   val merge :
        ?opt:value * value * value * value
-    -> op_key:exp
+    -> op_key:exp * value BatSet.PSet.t
     -> (value -> value -> value)
     -> t
     -> t

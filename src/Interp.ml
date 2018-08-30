@@ -86,6 +86,18 @@ module ExpMap = Map.Make (struct
   let compare = Pervasives.compare
 end)
 
+let build_env (env: env) (free_vars: Var.t BatSet.PSet.t) :
+    value BatSet.PSet.t =
+  (* BatSet.PSet.iter (fun v -> Printf.printf "free_var: %s\n" (Var.to_string v)) free_vars;
+  print_newline (); *)
+  let base = BatSet.PSet.create compare_values in
+  BatSet.PSet.fold
+    (fun v acc ->
+      match Env.lookup_opt env.value v with
+      | Some value -> BatSet.PSet.add value acc
+      | None -> acc )
+    free_vars base
+
 let bddfunc_cache = ref ExpMap.empty
 
 let rec interp_exp env e =
@@ -155,11 +167,18 @@ and interp_op env ty op es =
   | MSet, [{v= VMap m}; vkey; vval] ->
       vmap (BddMap.update m vkey vval)
   | MMap, [{v= VClosure (c_env, f)}; {v= VMap m}] ->
-      vmap (BddMap.map ~op_key:f.body (fun v -> apply c_env f v) m)
+      let seen = BatSet.PSet.singleton ~cmp:Var.compare f.arg in
+      let env = build_env c_env (Syntax.free seen f.body) in
+      vmap
+        (BddMap.map ~op_key:(f.body, env)
+           (fun v -> apply c_env f v)
+           m)
   | ( MMerge
     , {v= VClosure (c_env, f)}
       :: {v= VMap m1} :: {v= VMap m2} :: rest )
     -> (
+      let seen = BatSet.PSet.singleton ~cmp:Var.compare f.arg in
+      let env = build_env c_env (Syntax.free seen f.body) in
       (* TO DO:  Need to preserve types in VOptions here ? *)
       let f_lifted v1 v2 =
         match apply c_env f v1 with
@@ -169,12 +188,16 @@ and interp_op env ty op es =
       match rest with
       | [el0; el1; er0; er1] ->
           let opt = (el0, el1, er0, er1) in
-          vmap (BddMap.merge ~opt ~op_key:f.body f_lifted m1 m2)
-      | _ -> vmap (BddMap.merge ~op_key:f.body f_lifted m1 m2) )
+          vmap
+            (BddMap.merge ~opt ~op_key:(f.body, env) f_lifted m1 m2)
+      | _ -> vmap (BddMap.merge ~op_key:(f.body, env) f_lifted m1 m2)
+      )
   | ( MMapFilter
     , [ {v= VClosure (c_env1, f1)}
       ; {v= VClosure (c_env2, f2)}
       ; {v= VMap m} ] ) ->
+      let seen = BatSet.PSet.singleton ~cmp:Var.compare f2.arg in
+      let env = build_env c_env2 (Syntax.free seen f2.body) in
       let mtbdd =
         match ExpMap.find_opt f1.body !bddfunc_cache with
         | None -> (
@@ -191,7 +214,7 @@ and interp_op env ty op es =
         | Some bddf -> bddf
       in
       let f v = apply c_env2 f2 v in
-      vmap (BddMap.map_when ~op_key:f2.body mtbdd f m)
+      vmap (BddMap.map_when ~op_key:(f2.body, env) mtbdd f m)
   | _, _ ->
       failwith
         (Printf.sprintf "bad operator application: %s"

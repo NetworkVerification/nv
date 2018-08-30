@@ -101,6 +101,5 @@ let check_closures info _ (e: exp) =
   | _ -> ()
 
 let check info (ds: declarations) : unit =
-  Visitors.iter_exp_decls (check_types info) ds
-
-(* Visitors.iter_exp_decls (check_closures info) ds *)
+  Visitors.iter_exp_decls (check_types info) ds ;
+  Visitors.iter_exp_decls (check_closures info) ds

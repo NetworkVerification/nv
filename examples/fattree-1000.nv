@@ -10996,7 +10996,7 @@ let merge node x y =
   combine (fun x y -> mapbetter (fun x y -> if x < y then x else y) x y) x y (Some None) None (Some None) None
 
 let trans edge x =
-  map (fun x -> mapo (fun x -> x + 1) x) x
+  map (fun p -> mapo (fun q -> q + 1) p) x
 
 let ip_of_node node = node
 

@@ -11011,8 +11011,6 @@ let trans edge x =
 
 let ip_of_node node = node
 
-let conn_of_node node = node + 1000
-
 let init node =
   let m = createDict None in
   m[(ip_of_node node) := Some 0]

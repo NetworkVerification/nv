@@ -720,6 +720,51 @@ let get_requires ds =
 let rec get_inner_type t : ty =
   match t with TVar {contents= Link t} -> get_inner_type t | _ -> t
 
+open BatSet
+
+let rec free (seen: Var.t PSet.t) (e: exp) : Var.t PSet.t =
+  match e.e with
+  | EVar v ->
+      if PSet.mem v seen then PSet.create Var.compare
+      else PSet.singleton ~cmp:Var.compare v
+  | EVal _ -> PSet.create Var.compare
+  | EOp (_, es) | ETuple es ->
+      List.fold_left
+        (fun set e -> PSet.union set (free seen e))
+        (PSet.create Var.compare)
+        es
+  | EFun f -> free (PSet.add f.arg seen) f.body
+  | EApp (e1, e2) -> PSet.union (free seen e1) (free seen e2)
+  | EIf (e1, e2, e3) ->
+      PSet.union (free seen e1)
+        (PSet.union (free seen e2) (free seen e3))
+  | ELet (x, e1, e2) ->
+      let seen = PSet.add x seen in
+      PSet.union (free seen e1) (free seen e2)
+  | ESome e | ETy (e, _) -> free seen e
+  | EMatch (e, bs) ->
+      let bs =
+        List.fold_left
+          (fun set (p, e) ->
+            let seen = PSet.union seen (pattern_vars p) in
+            PSet.union set (free seen e) )
+          (PSet.create Var.compare)
+          bs
+      in
+      PSet.union (free seen e) bs
+
+and pattern_vars p =
+  match p with
+  | PWild | PBool _ | PUInt32 _ | POption None ->
+      PSet.create Var.compare
+  | PVar v -> PSet.singleton ~cmp:Var.compare v
+  | PTuple ps ->
+      List.fold_left
+        (fun set p -> PSet.union set (pattern_vars p))
+        (PSet.create Var.compare)
+        ps
+  | POption (Some p) -> pattern_vars p
+
 (* Memoization *)
 
 module type MEMOIZER = sig
@@ -930,7 +975,7 @@ module BddMap = struct
     fst (aux 0 ty)
 
   module ExpMap = Map.Make (struct
-    type t = exp
+    type t = exp * value PSet.t
 
     let compare = Pervasives.compare
   end)
@@ -954,42 +999,56 @@ module BddMap = struct
       in
       (User.apply_op1 op vdd, ty)
 
-  let count_tops arr =
-    Array.fold_left
-      (fun acc tb -> match tb with Man.Top -> acc + 1 | _ -> acc)
-      0 arr
+  let count_tops arr sz =
+    let j = ref 0 in
+    for i = 0 to sz - 1 do
+      match arr.(i) with Man.Top -> incr j | _ -> ()
+    done ;
+    !j
 
-  let pick_default_value map =
+  let rec size ty =
+    match get_inner_type ty with
+    | QVar _ | TVar _ | TArrow _ | TMap _ ->
+        failwith "internal error (size)"
+    | TBool -> 1
+    | TInt _ -> 32
+    | TTuple ts -> List.fold_left (fun acc t -> acc + size t) 0 ts
+    | TOption t -> 1 + size t
+
+  let pick_default_value (map, ty) =
     let count = ref (-1) in
     let value = ref None in
     Mtbdd.iter_cube
       (fun vars v ->
-        let c = count_tops vars in
+        let c = count_tops vars (size ty) in
         if c > !count then count := c ;
         value := Some v )
       map ;
     oget !value
 
-  let rec expand (vars: Man.tbool list) : Man.tbool list list =
-    match vars with
-    | [] -> [[]]
-    | Man.Top :: xs ->
-        let vars = expand xs in
-        let trus = List.map (fun v -> Man.False :: v) vars in
-        let fals = List.map (fun v -> Man.True :: v) vars in
-        fals @ trus
-    | x :: xs ->
-        let vars = expand xs in
-        List.map (fun v -> x :: v) vars
+  let rec expand (vars: Man.tbool list) sz : Man.tbool list list =
+    if sz = 0 then [[]]
+    else
+      match vars with
+      | [] -> [[]]
+      | Man.Top :: xs ->
+          let vars = expand xs (sz - 1) in
+          let trus = List.map (fun v -> Man.False :: v) vars in
+          let fals = List.map (fun v -> Man.True :: v) vars in
+          fals @ trus
+      | x :: xs ->
+          let vars = expand xs (sz - 1) in
+          List.map (fun v -> x :: v) vars
 
   let bindings ((map, ty): t) : (value * value) list * value =
     let bs = ref [] in
-    let dv = pick_default_value map in
+    let dv = pick_default_value (map, ty) in
     Mtbdd.iter_cube
       (fun vars v ->
         let lst = Array.to_list vars in
+        let sz = size ty in
         let expanded =
-          if count_tops vars <= 5 then expand lst else [lst]
+          if count_tops vars sz <= 5 then expand lst sz else [lst]
         in
         List.iter
           (fun vars ->
@@ -1033,7 +1092,8 @@ module BddMap = struct
       (User.apply_op2 op pred vdd, ty)
 
   module MergeMap = Map.Make (struct
-    type t = exp * (value * value * value * value) option
+    type t =
+      (exp * value PSet.t) * (value * value * value * value) option
 
     let compare = Pervasives.compare
   end)
