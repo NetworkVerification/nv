@@ -21,7 +21,6 @@ let mergeAux x y =
 let merge node x y = combine mergeAux x y (Some None) None (Some None) None
 
 let transAux edge v =
-  let (a,b) = edge in
   match v with 
   | None -> None 
   | Some ls -> Some (ls[edge := true])
