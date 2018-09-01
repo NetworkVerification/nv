@@ -1,3 +1,4 @@
+open BatSet
 open OUnit2
 open Syntax
 open Unsigned
@@ -60,7 +61,8 @@ let test1 _ =
   assert_equal_values x bt ;
   assert_equal_values y bf ;
   let e = new_key () in
-  let map = BddMap.map ~op_key:e (fun v -> vbool true) map in
+  let set = PSet.create Pervasives.compare in
+  let map = BddMap.map ~op_key:(e, set) (fun v -> vbool true) map in
   let x = BddMap.find map v2 in
   let y = BddMap.find map v1 in
   assert_equal_values x bt ;
@@ -88,8 +90,9 @@ let test3 _ =
   let map1 = BddMap.create ~key_ty:ty v1 in
   let map2 = BddMap.create ~key_ty:ty v2 in
   let e = evar (Var.create "x") in
+  let set = PSet.create Pervasives.compare in
   let merged =
-    BddMap.merge ~op_key:e
+    BddMap.merge ~op_key:(e, set)
       (fun v1 v2 ->
         match (v1.v, v2.v) with
         | VOption None, VOption (Some _) -> v2
@@ -145,7 +148,10 @@ let test5 _ =
   let value = BddFunc.wrap_mtbdd value in
   let map = BddMap.create ~key_ty:ty_int bf in
   let e = new_key () in
-  let map = BddMap.map_when ~op_key:e value (fun _ -> bt) map in
+  let set = PSet.create Pervasives.compare in
+  let map =
+    BddMap.map_when ~op_key:(e, set) value (fun _ -> bt) map
+  in
   let x0 = BddMap.find map v0 in
   let x1 = BddMap.find map v1 in
   let x2 = BddMap.find map v2 in
@@ -176,7 +182,10 @@ let test6 _ =
   let value = BddFunc.wrap_mtbdd value in
   let map = BddMap.create ~key_ty:ty_int bf in
   let e = new_key () in
-  let map = BddMap.map_when ~op_key:e value (fun _ -> bt) map in
+  let set = PSet.create Pervasives.compare in
+  let map =
+    BddMap.map_when ~op_key:(e, set) value (fun _ -> bt) map
+  in
   let x0 = BddMap.find map v0 in
   let x1 = BddMap.find map v1 in
   let x2 = BddMap.find map v2 in
@@ -209,7 +218,10 @@ let test7 _ =
   let value = BddFunc.wrap_mtbdd value in
   let map = BddMap.create ~key_ty:ty_int bf in
   let e = new_key () in
-  let map = BddMap.map_when ~op_key:e value (fun _ -> bt) map in
+  let set = PSet.create Pervasives.compare in
+  let map =
+    BddMap.map_when ~op_key:(e, set) value (fun _ -> bt) map
+  in
   let x0 = BddMap.find map v0 in
   let x1 = BddMap.find map v1 in
   let x2 = BddMap.find map v2 in
