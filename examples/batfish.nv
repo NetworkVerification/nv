@@ -1,4 +1,9 @@
-type attribute = dict[(int,int),(option[int],option[int],option[(int, int, int, int)],option[(int,int,int,int,set[int])],option[int])]
+type attribute = dict[(int,int),
+  (option[int],
+   option[int],
+   option[(int, int, int, int)],
+   option[(int,int,int,int,set[int])],
+   option[int])]
 
 let edges = {
   0-4;
