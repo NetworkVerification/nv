@@ -160,13 +160,13 @@ let rec unify info e t1 t2 : unit =
     if t1 == t2 then true (* t1 and t2 are physically the same *)
     else
       match (t1, t2) with
+      | TVar {contents= Link t1}, t2 -> try_unify t1 t2
+      | t1, TVar {contents= Link t2} -> try_unify t1 t2
       | TVar ({contents= Unbound _} as tv), t'
        |t', TVar ({contents= Unbound _} as tv) ->
           occurs tv t' ;
           tv := Link t' ;
           true
-      | TVar {contents= Link t1}, t2 -> try_unify t1 t2
-      | t1, TVar {contents= Link t2} -> try_unify t1 t2
       | TArrow (tyl1, tyl2), TArrow (tyr1, tyr2) ->
           try_unify tyl1 tyr1 && try_unify tyl2 tyr2
       | TBool, TBool -> true
@@ -313,7 +313,6 @@ let textract e =
   | Some ty -> (e, ty)
 
 let rec infer_exp i info env (e: exp) : exp =
-  (* Printf.printf "infer_exp: %s\n" (Printing.exp_to_string e) ; *)
   let exp =
     match e.e with
     | EVar x -> (
@@ -491,7 +490,8 @@ let rec infer_exp i info env (e: exp) : exp =
         unify info e t t1 ;
         texp (ety e t1, t1, e.espan)
   in
-  (* Printf.printf "type: %s\n" (Printing.ty_to_string (oget exp.ety)) ;
+  (* Printf.printf "infer_exp: %s\n" (Printing.exp_to_string e) ;
+  Printf.printf "type: %s\n" (Printing.ty_to_string (oget exp.ety)) ;
   check_annot exp ; *)
   exp
 
