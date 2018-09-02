@@ -871,10 +871,7 @@ end
 module BddMap = struct
   module B = BddUtils
 
-  (* TODO: 
-      1. optimize variable ordering
-      2. more efficient operations
-      3. preprocessing of filter statements *)
+  (* TODO: optimize variable ordering  *)
 
   type t = mtbdd
 

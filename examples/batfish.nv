@@ -220,7 +220,8 @@ let init node =
       let d = d[(1174406146,31) := (c,s,o,b,fib)] in
       d
   | _ -> d
- let transferOspf edge o =
+
+let transferOspf edge o =
    match o with
    | None -> None
    | Some (ad,cost,areaType,areaId) -> (

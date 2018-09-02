@@ -1,11 +1,15 @@
-* don't add duplicates to the queue in Srp.ml
+* Translation from batfish. Need to implement RoutingPolicies, iBGP, OSPF redistribution part of RoutingPolicy?
 
-* Check for fixedpoint more efficiently in Srp.ml
+* General purpose constructors & enums. E.g., type protocol = Ospf | Conn | Static | Bgp
+
+* Named fields and type inference
+
+* Arbitrary fixed width integers. Need it to be part of the type: int5
+  How does type inference work? Do you always have to specify for constants: e.g., 10u5?
+  This will let us optimize the BDD encoding to use fewer bits
+
+* Change the BDD variable ordering for integers to use MSB first
 
 * Add a command line flag to export to json
 
 * Check for recursion
-
-* General way to shrink an SRP model by simplifying the symbolic variables
-  Related: can we figure out, in the interpreter, what values are unused?
-  Then we can remove these from the symbolic values etc or use it for fuzzing.
