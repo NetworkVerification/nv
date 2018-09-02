@@ -137,17 +137,8 @@ and env_to_string env =
     "[" ^ ty_env_to_string env ^ "|" ^ value_env_to_string env ^ "] "
 
 and func_to_string_p prec {arg= x; argty= argt; resty= rest; body} =
-  let s_arg =
-    match argt with
-    | None -> Var.to_string x
-    | Some t -> "(" ^ Var.to_string x ^ ":" ^ ty_to_string t ^ ")"
-  in
-  let s_res =
-    match rest with None -> "" | Some t -> " : " ^ ty_to_string t
-  in
-  let s =
-    "fun " ^ s_arg ^ s_res ^ " -> " ^ exp_to_string_p max_prec body
-  in
+  let s_arg = Var.to_string x in
+  let s = "fun " ^ s_arg ^ " -> " ^ exp_to_string_p max_prec body in
   if prec < max_prec then "(" ^ s ^ ")" else s
 
 and closure_to_string_p prec

@@ -166,7 +166,8 @@ and interp_op env ty op es =
       vmap (BddMap.update m vkey vval)
   | MMap, [{v= VClosure (c_env, f)}; {v= VMap m}] ->
       let seen = BatSet.PSet.singleton ~cmp:Var.compare f.arg in
-      let env = build_env c_env (Syntax.free seen f.body) in
+      let free = Syntax.free seen f.body in
+      let env = build_env c_env free in
       vmap
         (BddMap.map ~op_key:(f.body, env)
            (fun v -> apply c_env f v)

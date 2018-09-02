@@ -12,7 +12,9 @@ type t =
   ; hashcons: bool    [@short "-c"]    (** enables hashconsing of all ast terms    *)
   ; memoize: bool     [@short "-z"]    (** memoizes the interpreter for reuse      *)
   ; no_caching: bool                   (** disables mtbdd operation caching        *)
-  ; no_cutoff: bool                    (** disables mtbdd early termination        *)}
+  ; no_cutoff: bool                    (** disables mtbdd early termination        *)
+  ; inline: bool      [@short "-i"]    (** inline the policy before simulation     *)
+  }
 [@@deriving
   show
   , argparse
@@ -32,7 +34,8 @@ let default =
   ; hashcons=false
   ; memoize = false
   ; no_caching=false
-  ; no_cutoff=false }
+  ; no_cutoff=false
+  ; inline=false }
 
 let cfg = ref default 
 
