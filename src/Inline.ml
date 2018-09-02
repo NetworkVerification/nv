@@ -55,77 +55,29 @@ let rec substitute x e1 e2 =
 and substitute_pattern x e2 (p, e) =
   if has_var p x then (p, e) else (p, substitute x e e2)
 
-let inst_types t1 t2 =
-  let map = ref Env.empty in
-  let rec aux t1 t2 =
-    match (t1, t2) with
-    | TVar {contents= Link r}, s | r, TVar {contents= Link s} ->
-        aux r s
-    | QVar x, t | TVar {contents= Unbound (x, _)}, t ->
-        map := Env.update !map x t
-    | TBool, TBool -> ()
-    | TInt i, TInt j when i = j -> ()
-    | TArrow (r1, s1), TArrow (r2, s2) -> aux r1 r2 ; aux s1 s2
-    | TTuple ts1, TTuple ts2 when List.length ts1 = List.length ts2 ->
-        List.combine ts1 ts2 |> List.iter (fun (r, s) -> aux r s)
-    | TOption r, TOption s -> aux r s
-    | _ ->
-        failwith
-          (Printf.sprintf "unimplemented (inst_types): (%s, %s)"
-             (Printing.ty_to_string t1)
-             (Printing.ty_to_string t2))
-  in
-  aux t1 t2 ; !map
-
-let rec inline_type (env: ty Env.t) ty : ty =
-  match ty with
-  | TVar {contents= Link t} -> inline_type env t
-  | QVar x | TVar {contents= Unbound (x, _)} -> (
-    match Env.lookup_opt env x with Some t -> t | None -> ty )
-  | TBool | TInt _ -> ty
-  | TArrow (r, s) -> TArrow (inline_type env r, inline_type env s)
-  | TTuple ts -> TTuple (List.map (inline_type env) ts)
-  | TOption r -> TOption (inline_type env r)
-  | _ -> failwith "unimplemented (inline_type)"
-
-let inline_type_app e1 e2 : ty =
-  match (get_inner_type (oget e1.ety), oget e2.ety) with
-  | TArrow (t1, t2), t3 ->
-      let env = inst_types t1 t3 in
-      inline_type env t2
-  | _ -> failwith "inlining internals (inline_type_app)"
-
 let rec inline_app env e1 e2 : exp =
   let exp =
     match e1.e with
     | EVar x -> (
       match Env.lookup_opt env x with
-      | None ->
-          eapp e1 e2 |> wrap e1 |> annot (inline_type_app e1 e2)
+      | None -> eapp e1 e2 |> wrap e1
       | Some e -> inline_app env e e2 )
     | EFun f ->
-        let e = substitute f.arg f.body e2 |> annot (oget f.resty) in
+        let e = substitute f.arg f.body e2 in
         inline_exp env e
     | EIf (e3, e4, e5) ->
         let etrue = inline_app env e4 e2 in
         let efalse = inline_app env e5 e2 in
-        eif e3 etrue efalse |> wrap e1 |> annot (oget etrue.ety)
+        eif e3 etrue efalse |> wrap e1
     | ELet (x, e3, e4) ->
-        let e5 =
-          inline_exp env
-            (eapp e4 e2 |> wrap e4 |> annot (inline_type_app e4 e2))
-        in
+        let e5 = inline_exp env (eapp e4 e2 |> wrap e4) in
         elet x e3 e5 |> wrap e1
     | ETy (e1, ty) -> inline_app env e1 e2
-    | EMatch (e, bs) -> (
+    | EMatch (e, bs) ->
         let e = inline_exp env e in
         let branches = List.map (inline_branch_app env e2) bs in
-        let e = ematch e branches |> wrap e1 in
-        match branches with
-        | [] -> failwith "internal error"
-        | (p, eb) :: _ -> e |> annot (oget eb.ety) )
-    | EApp _ ->
-        eapp e1 e2 |> wrap e1 |> annot (inline_type_app e1 e2)
+        ematch e branches |> wrap e1
+    | EApp _ -> eapp e1 e2 |> wrap e1
     | ESome _ | ETuple _ | EOp _ | EVal _ ->
         failwith
           (Printf.sprintf "inline_app: %s"
