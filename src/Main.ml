@@ -71,12 +71,12 @@ let run_test cfg info ds =
       print_solution (apply_all sol fs)
 
 let run_simulator cfg info decls =
-  let fs, decls = 
-    if cfg.inline then 
+  let fs, decls =
+    if cfg.inline then
       let decls, f = Renaming.alpha_convert_declarations decls in
       let decls = Inline.inline_declarations info decls in
-      [f; init_renamer], decls 
-    else [init_renamer], decls 
+      ([f; init_renamer], decls)
+    else ([init_renamer], decls)
   in
   try
     let solution, q =
