@@ -4,6 +4,8 @@ MLFILES= src/*.ml src/*.mli test/*.ml
 FORMATFILES=$(shell find src/ -name "*.ml" | grep -v Cmdline.ml)
 FORMATFILES+=$(shell find src/ -name "*.mli")
 
+.PHONY: test clean
+
 default:  src/Main
 
 all:
