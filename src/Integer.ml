@@ -25,6 +25,10 @@ let size x = x.size
 
 let value x = x.value
 
+let to_int x = Z.to_int x.value
+
+let to_string x = (Z.to_string x.value) ^ "u" ^ (Z.to_string x.size)
+
 let add x y =
   check x y ;
   let value = modulo (Z.add x.value y.value) x.size in
@@ -47,3 +51,5 @@ let leq x y = check x y ; Z.leq x.value y.value
 let gt x y = check x y ; Z.gt x.value y.value
 
 let geq x y = check x y ; Z.geq x.value y.value
+
+let equal x y = (x.size = y.size) && (x.value = y.value)

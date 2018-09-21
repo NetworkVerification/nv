@@ -30,8 +30,8 @@ type op =
   | UAdd of bitwidth
   | USub of bitwidth
   | UEq
-  | ULess
-  | ULeq
+  | ULess of bitwidth
+  | ULeq of bitwidth
   | MCreate
   | MGet
   | MSet
@@ -49,8 +49,7 @@ type pattern =
 
 type v = private
   | VBool of bool
-  | VInteger of Integer.t
-  | VUInt32 of UInt32.t
+  | VInt of Integer.t
   | VMap of mtbdd
   | VTuple of value list
   | VOption of value option
@@ -141,7 +140,9 @@ val ety : exp -> ty -> exp
 
 val arity : op -> int
 
-val tint : ty
+val tint_of_size : Z.t -> ty
+
+val tint_of_value : Integer.t -> ty
 
 val exp : e -> exp
 

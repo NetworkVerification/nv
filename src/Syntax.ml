@@ -7,6 +7,8 @@ open Unsigned
 type index = int
 
 type bitwidth = Z.t
+[@@deriving eq, ord] (* Z's pretty printer has the wrong name so we do show manually *)
+let pp_bitwidth = Z.pp_print;;
 
 (* see:  http://okmij.org/ftp/ML/generalization.html *)
 type level = int
@@ -31,11 +33,11 @@ type op =
   | And
   | Or
   | Not
-  | UAdd
-  | USub
+  | UAdd of bitwidth
+  | USub of bitwidth
   | UEq
-  | ULess
-  | ULeq
+  | ULess of bitwidth
+  | ULeq of bitwidth
   | MCreate
   | MGet
   | MSet
@@ -54,8 +56,7 @@ type pattern =
 
 type v =
   | VBool of bool
-  | VInteger of Integer.t
-  | VUInt32 of UInt32.t
+  | VInt of Integer.t
   | VMap of mtbdd
   | VTuple of value list
   | VOption of value option
@@ -198,7 +199,7 @@ and show_value v =
 and show_v v =
   match v with
   | VBool b -> Printf.sprintf "VBool %b" b
-  | VUInt32 i -> Printf.sprintf "VInt %s" (UInt32.to_string i)
+  | VInt i -> Printf.sprintf "VInt %s" (Integer.to_string i)
   | VMap m -> "VMap <opaque>"
   | VTuple vs -> Printf.sprintf "VTuple %s" (show_list show_value vs)
   | VOption vo ->
@@ -263,7 +264,7 @@ let rec equal_values ~cmp_meta (v1: value) (v2: value) =
 and equal_vs ~cmp_meta v1 v2 =
   match (v1, v2) with
   | VBool b1, VBool b2 -> b1 = b2
-  | VUInt32 i1, VUInt32 i2 -> UInt32.compare i1 i2 = 0
+  | VInt i1, VInt i2 -> Integer.equal i1 i2
   | VMap (m1, ty1), VMap (m2, ty2) ->
     Mtbdd.is_equal m1 m2 && equal_tys ty1 ty2
   | VTuple vs1, VTuple vs2 -> equal_lists ~cmp_meta vs1 vs2
@@ -410,7 +411,7 @@ let rec hash_value ~hash_meta v : int =
 and hash_v ~hash_meta v =
   match v with
   | VBool b -> if b then 1 else 0
-  | VUInt32 i -> (19 * UInt32.to_int i) + 1
+  | VInt i -> (19 * Integer.to_int i) + 1
   | VMap m -> (19 * Hashtbl.hash m) + 2
   | VTuple vs ->
     let acc =
@@ -506,17 +507,17 @@ and hash_pattern p =
 
 and hash_patterns ps =
   List.fold_left (fun acc p -> acc + hash_pattern p) 0 ps
-
+(* TODO/FIXME: Not sure how best to hash the value *)
 and hash_op op =
   match op with
   | And -> 1
   | Or -> 2
   | Not -> 3
-  | UAdd -> 4
-  | USub -> 5
+  | UAdd _ -> 4
+  | USub _ -> 5
   | UEq -> 6
-  | ULess -> 7
-  | ULeq -> 8
+  | ULess _ -> 7
+  | ULeq _ -> 8
   | MCreate -> 9
   | MGet -> 10
   | MSet -> 11
@@ -557,11 +558,11 @@ let arity op =
   | And -> 2
   | Or -> 2
   | Not -> 1
-  | UAdd -> 2
-  | USub -> 2
+  | UAdd _ -> 2
+  | USub _ -> 2
   | UEq -> 2
-  | ULess -> 2
-  | ULeq -> 2
+  | ULess _ -> 2
+  | ULeq _ -> 2
   | MCreate -> 1
   | MGet -> 2
   | MSet -> 3
@@ -571,7 +572,9 @@ let arity op =
 
 (* Useful constructors *)
 
-let tint = TInt 32
+let tint_of_size n = TInt n
+
+let tint_of_value n = TInt (Integer.size n)
 
 let exp e =
   let cfg = Cmdline.get_cfg () in
@@ -593,7 +596,7 @@ let wrap exp e = {e with ety= exp.ety; espan= exp.espan}
 
 let vbool b = value (VBool b)
 
-let vint i = value (VUInt32 i)
+let vint i = value (VInt i)
 
 let vmap m = value (VMap m)
 
@@ -894,7 +897,7 @@ module BddMap = struct
     let v =
       match ty with
       | TBool -> VBool false
-      | TInt _ -> VUInt32 (UInt32.of_int 0)
+      | TInt width -> VInt (Integer.of_size_and_val 0 (Z.to_int width))
       | TTuple ts -> VTuple (List.map default_value ts)
       | TOption ty -> VOption None
       | TMap (ty1, ty2) ->
@@ -910,7 +913,12 @@ module BddMap = struct
       | VBool b ->
         let var = B.ithvar idx in
         ((if b then var else Bdd.dnot var), idx + 1)
-      | VUInt32 i -> (B.mk_int i idx, idx + 32)
+      | VInt i ->
+        if (Z.to_int @@ Integer.size i) = 32 then
+          (* What we did when we only had 32 bit integers *)
+          (B.mk_int (Unsigned.UInt32.of_int @@ Z.to_int @@ Integer.size i) idx, idx + 32)
+        else
+          failwith "No idea how to do this yet" (*TODO,FIXME*)
       | VTuple vs ->
         let base = Bdd.dtrue B.mgr in
         List.fold_left

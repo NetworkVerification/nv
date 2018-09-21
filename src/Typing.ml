@@ -1,5 +1,5 @@
-(* Type inference with efficient generalization via levels; 
- * code following http://okmij.org/ftp/ML/generalization.html#levels 
+(* Type inference with efficient generalization via levels;
+ * code following http://okmij.org/ftp/ML/generalization.html#levels
  *)
 
 open Syntax
@@ -10,7 +10,7 @@ let debug = true
 
 let if_debug s = if debug then print_endline s else ()
 
-let node_ty = tint
+let node_ty = tint_of_size (Z.of_int 32)
 
 let edge_ty = TTuple [node_ty; node_ty]
 
@@ -294,11 +294,11 @@ let op_typ op =
   | And -> ([TBool; TBool], TBool)
   | Or -> ([TBool; TBool], TBool)
   | Not -> ([TBool], TBool)
-  (* Unsigned Integer 32 operators *)
-  | UAdd -> ([tint; tint], tint)
-  | USub -> ([tint; tint], tint)
-  | ULess -> ([tint; tint], TBool)
-  | ULeq -> ([tint; tint], TBool)
+  (* Integer operators *)
+  | UAdd size -> ([tint_of_size size; tint_of_size size], tint_of_size size)
+  | USub size -> ([tint_of_size size; tint_of_size size], tint_of_size size)
+  | ULess size-> ([tint_of_size size; tint_of_size size], TBool)
+  | ULeq size -> ([tint_of_size size; tint_of_size size], TBool)
   (* Map operations *)
   | MCreate | MGet | MSet | MMap | MMerge | MMapFilter | UEq ->
       failwith "internal error (op_typ)"
@@ -513,7 +513,7 @@ and infer_value info env (v: Syntax.value) : Syntax.value =
   let ret =
     match v.v with
     | VBool b -> tvalue (v, TBool, v.vspan)
-    | VUInt32 i -> tvalue (v, tint, v.vspan)
+    | VInt i -> tvalue (v, tint_of_value i, v.vspan)
     | VMap m -> (
         let vs, default = BddMap.bindings m in
         let default, dty =
@@ -594,8 +594,8 @@ and infer_pattern i info env e tmatch p =
   | PBool _ ->
       unify info e tmatch TBool ;
       env
-  | PUInt32 _ ->
-      unify info e tmatch tint ;
+  | PInt i ->
+      unify info e tmatch (tint_of_value i);
       env
   | PTuple ps ->
       let ts = List.map (fun p -> fresh_tyvar ()) ps in
@@ -691,7 +691,7 @@ and valid_pattern env p =
         Console.error
           ( "variable " ^ Var.to_string x
           ^ " appears twice in pattern" ) )
-  | PBool _ | PUInt32 _ -> env
+  | PBool _ | PInt _ -> env
   | PTuple ps -> valid_patterns env ps
   | POption None -> env
   | POption (Some p) -> valid_pattern env p

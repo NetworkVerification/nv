@@ -51,7 +51,7 @@ rule token = parse
   | "set"             { TSET (position lexbuf) }
   | "dict"            { TDICT (position lexbuf) }
   | "option"          { TOPTION (position lexbuf) }
-  | "int" width as s  { TINT (position lexbuf, Z.of_string @@ Str.lchop ~n:4 s) }
+  | "int" num as s  { TINT (position lexbuf, Z.of_string @@ Str.lchop ~n:3 s) }
   | "int"             { TINT (position lexbuf, Z.of_int 32) }
   | "bool"            { TBOOL (position lexbuf) }
   | "type"            { TYPE (position lexbuf) }
@@ -69,11 +69,15 @@ rule token = parse
   | "+"               { PLUS (position lexbuf, Z.of_int 32) }
   | "-" width as s    { SUB (position lexbuf, Z.of_string @@ Str.lchop ~n:2 s) }
   | "-"               { SUB (position lexbuf, Z.of_int 32) }
-  | "<="              { LEQ (position lexbuf) }
-  | ">="              { GEQ (position lexbuf) }
+  | "<=" width as s   { LEQ (position lexbuf, Z.of_string @@ Str.lchop ~n:3 s) }
+  | "<="              { LEQ (position lexbuf, Z.of_int 32) }
+  | ">=" width as s   { GEQ (position lexbuf, Z.of_string @@ Str.lchop ~n:3 s) }
+  | ">="              { GEQ (position lexbuf, Z.of_int 32) }
   | "="               { EQ (position lexbuf) }
-  | "<"               { LESS (position lexbuf) }
-  | ">"               { GREATER (position lexbuf) }
+  | "<" width as s    { LESS (position lexbuf, Z.of_string @@ Str.lchop ~n:2 s) }
+  | "<"               { LESS (position lexbuf, Z.of_int 32) }
+  | ">" width as s    { GREATER (position lexbuf, Z.of_string @@ Str.lchop ~n:2 s) }
+  | ">"               { GREATER (position lexbuf, Z.of_int 32) }
   | ";"               { SEMI (position lexbuf) }
   | ":"               { COLON (position lexbuf) }
   | "("               { LPAREN (position lexbuf) }

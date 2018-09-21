@@ -75,10 +75,10 @@
 %token <Span.t * Z.t> PLUS
 %token <Span.t * Z.t> SUB
 %token <Span.t> EQ
-%token <Span.t> LESS
-%token <Span.t> GREATER
-%token <Span.t> LEQ
-%token <Span.t> GEQ
+%token <Span.t * Z.t> LESS
+%token <Span.t * Z.t> GREATER
+%token <Span.t * Z.t> LEQ
+%token <Span.t * Z.t> GEQ
 %token <Span.t> LET
 %token <Span.t> IN
 %token <Span.t> IF
@@ -216,10 +216,10 @@ expr:
     | expr PLUS expr                    { exp (eop (UAdd snd $2) [$1;$3]) (Span.extend $1.espan $3.espan) }
     | expr SUB expr                     { exp (eop (USub snd $2) [$1;$3]) (Span.extend $1.espan $3.espan) }
     | expr EQ expr                      { exp (eop UEq [$1;$3]) (Span.extend $1.espan $3.espan) }
-    | expr LESS expr                    { exp (eop ULess [$1;$3]) (Span.extend $1.espan $3.espan) }
-    | expr GREATER expr                 { exp (eop ULess [$3;$1]) (Span.extend $1.espan $3.espan) }
-    | expr LEQ expr                     { exp (eop ULeq [$1;$3]) (Span.extend $1.espan $3.espan) }
-    | expr GEQ expr                     { exp (eop ULeq [$3;$1]) (Span.extend $1.espan $3.espan) }
+    | expr LESS expr                    { exp (eop (ULess snd $2) [$1;$3]) (Span.extend $1.espan $3.espan) }
+    | expr GREATER expr                 { exp (eop (ULess snd $2) [$3;$1]) (Span.extend $1.espan $3.espan) }
+    | expr LEQ expr                     { exp (eop (ULeq snd $2) [$1;$3]) (Span.extend $1.espan $3.espan) }
+    | expr GEQ expr                     { exp (eop (ULeq snd $2) [$3;$1]) (Span.extend $1.espan $3.espan) }
     | LPAREN expr COLON ty RPAREN       { exp (ety $2 $4) (Span.extend $1 $5) }
     | expr LBRACKET expr RBRACKET               { exp (eop MGet [$1;$3]) (Span.extend $1.espan $4) }
     | expr LBRACKET expr COLON EQ expr RBRACKET { exp (eop MSet [$1;$3;$6]) (Span.extend $1.espan $7) }
