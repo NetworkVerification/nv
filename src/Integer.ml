@@ -23,6 +23,8 @@ let modulo = Big_int_Z.mod_big_int
 
 let size x = x.size
 
+let value x = x.value
+
 let add x y =
   check x y ;
   let value = modulo (Z.add x.value y.value) x.size in

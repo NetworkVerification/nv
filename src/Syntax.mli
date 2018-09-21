@@ -3,6 +3,8 @@ open Unsigned
 
 type index = int
 
+type bitwidth = Z.t
+
 type level = int
 
 type tyname = Var.t
@@ -11,7 +13,7 @@ type ty =
   | TVar of tyvar ref
   | QVar of tyname
   | TBool
-  | TInt of index
+  | TInt of bitwidth
   | TArrow of ty * ty
   | TTuple of ty list
   | TOption of ty
@@ -25,8 +27,8 @@ type op =
   | And
   | Or
   | Not
-  | UAdd
-  | USub
+  | UAdd of bitwidth
+  | USub of bitwidth
   | UEq
   | ULess
   | ULeq
@@ -41,12 +43,13 @@ type pattern =
   | PWild
   | PVar of var
   | PBool of bool
-  | PUInt32 of UInt32.t
+  | PInt of Integer.t
   | PTuple of pattern list
   | POption of pattern option
 
 type v = private
   | VBool of bool
+  | VInteger of Integer.t
   | VUInt32 of UInt32.t
   | VMap of mtbdd
   | VTuple of value list
@@ -102,7 +105,7 @@ type declarations = declaration list
 
 val vbool : bool -> value
 
-val vint : UInt32.t -> value
+val vint : Integer.t -> value
 
 val vmap : mtbdd -> value
 

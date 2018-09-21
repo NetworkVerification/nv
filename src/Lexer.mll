@@ -67,7 +67,8 @@ rule token = parse
   | ","               { COMMA (position lexbuf) }
   | "+" width as s    { PLUS (position lexbuf, Z.of_string @@ Str.lchop ~n:2 s) }
   | "+"               { PLUS (position lexbuf, Z.of_int 32) }
-  | "-"               { SUB (position lexbuf) }
+  | "-" width as s    { SUB (position lexbuf, Z.of_string @@ Str.lchop ~n:2 s) }
+  | "-"               { SUB (position lexbuf, Z.of_int 32) }
   | "<="              { LEQ (position lexbuf) }
   | ">="              { GEQ (position lexbuf) }
   | "="               { EQ (position lexbuf) }
