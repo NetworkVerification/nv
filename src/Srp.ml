@@ -57,8 +57,8 @@ type info =
   ; mutable syms: value StringMap.t }
 
 exception Require_false
-
-let declarations_to_state ds ~throw_requires =
+        
+let declarations_to_srp ds ~throw_requires =
   let info =
     { env= Interp.empty_env
     ; m= None
@@ -133,7 +133,7 @@ let declarations_to_state ds ~throw_requires =
           if throw_requires then raise Require_false
           else
             Console.warning
-              "requires condition not satisified by inital state" )
+              "requires condition not satisified by initial state" )
     | DATy _ -> ()
   in
   List.iter process_declaration ds ;
@@ -151,14 +151,18 @@ let declarations_to_state ds ~throw_requires =
         ; merge= mf
         ; assertion= a }
       in
-      let state = create_state n cl in
-      (srp, state, info.syms)
+      (srp, cl, info.syms)
   | {m= None} -> Console.error "missing merge function"
   | {t= None} -> Console.error "missing trans function"
   | {ns= None} -> Console.error "missing nodes declaration"
   | {es= None} -> Console.error "missing edges declaration"
   | {init= None} -> Console.error "missing init declaration"
 
+let declarations_to_state ds ~throw_requires =
+  let srp, init, syms = declarations_to_srp ds ~throw_requires in
+  let state = create_state (Graph.num_vertices srp.graph) init in
+  (srp, state, syms)
+                  
 let solution_to_string s =
   Graph.vertex_map_to_string Printing.value_to_string s
 

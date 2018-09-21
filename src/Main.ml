@@ -100,6 +100,15 @@ let run_simulator cfg info decls =
   with Srp.Require_false ->
     Console.error "required conditions not satisfied"
 
+let compress info decls =
+  let decls = Inline.inline_declarations info decls in
+  let srp, _, _ = Srp.declarations_to_srp decls ~throw_requires:false in
+  let edge_to_val e = vtuple [vint (fst e); vint (snd e)] in
+  List.iter (fun e -> let pe = interp_partial (apply_closure srp.trans [edge_to_val e]) in
+                      Printf.printf "%s\n" (exp_to_string pe)) ([ List.hd (Graph.edges srp.graph)]);
+  List.iter (fun _ -> let pe = srp.trans in
+                      Printf.printf "%s\n" (closure_to_string pe)) ([ List.hd (Graph.edges srp.graph)])
+       
 let main =
   let cfg, rest = argparse default "nv" Sys.argv in
   Cmdline.set_cfg cfg ;
@@ -109,6 +118,7 @@ let main =
   let decls = Typing.infer_declarations info ds in
   Typing.check_annot_decls decls ;
   Wellformed.check info decls ;
+  if cfg.compress then compress info decls ;
   if cfg.smt then run_smt cfg info decls ;
   if cfg.random_test then run_test cfg info decls ;
   if cfg.simulate then run_simulator cfg info decls

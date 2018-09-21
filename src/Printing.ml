@@ -197,20 +197,20 @@ and exp_to_string_p prec e =
     | EIf (e1, e2, e3) ->
         "if "
         ^ exp_to_string_p max_prec e1
-        ^ " then "
+        ^ " then \n"
         ^ exp_to_string_p max_prec e2
-        ^ " else " ^ exp_to_string_p prec e3
+        ^ " else \n" ^ exp_to_string_p prec e3
     | ELet (x, e1, e2) ->
         "let " ^ Var.to_string x ^ "="
         ^ exp_to_string_p max_prec e1
-        ^ " in " ^ exp_to_string_p prec e2
+        ^ " in \n" ^ exp_to_string_p prec e2
     | ETuple es ->
         "(" ^ comma_sep (exp_to_string_p max_prec) es ^ ")"
     | ESome e -> "Some(" ^ exp_to_string_p prec e ^ ")"
     | EMatch (e1, bs) ->
         "(match "
         ^ exp_to_string_p max_prec e1
-        ^ " with "
+        ^ " with \n"
         ^ branches_to_string prec bs
         ^ ")"
     | ETy (e, t) -> exp_to_string_p prec e ^ ty_to_string t
@@ -223,7 +223,7 @@ and branch_to_string prec (p, e) =
 and branches_to_string prec bs =
   match bs with
   | [] -> ""
-  | b :: bs -> branch_to_string prec b ^ branches_to_string prec bs
+  | b :: bs -> branch_to_string prec b ^ "\n" ^ branches_to_string prec bs
 
 and op_args_to_string prec p op es =
   if is_keyword_op op then
