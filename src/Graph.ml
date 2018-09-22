@@ -3,10 +3,14 @@ open Unsigned
 module Vertex = struct
   type t = UInt32.t
 
+  let printVertex i =
+    Printf.sprintf "%d" (UInt32.to_int i)
+
   let compare = UInt32.compare
 end
 
 module VertexMap = Map.Make (Vertex)
+module VertexSet = Set.Make(Vertex)
 
 module Edge = struct
   type t = Vertex.t * Vertex.t
@@ -16,6 +20,8 @@ module Edge = struct
     else UInt32.compare w1 w2
 end
 
+module EdgeSet = Set.Make(Edge)
+            
 (* OCaml 4.06 contains find_opt and update built in. upgrade compiler. *)
 let find_opt v m =
   try Some (VertexMap.find v m) with Not_found -> None
@@ -45,6 +51,10 @@ let create i = (VertexMap.empty, i)
 
 (* vertices and edges *)
 let num_vertices (m, i) = i
+
+let get_vertices (m, i) =
+  VertexMap.fold (fun k _ acc -> VertexSet.add k acc)
+                 m VertexSet.empty
 
 let edges (m, i) =
   let my_edges v neighbors =

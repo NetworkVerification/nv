@@ -1,10 +1,20 @@
 open Unsigned
 
-module Vertex : Map.OrderedType with type t = UInt32.t
+module Vertex :
+  sig
+    type t = Unsigned.UInt32.t
+
+    val printVertex : t -> string
+    val compare : t -> t -> int
+  end
 
 module Edge : Map.OrderedType with type t = UInt32.t * UInt32.t
 
 module VertexMap : Map.S with type key = Vertex.t
+
+module VertexSet : Set.S with type elt = Vertex.t
+
+module EdgeSet : Set.S with type elt = Edge.t
 
 (* VertexMap auxiliaries *)
 
@@ -15,7 +25,7 @@ val print_vertex_map : ('a -> string) -> 'a VertexMap.t -> unit
 (* graph *)
 
 type t
-
+  
 (* raise BadVertex if a vertex v does not belong to a graph's set of vertices, ie: 0..num_vertex-1 *)
 
 exception BadVertex of UInt32.t
@@ -32,6 +42,9 @@ val create : UInt32.t -> t
 
 val num_vertices : t -> UInt32.t
 
+(** Vertices in the adjacency graph *)
+val get_vertices : t -> VertexSet.t
+  
 (* edges in the graph *)
 
 val edges : t -> (UInt32.t * UInt32.t) list
