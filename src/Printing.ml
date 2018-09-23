@@ -1,11 +1,10 @@
 (* Printing utilities for abstract syntax *)
 
-open Unsigned
 open Syntax
 
 let is_keyword_op op =
   match op with
-  | And | Or | Not | UAdd | USub | UEq | ULess | ULeq | MGet -> false
+  | And | Or | Not | UAdd _ | USub _ | UEq | ULess _ | ULeq _ | MGet -> false
   | MCreate | MSet | MMap | MMerge | MMapFilter -> true
 
 (* set to true if you want to print universal quanifiers explicitly *)
@@ -18,11 +17,11 @@ let prec_op op =
   | And -> 7
   | Or -> 7
   | Not -> 6
-  | UAdd -> 4
-  | USub -> 4
+  | UAdd _ -> 4
+  | USub _ -> 4
   | UEq -> 5
-  | ULess -> 5
-  | ULeq -> 5
+  | ULess _ -> 5
+  | ULeq _ -> 5
   | MCreate -> 5
   | MGet -> 5
   | MSet -> 3
@@ -79,7 +78,7 @@ let rec ty_to_string_p prec t =
     | TVar {contents= tv} -> tyvar_to_string tv
     | QVar name -> "{" ^ Var.to_string name ^ "}"
     | TBool -> "bool"
-    | TInt i -> "int" ^ string_of_int i
+    | TInt i -> "int" ^ Z.to_string i
     | TArrow (t1, t2) ->
         ty_to_string_p p t1 ^ " -> " ^ ty_to_string_p prec t2
     | TTuple ts -> sep "*" (ty_to_string_p p) ts
@@ -103,11 +102,11 @@ let op_to_string op =
   | And -> "&&"
   | Or -> "||"
   | Not -> "!"
-  | UAdd -> "+"
-  | USub -> "-"
+  | UAdd n -> "+" ^ "u" ^ (Z.to_string n)
+  | USub n -> "-" ^ "u" ^ (Z.to_string n)
   | UEq -> "="
-  | ULess -> "<"
-  | ULeq -> "<="
+  | ULess n -> "<" ^ "u" ^ (Z.to_string n)
+  | ULeq n -> "<=" ^ "u" ^ (Z.to_string n)
   | MCreate -> "createMap"
   | MGet -> "at"
   | MSet -> "set"
@@ -121,7 +120,7 @@ let rec pattern_to_string pattern =
   | PVar x -> Var.to_string x
   | PBool true -> "true"
   | PBool false -> "false"
-  | PUInt32 i -> UInt32.to_string i
+  | PInt i -> Integer.to_string i
   | PTuple ps -> "(" ^ comma_sep pattern_to_string ps ^ ")"
   | POption None -> "None"
   | POption (Some p) -> "Some " ^ pattern_to_string p
@@ -174,7 +173,7 @@ and value_to_string_p prec v =
   match v.v with
   | VBool true -> "true"
   | VBool false -> "false"
-  | VUInt32 i -> UInt32.to_string i
+  | VInt i -> Integer.to_string i
   | VMap m -> map_to_string ":=" "," m
   | VTuple vs ->
       "(" ^ comma_sep (value_to_string_p max_prec) vs ^ ")"
@@ -267,12 +266,12 @@ let rec declaration_to_string d =
   | DTrans e -> "let trans = " ^ exp_to_string e
   | DAssert e -> "let assert = " ^ exp_to_string e
   | DRequire e -> "require " ^ exp_to_string e
-  | DNodes n -> "let nodes = " ^ UInt32.to_string n
+  | DNodes n -> "let nodes = " ^ Integer.to_string n
   | DEdges es ->
       "let edges = {"
       ^ List.fold_right
           (fun (u, v) s ->
-            s ^ UInt32.to_string u ^ "=" ^ UInt32.to_string v ^ ";"
+            s ^ Integer.to_string u ^ "=" ^ Integer.to_string v ^ ";"
             )
           es ""
       ^ "}"

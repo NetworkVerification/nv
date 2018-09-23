@@ -1,7 +1,6 @@
 (* Abstract syntax of SRP attribute processing expressions *)
 open Cudd
 open Hashcons
-open Unsigned
 
 (* indices into maps or map sizes must be static constants *)
 type index = int
@@ -1211,8 +1210,8 @@ module BddFunc = struct
     let rec aux i ty =
       match get_inner_type ty with
       | TBool -> (BBool (B.ithvar i), i + 1)
-      | TInt _ ->
-        (BInt (Array.init 32 (fun j -> B.ithvar (i + j))), i + 32)
+      | TInt width ->
+        (BInt (Array.init (Z.to_int width) (fun j -> B.ithvar (i + j))), i + (Z.to_int width))
       | TTuple ts ->
         let bs, idx =
           List.fold_left
@@ -1392,14 +1391,18 @@ module BddFunc = struct
     | PVar v, _ -> (Env.update env v bddf, Bdd.dtrue B.mgr)
     | PBool true, BBool bdd -> (env, bdd)
     | PBool false, BBool bdd -> (env, Bdd.dnot bdd)
-    | PUInt32 i, BInt bi ->
-      let cond = ref (Bdd.dtrue B.mgr) in
-      for j = 0 to 31 do
-        let b = B.get_bit i j in
-        let bdd = if b then bi.(j) else Bdd.dnot bi.(j) in
-        cond := Bdd.dand !cond bdd
-      done ;
-      (env, !cond)
+    | PInt i, BInt bi ->
+      (* TODO: I'm pretty sure this works, but not entirely. *)
+      if (Z.to_int @@ Integer.size i) <> Array.length bi then
+        (env, Bdd.dfalse B.mgr)
+      else
+        let cond = ref (Bdd.dtrue B.mgr) in
+        for j = 0 to (Z.to_int @@ Integer.size i) - 1 do
+          let b = B.get_bit i j in
+          let bdd = if b then bi.(j) else Bdd.dnot bi.(j) in
+          cond := Bdd.dand !cond bdd
+        done ;
+        (env, !cond)
     | PTuple ps, BTuple bs ->
       let zip = List.combine ps bs in
       List.fold_left

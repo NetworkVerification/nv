@@ -1,6 +1,5 @@
 %{
   open Syntax
-  (* open Unsigned *)
 
   let exp e span : exp = aexp (e, None, span)
 
@@ -63,7 +62,7 @@
 %}
 
 %token <Span.t * Var.t> ID
-%token <Span.t * Z.t> NUM
+%token <Span.t * Integer.t> NUM
 %token <Span.t> AND
 %token <Span.t> OR
 %token <Span.t> NOT
@@ -140,7 +139,7 @@
 ty:
    | ty ARROW ty                        { TArrow ($1,$3) }
    | TBOOL                              { TBool }
-   | TINT                               { Syntax.TInt $1 }
+   | TINT                               { Syntax.TInt (snd $1) }
    | LPAREN tys RPAREN                  { if List.length $2 = 1 then List.hd $2 else TTuple $2 }
    | TOPTION LBRACKET ty RBRACKET       { TOption $3 }
    | TDICT LBRACKET ty COMMA ty RBRACKET{ TMap ($3,$5) }
@@ -210,13 +209,13 @@ expr:
     | NOT expr                          { exp (eop Not [$2]) (Span.extend $1 $2.espan) }
     | expr AND expr                     { exp (eop And [$1;$3]) (Span.extend $1.espan $3.espan) }
     | expr OR expr                      { exp (eop Or [$1;$3]) (Span.extend $1.espan $3.espan) }
-    | expr PLUS expr                    { exp (eop (UAdd snd $2) [$1;$3]) (Span.extend $1.espan $3.espan) }
-    | expr SUB expr                     { exp (eop (USub snd $2) [$1;$3]) (Span.extend $1.espan $3.espan) }
+    | expr PLUS expr                    { exp (eop (UAdd (snd $2)) [$1;$3]) (Span.extend $1.espan $3.espan) }
+    | expr SUB expr                     { exp (eop (USub (snd $2)) [$1;$3]) (Span.extend $1.espan $3.espan) }
     | expr EQ expr                      { exp (eop UEq [$1;$3]) (Span.extend $1.espan $3.espan) }
-    | expr LESS expr                    { exp (eop (ULess snd $2) [$1;$3]) (Span.extend $1.espan $3.espan) }
-    | expr GREATER expr                 { exp (eop (ULess snd $2) [$3;$1]) (Span.extend $1.espan $3.espan) }
-    | expr LEQ expr                     { exp (eop (ULeq snd $2) [$1;$3]) (Span.extend $1.espan $3.espan) }
-    | expr GEQ expr                     { exp (eop (ULeq snd $2) [$3;$1]) (Span.extend $1.espan $3.espan) }
+    | expr LESS expr                    { exp (eop (ULess (snd $2)) [$1;$3]) (Span.extend $1.espan $3.espan) }
+    | expr GREATER expr                 { exp (eop (ULess (snd $2)) [$3;$1]) (Span.extend $1.espan $3.espan) }
+    | expr LEQ expr                     { exp (eop (ULeq (snd $2)) [$1;$3]) (Span.extend $1.espan $3.espan) }
+    | expr GEQ expr                     { exp (eop (ULeq (snd $2)) [$3;$1]) (Span.extend $1.espan $3.espan) }
     | LPAREN expr COLON ty RPAREN       { exp (ety $2 $4) (Span.extend $1 $5) }
     | expr LBRACKET expr RBRACKET               { exp (eop MGet [$1;$3]) (Span.extend $1.espan $4) }
     | expr LBRACKET expr COLON EQ expr RBRACKET { exp (eop MSet [$1;$3;$6]) (Span.extend $1.espan $7) }

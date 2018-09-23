@@ -1,5 +1,4 @@
 open Cudd
-open Unsigned
 
 type index = int
 
