@@ -52,9 +52,18 @@ let create i = (VertexMap.empty, i)
 (* vertices and edges *)
 let num_vertices (m, i) = i
 
+(* let get_vertices (m, i) = *)
+(*   VertexMap.fold (fun k _ acc -> VertexSet.add k acc) *)
+(*                  m VertexSet.empty *)
+
+(* get_vertices now returns all the vertices in the graph, not just
+   the ones that have an outgoing edge.*)
 let get_vertices (m, i) =
-  VertexMap.fold (fun k _ acc -> VertexSet.add k acc)
-                 m VertexSet.empty
+  let rec loop j =
+    if i = j then VertexSet.empty
+    else VertexSet.add j (loop j)
+  in
+  loop UInt32.zero
 
 let edges (m, i) =
   let my_edges v neighbors =

@@ -103,16 +103,11 @@ let run_simulator cfg info decls =
 let compress info decls =
   let decls = Inline.inline_declarations info decls in
   let srp, _, _ = Srp.declarations_to_srp decls ~throw_requires:false in
-  let f = Abstraction.findAbstraction srp.graph Unsigned.UInt32.zero in
+  let f = Abstraction.findAbstraction srp Unsigned.UInt32.zero in
   (* let ag = Abstraction.buildAbstractGraph srp.graph f in *)
   let groups = AbstractionMap.printAbstractGroups f "\n" in
   Console.show_message groups Console.T.Blue "Abstract groups";
-  let edge_to_val e = vtuple [vint (fst e); vint (snd e)] in
   ()
-  (* List.iter (fun e -> let pe = interp_partial (apply_closure srp.trans [edge_to_val e]) in *)
-  (*                     Printf.printf "%s\n" (exp_to_string pe)) ([ List.hd (Graph.edges srp.graph)]); *)
-  (* List.iter (fun _ -> let pe = srp.trans in *)
-  (*                     Printf.printf "%s\n" (closure_to_string pe)) ([ List.hd (Graph.edges srp.graph)]) *)
        
 let main =
   let cfg, rest = argparse default "nv" Sys.argv in

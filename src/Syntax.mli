@@ -196,6 +196,8 @@ val equal_values : cmp_meta:bool -> value -> value -> bool
 
 val hash_value : hash_meta:bool -> value -> int
 
+val hash_exp : hash_meta:bool -> exp -> int
+
 val compare_values : value -> value -> int
 
 val compare_exps : exp -> exp -> int

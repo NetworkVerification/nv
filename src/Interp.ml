@@ -377,3 +377,6 @@ and interp_op_partial env ty op es =
 let interp_partial e = interp_exp_partial empty_env e
 
 let interp_partial = MemoizeExp.memoize ~size:1000 interp_partial
+
+let interp_partial_closure cl (args: value list) =
+  interp_partial (Syntax.apply_closure cl args)

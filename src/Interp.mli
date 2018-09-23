@@ -15,4 +15,5 @@ val interp : exp -> value
 val interp_closure : closure -> value list -> value
 
 val interp_partial : exp -> exp
-    
+
+val interp_partial_closure : closure -> value list -> exp
