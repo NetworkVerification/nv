@@ -95,8 +95,8 @@ type declaration =
   | DInit of exp
   | DAssert of exp
   | DRequire of exp
-  | DNodes of UInt32.t
-  | DEdges of (UInt32.t * UInt32.t) list
+  | DNodes of Integer.t
+  | DEdges of (Integer.t * Integer.t) list
 
 type declarations = declaration list
 
@@ -188,9 +188,9 @@ val get_init : declarations -> exp option
 
 val get_assert : declarations -> exp option
 
-val get_edges : declarations -> (UInt32.t * UInt32.t) list option
+val get_edges : declarations -> (Integer.t * Integer.t) list option
 
-val get_nodes : declarations -> UInt32.t option
+val get_nodes : declarations -> Integer.t option
 
 val get_symbolics : declarations -> (var * ty_or_exp) list
 

@@ -50,7 +50,7 @@ type pattern =
   | PWild
   | PVar of var
   | PBool of bool
-  | PUInt32 of UInt32.t
+  | PInt of Integer.t
   | PTuple of pattern list
   | POption of pattern option
 
@@ -101,12 +101,13 @@ type declaration =
   | DInit of exp
   | DAssert of exp
   | DRequire of exp
-  | DNodes of UInt32.t
-  | DEdges of (UInt32.t * UInt32.t) list
+  | DNodes of Integer.t
+  | DEdges of (Integer.t * Integer.t) list
 
 type declarations = declaration list
 
 (* structural printing *)
+(* TODO: This should probably be its own file *)
 
 let show_span (span: Span.t) =
   Printf.sprintf "(%d,%d)" span.start span.finish
@@ -183,7 +184,7 @@ and show_pattern p =
   | PWild -> "PWild"
   | PVar x -> Printf.sprintf "PVar %s" (Var.to_string x)
   | PBool b -> Printf.sprintf "PBool %b" b
-  | PUInt32 _ -> "PUInt32"
+  | PInt n -> Printf.sprintf "PInt %s" (Integer.to_string n)
   | PTuple ps ->
     Printf.sprintf "PTuple %s" (show_list show_pattern ps)
   | POption None -> "POption None"
@@ -347,7 +348,7 @@ and equal_patterns p1 p2 =
   | PWild, PWild -> true
   | PVar x1, PVar x2 -> Var.equals x1 x2
   | PBool b1, PBool b2 -> b1 = b2
-  | PUInt32 i, PUInt32 j -> UInt32.compare i j = 0
+  | PInt i, PInt j -> Integer.equal i j
   | PTuple ps1, PTuple ps2 -> equal_patterns_list ps1 ps2
   | POption None, POption None -> true
   | POption (Some p1), POption (Some p2) -> equal_patterns p1 p2
@@ -500,30 +501,29 @@ and hash_pattern p =
   | PWild -> 1
   | PVar x -> (19 * hash_var x) + 2
   | PBool b -> (19 * if b then 1 else 0) + 3
-  | PUInt32 i -> (19 * UInt32.to_int i) + 4
+  | PInt i -> (19 * Integer.to_int i) + 4
   | PTuple ps -> (19 * hash_patterns ps) + 5
   | POption None -> 6
   | POption (Some p) -> (19 * hash_pattern p) + 7
 
 and hash_patterns ps =
   List.fold_left (fun acc p -> acc + hash_pattern p) 0 ps
-(* TODO/FIXME: Not sure how best to hash the value *)
 and hash_op op =
   match op with
   | And -> 1
   | Or -> 2
   | Not -> 3
-  | UAdd _ -> 4
-  | USub _ -> 5
-  | UEq -> 6
-  | ULess _ -> 7
-  | ULeq _ -> 8
-  | MCreate -> 9
-  | MGet -> 10
-  | MSet -> 11
-  | MMap -> 12
-  | MMapFilter -> 13
-  | MMerge -> 14
+  | UEq -> 4
+  | MCreate -> 5
+  | MGet -> 6
+  | MSet -> 7
+  | MMap -> 8
+  | MMapFilter -> 9
+  | MMerge -> 10
+  | UAdd n -> 11  + (Z.to_int n)
+  | USub n -> 11  + (Z.to_int n) + 64
+  | ULess n -> 11 + (Z.to_int n) + 64 * 2
+  | ULeq n -> 11  + (Z.to_int n) + 64 * 3
 
 (* hashconsing information/tables *)
 
@@ -761,7 +761,7 @@ let rec free (seen: Var.t PSet.t) (e: exp) : Var.t PSet.t =
 
 and pattern_vars p =
   match p with
-  | PWild | PBool _ | PUInt32 _ | POption None ->
+  | PWild | PBool _ | PInt _ | POption None ->
     PSet.create Var.compare
   | PVar v -> PSet.singleton ~cmp:Var.compare v
   | PTuple ps ->
@@ -854,15 +854,15 @@ module BddUtils = struct
   let tbl_bool =
     Mtbdd.make_table ~hash:(fun b -> if b then 1 else 0) ~equal:( = )
 
-  let nth_bit x i = x land (1 lsl i) <> 0
-
-  let get_bit (x: UInt32.t) (i: int) : bool =
-    let x = UInt32.to_int x in
-    nth_bit x i
+  let get_bit (n: Integer.t) (i: int) : bool =
+    let z = Integer.value n in
+    let marker = (Z.shift_left Z.one i) in
+    Z.logand z marker <> Z.zero
 
   let mk_int i idx =
     let acc = ref (Bdd.dtrue mgr) in
-    for j = 0 to 31 do
+    let sz = (Z.to_int @@ Integer.size i) in
+    for j = 0 to sz do
       let var = ithvar (idx + j) in
       let bit = get_bit i j in
       let bdd = if bit then Bdd.dtrue mgr else Bdd.dfalse mgr in
@@ -897,7 +897,7 @@ module BddMap = struct
     let v =
       match ty with
       | TBool -> VBool false
-      | TInt width -> VInt (Integer.of_size_and_val 0 (Z.to_int width))
+      | TInt width -> VInt (Integer.create ~value:0 ~size:(Z.to_int width))
       | TTuple ts -> VTuple (List.map default_value ts)
       | TOption ty -> VOption None
       | TMap (ty1, ty2) ->
@@ -916,8 +916,10 @@ module BddMap = struct
       | VInt i ->
         if (Z.to_int @@ Integer.size i) = 32 then
           (* What we did when we only had 32 bit integers *)
-          (B.mk_int (Unsigned.UInt32.of_int @@ Z.to_int @@ Integer.size i) idx, idx + 32)
+          (B.mk_int i idx, idx + 32)
         else
+          (* TODO: Pretty sure this is correct, but needs to be verified *)
+          (* (B.mk_int i idx, idx + (Z.to_int @@ Integer.size i)) *)
           failwith "No idea how to do this yet" (*TODO,FIXME*)
       | VTuple vs ->
         let base = Bdd.dtrue B.mgr in
@@ -949,15 +951,15 @@ module BddMap = struct
         match get_inner_type ty with
         | TBool ->
           (VBool (B.tbool_to_bool vars.(idx)) |> value, idx + 1)
-        | TInt _ ->
-          let acc = ref UInt32.zero in
-          for i = 0 to 31 do
+        | TInt width ->
+          let acc = ref (Integer.create ~value:0 ~size:(Z.to_int width)) in
+          for i = 0 to (Z.to_int width)-1 do
             let bit = B.tbool_to_bool vars.(idx + i) in
             if bit then
-              let add = UInt32.shift_left UInt32.one i in
-              acc := UInt32.add !acc add
+              let add = Integer.shift_left (Integer.create ~value:1 ~size:(Z.to_int width)) i in
+              acc := Integer.add !acc add
           done ;
-          (value (VUInt32 !acc), idx + 32)
+          (value (VInt !acc), idx + 32)
         | TTuple ts ->
           let vs, i =
             List.fold_left
@@ -1273,8 +1275,9 @@ module BddFunc = struct
 
   let add (x: t) (y: t) : t =
     let aux xs ys =
+      assert ((Array.length xs) = (Array.length ys));
       let var3 = ref (Bdd.dfalse B.mgr) in
-      let var4 = Array.make 32 (Bdd.dfalse B.mgr) in
+      let var4 = Array.make (Array.length xs) (Bdd.dfalse B.mgr) in
       for var5 = 0 to Array.length xs - 1 do
         var4.(var5) <- Bdd.xor xs.(var5) ys.(var5) ;
         var4.(var5) <- Bdd.xor var4.(var5) !var3 ;
@@ -1290,29 +1293,31 @@ module BddFunc = struct
     | BInt xs, BInt ys -> BInt (aux xs ys)
     | _ -> failwith "internal error (add)"
 
+  (* Outdated. Compare with add above if uncommenting *)
   (* let sub (x: bdd_value) (y: bdd_value) : bdd_value =
-        let aux xs ys =
-          let var3 = ref (Bdd.dfalse mgr) in
-          let var4 = Array.make 32 (Bdd.dfalse mgr) in
-          for var5 = 0 to Array.length xs - 1 do
-            var4.(var5) <- Bdd.xor xs.(var5) ys.(var5) ;
-            var4.(var5) <- Bdd.xor var4.(var5) !var3 ;
-            let var6 = Bdd.dor xs.(var5) !var3 in
-            let var7 = Bdd.dand (Bdd.dnot xs.(var5)) var6 in
-            let var6 = Bdd.dand xs.(var5) ys.(var5) in
-            let var6 = Bdd.dand var6 !var3 in
-            let var6 = Bdd.dor var6 var7 in
-            var3 := var6
-          done ;
-          var4
-        in
-        match (x, y) with
-        | BInt xs, BInt ys -> BInt (aux xs ys)
-        | _ -> failwith "internal error (sub)" *)
+     let aux xs ys =
+      let var3 = ref (Bdd.dfalse mgr) in
+      let var4 = Array.make 32 (Bdd.dfalse mgr) in
+      for var5 = 0 to Array.length xs - 1 do
+        var4.(var5) <- Bdd.xor xs.(var5) ys.(var5) ;
+        var4.(var5) <- Bdd.xor var4.(var5) !var3 ;
+        let var6 = Bdd.dor xs.(var5) !var3 in
+        let var7 = Bdd.dand (Bdd.dnot xs.(var5)) var6 in
+        let var6 = Bdd.dand xs.(var5) ys.(var5) in
+        let var6 = Bdd.dand var6 !var3 in
+        let var6 = Bdd.dor var6 var7 in
+        var3 := var6
+      done ;
+      var4
+     in
+     match (x, y) with
+     | BInt xs, BInt ys -> BInt (aux xs ys)
+     | _ -> failwith "internal error (sub)" *)
 
   let leq (x: t) (y: t) : t =
     let less x y = Bdd.dand (Bdd.dnot x) y in
     let aux xs ys =
+      assert ((Array.length xs) = (Array.length ys));
       let acc = ref (Bdd.dtrue B.mgr) in
       for i = 0 to Array.length xs - 1 do
         let x = xs.(i) in
@@ -1346,10 +1351,10 @@ module BddFunc = struct
         | Or, [e1; e2] -> eval_bool_op2 env Bdd.dor e1 e2
         | Not, [e1] -> eval_bool_op1 env Bdd.dnot e1
         | UEq, [e1; e2] -> eq (eval env e1) (eval env e2)
-        | UAdd, [e1; e2] -> add (eval env e1) (eval env e2)
-        | ULess, [e1; e2] -> lt (eval env e1) (eval env e2)
-        | ULeq, [e1; e2] -> leq (eval env e1) (eval env e2)
-        | USub, [e1; e2] -> failwith "subtraction not implemented"
+        | UAdd _, [e1; e2] -> add (eval env e1) (eval env e2)
+        | ULess _, [e1; e2] -> lt (eval env e1) (eval env e2)
+        | ULeq _, [e1; e2] -> leq (eval env e1) (eval env e2)
+        | USub _, [e1; e2] -> failwith "subtraction not implemented"
         | _ -> failwith "internal error (eval)" )
     | EIf (e1, e2, e3) -> (
         let v1 = eval env e1 in
@@ -1425,9 +1430,9 @@ module BddFunc = struct
   and eval_value env (v: value) =
     match v.v with
     | VBool b -> BBool (bdd_of_bool b)
-    | VUInt32 i ->
+    | VInt i ->
       let bs =
-        Array.init 32 (fun j ->
+        Array.init (Z.to_int @@ Integer.size i) (fun j ->
             let bit = B.get_bit i j in
             bdd_of_bool bit )
       in

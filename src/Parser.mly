@@ -60,9 +60,6 @@
     let e = exp (eop MCreate [e]) span in
     updates e exprs
 
-  let extract_value (n : Integer.t) : Unsigned.UInt32.t =
-    Unsigned.UInt32.of_int @@ Z.to_int @@ Integer.value n
-
 %}
 
 %token <Span.t * Var.t> ID
@@ -179,7 +176,7 @@ component:
     | REQUIRE expr                      { DRequire $2 }
     | LET EDGES EQ LBRACE RBRACE        { DEdges [] }
     | LET EDGES EQ LBRACE edges RBRACE  { DEdges $5 }
-    | LET NODES EQ NUM                  { DNodes (extract_value @@ snd $4) }
+    | LET NODES EQ NUM                  { DNodes (snd $4) }
     | TYPE ATTRIBUTE EQ ty              { DATy $4 }
 ;
 
@@ -296,9 +293,8 @@ exprsspace:
 ;
 
 edge:
-    | NUM SUB NUM SEMI                  { [(extract_value @@ snd $1, extract_value @@ snd $3)] }
-    | NUM EQ NUM SEMI                   { [(extract_value @@ snd $1, extract_value @@ snd $3);
-                                           (extract_value @@ snd $3, extract_value @@ snd $1)] }
+    | NUM SUB NUM SEMI                  { [(snd $1, snd $3)] }
+    | NUM EQ NUM SEMI                   { [(snd $1, snd $3); (snd $3, snd $1)] }
 ;
 
 edges:

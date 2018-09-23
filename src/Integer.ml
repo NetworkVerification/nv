@@ -3,7 +3,7 @@ type t = {size: Z.t; value: Z.t}
 let of_string (s : string) : t =
   let lst = List.map Z.of_string @@ Str.split (Str.regexp "u") s in
   match lst with
-  | [] -> failwith "This is literally impossible"
+  | [] -> failwith "Integer.of_string: This is literally impossible"
   | value::[] -> {size = Z.of_int 32; value}
   | value::size::[] -> {size; value}
   | _ -> failwith "Integer.of_string: Too many values"
@@ -12,7 +12,7 @@ let of_string (s : string) : t =
 let of_int (n : int) : t =
   {size = Z.of_int 32; value = Z.of_int n}
 
-let of_size_and_val (value : int) (size : int) : t =
+let create ~(value : int) ~(size : int) : t =
   {size = Z.of_int size; value = Z.of_int value}
 
 let check x y =
@@ -39,10 +39,9 @@ let sub x y =
   let value = modulo (Z.sub x.value y.value) x.size in
   {size= x.size; value}
 
-let create sz str =
-  let size = Z.of_int sz in
-  let value = Z.of_string str in
-  {size; value}
+let shift_left (x : t) (n : int) =
+  let value = modulo (Z.shift_left x.value n) x.size in
+  {size= x.size; value}
 
 let lt x y = check x y ; Z.lt x.value y.value
 
