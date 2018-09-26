@@ -58,19 +58,22 @@ let getGroupRepresentative (f: abstractionMap) (u: AbstractNode.t) : Vertex.t =
 let getGroupId (f: abstractionMap) (u: AbstractNode.t) : abstrId =
   getId f (getGroupRepresentative f u)
 
+(* Removes the node u from it's current abstract group and assigns it to the id newId *)
 let partitionNode (f: abstractionMap) (newId: abstrId) (u: Vertex.t) : unit =
   let _ =  match getIdPartial f u with
     | Some idx ->
        let us = getGroupById f idx in
        let newUs = AbstractNode.remove u us in
        if AbstractNode.is_empty newUs then
-           f.absGroups <- GroupMap.remove idx (f.absGroups)
+         f.absGroups <- GroupMap.remove idx (f.absGroups)
        else
          f.absGroups <- GroupMap.add idx newUs (f.absGroups)
     | None -> ()
   in
   f.groupId <- VertexMap.add u newId (f.groupId)
-    
+
+(* Removes the nodes us from their current abstract group and adds
+   them to a new abstract group designated by identifier i*)
 let partitionNodes (f: abstractionMap) (i: abstrId) (us: AbstractNode.t) : unit =
   AbstractNode.iter (fun u -> partitionNode f i u) us;
   f.absGroups <- GroupMap.add i us (f.absGroups)
