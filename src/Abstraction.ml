@@ -93,8 +93,13 @@ let partialEvalTrans (network : srp) : (Edge.t, int) Hashtbl.t =
   let tbl = Hashtbl.create (List.length es) in
   List.iter (fun e ->
       (* remove unused variables from closures before hashing transfer functions *)
+      Printf.printf "%s\n"
+                    (Syntax.show_exp ~show_meta:false
+                                        (exp_of_value (vclosure (network.trans))));
       let ptrans = free_dead_vars
                      (Interp.interp_partial_closure network.trans [edge_to_val e]) in
+      Printf.printf "edge (%d,%d): %s\n" (UInt32.to_int (fst e)) (UInt32.to_int (snd e))
+      (Syntax.show_exp ~show_meta:false ptrans);
       Hashtbl.add tbl e (Syntax.hash_exp ~hash_meta:false ptrans)) es;
   tbl
 
