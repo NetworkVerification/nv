@@ -134,45 +134,48 @@ let rec show_ty ty =
   | TMap (ty1, ty2) ->
       Printf.sprintf "TMap (%s,%s)" (show_ty ty1) (show_ty ty2)
 
-let rec show_exp e =
-  Printf.sprintf "{e=%s; ety=%s; espan=%s; etag=%d; ehkey=%d}"
-    (show_e e.e)
-    (show_opt show_ty e.ety)
-    (show_span e.espan) e.etag e.ehkey
+let rec show_exp ~show_meta e =
+  if show_meta then
+    Printf.sprintf "{e=%s; ety=%s; espan=%s; etag=%d; ehkey=%d}"
+                   (show_e ~show_meta e.e)
+                   (show_opt show_ty e.ety)
+                   (show_span e.espan) e.etag e.ehkey
+  else
+    Printf.sprintf "e=%s" (show_e ~show_meta e.e)
 
-and show_e e =
+and show_e ~show_meta e =
   match e with
   | EVar x -> Printf.sprintf "EVar %s" (Var.to_string x)
-  | EVal v -> Printf.sprintf "EVal (%s)" (show_value v)
+  | EVal v -> Printf.sprintf "EVal (%s)" (show_value ~show_meta v)
   | EOp (op, es) ->
       Printf.sprintf "EOp (%s,%s)" (show_op op)
-        (show_list show_exp es)
-  | EFun f -> Printf.sprintf "EFun %s" (show_func f)
+        (show_list (show_exp ~show_meta) es)
+  | EFun f -> Printf.sprintf "EFun %s" (show_func ~show_meta f)
   | EApp (e1, e2) ->
-      Printf.sprintf "EApp (%s,%s)" (show_exp e1) (show_exp e2)
+      Printf.sprintf "EApp (%s,%s)" (show_exp ~show_meta e1) (show_exp ~show_meta e2)
   | EIf (e1, e2, e3) ->
-      Printf.sprintf "EIf (%s,%s,%s)" (show_exp e1) (show_exp e2)
-        (show_exp e3)
+      Printf.sprintf "EIf (%s,%s,%s)" (show_exp ~show_meta e1) (show_exp ~show_meta e2)
+        (show_exp ~show_meta e3)
   | ELet (x, e1, e2) ->
       Printf.sprintf "ELet (%s,%s,%s)" (Var.to_string x)
-        (show_exp e1) (show_exp e2)
-  | ETuple es -> Printf.sprintf "ETuple %s" (show_list show_exp es)
-  | ESome e -> Printf.sprintf "ESome (%s)" (show_exp e)
+        (show_exp ~show_meta e1) (show_exp ~show_meta e2)
+  | ETuple es -> Printf.sprintf "ETuple %s" (show_list (show_exp ~show_meta) es)
+  | ESome e -> Printf.sprintf "ESome (%s)" (show_exp ~show_meta e)
   | EMatch (e, bs) ->
-      Printf.sprintf "EMatch (%s,%s)" (show_exp e)
-        (show_list show_branch bs)
+      Printf.sprintf "EMatch (%s,%s)" (show_exp ~show_meta e)
+        (show_list (show_branch ~show_meta) bs)
   | ETy (e, ty) ->
-      Printf.sprintf "ETy (%s,%s)" (show_exp e) (show_ty ty)
+      Printf.sprintf "ETy (%s,%s)" (show_exp ~show_meta e) (show_ty ty)
 
-and show_func f =
+and show_func ~show_meta f =
   Printf.sprintf "{arg=%s; argty=%s; resty=%s; body=%s}"
     (Var.to_string f.arg)
     (show_opt show_ty f.argty)
     (show_opt show_ty f.resty)
-    (show_exp f.body)
+    (show_exp ~show_meta f.body)
 
-and show_branch (p, e) =
-  Printf.sprintf "(%s,%s)" (show_pattern p) (show_exp e)
+and show_branch ~show_meta (p, e) =
+  Printf.sprintf "(%s,%s)" (show_pattern p) (show_exp ~show_meta e)
 
 and show_pattern p =
   match p with
@@ -186,29 +189,33 @@ and show_pattern p =
   | POption (Some p) ->
       Printf.sprintf "POption (Some %s)" (show_pattern p)
 
-and show_value v =
-  Printf.sprintf "{e=%s; ety=%s; espan=%s; etag=%d; ehkey=%d}"
-    (show_v v.v)
-    (show_opt show_ty v.vty)
-    (show_span v.vspan) v.vtag v.vhkey
+and show_value ~show_meta v =
+  if show_meta then
+    Printf.sprintf "{e=%s; ety=%s; espan=%s; etag=%d; ehkey=%d}"
+                   (show_v ~show_meta v.v)
+                   (show_opt show_ty v.vty)
+                   (show_span v.vspan) v.vtag v.vhkey
+  else
+    Printf.sprintf "{v=%s;}"
+                   (show_v ~show_meta v.v)
 
-and show_v v =
+and show_v ~show_meta v =
   match v with
   | VBool b -> Printf.sprintf "VBool %b" b
   | VUInt32 i -> Printf.sprintf "VInt %s" (UInt32.to_string i)
   | VMap m -> "VMap <opaque>"
-  | VTuple vs -> Printf.sprintf "VTuple %s" (show_list show_value vs)
+  | VTuple vs -> Printf.sprintf "VTuple %s" (show_list (show_value ~show_meta) vs)
   | VOption vo ->
-      Printf.sprintf "VOption (%s)" (show_opt show_value vo)
-  | VClosure c -> Printf.sprintf "VClosure %s" (show_closure c)
+      Printf.sprintf "VOption (%s)" (show_opt (show_value ~show_meta) vo)
+  | VClosure c -> Printf.sprintf "VClosure %s" (show_closure ~show_meta c)
 
-and show_closure (e, f) =
-  Printf.sprintf "{env=%s; func=%s}" (show_env e) (show_func f)
+and show_closure ~show_meta (e, f) =
+  Printf.sprintf "{env=%s; func=%s}" (show_env ~show_meta e) (show_func ~show_meta f)
 
-and show_env e =
+and show_env ~show_meta e =
   Printf.sprintf "{ty=%s; value=%s}"
     (Env.to_string show_ty e.ty)
-    (Env.to_string show_value e.value)
+    (Env.to_string (show_value ~show_meta) e.value)
 
 (* equality / hashing *)
 
@@ -764,6 +771,41 @@ and pattern_vars p =
         (PSet.create Var.compare)
         ps
   | POption (Some p) -> pattern_vars p
+
+let rec free_dead_vars (e : exp) =
+  match e.e with
+  | ETy (e, _) -> free_dead_vars e
+  | EVal v ->
+     (match v.v with
+     | VClosure (env, f) ->
+        let fv = free (PSet.empty) f.body in
+        vclosure ({env with value = Env.filter env.value (fun x _ -> PSet.mem x fv)},
+                  {f with body = free_dead_vars f.body})
+        |> exp_of_value
+        |> wrap e
+     | _ -> e)
+  | EVar _ | EFun _ -> e
+  | EOp (op, es) ->
+     eop op (List.map free_dead_vars es)
+  | EApp (e1, e2) ->
+     let e1 = free_dead_vars e1 in 
+     let e2 = free_dead_vars e2 in
+     eapp e1 e2
+  | EIf (e1, e2, e3) ->
+     let e1 = free_dead_vars e1 in 
+     let e2 = free_dead_vars e2 in
+     let e3 = free_dead_vars e3 in
+     eif e1 e2 e3
+  | ELet (x, e1, e2) ->
+     let e1 = free_dead_vars e1 in 
+     let e2 = free_dead_vars e2 in
+     elet x e1 e2
+  | ETuple es ->
+     etuple (List.map free_dead_vars es)
+  | ESome e -> esome (free_dead_vars e)
+  | EMatch (e1, branches) ->
+     let e1 = free_dead_vars e1 in 
+     ematch e1 (List.map (fun (ps, e) -> (ps, free_dead_vars e)) branches)
 
 (* Memoization *)
 

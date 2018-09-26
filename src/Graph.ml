@@ -61,7 +61,7 @@ let num_vertices (m, i) = i
 let get_vertices (m, i) =
   let rec loop j =
     if i = j then VertexSet.empty
-    else VertexSet.add j (loop j)
+    else VertexSet.add j (loop (UInt32.add j UInt32.one))
   in
   loop UInt32.zero
 

@@ -7,10 +7,11 @@ open Hashtbl
 open Syntax
 
 let debugAbstraction = ref true
-   
+
+(** Sets of Abstract Nodes *)
 module AbstractNodeSet : Set.S with type elt := AbstractNode.t = Set.Make(AbstractNode)
 
-(* Module packing together a set of nodes and a hash of a routing policy *)
+(** Module packing together a set of nodes and a hash of a routing policy *)
 module TransferNodes =
   struct
     (* trans hash, set of nodes*)
@@ -22,10 +23,10 @@ module TransferNodes =
         compare h1 h2
   end
 
-(* Sets of (trans_hash, {nodes}) *)
+(** Sets of (trans_hash, {nodes}) *)
 module TransferNodesSet : Set.S with type elt := TransferNodes.t = Set.Make(TransferNodes)
 
-(* Module packing together a hash of a merge policy and sets of TransferNodes*)
+(** Module packing together a hash of a merge policy and sets of TransferNodes*)
 module NodeGroups =
   struct
     (* merge_hash * {(trans_hash, {nodes})}*) 
@@ -39,7 +40,7 @@ module NodeGroups =
        
 module NodeGroupsMap : Map.S with type key := NodeGroups.t = Map.Make(NodeGroups)
 
-(* given a map from concrete vertices to NodeGroups, groupsKeysByValue
+(* Given a map from concrete vertices to NodeGroups, groupsKeysByValue
    will reverse the mapping creating a map from NodeGroups to set of
    concrete vertices, in effect computing sets of concrete vertices
    that map to the same NodeGroups.*)
@@ -91,7 +92,9 @@ let partialEvalTrans (network : srp) : (Edge.t, int) Hashtbl.t =
   let es = Graph.edges network.graph in
   let tbl = Hashtbl.create (List.length es) in
   List.iter (fun e ->
-      let ptrans = Interp.interp_partial_closure network.trans [edge_to_val e] in
+      (* remove unused variables from closures before hashing transfer functions *)
+      let ptrans = free_dead_vars
+                     (Interp.interp_partial_closure network.trans [edge_to_val e]) in
       Hashtbl.add tbl e (Syntax.hash_exp ~hash_meta:false ptrans)) es;
   tbl
 
@@ -100,7 +103,8 @@ let partialEvalMerge (network : srp) : (Vertex.t, int) Hashtbl.t =
   let ns = Graph.get_vertices network.graph in
   let tbl = Hashtbl.create (VertexSet.cardinal ns) in
   VertexSet.iter (fun v ->
-      let pmerge = Interp.interp_partial_closure network.merge [node_to_val v] in
+      let pmerge = free_dead_vars
+                     (Interp.interp_partial_closure network.merge [node_to_val v]) in
       Hashtbl.add tbl v (Syntax.hash_exp ~hash_meta:false pmerge)) ns;
   tbl
 

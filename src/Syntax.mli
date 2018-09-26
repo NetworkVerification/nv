@@ -206,9 +206,9 @@ val get_inner_type : ty -> ty
 
 val free : Var.t BatSet.PSet.t -> exp -> Var.t BatSet.PSet.t
 
-val show_exp : exp -> string
+val free_dead_vars : exp -> exp
 
-val show_e : e -> string
+val show_exp : show_meta:bool -> exp -> string
 
 module type MEMOIZER = sig
   type t
