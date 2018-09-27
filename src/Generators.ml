@@ -12,8 +12,8 @@ let rec random_value ~hints ~max_map_size ty =
   | _ ->
     match get_inner_type ty with
     | TBool -> vbool (Random.bool ())
-    | TInt _ ->
-        let x = UInt32.of_int64 (Random.int64 Int64.max_int) in
+    | TInt width ->
+      let x = Integer.create_64 ~value:(Random.int64 Int64.max_int) ~size:(Z.to_int width) in
         vint x
     | TTuple ts ->
         vtuple

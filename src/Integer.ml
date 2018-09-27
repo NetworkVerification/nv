@@ -1,25 +1,31 @@
 type t = {size: Z.t; value: Z.t}
 
+let modulo = Big_int_Z.mod_big_int
+
+let mod_by_size (x : t) : t =
+  {size = x.size; value = modulo x.value x.size}
+
 let of_string (s : string) : t =
   let lst = List.map Z.of_string @@ Str.split (Str.regexp "u") s in
   match lst with
   | [] -> failwith "Integer.of_string: This is literally impossible"
-  | value::[] -> {size = Z.of_int 32; value}
-  | value::size::[] -> {size; value}
+  | value::[] -> mod_by_size {size = Z.of_int 32; value}
+  | value::size::[] -> mod_by_size {size; value}
   | _ -> failwith "Integer.of_string: Too many values"
 ;;
 
 let of_int (n : int) : t =
-  {size = Z.of_int 32; value = Z.of_int n}
+  mod_by_size {size = Z.of_int 32; value = Z.of_int n}
 
 let create ~(value : int) ~(size : int) : t =
-  {size = Z.of_int size; value = Z.of_int value}
+  mod_by_size {size = Z.of_int size; value = Z.of_int value}
+
+let create_64 ~(value : Int64.t) ~(size : int) : t =
+  mod_by_size {size = Z.of_int size; value = Z.of_int64 value}
 
 let check x y =
   if not (Z.equal x.size y.size) then
     failwith "integer bit sizes did not match"
-
-let modulo = Big_int_Z.mod_big_int
 
 let size x = x.size
 
