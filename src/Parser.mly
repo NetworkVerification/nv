@@ -68,13 +68,13 @@
 %token <Span.t> NOT
 %token <Span.t> TRUE
 %token <Span.t> FALSE
-%token <Span.t * Z.t> PLUS
-%token <Span.t * Z.t> SUB
+%token <Span.t * int> PLUS
+%token <Span.t * int> SUB
 %token <Span.t> EQ
-%token <Span.t * Z.t> LESS
-%token <Span.t * Z.t> GREATER
-%token <Span.t * Z.t> LEQ
-%token <Span.t * Z.t> GEQ
+%token <Span.t * int> LESS
+%token <Span.t * int> GREATER
+%token <Span.t * int> LEQ
+%token <Span.t * int> GEQ
 %token <Span.t> LET
 %token <Span.t> IN
 %token <Span.t> IF
@@ -106,7 +106,7 @@
 %token <Span.t> TYPE
 %token <Span.t> COLON
 %token <Span.t> TBOOL
-%token <Span.t * Z.t> TINT
+%token <Span.t * int> TINT
 %token <Span.t> EDGES
 %token <Span.t> NODES
 %token <Span.t> SYMBOLIC

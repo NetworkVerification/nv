@@ -17,10 +17,10 @@ let create_name descr n =
   else Printf.sprintf "%s-%s" descr (Var.to_string n)
 
 let mk_int_u32 ctx i =
-  Expr.mk_numeral_string ctx (UInt32.to_string i)
+  Expr.mk_numeral_string ctx (Integer.to_string i)
     (Arithmetic.Integer.mk_sort ctx)
 
-let mk_int ctx i = mk_int_u32 ctx (UInt32.of_int i)
+let mk_int ctx i = mk_int_u32 ctx (Integer.of_int i)
 
 let mk_bool ctx b = Boolean.mk_val ctx b
 
@@ -277,6 +277,7 @@ let rec encode_exp_z3 descr env arr (e: exp) =
               ; argty= ty1
               ; body= {e= EFun {arg= y; argty= ty2; body= e1}} } }
         :: e2 :: e3 :: _ ) ->
+
         let keysort =
           match get_inner_type (oget e2.ety) with
           | TMap (ty, _) -> ty_to_sort env.ctx ty

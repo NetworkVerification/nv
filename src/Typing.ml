@@ -10,7 +10,7 @@ let debug = true
 
 let if_debug s = if debug then print_endline s else ()
 
-let node_ty = tint_of_size (Z.of_int 32)
+let node_ty = tint_of_size 32
 
 let edge_ty = TTuple [node_ty; node_ty]
 

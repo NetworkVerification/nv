@@ -78,7 +78,7 @@ let rec ty_to_string_p prec t =
     | TVar {contents= tv} -> tyvar_to_string tv
     | QVar name -> "{" ^ Var.to_string name ^ "}"
     | TBool -> "bool"
-    | TInt i -> "int" ^ Z.to_string i
+    | TInt i -> "int" ^ string_of_int i
     | TArrow (t1, t2) ->
         ty_to_string_p p t1 ^ " -> " ^ ty_to_string_p prec t2
     | TTuple ts -> sep "*" (ty_to_string_p p) ts
@@ -102,11 +102,11 @@ let op_to_string op =
   | And -> "&&"
   | Or -> "||"
   | Not -> "!"
-  | UAdd n -> "+" ^ "u" ^ (Z.to_string n)
-  | USub n -> "-" ^ "u" ^ (Z.to_string n)
+  | UAdd n -> "+" ^ "u" ^ (string_of_int n)
+  | USub n -> "-" ^ "u" ^ (string_of_int n)
   | UEq -> "="
-  | ULess n -> "<" ^ "u" ^ (Z.to_string n)
-  | ULeq n -> "<=" ^ "u" ^ (Z.to_string n)
+  | ULess n -> "<" ^ "u" ^ (string_of_int n)
+  | ULeq n -> "<=" ^ "u" ^ (string_of_int n)
   | MCreate -> "createMap"
   | MGet -> "at"
   | MSet -> "set"

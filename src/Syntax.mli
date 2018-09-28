@@ -2,7 +2,7 @@ open Cudd
 
 type index = int
 
-type bitwidth = Z.t
+type bitwidth = int
 
 type level = int
 
@@ -139,7 +139,7 @@ val ety : exp -> ty -> exp
 
 val arity : op -> int
 
-val tint_of_size : Z.t -> ty
+val tint_of_size : int -> ty
 
 val tint_of_value : Integer.t -> ty
 

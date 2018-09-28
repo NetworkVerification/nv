@@ -5,9 +5,8 @@ open Hashcons
 (* indices into maps or map sizes must be static constants *)
 type index = int
 
-type bitwidth = Z.t
-[@@deriving eq, ord] (* Z's pretty printer has the wrong name so we do show manually *)
-let pp_bitwidth = Z.pp_print;;
+type bitwidth = int
+[@@deriving eq, ord, show]
 
 (* see:  http://okmij.org/ftp/ML/generalization.html *)
 type level = int
@@ -519,10 +518,10 @@ and hash_op op =
   | MMap -> 8
   | MMapFilter -> 9
   | MMerge -> 10
-  | UAdd n -> 11  + (Z.to_int n)
-  | USub n -> 11  + (Z.to_int n) + 64
-  | ULess n -> 11 + (Z.to_int n) + 64 * 2
-  | ULeq n -> 11  + (Z.to_int n) + 64 * 3
+  | UAdd n -> 11  + n
+  | USub n -> 11  + n + 64
+  | ULess n -> 11 + n + 64 * 2
+  | ULeq n -> 11  + n + 64 * 3
 
 (* hashconsing information/tables *)
 
@@ -860,7 +859,7 @@ module BddUtils = struct
 
   let mk_int i idx =
     let acc = ref (Bdd.dtrue mgr) in
-    let sz = (Z.to_int @@ Integer.size i) in
+    let sz = Integer.size i in
     for j = 0 to sz do
       let var = ithvar (idx + j) in
       let bit = get_bit i j in
@@ -896,7 +895,7 @@ module BddMap = struct
     let v =
       match ty with
       | TBool -> VBool false
-      | TInt width -> VInt (Integer.create ~value:0 ~size:(Z.to_int width))
+      | TInt size -> VInt (Integer.create ~value:0 ~size:size)
       | TTuple ts -> VTuple (List.map default_value ts)
       | TOption ty -> VOption None
       | TMap (ty1, ty2) ->
@@ -913,13 +912,7 @@ module BddMap = struct
         let var = B.ithvar idx in
         ((if b then var else Bdd.dnot var), idx + 1)
       | VInt i ->
-        if (Z.to_int @@ Integer.size i) = 32 then
-          (* What we did when we only had 32 bit integers *)
-          (B.mk_int i idx, idx + 32)
-        else
-          (* TODO: Pretty sure this is correct, but needs to be verified *)
-          (* (B.mk_int i idx, idx + (Z.to_int @@ Integer.size i)) *)
-          failwith "No idea how to do this yet" (*TODO,FIXME*)
+        B.mk_int i idx, idx + Integer.size i
       | VTuple vs ->
         let base = Bdd.dtrue B.mgr in
         List.fold_left
@@ -950,12 +943,12 @@ module BddMap = struct
         match get_inner_type ty with
         | TBool ->
           (VBool (B.tbool_to_bool vars.(idx)) |> value, idx + 1)
-        | TInt width ->
-          let acc = ref (Integer.create ~value:0 ~size:(Z.to_int width)) in
-          for i = 0 to (Z.to_int width)-1 do
+        | TInt size ->
+          let acc = ref (Integer.create ~value:0 ~size:size) in
+          for i = 0 to size-1 do
             let bit = B.tbool_to_bool vars.(idx + i) in
             if bit then
-              let add = Integer.shift_left (Integer.create ~value:1 ~size:(Z.to_int width)) i in
+              let add = Integer.shift_left (Integer.create ~value:1 ~size:size) i in
               acc := Integer.add !acc add
           done ;
           (value (VInt !acc), idx + 32)
@@ -1210,8 +1203,8 @@ module BddFunc = struct
     let rec aux i ty =
       match get_inner_type ty with
       | TBool -> (BBool (B.ithvar i), i + 1)
-      | TInt width ->
-        (BInt (Array.init (Z.to_int width) (fun j -> B.ithvar (i + j))), i + (Z.to_int width))
+      | TInt size ->
+        (BInt (Array.init size (fun j -> B.ithvar (i + j))), i + size)
       | TTuple ts ->
         let bs, idx =
           List.fold_left
@@ -1393,11 +1386,11 @@ module BddFunc = struct
     | PBool false, BBool bdd -> (env, Bdd.dnot bdd)
     | PInt i, BInt bi ->
       (* TODO: I'm pretty sure this works, but not entirely. *)
-      if (Z.to_int @@ Integer.size i) <> Array.length bi then
+      if Integer.size i <> Array.length bi then
         (env, Bdd.dfalse B.mgr)
       else
         let cond = ref (Bdd.dtrue B.mgr) in
-        for j = 0 to (Z.to_int @@ Integer.size i) - 1 do
+        for j = 0 to Integer.size i - 1 do
           let b = B.get_bit i j in
           let bdd = if b then bi.(j) else Bdd.dnot bi.(j) in
           cond := Bdd.dand !cond bdd
@@ -1435,7 +1428,7 @@ module BddFunc = struct
     | VBool b -> BBool (bdd_of_bool b)
     | VInt i ->
       let bs =
-        Array.init (Z.to_int @@ Integer.size i) (fun j ->
+        Array.init (Integer.size i) (fun j ->
             let bit = B.get_bit i j in
             bdd_of_bool bit )
       in

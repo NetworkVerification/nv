@@ -27,7 +27,7 @@ let check x y =
   if not (Z.equal x.size y.size) then
     failwith "integer bit sizes did not match"
 
-let size x = x.size
+let size x = Z.to_int x.size
 
 let value x = x.value
 
