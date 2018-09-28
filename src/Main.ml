@@ -83,7 +83,7 @@ let run_simulator cfg info decls =
       match cfg.bound with
       | None ->
           ( Srp.simulate_declarations decls
-          , QueueSet.empty Unsigned.UInt32.compare )
+          , QueueSet.empty Integer.compare )
       | Some b -> Srp.simulate_declarations_bound decls b
     in
     print_solution (apply_all solution fs) ;
@@ -93,7 +93,7 @@ let run_simulator cfg info decls =
         print_string [] "non-quiescent nodes:" ;
         QueueSet.iter
           (fun q ->
-            print_string [] (Unsigned.UInt32.to_string q ^ ";") )
+            print_string [] (Integer.to_string q ^ ";") )
           q ;
         print_newline () ;
         print_newline ()

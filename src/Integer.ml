@@ -49,6 +49,14 @@ let shift_left (x : t) (n : int) =
   let value = modulo (Z.shift_left x.value n) x.size in
   {size= x.size; value}
 
+let pred x =
+  let value = modulo (Z.sub x.value Z.one) x.size in
+  {size = x.size; value}
+
+let succ x =
+  let value = modulo (Z.add x.value Z.one) x.size in
+  {size = x.size; value}
+
 let lt x y = check x y ; Z.lt x.value y.value
 
 let leq x y = check x y ; Z.leq x.value y.value
@@ -58,3 +66,5 @@ let gt x y = check x y ; Z.gt x.value y.value
 let geq x y = check x y ; Z.geq x.value y.value
 
 let equal x y = (x.size = y.size) && (x.value = y.value)
+
+let compare x y = check x y; Z.compare x.value y.value

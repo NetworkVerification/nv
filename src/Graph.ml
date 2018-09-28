@@ -1,9 +1,7 @@
-open Unsigned
-
 module Vertex = struct
-  type t = UInt32.t
+  type t = Integer.t
 
-  let compare = UInt32.compare
+  let compare = Integer.compare
 end
 
 module VertexMap = Map.Make (Vertex)
@@ -12,8 +10,8 @@ module Edge = struct
   type t = Vertex.t * Vertex.t
 
   let compare (v1, w1) (v2, w2) =
-    if UInt32.compare v1 v2 != 0 then UInt32.compare v1 v2
-    else UInt32.compare w1 w2
+    if Integer.compare v1 v2 != 0 then Integer.compare v1 v2
+    else Integer.compare w1 w2
 end
 
 (* OCaml 4.06 contains find_opt and update built in. upgrade compiler. *)
@@ -28,17 +26,17 @@ let update v f m =
 let vertex_map_to_string elem_to_string m =
   let kvs = VertexMap.fold (fun k v l -> (k, v) :: l) m [] in
   List.fold_left
-    (fun s (k, v) -> UInt32.to_string k ^ ":" ^ elem_to_string v ^ s)
+    (fun s (k, v) -> Integer.to_string k ^ ":" ^ elem_to_string v ^ s)
     "" kvs
 
 let print_vertex_map elem_to_string m =
   VertexMap.iter
     (fun k v ->
-      print_endline (UInt32.to_string k ^ ":" ^ elem_to_string v) )
+      print_endline (Integer.to_string k ^ ":" ^ elem_to_string v) )
     m
 
 (* a graph as ajacency list * # of vertices *)
-type t = Vertex.t list VertexMap.t * UInt32.t
+type t = Vertex.t list VertexMap.t * Integer.t
 
 (* create a graph with i vertices *)
 let create i = (VertexMap.empty, i)
@@ -56,10 +54,10 @@ let edges (m, i) =
        m [])
 
 (* a vertex v does not belong to a graph's set of vertices *)
-exception BadVertex of UInt32.t
+exception BadVertex of Integer.t
 
 let good_vertex (m, i) v =
-  if UInt32.compare v UInt32.zero < 0 || not (UInt32.compare i v > 0)
+  if Integer.compare v (Integer.of_int 0) < 0 || not (Integer.compare i v > 0)
   then raise (BadVertex v)
 
 let good_graph g =
@@ -92,7 +90,7 @@ let remove_edge (m, i) (v, w) =
     | None -> adj
     | Some ns ->
       match
-        List.filter (fun a -> not (UInt32.compare a w = 0)) ns
+        List.filter (fun a -> not (Integer.compare a w = 0)) ns
       with
       | [] -> None
       | ns' -> Some ns'
@@ -105,10 +103,10 @@ let neighbors (m, i) v =
   match find_opt v m with None -> [] | Some ns -> ns
 
 let print g =
-  Printf.printf "%d\n" (UInt32.to_int (num_vertices g)) ;
+  Printf.printf "%d\n" (Integer.to_int (num_vertices g)) ;
   List.iter
     (fun (v, w) ->
-      Printf.printf "%d -> %d\n" (UInt32.to_int v) (UInt32.to_int w)
+      Printf.printf "%d -> %d\n" (Integer.to_int v) (Integer.to_int w)
       )
     (edges g)
 
@@ -119,10 +117,10 @@ let to_string g =
     | [] -> ()
     | (v, w) :: rest ->
         Buffer.add_string b
-          (Printf.sprintf "%d -> %d\n" (UInt32.to_int v)
-             (UInt32.to_int w)) ;
+          (Printf.sprintf "%d -> %d\n" (Integer.to_int v)
+             (Integer.to_int w)) ;
         add_edges rest
   in
-  Buffer.add_string b (UInt32.to_string (num_vertices g) ^ "\n") ;
+  Buffer.add_string b (Integer.to_string (num_vertices g) ^ "\n") ;
   add_edges (edges g) ;
   Buffer.contents b

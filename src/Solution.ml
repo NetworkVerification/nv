@@ -18,7 +18,7 @@ let print_solution solution =
     Graph.VertexMap.iter
       (fun k v ->
         Printf.printf "%s:%s\n"
-          (Unsigned.UInt32.to_string k)
+          (Integer.to_string k)
           (Printing.value_to_string v) )
       solution.labels ) ;
   ( match solution.assertions with
@@ -36,6 +36,6 @@ let print_solution solution =
             if not v then (
               print_string [red; Bold] "Failed: " ;
               Printf.printf "assertion for node %s\n"
-                (Unsigned.UInt32.to_string k) ) )
+                (Integer.to_string k) ) )
           m ) ;
   print_newline ()

@@ -8,7 +8,7 @@ let is_function_ty e =
 
 let rec has_var p x =
   match p with
-  | PWild | PBool _ | PUInt32 _ -> false
+  | PWild | PBool _ | PInt _ -> false
   | PVar y -> Var.equals x y
   | PTuple ps ->
       List.fold_left (fun acc p -> acc || has_var p x) false ps
@@ -17,7 +17,7 @@ let rec has_var p x =
 
 let rec remove_all env p =
   match p with
-  | PWild | PBool _ | PUInt32 _ -> env
+  | PWild | PBool _ | PInt _ -> env
   | PVar x -> Env.remove env x
   | PTuple ps ->
       List.fold_left (fun acc p -> remove_all acc p) env ps
