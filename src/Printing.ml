@@ -210,7 +210,7 @@ and exp_to_string_p prec e =
     | EMatch (e1, bs) ->
         "(match "
         ^ exp_to_string_p max_prec e1
-        ^ " with \n"
+        ^ " with " ^ "\n"
         ^ branches_to_string prec bs
         ^ ")"
     | ETy (e, t) -> exp_to_string_p prec e ^ ty_to_string t

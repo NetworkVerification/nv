@@ -54,6 +54,9 @@ let getGroup (f: abstractionMap) (u: Vertex.t) : AbstractNode.t =
 
 let getGroupRepresentative (f: abstractionMap) (u: AbstractNode.t) : Vertex.t =
   AbstractNode.min_elt u
+
+let getGroupRepresentativeId (f: abstractionMap) (uhat: abstrId) : Vertex.t =
+  getGroupRepresentative f (getGroupById f uhat)
   
 let getGroupId (f: abstractionMap) (u: AbstractNode.t) : abstrId =
   getId f (getGroupRepresentative f u)

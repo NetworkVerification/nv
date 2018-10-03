@@ -102,13 +102,29 @@ let run_simulator cfg info decls =
 
 let compress info decls =
   let decls = Inline.inline_declarations info decls in
-  let srp, _, _ = Srp.declarations_to_srp decls ~throw_requires:false in
-  let f = Abstraction.findAbstraction srp Unsigned.UInt32.zero in
+  let emerge, etrans, einit, nodes, edges, aty =
+    match
+      ( get_merge decls
+      , get_trans decls
+      , get_init decls
+      , get_nodes decls
+      , get_edges decls
+      , get_attr_type decls )
+    with
+    | Some emerge, Some etrans, Some einit, Some n, Some es, Some aty ->
+       (emerge, etrans, einit, n, es, aty)
+    | _ ->
+       Console.error
+         "missing definition of nodes, edges, merge, trans or init"
+  in
+  let graph = Graph.add_edges (Graph.create nodes) edges in
+  let f = Abstraction.findAbstraction graph etrans emerge Unsigned.UInt32.zero 0 in
   (* let ag = Abstraction.buildAbstractGraph srp.graph f in *)
   let groups = AbstractionMap.printAbstractGroups f "\n" in
   Console.show_message groups Console.T.Blue "Abstract groups";
+  Abstraction.slice_network graph einit;
   ()
-       
+  
 let main =
   let cfg, rest = argparse default "nv" Sys.argv in
   Cmdline.set_cfg cfg ;

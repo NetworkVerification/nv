@@ -42,6 +42,9 @@ val create : UInt32.t -> t
 
 val num_vertices : t -> UInt32.t
 
+  
+val fold_vertices : (Vertex.t -> 'a -> 'a) -> t -> 'a -> 'a
+  
 (** Vertices in the adjacency graph *)
 val get_vertices : t -> VertexSet.t
   

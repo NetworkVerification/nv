@@ -95,6 +95,10 @@ val getGroupById : abstractionMap -> abstrId -> AbstractNode.t
    that acts as the representative of all concrete nodes in this group *)
 val getGroupRepresentative: abstractionMap -> AbstractNode.t -> Graph.Vertex.t
 
+(** Given an abstraction and the id of an abstract node returns a concrete node
+   that acts as the representative of all concrete nodes in this group *)
+val getGroupRepresentativeId: abstractionMap -> abstrId -> Graph.Vertex.t
+  
 (** Given an abstraction and an abstract node returns a unique id for this abstract node*)
 val getGroupId: abstractionMap -> AbstractNode.t -> abstrId
   

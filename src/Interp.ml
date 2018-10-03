@@ -228,7 +228,7 @@ let interp = MemoizeExp.memoize ~size:1000 interp
 let interp_closure cl (args: value list) =
   interp (Syntax.apply_closure cl args)
 
-
+  
 (** * Partial Interpreter *)
 
 let rec interp_exp_partial env e =
@@ -246,17 +246,19 @@ let rec interp_exp_partial env e =
      (* This is kind of a hack: I think it only works if you inline
         functions, because it only applies to top-level definitions -
         otherwise the closure (env) is wrong *)
-     exp_of_value (vclosure (env, {f with body = interp_exp_partial env f.body}))
+     (* exp_of_value (vclosure (env, {f with body = interp_exp_partial env f.body})) *)
+     e
   | EApp (e1, e2) ->
-    let v1 = to_value (interp_exp_partial env e1) in
+    let pe1 = interp_exp_partial env e1 in
     let pe2 = interp_exp_partial env e2 in
-    (match v1.v with
-     | VClosure (c_env, f) ->
+    (match pe1.e with
+     | EFun f ->
         if is_value pe2 then
-          interp_exp_partial (update_value c_env f.arg (to_value pe2)) f.body
+          (*   interp_exp_partial (update_value c_env f.arg (to_value pe2)) f.body *)
+          interp_exp_partial (update_value env f.arg (to_value pe2)) f.body
         else
-          eapp (exp_of_value v1) pe2
-     | _ -> failwith "bad functional application" )
+          eapp pe1 pe2
+     | _ -> failwith ("bad functional application: " ^ (show_exp ~show_meta:false e1)) )
   | EIf (e1, e2, e3) -> (
     let pe1 = interp_exp_partial env e1 in
     if is_value pe1 then
@@ -374,10 +376,14 @@ and interp_op_partial env ty op es =
                            (Printing.op_to_string op))
     end
     
-let interp_partial e = interp_exp_partial empty_env e
+let interp_partial = fun e -> interp_exp_partial empty_env e
+
+(* let interp_partial_closure cl (args: value list) = *)
+(*   interp_partial (Syntax.apply_closure cl args) *)
 
 let interp_partial = MemoizeExp.memoize ~size:1000 interp_partial
 
-let interp_partial_closure cl (args: value list) =
-  interp_partial (Syntax.apply_closure cl args)
+let interp_partial_fun (fn : Syntax.exp) (args: value list) =
+  Syntax.apps fn (List.map (fun a -> e_val a) args) |>
+    interp_partial
   
