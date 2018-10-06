@@ -11,6 +11,8 @@ open Solution
 open Syntax
 open Typing
 
+exception Success
+   
 let init_renamer sol =
   let drop_zero s = String.sub s 0 (String.length s - 1) in
   let syms =
@@ -46,9 +48,10 @@ let run_smt cfg info ds =
     else (Smt.solve decls ~symbolic_vars:[], fs)
   in
   match res with
-  | Unsat -> ()
+  | Unsat -> Unsat
   | Unknown -> Console.error "SMT returned unknown"
-  | Sat solution -> print_solution (apply_all solution fs)
+  | Sat solution -> (* print_solution (apply_all solution fs) *)
+     Sat (apply_all solution fs)
 
 let run_test cfg info ds =
   let fs = [init_renamer] in
@@ -100,29 +103,61 @@ let run_simulator cfg info decls =
   with Srp.Require_false ->
     Console.error "required conditions not satisfied"
 
-let compress info decls =
+
+type network =
+  { attr_type : Syntax.ty;
+    init      : Syntax.exp;
+    trans     : Syntax.exp;
+    merge     : Syntax.exp;
+    assertion : Syntax.exp;
+    graph     : Graph.t;
+  }
+        
+let compress info decls cfg networkOp =
   let decls = Inline.inline_declarations info decls in
-  let emerge, etrans, einit, nodes, edges, aty =
+  let network =
     match
       ( get_merge decls
       , get_trans decls
       , get_init decls
       , get_nodes decls
       , get_edges decls
-      , get_attr_type decls )
+      , get_attr_type decls
+      , get_assert decls )
     with
-    | Some emerge, Some etrans, Some einit, Some n, Some es, Some aty ->
-       (emerge, etrans, einit, n, es, aty)
+    | Some emerge, Some etrans, Some einit, Some n, Some es, Some aty, Some eassert ->
+       let graph = Graph.add_edges (Graph.create n) es in
+       { attr_type = aty; init = einit; trans = etrans;
+         merge = emerge; assertion = eassert; graph = graph }
     | _ ->
        Console.error
-         "missing definition of nodes, edges, merge, trans or init"
+         "missing definition of nodes, edges, merge, trans, init or assert"
   in
-  let graph = Graph.add_edges (Graph.create nodes) edges in
-  let f = Abstraction.findAbstraction graph etrans emerge Unsigned.UInt32.zero 0 in
-  (* let ag = Abstraction.buildAbstractGraph srp.graph f in *)
+
+  (* find the prefixes that are relevant to the assertions *)
+  let prefixes = Slicing.relevantPrefixes network in
+  (* find where each prefix is announced from *)
+  let slices = Slice.slice_network network in
+
+  (* partially evaluate the transfer and merge functions *)
+  let transMap = Abstraction.partialEvalTrans graph trans in
+  let mergeMap = Abstraction.partialEvalMerge graph merge in
+  let rec loop (f: Abstraction.abstractionMap) =
+    (* build abstract network *)
+    (*TODO: also partially interpret the initial function and the
+       assert function and provide them to buildAbstractNetwork *)
+    let decls = Abstraction.buildAbstractNetwork f graph mergeMap transMap cfg.compress in
+    match networkOp cfg info decls with
+    | Unsat -> ()
+    (* find the abstraction function *)
+    let f = Abstraction.findAbstraction graph transMap mergeMap
+                                        (VertexSet.singleton Unsigned.UInt32.zero) in
+
+  (*TODO: run networkOp on it *)
+  (* let res = networkOp cfg info decls *)
+  (*TODO: loop if necessary *)
   let groups = AbstractionMap.printAbstractGroups f "\n" in
   Console.show_message groups Console.T.Blue "Abstract groups";
-  Abstraction.slice_network graph einit;
   ()
   
 let main =
@@ -134,7 +169,23 @@ let main =
   let decls = Typing.infer_declarations info ds in
   Typing.check_annot_decls decls ;
   Wellformed.check info decls ;
-  if cfg.compress then compress info decls ;
-  if cfg.smt then run_smt cfg info decls ;
-  if cfg.random_test then run_test cfg info decls ;
-  if cfg.simulate then run_simulator cfg info decls
+  if cfg.compress >= 0 then
+    begin
+      let networkOp = if cfg.smt then run_smt
+                      else run_smt
+                      (* else if cfg.random_test then run_test *)
+                      (* else run_simulator *)
+      in
+      compress info decls cfg networkOp
+    end
+  else
+    begin
+      if cfg.smt then
+        begin
+          match run_smt cfg info decls with
+          | Sat sol -> print_solution sol
+          | _ -> ()
+        end;
+      if cfg.random_test then run_test cfg info decls ;
+      if cfg.simulate then run_simulator cfg info decls
+    end

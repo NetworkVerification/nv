@@ -1,13 +1,17 @@
-module Slice :
-sig
-  type prefix = Unsigned.UInt32.t * Unsigned.UInt32.t
-  (** [slice_network g init] returns a map from prefixes announced bys *)
-  val slice_network: Graph.t -> Syntax.exp -> (prefix, Graph.VertexSet.t) BatMap.t
-end
+(** [partialEvalTrans g trans] partially evaluates the transfer
+   function for each edge on the graph g and returns a table from
+   edges to expressions and their hash *)
+val partialEvalTrans: Graph.t -> Syntax.exp -> (Graph.Edge.t, int * Syntax.exp) Hashtbl.t 
 
-(** Given a graph and a destination node compute an abstraction function *)
+(** [partialEvalMerge g trans] partially evaluates the merge function
+   for each vertex on the graph g and returns a table from vertices to
+   expressions and their hash *)
+val partialEvalMerge: Graph.t -> Syntax.exp -> (Graph.Vertex.t, int * Syntax.exp) Hashtbl.t
+  
+(** [findAbstraction g trans merge] computes an abstraction function
+    for the network *)
 val findAbstraction :
-  Graph.t -> Syntax.exp -> Syntax.exp -> Graph.Vertex.t -> int -> AbstractionMap.abstractionMap
+  Graph.t -> Syntax.exp -> Syntax.exp -> AbstractionMap.abstractionMap
 
 module FailuresAbstraction :
   sig  

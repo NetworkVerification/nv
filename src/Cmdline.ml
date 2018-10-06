@@ -14,7 +14,7 @@ type t =
   ; no_caching: bool                   (** disables mtbdd operation caching        *)
   ; no_cutoff: bool                    (** disables mtbdd early termination        *)
   ; inline: bool      [@short "-i"]    (** inline the policy before simulation     *)
-  ; compress: bool                     (** compress the network before simulation  *)
+  ; compress: int                      (** compress the network for n failures     *)
   }
 [@@deriving
   show
@@ -37,7 +37,7 @@ let default =
   ; no_caching=false
   ; no_cutoff=false
   ; inline=false
-  ; compress=false}
+  ; compress= -1}
 
 let cfg = ref default 
 
