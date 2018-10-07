@@ -67,4 +67,7 @@ let geq x y = check x y ; Z.geq x.value y.value
 
 let equal x y = (x.size = y.size) && (x.value = y.value)
 
-let compare x y = check x y; Z.compare x.value y.value
+let compare x y =
+  let cmp = Z.compare x.size y.size in
+  if cmp <> 0 then cmp
+  else Z.compare x.value y.value
