@@ -24,13 +24,26 @@ let mk_int ctx i = mk_int_z ctx (Z.of_int i)
 
 let mk_bool ctx b = Boolean.mk_val ctx b
 
+(* The z3 API doesn't seem to expose the mod operation, so do it ourselves as
+   a % b = a - (b * (a / b))), where / indicates integer division *)
+let mk_mod ctx a b =
+  Arithmetic.mk_sub ctx
+    [a;
+     Arithmetic.mk_mul ctx
+       [b;
+        Arithmetic.mk_div ctx a b]]
+
+(* TODO: I think that zero is just a dummy value, so we shouldn't get into
+   trouble with division by zero. But it would be good to confirm. *)
 let add_f ctx =
   let zero = mk_int ctx 0 in
-  Arithmetic.mk_add ctx [zero; zero] |> Expr.get_func_decl
+  let op = Arithmetic.mk_add ctx [zero; zero] in
+  mk_mod ctx op zero |> Expr.get_func_decl
 
 let sub_f ctx =
   let zero = mk_int ctx 0 in
-  Arithmetic.mk_sub ctx [zero; zero] |> Expr.get_func_decl
+  let op = Arithmetic.mk_sub ctx [zero; zero] in
+  mk_mod ctx op zero |> Expr.get_func_decl
 
 let lt_f ctx =
   let zero = mk_int ctx 0 in
@@ -172,20 +185,24 @@ let rec encode_exp_z3 descr env arr (e: exp) =
         let ze = List.hd es |> encode_exp_z3 descr env arr in
         if arr.lift then Z3Array.mk_map env.ctx (not_f env.ctx) [ze]
         else Boolean.mk_not env.ctx ze
-      | UAdd _, _ ->
+      | UAdd width, _ ->
         let f =
           if arr.lift then fun e1 e2 ->
             Z3Array.mk_map env.ctx (add_f env.ctx) [e1; e2]
-          else fun e1 e2 -> Arithmetic.mk_add env.ctx [e1; e2]
+          else fun e1 e2 ->
+            mk_mod env.ctx (Arithmetic.mk_add env.ctx [e1; e2]) (mk_int env.ctx width)
         in
         encode_op_z3 descr env f arr es
-      | USub _, _ ->
+      | USub width, _ ->
         let f =
           if arr.lift then fun e1 e2 ->
             Z3Array.mk_map env.ctx (sub_f env.ctx) [e1; e2]
-          else fun e1 e2 -> Arithmetic.mk_sub env.ctx [e1; e2]
+          else fun e1 e2 ->
+            mk_mod env.ctx (Arithmetic.mk_sub env.ctx [e1; e2]) (mk_int env.ctx width)
         in
         encode_op_z3 descr env f arr es
+      (* TODO: This doesn't exactly match the semantics of nv, since it has no
+         information about bitsizes *)
       | UEq, _ ->
         let f =
           if arr.lift then fun e1 e2 ->
@@ -732,7 +749,7 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
        let ie = mk_int_z env.ctx (Integer.value i) in
        let je = mk_int_z env.ctx (Integer.value j) in
        let pair_sort =
-         ty_to_sort env.ctx (TTuple [TInt 32; TInt 32])
+         ty_to_sort env.ctx (TTuple [TInt (Integer.size i); TInt (Integer.size j)])
        in
        let f = Datatype.get_constructors pair_sort |> List.hd in
        add env.solver
@@ -742,6 +759,9 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
   (* compute the labelling as the merge of all inputs *)
   let labelling = ref Graph.VertexMap.empty in
   for i = 0 to Integer.to_int nodes - 1 do
+    (* FIXME: This and other calls to Integer.of_int rely on the fact that nodes
+       are implicitly size 32. If that changes, this part of the code is likely
+       to break. *)
     let init = Graph.VertexMap.find (Integer.of_int i) !init_map in
     let in_edges =
       try Graph.VertexMap.find (Integer.of_int i) !incoming_map
@@ -839,6 +859,7 @@ let rec parse_custom_type s : ty * string =
     let tys, r = parse_list count remaining in
     (TTuple tys, r)
   else if starts_with s "Int" then
+    (* TODO: Not sure how to do this yet *)
     let remaining =
       if len = 3 then "" else String.sub s 3 (len - 3)
     in
@@ -865,6 +886,7 @@ let sort_to_ty s =
       else str
     in
     let strs = String.split_on_char ' ' str in
+    (* TODO: Not sure how to do this yet *)
     match strs with
     | ["Int"] -> TInt 32
     | ["Bool"] -> TBool
