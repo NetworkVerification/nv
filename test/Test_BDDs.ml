@@ -233,8 +233,8 @@ let test7 _ =
   assert_equal_values x5 bf
 
 (* Name the test cases and group them together *)
-let suite =
-  "suite"
+let tests =
+  "Test_BDDs"
   >::: [ "BddMap find/update/create" >:: test1
        ; "BddMap with nested types" >:: test2
        ; "BddMap merge/equality" >:: test3
@@ -242,5 +242,3 @@ let suite =
        ; "BddMap map_when/leq " >:: test5
        ; "BddMap map_when/lt/add" >:: test6
        ; "BddMap map_when/ite" >:: test7 ]
-
-let () = run_test_tt_main suite

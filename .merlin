@@ -1,5 +1,5 @@
-S src
-S test
-B _build/src
-
 PKG integers oUnit z3 ANSITerminal str batteries cudd ppx_deriving.std ppx_deriving_argparse lru-cache zarith
+S src/**
+S test/**
+B _build/src/**
+B _build/test/**
