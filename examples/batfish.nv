@@ -280,3 +280,8 @@ let transferRoute edge x =
 
 let trans edge x =
   map (transferRoute edge) x
+
+let assert node x =
+    match x[(167772672,31)] with
+    | (None, None, None, None, None) -> false
+    | _ -> true

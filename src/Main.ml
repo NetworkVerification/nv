@@ -8,6 +8,7 @@ open Quickcheck
 open Renaming
 open Smt
 open Solution
+open Slicing
 open Syntax
 open Typing
 
@@ -102,16 +103,6 @@ let run_simulator cfg info decls =
         print_newline ()
   with Srp.Require_false ->
     Console.error "required conditions not satisfied"
-
-
-type network =
-  { attr_type : Syntax.ty;
-    init      : Syntax.exp;
-    trans     : Syntax.exp;
-    merge     : Syntax.exp;
-    assertion : Syntax.exp;
-    graph     : Graph.t;
-  }
         
 let compress info decls cfg networkOp =
   let decls = Inline.inline_declarations info decls in
@@ -134,31 +125,50 @@ let compress info decls cfg networkOp =
          "missing definition of nodes, edges, merge, trans, init or assert"
   in
 
+  (* partially evaluate the functions of the network *)
+  let transMap = Abstraction.partialEvalTrans network.graph network.trans in
+  let mergeMap = Abstraction.partialEvalMerge network.graph network.merge in
+  let initMap = Slicing.partialEvalInit network in
+  let assertMap = Slicing.partialEvalAssert network in
+  
   (* find the prefixes that are relevant to the assertions *)
-  let prefixes = Slicing.relevantPrefixes network in
+  let prefixes = Slicing.relevantPrefixes assertMap in
   (* find where each prefix is announced from *)
-  let slices = Slice.slice_network network in
+  let slices = Slicing.findInitialSlices initMap in
+  (* keep only the relevant slices, i.e. prefixes that are used by the assertion *)
+  let relevantSlices = BatMap.filter (fun pre _ -> BatSet.mem pre prefixes) slices in
+  (* each set of prefixes represents an SRP *)
+  (* there is a slight overapproximation here: if a prefix is not used
+     by the assertion, but some other prefix that is announced from
+     the same node is then this prefix is not sliced out. This is
+     sound, but it can be optimized in the future *)
+  let relevantSliceGroups = Collections.groupKeysByValue relevantSlices in
 
-  (* partially evaluate the transfer and merge functions *)
-  let transMap = Abstraction.partialEvalTrans graph trans in
-  let mergeMap = Abstraction.partialEvalMerge graph merge in
-  let rec loop (f: Abstraction.abstractionMap) =
-    (* build abstract network *)
-    (*TODO: also partially interpret the initial function and the
-       assert function and provide them to buildAbstractNetwork *)
-    let decls = Abstraction.buildAbstractNetwork f graph mergeMap transMap cfg.compress in
-    match networkOp cfg info decls with
-    | Unsat -> ()
-    (* find the abstraction function *)
-    let f = Abstraction.findAbstraction graph transMap mergeMap
-                                        (VertexSet.singleton Unsigned.UInt32.zero) in
-
-  (*TODO: run networkOp on it *)
-  (* let res = networkOp cfg info decls *)
-  (*TODO: loop if necessary *)
-  let groups = AbstractionMap.printAbstractGroups f "\n" in
-  Console.show_message groups Console.T.Blue "Abstract groups";
-  ()
+  BatSet.iter
+    (fun prefixes -> 
+      let rec loop (f: AbstractionMap.abstractionMap) (ds: Graph.Vertex.t BatSet.t) =
+        (* build abstract network *)
+        let decls = Abstraction.buildAbstractNetwork f network.graph mergeMap transMap
+                                                     initMap assertMap ds
+                                                     network.attr_type cfg.compress in
+        match networkOp cfg info decls with
+        | Unsat -> ()
+        | Sat sol ->
+           (* find the abstraction function *)
+           (* let f = Abstraction.findAbstraction network.graph transMap mergeMap ds in *)
+           (*TODO: loop if necessary *)
+           let groups = AbstractionMap.printAbstractGroups f "\n" in
+           Console.show_message groups Console.T.Blue "Abstract groups";
+           print_solution sol
+        | _ -> Console.error "Solver returned unknown"
+      in
+      (* get a prefix from this class of prefixes *)
+      let pre = BatSet.min_elt prefixes in
+      (* find the nodes this class is announced from *)
+      let ds = BatMap.find pre relevantSlices in
+      (* find the initial abstraction function for these destinations *)
+      let f = Abstraction.findAbstraction network.graph transMap mergeMap ds in
+      loop f ds) relevantSliceGroups
   
 let main =
   let cfg, rest = argparse default "nv" Sys.argv in

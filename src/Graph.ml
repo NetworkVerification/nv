@@ -68,8 +68,8 @@ let fold_vertices (f: Vertex.t -> 'a -> 'a) (_, i) (acc: 'a) : 'a =
    the ones that have an outgoing edge.*)
 let get_vertices (m, i) =
   let rec loop j =
-    if i = j then VertexSet.empty
-    else VertexSet.add j (loop (UInt32.add j UInt32.one))
+    if i = j then BatSet.empty
+    else BatSet.add j (loop (UInt32.add j UInt32.one))
   in
   loop UInt32.zero
 

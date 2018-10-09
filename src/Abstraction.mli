@@ -8,10 +8,12 @@ val partialEvalTrans: Graph.t -> Syntax.exp -> (Graph.Edge.t, int * Syntax.exp) 
    expressions and their hash *)
 val partialEvalMerge: Graph.t -> Syntax.exp -> (Graph.Vertex.t, int * Syntax.exp) Hashtbl.t
   
-(** [findAbstraction g trans merge] computes an abstraction function
+(** [findAbstraction g trans merge ds] computes an abstraction function
     for the network *)
 val findAbstraction :
-  Graph.t -> Syntax.exp -> Syntax.exp -> AbstractionMap.abstractionMap
+  Graph.t -> (Graph.Edge.t, int * Syntax.exp) Hashtbl.t ->
+  (Graph.Vertex.t, int * Syntax.exp) Hashtbl.t ->
+  Graph.Vertex.t BatSet.t -> AbstractionMap.abstractionMap
 
 module FailuresAbstraction :
   sig  
@@ -28,6 +30,17 @@ module FailuresAbstraction :
 (** [buildAbstractGraph g f] constructs the abstract graph from graph
    g and the abstraction f*)
 val buildAbstractGraph : Graph.t -> AbstractionMap.abstractionMap -> Graph.t
+
+(** [buildAbstractNetwork f g mergeMap transMap initMap assertMap dst attrTy k] builds the
+   declarations of the abstract network *)
+val buildAbstractNetwork : AbstractionMap.abstractionMap -> Graph.t ->
+                         (Graph.Vertex.t, int * Syntax.exp) Hashtbl.t ->
+                         (Graph.Edge.t, int * Syntax.exp) Hashtbl.t ->
+                         (Graph.Vertex.t, Syntax.exp) Hashtbl.t ->
+                         (Graph.Vertex.t, Syntax.exp) Hashtbl.t ->
+                         Graph.Vertex.t BatSet.t ->
+                         Syntax.ty ->
+                         int -> Syntax.declarations
 
 (** [abstractToConcreteEdge g f ehat] returns the set of concrete
    edges that map to the abstract edge [ehat] *)
