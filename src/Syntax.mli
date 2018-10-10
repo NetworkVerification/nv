@@ -202,6 +202,8 @@ val compare_values : value -> value -> int
 
 val compare_exps : exp -> exp -> int
 
+val show_exp : exp -> string
+
 val get_inner_type : ty -> ty
 
 val free : Var.t BatSet.PSet.t -> exp -> Var.t BatSet.PSet.t
