@@ -675,7 +675,7 @@ and infer_declaration i info env aty d : ty Env.t * declaration =
       let e' = infer_exp (i + 1) info env e in
       let ty = oget e'.ety in
       unify info e ty (init_ty aty) ;
-      (Env.update env (Var.create "trans") ty, DInit e')
+      (Env.update env (Var.create "init") ty, DInit e')
   | DATy _ | DNodes _ | DEdges _ -> (env, d)
 
 (* ensure patterns do not contain duplicate variables *)
