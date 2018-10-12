@@ -654,7 +654,7 @@ module EdgeMap = Map.Make (struct
     if cmp <> 0 then cmp else UInt32.compare b d
 end)
 
-let cfg = [("model_compress", "false")]
+let cfg = [("model_compress", "false"); ("trace","true")]
 
 let add_symbolic_constraints env requires sym_vars =
   List.iter
@@ -933,7 +933,11 @@ let rec z3_to_value m (e: Expr.expr) : Syntax.value =
         then
           let es = List.map (z3_to_value m) es in
           vtuple es
-        else raise Model_conversion
+        else
+          begin
+          Printf.printf "name that causes crash: %s\n" name;
+          raise Model_conversion
+          end
 
 and z3_to_exp m (e: Expr.expr) : Syntax.exp =
   try e_val (z3_to_value m e) with _ ->
@@ -1038,9 +1042,16 @@ let solve ?symbolic_vars ds =
   let env = encode_z3 ds sym_vars in
   (* print_endline (Solver.to_string env.solver) ; *)
   let q = Solver.check env.solver [] in
+   Params.set_print_mode env.ctx PRINT_SMTLIB_FULL;
+  let file = open_out "query.txt" in
+  Printf.fprintf file "%s" (Solver.to_string (Solver.translate env.solver env.ctx));
   match q with
   | UNSATISFIABLE -> Unsat
   | UNKNOWN -> Unknown
-  | SATISFIABLE ->
-      let m = Solver.get_model env.solver in
-      build_result m env aty num_nodes eassert
+  | SATISFIABLE -> 
+     match Solver.get_model env.solver with
+     | Some m ->
+        let file = open_out "model.txt" in
+        Printf.fprintf file "%s" (Model.to_string m);
+        build_result (Some m) env aty num_nodes eassert
+     | _ ->         build_result None env aty num_nodes eassert

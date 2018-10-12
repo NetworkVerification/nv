@@ -13,9 +13,9 @@ let mergeValues x y =
 match (x,y) with
 | (None, None) -> None
 | (None, Some y) -> None
+| (Some _, None) -> x
 | (Some x, Some y) ->
   if x < y then Some x else Some y
-| (Some _, None) -> x
 
 let merge node x y = combine mergeValues x y 
 
@@ -31,12 +31,12 @@ match x with
 | None -> None
 | Some x -> Some (x+1)
 
-let trans edge x = map (transferRoute edge) x
+(*let trans edge x = map (transferRoute edge) x*)
 
-(*let trans edge x =
+let trans edge x =
 let x0 = x[0] in
 let y0 = transferRoute edge x0 in
-x[0 := x0] *)
+x[0 := x0]
 
 let init node =
     let d = createDict(None) in
