@@ -23,31 +23,31 @@ module FailuresAbstraction :
     val refineForFailures :
       Graph.t ->
       AbstractionMap.abstractionMap ->
-      AbstractionMap.abstrId ->
-      AbstractionMap.abstrId list -> AbstractionMap.abstractionMap
+      Solution.t ->
+      AbstractionMap.abstractionMap
   end
+
      
-(** [buildAbstractGraph g f] constructs the abstract graph from graph
-   g and the abstraction f*)
-val buildAbstractGraph : Graph.t -> AbstractionMap.abstractionMap -> Graph.t
-
-(** [buildAbstractNetwork f g mergeMap transMap initMap assertMap dst attrTy k] builds the
+module BuildAbstractNetwork :
+sig
+  (** [buildAbstractNetwork f g mergeMap transMap initMap assertMap dst attrTy k] builds the
    declarations of the abstract network *)
-val buildAbstractNetwork : AbstractionMap.abstractionMap -> Graph.t ->
-                         (Graph.Vertex.t, int * Syntax.exp) Hashtbl.t ->
-                         (Graph.Edge.t, int * Syntax.exp) Hashtbl.t ->
-                         (Graph.Vertex.t, Syntax.exp) Hashtbl.t ->
-                         (Graph.Vertex.t, Syntax.exp) Hashtbl.t ->
-                         Graph.Vertex.t BatSet.t ->
-                         Syntax.ty ->
-                         int -> Syntax.declarations
+  val buildAbstractNetwork : AbstractionMap.abstractionMap -> Graph.t ->
+                             (Graph.Vertex.t, int * Syntax.exp) Hashtbl.t ->
+                             (Graph.Edge.t, int * Syntax.exp) Hashtbl.t ->
+                             (Graph.Vertex.t, Syntax.exp) Hashtbl.t ->
+                             (Graph.Vertex.t, Syntax.exp) Hashtbl.t ->
+                             Graph.Vertex.t BatSet.t ->
+                             Syntax.ty ->
+                             int -> Syntax.declarations
 
-(** [abstractToConcreteEdge g f ehat] returns the set of concrete
+  (** [abstractToConcreteEdge g f ehat] returns the set of concrete
    edges that map to the abstract edge [ehat] *)
-val abstractToConcreteEdge: Graph.t -> AbstractionMap.abstractionMap ->
-                             Graph.Edge.t -> Graph.EdgeSet.t
+  val abstractToConcreteEdge: Graph.t -> AbstractionMap.abstractionMap ->
+                              Graph.Edge.t -> Graph.EdgeSet.t
 
-(** [getEdgeMultiplicity g f ehat] returns the number of concrete
+  (** [getEdgeMultiplicity g f ehat] returns the number of concrete
    edges that map to the abstract edge [ehat] *)  
-val getEdgeMultiplicity: Graph.t -> AbstractionMap.abstractionMap ->
-                         Graph.Edge.t -> int
+  val getEdgeMultiplicity: Graph.t -> AbstractionMap.abstractionMap ->
+                           Graph.Edge.t -> int
+end

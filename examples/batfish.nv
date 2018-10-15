@@ -282,6 +282,9 @@ let trans edge x =
   map (transferRoute edge) x
 
 let assert node x =
-    match x[(167772672,31)] with
-    | (None, None, None, None, None) -> false
-    | _ -> true
+ match node with
+ | 0 ->
+     (match x[(1174405888,32)] with
+     | (None, None, None, None, None) -> false
+     | _ -> false)
+ | _ -> true

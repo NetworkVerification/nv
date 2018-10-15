@@ -11,6 +11,8 @@ open Solution
 open Slicing
 open Syntax
 open Typing
+open Abstraction
+open BuildAbstractNetwork
 
 exception Success
    
@@ -144,31 +146,36 @@ let compress info decls cfg networkOp =
      sound, but it can be optimized in the future *)
   let relevantSliceGroups = Collections.groupKeysByValue relevantSlices in
 
+  let rec loop (f: AbstractionMap.abstractionMap) (ds: Graph.Vertex.t BatSet.t) =
+    (* build abstract network *)
+    let decls = buildAbstractNetwork f network.graph mergeMap transMap
+                                     initMap assertMap ds
+                                     network.attr_type cfg.compress in
+    match networkOp cfg info decls with
+    | Unsat -> ()
+    | Sat sol ->
+       (* find the abstraction function *)
+       (* let f = Abstraction.findAbstraction network.graph transMap mergeMap ds in *)
+       (*TODO: loop if necessary *)
+       let groups = AbstractionMap.printAbstractGroups f "\n" in
+       Console.show_message groups Console.T.Blue "Abstract groups";
+       print_solution sol
+    | _ -> Console.error "Solver returned unknown"
+  in
   BatSet.iter
     (fun prefixes -> 
-      let rec loop (f: AbstractionMap.abstractionMap) (ds: Graph.Vertex.t BatSet.t) =
-        (* build abstract network *)
-        let decls = Abstraction.buildAbstractNetwork f network.graph mergeMap transMap
-                                                     initMap assertMap ds
-                                                     network.attr_type cfg.compress in
-        match networkOp cfg info decls with
-        | Unsat -> ()
-        | Sat sol ->
-           (* find the abstraction function *)
-           (* let f = Abstraction.findAbstraction network.graph transMap mergeMap ds in *)
-           (*TODO: loop if necessary *)
-           let groups = AbstractionMap.printAbstractGroups f "\n" in
-           Console.show_message groups Console.T.Blue "Abstract groups";
-           print_solution sol
-        | _ -> Console.error "Solver returned unknown"
-      in
       (* get a prefix from this class of prefixes *)
       let pre = BatSet.min_elt prefixes in
       (* find the nodes this class is announced from *)
       let ds = BatMap.find pre relevantSlices in
       (* find the initial abstraction function for these destinations *)
       let f = Abstraction.findAbstraction network.graph transMap mergeMap ds in
-      loop f ds) relevantSliceGroups
+      (*TODO: remove decls from here once the simulator is tested *)
+      let decls = buildAbstractNetwork f network.graph mergeMap transMap
+                                       initMap assertMap ds
+                                       network.attr_type cfg.compress in
+      run_simulator cfg info decls 
+      (* loop f ds *)) relevantSliceGroups
   
 let main =
   let cfg, rest = argparse default "nv" Sys.argv in
@@ -194,6 +201,7 @@ let main =
         begin
           match run_smt cfg info decls with
           | Sat sol -> print_solution sol
+          | Unsat -> Printf.printf "unsat\n"
           | _ -> ()
         end;
       if cfg.random_test then run_test cfg info decls ;

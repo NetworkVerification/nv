@@ -20,7 +20,7 @@ type transAbsId = int * abstrId
 
 (** merge_hash * {(trans_hash, abstractId)}*) 
 type policyAbsId = int * (transAbsId BatSet.t)
-                                                               
+                 
 
 (** ** Topological only abstraction *)
 (* This does not handle a forall-forall abstraction. *)  
@@ -30,9 +30,9 @@ let refineTopological (f: abstractionMap) (g: Graph.t)
     List.fold_left (fun acc v ->
         let vhat = getId f v in
         BatMap.modify_opt u (fun omapu ->
-                           match omapu with
-                           | None -> Some (BatSet.singleton vhat)
-                           | Some vs -> Some (BatSet.add vhat vs)) acc) umap
+                            match omapu with
+                            | None -> Some (BatSet.singleton vhat)
+                            | Some vs -> Some (BatSet.add vhat vs)) acc) umap
                    (neighbors g u)
   in
   let vmap = BatSet.fold (fun u acc -> refineOne u acc) us BatMap.empty in
@@ -48,7 +48,7 @@ let rec abstractionTopological (f: abstractionMap) (g: Graph.t) : abstractionMap
   else abstractionTopological f' g
 
 (** * Proper policy+topology abstraction *)  
- 
+  
 let refineAbstraction (f: abstractionMap) (g: Graph.t)
                       (transMap: (Edge.t, int * Syntax.exp) Hashtbl.t)
                       (mergeMap: (Vertex.t, int * Syntax.exp) Hashtbl.t)
@@ -58,13 +58,13 @@ let refineAbstraction (f: abstractionMap) (g: Graph.t)
         let vhat = getId f v in
         let (trans_pol, _) = Hashtbl.find transMap (u,v) in
         BatMap.modify_opt u (fun omapu ->
-            match omapu with
-            | None ->
-               let (merge_pol, _) = Hashtbl.find mergeMap u in
-               Some (merge_pol, BatSet.singleton (trans_pol, vhat))
-            | Some (mp, vs) ->
-               Some (mp, BatSet.add (trans_pol, vhat) vs))
-                         acc) umap (neighbors g u)
+                            match omapu with
+                            | None ->
+                               let (merge_pol, _) = Hashtbl.find mergeMap u in
+                               Some (merge_pol, BatSet.singleton (trans_pol, vhat))
+                            | Some (mp, vs) ->
+                               Some (mp, BatSet.add (trans_pol, vhat) vs))
+                          acc) umap (neighbors g u)
   in
   (* for each node u in us, find the (abstract) nodes it's connected to and their policy *)
   let vmap = BatSet.fold (fun u acc -> refineOne u acc) us BatMap.empty in
@@ -92,7 +92,9 @@ let partialEvalTrans (graph : Graph.t)
       (*                                   (exp_of_value (vclosure (network.trans)))); *)
       let ptrans = Interp.interp_partial_fun trans [edge_to_val e] in
       Printf.printf "edge (%d,%d): %s\n" (UInt32.to_int (fst e)) (UInt32.to_int (snd e))
-      (Syntax.show_exp ~show_meta:false ptrans);
+                    (Syntax.show_exp ~show_meta:false ptrans);
+      Printf.printf "edge (%d,%d): %d\n" (UInt32.to_int (fst e)) (UInt32.to_int (snd e))
+                    (Syntax.hash_exp ~hash_meta:false ptrans);
       Hashtbl.add tbl e ((Syntax.hash_exp ~hash_meta:false ptrans), ptrans)) es;
   tbl
 
@@ -121,205 +123,8 @@ let addAbstractEdges (g: Graph.t) (f: abstractionMap) (ag: Graph.t)
 (* Requires that abstract group ids are contiguous. Deprecated. *)
 let buildAbstractGraph (g: Graph.t) (f: abstractionMap) : Graph.t =
   let ag = Graph.create (UInt32.of_int (size f)) in
-  BatSet.fold (fun uhat acc -> addAbstractEdges g f acc uhat) (Graph.get_vertices ag) ag   
+  BatSet.fold (fun uhat acc -> addAbstractEdges g f acc uhat) (Graph.get_vertices ag) ag
 
-(* Given a concrete graph and an abstraction function returns the node
-   and edges of the abstract graph *)
-let buildAbstractGraphDecls (g: Graph.t) (f: abstractionMap) : UInt32.t * (Edge.t list) =
-  let n = UInt32.of_int (size f) in
-  let rec edges uhat =
-    if uhat = n then []
-    else (findAbstractEdges g f uhat) @ edges (UInt32.add uhat UInt32.one)
-  in
-  (n, edges UInt32.zero)
-
-(* Helper function that constructs an MGet expression *)
-let mget (m : exp) (i : exp) : exp =
-  eop MGet [m; i]
-  
-let buildSymbolicFailures (edges : Edge.t list) (k : int) (failuresVar : Var.t) =
-  (* symbolic map of failures *)
-  let failuresMap = e_val (vmap (BddMap.create ~key_ty:tint (vbool false))) in
-  let bool2int_exp arg = eif arg (e_val (vint UInt32.one)) (e_val (vint UInt32.zero)) in
-  let failuresSum = List.fold_left (fun acc (uhat, vhat) ->
-                     eop UAdd [(bool2int_exp (mget (evar failuresVar)
-                                         (e_val (vtuple [vint uhat; vint vhat])))); acc])
-                                (e_val (vint UInt32.zero)) edges in
-  let failures_leq_k = eop ULeq [failuresSum; e_val (vint (UInt32.of_int k))] in
-  [DRequire failures_leq_k; DSymbolic (failuresVar, Exp failuresMap)]
-
-
-let deconstructFun exp =
-  match exp.e with
-  | EFun f ->
-     (f.arg, f.body)
-  | _ -> failwith "expected a function"
-  
-(* Given the abstract edges and a concrete transfer function, 
-   synthesizes an abstract transfer function. *)
-let buildAbstractTrans (aedges : Edge.t list)
-                       (trans: (Edge.t, int * Syntax.exp) Hashtbl.t)
-                       (failuresVar : Var.t)
-                       (f: abstractionMap) : Syntax.exp =
-  (* edge argument used by abstract transfer function *)
-  let aedge_var = Var.create "edge" in
- 
-  (* code that implements check for failed edge *)
-  let failCheck exp = eif (mget (evar failuresVar) (evar aedge_var))
-                          (exp_of_value (voption None))
-                          exp in
-  
-  (* inserting that code in the body of the transfer function *)
-  let addFailureCheck exp = deconstructFun exp |> snd |> failCheck in
-    
-  (* for each abstract edge, find it's corresponding concrete
-     transfer function and augment it with a check for whether it's
-     failed *)
-  let branches =
-    List.fold_left (fun acc (uhat, vhat) ->
-        let p = PTuple [PUInt32 uhat; PUInt32 vhat] in
-        let (u,v) = (getGroupRepresentativeId f uhat, getGroupRepresentativeId f vhat) in
-        let (_, transuv) = Hashtbl.find trans (u,v) in
-        (p, addFailureCheck transuv) :: acc) [] aedges
-  in
-  (* partial evaluted trans functions are of the form fun m -> ..., grab m *)
-  let messageArg = match aedges with
-    | [] -> failwith "No edges found"
-    | (uhat, vhat) :: _ ->
-       let uv = (getGroupRepresentativeId f uhat, getGroupRepresentativeId f vhat) in
-       let (_, transuv) = Hashtbl.find trans uv in
-       match transuv.e with
-       | EFun f ->
-          f.arg
-       | _ -> failwith "expected a function"
-  in
-  let match_exp = ematch (evar aedge_var) branches in
-  (* create fun m -> trans_hat_body *)
-  let trans_hat_msg = Syntax.lam messageArg match_exp in
-  (*return fun e_hat m -> trans_hat_body *)  
-  Syntax.lam aedge_var trans_hat_msg
-
-(* Given the number of abstract nodes and a concrete merge function, 
-   synthesizes an abstract merge function. *)
-let buildAbstractMerge (n : UInt32.t)
-                       (merge: (Vertex.t, int * Syntax.exp) Hashtbl.t)
-                       (f: abstractionMap) : Syntax.exp =
-  (* vertex argument used by abstract merge function *)
-  let avertex_var = Var.create "node" in
-
-  (* get attribute arguments *)
-  let xvar, yvar =
-    let _, merge0 = Hashtbl.find merge UInt32.zero in
-    (fst (deconstructFun merge0), fst (deconstructFun (snd (deconstructFun merge0)))) in
-  (* for each abstract node, find it's corresponding concrete
-      merge function. *)
-  let rec branches uhat =
-    if uhat = n then []
-    else
-      let p = PUInt32 uhat in
-      let u = getGroupRepresentativeId f uhat in
-      let (_, mergeu) = Hashtbl.find merge u in
-      let mergeubody = mergeu |> deconstructFun |> snd |> deconstructFun |> snd in
-      (p, mergeubody) :: (branches (UInt32.add uhat UInt32.one))
-  in
-  (* create a match on the node expression *)
-  let match_exp = ematch (evar avertex_var) (branches UInt32.zero) in
-  (* create a function from attributes *)
-  let merge_fun_msg = Syntax.lam xvar (Syntax.lam yvar match_exp) in
-  (*return fun uhat x y -> merge_hat_body *)  
-  Syntax.lam avertex_var merge_fun_msg
-
-(* Constructs the init function for the abstract network. Nodes in the
-   set dst have the invariant that they announce the same prefixes *)
-let buildAbstractInit (dst: Vertex.t BatSet.t)
-                      (initMap: (Vertex.t, Syntax.exp) Hashtbl.t)
-                      (attrTy : Syntax.ty)
-                      (f: abstractionMap) : Syntax.exp =
-  (* vertex argument used by abstract init function *)
-  let avertex_var = Var.create "node" in
-
-  (* Grab one of the destination nodes *)
-  let (d, dst') = BatSet.pop_min dst in
-  (* Grab its initial value *)
-  let vinit = (Hashtbl.find initMap d) in
-  let b = (PUInt32 (getId f d), vinit) in
-  (* This is the default initial value for all other nodes.
-     Assuming default_value computes the value we want..*)
-  let default_attr = e_val (default_value attrTy) in
-  let default_branch = (PWild, default_attr) in
-  (* compute the branches of the initial expression *)
-  let branches = BatSet.fold (fun u acc ->
-                     let uhat = getId f u in
-                     let p = PUInt32 uhat in
-                     (p, vinit) :: acc) dst' ([b; default_branch]) in
-  (*build the match expression *)
-  let match_exp = ematch (evar avertex_var) branches in
-  (*return the function "init node = ..." *)
-  Syntax.lam avertex_var match_exp
-
-(* Constructs the assertion function for the abstract network.*)
-(* TODO: we also need to slice the assertion function to only refer to
-   prefixes of the current SRP *)
-(* Invariant: This assumes that nodes in the same abstract group have
-   the same assertion. *)
-let buildAbstractAssert (assertionMap: (Vertex.t, Syntax.exp) Hashtbl.t)
-                        (f: abstractionMap) : Syntax.exp =
-  (* vertex argument used by abstract init function *)
-  let avertex_var = Var.create "node" in
-  
-  (* get abstract nodes *)
-  let n = UInt32.of_int (AbstractionMap.size f) in
-
-  (* get the argument name of the attribute *)
-  let mineu = Hashtbl.find assertionMap UInt32.zero in 
-  let messageArg, _ = deconstructFun mineu in
-  
-  (* for each abstract node, find it's corresponding concrete
-      assertion function. *)
-  let rec branches uhat =
-    if uhat = n then []
-    else
-      let p = PUInt32 uhat in
-      let u = getGroupRepresentativeId f uhat in
-      let assertu = Hashtbl.find assertionMap u in
-      (p, assertu) :: (branches (UInt32.add uhat UInt32.one))
-  in
-  
-  (* create a match on the node expression *)
-  let match_exp = ematch (evar avertex_var) (branches UInt32.zero) in
-  let assert_msg = Syntax.lam messageArg match_exp in
-  
-  (*return fun uhat m -> assert_hat_body *)  
-  Syntax.lam avertex_var assert_msg
-  
-(* Given an abstraction function, a concrete graph, transfer and merge
-   function, and the number of maximum link failures builds an
-   abstract network *)
-let buildAbstractNetwork (f: abstractionMap) (graph: Graph.t)
-                         (mergeMap: (Vertex.t, int * Syntax.exp) Hashtbl.t)
-                         (transMap: (Edge.t, int * Syntax.exp) Hashtbl.t)
-                         (initMap: (Vertex.t, Syntax.exp) Hashtbl.t)
-                         (assertMap: (Vertex.t, Syntax.exp) Hashtbl.t)
-                         (dst : Vertex.t BatSet.t)
-                         (attrTy: Syntax.ty)
-                         (k: int) : declarations =
-  (* build the abstract graph based on the abstraction function *)
-  let (n, edgeshat) = buildAbstractGraphDecls graph f in
-  (* create a variable to point to a failures map *)
-  let failuresVar = Var.create "fail" in
-  (* build the abstract merge function *)
-  let mergehat = buildAbstractMerge n mergeMap f in
-  (* build the abstract transfer function *)
-  let transhat = buildAbstractTrans edgeshat transMap failuresVar f in
-  (* build the abstract init function *)
-  let inithat = buildAbstractInit dst initMap attrTy f in
-  (* build the abstract assert function *)
-  let asserthat = buildAbstractAssert assertMap f in
-  (* build the symbolic representation of failures *) 
-  let symbolics = buildSymbolicFailures edgeshat k failuresVar in
-  (DNodes n) :: (DEdges edgeshat) :: (DMerge mergehat)
-  :: (DTrans transhat) :: (DInit inithat) :: (DAssert asserthat) :: symbolics
-  
 (* Given a concrete graph, transfer, merge functions a destinations
    computes an abstract network *)
 let findAbstraction (graph: Graph.t)
@@ -334,21 +139,229 @@ let findAbstraction (graph: Graph.t)
   (* compute the abstraction function *)
   let f = abstraction f graph transMap mergeMap in
   f
-  
-let abstractToConcreteEdge (g: Graph.t) (f: abstractionMap) (ehat: Edge.t) : EdgeSet.t =
-  let (uhat, vhat) = ehat in
-  let us = getGroupById f uhat in (* get nodes represented by uhat *)
-  let getNeighborsInVhat u =
-    BatList.filter_map (fun v ->
-        if (getId f v = vhat) then Some (u,v) else None) (neighbors g u)
-    |> EdgeSet.of_list
-  in
-  BatSet.fold
-    (fun u acc -> EdgeSet.union (getNeighborsInVhat u) acc) us EdgeSet.empty
-  
-let getEdgeMultiplicity (g: Graph.t) (f: abstractionMap) (ehat: Edge.t) : int =
-  EdgeSet.cardinal (abstractToConcreteEdge g f ehat)
-  
+
+(** * Functions related to creating the declarations of an abstract network *)
+module BuildAbstractNetwork =
+  struct
+    
+    (* Given a concrete graph and an abstraction function returns the node
+   and edges of the abstract graph *)
+    let buildAbstractGraphDecls (g: Graph.t) (f: abstractionMap) : UInt32.t * (Edge.t list) =
+      let n = UInt32.of_int (size f) in
+      Printf.printf "size %d\n" (size f);
+      let rec edges uhat =
+        if uhat = n then []
+        else
+          begin
+            Printf.printf "%d\n" (UInt32.to_int uhat);
+            (findAbstractEdges g f uhat) @ edges (UInt32.add uhat UInt32.one)
+          end
+      in
+      (n, edges UInt32.zero)
+
+    (* Helper function that constructs an MGet expression *)
+    let mget (m : exp) (i : exp) : exp =
+      eop MGet [m; i]
+      
+    let buildSymbolicFailures (edges : Edge.t list) (k : int) (failuresVar : Var.t) =
+      (* symbolic map of failures *)
+      let failuresMap = e_val (vmap (BddMap.create ~key_ty:tint (vbool false))) in
+      let bool2int_exp arg = eif arg (e_val (vint UInt32.one)) (e_val (vint UInt32.zero)) in
+      let failuresSum = List.fold_left (fun acc (uhat, vhat) ->
+                            eop UAdd [(bool2int_exp (mget (evar failuresVar)
+                                                          (e_val (vtuple [vint uhat; vint vhat])))); acc])
+                                       (e_val (vint UInt32.zero)) edges in
+      let failures_leq_k = eop ULeq [failuresSum; e_val (vint (UInt32.of_int k))] in
+      [DRequire failures_leq_k; DSymbolic (failuresVar, Exp failuresMap)]
+
+
+    let deconstructFun exp =
+      match exp.e with
+      | EFun f ->
+         (f.arg, f.body)
+      | _ -> failwith "expected a function"
+           
+    (* Given the abstract edges and a concrete transfer function, 
+   synthesizes an abstract transfer function. *)
+    let buildAbstractTrans (aedges : Edge.t list)
+                           (trans: (Edge.t, int * Syntax.exp) Hashtbl.t)
+                           (failuresVar : Var.t)
+                           (f: abstractionMap) : Syntax.exp =
+      (* edge argument used by abstract transfer function *)
+      let aedge_var = Var.create "edge" in
+      
+      (* code that implements check for failed edge *)
+      let failCheck exp = eif (mget (evar failuresVar) (evar aedge_var))
+                              (exp_of_value (voption None))
+                              exp in
+      
+      (* inserting that code in the body of the transfer function *)
+      let addFailureCheck exp = deconstructFun exp |> snd |> failCheck in
+      
+      (* for each abstract edge, find it's corresponding concrete
+     transfer function and augment it with a check for whether it's
+     failed *)
+      let branches =
+        List.fold_left (fun acc (uhat, vhat) ->
+            let p = PTuple [PUInt32 uhat; PUInt32 vhat] in
+            let (u,v) = (getGroupRepresentativeId f uhat, getGroupRepresentativeId f vhat) in
+            let (_, transuv) = Hashtbl.find trans (u,v) in
+            (p, addFailureCheck transuv) :: acc) [] aedges
+      in
+      (* partial evaluted trans functions are of the form fun m -> ..., grab m *)
+      let messageArg = match aedges with
+        | [] -> failwith "No edges found"
+        | (uhat, vhat) :: _ ->
+           let uv = (getGroupRepresentativeId f uhat, getGroupRepresentativeId f vhat) in
+           let (_, transuv) = Hashtbl.find trans uv in
+           match transuv.e with
+           | EFun f ->
+              f.arg
+           | _ -> failwith "expected a function"
+      in
+      let match_exp = ematch (evar aedge_var) branches in
+      (* create fun m -> trans_hat_body *)
+      let trans_hat_msg = Syntax.lam messageArg match_exp in
+      (*return fun e_hat m -> trans_hat_body *)  
+      Syntax.lam aedge_var trans_hat_msg
+
+    (* Given the number of abstract nodes and a concrete merge function, 
+   synthesizes an abstract merge function. *)
+    let buildAbstractMerge (n : UInt32.t)
+                           (merge: (Vertex.t, int * Syntax.exp) Hashtbl.t)
+                           (f: abstractionMap) : Syntax.exp =
+      (* vertex argument used by abstract merge function *)
+      let avertex_var = Var.create "node" in
+
+      (* get attribute arguments *)
+      let xvar, yvar =
+        let _, merge0 = Hashtbl.find merge UInt32.zero in
+        (fst (deconstructFun merge0), fst (deconstructFun (snd (deconstructFun merge0)))) in
+      (* for each abstract node, find it's corresponding concrete
+      merge function. *)
+      let rec branches uhat =
+        if uhat = n then []
+        else
+          let p = PUInt32 uhat in
+          let u = getGroupRepresentativeId f uhat in
+          let (_, mergeu) = Hashtbl.find merge u in
+          let mergeubody = mergeu |> deconstructFun |> snd |> deconstructFun |> snd in
+          (p, mergeubody) :: (branches (UInt32.add uhat UInt32.one))
+      in
+      (* create a match on the node expression *)
+      let match_exp = ematch (evar avertex_var) (branches UInt32.zero) in
+      (* create a function from attributes *)
+      let merge_fun_msg = Syntax.lam xvar (Syntax.lam yvar match_exp) in
+      (*return fun uhat x y -> merge_hat_body *)  
+      Syntax.lam avertex_var merge_fun_msg
+
+    (* Constructs the init function for the abstract network. Nodes in the
+   set dst have the invariant that they announce the same prefixes *)
+    let buildAbstractInit (dst: Vertex.t BatSet.t)
+                          (initMap: (Vertex.t, Syntax.exp) Hashtbl.t)
+                          (attrTy : Syntax.ty)
+                          (f: abstractionMap) : Syntax.exp =
+      (* vertex argument used by abstract init function *)
+      let avertex_var = Var.create "node" in
+
+      (* Grab one of the destination nodes *)
+      let (d, dst') = BatSet.pop_min dst in
+      (* Grab its initial value *)
+      let vinit = (Hashtbl.find initMap d) in
+      let b = (PUInt32 (getId f d), vinit) in
+      (* This is the default initial value for all other nodes.
+     Assuming default_value computes the value we want..*)
+      let default_attr = e_val (default_value attrTy) in
+      let default_branch = (PWild, default_attr) in
+      (* compute the branches of the initial expression *)
+      let branches = BatSet.fold (fun u acc ->
+                         let uhat = getId f u in
+                         let p = PUInt32 uhat in
+                         (p, vinit) :: acc) dst' ([b; default_branch]) in
+      (*build the match expression *)
+      let match_exp = ematch (evar avertex_var) branches in
+      (*return the function "init node = ..." *)
+      Syntax.lam avertex_var match_exp
+
+    (* Constructs the assertion function for the abstract network.*)
+    (* TODO: we also need to slice the assertion function to only refer to
+   prefixes of the current SRP *)
+    (* Invariant: This assumes that nodes in the same abstract group have
+   the same assertion. *)
+    let buildAbstractAssert (assertionMap: (Vertex.t, Syntax.exp) Hashtbl.t)
+                            (f: abstractionMap) : Syntax.exp =
+      (* vertex argument used by abstract init function *)
+      let avertex_var = Var.create "node" in
+      
+      (* get abstract nodes *)
+      let n = UInt32.of_int (AbstractionMap.size f) in
+
+      (* get the argument name of the attribute *)
+      let mineu = Hashtbl.find assertionMap UInt32.zero in 
+      let messageArg, _ = deconstructFun mineu in
+      
+      (* for each abstract node, find it's corresponding concrete
+      assertion function. *)
+      let rec branches uhat =
+        if uhat = n then []
+        else
+          let p = PUInt32 uhat in
+          let u = getGroupRepresentativeId f uhat in
+          let assertu = Hashtbl.find assertionMap u in
+          (p, assertu) :: (branches (UInt32.add uhat UInt32.one))
+      in
+      
+      (* create a match on the node expression *)
+      let match_exp = ematch (evar avertex_var) (branches UInt32.zero) in
+      let assert_msg = Syntax.lam messageArg match_exp in
+      
+      (*return fun uhat m -> assert_hat_body *)  
+      Syntax.lam avertex_var assert_msg
+      
+    (* Given an abstraction function, a concrete graph, transfer and merge
+   function, and the number of maximum link failures builds an
+   abstract network *)
+    let buildAbstractNetwork (f: abstractionMap) (graph: Graph.t)
+                             (mergeMap: (Vertex.t, int * Syntax.exp) Hashtbl.t)
+                             (transMap: (Edge.t, int * Syntax.exp) Hashtbl.t)
+                             (initMap: (Vertex.t, Syntax.exp) Hashtbl.t)
+                             (assertMap: (Vertex.t, Syntax.exp) Hashtbl.t)
+                             (dst : Vertex.t BatSet.t)
+                             (attrTy: Syntax.ty)
+                             (k: int) : declarations =
+      (* build the abstract graph based on the abstraction function *)
+      let (n, edgeshat) = buildAbstractGraphDecls graph f in
+      (* create a variable to point to a failures map *)
+      let failuresVar = Var.create "fail" in
+      (* build the abstract merge function *)
+      let mergehat = buildAbstractMerge n mergeMap f in
+      (* build the abstract transfer function *)
+      let transhat = buildAbstractTrans edgeshat transMap failuresVar f in
+      (* build the abstract init function *)
+      let inithat = buildAbstractInit dst initMap attrTy f in
+      (* build the abstract assert function *)
+      let asserthat = buildAbstractAssert assertMap f in
+      (* build the symbolic representation of failures *) 
+      let symbolics = buildSymbolicFailures edgeshat k failuresVar in
+      (DNodes n) :: (DEdges edgeshat) :: (DMerge mergehat)
+      :: (DTrans transhat) :: (DInit inithat) :: (DAssert asserthat) :: symbolics
+
+    let abstractToConcreteEdge (g: Graph.t) (f: abstractionMap) (ehat: Edge.t) : EdgeSet.t =
+      let (uhat, vhat) = ehat in
+      let us = getGroupById f uhat in (* get nodes represented by uhat *)
+      let getNeighborsInVhat u =
+        BatList.filter_map (fun v ->
+            if (getId f v = vhat) then Some (u,v) else None) (neighbors g u)
+        |> EdgeSet.of_list
+      in
+      BatSet.fold
+        (fun u acc -> EdgeSet.union (getNeighborsInVhat u) acc) us EdgeSet.empty
+      
+    let getEdgeMultiplicity (g: Graph.t) (f: abstractionMap) (ehat: Edge.t) : int =
+      EdgeSet.cardinal (abstractToConcreteEdge g f ehat)
+
+  end
+      
 (* For failures we don't really need to care about the policies when
    computing a new abstraction as those have already been factored in
    and we are only splitting things. We just have to ensure a
@@ -360,7 +373,7 @@ module FailuresAbstraction =
     (* For each abstract node [uhat] and [vhat], partitions the concrete
        nodes in uhat into subsets s.t. that nodes in the same subset have
        edges to the same concrete nodes in [vhat] *)                              
-    let splitForFailures (uhat : AbstractNode.t) (vhat : AbstractNode.t)
+    let findSplittingByConnectivity (uhat : AbstractNode.t) (vhat : AbstractNode.t)
                          (g: Graph.t) : splittings = 
       let addNeighbor u =
         let neighborsOfu = neighbors g u in
@@ -388,7 +401,7 @@ module FailuresAbstraction =
         | [] -> best
         | vid :: path ->
            let curGroup = getGroupById f current in
-           match splitForFailures curGroup (getGroupById f vid) g with
+           match findSplittingByConnectivity curGroup (getGroupById f vid) g with
            | Groups us when BatSet.cardinal us = 2 ->
               (us, 0.0)
            | Groups us ->
@@ -411,6 +424,40 @@ module FailuresAbstraction =
       let u1, u2 = AbstractNode.randomSplit (getGroupById f uid) in
       loop path uid (BatSet.of_list [u1;u2], float_of_int max_int)
 
+
+    (* Try to find a failure for which splitting would make the most
+       sense. This is based on heuristics, currently: 
+       * 1. Choose a u,v with |v| > 1 or |u| > 1, so we can split it.  
+       * 2. Choose failure (u,v) such that v can reach the destination and u cannot.  
+       * 3. Choose u with the biggest cost (thus distance from the
+       destination). This is good for our splitting based on the
+       path. *)
+    let findVertexToRefine f (failed: Edge.t BatSet.t) sol =
+      let lbl = sol.Solution.labels in
+      let candidate1 =
+        BatSet.filter (fun (u,v) -> ((BatSet.cardinal (getGroupById f v)) > 1))
+                      failed in
+      let isEmpty1 = BatSet.is_empty candidate1 in
+      let candidate1 = if isEmpty1 then
+                         BatSet.filter (fun (u,v) -> ((BatSet.cardinal (getGroupById f u)) > 1))
+                                       failed
+                       else
+                         candidate1
+      in
+      let candidate2 =
+        BatSet.filter (fun (u,v) ->
+            match (VertexMap.find u lbl).v, (VertexMap.find v lbl).v with
+            | VOption None, VOption (Some _) -> true
+            | _ -> false)
+                      candidate1 in
+      let selector = if isEmpty1 then fst else snd in
+      match BatSet.is_empty candidate2 with
+      | false ->
+         (* not sure how to implement this right now *)
+         selector (BatSet.choose candidate2)
+      | true ->
+         selector (BatSet.choose candidate1)
+        
     let splitSet_debug us =
       if !debugAbstraction then
         show_message (AbstractNode.printAbstractNode us) T.Blue "splitting set"
@@ -425,25 +472,15 @@ module FailuresAbstraction =
         show_message (printAbstractGroups f "\n") T.Blue
                      "Abstract groups after refine for failures "
       
-    let refineForFailures (g: Graph.t) (f: abstractionMap)
-                          (uid: abstrId) (path: abstrId list) : abstractionMap =
-      let (uss, _) = bestSplitForFailures g f uid path in
+    let refineForFailures (g: Graph.t) (f: abstractionMap) (sol: Solution.t) : abstractionMap =
+      (*TODO: find failures from symbolics and replace BatSet.empty *)
+      let uhat = findVertexToRefine f BatSet.empty sol in
+      let (uss, _) = bestSplitForFailures g f uhat [] in
       let f' = splitSet f uss in
       let f'' =  abstractionTopological f' g in
       refineForFailures_debug f'';
       f''      
   end
 
-  (* 1. find the abstraction.
-     2. build abstract network.
-     3. check assertions.
-     3a. if they succeed, we are done.
-     3b. if not, decide whether it's game over or we can refine. *)
-(* let abstractionLoop (graph: Graph.t) (trans : Syntax.exp) *)
-(*                     (merge : Syntax.exp) (init : Syntax.exp) *)
-(*                     (assertion : Syntax.exp) (ds: VertexSet.t) (k : int) = *)
-(*   let f = findAbstraction graph trans merge init assertion ds in *)
-(*   let transMap = partialEvalTrans graph trans in *)
-(*   let mergeMap = partialEvalMerge graph merge in *)
   
-    
+  

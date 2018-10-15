@@ -235,8 +235,10 @@ let rec interp_exp_partial env e =
   match e.e with
   | ETy (e, _) -> interp_exp_partial env e
   | EVar x -> (
+    (* Printf.printf "lookup:%s\n" (Var.to_string x); *)
     match Env.lookup_opt env.value x with
-    | None -> e
+    | None ->
+       e
     | Some v ->
        e_val v)
   | EVal v -> e
@@ -246,16 +248,28 @@ let rec interp_exp_partial env e =
      (* This is kind of a hack: I think it only works if you inline
         functions, because it only applies to top-level definitions -
         otherwise the closure (env) is wrong *)
-     (* exp_of_value (vclosure (env, {f with body = interp_exp_partial env f.body})) *)
-     e
+     exp_of_value (vclosure (env, {f with body = interp_exp_partial env f.body}))
+     (* e *)
   | EApp (e1, e2) ->
     let pe1 = interp_exp_partial env e1 in
     let pe2 = interp_exp_partial env e2 in
+    if is_value pe1 then
+      match (to_value pe1). with
+      | VClosure (c_env, f) ->
+         if is_value pe2 then
+           interp_exp_partial (update_value c_env f.arg (to_value pe2)) f.body
+         else
+           eapp pe1 pe2
+      | _ -> failwith ("bad functional application: " ^ (show_exp ~show_meta:false e1))
+    else
+      eapp pe1 pe2
     (match pe1.e with
-     | EFun f ->
+     | EVal (VClosure (c_env, f)) ->
         if is_value pe2 then
-          (*   interp_exp_partial (update_value c_env f.arg (to_value pe2)) f.body *)
-          interp_exp_partial (update_value env f.arg (to_value pe2)) f.body
+          begin
+            interp_exp_partial (update_value c_env f.arg (to_value pe2)) f.body
+          (* interp_exp_partial (update_value env f.arg (to_value pe2)) f.body *)
+          end
         else
           eapp pe1 pe2
      | _ -> failwith ("bad functional application: " ^ (show_exp ~show_meta:false e1)) )
@@ -288,6 +302,7 @@ let rec interp_exp_partial env e =
                ^ " did not match any pattern in match statement"))
      else
        ematch pe1 (List.map (fun (p,eb) -> (p, interp_exp_partial env eb)) branches)
+
 and interp_op_partial env ty op es =
   (* if arity op != List.length es then
     failwith
