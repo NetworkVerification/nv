@@ -109,7 +109,8 @@ let rec interp_exp env e =
              (Var.to_string x))
     | Some v -> v )
   | EVal v -> v
-  | EOp (op, es) -> interp_op env (oget e.ety) op es
+  | EOp (op, es) ->
+     interp_op env (oget e.ety) op es
   | EFun f -> vclosure (env, f)
   | EApp (e1, e2) -> (
       let v1 = interp_exp env e1 in
@@ -235,7 +236,6 @@ let rec interp_exp_partial isapp env e =
   match e.e with
   | ETy (e, _) -> interp_exp_partial isapp env e
   | EVar x -> (
-    (* Printf.printf "lookup:%s\n" (Var.to_string x); *)
     match Env.lookup_opt env.value x with
     | None ->
        e
@@ -309,13 +309,9 @@ let rec interp_exp_partial isapp env e =
        ematch pe1 (List.map (fun (p,eb) -> (p, interp_exp_partial false env eb)) branches)
 
 and interp_op_partial env ty op es =
-  (* if arity op != List.length es then
-    failwith
-      (sprintf "operation %s has arity %d not arity %d"
-         (op_to_string op) (arity op) (List.length es)) ; *)
   let pes = List.map (interp_exp_partial false env) es in
   if List.exists (fun pe -> not (is_value pe)) pes then
-    eop op pes
+    aexp (eop op pes, Some ty, Span.default)
   else
     begin
       exp_of_value @@ 
