@@ -105,7 +105,7 @@ let fold (g: Vertex.t -> AbstractNode.t -> 'a -> 'a) (f: abstractionMap) (acc: '
   VertexMap.fold (fun u idx acc -> g u (getGroupById f idx) acc) f.groupId acc
 
 let size (f: abstractionMap) : int =
-  VertexMap.cardinal f.groupId
+  f.nextId |> UInt32.to_int
 
 let normalize (f: abstractionMap) =
   let (nextIdN, groupIdN, absGroupsN) =

@@ -91,10 +91,10 @@ let partialEvalTrans (graph : Graph.t)
       (*               (Syntax.show_exp ~show_meta:false *)
       (*                                   (exp_of_value (vclosure (network.trans)))); *)
       let ptrans = Interp.interp_partial_fun trans [edge_to_val e] in
-      Printf.printf "edge (%d,%d): %s\n" (UInt32.to_int (fst e)) (UInt32.to_int (snd e))
-                    (Syntax.show_exp ~show_meta:false ptrans);
-      Printf.printf "edge (%d,%d): %d\n" (UInt32.to_int (fst e)) (UInt32.to_int (snd e))
-                    (Syntax.hash_exp ~hash_meta:false ptrans);
+      (* Printf.printf "edge (%d,%d): %s\n" (UInt32.to_int (fst e)) (UInt32.to_int (snd e)) *)
+      (*               (Syntax.show_exp ~show_meta:false ptrans); *)
+      (* Printf.printf "edge (%d,%d): %d\n" (UInt32.to_int (fst e)) (UInt32.to_int (snd e)) *)
+      (*               (Syntax.hash_exp ~hash_meta:false ptrans); *)
       Hashtbl.add tbl e ((Syntax.hash_exp ~hash_meta:false ptrans), ptrans)) es;
   tbl
 
@@ -148,7 +148,6 @@ module BuildAbstractNetwork =
    and edges of the abstract graph *)
     let buildAbstractGraphDecls (g: Graph.t) (f: abstractionMap) : UInt32.t * (Edge.t list) =
       let n = UInt32.of_int (size f) in
-      Printf.printf "size %d\n" (size f);
       let rec edges uhat =
         if uhat = n then []
         else
@@ -163,7 +162,7 @@ module BuildAbstractNetwork =
     let mget (m : exp) (i : exp) : exp =
       eop MGet [m; i]
       
-    let buildSymbolicFailures (edges : Edge.t list) (k : int) (failuresVar : Var.t) =
+    let buildSymbolicFailures (aedges : Edge.t list) (k : int) (failuresVar : Var.t) =
       (* symbolic map of failures *)
       let failuresMap = e_val (vmap (BddMap.create ~key_ty:tint (vbool false))) in
       let bool2int_exp arg = eif arg (e_val (vint UInt32.one)) (e_val (vint UInt32.zero)) in
@@ -180,13 +179,19 @@ module BuildAbstractNetwork =
       | EFun f ->
          (f.arg, f.body)
       | _ -> failwith "expected a function"
+
+    let getNeighborsInVhat f g u vhat =
+      BatList.filter_map (fun v ->
+          if (getId f v = vhat) then Some (u,v) else None) (neighbors g u)
            
     (* Given the abstract edges and a concrete transfer function, 
    synthesizes an abstract transfer function. *)
-    let buildAbstractTrans (aedges : Edge.t list)
-                           (trans: (Edge.t, int * Syntax.exp) Hashtbl.t)
-                           (failuresVar : Var.t)
-                           (f: abstractionMap) : Syntax.exp =
+    let buildAbstractTrans
+          (g : Graph.t)
+          (aedges : Edge.t list)
+          (trans: (Edge.t, int * Syntax.exp) Hashtbl.t)
+          (failuresVar : Var.t)
+          (f: abstractionMap) : Syntax.exp =
       (* edge argument used by abstract transfer function *)
       let aedge_var = Var.create "edge" in
       
@@ -204,9 +209,13 @@ module BuildAbstractNetwork =
       let branches =
         List.fold_left (fun acc (uhat, vhat) ->
             let p = PTuple [PUInt32 uhat; PUInt32 vhat] in
-            let (u,v) = (getGroupRepresentativeId f uhat, getGroupRepresentativeId f vhat) in
-            let (_, transuv) = Hashtbl.find trans (u,v) in
-            (p, addFailureCheck transuv) :: acc) [] aedges
+            let u = getGroupRepresentativeId f uhat in
+            match getNeighborsInVhat f g u vhat with
+            | [] -> failwith "There must be a concrete edge
+                              corresponding to the abstract edge"
+            | uv :: _ -> 
+               let (_, transuv) = Hashtbl.find trans uv in
+               (p, addFailureCheck transuv) :: acc) [] aedges
       in
       (* partial evaluted trans functions are of the form fun m -> ..., grab m *)
       let messageArg = match aedges with
@@ -336,7 +345,7 @@ module BuildAbstractNetwork =
       (* build the abstract merge function *)
       let mergehat = buildAbstractMerge n mergeMap f in
       (* build the abstract transfer function *)
-      let transhat = buildAbstractTrans edgeshat transMap failuresVar f in
+      let transhat = buildAbstractTrans graph edgeshat transMap failuresVar f in
       (* build the abstract init function *)
       let inithat = buildAbstractInit dst initMap attrTy f in
       (* build the abstract assert function *)
@@ -349,13 +358,9 @@ module BuildAbstractNetwork =
     let abstractToConcreteEdge (g: Graph.t) (f: abstractionMap) (ehat: Edge.t) : EdgeSet.t =
       let (uhat, vhat) = ehat in
       let us = getGroupById f uhat in (* get nodes represented by uhat *)
-      let getNeighborsInVhat u =
-        BatList.filter_map (fun v ->
-            if (getId f v = vhat) then Some (u,v) else None) (neighbors g u)
-        |> EdgeSet.of_list
-      in
       BatSet.fold
-        (fun u acc -> EdgeSet.union (getNeighborsInVhat u) acc) us EdgeSet.empty
+        (fun u acc ->
+          EdgeSet.union (EdgeSet.of_list (getNeighborsInVhat f g u vhat)) acc) us EdgeSet.empty
       
     let getEdgeMultiplicity (g: Graph.t) (f: abstractionMap) (ehat: Edge.t) : int =
       EdgeSet.cardinal (abstractToConcreteEdge g f ehat)
