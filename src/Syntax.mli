@@ -160,6 +160,10 @@ val exp_of_value : value -> exp
 
 val func : var -> exp -> func
 
+val funcFull : var -> ty option -> ty option -> exp -> func
+
+val efunc : func -> exp
+
 val lam : var -> exp -> exp
 
 val is_value : exp -> bool

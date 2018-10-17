@@ -652,6 +652,15 @@ let exp_of_value v =
 
 let func x body = {arg= x; argty= None; resty= None; body}
 
+let funcFull x argty resty body = {arg= x; argty= argty; resty= resty; body}
+
+let efunc f =
+  match f.argty, f.resty with
+  | Some argty, Some resty ->
+     aexp (exp (EFun f), Some (TArrow (argty, resty)), Span.default)
+  | _, _ ->
+     exp (EFun f)
+
 let lam x body = exp (EFun (func x body))
 
 let annot ty e = {e with ety= Some ty; espan= e.espan}

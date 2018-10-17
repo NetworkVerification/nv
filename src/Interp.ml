@@ -311,7 +311,7 @@ let rec interp_exp_partial isapp env e =
 and interp_op_partial env ty op es =
   let pes = List.map (interp_exp_partial false env) es in
   if List.exists (fun pe -> not (is_value pe)) pes then
-    aexp (eop op pes, Some ty, Span.default)
+    eop op pes
   else
     begin
       exp_of_value @@ 

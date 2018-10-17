@@ -108,7 +108,7 @@ let run_simulator cfg info decls =
         
 let compress info decls cfg networkOp =
   let decls = Inline.inline_declarations info decls in
-  let network =
+  let network, symb =
     match
       ( get_merge decls
       , get_trans decls
@@ -116,12 +116,14 @@ let compress info decls cfg networkOp =
       , get_nodes decls
       , get_edges decls
       , get_attr_type decls
-      , get_assert decls )
+      , get_assert decls
+      , get_symbolics decls )
     with
-    | Some emerge, Some etrans, Some einit, Some n, Some es, Some aty, Some eassert ->
+    | Some emerge, Some etrans, Some einit, Some n, Some es,
+      Some aty, Some eassert, symb ->
        let graph = Graph.add_edges (Graph.create n) es in
        { attr_type = aty; init = einit; trans = etrans;
-         merge = emerge; assertion = eassert; graph = graph }
+         merge = emerge; assertion = eassert; graph = graph }, symb
     | _ ->
        Console.error
          "missing definition of nodes, edges, merge, trans, init or assert"
@@ -134,23 +136,24 @@ let compress info decls cfg networkOp =
   let assertMap = Slicing.partialEvalAssert network in
   
   (* find the prefixes that are relevant to the assertions *)
-  let prefixes = Slicing.relevantPrefixes assertMap in
+  let assertionPrefixes = Slicing.relevantPrefixes assertMap in
   (* find where each prefix is announced from *)
   let slices = Slicing.findInitialSlices initMap in
   (* keep only the relevant slices, i.e. prefixes that are used by the assertion *)
-  let relevantSlices = BatMap.filter (fun pre _ -> BatSet.mem pre prefixes) slices in
+  let relevantSlices =
+    BatMap.filter (fun pre _ -> BatSet.mem pre assertionPrefixes) slices in
   (* each set of prefixes represents an SRP *)
-  (* there is a slight overapproximation here: if a prefix is not used
-     by the assertion, but some other prefix that is announced from
-     the same node is then this prefix is not sliced out. This is
-     sound, but it can be optimized in the future *)
   let relevantSliceGroups = Collections.groupKeysByValue relevantSlices in
 
   let rec loop (f: AbstractionMap.abstractionMap) (ds: Graph.Vertex.t BatSet.t) =
     (* build abstract network *)
     let decls = buildAbstractNetwork f network.graph mergeMap transMap
                                      initMap assertMap ds
-                                     network.attr_type cfg.compress in
+                                     network.attr_type symb cfg.compress in
+    let fout = open_out "abstract.nv" in
+    Printf.fprintf fout "%s" (Printing.declarations_to_string decls);
+    flush fout;
+    let decls = Typing.infer_declarations info decls in
     match networkOp cfg info decls with
     | Unsat -> ()
     | Sat sol ->
@@ -163,19 +166,16 @@ let compress info decls cfg networkOp =
     | _ -> Console.error "Solver returned unknown"
   in
   BatSet.iter
-    (fun prefixes -> 
+    (fun prefixes ->
+      Printf.printf "Checking SRP for prefixes: %s" (Slicing.printPrefixes prefixes);
       (* get a prefix from this class of prefixes *)
       let pre = BatSet.min_elt prefixes in
       (* find the nodes this class is announced from *)
       let ds = BatMap.find pre relevantSlices in
       (* find the initial abstraction function for these destinations *)
       let f = Abstraction.findAbstraction network.graph transMap mergeMap ds in
-      (*TODO: remove decls from here once the simulator is tested *)
-      let decls = buildAbstractNetwork f network.graph mergeMap transMap
-                                       initMap assertMap ds
-                                       network.attr_type cfg.compress in
-      run_simulator cfg info decls 
-      (* loop f ds *)) relevantSliceGroups
+      (* run_simulator cfg info decls  *)
+      loop f ds) relevantSliceGroups
   
 let main =
   let cfg, rest = argparse default "nv" Sys.argv in

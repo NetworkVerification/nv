@@ -11,6 +11,10 @@ type network =
 (** The type of network prefixes *)
 type prefix = Unsigned.UInt32.t * Unsigned.UInt32.t
 
+val printPrefix : prefix -> string
+
+val printPrefixes : prefix BatSet.t -> string
+
 (** [relevantPrefixes assertTable] returns the prefixes that are used by the
    assertion function*)
 val relevantPrefixes: (Unsigned.UInt32.t, Syntax.exp) Hashtbl.t -> prefix BatSet.t

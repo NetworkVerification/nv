@@ -39,6 +39,7 @@ sig
                              (Graph.Vertex.t, Syntax.exp) Hashtbl.t ->
                              Graph.Vertex.t BatSet.t ->
                              Syntax.ty ->
+                             (Syntax.var * Syntax.ty_or_exp) list ->
                              int -> Syntax.declarations
 
   (** [abstractToConcreteEdge g f ehat] returns the set of concrete

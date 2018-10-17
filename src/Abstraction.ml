@@ -179,9 +179,9 @@ module BuildAbstractNetwork =
     let deconstructFun exp =
       match exp.e with
       | EFun f ->
-         (f.arg, f.body)
+         f
       | _ -> failwith "expected a function"
-
+           
     (* get all the concrete neighbors v of u s.t. f(v) = vhat *)
     let getNeighborsInVhat f g u vhat =
       BatList.filter_map (fun v ->
@@ -204,7 +204,7 @@ module BuildAbstractNetwork =
                                    body in
       
       (* inserting that code in the body of the transfer function *)
-      let addFailureCheck fvar exp = deconstructFun exp |> snd |> (failCheck fvar) in
+      let addFailureCheck fvar exp = (deconstructFun exp).body |> (failCheck fvar) in
       
       (* for each abstract edge, find it's corresponding concrete
          transfer function and augment it with a check for whether it's
@@ -234,10 +234,8 @@ module BuildAbstractNetwork =
                              corresponding to the abstract edge"
            | uv :: _ -> 
               let (_, transuv) = Hashtbl.find trans uv in
-              match transuv.e with
-              | EFun f ->
-                 f.arg
-              | _ -> failwith "expected a function"
+              let transf = deconstructFun transuv in
+              transf.arg
       in
       let match_exp = ematch (evar aedge_var) branches in
       (* create fun m -> trans_hat_body *)
@@ -253,10 +251,13 @@ module BuildAbstractNetwork =
       (* vertex argument used by abstract merge function *)
       let avertex_var = Var.create "node" in
 
+      let _, merge0 = Hashtbl.find merge UInt32.zero in
+      let merge0x = deconstructFun merge0 in
+      let merge0y = deconstructFun merge0x.body in
+      
       (* get attribute arguments *)
       let xvar, yvar =
-        let _, merge0 = Hashtbl.find merge UInt32.zero in
-        (fst (deconstructFun merge0), fst (deconstructFun (snd (deconstructFun merge0)))) in
+        (merge0x.arg, merge0y.arg) in
       (* for each abstract node, find it's corresponding concrete
       merge function. *)
       let rec branches uhat =
@@ -265,18 +266,33 @@ module BuildAbstractNetwork =
           let p = PUInt32 uhat in
           let u = getGroupRepresentativeId f uhat in
           let (_, mergeu) = Hashtbl.find merge u in
-          let mergeubody = mergeu |> deconstructFun |> snd |> deconstructFun |> snd in
-          (p, mergeubody) :: (branches (UInt32.add uhat UInt32.one))
+          let mergeu0 = deconstructFun mergeu in
+          let mergeu1 = deconstructFun mergeu0.body in
+          (* let mergeutyped = aexp(mergeu1.body, mergeu1.resty, Span.default) in *)
+          (*NOTE:removing types for now*)
+          (* (match mergeu1.resty with *)
+          (* | None -> Printf.printf "type is empty!\n"; *)
+          (* | Some ty -> Printf.printf "type in merge:%s\n" (Printing.ty_to_string ty);); *)
+          (p, mergeu1.body) :: (branches (UInt32.add uhat UInt32.one))
       in
       (* create a match on the node expression *)
+      (* let match_exp = aexp (ematch (evar avertex_var) (branches UInt32.zero), *)
+      (*                       merge0y.resty, Span.default) in *)
+      (*TODO:removing types*)
       let match_exp = ematch (evar avertex_var) (branches UInt32.zero) in
+                        
       (* create a function from attributes *)
-      let merge_fun_msg = Syntax.lam xvar (Syntax.lam yvar match_exp) in
-      (*return fun uhat x y -> merge_hat_body *)  
-      Syntax.lam avertex_var merge_fun_msg
+      (* let merge_fun_msg_y = funcFull yvar merge0y.argty merge0y.resty match_exp in *)
+      (* let merge_fun_msg = funcFull xvar merge0x.argty merge0x.resty (efunc merge_fun_msg_y) in *)
+                           
+      (*return fun uhat x y -> merge_hat_body *)
+      (* funcFull avertex_var (Some tint) merge_fun_msg.resty (efunc merge_fun_msg) |> *)
+      (*   efunc *)
+      Syntax.lam avertex_var (Syntax.lam xvar (Syntax.lam yvar match_exp))
 
-    (* Constructs the init function for the abstract network. Nodes in the
-   set dst have the invariant that they announce the same prefixes *)
+    (* Constructs the init function for the abstract network. Nodes in
+       the set dst have the invariant that they announce the same
+       prefixes *)
     let buildAbstractInit (dst: Vertex.t BatSet.t)
                           (initMap: (Vertex.t, Syntax.exp) Hashtbl.t)
                           (attrTy : Syntax.ty)
@@ -318,7 +334,7 @@ module BuildAbstractNetwork =
 
       (* get the argument name of the attribute *)
       let mineu = Hashtbl.find assertionMap UInt32.zero in 
-      let messageArg, _ = deconstructFun mineu in
+      let messageArg = (deconstructFun mineu).arg in
       
       (* for each abstract node, find it's corresponding concrete
       assertion function. *)
@@ -328,7 +344,7 @@ module BuildAbstractNetwork =
           let p = PUInt32 uhat in
           let u = getGroupRepresentativeId f uhat in
           let assertu = Hashtbl.find assertionMap u in
-          let assertubody = assertu |> deconstructFun |> snd in
+          let assertubody = (deconstructFun assertu).body in
           (p, assertubody) :: (branches (UInt32.add uhat UInt32.one))
       in
       
@@ -349,6 +365,7 @@ module BuildAbstractNetwork =
                              (assertMap: (Vertex.t, Syntax.exp) Hashtbl.t)
                              (dst : Vertex.t BatSet.t)
                              (attrTy: Syntax.ty)
+                             (symb: (Syntax.var * Syntax.ty_or_exp) list)
                              (k: int) : declarations =
       (* build the abstract graph based on the abstraction function *)
       let (n, edgeshat) = buildAbstractGraphDecls graph f in
@@ -362,7 +379,8 @@ module BuildAbstractNetwork =
       let inithat = buildAbstractInit dst initMap attrTy f in
       (* build the abstract assert function *)
       let asserthat = buildAbstractAssert assertMap f in
-      (DNodes n) :: (DEdges edgeshat) :: symbolics
+      let symbD = List.map (fun (d, tye) -> DSymbolic (d,tye)) symb in
+      (DATy attrTy) :: (DNodes n) :: (DEdges edgeshat) :: symbolics @ symbD
       @ ((DMerge mergehat) :: (DTrans transhat) :: (DInit inithat)
          :: [DAssert asserthat])
 

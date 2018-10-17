@@ -108,7 +108,12 @@ and inline_exp (env: exp Env.t) (e: exp) : exp =
           (inline_exp env e3)
         |> wrap e
     | ELet (x, e1, e2) ->
-        let e1' = inline_exp env e1 in
+       let e1' = inline_exp env e1 in
+       (* (match e1.ety with *)
+       (* | None -> Printf.printf "no type\n"; *)
+       (* | Some ty -> *)
+       (*    Printf.printf "crashes here: %s\n" (Printing.ty_to_string ty)); *)
+       (* Printf.printf "crashes here: %s\n" (Printing.exp_to_string e1); *)
         if is_function_ty e1 then
           inline_exp (Env.update env x e1') e2
         else elet x e1' (inline_exp env e2) |> wrap e

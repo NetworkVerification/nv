@@ -46,13 +46,14 @@ let show_line info line_num underline =
       Printf.printf "\n"
 
 let show_message_position info (span: Span.t) msg color label =
-  let l1, c1 = get_position span.start info in
-  let l2, c2 = get_position span.finish info in
   let border = "\n" in
-  T.print_string [] border ;
-  if l2 - l1 = 0 then show_line info l1 (Some (c1, c2, color))
-  else for i = l1 to l2 do show_line info i None done ;
-  T.print_string [] "\n" ;
+  (match get_position_opt span.start info, get_position_opt span.finish info with
+  | Some (l1, c1), Some (l2, c2) ->
+     T.print_string [] border ;
+     if l2 - l1 = 0 then show_line info l1 (Some (c1, c2, color))
+     else for i = l1 to l2 do show_line info i None done ;
+     T.print_string [] "\n"
+  | _, _ -> ());
   T.print_string [T.Foreground color; T.Bold] (label ^ ": ") ;
   Printf.printf "%s\n" msg ;
   T.print_string [] border
