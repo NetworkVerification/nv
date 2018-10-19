@@ -14,6 +14,15 @@ let of_string (s : string) : t =
   | _ -> failwith "Integer.of_string: Too many values"
 ;;
 
+let of_bv_string (s : string) : t =
+  if Str.string_before s 2 <> "#b"
+  then failwith @@ "Integer.of_bv_string: Unrecognized bv format: " ^ s;
+  let s = Str.string_after s 2 in
+  let size = Z.of_int @@ String.length s in
+  let value = Z.of_string ("0b" ^ s) in
+  {size; value}
+;;
+
 let of_int (n : int) : t =
   mod_by_size {size = Z.of_int 32; value = Z.of_int n}
 
