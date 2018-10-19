@@ -15,11 +15,15 @@ let of_string (s : string) : t =
 ;;
 
 let of_bv_string (s : string) : t =
-  if Str.string_before s 2 <> "#b"
-  then failwith @@ "Integer.of_bv_string: Unrecognized bv format: " ^ s;
-  let s = Str.string_after s 2 in
-  let size = Z.of_int @@ String.length s in
-  let value = Z.of_string ("0b" ^ s) in
+  (* print_endline @@ "of_bv_string: given " ^ s; *)
+  let size =
+    match String.sub s 0 2 with
+    | "#b" -> Z.of_int @@ String.length s - 2
+    | "#x" -> Z.of_int @@ 4 * (String.length s - 2)
+    | _ -> failwith @@ "Integer.of_bv_string: Unrecognized bv format: " ^ s;
+  in
+  (* Replace "#b00101" with "0b00101", etc *)
+  let value = Z.of_string @@ "0" ^ (Str.string_after s 1) in
   {size; value}
 ;;
 
