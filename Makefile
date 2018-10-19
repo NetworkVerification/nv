@@ -1,4 +1,4 @@
-PKGS = -package integers -package ounit -package z3
+PKGS = -package integers -package oUnit -package z3
 BUILD = ocamlbuild -use-ocamlfind -use-menhir -r $(PKGS)
 MLFILES= src/*.ml src/*.mli test/*.ml
 FORMATFILES=$(shell find src/ -name "*.ml" | grep -v Cmdline.ml)

@@ -1,4 +1,4 @@
-true: package(ounit)
+true: package(oUnit)
 true: package(integers)
 true: package(z3)
 true: package(ANSITerminal)
