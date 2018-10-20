@@ -151,7 +151,11 @@ let rec encode_exp_z3 descr env arr (e: exp) =
   match e.e with
   | EVar x ->
       let name =
-        if is_symbolic env.symbolics x then Var.to_string x
+        if is_symbolic env.symbolics x then
+          begin
+            Printf.printf "var:%s\n" (Var.to_string x);
+            Var.to_string x
+            end
         else create_name descr x
       in
       let sort = ty_to_sort env.ctx (oget e.ety) |> arr.f in
@@ -1036,7 +1040,7 @@ let solve ?symbolic_vars ds =
   in
   let eassert = get_assert ds in
   let env = encode_z3 ds sym_vars in
-  (* print_endline (Solver.to_string env.solver) ; *)
+  print_endline (Solver.to_string env.solver) ;
   let q = Solver.check env.solver [] in
   match q with
   | UNSATISFIABLE -> Unsat

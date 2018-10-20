@@ -193,6 +193,7 @@ module BuildAbstractNetwork =
           (g : Graph.t)
           (aedges : Edge.t list)
           (trans: (Edge.t, int * Syntax.exp) Hashtbl.t)
+          (attrTy: Syntax.ty)
           (failuresMap : (Edge.t, Var.t) BatMap.t)
           (f: abstractionMap) : Syntax.exp =
       (* edge argument used by abstract transfer function *)
@@ -200,7 +201,7 @@ module BuildAbstractNetwork =
       
       (* code that implements check for a failed edge *)
       let failCheck fvar body = eif (evar fvar)
-                                   (exp_of_value (voption None))
+                                   (exp_of_value (Syntax.default_value attrTy))
                                    body in
       
       (* inserting that code in the body of the transfer function *)
@@ -268,26 +269,11 @@ module BuildAbstractNetwork =
           let (_, mergeu) = Hashtbl.find merge u in
           let mergeu0 = deconstructFun mergeu in
           let mergeu1 = deconstructFun mergeu0.body in
-          (* let mergeutyped = aexp(mergeu1.body, mergeu1.resty, Span.default) in *)
-          (*NOTE:removing types for now*)
-          (* (match mergeu1.resty with *)
-          (* | None -> Printf.printf "type is empty!\n"; *)
-          (* | Some ty -> Printf.printf "type in merge:%s\n" (Printing.ty_to_string ty);); *)
           (p, mergeu1.body) :: (branches (UInt32.add uhat UInt32.one))
       in
       (* create a match on the node expression *)
-      (* let match_exp = aexp (ematch (evar avertex_var) (branches UInt32.zero), *)
-      (*                       merge0y.resty, Span.default) in *)
-      (*TODO:removing types*)
       let match_exp = ematch (evar avertex_var) (branches UInt32.zero) in
-                        
       (* create a function from attributes *)
-      (* let merge_fun_msg_y = funcFull yvar merge0y.argty merge0y.resty match_exp in *)
-      (* let merge_fun_msg = funcFull xvar merge0x.argty merge0x.resty (efunc merge_fun_msg_y) in *)
-                           
-      (*return fun uhat x y -> merge_hat_body *)
-      (* funcFull avertex_var (Some tint) merge_fun_msg.resty (efunc merge_fun_msg) |> *)
-      (*   efunc *)
       Syntax.lam avertex_var (Syntax.lam xvar (Syntax.lam yvar match_exp))
 
     (* Constructs the init function for the abstract network. Nodes in
@@ -366,7 +352,7 @@ module BuildAbstractNetwork =
                              (dst : Vertex.t BatSet.t)
                              (attrTy: Syntax.ty)
                              (symb: (Syntax.var * Syntax.ty_or_exp) list)
-                             (k: int) : declarations =
+                             (k: int) =
       (* build the abstract graph based on the abstraction function *)
       let (n, edgeshat) = buildAbstractGraphDecls graph f in
       (* build the symbolic representation of failures *) 
@@ -374,15 +360,15 @@ module BuildAbstractNetwork =
       (* build the abstract merge function *)
       let mergehat = buildAbstractMerge n mergeMap f in
       (* build the abstract transfer function *)
-      let transhat = buildAbstractTrans graph edgeshat transMap failuresMap f in
+      let transhat = buildAbstractTrans graph edgeshat transMap attrTy failuresMap f in
       (* build the abstract init function *)
       let inithat = buildAbstractInit dst initMap attrTy f in
       (* build the abstract assert function *)
       let asserthat = buildAbstractAssert assertMap f in
       let symbD = List.map (fun (d, tye) -> DSymbolic (d,tye)) symb in
-      (DATy attrTy) :: (DNodes n) :: (DEdges edgeshat) :: symbolics @ symbD
-      @ ((DMerge mergehat) :: (DTrans transhat) :: (DInit inithat)
-         :: [DAssert asserthat])
+      (failuresMap, (DATy attrTy) :: (DNodes n) :: (DEdges edgeshat) :: symbolics @ symbD
+                    @ ((DMerge mergehat) :: (DTrans transhat) :: (DInit inithat)
+                       :: [DAssert asserthat]))
 
     let abstractToConcreteEdge (g: Graph.t) (f: abstractionMap) (ehat: Edge.t) : EdgeSet.t =
       let (uhat, vhat) = ehat in
@@ -506,9 +492,19 @@ module FailuresAbstraction =
         show_message (printAbstractGroups f "\n") T.Blue
                      "Abstract groups after refine for failures "
       
-    let refineForFailures (g: Graph.t) (f: abstractionMap) (sol: Solution.t) : abstractionMap =
-      (*TODO: find failures from symbolics and replace BatSet.empty *)
-      let uhat = findVertexToRefine f BatSet.empty sol in
+    let refineForFailures (g: Graph.t) (f: abstractionMap) (failVars: (Edge.t, Var.t) BatMap.t)
+                          (sol: Solution.t) : abstractionMap =
+      Collections.StringMap.iter (fun k _ -> Printf.printf "symb: %s\n" k) sol.symbolics;
+      BatMap.iter (fun _ k -> Printf.printf "%s\n" (Var.to_string k)) failVars;
+      let failures =
+        BatMap.foldi (fun edge fvar acc ->
+            let bv = Collections.StringMap.find (Var.to_string fvar) sol.symbolics in
+            match bv.v with
+            | VBool b ->
+               if b then BatSet.add edge acc else acc
+            | _ -> failwith "This should be a boolean variable") failVars BatSet.empty in
+      let uhat = findVertexToRefine f failures sol in
+      (* TODO: find path to use here instead of [] *)
       let (uss, _) = bestSplitForFailures g f uhat [] in
       let f' = splitSet f uss in
       let f'' =  abstractionTopological f' g in

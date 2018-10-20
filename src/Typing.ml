@@ -184,7 +184,6 @@ let rec unify info e t1 t2 : unit =
         (ty_to_string t1) (ty_to_string t2)
     in
     Printf.printf "%s\n" msg;
-    failwith "failed";
     Console.error_position info e.espan msg
 
 and unifies info (e: exp) ts1 ts2 =
@@ -315,7 +314,6 @@ let textract e =
   | Some ty -> (e, ty)
 
 let rec infer_exp i info env (e: exp) : exp =
-  Printf.printf "inferring: %s\n\n" (Printing.exp_to_string e);
   let exp =
     match e.e with
     | EVar x -> (
@@ -524,9 +522,16 @@ and infer_value info env (v: Syntax.value) : Syntax.value =
         in
         match vs with
         | [] ->
-            let ty = fresh_tyvar () in
-            let map = BddMap.create ~key_ty:ty default in
-            tvalue (vmap map, TMap (ty, dty), v.vspan)
+           (* let ty = fresh_tyvar () in *)
+           let ty = fresh_tyvar () in
+           tvalue (vmap m, TMap (ty, dty), v.vspan)
+           (* (match v.vty with *)
+           (*  | None -> *)
+           (*     let ty = fresh_tyvar () in *)
+           (*     tvalue (vmap m, TMap (ty, dty), v.vspan) *)
+           (*  | Some ty -> *)
+           (*     let map = BddMap.create ~key_ty:ty default in *)
+           (*     tvalue (vmap map, TMap (ty, dty), v.vspan)) *)
         | (kv, vv) :: _ ->
             let kv, kvty = infer_value info env kv |> textractv in
             let vv, vvty = infer_value info env vv |> textractv in
@@ -661,7 +666,6 @@ and infer_declaration i info env aty d : ty Env.t * declaration =
       unify info e ty (merge_ty aty) ;
       (Env.update env (Var.create "merge") ty, DMerge e')
   | DTrans e ->
-     Printf.printf "transfer expr: %s\n" (Printing.exp_to_string e);
       let e' = infer_exp (i + 1) info env e in
       let ty = oget e'.ety in
       unify info e ty (trans_ty aty) ;

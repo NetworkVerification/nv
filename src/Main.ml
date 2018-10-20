@@ -51,10 +51,10 @@ let run_smt cfg info ds =
     else (Smt.solve decls ~symbolic_vars:[], fs)
   in
   match res with
-  | Unsat -> Unsat
+  | Unsat -> (Unsat, None)
   | Unknown -> Console.error "SMT returned unknown"
   | Sat solution -> (* print_solution (apply_all solution fs) *)
-     Sat (apply_all solution fs)
+     (Sat solution, Some fs)
 
 let run_test cfg info ds =
   let fs = [init_renamer] in
@@ -147,22 +147,21 @@ let compress info decls cfg networkOp =
 
   let rec loop (f: AbstractionMap.abstractionMap) (ds: Graph.Vertex.t BatSet.t) =
     (* build abstract network *)
-    let decls = buildAbstractNetwork f network.graph mergeMap transMap
-                                     initMap assertMap ds
-                                     network.attr_type symb cfg.compress in
-    let fout = open_out "abstract.nv" in
-    Printf.fprintf fout "%s" (Printing.declarations_to_string decls);
-    flush fout;
+    let failVars, decls = buildAbstractNetwork f network.graph mergeMap transMap
+                                               initMap assertMap ds
+                                               network.attr_type symb cfg.compress in
+    (* let fout = open_out "abstract.nv" in *)
+    (* Printf.fprintf fout "%s" (Printing.declarations_to_string decls); *)
+    (* flush fout; *)
     let decls = Typing.infer_declarations info decls in
+    let groups = AbstractionMap.printAbstractGroups f "\n" in
+    Console.show_message groups Console.T.Blue "Abstract groups";
     match networkOp cfg info decls with
-    | Unsat -> ()
-    | Sat sol ->
-       (* find the abstraction function *)
-       (* let f = Abstraction.findAbstraction network.graph transMap mergeMap ds in *)
-       (*TODO: loop if necessary *)
-       let groups = AbstractionMap.printAbstractGroups f "\n" in
-       Console.show_message groups Console.T.Blue "Abstract groups";
-       print_solution sol
+    | Unsat, _ -> ()
+    | (Sat sol), fs ->
+       let f' = FailuresAbstraction.refineForFailures network.graph f failVars sol in
+       print_solution sol;
+       loop f' ds
     | _ -> Console.error "Solver returned unknown"
   in
   BatSet.iter
@@ -200,8 +199,8 @@ let main =
       if cfg.smt then
         begin
           match run_smt cfg info decls with
-          | Sat sol -> print_solution sol
-          | Unsat -> Printf.printf "unsat\n"
+          | Sat sol, Some fs -> print_solution sol
+          | Unsat, _ -> Printf.printf "unsat\n"
           | _ -> ()
         end;
       if cfg.random_test then run_test cfg info decls ;

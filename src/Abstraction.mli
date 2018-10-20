@@ -23,6 +23,7 @@ module FailuresAbstraction :
     val refineForFailures :
       Graph.t ->
       AbstractionMap.abstractionMap ->
+      (Graph.Edge.t, Var.t) BatMap.t ->
       Solution.t ->
       AbstractionMap.abstractionMap
   end
@@ -40,7 +41,7 @@ sig
                              Graph.Vertex.t BatSet.t ->
                              Syntax.ty ->
                              (Syntax.var * Syntax.ty_or_exp) list ->
-                             int -> Syntax.declarations
+                             int -> ((Graph.Edge.t, Var.t) BatMap.t) * Syntax.declarations
 
   (** [abstractToConcreteEdge g f ehat] returns the set of concrete
    edges that map to the abstract edge [ehat] *)

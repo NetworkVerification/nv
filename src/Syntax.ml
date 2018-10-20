@@ -889,7 +889,7 @@ module BddUtils = struct
     | TTuple ts ->
         List.fold_left (fun acc t -> acc + ty_to_size t) 0 ts
     | TArrow _ | TMap _ | TVar _ | QVar _ ->
-        failwith "internal error (ty_to_size)"
+        failwith ("internal error (ty_to_size) " ^ (show_ty ty))
 
   let tbl =
     Mtbdd.make_table

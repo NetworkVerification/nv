@@ -116,3 +116,53 @@ let rec alpha_convert_declarations (ds: declarations) =
   let bmap = ref StringMap.empty in
   let prog = alpha_convert_aux bmap Env.empty ds in
   (prog, adjust_solution !bmap)
+
+module Tests =
+  struct
+
+    exception Duplicate
+            
+    let collect_unique_vars e =
+      let vars = ref BatSet.empty in
+      let checkCollect x =
+        if BatSet.mem x !vars then
+          raise Duplicate
+        else
+          vars := BatSet.add x !vars
+      in
+      Visitors.iter_exp (fun e ->
+          match e.e with
+          | EVar x -> checkCollect x
+          | EFun f -> checkCollect f.arg
+          | ELet (x, _, _) -> checkCollect x
+          | _ -> ()) e;
+      !vars
+
+    let collect_vars e =
+      let vars = ref [] in
+      Visitors.iter_exp (fun e ->
+          match e.e with
+          | EVar x -> vars := x :: !vars
+          | EFun f -> vars := f.arg :: !vars
+          | ELet (x, _, _) -> vars := x :: !vars
+          | _ -> ()) e;
+      !vars
+                            
+    let alpha_exp_no_duplicates_prop env e =
+      let aexp = alpha_convert_exp env e in
+      try
+        let _ = collect_unique_vars aexp in
+        true
+      with | Duplicate -> false
+                        
+    let alpha_exp_number_of_vars_prop env e =
+      let aexp = alpha_convert_exp env e in
+      try
+        begin
+          let avars = collect_unique_vars aexp in
+          let vars = collect_vars e in
+          List.length vars = BatSet.cardinal avars
+        end
+      with | Duplicate -> false
+
+  end
