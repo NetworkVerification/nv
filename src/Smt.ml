@@ -57,7 +57,12 @@ let ite_f ctx e2 e3 =
   let tru = mk_bool ctx true in
   Boolean.mk_ite ctx tru e2 e3 |> Expr.get_func_decl
 
-let peel ctx e = Z3Array.mk_select ctx e (mk_bv_int ctx 0)
+(* I think the intention of this is to take any value from a constant
+   array, I am doing so using a constant of the right sort which is
+   essentially thrown away afterwards *)
+let peel ctx e =
+  let sort = Z3Array.get_domain (Expr.get_sort e) in
+  Z3Array.mk_select ctx e (Expr.mk_const_s ctx (create_fresh "peel" "const") sort)
 
 let add solver args =
   (* List.iter (fun e -> Printf.printf "(assert %s)\n" (Expr.to_string e)) args; *)
@@ -208,12 +213,17 @@ let rec encode_exp_z3 descr env arr (e: exp) =
           else BitVector.mk_ule env.ctx
         in
         encode_op_z3 descr env f arr es
-      | MCreate, [e1] ->
-        if arr.lift then failwith "not supported yet" ;
-        let e1 = encode_exp_z3 descr env arr e1 in
-        let sort = Arithmetic.Integer.mk_sort env.ctx |> arr.f in
-        Z3Array.mk_const_array env.ctx sort e1
-      | MGet, [e1; e2] ->
+    | MCreate, [e1] ->
+       if arr.lift then failwith "not supported yet" ;
+       let kty =
+         match get_inner_type (oget e.ety) with
+         | TMap (kty, _) -> kty
+         | _ -> failwith "runtime error: missing map key type"
+       in
+       let sort = ty_to_sort env.ctx kty |> arr.f in
+       let e1 = encode_exp_z3 descr env arr e1 in
+       Z3Array.mk_const_array env.ctx sort e1
+    | MGet, [e1; e2] ->
         if arr.lift then failwith "not supported yet" ;
         let e1 = encode_exp_z3 descr env arr e1 in
         let e2 = encode_exp_z3 descr env arr e2 in
