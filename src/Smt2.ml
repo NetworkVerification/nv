@@ -831,7 +831,26 @@ let solve ?symbolic_vars ds =
 module CompileSMT =
   struct
 
-    let sort_to_smt (s : sort) : string = ""
+    let printList (printer: 'a -> string) (ls: 'a list) (first : string)
+                  (sep : string) (last : string) =
+      let rec loop ls =
+        match ls with
+        | [] -> ""
+        | [l] -> printer l
+        | l :: ls -> (printer l) ^ sep ^ (loop ls)
+      in
+      first ^ (loop ls) ^ last
+
+    let rec sort_to_smt (s : sort) : string =
+      match s with
+      | BoolSort -> "Bool"
+      | IntSort -> "Int"
+      | ArraySort (s1, s2) ->
+         Printf.sprintf "(Array %s %s)" (sort_to_smt s1) (sort_to_smt s2)
+      | DataTypeSort (name, ls) ->
+         let args = printList sort_to_smt ls "" " " "" in
+         Printf.sprintf "(%s %s)" name args
+      | VarSort s -> s
                                         
     let rec term_to_smt (term : smt_term) : string =
       match term with
@@ -857,11 +876,42 @@ module CompileSMT =
          Printf.sprintf "(ite %s %s %s)" (term_to_smt t1) (term_to_smt t2) (term_to_smt t3)
       | Symbol s -> s
       | App (t, ts) ->
-         let rec loop ts =
-           match ts with
-           | [] -> ""
-           | [t] -> term_to_smt t
-           | t :: ts -> (term_to_smt t) ^ " " ^ loop ts
+         let args = printList term_to_smt ts "" " " "" in 
+         Printf.sprintf "(%s %s)" (term_to_smt t) args
+
+    let constructor_to_smt (c: constructor_decl) : string =
+      match c.constr_args with
+      | [] -> c.constr_name
+      | ps ->
+         let constrArgs = printList (fun (p,s) ->
+                              Printf.sprintf "(%s %s)" p (sort_to_smt s)) ps "" " " ""
          in
-         Printf.sprintf "(%s %s)" (term_to_smt t) (loop ts)
+         Printf.sprintf "(%s %s)" c.constr_name constrArgs
+                        
+    let rec type_decl_to_smt (dt: datatype_decl) : string =
+      Printf.sprintf "(delcare-datatypes %s ((%s %s)))"
+                     (printList sort_to_smt dt.params "(" " " ")")
+                     dt.name
+                     (printList constructor_to_smt dt.constructors "" " " "")
+
+    let const_decl_to_smt (const_name, const_sort : string * sort) : string =
+      Printf.sprintf "(declare-const %s %s)" const_name (sort_to_smt const_sort)
+
+    let ctx_to_smt (tm: smt_term) : string =
+      Printf.sprintf "(assert %s)" (term_to_smt tm)
+      
+    let env_to_smt (env : smt_env) =
+      (* Emit type declarations *)
+      let decls =
+        BatMap.fold (fun typ acc ->
+            (Printf.sprintf "%s\n" (type_decl_to_smt typ)) ^ acc) env.type_decls ""
+      in
+      (* Emit constants *)
+      let constants =
+        BatSet.fold (fun const acc ->
+            (Printf.sprintf "%s\n" (const_decl_to_smt const)) ^ acc) env.const_decls ""
+      in
+      (* Emit context *)
+      let context = printList ctx_to_smt env.ctx "\n" "\n" "\n" in
+      Printf.printf "%s" (decls ^ constants ^ context)
   end
