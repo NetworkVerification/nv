@@ -111,8 +111,6 @@ let run_simulator cfg info decls =
 
 let parse_input (args : string array)
   : Cmdline.t * Console.info * Syntax.declarations =
-  print_endline @@ string_of_int @@ Array.length args;
-  print_endline @@ Array.fold_left (fun s1 s2 -> s1 ^ " " ^ s2) "" args;
   let cfg, rest = argparse default "nv" args in
   Cmdline.set_cfg cfg ;
   if cfg.debug then Printexc.record_backtrace true ;
