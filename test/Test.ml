@@ -4,6 +4,7 @@ let all_tests =
   "tests" >:::
   [
     Test_BDDs.tests;
+    Test_end_to_end.tests;
   ]
 ;;
 
