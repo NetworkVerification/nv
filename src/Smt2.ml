@@ -34,12 +34,26 @@ type smt_term =
   | Lt of smt_term * smt_term
   | Leq of smt_term * smt_term
   | Ite of smt_term * smt_term * smt_term
-  | Symbol of string * sort
+  | Var of string
+  | Constructor of string * sort (* constructor name, instantiated sort*)
   | App of smt_term * (smt_term list)
-         
+
+type term =
+  { t : smt_term;
+    tdescr : string;
+    tloc: Span.t
+  }
+
+type constant =
+  { cname : string;
+    csort   : sort;
+    cdescr : string;
+    cloc : Span.t
+  }
+  
 type smt_env =
-  { mutable ctx: smt_term list
-  ; mutable const_decls: (string * sort) BatSet.t (* named constant and its sort *)
+  { mutable ctx: term list
+  ; mutable const_decls: constant BatSet.t (* named constant and its sort *)
   ; mutable type_decls: (string, datatype_decl) BatMap.t
   ; symbolics: (Var.t * ty_or_exp) list }
   
@@ -57,15 +71,34 @@ let mk_int i = mk_int_u32 (UInt32.of_int i)
 
 let mk_bool b = Bool b
 
-let mk_symb f s = Symbol (f, s)
+let mk_var s = Var s
+
+let mk_constructor f ts = Constructor (f, ts)
               
 let mk_app f args =
   App (f, args)
 
 let mk_and t1 t2 = And (t1, t2)
 
+let mk_or t1 t2 = Or (t1, t2)
+
 let mk_not t1 = Not t1
-                 
+
+let mk_add t1 t2 = Add (t1, t2)
+
+let mk_sub t1 t2 = Sub (t1, t2)
+
+let mk_eq t1 t2 = Eq (t1, t2)
+
+let mk_lt t1 t2 = Lt (t1, t2)
+
+let mk_leq t1 t2 = Leq (t1, t2)
+
+let mk_ite t1 t2 t3 = Ite (t1, t2, t3)
+
+let mk_term ?(tdescr="") ?(tloc= Span.default) (t: smt_term) =
+  {t; tdescr; tloc}
+ 
 let rec datatype_name (ty : ty) : string =
   match ty with
   | TVar {contents= Link t} -> datatype_name t
@@ -136,14 +169,14 @@ let compute_decl (env : smt_env) ty =
      decl
   | Some decl -> decl
 
-let add_constant (env : smt_env) name sort =
-  env.const_decls <- BatSet.add (name, sort) env.const_decls
+let add_constant (env : smt_env) ?(cdescr = "") ?(cloc = Span.default) cname csort =
+  env.const_decls <- BatSet.add {cname; csort; cdescr; cloc} env.const_decls
 
-let mk_constant (env : smt_env) name sort =
-  add_constant env name sort;
-  mk_symb name sort
+let mk_constant (env : smt_env) ?(cdescr = "") ?(cloc = Span.default) cname csort =
+  add_constant env ~cdescr:cdescr ~cloc:cloc cname csort;
+  (mk_var cname) |> (mk_term ~tdescr:cdescr ~tloc:cloc)
 
-let add_constraint (env : smt_env) (c : smt_term) =
+let add_constraint (env : smt_env) (c : term) =
   env.ctx <- c :: env.ctx
                
 let mk_array ctx sort value = Z3Array.mk_const_array ctx sort value
@@ -165,54 +198,62 @@ let get_recognizer (constr : constructor_decl) =
 let is_symbolic syms x =
   List.exists (fun (y, e) -> Var.equals x y) syms
 
-let rec encode_exp_z3 descr env (e: exp) =
+let rec encode_exp_z3 descr env (e: exp) : term =
   (* Printf.printf "expr: %s\n" (Printing.exp_to_string e) ; *)
   match e.e with
   | EVar x ->
       let name =
         if is_symbolic env.symbolics x then
           begin
-            Printf.printf "var:%s\n" (Var.to_string x);
+            (* Printf.printf "var:%s\n" (Var.to_string x); *)
             Var.to_string x
             end
         else create_name descr x
       in
       let sort = ty_to_sort (oget e.ety) in
-      mk_constant env name sort
+      mk_constant env name sort ~cloc:e.espan 
   | EVal v -> encode_value_z3 descr env v
   | EOp (op, es) -> (
     match (op, es) with
     | Syntax.And, [e1;e2] ->
        let ze1 = encode_exp_z3 descr env e1 in
        let ze2 = encode_exp_z3 descr env e2 in
-       And (ze1, ze2)
+       mk_and (ze1.t) (ze2.t) |>
+         mk_term ~tloc:e.espan
     | Syntax.Or, [e1;e2] ->
        let ze1 = encode_exp_z3 descr env e1 in
        let ze2 = encode_exp_z3 descr env e2 in
-       Or (ze1, ze2)
+       mk_or ze1.t ze2.t |>
+         mk_term ~tloc:e.espan
     | Not, _ ->
         let ze = List.hd es |> encode_exp_z3 descr env in
-        Not ze
+        mk_not ze.t |>
+          mk_term ~tloc:e.espan
     | Syntax.UAdd, [e1;e2] ->
        let ze1 = encode_exp_z3 descr env e1 in
        let ze2 = encode_exp_z3 descr env e2 in
-       Add (ze1, ze2)
+       mk_add ze1.t ze2.t |>
+         mk_term ~tloc:e.espan
     | Syntax.USub, [e1;e2] ->
        let ze1 = encode_exp_z3 descr env e1 in
        let ze2 = encode_exp_z3 descr env e2 in
-       Sub (ze1, ze2)
+       mk_sub ze1.t ze2.t |>
+         mk_term ~tloc:e.espan
     | UEq, [e1;e2] ->
        let ze1 = encode_exp_z3 descr env e1 in
        let ze2 = encode_exp_z3 descr env e2 in
-       Eq (ze1, ze2)
+       mk_eq ze1.t ze2.t |>
+         mk_term ~tloc:e.espan
     | ULess, [e1;e2] ->
        let ze1 = encode_exp_z3 descr env e1 in
        let ze2 = encode_exp_z3 descr env e2 in
-       Lt (ze1, ze2)
+       mk_lt ze1.t ze2.t |>
+         mk_term ~tloc:e.espan
     | ULeq, [e1;e2] ->
        let ze1 = encode_exp_z3 descr env e1 in
        let ze2 = encode_exp_z3 descr env e2 in
-       Leq (ze1, ze2)
+       mk_leq ze1.t ze2.t |>
+         mk_term ~tloc:e.espan
     | MCreate, _ | MGet, _
     | MSet, _
     | MMap, _
@@ -223,13 +264,14 @@ let rec encode_exp_z3 descr env (e: exp) =
       let ze1 = encode_exp_z3 descr env e1 in
       let ze2 = encode_exp_z3 descr env e2 in
       let ze3 = encode_exp_z3 descr env e3 in
-      Ite (ze1, ze2, ze3)
+      mk_ite ze1.t ze2.t ze3.t |>
+         mk_term ~tloc:e.espan
   | ELet (x, e1, e2) ->
       let xstr = create_name descr x in
-      let za = mk_constant env xstr (oget e1.ety |> ty_to_sort) in
+      let za = mk_constant env xstr (oget e1.ety |> ty_to_sort) ~cloc:e.espan in
       let ze1 = encode_exp_z3 descr env e1 in
       let ze2 = encode_exp_z3 descr env e2 in
-      add_constraint env (Eq (za,ze1));
+      add_constraint env (mk_term (mk_eq za.t ze1.t));
       ze2
   | ETuple es -> (
       let ty = oget e.ety in
@@ -237,9 +279,10 @@ let rec encode_exp_z3 descr env (e: exp) =
       | TTuple ts ->
          let pair_decl = compute_decl env ty in
          let pair_sort = ty_to_sort ty in
-         let zes = List.map (encode_exp_z3 descr env) es in
+         let zes = List.map (fun e -> (encode_exp_z3 descr env e).t) es in
          let f = get_constructors pair_decl |> List.hd in
-         App (mk_symb f.constr_name pair_sort, zes)
+         mk_app (mk_constructor f.constr_name pair_sort) zes |>
+           mk_term ~tloc:e.espan
       | _ -> failwith "internal error (encode_exp_z3)" )
   | ESome e1 ->
      let ty = oget e.ety in
@@ -247,12 +290,13 @@ let rec encode_exp_z3 descr env (e: exp) =
      let sort = ty_to_sort ty in
      let f = List.nth (get_constructors decl) 1 in
      let ze = encode_exp_z3 descr env e1 in
-     App (mk_symb f.constr_name sort, [ze])
+     mk_app (mk_constructor f.constr_name sort) [ze.t] |>
+       mk_term ~tloc:e.espan
   | EMatch (e, bs) ->
       let name = create_fresh descr "match" in
       let za = mk_constant env name (ty_to_sort (oget e.ety)) in
       let ze1 = encode_exp_z3 descr env e in
-      add_constraint env (Eq (za, ze1));
+      add_constraint env (mk_term ~tloc:e.espan (mk_eq za.t ze1.t));
       encode_branches_z3 descr env za bs (oget e.ety)
   | ETy (e, ty) -> encode_exp_z3 descr env e
   | EFun _ | EApp _ -> failwith "function in smt encoding"
@@ -301,24 +345,27 @@ and encode_branches_aux_z3 descr env name bs accze (t: ty) =
   | (p, e) :: bs ->
       let ze = encode_exp_z3 descr env e in
       let zp = encode_pattern_z3 descr env name p t in
-      let ze = Ite (zp, ze, accze) in
+      let ze = mk_ite zp.t ze.t accze.t |> mk_term in
       encode_branches_aux_z3 descr env name bs ze t
 
 and encode_pattern_z3 descr env zname p (t: ty) =
   let ty = get_inner_type t in
   match (p, ty) with
   | PWild, _ ->
-       mk_bool true
+     mk_bool true |>
+       mk_term
   | PVar x, t ->
      let local_name = create_name descr x in
      let za = mk_constant env local_name (ty_to_sort t) in
-      add_constraint env (Eq (za, zname));
-      mk_bool true
+      add_constraint env (mk_term (mk_eq za.t zname.t));
+      mk_bool true |> mk_term
   | PBool b, TBool ->
-     Eq (zname, mk_bool b)
+     mk_eq zname.t (mk_bool b) |>
+       mk_term
   | PUInt32 i, TInt _ ->
      let const = mk_int_u32 i in
-     Eq (zname, const)
+     mk_eq zname.t const |>
+       mk_term
   | PTuple ps, TTuple ts -> (
     match (ps, ts) with
     | [p], [t] -> encode_pattern_z3 descr env zname p t
@@ -333,27 +380,27 @@ and encode_pattern_z3 descr env zname p (t: ty) =
             ts
         in
         let tup_decl = compute_decl env ty in
-        let tup_sort = ty_to_sort ty in
         let fs = tup_decl |> get_constructors |> List.hd |> get_projections in
         List.combine znames fs
         |> List.iter (fun ((elem, _, _), (f, _)) ->
-               let e = mk_app (mk_symb f tup_sort) [zname] in
-               add_constraint env (Eq (elem, e)));
+               let e = mk_term (mk_app (mk_var f) [zname.t]) in
+               add_constraint env ((mk_eq elem.t e.t) |> mk_term));
         let matches =
           List.map
             (fun (p, (zname, _, ty)) ->
               encode_pattern_z3 descr env zname p ty )
             (List.combine ps znames)
         in
-        let f acc e = mk_and acc e in
+        let f acc e = mk_and acc e.t in
         let b = mk_bool true in
         let base = b in
-        List.fold_left f base matches )
+        (List.fold_left f base matches) |>
+          mk_term)
   | POption None, TOption _ ->
      let opt_decl = compute_decl env ty in
-     let opt_sort = ty_to_sort ty in
       let f = opt_decl |> get_constructors |> List.hd |> get_recognizer in
-       mk_app (mk_symb f opt_sort) [zname]
+      mk_app (mk_var f) [zname.t] |>
+        mk_term
   | POption (Some p), TOption t ->
       let new_name = create_fresh descr "option" in
       let za = mk_constant env new_name (ty_to_sort t) in
@@ -361,10 +408,11 @@ and encode_pattern_z3 descr env zname p (t: ty) =
       let some_cons = List.nth (opt_decl |> get_constructors) 1 in
       let get_some, _ = some_cons |> get_projections |> List.hd in
       let is_some = some_cons |> get_recognizer in
-      let e = mk_app (mk_symb get_some (ty_to_sort ty)) [zname] in
-      add_constraint env (Eq (za, e));
+      let e = mk_app (mk_var get_some) [zname.t]in
+      add_constraint env (mk_term (mk_eq za.t e));
       let zp = encode_pattern_z3 descr env za p t in
-      mk_and (mk_app (mk_symb is_some (ty_to_sort ty)) [zname]) zp
+      mk_and (mk_app (mk_var is_some) [zname.t]) zp.t |>
+        mk_term
   | _ ->
       Console.error
         (Printf.sprintf "internal error (encode_pattern): (%s, %s)"
@@ -375,27 +423,31 @@ and encode_value_z3 descr env (v: Syntax.value) =
   (* Printf.printf "value: %s\n" (Printing.value_to_string v) ; *)
   match v.v with
   | VBool b ->
-      mk_bool b
+     mk_bool b |>
+       mk_term ~tloc:v.vspan
   | VUInt32 i ->
-     mk_int_u32 i
+     mk_int_u32 i |>
+       mk_term ~tloc:v.vspan       
   | VTuple vs -> (
     match oget v.vty with
     | TTuple ts ->
         let pair_decl = compute_decl env (oget v.vty) in
-        let zes = List.map (encode_value_z3 descr env) vs in
+        let zes = List.map (fun v -> (encode_value_z3 descr env v).t) vs in
         let f = (pair_decl |> get_constructors |> List.hd).constr_name in
-        mk_app (mk_symb f (ty_to_sort (oget v.vty))) zes
+        mk_app (mk_constructor f (ty_to_sort (oget v.vty))) zes |>
+          mk_term ~tloc:v.vspan
     | _ -> failwith "internal error (encode_value)" )
   | VOption None ->
      let opt_decl = compute_decl env (oget v.vty) in
      let f = (opt_decl |> get_constructors |> List.hd).constr_name in
-     let e = mk_symb f (ty_to_sort (oget v.vty)) in
-     e
+     let e = mk_app (mk_constructor f (ty_to_sort (oget v.vty))) [] in
+     mk_term ~tloc:v.vspan e
   | VOption (Some v1) ->
      let opt_decl = compute_decl env (oget v.vty) in
      let f = (List.nth (opt_decl |> get_constructors) 1).constr_name in
      let zv = encode_value_z3 descr env v1 in
-      mk_app (mk_symb f (ty_to_sort (oget v.vty))) [zv]
+     mk_app (mk_constructor f (ty_to_sort (oget v.vty))) [zv.t] |>
+       mk_term ~tloc:v.vspan
   | VClosure _ -> failwith "internal error (closure in smt)"
   | VMap map -> failwith "not doing maps yet"
 
@@ -414,18 +466,18 @@ let encode_z3_merge str env e =
                 ; body= {e= EFun {arg= y; argty= yty; body= exp}} }
           } } ->
       let nodestr =
-        mk_constant env (create_name str node) (ty_to_sort (oget nodety))
+        mk_constant env (create_name str node) (ty_to_sort (oget nodety)) ~cdescr:"merge node argument"
       in
       let xstr =
-        mk_constant env (create_name str x) (ty_to_sort (oget xty))
+        mk_constant env (create_name str x) (ty_to_sort (oget xty)) ~cdescr:"merge x argument"
       in
       let ystr =
-        mk_constant env (create_name str y) (ty_to_sort (oget yty))
+        mk_constant env (create_name str y) (ty_to_sort (oget yty)) ~cdescr:"merge y argument"
       in
       let name = Printf.sprintf "%s-result" str in
       let result = mk_constant env name (oget exp.ety |> ty_to_sort) in
       let e = encode_exp_z3 str env exp in
-      add_constraint env (Eq (result, e));
+      add_constraint env (mk_term (mk_eq result.t e.t));
       (result, nodestr, xstr, ystr)
   | _ -> failwith "internal error (encode_z3_merge)"
 
@@ -437,13 +489,15 @@ let encode_z3_trans str env e =
       ; body= {e= EFun {arg= x; argty= xty; body= exp}} } ->
       let edgestr = mk_constant env (create_name str edge) (ty_to_sort (oget edgety))
       in
-      let xstr = mk_constant env (create_name str x) (ty_to_sort  (oget xty))
-      in
+      (* let xstr = mk_constant env (create_name str x) (ty_to_sort  (oget xty)) *)
+      let xstr = mk_var (create_name str x) |> mk_term
+      
+    in
       let name = Printf.sprintf "%s-result" str in
       let result =
         mk_constant env name (oget exp.ety |> ty_to_sort) in
       let e = encode_exp_z3 str env exp in
-      add_constraint env (Eq (result, e));
+      add_constraint env (mk_term (mk_eq result.t e.t));
       (result, edgestr, xstr)
   | _ -> failwith "internal error"
 
@@ -454,7 +508,7 @@ let encode_z3_init str env e =
       let name = Printf.sprintf "%s-result" str in
       let result = mk_constant env name (oget e.ety |> ty_to_sort) in
       let e = encode_exp_z3 str env e in
-      add_constraint env (Eq (result, e));
+      add_constraint env (mk_term (mk_eq result.t e.t));
       (result, nodestr)
   | _ -> failwith "internal error"
 
@@ -475,7 +529,7 @@ let add_symbolic_constraints env requires sym_vars =
     (fun (v, e) ->
       let v = mk_constant env (Var.to_string v) (ty_to_sort (oget e.ety)) in
       let e = encode_exp_z3 "" env e in
-      add_constraint env (Eq (v,e))) sym_vars ;
+      add_constraint env (mk_term (mk_eq v.t e.t))) sym_vars ;
   (* add the require clauses *)
   List.iter
     (fun e ->
@@ -524,7 +578,7 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
     let init, n =
       encode_z3_init (Printf.sprintf "init-%d" i) env einit
     in
-    add_constraint env (Eq (n, mk_int i));
+    add_constraint env (mk_term (mk_eq n.t (mk_int i)));
     init_map := Graph.VertexMap.add (UInt32.of_int i) init !init_map
   done ;
   (* map each edge to transfer function result *)
@@ -549,9 +603,10 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
       trans_input_map := EdgeMap.add (i, j) x !trans_input_map ;
       let ie = mk_int_u32 i in
       let je = mk_int_u32 j in
-      let pair_decl = compute_decl env (TTuple [TInt 32; TInt 32]) in
+      let tup_ty = TTuple [TInt 32; TInt 32] in
+      let pair_decl = compute_decl env tup_ty  in
       let f = (pair_decl |> get_constructors |> List.hd).constr_name in
-      add_constraint env (Eq (e, mk_app (Symbol f) [ie; je])) ;
+      add_constraint env (mk_term (mk_eq e.t (mk_app (mk_constructor f (ty_to_sort tup_ty)) [ie; je]))) ;
       trans_map := EdgeMap.add (i, j) trans !trans_map )
     edges ;
   (* compute the labelling as the merge of all inputs *)
@@ -572,21 +627,21 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
           let merge_result, n, x, y =
             encode_z3_merge str env emerge
           in
-          add_constraint env (Eq (trans, x));
-          add_constraint env (Eq (acc, y));
-          add_constraint env (Eq (n, mk_int i));
+          add_constraint env (mk_term (mk_eq trans.t x.t));
+          add_constraint env (mk_term (mk_eq acc.t y.t));
+          add_constraint env (mk_term (mk_eq n.t (mk_int i)));
           merge_result )
         init in_edges
     in
     let l = mk_constant env (Printf.sprintf "label-%d" i) (ty_to_sort aty) in
-    add_constraint env (Eq (l, merged));
+    add_constraint env (mk_term (mk_eq l.t merged.t));
     labelling := Graph.VertexMap.add (UInt32.of_int i) l !labelling
   done ;
   (* Propagate labels across edges outputs *)
   EdgeMap.iter
     (fun (i, j) x ->
       let label = Graph.VertexMap.find i !labelling in
-      add_constraint env (Eq (label, x))) !trans_input_map ;
+      add_constraint env (mk_term (mk_eq label.t x.t))) !trans_input_map ;
   (* add assertions at the end *)
   ( match eassert with
   | None -> ()
@@ -599,13 +654,13 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
         let result, n, x =
           encode_z3_assert (Printf.sprintf "assert-%d" i) env eassert
         in
-        add_constraint env (Eq (x, label));
-        add_constraint env (Eq (n, mk_int i));
-        let assertion_holds = Eq (result, (mk_bool true)) in
+        add_constraint env (mk_term (mk_eq x.t label.t));
+        add_constraint env (mk_term (mk_eq n.t (mk_int i)));
+        let assertion_holds = mk_eq result.t (mk_bool true) in
         all_good :=
           mk_and !all_good assertion_holds
       done ;
-      add_constraint env (mk_not !all_good)) ;
+      add_constraint env (mk_term (mk_not !all_good))) ;
   (* add the symbolic variable constraints *)
   add_symbolic_constraints env (get_requires ds) sym_vars ;
   env
@@ -821,6 +876,9 @@ module CompileSMT =
       in
       first ^ (loop ls) ^ last
 
+    let printVerbose (msg: string) (descr: string) (span: Span.t) =
+      Printf.sprintf "; %s: %s on %s\n" msg descr (Syntax.show_span span)
+
     let rec sort_to_smt (s : sort) : string =
       match s with
       | BoolSort -> "Bool"
@@ -832,34 +890,41 @@ module CompileSMT =
          Printf.sprintf "(%s %s)" name args
       | VarSort s -> s
                                         
-    let rec term_to_smt (term : smt_term) : string =
-      match term with
+    let rec smt_term_to_smt (tm : smt_term) : string =
+      match tm with
       | Int s -> s
       | Bool b -> if b then "true" else "false"
       | And (b1, b2) ->
-         Printf.sprintf "(and %s %s)" (term_to_smt b1) (term_to_smt b2)
+         Printf.sprintf "(and %s %s)" (smt_term_to_smt b1) (smt_term_to_smt b2)
       | Or (b1, b2) ->
-         Printf.sprintf "(or %s %s)" (term_to_smt b1) (term_to_smt b2)
+         Printf.sprintf "(or %s %s)" (smt_term_to_smt b1) (smt_term_to_smt b2)
       | Not b ->
-         Printf.sprintf "(not %s)" (term_to_smt b)
+         Printf.sprintf "(not %s)" (smt_term_to_smt b)
       | Add (n, m) ->
-         Printf.sprintf "(+ %s %s)" (term_to_smt n) (term_to_smt m)
+         Printf.sprintf "(+ %s %s)" (smt_term_to_smt n) (smt_term_to_smt m)
       | Sub (n, m) ->
-         Printf.sprintf "(- %s %s)" (term_to_smt n) (term_to_smt m)
+         Printf.sprintf "(- %s %s)" (smt_term_to_smt n) (smt_term_to_smt m)
       | Eq (n, m) ->
-         Printf.sprintf "(= %s %s)" (term_to_smt n) (term_to_smt m)
+         Printf.sprintf "(= %s %s)" (smt_term_to_smt n) (smt_term_to_smt m)
       | Lt (n, m) ->
-         Printf.sprintf "(< %s %s)" (term_to_smt n) (term_to_smt m)
+         Printf.sprintf "(< %s %s)" (smt_term_to_smt n) (smt_term_to_smt m)
       | Leq (n, m) ->
-         Printf.sprintf "(<= %s %s)" (term_to_smt n) (term_to_smt m)         
+         Printf.sprintf "(<= %s %s)" (smt_term_to_smt n) (smt_term_to_smt m)         
       | Ite (t1, t2, t3) ->
-         Printf.sprintf "(ite %s %s %s)" (term_to_smt t1) (term_to_smt t2) (term_to_smt t3)
-      | Symbol s -> s
-      | App (t, ts) when ts = [] -> (*this case may be redundant for our encoding *)
-         Printf.sprintf "%s" (term_to_smt t) 
+         Printf.sprintf "(ite %s %s %s)" (smt_term_to_smt t1) (smt_term_to_smt t2) (smt_term_to_smt t3)
+      | Var s -> s
+      | Constructor (name, sort) -> name
+      | App (Constructor (name, sort), ts) when ts = [] ->
+         Printf.sprintf "(as %s %s)" name (sort_to_smt sort) 
       | App (t, ts) ->
-         let args = printList term_to_smt ts "" " " "" in 
-         Printf.sprintf "(%s %s)" (term_to_smt t) args
+         let args = printList smt_term_to_smt ts "" " " "" in 
+         Printf.sprintf "(%s %s)" (smt_term_to_smt t) args
+
+    let term_to_smt verbose (tm : term) =
+      (if verbose then
+        printVerbose "Translating expression:" tm.tdescr tm.tloc
+       else "") ^
+        smt_term_to_smt tm.t
 
     let constructor_to_smt (c: constructor_decl) : string =
       match c.constr_args with
@@ -875,14 +940,18 @@ module CompileSMT =
                      (printList sort_to_smt dt.params "(" " " ")")
                      dt.name
                      (printList constructor_to_smt dt.constructors "" " " "")
-
-    let const_decl_to_smt (const_name, const_sort : string * sort) : string =
-      Printf.sprintf "(declare-const %s %s)" const_name (sort_to_smt const_sort)
-
-    let ctx_to_smt (tm: smt_term) : string =
-      Printf.sprintf "(assert %s)" (term_to_smt tm)
       
-    let env_to_smt (env : smt_env) =
+    let const_decl_to_smt ?(verbose=false) const : string =
+      (if verbose then
+        printVerbose "Constant declared about:" const.cdescr const.cloc
+      else
+        "") ^
+      Printf.sprintf "(declare-const %s %s)" const.cname (sort_to_smt const.csort)
+
+    let ctx_to_smt ?(verbose=false) (tm: term) : string =
+      Printf.sprintf "(assert %s)" (term_to_smt verbose tm)
+      
+    let env_to_smt ?(verbose=false) (env : smt_env) =
       (* Emit type declarations *)
       let decls =
         BatMap.fold (fun typ acc ->
@@ -891,7 +960,7 @@ module CompileSMT =
       (* Emit constants *)
       let constants =
         BatSet.fold (fun const acc ->
-            (Printf.sprintf "%s\n" (const_decl_to_smt const)) ^ acc) env.const_decls ""
+            (Printf.sprintf "%s\n" (const_decl_to_smt ~verbose:verbose const)) ^ acc) env.const_decls ""
       in
       (* Emit context *)
       let context = printList ctx_to_smt env.ctx "\n" "\n" "\n" in
@@ -903,6 +972,6 @@ let solve ?symbolic_vars ds =
     match symbolic_vars with None -> [] | Some ls -> ls
   in
   let env = encode_z3 ds sym_vars in
-  let smt_query = CompileSMT.env_to_smt env in
+  let smt_query = CompileSMT.env_to_smt ~verbose:true env in
   Printf.printf "%s" smt_query;
   Unsat

@@ -214,6 +214,8 @@ val free_dead_vars : exp -> exp
 
 val show_exp : show_meta:bool -> exp -> string
 
+val show_span: Span.t -> string
+
 module type MEMOIZER = sig
   type t
 
