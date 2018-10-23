@@ -117,7 +117,7 @@ let rec ty_to_type_decl (ty: ty) : datatype_decl =
      let len = List.length ts in
      let name = datatype_name ty in
      let params = List.mapi (fun i _ -> VarSort (Printf.sprintf "T%d" i)) ts in
-     let mkpair = { constr_name = Printf.sprintf "MkPair%d" len;
+     let mkpair = { constr_name = Printf.sprintf "mkPair%d" len;
                     constr_args =
                       List.mapi (fun i _ ->
                           Printf.sprintf "proj%d" i, List.nth params i) ts} in
@@ -309,7 +309,7 @@ and encode_pattern_z3 descr env zname p (t: ty) =
        mk_bool true
   | PVar x, t ->
      let local_name = create_name descr x in
-     let za = Constant (local_name, ty_to_sort t) in
+     let za = mk_constant env local_name (ty_to_sort t) in
       add_constraint env (Eq (za, zname));
       mk_bool true
   | PBool b, TBool ->
@@ -385,7 +385,7 @@ and encode_value_z3 descr env (v: Syntax.value) =
   | VOption None ->
      let opt_decl = compute_decl env (oget v.vty) in
      let f = (opt_decl |> get_constructors |> List.hd).constr_name in
-     let e = mk_app (Symbol f) [] in
+     let e = Symbol f in
      e
   | VOption (Some v1) ->
      let opt_decl = compute_decl env (oget v.vty) in
@@ -491,7 +491,10 @@ let init_solver ds =
   (*     [] *)
   (* in *)
   let symbolics = get_symbolics ds in
-  {ctx = []; type_decls = BatMap.empty; symbolics = symbolics}
+  { ctx = [];
+    const_decls = BatSet.empty;
+    type_decls = BatMap.empty;
+    symbolics = symbolics }
 
 let encode_z3 (ds: declarations) sym_vars : smt_env =
   let env = init_solver ds in
@@ -800,33 +803,6 @@ let build_result m env aty num_nodes eassert =
       let sym_map = build_symbolic_assignment env m in
       Sat {symbolics= sym_map; labels= !map; assertions}
 
-let symvar_assign ds : value StringMap.t option =
-  let env = init_solver ds in
-  let requires = Syntax.get_requires ds in
-  add_symbolic_constraints env requires [] ;
-  let q = Solver.check env.solver [] in
-  match q with
-  | UNSATISFIABLE -> None
-  | UNKNOWN -> None
-  | SATISFIABLE ->
-      let m = Solver.get_model env.solver in
-      match m with
-      | None -> failwith "internal error (find_sym_init)"
-      | Some m -> Some (build_symbolic_assignment env m)
-
-let solve ?symbolic_vars ds =
-  let sym_vars =
-    match symbolic_vars with None -> [] | Some ls -> ls
-  in
-  let num_nodes, aty =
-    match (get_nodes ds, get_attr_type ds) with
-    | Some n, Some aty -> (n, aty)
-    | _ -> failwith "internal error (encode)"
-  in
-  let eassert = get_assert ds in
-  let env = encode_z3 ds sym_vars in
-  (* print_endline (Solver.to_string env.solver) ; *)
-  failwith "not yet implemented"
 
 module CompileSMT =
   struct
@@ -875,6 +851,8 @@ module CompileSMT =
       | Ite (t1, t2, t3) ->
          Printf.sprintf "(ite %s %s %s)" (term_to_smt t1) (term_to_smt t2) (term_to_smt t3)
       | Symbol s -> s
+      | App (t, ts) when ts = [] -> (*this case may be redundant for our encoding *)
+         Printf.sprintf "%s" (term_to_smt t) 
       | App (t, ts) ->
          let args = printList term_to_smt ts "" " " "" in 
          Printf.sprintf "(%s %s)" (term_to_smt t) args
@@ -882,14 +860,14 @@ module CompileSMT =
     let constructor_to_smt (c: constructor_decl) : string =
       match c.constr_args with
       | [] -> c.constr_name
-      | ps ->
+      | (p :: ps) ->
          let constrArgs = printList (fun (p,s) ->
-                              Printf.sprintf "(%s %s)" p (sort_to_smt s)) ps "" " " ""
+                              Printf.sprintf "(%s %s)" p (sort_to_smt s)) (p :: ps) "" " " ""
          in
          Printf.sprintf "(%s %s)" c.constr_name constrArgs
                         
     let rec type_decl_to_smt (dt: datatype_decl) : string =
-      Printf.sprintf "(delcare-datatypes %s ((%s %s)))"
+      Printf.sprintf "(declare-datatypes %s ((%s %s)))"
                      (printList sort_to_smt dt.params "(" " " ")")
                      dt.name
                      (printList constructor_to_smt dt.constructors "" " " "")
@@ -913,5 +891,14 @@ module CompileSMT =
       in
       (* Emit context *)
       let context = printList ctx_to_smt env.ctx "\n" "\n" "\n" in
-      Printf.printf "%s" (decls ^ constants ^ context)
+      Printf.sprintf "%s" (decls ^ constants ^ context)
   end
+
+let solve ?symbolic_vars ds =
+  let sym_vars =
+    match symbolic_vars with None -> [] | Some ls -> ls
+  in
+  let env = encode_z3 ds sym_vars in
+  let smt_query = CompileSMT.env_to_smt env in
+  Printf.printf "%s" smt_query;
+  Unsat

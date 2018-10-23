@@ -6,7 +6,7 @@ open Hashcons
 open Printing
 open Quickcheck
 open Renaming
-open Smt
+open Smt2
 open Solution
 open Slicing
 open Syntax
@@ -39,7 +39,7 @@ let run_smt cfg info ds =
         let decls, vars, f = MapUnrolling.unroll info decls in
         let decls = Inline.inline_declarations info decls in
         let fs = f :: fs in
-        (Smt.solve decls ~symbolic_vars:vars, fs)
+        (Smt2.solve decls ~symbolic_vars:vars, fs)
       with MapUnrolling.Cannot_unroll e ->
         let msg =
           Printf.sprintf
@@ -47,8 +47,8 @@ let run_smt cfg info ds =
             (Printing.exp_to_string e)
         in
         Console.warning msg ;
-        (Smt.solve decls ~symbolic_vars:[], fs) )
-    else (Smt.solve decls ~symbolic_vars:[], fs)
+        (Smt2.solve decls ~symbolic_vars:[], fs) )
+    else (Smt2.solve decls ~symbolic_vars:[], fs)
   in
   match res with
   | Unsat -> (Unsat, None)
