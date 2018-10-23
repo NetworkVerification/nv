@@ -34,7 +34,7 @@ type smt_term =
   | Lt of smt_term * smt_term
   | Leq of smt_term * smt_term
   | Ite of smt_term * smt_term * smt_term
-  | Symbol of string
+  | Symbol of string * sort
   | App of smt_term * (smt_term list)
          
 type smt_env =
@@ -57,7 +57,7 @@ let mk_int i = mk_int_u32 (UInt32.of_int i)
 
 let mk_bool b = Bool b
 
-let mk_symb s = Symbol s
+let mk_symb f s = Symbol (f, s)
               
 let mk_app f args =
   App (f, args)
@@ -141,7 +141,7 @@ let add_constant (env : smt_env) name sort =
 
 let mk_constant (env : smt_env) name sort =
   add_constant env name sort;
-  Symbol name
+  mk_symb name sort
 
 let add_constraint (env : smt_env) (c : smt_term) =
   env.ctx <- c :: env.ctx
@@ -236,16 +236,18 @@ let rec encode_exp_z3 descr env (e: exp) =
       match ty with
       | TTuple ts ->
          let pair_decl = compute_decl env ty in
+         let pair_sort = ty_to_sort ty in
          let zes = List.map (encode_exp_z3 descr env) es in
          let f = get_constructors pair_decl |> List.hd in
-         App (Symbol f.constr_name, zes)
+         App (mk_symb f.constr_name pair_sort, zes)
       | _ -> failwith "internal error (encode_exp_z3)" )
   | ESome e1 ->
      let ty = oget e.ety in
      let decl = compute_decl env ty in
+     let sort = ty_to_sort ty in
      let f = List.nth (get_constructors decl) 1 in
      let ze = encode_exp_z3 descr env e1 in
-     App (Symbol f.constr_name, [ze])
+     App (mk_symb f.constr_name sort, [ze])
   | EMatch (e, bs) ->
       let name = create_fresh descr "match" in
       let za = mk_constant env name (ty_to_sort (oget e.ety)) in
@@ -331,10 +333,11 @@ and encode_pattern_z3 descr env zname p (t: ty) =
             ts
         in
         let tup_decl = compute_decl env ty in
+        let tup_sort = ty_to_sort ty in
         let fs = tup_decl |> get_constructors |> List.hd |> get_projections in
         List.combine znames fs
         |> List.iter (fun ((elem, _, _), (f, _)) ->
-               let e = mk_app (Symbol f) [zname] in
+               let e = mk_app (mk_symb f tup_sort) [zname] in
                add_constraint env (Eq (elem, e)));
         let matches =
           List.map
@@ -347,9 +350,10 @@ and encode_pattern_z3 descr env zname p (t: ty) =
         let base = b in
         List.fold_left f base matches )
   | POption None, TOption _ ->
-      let opt_decl = compute_decl env ty in
+     let opt_decl = compute_decl env ty in
+     let opt_sort = ty_to_sort ty in
       let f = opt_decl |> get_constructors |> List.hd |> get_recognizer in
-       mk_app (Symbol f) [zname]
+       mk_app (mk_symb f opt_sort) [zname]
   | POption (Some p), TOption t ->
       let new_name = create_fresh descr "option" in
       let za = mk_constant env new_name (ty_to_sort t) in
@@ -357,10 +361,10 @@ and encode_pattern_z3 descr env zname p (t: ty) =
       let some_cons = List.nth (opt_decl |> get_constructors) 1 in
       let get_some, _ = some_cons |> get_projections |> List.hd in
       let is_some = some_cons |> get_recognizer in
-      let e = mk_app (Symbol get_some) [zname] in
+      let e = mk_app (mk_symb get_some (ty_to_sort ty)) [zname] in
       add_constraint env (Eq (za, e));
       let zp = encode_pattern_z3 descr env za p t in
-      mk_and (mk_app (Symbol is_some) [zname]) zp
+      mk_and (mk_app (mk_symb is_some (ty_to_sort ty)) [zname]) zp
   | _ ->
       Console.error
         (Printf.sprintf "internal error (encode_pattern): (%s, %s)"
@@ -380,18 +384,18 @@ and encode_value_z3 descr env (v: Syntax.value) =
         let pair_decl = compute_decl env (oget v.vty) in
         let zes = List.map (encode_value_z3 descr env) vs in
         let f = (pair_decl |> get_constructors |> List.hd).constr_name in
-        mk_app (Symbol f) zes
+        mk_app (mk_symb f (ty_to_sort (oget v.vty))) zes
     | _ -> failwith "internal error (encode_value)" )
   | VOption None ->
      let opt_decl = compute_decl env (oget v.vty) in
      let f = (opt_decl |> get_constructors |> List.hd).constr_name in
-     let e = Symbol f in
+     let e = mk_symb f (ty_to_sort (oget v.vty)) in
      e
   | VOption (Some v1) ->
      let opt_decl = compute_decl env (oget v.vty) in
      let f = (List.nth (opt_decl |> get_constructors) 1).constr_name in
      let zv = encode_value_z3 descr env v1 in
-      mk_app (Symbol f) [zv]
+      mk_app (mk_symb f (ty_to_sort (oget v.vty))) [zv]
   | VClosure _ -> failwith "internal error (closure in smt)"
   | VMap map -> failwith "not doing maps yet"
 
