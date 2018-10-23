@@ -1,0 +1,144 @@
+type attribute = (option[int],option[int],option[(int, int, int, int)],option[(int,int,int,int)],option[int])
+
+symbolic d = (1174406144, 24)
+
+require d = (1174406144, 24)
+
+let edges = {
+  0-1;
+  (*4-0;
+  4-2;
+  2-1;
+  2-4;
+  3-1;
+  1-2;*)
+  (*1-3;*)
+}
+
+let nodes = 2
+
+let ospfIntraArea = 0
+let ospfInterArea = 1
+let ospfE1 = 2
+let ospfE2 = 3
+
+let protoConn = 0
+let protoStatic = 1
+let protoOspf = 2
+let protoBgp = 3
+
+let min x y = if x < y then x else y
+
+let max x y = if x < y then y else x
+
+let pickOption f x y =
+  match (x,y) with
+  | (None, None) -> None
+  | (None, Some _) -> y  | (Some _, None) -> x
+  | (Some a, Some b) -> Some (f a b)
+
+let betterOspf o1 o2 =
+  let (_,cost1,areaType1,_) = o1 in
+  let (_,cost2,areaType2,_) = o2 in
+  if areaType1 > areaType2 then o1
+  else if areaType2 > areaType1 then o2
+  else if cost1 <= cost2 then o1 else o2
+
+let betterBgp o1 o2 =
+  let (_,lp1,cost1,med1) = o1 in
+  let (_,lp2,cost2,med2) = o2 in
+  if lp1 > lp2 then o1
+  else if lp2 > lp1 then o2
+  else if cost1 < cost2 then o1
+  else if cost2 < cost1 then o2  else if med1 >= med2 then o1 else o2
+
+let betterEqOption o1 o2 =
+  match (o1,o2) with
+  | (None, None) -> true
+  | (Some _, None) -> true
+  | (None, Some _) -> false
+  | (Some a, Some b) -> a <= b
+
+let best c s o b =
+  match (c,s,o,b) with
+  | (None,None,None,None) -> None
+  | _ -> 
+      let o = match o with | None -> None | Some (ad,_,_,_) -> Some ad in
+      let b = match b with | None -> None | Some (ad,_,_,_) -> Some ad in
+      let (x,p1) = if betterEqOption c s then (c,0) else (s,1) in
+      let (y,p2) = if betterEqOption o b then (o,2) else (b,3) in
+      Some (if betterEqOption x y then p1 else p2)
+
+let mergeValues x y =
+  let (cx,sx,ox,bx,_) = x in
+  let (cy,sy,oy,by,_) = y in
+  let c = pickOption min cx cy in
+  let s = pickOption min sx sy in
+  let o = pickOption betterOspf ox oy in
+  let b = pickOption betterBgp bx by in
+  (c,s,o,b, best c s o b)
+
+let merge node x y = mergeValues x y
+
+let init node =
+  match node with
+  | 0 -> 
+     if (d = (1174406144, 24)) then
+       let c = None in
+       let s = None in
+       let o = None in
+       let b = Some (20, 100, 0, 80) in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else if (d = (167772416, 31)) || (d = (1174406144, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 1 -> 
+     if (d = (167772160, 31)) || (d = (167772672, 31)) || (d = (1174405376, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+ 
+ let transferOspf edge o =
+   match o with
+   | None -> None
+   | Some (ad,cost,areaType,areaId) -> (
+   match edge with
+   | (0,1) -> None
+)
+ let transferBgp edge b =
+   match b with
+   | None -> None
+   | Some (ad,lp,cost,med) -> (
+   match edge with
+   | (0,1) -> Some (ad, lp, cost + 1, med)
+)
+
+let transferRoute edge x = 
+  let (c,s,o,b,fib) = x in
+  let o = transferOspf edge o in
+  let b = transferBgp edge b in
+  (None, None, o, b, fib)
+
+let trans edge x =
+   transferRoute edge x
+
+let assert node x = false
+(*match node with
+| 3 ->
+    if (d = (1174406144, 24)) then
+       match x with
+       | (None, None, None, None, None) -> false
+       | _ -> true
+     else
+	true
+| _ -> true *)
