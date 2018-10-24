@@ -1,59 +1,200 @@
+(** * SMT encoding of network *)
+
 open Collections
 open Unsigned
 open Syntax
 open Solution
-open Z3
 
-type datatype_decl =
-  { name         : string;
-    params       : sort list;
-    constructors : (constructor_decl) list
-  }
+let printList (printer: 'a -> string) (ls: 'a list) (first : string)
+              (sep : string) (last : string) =
+  let rec loop ls =
+    match ls with
+    | [] -> ""
+    | [l] -> printer l
+    | l :: ls -> (printer l) ^ sep ^ (loop ls)
+  in
+  first ^ (loop ls) ^ last
 
-and constructor_decl =
-  { constr_name : string; (* name of constructor *)
-    constr_args : (string * sort) list (* projection functions and their type *)
-  }
+let printVerbose (msg: string) (descr: string) (span: Span.t) =
+  Printf.sprintf "; %s: %s on %s\n" msg descr (Syntax.show_span span)
    
-and sort =
-  | BoolSort
-  | IntSort
-  | ArraySort of sort * sort
-  | DataTypeSort of string * (sort list)
-  | VarSort of string
-                  
-type smt_term =
-  | Int of string (* unbounded integers *)
-  | Bool of bool
-  | And of smt_term * smt_term
-  | Or of smt_term * smt_term
-  | Not of smt_term
-  | Add of smt_term * smt_term
-  | Sub of smt_term * smt_term
-  | Eq of smt_term * smt_term
-  | Lt of smt_term * smt_term
-  | Leq of smt_term * smt_term
-  | Ite of smt_term * smt_term * smt_term
-  | Var of string
-  | Constructor of string * sort (* constructor name, instantiated sort*)
-  | App of smt_term * (smt_term list)
+module SmtLang =
+  struct
 
-type term =
-  { t : smt_term;
-    tdescr : string;
-    tloc: Span.t
-  }
+    type datatype_decl =
+      { name         : string;
+        params       : sort list;
+        constructors : (constructor_decl) list
+      }
+      
+    and constructor_decl =
+      { constr_name : string; (** name of constructor *)
+        constr_args : (string * sort) list (** projection functions and their type *)
+      }
+      
+    and sort =
+      | BoolSort
+      | IntSort
+      | ArraySort of sort * sort
+      | DataTypeSort of string * (sort list)
+      | VarSort of string
+                 
+    type smt_term =
+      | Int of string (** unbounded integers *)
+      | Bool of bool
+      | And of smt_term * smt_term
+      | Or of smt_term * smt_term
+      | Not of smt_term
+      | Add of smt_term * smt_term
+      | Sub of smt_term * smt_term
+      | Eq of smt_term * smt_term
+      | Lt of smt_term * smt_term
+      | Leq of smt_term * smt_term
+      | Ite of smt_term * smt_term * smt_term
+      | Var of string
+      | Constructor of string * sort (** constructor name, instantiated sort*)
+      | App of smt_term * (smt_term list)
+             
+    type term =
+      { t : smt_term;
+        tdescr : string;
+        tloc: Span.t
+      }
+      
+    type constant =
+      { cname : string;
+        csort   : sort;
+        cdescr : string;
+        cloc : Span.t
+      }
 
-type constant =
-  { cname : string;
-    csort   : sort;
-    cdescr : string;
-    cloc : Span.t
-  }
+    (** ** Constructors for SMT terms *)
+      
+    let mk_int_u32 i =
+      Int (UInt32.to_string i)
+
+    let mk_int i = mk_int_u32 (UInt32.of_int i)
+
+    let mk_bool b = Bool b
+
+    let mk_var s = Var s
+
+    let mk_constructor f ts = Constructor (f, ts)
+                            
+    let mk_app f args =
+      App (f, args)
+
+    let mk_and t1 t2 = And (t1, t2)
+
+    let mk_or t1 t2 = Or (t1, t2)
+
+    let mk_not t1 = Not t1
+
+    let mk_add t1 t2 = Add (t1, t2)
+
+    let mk_sub t1 t2 = Sub (t1, t2)
+
+    let mk_eq t1 t2 = Eq (t1, t2)
+
+    let mk_lt t1 t2 = Lt (t1, t2)
+
+    let mk_leq t1 t2 = Leq (t1, t2)
+
+    let mk_ite t1 t2 t3 = Ite (t1, t2, t3)
+
+    let mk_term ?(tdescr="") ?(tloc= Span.default) (t: smt_term) =
+      {t; tdescr; tloc}
+
+    (** ** Functions related to datatype constructors *)
+      
+    let get_constructors decl =
+      decl.constructors
+
+    let get_projections (constr: constructor_decl) =
+      constr.constr_args
+
+    let get_recognizer (constr : constructor_decl) =
+      "is-" ^ constr.constr_name
+
+    (** ** Compilation to SMT-LIB2 *)
+
+    let rec sort_to_smt (s : sort) : string =
+      match s with
+      | BoolSort -> "Bool"
+      | IntSort -> "Int"
+      | ArraySort (s1, s2) ->
+         Printf.sprintf "(Array %s %s)" (sort_to_smt s1) (sort_to_smt s2)
+      | DataTypeSort (name, ls) ->
+         let args = printList sort_to_smt ls "" " " "" in
+         Printf.sprintf "(%s %s)" name args
+      | VarSort s -> s
+                   
+    let rec smt_term_to_smt (tm : smt_term) : string =
+      match tm with
+      | Int s -> s
+      | Bool b -> if b then "true" else "false"
+      | And (b1, b2) ->
+         Printf.sprintf "(and %s %s)" (smt_term_to_smt b1) (smt_term_to_smt b2)
+      | Or (b1, b2) ->
+         Printf.sprintf "(or %s %s)" (smt_term_to_smt b1) (smt_term_to_smt b2)
+      | Not b ->
+         Printf.sprintf "(not %s)" (smt_term_to_smt b)
+      | Add (n, m) ->
+         Printf.sprintf "(+ %s %s)" (smt_term_to_smt n) (smt_term_to_smt m)
+      | Sub (n, m) ->
+         Printf.sprintf "(- %s %s)" (smt_term_to_smt n) (smt_term_to_smt m)
+      | Eq (n, m) ->
+         Printf.sprintf "(= %s %s)" (smt_term_to_smt n) (smt_term_to_smt m)
+      | Lt (n, m) ->
+         Printf.sprintf "(< %s %s)" (smt_term_to_smt n) (smt_term_to_smt m)
+      | Leq (n, m) ->
+         Printf.sprintf "(<= %s %s)" (smt_term_to_smt n) (smt_term_to_smt m)         
+      | Ite (t1, t2, t3) ->
+         Printf.sprintf "(ite %s %s %s)" (smt_term_to_smt t1) (smt_term_to_smt t2)
+                        (smt_term_to_smt t3)
+      | Var s -> s
+      | Constructor (name, sort) -> name
+      | App (Constructor (name, sort), ts) when ts = [] ->
+         Printf.sprintf "(as %s %s)" name (sort_to_smt sort) 
+      | App (t, ts) ->
+         let args = printList smt_term_to_smt ts "" " " "" in 
+         Printf.sprintf "(%s %s)" (smt_term_to_smt t) args
+
+    let term_to_smt verbose (tm : term) =
+      (if verbose then
+         printVerbose "Translating expression:" tm.tdescr tm.tloc
+       else "") ^
+        smt_term_to_smt tm.t
+
+    let constructor_to_smt (c: constructor_decl) : string =
+      match c.constr_args with
+      | [] -> c.constr_name
+      | (p :: ps) ->
+         let constrArgs = printList (fun (p,s) ->
+                              Printf.sprintf "(%s %s)" p (sort_to_smt s)) (p :: ps) "" " " ""
+         in
+         Printf.sprintf "(%s %s)" c.constr_name constrArgs
+         
+    let rec type_decl_to_smt (dt: datatype_decl) : string =
+      Printf.sprintf "(declare-datatypes %s ((%s %s)))"
+                     (printList sort_to_smt dt.params "(" " " ")")
+                     dt.name
+                     (printList constructor_to_smt dt.constructors "" " " "")
+      
+    let const_decl_to_smt ?(verbose=false) const : string =
+      (if verbose then
+         printVerbose "Constant declared about:" const.cdescr const.cloc
+       else
+         "") ^
+        Printf.sprintf "(declare-const %s %s)" const.cname (sort_to_smt const.csort)
+
+  end
+
+open SmtLang
   
 type smt_env =
   { mutable ctx: term list
-  ; mutable const_decls: constant BatSet.t (* named constant and its sort *)
+  ; mutable const_decls: constant BatSet.t (** named constant and its sort *)
   ; mutable type_decls: (string, datatype_decl) BatMap.t
   ; symbolics: (Var.t * ty_or_exp) list }
   
@@ -63,41 +204,6 @@ let create_fresh descr s =
 let create_name descr n =
   if descr = "" then Var.to_string n
   else Printf.sprintf "%s-%s" descr (Var.to_string n)
-
-let mk_int_u32 i =
-  Int (UInt32.to_string i)
-
-let mk_int i = mk_int_u32 (UInt32.of_int i)
-
-let mk_bool b = Bool b
-
-let mk_var s = Var s
-
-let mk_constructor f ts = Constructor (f, ts)
-              
-let mk_app f args =
-  App (f, args)
-
-let mk_and t1 t2 = And (t1, t2)
-
-let mk_or t1 t2 = Or (t1, t2)
-
-let mk_not t1 = Not t1
-
-let mk_add t1 t2 = Add (t1, t2)
-
-let mk_sub t1 t2 = Sub (t1, t2)
-
-let mk_eq t1 t2 = Eq (t1, t2)
-
-let mk_lt t1 t2 = Lt (t1, t2)
-
-let mk_leq t1 t2 = Leq (t1, t2)
-
-let mk_ite t1 t2 t3 = Ite (t1, t2, t3)
-
-let mk_term ?(tdescr="") ?(tloc= Span.default) (t: smt_term) =
-  {t; tdescr; tloc}
  
 let rec datatype_name (ty : ty) : string =
   match ty with
@@ -179,21 +285,12 @@ let mk_constant (env : smt_env) ?(cdescr = "") ?(cloc = Span.default) cname csor
 let add_constraint (env : smt_env) (c : term) =
   env.ctx <- c :: env.ctx
                
-let mk_array ctx sort value = Z3Array.mk_const_array ctx sort value
+(* let mk_array ctx sort value = Z3Array.mk_const_array ctx sort value *)
 
-type array_info =
-  { f: Sort.sort -> Sort.sort
-  ; make: Expr.expr -> Expr.expr
-  ; lift: bool }
-
-let get_constructors decl =
-  decl.constructors
-
-let get_projections (constr: constructor_decl) =
-  constr.constr_args
-
-let get_recognizer (constr : constructor_decl) =
-  "is-" ^ constr.constr_name
+(* type array_info = *)
+(*   { f: Sort.sort -> Sort.sort *)
+(*   ; make: Expr.expr -> Expr.expr *)
+(*   ; lift: bool } *)
 
 let is_symbolic syms x =
   List.exists (fun (y, e) -> Var.equals x y) syms
@@ -210,8 +307,7 @@ let rec encode_exp_z3 descr env (e: exp) : term =
             end
         else create_name descr x
       in
-      let sort = ty_to_sort (oget e.ety) in
-      mk_constant env name sort ~cloc:e.espan 
+      (mk_var name) |> (mk_term ~tloc:e.espan)
   | EVal v -> encode_value_z3 descr env v
   | EOp (op, es) -> (
     match (op, es) with
@@ -268,7 +364,8 @@ let rec encode_exp_z3 descr env (e: exp) : term =
          mk_term ~tloc:e.espan
   | ELet (x, e1, e2) ->
       let xstr = create_name descr x in
-      let za = mk_constant env xstr (oget e1.ety |> ty_to_sort) ~cloc:e.espan in
+      let za = mk_constant env xstr (oget e1.ety |> ty_to_sort)
+                           ~cloc:e.espan ~cdescr: (descr ^ "let") in
       let ze1 = encode_exp_z3 descr env e1 in
       let ze2 = encode_exp_z3 descr env e2 in
       add_constraint env (mk_term (mk_eq za.t ze1.t));
@@ -466,13 +563,16 @@ let encode_z3_merge str env e =
                 ; body= {e= EFun {arg= y; argty= yty; body= exp}} }
           } } ->
       let nodestr =
-        mk_constant env (create_name str node) (ty_to_sort (oget nodety)) ~cdescr:"merge node argument"
+        mk_constant env (create_name str node) (ty_to_sort (oget nodety))
+                    ~cdescr:"merge node argument" ~cloc:e.espan
       in
       let xstr =
-        mk_constant env (create_name str x) (ty_to_sort (oget xty)) ~cdescr:"merge x argument"
+        mk_constant env (create_name str x) (ty_to_sort (oget xty))
+                    ~cdescr:"merge x argument" ~cloc:e.espan
       in
       let ystr =
-        mk_constant env (create_name str y) (ty_to_sort (oget yty)) ~cdescr:"merge y argument"
+        mk_constant env (create_name str y) (ty_to_sort (oget yty))
+                    ~cdescr:"merge y argument" ~cloc:e.espan
       in
       let name = Printf.sprintf "%s-result" str in
       let result = mk_constant env name (oget exp.ety |> ty_to_sort) in
@@ -489,10 +589,8 @@ let encode_z3_trans str env e =
       ; body= {e= EFun {arg= x; argty= xty; body= exp}} } ->
       let edgestr = mk_constant env (create_name str edge) (ty_to_sort (oget edgety))
       in
-      (* let xstr = mk_constant env (create_name str x) (ty_to_sort  (oget xty)) *)
-      let xstr = mk_var (create_name str x) |> mk_term
-      
-    in
+      let xstr = mk_constant env (create_name str x) (ty_to_sort  (oget xty))      
+      in
       let name = Printf.sprintf "%s-result" str in
       let result =
         mk_constant env name (oget exp.ety |> ty_to_sort) in
@@ -530,7 +628,7 @@ let add_symbolic_constraints env requires sym_vars =
       let v = mk_constant env (Var.to_string v) (ty_to_sort (oget e.ety)) in
       let e = encode_exp_z3 "" env e in
       add_constraint env (mk_term (mk_eq v.t e.t))) sym_vars ;
-  (* add the require clauses *)
+  (*TODO: add the require clauses *)
   List.iter
     (fun e ->
       let e = encode_exp_z3 "" env e in
@@ -720,7 +818,7 @@ and parse_list n s =
     let rest, s = parse_list (n - 1) s in
     (ty :: rest, s)
 
-let sort_to_ty s =
+(*let sort_to_ty s =
   let rec aux str =
     let has_parens = String.sub str 0 1 = "(" in
     let str =
@@ -811,7 +909,7 @@ and z3_to_exp m (e: Expr.expr) : Syntax.exp =
             base es
       | "=", [e1; e2] -> eop UEq [z3_to_exp m e1; z3_to_exp m e2]
       | _ -> raise Model_conversion
-    with _ -> evar (Var.create "key")
+    with _ -> evar (Var.create "key") *)
 
 type smt_result = Unsat | Unknown | Sat of Solution.t
 
@@ -863,115 +961,30 @@ let build_result m env aty num_nodes eassert =
       Sat {symbolics= sym_map; labels= !map; assertions}
 
 
-module CompileSMT =
-  struct
-
-    let printList (printer: 'a -> string) (ls: 'a list) (first : string)
-                  (sep : string) (last : string) =
-      let rec loop ls =
-        match ls with
-        | [] -> ""
-        | [l] -> printer l
-        | l :: ls -> (printer l) ^ sep ^ (loop ls)
-      in
-      first ^ (loop ls) ^ last
-
-    let printVerbose (msg: string) (descr: string) (span: Span.t) =
-      Printf.sprintf "; %s: %s on %s\n" msg descr (Syntax.show_span span)
-
-    let rec sort_to_smt (s : sort) : string =
-      match s with
-      | BoolSort -> "Bool"
-      | IntSort -> "Int"
-      | ArraySort (s1, s2) ->
-         Printf.sprintf "(Array %s %s)" (sort_to_smt s1) (sort_to_smt s2)
-      | DataTypeSort (name, ls) ->
-         let args = printList sort_to_smt ls "" " " "" in
-         Printf.sprintf "(%s %s)" name args
-      | VarSort s -> s
-                                        
-    let rec smt_term_to_smt (tm : smt_term) : string =
-      match tm with
-      | Int s -> s
-      | Bool b -> if b then "true" else "false"
-      | And (b1, b2) ->
-         Printf.sprintf "(and %s %s)" (smt_term_to_smt b1) (smt_term_to_smt b2)
-      | Or (b1, b2) ->
-         Printf.sprintf "(or %s %s)" (smt_term_to_smt b1) (smt_term_to_smt b2)
-      | Not b ->
-         Printf.sprintf "(not %s)" (smt_term_to_smt b)
-      | Add (n, m) ->
-         Printf.sprintf "(+ %s %s)" (smt_term_to_smt n) (smt_term_to_smt m)
-      | Sub (n, m) ->
-         Printf.sprintf "(- %s %s)" (smt_term_to_smt n) (smt_term_to_smt m)
-      | Eq (n, m) ->
-         Printf.sprintf "(= %s %s)" (smt_term_to_smt n) (smt_term_to_smt m)
-      | Lt (n, m) ->
-         Printf.sprintf "(< %s %s)" (smt_term_to_smt n) (smt_term_to_smt m)
-      | Leq (n, m) ->
-         Printf.sprintf "(<= %s %s)" (smt_term_to_smt n) (smt_term_to_smt m)         
-      | Ite (t1, t2, t3) ->
-         Printf.sprintf "(ite %s %s %s)" (smt_term_to_smt t1) (smt_term_to_smt t2) (smt_term_to_smt t3)
-      | Var s -> s
-      | Constructor (name, sort) -> name
-      | App (Constructor (name, sort), ts) when ts = [] ->
-         Printf.sprintf "(as %s %s)" name (sort_to_smt sort) 
-      | App (t, ts) ->
-         let args = printList smt_term_to_smt ts "" " " "" in 
-         Printf.sprintf "(%s %s)" (smt_term_to_smt t) args
-
-    let term_to_smt verbose (tm : term) =
-      (if verbose then
-        printVerbose "Translating expression:" tm.tdescr tm.tloc
-       else "") ^
-        smt_term_to_smt tm.t
-
-    let constructor_to_smt (c: constructor_decl) : string =
-      match c.constr_args with
-      | [] -> c.constr_name
-      | (p :: ps) ->
-         let constrArgs = printList (fun (p,s) ->
-                              Printf.sprintf "(%s %s)" p (sort_to_smt s)) (p :: ps) "" " " ""
-         in
-         Printf.sprintf "(%s %s)" c.constr_name constrArgs
-                        
-    let rec type_decl_to_smt (dt: datatype_decl) : string =
-      Printf.sprintf "(declare-datatypes %s ((%s %s)))"
-                     (printList sort_to_smt dt.params "(" " " ")")
-                     dt.name
-                     (printList constructor_to_smt dt.constructors "" " " "")
-      
-    let const_decl_to_smt ?(verbose=false) const : string =
-      (if verbose then
-        printVerbose "Constant declared about:" const.cdescr const.cloc
-      else
-        "") ^
-      Printf.sprintf "(declare-const %s %s)" const.cname (sort_to_smt const.csort)
-
-    let ctx_to_smt ?(verbose=false) (tm: term) : string =
-      Printf.sprintf "(assert %s)" (term_to_smt verbose tm)
-      
-    let env_to_smt ?(verbose=false) (env : smt_env) =
-      (* Emit type declarations *)
-      let decls =
-        BatMap.fold (fun typ acc ->
-            (Printf.sprintf "%s\n" (type_decl_to_smt typ)) ^ acc) env.type_decls ""
-      in
-      (* Emit constants *)
-      let constants =
-        BatSet.fold (fun const acc ->
-            (Printf.sprintf "%s\n" (const_decl_to_smt ~verbose:verbose const)) ^ acc) env.const_decls ""
-      in
-      (* Emit context *)
-      let context = printList ctx_to_smt env.ctx "\n" "\n" "\n" in
-      Printf.sprintf "%s" (decls ^ constants ^ context)
-  end
+let ctx_to_smt ?(verbose=false) (tm: term) : string =
+  Printf.sprintf "(assert %s)" (term_to_smt verbose tm)
+  
+let env_to_smt ?(verbose=false) (env : smt_env) =
+  (* Emit type declarations *)
+  let decls =
+    BatMap.fold (fun typ acc ->
+        (Printf.sprintf "%s\n" (type_decl_to_smt typ)) ^ acc) env.type_decls ""
+  in
+  (* Emit constants *)
+  let constants =
+    BatSet.fold (fun const acc ->
+        (Printf.sprintf "%s\n" (const_decl_to_smt ~verbose:verbose const)) ^ acc)
+                env.const_decls ""
+  in
+  (* Emit context *)
+  let context = printList ctx_to_smt env.ctx "\n" "\n" "\n" in
+  Printf.sprintf "%s" (decls ^ constants ^ context)
 
 let solve ?symbolic_vars ds =
   let sym_vars =
     match symbolic_vars with None -> [] | Some ls -> ls
   in
   let env = encode_z3 ds sym_vars in
-  let smt_query = CompileSMT.env_to_smt ~verbose:true env in
+  let smt_query = env_to_smt ~verbose:true env in
   Printf.printf "%s" smt_query;
   Unsat

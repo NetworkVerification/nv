@@ -30,9 +30,10 @@ let rec apply_all s fs =
 
 let run_smt cfg info ds =
   let fs = [init_renamer] in
-  let decls, f = Renaming.alpha_convert_declarations ds in
+  let decls = Inline.inline_declarations info ds in
+  let decls, f = Renaming.alpha_convert_declarations decls in
   let fs = f :: fs in
-  let decls = Inline.inline_declarations info decls in
+  let decls = Typing.infer_declarations info decls in
   let res, fs =
     if cfg.unroll_maps then (
       try

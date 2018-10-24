@@ -35,7 +35,7 @@ let pickOption f x y =
   match (x,y) with
   | (None, None) -> None
   | (None, Some _) -> y  | (Some _, None) -> x
-  | (Some a, Some b) -> Some (f a b)
+  | (Some xa, Some yb) -> Some (f xa yb)
 
 let betterOspf o1 o2 =
   let (_,cost1,areaType1,_) = o1 in
@@ -73,10 +73,10 @@ let mergeValues x y =
   let (cx,sx,ox,bx,_) = x in
   let (cy,sy,oy,by,_) = y in
   let c = pickOption min cx cy in
-  let s = pickOption min sx sy in
+  (*let s = pickOption min sx sy in*)
   let o = pickOption betterOspf ox oy in
-  let b = pickOption betterBgp bx by in
-  (c,s,o,b, best c s o b)
+  (*let b = pickOption betterBgp bx by in*)
+  (c,sx,o,bx, best c sx o bx)
 
 let merge node x y = mergeValues x y
 
