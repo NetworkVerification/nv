@@ -8,6 +8,7 @@ type t =
   ; ntests: int                        (** number of random test cases to try      *)
   ; smart_gen: bool   [@short "-g"]    (** generate relevant randomized inputs     *)
   ; smt: bool         [@short "-m"]    (** search for bugs using an smt solver     *)
+  ; query: bool                        (** emit the query used by the smt solver   *)
   ; unroll_maps: bool [@short "-u"]    (** try to unroll dictionaries as tuples    *)
   ; hashcons: bool    [@short "-c"]    (** enables hashconsing of all ast terms    *)
   ; memoize: bool     [@short "-z"]    (** memoizes the interpreter for reuse      *)
@@ -31,6 +32,7 @@ let default =
   ; ntests = 100
   ; smart_gen= false
   ; smt= false
+  ; query= false
   ; unroll_maps= false
   ; hashcons=false
   ; memoize = false

@@ -736,6 +736,11 @@ let get_requires ds =
 let rec get_inner_type t : ty =
   match t with TVar {contents= Link t} -> get_inner_type t | _ -> t
 
+let get_ty_from_tyexp (et : ty_or_exp) : ty =
+  match et with
+  | Ty t -> t
+  | Exp e -> oget (e.ety)
+  
 open BatSet
 
 let rec free (seen: Var.t PSet.t) (e: exp) : Var.t PSet.t =

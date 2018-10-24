@@ -4,6 +4,7 @@ open Collections
 open Unsigned
 open Syntax
 open Solution
+open Z3
 
 let printList (printer: 'a -> string) (ls: 'a list) (first : string)
               (sep : string) (last : string) =
@@ -216,7 +217,23 @@ let rec datatype_name (ty : ty) : string =
        let len = List.length ts in
        Printf.sprintf "Pair%d" len)
   | TOption ty -> "Option"
-  | _ -> failwith "should be only called on datatypes" 
+  | _ -> failwith "should be only called on datatypes"
+
+let rec type_name (ty : ty) : string =
+  match ty with
+  | TVar {contents= Link t} -> datatype_name t
+  | TTuple ts -> (
+    match ts with
+    | [] -> failwith "empty tuple"
+    | [t] -> datatype_name t
+    | ts ->
+       let len = List.length ts in
+       Printf.sprintf "Pair%d" len)
+  | TOption ty -> "Option"
+  | TBool -> "Bool"
+  | TInt _ -> "Int"
+  | TMap _ -> failwith "no maps yet"
+  | TArrow _ | TVar _ | QVar _ -> failwith "unsupported type in SMT"
               
 let rec ty_to_sort (ty: ty) : sort =
   match ty with
@@ -623,12 +640,11 @@ end)
 let cfg = [("model_compress", "false")]
 
 let add_symbolic_constraints env requires sym_vars =
+  (* Declare the symbolic variables: ignore the expression in case of SMT *)
   List.iter
     (fun (v, e) ->
-      let v = mk_constant env (Var.to_string v) (ty_to_sort (oget e.ety))
-                          ~cdescr:"Symbolic variable decl" in
-      let e = encode_exp_z3 "" env e in
-      add_constraint env (mk_term (mk_eq v.t e.t))) sym_vars ;
+      let _ = mk_constant env (Var.to_string v) (ty_to_sort (Syntax.get_ty_from_tyexp e))
+                          ~cdescr:"Symbolic variable decl" in ()) sym_vars ;
   (* add the require clauses *)
   List.iter
     (fun e ->
@@ -761,9 +777,7 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
       done ;
       add_constraint env (mk_term (mk_not !all_good))) ;
   (* add the symbolic variable constraints *)
-  Printf.printf "%d\n" (List.length sym_vars);
-  Printf.printf "%s" (printList (fun (s,_) -> Var.to_string s) sym_vars "Symbolics:" "\n" "");
-  add_symbolic_constraints env (get_requires ds) sym_vars ;
+  add_symbolic_constraints env (get_requires ds) (env.symbolics (*@ sym_vars*));
   env
 
 exception Model_conversion
@@ -916,20 +930,92 @@ and z3_to_exp m (e: Expr.expr) : Syntax.exp =
 
 type smt_result = Unsat | Unknown | Sat of Solution.t
 
-let eval env m str ty = failwith "not yet implemented"
+let rec sort_name (s : sort) : string =
+  match s with
+  | BoolSort -> "Bool"
+  | IntSort -> "Int"
+  | ArraySort (s1, s2) ->
+     Printf.sprintf "(Array %s %s)" (sort_to_smt s1) (sort_to_smt s2)
+  | DataTypeSort (name, ls) ->
+     let args = printList sort_to_smt ls "" " " "" in
+     Printf.sprintf "(%s %s)" name args
+  | VarSort s -> s
 
-let build_symbolic_assignment env m =
+let get_sort m ty =
+  let sorts = Model.get_sorts m in
+  Printf.printf "%s" (printList  (fun s -> (Sort.get_name s |> Symbol.to_string)) sorts "" "\n" "");
+  let name = type_name ty in
+  Printf.printf "name:%s\n" name;
+  let sort = List.find (fun s -> (Sort.get_name s |> Symbol.to_string) = name) sorts in
+  sort
+  
+let rec z3_to_value m (e: Expr.expr) : Syntax.value =
+  try
+    let i = UInt32.of_string (Expr.to_string e) in
+    vint i
+  with _ ->
+        let f = Expr.get_func_decl e in
+        let es = Expr.get_args e in
+        let name = FuncDecl.get_name f |> Symbol.to_string in
+        match (name, es) with
+        | "true", _ -> vbool true
+        | "false", _ -> vbool false
+        | "some", [e1] -> voption (Some (z3_to_value m e1))
+        | "none", _ -> voption None
+        (* | "store", [e1; e2; e3] -> (
+         *   let v1 = z3_to_value m e1 in
+         *   let v2 = z3_to_value m e2 in
+         *   let v3 = z3_to_value m e3 in
+         *   match v1.v with
+         *   | VMap m -> vmap (BddMap.update m v2 v3)
+         *   | _ -> raise Model_conversion )
+         * | "const", [e1] -> (
+         *   let sort = Z3.Expr.get_sort e in
+         *   let ty = sort_to_ty sort in
+         *   match get_inner_type ty with
+         *   | TMap (kty, _) ->
+         *      let e1 = z3_to_value m e1 in
+         *      vmap (BddMap.create ~key_ty:kty e1)
+         *   | _ -> failwith "internal error (z3_to_exp)" )
+         * | "as-array", _ -> (
+         *   let x = FuncDecl.get_parameters f |> List.hd in
+         *   let f = FuncDecl.Parameter.get_func_decl x in
+         *   let y = Model.get_func_interp m f in
+         *   match y with
+         *   | None -> failwith "impossible"
+         *   | Some x ->
+         *      let e = Model.FuncInterp.get_else x in
+         *      let e = z3_to_exp m e in
+         *      let env = {ty= Env.empty; value= Env.empty} in
+         *      let key = Var.create "key" in
+         *      let func =
+         *        {arg= key; argty= None; resty= None; body= e}
+         *      in
+         *      vclosure (env, func) ) *)
+        | _ ->
+           if String.length name >= 7 && String.sub name 0 6 = "mkPair"
+           then
+             let es = List.map (z3_to_value m) es in
+             vtuple es
+           else raise Model_conversion
+                                         
+let eval ctx m str ty =
+  let l = Expr.mk_const_s ctx str (get_sort m ty) in
+  let e = Model.eval m l true |> oget in
+  z3_to_value m e
+
+let build_symbolic_assignment ctx symbolics m =
   let sym_map = ref StringMap.empty in
   List.iter
     (fun (x, e) ->
       let ty = match e with Ty ty -> ty | Exp e -> oget e.ety in
       let name = Var.to_string x in
-      let e = eval env m name ty in
+      let e = eval ctx m name ty in
       sym_map := StringMap.add name e !sym_map )
-    env.symbolics ;
+    symbolics ;
   !sym_map
 
-let build_result m env aty num_nodes eassert =
+let build_result m ctx symbolics aty num_nodes eassert =
   match m with
   | None -> failwith "internal error (encode)"
   | Some m ->
@@ -937,7 +1023,7 @@ let build_result m env aty num_nodes eassert =
       let map = ref Graph.VertexMap.empty in
       (* grab the model from z3 *)
       for i = 0 to UInt32.to_int num_nodes - 1 do
-        let e = eval env m (Printf.sprintf "label-%d" i) aty in
+        let e = eval ctx m (Printf.sprintf "label-%d" i) aty in
         map := Graph.VertexMap.add (UInt32.of_int i) e !map
       done ;
       let assertions =
@@ -947,7 +1033,7 @@ let build_result m env aty num_nodes eassert =
             let assertions = ref Graph.VertexMap.empty in
             for i = 0 to UInt32.to_int num_nodes - 1 do
               let e =
-                eval env m
+                eval ctx m
                   (Printf.sprintf "assert-%d-result" i)
                   TBool
               in
@@ -960,10 +1046,11 @@ let build_result m env aty num_nodes eassert =
             done ;
             Some !assertions
       in
-      let sym_map = build_symbolic_assignment env m in
+      let sym_map = build_symbolic_assignment ctx symbolics m in
       Sat {symbolics= sym_map; labels= !map; assertions}
 
 
+(** ** Translate the environment to SMT-LIB2 *)
 let ctx_to_smt ?(verbose=false) (tm: term) : string =
   Printf.sprintf "(assert %s)" (term_to_smt verbose tm)
   
@@ -983,11 +1070,44 @@ let env_to_smt ?(verbose=false) (env : smt_env) =
   let context = printList ctx_to_smt env.ctx "\n" "\n" "\n" in
   Printf.sprintf "%s" (decls ^ constants ^ context)
 
-let solve ?symbolic_vars ds =
+let cfg = []
+
+let init_solver () =
+  let ctx = Z3.mk_context cfg in
+  (* let t1 = Tactic.mk_tactic ctx "simplify" in
+   * let t2 = Tactic.mk_tactic ctx "propagate-values" in
+   * let t3 = Tactic.mk_tactic ctx "bit-blast" in
+   * let t4 = Tactic.mk_tactic ctx "smt" in
+   * let t =
+   *   Tactic.and_then ctx t1
+   *     (Tactic.and_then ctx t2 (Tactic.and_then ctx t3 t4 []) [])
+   *     []
+   * in *)
+  let solver = Z3.Solver.mk_solver ctx None in
+  (solver, ctx)
+  
+        
+let solve query chan ?symbolic_vars ds =
   let sym_vars =
     match symbolic_vars with None -> [] | Some ls -> ls
   in
+  let num_nodes, aty =
+    match (get_nodes ds, get_attr_type ds) with
+    | Some n, Some aty -> (n, aty)
+    | _ -> failwith "internal error (encode)"
+  in
+  let eassert = get_assert ds in
   let env = encode_z3 ds sym_vars in
-  let smt_query = env_to_smt ~verbose:true env in
-  Printf.printf "%s" smt_query;
-  Unsat
+  let smt_query = env_to_smt ~verbose:false env in
+  if query then
+    ( Printf.fprintf chan "%s" smt_query; flush chan);
+  let (solver, ctx) = init_solver () in
+  let parsed_query = Z3.SMT.parse_smtlib2_string ctx smt_query [] [] [] [] in
+  Solver.add solver [parsed_query];
+  match Solver.check solver [] with
+  | UNSATISFIABLE -> Unsat
+  | SATISFIABLE ->
+     let m = Solver.get_model solver in
+     build_result m ctx env.symbolics aty num_nodes eassert
+  | UNKNOWN -> Unknown
+  

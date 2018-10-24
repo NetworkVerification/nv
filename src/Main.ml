@@ -28,7 +28,14 @@ let init_renamer sol =
 let rec apply_all s fs =
   match fs with [] -> s | f :: fs -> apply_all (f s) fs
 
-let run_smt cfg info ds =
+let smt_query_file (file: string) =
+  open_out (file ^ "-query")
+
+type answer =
+  | Success of (Solution.t option)
+  | CounterExample of Solution.t
+  
+let run_smt file cfg info ds =
   let fs = [init_renamer] in
   let decls = Inline.inline_declarations info ds in
   let decls, f = Renaming.alpha_convert_declarations decls in
@@ -40,7 +47,7 @@ let run_smt cfg info ds =
         let decls, vars, f = MapUnrolling.unroll info decls in
         let decls = Inline.inline_declarations info decls in
         let fs = f :: fs in
-        (Smt2.solve decls ~symbolic_vars:vars, fs)
+        (Smt2.solve cfg.query (smt_query_file file) decls ~symbolic_vars:vars, fs)
       with MapUnrolling.Cannot_unroll e ->
         let msg =
           Printf.sprintf
@@ -48,14 +55,14 @@ let run_smt cfg info ds =
             (Printing.exp_to_string e)
         in
         Console.warning msg ;
-        (Smt2.solve decls ~symbolic_vars:[], fs) )
-    else (Smt2.solve decls ~symbolic_vars:[], fs)
+        (Smt2.solve cfg.query (smt_query_file file) decls ~symbolic_vars:[], fs))
+    else (Smt2.solve cfg.query (smt_query_file file) decls ~symbolic_vars:[], fs)
   in
   match res with
-  | Unsat -> (Unsat, None)
+  | Unsat -> (Success None, None)
   | Unknown -> Console.error "SMT returned unknown"
   | Sat solution -> (* print_solution (apply_all solution fs) *)
-     (Sat solution, Some fs)
+     (CounterExample solution, Some fs)
 
 let run_test cfg info ds =
   let fs = [init_renamer] in
@@ -68,14 +75,15 @@ let run_test cfg info ds =
     else (Quickcheck.check_random ds ~iterations:cfg.ntests, fs)
   in
   match sol with
-  | None -> ()
+  | None -> (Success None, None)
   | Some sol ->
       print_newline () ;
       print_string [Bold] "Test cases: " ;
       Printf.printf "%d\n" stats.iterations ;
       print_string [Bold] "Rejected: " ;
       Printf.printf "%d\n" stats.num_rejected ;
-      print_solution (apply_all sol fs)
+      (CounterExample sol, Some fs)
+      (* print_solution (apply_all sol fs) *)
 
 let run_simulator cfg info decls =
   let fs, decls =
@@ -158,12 +166,11 @@ let compress info decls cfg networkOp =
     let groups = AbstractionMap.printAbstractGroups f "\n" in
     Console.show_message groups Console.T.Blue "Abstract groups";
     match networkOp cfg info decls with
-    | Unsat, _ -> ()
-    | (Sat sol), fs ->
+    | Success _, _ -> ()
+    | (CounterExample sol), fs ->
        let f' = FailuresAbstraction.refineForFailures network.graph f failVars sol in
        print_solution sol;
        loop f' ds
-    | _ -> Console.error "Solver returned unknown"
   in
   BatSet.iter
     (fun prefixes ->
@@ -186,24 +193,23 @@ let main =
   let decls = Typing.infer_declarations info ds in
   Typing.check_annot_decls decls ;
   Wellformed.check info decls ;
+  let networkOp = if cfg.smt then run_smt file
+                  else if cfg.random_test then run_test
+                  else run_smt file
+                               (* else run_simulator *)
+  in
   if cfg.compress >= 0 then
     begin
-      let networkOp = if cfg.smt then run_smt
-                      else run_smt
-                      (* else if cfg.random_test then run_test *)
-                      (* else run_simulator *)
-      in
       compress info decls cfg networkOp
     end
   else
     begin
-      if cfg.smt then
+      if cfg.smt || cfg.random_test then
         begin
-          match run_smt cfg info decls with
-          | Sat sol, Some fs -> print_solution sol
-          | Unsat, _ -> Printf.printf "unsat\n"
+          match run_smt file cfg info decls with
+          | CounterExample sol, Some fs -> print_solution sol
+          | Success _, _ -> Printf.printf "No counterexamples found\n"
           | _ -> ()
         end;
-      if cfg.random_test then run_test cfg info decls ;
       if cfg.simulate then run_simulator cfg info decls
     end
