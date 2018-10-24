@@ -314,6 +314,18 @@ let rec encode_exp_z3 descr env arr (e: exp) =
       let ze1 = encode_exp_z3 descr env arr e1 in
       let ze2 = encode_exp_z3 descr env arr e2 in
       let ze3 = encode_exp_z3 descr env arr e3 in
+      (* Printf.printf "sort ze1: %s\n" (Sort.to_string (Expr.get_sort ze1)); *)
+      (* Printf.printf "sort ze2: %s\n" (Sort.to_string (Expr.get_sort ze2)); *)
+      (* Printf.printf "sort ze3: %s\n" (Sort.to_string (Expr.get_sort ze3)); *)
+      (* Printf.printf "expr ze1: %s\n" (Expr.to_string ze1); *)
+      (* Printf.printf "expr ze2: %s\n" (Expr.to_string ze2); *)
+      (* Printf.printf "expr ze3: %s\n" (Expr.to_string ze3); *)
+      (* Printf.printf "expr e1: %s\n" (Printing.exp_to_string e1); *)
+      (* Printf.printf "expr e2: %s\n" (Printing.exp_to_string e2); *)
+      (* Printf.printf "expr e3: %s\n" (Printing.exp_to_string e3); *)
+      (* Printf.printf "expr e2: %s\n" (Syntax.show_exp e2); *)
+      (* Printf.printf "expr e3: %s\n" (Syntax.show_exp e3); *)
+      (* Printf.printf "keysort: %s\n" (Sort.to_string (arr.f (Expr.get_sort ze2))); *)
       if arr.lift then
         Z3Array.mk_map env.ctx
           (ite_f env.ctx (peel env.ctx ze2) (peel env.ctx ze3))
@@ -654,7 +666,7 @@ module EdgeMap = Map.Make (struct
     if cmp <> 0 then cmp else UInt32.compare b d
 end)
 
-let cfg = [("model_compress", "false"); ("trace","true")]
+let cfg = [("model_compress", "false")]
 
 let add_symbolic_constraints env requires sym_vars =
   List.iter
@@ -933,11 +945,7 @@ let rec z3_to_value m (e: Expr.expr) : Syntax.value =
         then
           let es = List.map (z3_to_value m) es in
           vtuple es
-        else
-          begin
-          Printf.printf "name that causes crash: %s\n" name;
-          raise Model_conversion
-          end
+        else raise Model_conversion
 
 and z3_to_exp m (e: Expr.expr) : Syntax.exp =
   try e_val (z3_to_value m e) with _ ->
@@ -1042,16 +1050,9 @@ let solve ?symbolic_vars ds =
   let env = encode_z3 ds sym_vars in
   (* print_endline (Solver.to_string env.solver) ; *)
   let q = Solver.check env.solver [] in
-   Params.set_print_mode env.ctx PRINT_SMTLIB_FULL;
-  let file = open_out "query.txt" in
-  Printf.fprintf file "%s" (Solver.to_string (Solver.translate env.solver env.ctx));
   match q with
   | UNSATISFIABLE -> Unsat
   | UNKNOWN -> Unknown
-  | SATISFIABLE -> 
-     match Solver.get_model env.solver with
-     | Some m ->
-        let file = open_out "model.txt" in
-        Printf.fprintf file "%s" (Model.to_string m);
-        build_result (Some m) env aty num_nodes eassert
-     | _ ->         build_result None env aty num_nodes eassert
+  | SATISFIABLE ->
+      let m = Solver.get_model env.solver in
+      build_result m env aty num_nodes eassert
