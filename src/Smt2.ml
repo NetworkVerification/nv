@@ -625,10 +625,11 @@ let cfg = [("model_compress", "false")]
 let add_symbolic_constraints env requires sym_vars =
   List.iter
     (fun (v, e) ->
-      let v = mk_constant env (Var.to_string v) (ty_to_sort (oget e.ety)) in
+      let v = mk_constant env (Var.to_string v) (ty_to_sort (oget e.ety))
+                          ~cdescr:"Symbolic variable decl" in
       let e = encode_exp_z3 "" env e in
       add_constraint env (mk_term (mk_eq v.t e.t))) sym_vars ;
-  (*TODO: add the require clauses *)
+  (* add the require clauses *)
   List.iter
     (fun e ->
       let e = encode_exp_z3 "" env e in
@@ -760,6 +761,8 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
       done ;
       add_constraint env (mk_term (mk_not !all_good))) ;
   (* add the symbolic variable constraints *)
+  Printf.printf "%d\n" (List.length sym_vars);
+  Printf.printf "%s" (printList (fun (s,_) -> Var.to_string s) sym_vars "Symbolics:" "\n" "");
   add_symbolic_constraints env (get_requires ds) sym_vars ;
   env
 
