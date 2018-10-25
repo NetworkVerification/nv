@@ -234,7 +234,7 @@ module SmtLang =
 open SmtLang
   
 type smt_env =
-  { mutable ctx: term list
+  { mutable ctx: command list
   ; mutable const_decls: constant BatSet.t (** named constant and its sort *)
   ; mutable type_decls: (string, datatype_decl) BatMap.t
   ; symbolics: (Var.t * ty_or_exp) list }
@@ -1063,9 +1063,11 @@ let assert_result_var i =
 
 let symbolic_var (s: Var.t) =
   Var.to_string s
-  
-let eval_model (symbolics: (Var.t * Syntax.ty_or_exp) list) (num_nodes: UInt32.t)
-               (eassert: Syntax.exp option) : command list =
+
+(** Emits the code that evaluates the model returned by Z3 (if any) *)  
+let eval_model (symbolics: (Var.t * Syntax.ty_or_exp) list)
+      (num_nodes: UInt32.t)
+      (eassert: Syntax.exp option) : command list =
   (* Compute eval statements for labels *)
   let labels =
     Graph.fold_vertices (fun u acc ->
@@ -1143,13 +1145,14 @@ let solve query chan ?symbolic_vars ds =
   let smt_query = env_to_smt ~verbose:false env in
   if query then
     ( Printf.fprintf chan "%s" smt_query; flush chan);
-  let (solver, ctx) = init_solver () in
-  let parsed_query = Z3.SMT.parse_smtlib2_string ctx smt_query [] [] [] [] in
-  Solver.add solver [parsed_query];
-  match Solver.check solver [] with
-  | UNSATISFIABLE -> Unsat
-  | SATISFIABLE ->
-     let m = Solver.get_model solver in
-     build_result m ctx env.symbolics aty num_nodes eassert
-  | UNKNOWN -> Unknown
+
+  (* let (solver, ctx) = init_solver () in *)
+  (* let parsed_query = Z3.SMT.parse_smtlib2_string ctx smt_query [] [] [] [] in *)
+  (* Solver.add solver [parsed_query]; *)
+  (* match Solver.check solver [] with
+   * | UNSATISFIABLE -> Unsat
+   * | SATISFIABLE ->
+   *    let m = Solver.get_model solver in
+   *    build_result m ctx env.symbolics aty num_nodes eassert
+   * | UNKNOWN -> Unknown *)
   
