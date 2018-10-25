@@ -56,7 +56,7 @@ let num_vertices (m, i) = i
 (*   VertexMap.fold (fun k _ acc -> VertexSet.add k acc) *)
 (*                  m VertexSet.empty *)
 
-let fold_vertices (f: Vertex.t -> 'a -> 'a) (_, i) (acc: 'a) : 'a =
+let fold_vertices (f: Vertex.t -> 'a -> 'a) i (acc: 'a) : 'a =
   let rec loop j =
     if i = j then acc
     else f j (loop (UInt32.add j UInt32.one))

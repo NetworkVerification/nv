@@ -6,6 +6,12 @@ open Syntax
 open Solution
 open Z3
 
+(* TODO: 
+   1. make everything an smt_command. i.e. assert, declarations, etc. 
+   2. Make smt_term wrap around terms, print out more helpful
+   comments, include location of ocaml source file
+   3. Have verbosity levels, we don't always need comments everywhere.*)
+   
 let printList (printer: 'a -> string) (ls: 'a list) (first : string)
               (sep : string) (last : string) =
   let rec loop ls =
@@ -57,16 +63,26 @@ module SmtLang =
       | App of smt_term * (smt_term list)
              
     type term =
-      { t : smt_term;
+      { t      : smt_term;
         tdescr : string;
-        tloc: Span.t
+        tloc   : Span.t
       }
       
     type constant =
-      { cname : string;
-        csort   : sort;
+      { cname  : string;
+        csort  : sort;
         cdescr : string;
-        cloc : Span.t
+        cloc   : Span.t
+      }
+
+    type smt_command =
+      | Echo of string
+      | Eval of term
+
+    type command =
+      { com      : smt_command;
+        comdescr : string;
+        comloc   : Span.t
       }
 
     (** ** Constructors for SMT terms *)
@@ -106,6 +122,15 @@ module SmtLang =
     let mk_term ?(tdescr="") ?(tloc= Span.default) (t: smt_term) =
       {t; tdescr; tloc}
 
+    (** ** Constructors for SMT commands *)
+
+    let mk_echo s = Echo s
+
+    let mk_eval tm = Eval tm
+
+    let mk_command ?(comdescr ="") ?(comloc=Span.default) (com : smt_command) =
+      {com; comdescr; comloc}
+      
     (** ** Functions related to datatype constructors *)
       
     let get_constructors decl =
@@ -189,6 +214,21 @@ module SmtLang =
          "") ^
         Printf.sprintf "(declare-const %s %s)" const.cname (sort_to_smt const.csort)
 
+    let smt_command_to_smt (comm : smt_command) : string =
+      match comm with
+      | Echo s ->
+         Printf.sprintf "(echo %s)" s
+      | Eval tm ->
+         Printf.sprintf "(eval %s)" (term_to_smt false tm)
+
+    (* NOTE: this currently ignores the comment/loc of the term inside
+       the command. Perhaps we would like to combine them in some way
+       *)
+    let command_to_smt (verbose : bool) (com : command) : string =
+      (if verbose then
+         printVerbose "Translating command:" com.comdescr com.comloc
+       else "") ^
+        smt_command_to_smt com.com
   end
 
 open SmtLang
@@ -1015,40 +1055,42 @@ let build_symbolic_assignment ctx symbolics m =
     symbolics ;
   !sym_map
 
-let build_result m ctx symbolics aty num_nodes eassert =
-  match m with
-  | None -> failwith "internal error (encode)"
-  | Some m ->
-      (* print_endline (Model.to_string m) ; *)
-      let map = ref Graph.VertexMap.empty in
-      (* grab the model from z3 *)
-      for i = 0 to UInt32.to_int num_nodes - 1 do
-        let e = eval ctx m (Printf.sprintf "label-%d" i) aty in
-        map := Graph.VertexMap.add (UInt32.of_int i) e !map
-      done ;
-      let assertions =
-        match eassert with
-        | None -> None
-        | Some _ ->
-            let assertions = ref Graph.VertexMap.empty in
-            for i = 0 to UInt32.to_int num_nodes - 1 do
-              let e =
-                eval ctx m
-                  (Printf.sprintf "assert-%d-result" i)
-                  TBool
-              in
-              match (e, eassert) with
-              | {v= VBool b}, Some _ ->
-                  assertions :=
-                    Graph.VertexMap.add (UInt32.of_int i) b
-                      !assertions
-              | _ -> failwith "internal error (build_result)"
-            done ;
-            Some !assertions
-      in
-      let sym_map = build_symbolic_assignment ctx symbolics m in
-      Sat {symbolics= sym_map; labels= !map; assertions}
+let label_var i =
+  Printf.sprintf "label-%d" (UInt32.to_int i)
 
+let assert_result_var i =
+  Printf.sprintf "assert-%d-result" (UInt32.to_int i)
+
+let symbolic_var (s: Var.t) =
+  Var.to_string s
+  
+let eval_model (symbolics: (Var.t * Syntax.ty_or_exp) list) (num_nodes: UInt32.t)
+               (eassert: Syntax.exp option) : command list =
+  (* Compute eval statements for labels *)
+  let labels =
+    Graph.fold_vertices (fun u acc ->
+        let tm = mk_var (label_var u) |> mk_term in
+        let ev = mk_eval tm |> mk_command in
+        let ec = mk_echo (label_var u) |> mk_command in
+        ec :: ev :: acc) num_nodes [] in
+  (* Compute eval statement for assertions *)
+  let assertions =
+    match eassert with
+    | None -> []
+    | Some _ ->
+       Graph.fold_vertices (fun u acc ->
+           let tm = mk_var (assert_result_var u) |> mk_term in
+           let ev = mk_eval tm |> mk_command in
+           let ec = mk_echo (assert_result_var u) |> mk_command in
+           ec :: ev :: acc) num_nodes labels
+  in
+  let symbols =
+    List.fold_left (fun acc (sv, _) ->
+        let tm = mk_var (symbolic_var sv) |> mk_term in
+        let ev = mk_eval tm |> mk_command in
+        let ec = mk_echo (symbolic_var sv) |> mk_command in
+        ec :: ev :: acc) assertions symbolics in
+  symbols
 
 (** ** Translate the environment to SMT-LIB2 *)
 let ctx_to_smt ?(verbose=false) (tm: term) : string =
