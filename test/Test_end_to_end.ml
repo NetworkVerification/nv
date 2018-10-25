@@ -19,17 +19,25 @@ let files_to_test : (string * bool * bool) list =
     ("examples/env.nv", true, true);
     ("examples/failure.nv", true, false);
     ("examples/failure2.nv", true, false);
-    (* TODO: Add more *)
+    (* ("examples/fattree.nv", true, true); *)
+    ("examples/map.nv", true, true);
+    ("examples/map2.nv", false, false);
+    ("examples/minesweeper.nv", true, false);
+    ("examples/property.nv", true, false);
+    ("examples/set.nv", true, true);
+    ("examples/simple.nv", true, true);
+    ("examples/symbolic.nv", true, false);
+    ("examples/symbolic2.nv", true, false);
   ]
 ;;
 
 let make_test file =
   let filename, sim_success, smt_success = file in
   filename >:: fun _ ->
-  let args = Array.of_list ["nv"; "-s"; "-m"; filename] in
-  let cfg, info, decls = parse_input args in
-  assert_equal ~printer:string_of_bool sim_success @@ run_simulator cfg info decls;
-  assert_equal ~printer:string_of_bool smt_success @@ run_smt cfg info decls;
+    let args = Array.of_list ["nv"; "-s"; "-m"; filename] in
+    let cfg, info, decls = parse_input args in
+    assert_equal ~printer:string_of_bool sim_success @@ run_simulator cfg info decls;
+    assert_equal ~printer:string_of_bool smt_success @@ run_smt cfg info decls;
 ;;
 
 (* Name the test cases and group them together *)
