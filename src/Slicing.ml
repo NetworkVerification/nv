@@ -23,7 +23,7 @@ let partialEvalOverNodes (g : Graph.t) (e: Syntax.exp) =
   Graph.fold_vertices
     (fun u _ ->
       let initu = Interp.interp_partial (Syntax.apps e [e_val (vint u)]) in
-      Hashtbl.add tbl u initu) g ();
+      Hashtbl.add tbl u initu) (Graph.num_vertices g) ();
   tbl
 
 (* deprecated *)

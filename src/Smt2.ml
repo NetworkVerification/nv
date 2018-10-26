@@ -4,7 +4,7 @@ open Collections
 open Unsigned
 open Syntax
 open Solution
-open Z3
+open SmtUtil
 
 (* TODO: 
    1. make everything an smt_command. i.e. assert, declarations, etc. 
@@ -36,7 +36,8 @@ module SmtLang =
       
     and constructor_decl =
       { constr_name : string; (** name of constructor *)
-        constr_args : (string * sort) list (** projection functions and their type *)
+        constr_args : (string * sort) list (** projection functions
+                                              and their type *)
       }
       
     and sort =
@@ -75,9 +76,12 @@ module SmtLang =
         cloc   : Span.t
       }
 
+    (* NOTE: Do we want to have constants as commands? Ordering issues
+       must be considered. If we want to have all declarations on top. *)
     type smt_command =
-      | Echo of string
-      | Eval of term
+      | Echo : string -> smt_command
+      | Eval : term -> smt_command
+      | Assert : term -> smt_command
 
     type command =
       { com      : smt_command;
@@ -127,6 +131,8 @@ module SmtLang =
     let mk_echo s = Echo s
 
     let mk_eval tm = Eval tm
+
+    let mk_assert tm = Assert tm
 
     let mk_command ?(comdescr ="") ?(comloc=Span.default) (com : smt_command) =
       {com; comdescr; comloc}
@@ -196,8 +202,9 @@ module SmtLang =
       match c.constr_args with
       | [] -> c.constr_name
       | (p :: ps) ->
-         let constrArgs = printList (fun (p,s) ->
-                              Printf.sprintf "(%s %s)" p (sort_to_smt s)) (p :: ps) "" " " ""
+         let constrArgs =
+           printList (fun (p,s) ->
+               Printf.sprintf "(%s %s)" p (sort_to_smt s)) (p :: ps) "" " " ""
          in
          Printf.sprintf "(%s %s)" c.constr_name constrArgs
          
@@ -212,7 +219,8 @@ module SmtLang =
          printVerbose "Constant declared about:" const.cdescr const.cloc
        else
          "") ^
-        Printf.sprintf "(declare-const %s %s)" const.cname (sort_to_smt const.csort)
+        Printf.sprintf "(declare-const %s %s)" const.cname
+          (sort_to_smt const.csort)
 
     let smt_command_to_smt (comm : smt_command) : string =
       match comm with
@@ -220,6 +228,8 @@ module SmtLang =
          Printf.sprintf "(echo %s)" s
       | Eval tm ->
          Printf.sprintf "(eval %s)" (term_to_smt false tm)
+      | Assert tm ->
+         Printf.sprintf "(assert %s)" (term_to_smt false tm)
 
     (* NOTE: this currently ignores the comment/loc of the term inside
        the command. Perhaps we would like to combine them in some way
@@ -234,7 +244,7 @@ module SmtLang =
 open SmtLang
   
 type smt_env =
-  { mutable ctx: command list
+  { mutable ctx: command Queue.t
   ; mutable const_decls: constant BatSet.t (** named constant and its sort *)
   ; mutable type_decls: (string, datatype_decl) BatMap.t
   ; symbolics: (Var.t * ty_or_exp) list }
@@ -245,7 +255,8 @@ let create_fresh descr s =
 let create_name descr n =
   if descr = "" then Var.to_string n
   else Printf.sprintf "%s-%s" descr (Var.to_string n)
- 
+
+(** * Returns the SMT name of a datatype *)
 let rec datatype_name (ty : ty) : string =
   match ty with
   | TVar {contents= Link t} -> datatype_name t
@@ -259,6 +270,7 @@ let rec datatype_name (ty : ty) : string =
   | TOption ty -> "Option"
   | _ -> failwith "should be only called on datatypes"
 
+(** Returns the SMT name of any type *)
 let rec type_name (ty : ty) : string =
   match ty with
   | TVar {contents= Link t} -> datatype_name t
@@ -274,7 +286,8 @@ let rec type_name (ty : ty) : string =
   | TInt _ -> "Int"
   | TMap _ -> failwith "no maps yet"
   | TArrow _ | TVar _ | QVar _ -> failwith "unsupported type in SMT"
-              
+
+(** Translates a [Syntax.ty] to an SMT sort *)
 let rec ty_to_sort (ty: ty) : sort =
   match ty with
   | TVar {contents= Link t} -> ty_to_sort t
@@ -299,6 +312,7 @@ let rec ty_to_sort (ty: ty) : sort =
 
 let mk_array_sort sort1 sort2 = ArraySort (sort1, sort2)
 
+(** Translates a [Syntax.ty] to an SMT datatype declaration *)
 let rec ty_to_type_decl (ty: ty) : datatype_decl =
   match ty with
   | TVar {contents= Link t} -> ty_to_type_decl t
@@ -321,7 +335,7 @@ let rec ty_to_type_decl (ty: ty) : datatype_decl =
   | TVar _ | QVar _ | TArrow _ | TMap _ ->
      failwith "not a datatype"
 
-(* Finds the declaration for the datatype of ty if it exists,
+(** Finds the declaration for the datatype of ty if it exists,
    otherwise it creates it and adds it to the env *)
 let compute_decl (env : smt_env) ty =
   let name = datatype_name ty in
@@ -340,7 +354,7 @@ let mk_constant (env : smt_env) ?(cdescr = "") ?(cloc = Span.default) cname csor
   (mk_var cname) |> (mk_term ~tdescr:cdescr ~tloc:cloc)
 
 let add_constraint (env : smt_env) (c : term) =
-  env.ctx <- c :: env.ctx
+  Queue.add (mk_assert c |> mk_command) env.ctx
                
 (* let mk_array ctx sort value = Z3Array.mk_const_array ctx sort value *)
 
@@ -704,7 +718,7 @@ let init_solver ds =
   (*     [] *)
   (* in *)
   let symbolics = get_symbolics ds in
-  { ctx = [];
+  { ctx = Queue.create ();
     const_decls = BatSet.empty;
     type_decls = BatMap.empty;
     symbolics = symbolics }
@@ -1064,7 +1078,7 @@ let assert_result_var i =
 let symbolic_var (s: Var.t) =
   Var.to_string s
 
-(** Emits the code that evaluates the model returned by Z3 (if any) *)  
+(** Emits the code that evaluates the model returned by Z3. *)  
 let eval_model (symbolics: (Var.t * Syntax.ty_or_exp) list)
       (num_nodes: UInt32.t)
       (eassert: Syntax.exp option) : command list =
@@ -1075,7 +1089,7 @@ let eval_model (symbolics: (Var.t * Syntax.ty_or_exp) list)
         let ev = mk_eval tm |> mk_command in
         let ec = mk_echo (label_var u) |> mk_command in
         ec :: ev :: acc) num_nodes [] in
-  (* Compute eval statement for assertions *)
+  (* Compute eval statements for assertions *)
   let assertions =
     match eassert with
     | None -> []
@@ -1086,6 +1100,7 @@ let eval_model (symbolics: (Var.t * Syntax.ty_or_exp) list)
            let ec = mk_echo (assert_result_var u) |> mk_command in
            ec :: ev :: acc) num_nodes labels
   in
+  (* Compute eval statements for symbolic variables *)
   let symbols =
     List.fold_left (fun acc (sv, _) ->
         let tm = mk_var (symbolic_var sv) |> mk_term in
@@ -1095,9 +1110,7 @@ let eval_model (symbolics: (Var.t * Syntax.ty_or_exp) list)
   symbols
 
 (** ** Translate the environment to SMT-LIB2 *)
-let ctx_to_smt ?(verbose=false) (tm: term) : string =
-  Printf.sprintf "(assert %s)" (term_to_smt verbose tm)
-  
+ 
 let env_to_smt ?(verbose=false) (env : smt_env) =
   (* Emit type declarations *)
   let decls =
@@ -1111,41 +1124,32 @@ let env_to_smt ?(verbose=false) (env : smt_env) =
                 env.const_decls ""
   in
   (* Emit context *)
-  let context = printList ctx_to_smt env.ctx "\n" "\n" "\n" in
+  let context = Queue.fold (fun acc c ->
+                    command_to_smt verbose c ^ "\n") "" env.ctx in
   Printf.sprintf "%s" (decls ^ constants ^ context)
-
-let cfg = []
-
-let init_solver () =
-  let ctx = Z3.mk_context cfg in
-  (* let t1 = Tactic.mk_tactic ctx "simplify" in
-   * let t2 = Tactic.mk_tactic ctx "propagate-values" in
-   * let t3 = Tactic.mk_tactic ctx "bit-blast" in
-   * let t4 = Tactic.mk_tactic ctx "smt" in
-   * let t =
-   *   Tactic.and_then ctx t1
-   *     (Tactic.and_then ctx t2 (Tactic.and_then ctx t3 t4 []) [])
-   *     []
-   * in *)
-  let solver = Z3.Solver.mk_solver ctx None in
-  (solver, ctx)
   
-        
-let solve query chan ?symbolic_vars ds =
+let solve query chan ?symbolic_vars ?(params=[]) ds =
   let sym_vars =
     match symbolic_vars with None -> [] | Some ls -> ls
   in
-  let num_nodes, aty =
-    match (get_nodes ds, get_attr_type ds) with
-    | Some n, Some aty -> (n, aty)
-    | _ -> failwith "internal error (encode)"
-  in
-  let eassert = get_assert ds in
+  (* let num_nodes, aty =
+   *   match (get_nodes ds, get_attr_type ds) with
+   *   | Some n, Some aty -> (n, aty)
+   *   | _ -> failwith "internal error (encode)"
+   * in
+   * let eassert = get_assert ds in *)
+
+  (* compute the encoding of the network *)
   let env = encode_z3 ds sym_vars in
   let smt_query = env_to_smt ~verbose:false env in
   if query then
     ( Printf.fprintf chan "%s" smt_query; flush chan);
 
+  (* start communication with solver process *)
+  let solver = start_solver params in
+  ask_solver solver smt_query
+  
+    
   (* let (solver, ctx) = init_solver () in *)
   (* let parsed_query = Z3.SMT.parse_smtlib2_string ctx smt_query [] [] [] [] in *)
   (* Solver.add solver [parsed_query]; *)
