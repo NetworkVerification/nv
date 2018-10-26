@@ -47,7 +47,8 @@ let ask_solver (solver: solver_proc) (question: string) : unit =
 let get_reply (solver: solver_proc) : string =
   (* BatIO.read_all solver.nvin *)
   let rec loop acc =
-    try
-      loop ((input_line solver.nvin ) :: acc)
-    with
-      End_of_file -> acc 
+    match try Some (input_line solver.nvin) with End_of_file -> None with
+    | None -> acc
+    | Some s -> acc ^ s
+  in
+  loop ""
