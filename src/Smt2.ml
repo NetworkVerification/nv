@@ -82,6 +82,8 @@ module SmtLang =
       | Echo : string -> smt_command
       | Eval : term -> smt_command
       | Assert : term -> smt_command
+      | CheckSat : smt_command
+      | GetModel : smt_command
 
     type command =
       { com      : smt_command;
@@ -230,6 +232,10 @@ module SmtLang =
          Printf.sprintf "(eval %s)" (term_to_smt false tm)
       | Assert tm ->
          Printf.sprintf "(assert %s)" (term_to_smt false tm)
+      | CheckSat ->
+         Printf.sprintf "(check-sat)"
+      | GetModel ->
+         Printf.sprintf "(get-model)"
 
     (* NOTE: this currently ignores the comment/loc of the term inside
        the command. Perhaps we would like to combine them in some way
@@ -239,12 +245,57 @@ module SmtLang =
          printVerbose "Translating command:" com.comdescr com.comloc
        else "") ^
         smt_command_to_smt com.com
+
+    let commands_to_smt (verbose : bool) (coms : command list) : string =
+      printList (fun c -> command_to_smt verbose c) coms "\n" "\n" "\n"
+
+    type smt_answer =
+      UNSAT | SAT | UNKNOWN
+      | MODEL of (string, string) BatMap.t
+      | OTHER of string
+
+    (* parses the initial reply of the solver *)
+    let rec parse_reply (solver: solver_proc) =
+      (* Printf.printf "rs: %s" (printList (fun s -> s) r "" "\n" ""); *)
+      let r = get_reply solver in
+      match r with
+      | Some "sat" -> SAT
+      | Some "unsat" -> UNSAT
+      | Some "unknown" -> UNKNOWN
+      | None -> OTHER "EOF"
+      | Some r -> OTHER r
+
+    let rec parse_model (solver: solver_proc) =
+      let rs = get_reply_until "end_of_model" solver in
+      Printf.printf "%s" (printList (fun s -> s) rs "reply:\n" "\n" "");
+      let rec loop rs model =
+        match rs with
+        | [] -> MODEL model
+        | [v] when v = "end_of_model" ->  MODEL model
+        | vname :: rs when (BatString.starts_with vname "Var:") ->
+           let vname = BatString.lchop ~n:4 vname in
+           let rec grab_vals rs acc =
+             match rs with
+             | [] -> failwith "expected string"
+             | v :: _ when (BatString.starts_with v "Var:") || v = "end_of_model" ->
+                (acc, rs)
+             | v :: rs' ->
+                grab_vals rs' (acc ^ v)
+           in
+           let vval, rs' = grab_vals rs "" in
+           Printf.printf "computed vval:%s\n" vval;
+           loop rs' (BatMap.add vname vval model)
+        | _ ->
+           Printf.printf "%s\n" (List.hd rs);
+           failwith "wrong format"
+      in loop rs BatMap.empty
+                
   end
 
 open SmtLang
   
 type smt_env =
-  { mutable ctx: command Queue.t
+  { mutable ctx: command list
   ; mutable const_decls: constant BatSet.t (** named constant and its sort *)
   ; mutable type_decls: (string, datatype_decl) BatMap.t
   ; symbolics: (Var.t * ty_or_exp) list }
@@ -354,7 +405,7 @@ let mk_constant (env : smt_env) ?(cdescr = "") ?(cloc = Span.default) cname csor
   (mk_var cname) |> (mk_term ~tdescr:cdescr ~tloc:cloc)
 
 let add_constraint (env : smt_env) (c : term) =
-  Queue.add (mk_assert c |> mk_command) env.ctx
+  env.ctx <- (mk_assert c |> mk_command) :: env.ctx
                
 (* let mk_array ctx sort value = Z3Array.mk_const_array ctx sort value *)
 
@@ -620,7 +671,7 @@ and encode_value_z3 descr env (v: Syntax.value) =
   | VMap map -> failwith "not doing maps yet"
 
 let exp_to_z3 = encode_exp_z3
-
+              
 let encode_z3_merge str env e =
   match e.e with
   | EFun
@@ -691,13 +742,30 @@ module EdgeMap = Map.Make (struct
     if cmp <> 0 then cmp else UInt32.compare b d
 end)
 
-let cfg = [("model_compress", "false")]
 
+(** ** Naming convention of useful variables *)
+let label_var i =
+  Printf.sprintf "label-%d" (UInt32.to_int i)
+
+let node_of_label_var s =
+  UInt32.of_string (BatString.lchop ~n:6 s)
+  
+let assert_var i =
+  Printf.sprintf "assert-%d" (UInt32.to_int i)
+
+  (* this is flaky, the variable name used by SMT will be
+     assert-n-result, we need to chop both ends *)
+let node_of_assert_var s =
+  UInt32.of_string (BatString.lchop ~n:7 s |> BatString.rchop ~n:7)
+
+let symbolic_var (s: Var.t) =
+  Var.to_string s
+        
 let add_symbolic_constraints env requires sym_vars =
   (* Declare the symbolic variables: ignore the expression in case of SMT *)
   List.iter
     (fun (v, e) ->
-      let _ = mk_constant env (Var.to_string v) (ty_to_sort (Syntax.get_ty_from_tyexp e))
+      let _ = mk_constant env (symbolic_var v) (ty_to_sort (Syntax.get_ty_from_tyexp e))
                           ~cdescr:"Symbolic variable decl" in ()) sym_vars ;
   (* add the require clauses *)
   List.iter
@@ -707,18 +775,8 @@ let add_symbolic_constraints env requires sym_vars =
 
 let init_solver ds =
   Var.reset () ;
-  (* let ctx = Z3.mk_context cfg in *)
-  (* let t1 = Tactic.mk_tactic ctx "simplify" in *)
-  (* let t2 = Tactic.mk_tactic ctx "propagate-values" in *)
-  (* let t3 = Tactic.mk_tactic ctx "bit-blast" in *)
-  (* let t4 = Tactic.mk_tactic ctx "smt" in *)
-  (* let t = *)
-  (*   Tactic.and_then ctx t1 *)
-  (*     (Tactic.and_then ctx t2 (Tactic.and_then ctx t3 t4 []) []) *)
-  (*     [] *)
-  (* in *)
   let symbolics = get_symbolics ds in
-  { ctx = Queue.create ();
+  { ctx = [];
     const_decls = BatSet.empty;
     type_decls = BatMap.empty;
     symbolics = symbolics }
@@ -802,7 +860,7 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
           merge_result )
         init in_edges
     in
-    let l = mk_constant env (Printf.sprintf "label-%d" i) (ty_to_sort aty) in
+    let l = mk_constant env (label_var (UInt32.of_int i)) (ty_to_sort aty) in
     add_constraint env (mk_term (mk_eq l.t merged.t));
     labelling := Graph.VertexMap.add (UInt32.of_int i) l !labelling
   done ;
@@ -821,7 +879,7 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
           Graph.VertexMap.find (UInt32.of_int i) !labelling
         in
         let result, n, x =
-          encode_z3_assert (Printf.sprintf "assert-%d" i) env eassert
+          encode_z3_assert (assert_var (UInt32.of_int i)) env eassert
         in
         add_constraint env (mk_term (mk_eq x.t label.t));
         add_constraint env (mk_term (mk_eq n.t (mk_int i)));
@@ -984,120 +1042,94 @@ and z3_to_exp m (e: Expr.expr) : Syntax.exp =
 
 type smt_result = Unsat | Unknown | Sat of Solution.t
 
-let rec sort_name (s : sort) : string =
-  match s with
-  | BoolSort -> "Bool"
-  | IntSort -> "Int"
-  | ArraySort (s1, s2) ->
-     Printf.sprintf "(Array %s %s)" (sort_to_smt s1) (sort_to_smt s2)
-  | DataTypeSort (name, ls) ->
-     let args = printList sort_to_smt ls "" " " "" in
-     Printf.sprintf "(%s %s)" name args
-  | VarSort s -> s
-
-let get_sort m ty =
-  let sorts = Model.get_sorts m in
-  Printf.printf "%s" (printList  (fun s -> (Sort.get_name s |> Symbol.to_string)) sorts "" "\n" "");
-  let name = type_name ty in
-  Printf.printf "name:%s\n" name;
-  let sort = List.find (fun s -> (Sort.get_name s |> Symbol.to_string) = name) sorts in
-  sort
-  
-let rec z3_to_value m (e: Expr.expr) : Syntax.value =
-  try
-    let i = UInt32.of_string (Expr.to_string e) in
-    vint i
-  with _ ->
-        let f = Expr.get_func_decl e in
-        let es = Expr.get_args e in
-        let name = FuncDecl.get_name f |> Symbol.to_string in
-        match (name, es) with
-        | "true", _ -> vbool true
-        | "false", _ -> vbool false
-        | "some", [e1] -> voption (Some (z3_to_value m e1))
-        | "none", _ -> voption None
-        (* | "store", [e1; e2; e3] -> (
-         *   let v1 = z3_to_value m e1 in
-         *   let v2 = z3_to_value m e2 in
-         *   let v3 = z3_to_value m e3 in
-         *   match v1.v with
-         *   | VMap m -> vmap (BddMap.update m v2 v3)
-         *   | _ -> raise Model_conversion )
-         * | "const", [e1] -> (
-         *   let sort = Z3.Expr.get_sort e in
-         *   let ty = sort_to_ty sort in
-         *   match get_inner_type ty with
-         *   | TMap (kty, _) ->
-         *      let e1 = z3_to_value m e1 in
-         *      vmap (BddMap.create ~key_ty:kty e1)
-         *   | _ -> failwith "internal error (z3_to_exp)" )
-         * | "as-array", _ -> (
-         *   let x = FuncDecl.get_parameters f |> List.hd in
-         *   let f = FuncDecl.Parameter.get_func_decl x in
-         *   let y = Model.get_func_interp m f in
-         *   match y with
-         *   | None -> failwith "impossible"
-         *   | Some x ->
-         *      let e = Model.FuncInterp.get_else x in
-         *      let e = z3_to_exp m e in
-         *      let env = {ty= Env.empty; value= Env.empty} in
-         *      let key = Var.create "key" in
-         *      let func =
-         *        {arg= key; argty= None; resty= None; body= e}
-         *      in
-         *      vclosure (env, func) ) *)
-        | _ ->
-           if String.length name >= 7 && String.sub name 0 6 = "mkPair"
-           then
-             let es = List.map (z3_to_value m) es in
-             vtuple es
-           else raise Model_conversion
+(* let rec z3_to_value m (e: Expr.expr) : Syntax.value = *)
+(*   try *)
+(*     let i = UInt32.of_string (Expr.to_string e) in *)
+(*     vint i *)
+(*   with _ -> *)
+(*         let f = Expr.get_func_decl e in *)
+(*         let es = Expr.get_args e in *)
+(*         let name = FuncDecl.get_name f |> Symbol.to_string in *)
+(*         match (name, es) with *)
+(*         | "true", _ -> vbool true *)
+(*         | "false", _ -> vbool false *)
+(*         | "some", [e1] -> voption (Some (z3_to_value m e1)) *)
+(*         | "none", _ -> voption None *)
+(*         (\* | "store", [e1; e2; e3] -> ( *)
+(*          *   let v1 = z3_to_value m e1 in *)
+(*          *   let v2 = z3_to_value m e2 in *)
+(*          *   let v3 = z3_to_value m e3 in *)
+(*          *   match v1.v with *)
+(*          *   | VMap m -> vmap (BddMap.update m v2 v3) *)
+(*          *   | _ -> raise Model_conversion ) *)
+(*          * | "const", [e1] -> ( *)
+(*          *   let sort = Z3.Expr.get_sort e in *)
+(*          *   let ty = sort_to_ty sort in *)
+(*          *   match get_inner_type ty with *)
+(*          *   | TMap (kty, _) -> *)
+(*          *      let e1 = z3_to_value m e1 in *)
+(*          *      vmap (BddMap.create ~key_ty:kty e1) *)
+(*          *   | _ -> failwith "internal error (z3_to_exp)" ) *)
+(*          * | "as-array", _ -> ( *)
+(*          *   let x = FuncDecl.get_parameters f |> List.hd in *)
+(*          *   let f = FuncDecl.Parameter.get_func_decl x in *)
+(*          *   let y = Model.get_func_interp m f in *)
+(*          *   match y with *)
+(*          *   | None -> failwith "impossible" *)
+(*          *   | Some x -> *)
+(*          *      let e = Model.FuncInterp.get_else x in *)
+(*          *      let e = z3_to_exp m e in *)
+(*          *      let env = {ty= Env.empty; value= Env.empty} in *)
+(*          *      let key = Var.create "key" in *)
+(*          *      let func = *)
+(*          *        {arg= key; argty= None; resty= None; body= e} *)
+(*          *      in *)
+(*          *      vclosure (env, func) ) *\) *)
+(*         | _ -> *)
+(*            if String.length name >= 7 && String.sub name 0 6 = "mkPair" *)
+(*            then *)
+(*              let es = List.map (z3_to_value m) es in *)
+(*              vtuple es *)
+(*            else raise Model_conversion *)
                                          
-let eval ctx m str ty =
-  let l = Expr.mk_const_s ctx str (get_sort m ty) in
-  let e = Model.eval m l true |> oget in
-  z3_to_value m e
+(* let eval ctx m str ty = *)
+(*   let l = Expr.mk_const_s ctx str (get_sort m ty) in *)
+(*   let e = Model.eval m l true |> oget in *)
+(*   z3_to_value m e *)
 
-let build_symbolic_assignment ctx symbolics m =
-  let sym_map = ref StringMap.empty in
-  List.iter
-    (fun (x, e) ->
-      let ty = match e with Ty ty -> ty | Exp e -> oget e.ety in
-      let name = Var.to_string x in
-      let e = eval ctx m name ty in
-      sym_map := StringMap.add name e !sym_map )
-    symbolics ;
-  !sym_map
-
-let label_var i =
-  Printf.sprintf "label-%d" (UInt32.to_int i)
-
-let assert_result_var i =
-  Printf.sprintf "assert-%d-result" (UInt32.to_int i)
-
-let symbolic_var (s: Var.t) =
-  Var.to_string s
+(* let build_symbolic_assignment ctx symbolics m = *)
+(*   let sym_map = ref StringMap.empty in *)
+(*   List.iter *)
+(*     (fun (x, e) -> *)
+(*       let ty = match e with Ty ty -> ty | Exp e -> oget e.ety in *)
+(*       let name = Var.to_string x in *)
+(*       let e = eval ctx m name ty in *)
+(*       sym_map := StringMap.add name e !sym_map ) *)
+(*     symbolics ; *)
+(*   !sym_map *)
 
 (** Emits the code that evaluates the model returned by Z3. *)  
 let eval_model (symbolics: (Var.t * Syntax.ty_or_exp) list)
       (num_nodes: UInt32.t)
       (eassert: Syntax.exp option) : command list =
+  let var x = "Var:" ^ x in
   (* Compute eval statements for labels *)
   let labels =
     Graph.fold_vertices (fun u acc ->
         let tm = mk_var (label_var u) |> mk_term in
         let ev = mk_eval tm |> mk_command in
-        let ec = mk_echo (label_var u) |> mk_command in
-        ec :: ev :: acc) num_nodes [] in
+        let ec = mk_echo ("\"" ^ (var (label_var u)) ^ "\"") |> mk_command in
+        ec :: ev :: acc) num_nodes [(mk_echo ("\"end_of_model\"") |> mk_command)] in
   (* Compute eval statements for assertions *)
   let assertions =
     match eassert with
     | None -> []
     | Some _ ->
        Graph.fold_vertices (fun u acc ->
-           let tm = mk_var (assert_result_var u) |> mk_term in
+           let tm = mk_var ((assert_var u) ^ "-result") |> mk_term in
            let ev = mk_eval tm |> mk_command in
-           let ec = mk_echo (assert_result_var u) |> mk_command in
+           let ec = mk_echo ("\"" ^ (var ((assert_var u) ^ "-result")) ^ "\"")
+                             |> mk_command in
            ec :: ev :: acc) num_nodes labels
   in
   (* Compute eval statements for symbolic variables *)
@@ -1105,12 +1137,46 @@ let eval_model (symbolics: (Var.t * Syntax.ty_or_exp) list)
     List.fold_left (fun acc (sv, _) ->
         let tm = mk_var (symbolic_var sv) |> mk_term in
         let ev = mk_eval tm |> mk_command in
-        let ec = mk_echo (symbolic_var sv) |> mk_command in
+        let ec = mk_echo ("\"" ^ (var (symbolic_var sv)) ^ "\"") |> mk_command in
         ec :: ev :: acc) assertions symbolics in
   symbols
 
+let parse_val (s : string) : Syntax.value =
+ let lexbuf = Lexing.from_string s
+ in 
+  try SMTParser.smtlib SMTLexer.token lexbuf
+  with exn ->
+      begin
+        let tok = Lexing.lexeme lexbuf in
+        failwith ("failed: " ^ tok)
+      end
+      
+let translate_model (m : (string, string) BatMap.t) : Solution.t =
+  BatMap.foldi (fun k v sol ->
+      Printf.printf "crashes at:%s\n" v;
+      let nvval = parse_val v in
+      match k with
+      | k when BatString.starts_with k "label" ->
+         {sol with labels= Graph.VertexMap.add (node_of_label_var k) nvval sol.labels}
+      | k when BatString.starts_with k "assert-" ->
+         {sol with assertions=
+                     match sol.assertions with
+                     | None ->
+                        Some (Graph.VertexMap.add (node_of_assert_var k)
+                                                  (nvval |> Syntax.bool_of_val |> oget)
+                                                  Graph.VertexMap.empty)
+                     | Some m ->
+                        Some (Graph.VertexMap.add (node_of_assert_var k)
+                                                  (nvval |> Syntax.bool_of_val |> oget) m)
+         }
+      | k ->
+         {sol with symbolics= Collections.StringMap.add k nvval sol.symbolics}) m
+               {symbolics = StringMap.empty;
+                labels = Graph.VertexMap.empty;
+                assertions= None}
+  
 (** ** Translate the environment to SMT-LIB2 *)
- 
+
 let env_to_smt ?(verbose=false) (env : smt_env) =
   (* Emit type declarations *)
   let decls =
@@ -1124,30 +1190,52 @@ let env_to_smt ?(verbose=false) (env : smt_env) =
                 env.const_decls ""
   in
   (* Emit context *)
-  let context = Queue.fold (fun acc c ->
-                    command_to_smt verbose c ^ "\n") "" env.ctx in
+  let context = List.fold_left (fun acc c ->
+                    (command_to_smt verbose c) ^ "\n" ^ acc) "" env.ctx in
   Printf.sprintf "%s" (decls ^ constants ^ context)
-  
+
+let check_sat (env: smt_env) =
+  env.ctx <- (CheckSat |> mk_command) :: env.ctx
+               
 let solve query chan ?symbolic_vars ?(params=[]) ds =
   let sym_vars =
     match symbolic_vars with None -> [] | Some ls -> ls
   in
-  (* let num_nodes, aty =
-   *   match (get_nodes ds, get_attr_type ds) with
-   *   | Some n, Some aty -> (n, aty)
-   *   | _ -> failwith "internal error (encode)"
-   * in
-   * let eassert = get_assert ds in *)
+  let verbose = false in
 
   (* compute the encoding of the network *)
   let env = encode_z3 ds sym_vars in
-  let smt_query = env_to_smt ~verbose:false env in
+  check_sat env;
+  let smt_encoding = env_to_smt ~verbose:verbose env in
   if query then
-    ( Printf.fprintf chan "%s" smt_query; flush chan);
-
+    ( Printf.fprintf chan "%s" smt_encoding; flush chan);
   (* start communication with solver process *)
   let solver = start_solver params in
-  ask_solver solver smt_query
+  ask_solver solver smt_encoding;
+  let reply = solver |> parse_reply in
+  match reply with
+  | UNSAT -> Unsat
+  | SAT ->
+     (* build a counterexample based on the model provided by Z3 *)
+     let num_nodes, aty =
+       match (get_nodes ds, get_attr_type ds) with
+       | Some n, Some aty -> (n, aty)
+       | _ -> failwith "internal error (encode)"
+     in
+     let eassert = get_assert ds in
+     let model = eval_model env.symbolics num_nodes eassert in
+     let model_question = commands_to_smt verbose model in
+     Printf.printf "%s\n" model_question;
+     ask_solver solver model_question;
+     let model = solver |> parse_model in
+     (match model with
+      | MODEL m -> Sat (translate_model m)
+      | OTHER s ->
+         Printf.printf "%s\n" s;
+         failwith "failed to parse a model"
+      | _ -> failwith "failed to parse a model")
+  | UNKNOWN -> Unknown
+  | _ -> failwith "unexpected answer from solver\n"
   
     
   (* let (solver, ctx) = init_solver () in *)

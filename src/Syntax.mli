@@ -214,12 +214,16 @@ val free_dead_vars : exp -> exp
 
 val show_exp : show_meta:bool -> exp -> string
 
+val show_value : show_meta:bool -> value -> string
+
 val show_span: Span.t -> string
 
 (** [get_ty_from_tyexp t] @return the type wrapped by [Ty] or the type
    of the expression wrapped by [Exp]. Fails if the expression has no
    type. *)
 val get_ty_from_tyexp: ty_or_exp -> ty
+
+val bool_of_val: value -> bool option
 
 module type MEMOIZER = sig
   type t

@@ -42,13 +42,19 @@ let start_solver (params : string list) =
 
 let ask_solver (solver: solver_proc) (question: string) : unit =
   (* BatIO.write_string solver.nvout question *)
-  output_string solver.nvout question
+  output_string solver.nvout question;
+  flush solver.nvout
 
-let get_reply (solver: solver_proc) : string =
-  (* BatIO.read_all solver.nvin *)
+let get_reply (solver: solver_proc) : string option =
+  try Some (input_line solver.nvin) with End_of_file -> None
+
+let get_reply_until marker (solver: solver_proc) : string list =
   let rec loop acc =
-    match try Some (input_line solver.nvin) with End_of_file -> None with
-    | None -> acc
-    | Some s -> acc ^ s
-  in
-  loop ""
+    try
+      let s = input_line solver.nvin in
+      if s = marker then
+        List.rev (s :: acc)
+      else
+        loop (s :: acc)
+    with End_of_file -> List.rev acc
+  in loop []

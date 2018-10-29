@@ -740,7 +740,12 @@ let get_ty_from_tyexp (et : ty_or_exp) : ty =
   match et with
   | Ty t -> t
   | Exp e -> oget (e.ety)
-  
+
+let bool_of_val (v : value) : bool option =
+  match v.v with
+  | VBool b -> Some b
+  | _ -> None
+           
 open BatSet
 
 let rec free (seen: Var.t PSet.t) (e: exp) : Var.t PSet.t =
