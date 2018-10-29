@@ -256,7 +256,6 @@ module SmtLang =
 
     (* parses the initial reply of the solver *)
     let rec parse_reply (solver: solver_proc) =
-      (* Printf.printf "rs: %s" (printList (fun s -> s) r "" "\n" ""); *)
       let r = get_reply solver in
       match r with
       | Some "sat" -> SAT
@@ -267,7 +266,6 @@ module SmtLang =
 
     let rec parse_model (solver: solver_proc) =
       let rs = get_reply_until "end_of_model" solver in
-      Printf.printf "%s" (printList (fun s -> s) rs "reply:\n" "\n" "");
       let rec loop rs model =
         match rs with
         | [] -> MODEL model
@@ -283,10 +281,8 @@ module SmtLang =
                 grab_vals rs' (acc ^ v)
            in
            let vval, rs' = grab_vals rs "" in
-           Printf.printf "computed vval:%s\n" vval;
            loop rs' (BatMap.add vname vval model)
         | _ ->
-           Printf.printf "%s\n" (List.hd rs);
            failwith "wrong format"
       in loop rs BatMap.empty
                 
@@ -1153,7 +1149,6 @@ let parse_val (s : string) : Syntax.value =
       
 let translate_model (m : (string, string) BatMap.t) : Solution.t =
   BatMap.foldi (fun k v sol ->
-      Printf.printf "crashes at:%s\n" v;
       let nvval = parse_val v in
       match k with
       | k when BatString.starts_with k "label" ->
@@ -1225,7 +1220,6 @@ let solve query chan ?symbolic_vars ?(params=[]) ds =
      let eassert = get_assert ds in
      let model = eval_model env.symbolics num_nodes eassert in
      let model_question = commands_to_smt verbose model in
-     Printf.printf "%s\n" model_question;
      ask_solver solver model_question;
      let model = solver |> parse_model in
      (match model with
