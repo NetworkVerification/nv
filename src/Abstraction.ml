@@ -494,8 +494,8 @@ module FailuresAbstraction =
       
     let refineForFailures (g: Graph.t) (f: abstractionMap) (failVars: (Edge.t, Var.t) BatMap.t)
                           (sol: Solution.t) : abstractionMap =
-      Collections.StringMap.iter (fun k _ -> Printf.printf "symb: %s\n" k) sol.symbolics;
-      BatMap.iter (fun _ k -> Printf.printf "%s\n" (Var.to_string k)) failVars;
+      (* Collections.StringMap.iter (fun k _ -> Printf.printf "symb: %s\n" k) sol.symbolics; *)
+      (* BatMap.iter (fun _ k -> Printf.printf "%s\n" (Var.to_string k)) failVars; *)
       let failures =
         BatMap.foldi (fun edge fvar acc ->
             let bv = Collections.StringMap.find (Var.to_string fvar) sol.symbolics in
