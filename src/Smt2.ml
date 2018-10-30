@@ -7,7 +7,7 @@ open Solution
 open SmtUtil
 
 (* TODO: 
-   1. make everything an smt_command. i.e. assert, declarations, etc. 
+   1. make everything an smt_command. i.e. assert, declarations, etc.?
    2. Make smt_term wrap around terms, print out more helpful
    comments, include location of ocaml source file
    3. Have verbosity levels, we don't always need comments everywhere.*)

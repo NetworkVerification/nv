@@ -168,6 +168,7 @@ let compress info decls cfg networkOp =
     match networkOp cfg info decls with
     | Success _, _ -> ()
     | (CounterExample sol), fs ->
+       let sol = apply_all sol (oget fs) in
        let f' = FailuresAbstraction.refineForFailures network.graph f failVars sol in
        print_solution sol;
        loop f' ds
