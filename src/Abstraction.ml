@@ -493,7 +493,7 @@ module FailuresAbstraction =
                      "Abstract groups after refine for failures "
       
     let refineForFailures (g: Graph.t) (f: abstractionMap) (failVars: (Edge.t, Var.t) BatMap.t)
-                          (sol: Solution.t) : abstractionMap =
+                          (sol: Solution.t) (k: int) : abstractionMap option =
       (* Collections.StringMap.iter (fun k _ -> Printf.printf "symb: %s\n" k) sol.symbolics; *)
       (* BatMap.iter (fun _ k -> Printf.printf "%s\n" (Var.to_string k)) failVars; *)
       let failures =
@@ -503,13 +503,22 @@ module FailuresAbstraction =
             | VBool b ->
                if b then BatSet.add edge acc else acc
             | _ -> failwith "This should be a boolean variable") failVars BatSet.empty in
-      let uhat = findVertexToRefine f failures sol in
-      (* TODO: find path to use here instead of [] *)
-      let (uss, _) = bestSplitForFailures g f uhat [] in
-      let f' = splitSet f uss in
-      let f'' =  abstractionTopological f' g in
-      refineForFailures_debug f'';
-      f''      
+
+      let total_failures = BatSet.fold (fun ehat acc ->
+                               (BuildAbstractNetwork.getEdgeMultiplicity g f ehat) + acc)
+                                       failures 0 in
+      if (total_failures <= k) then
+        None
+      else
+        begin
+          let uhat = findVertexToRefine f failures sol in
+          (* TODO: find path to use here instead of [] *)
+          let (uss, _) = bestSplitForFailures g f uhat [] in
+          let f' = splitSet f uss in
+          let f'' =  abstractionTopological f' g in
+          refineForFailures_debug f'';
+          Some f''
+        end
   end
 
   

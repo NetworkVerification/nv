@@ -1171,27 +1171,33 @@ let translate_model (m : (string, string) BatMap.t) : Solution.t =
                 assertions= None}
   
 (** ** Translate the environment to SMT-LIB2 *)
-
+  
 let env_to_smt ?(verbose=false) (env : smt_env) =
-  (* Emit type declarations *)
-  let decls =
-    BatMap.fold (fun typ acc ->
-        (Printf.sprintf "%s\n" (type_decl_to_smt typ)) ^ acc) env.type_decls ""
-  in
-  (* Emit constants *)
-  let constants =
-    BatSet.fold (fun const acc ->
-        (Printf.sprintf "%s\n" (const_decl_to_smt ~verbose:verbose const)) ^ acc)
-                env.const_decls ""
-  in
   (* Emit context *)
-  let context = List.fold_left (fun acc c ->
-                    (command_to_smt verbose c) ^ "\n" ^ acc) "" env.ctx in
+  let context = List.rev_map (fun c -> command_to_smt verbose c) env.ctx in
+  let context = String.concat "\n" context in
+
+  (* Emit constants *)
+  let constants = BatSet.to_list env.const_decls in
+  let constants =
+    String.concat "\n"
+                  (List.map (fun c -> const_decl_to_smt ~verbose:verbose c) constants) in
+  (* Emit type declarations *)
+  let decls = BatMap.bindings env.type_decls in
+  let decls = String.concat "\n"
+            (List.map (fun (_,typ) -> type_decl_to_smt typ) decls) in
   Printf.sprintf "%s" (decls ^ constants ^ context)
 
 let check_sat (env: smt_env) =
   env.ctx <- (CheckSat |> mk_command) :: env.ctx
-               
+
+let time_profile msg (f: unit -> 'a) : 'a =
+  let start_time = Sys.time () in
+  let res = f () in
+  let finish_time = Sys.time () in
+  Printf.printf "%s took: %f secs to complete\n%!" msg (finish_time -. start_time);
+  res
+  
 let solve query chan ?symbolic_vars ?(params=[]) ds =
   let sym_vars =
     match symbolic_vars with None -> [] | Some ls -> ls
@@ -1199,9 +1205,10 @@ let solve query chan ?symbolic_vars ?(params=[]) ds =
   let verbose = false in
 
   (* compute the encoding of the network *)
-  let env = encode_z3 ds sym_vars in
+  let env = time_profile "encoding network" (fun () -> encode_z3 ds sym_vars) in
   check_sat env;
-  let smt_encoding = env_to_smt ~verbose:verbose env in
+  let smt_encoding = time_profile "compiling query"
+                                  (fun () -> env_to_smt ~verbose:verbose env) in
   if query then
     ( Printf.fprintf chan "%s" smt_encoding; flush chan);
   (* start communication with solver process *)

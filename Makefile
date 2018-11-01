@@ -17,6 +17,9 @@ install:
 build: $(MLFILES)
 	$(BUILD) src/Main.native
 
+optimize: $(MLFILES)
+	$(BUILD) -tag 'optimize(3)' src/Main.native
+
 debug: $(MLFILES)
 	$(BUILD) -tag 'debug' src/Main.native
 

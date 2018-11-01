@@ -17,15 +17,16 @@ val findAbstraction :
 
 module FailuresAbstraction :
   sig  
-    (** Given a concrete graph, an abstraction function, and a abstrId of an
-        abstract node to split, tries to refine the abstraction leveraging
-        the given path if possible *)
+    (** [refineForFailures g f failVars sol k] decides whether there
+       is need to further refine the abstraction, and does so
+       leveraging the given path if possible *)
     val refineForFailures :
       Graph.t ->
       AbstractionMap.abstractionMap ->
       (Graph.Edge.t, Var.t) BatMap.t ->
       Solution.t ->
-      AbstractionMap.abstractionMap
+      int ->
+      AbstractionMap.abstractionMap option
   end
 
      

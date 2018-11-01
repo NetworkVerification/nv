@@ -138,6 +138,7 @@ let compress info decls cfg networkOp =
          "missing definition of nodes, edges, merge, trans, init or assert"
   in
 
+  let k = cfg.compress in
   (* partially evaluate the functions of the network *)
   let transMap = Abstraction.partialEvalTrans network.graph network.trans in
   let mergeMap = Abstraction.partialEvalMerge network.graph network.merge in
@@ -158,7 +159,7 @@ let compress info decls cfg networkOp =
     (* build abstract network *)
     let failVars, decls = buildAbstractNetwork f network.graph mergeMap transMap
                                                initMap assertMap ds
-                                               network.attr_type symb cfg.compress in
+                                               network.attr_type symb k in
     (* let fout = open_out "abstract.nv" in *)
     (* Printf.fprintf fout "%s" (Printing.declarations_to_string decls); *)
     (* flush fout; *)
@@ -166,12 +167,14 @@ let compress info decls cfg networkOp =
     let groups = AbstractionMap.printAbstractGroups f "\n" in
     Console.show_message groups Console.T.Blue "Abstract groups";
     match networkOp cfg info decls with
-    | Success _, _ -> ()
+    | Success _, _ -> Printf.printf "No counterexamples found\n"
     | (CounterExample sol), fs ->
        let sol = apply_all sol (oget fs) in
-       let f' = FailuresAbstraction.refineForFailures network.graph f failVars sol in
-       print_solution sol;
-       loop f' ds
+       let f' = FailuresAbstraction.refineForFailures network.graph f failVars sol k in
+       match f' with
+       | None -> print_solution sol;
+       | Some f' ->
+          loop f' ds
   in
   BatSet.iter
     (fun prefixes ->
