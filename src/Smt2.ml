@@ -1186,7 +1186,7 @@ let env_to_smt ?(verbose=false) (env : smt_env) =
   let decls = BatMap.bindings env.type_decls in
   let decls = String.concat "\n"
             (List.map (fun (_,typ) -> type_decl_to_smt typ) decls) in
-  Printf.sprintf "%s" (decls ^ constants ^ context)
+  Printf.sprintf "%s%!" (decls ^ constants ^ context)
 
 let check_sat (env: smt_env) =
   env.ctx <- (CheckSat |> mk_command) :: env.ctx
@@ -1205,16 +1205,20 @@ let solve query chan ?symbolic_vars ?(params=[]) ds =
   let verbose = false in
 
   (* compute the encoding of the network *)
-  let env = time_profile "encoding network" (fun () -> encode_z3 ds sym_vars) in
-  check_sat env;
-  let smt_encoding = time_profile "compiling query"
-                                  (fun () -> env_to_smt ~verbose:verbose env) in
+  (* let env = time_profile "encoding network" (fun () -> encode_z3 ds sym_vars) in *)
+  let env = encode_z3 ds sym_vars in
+  (* check_sat env; *)
+  (* let smt_encoding = time_profile "compiling query" *)
+  (*                                 (fun () -> env_to_smt ~verbose:verbose env) in *)
+  let smt_encoding =  env_to_smt ~verbose:verbose env in
   if query then
     ( Printf.fprintf chan "%s" smt_encoding; flush chan);
   (* start communication with solver process *)
   let solver = start_solver params in
   ask_solver solver smt_encoding;
+  (* Printf.printf "just asked solver%!"; *)
   let reply = solver |> parse_reply in
+  Printf.printf "did i get an answer%!";
   match reply with
   | UNSAT -> Unsat
   | SAT ->
@@ -1227,6 +1231,7 @@ let solve query chan ?symbolic_vars ?(params=[]) ds =
      let eassert = get_assert ds in
      let model = eval_model env.symbolics num_nodes eassert in
      let model_question = commands_to_smt verbose model in
+     (* Printf.printf "%s\n%!" model_question; *)
      ask_solver solver model_question;
      let model = solver |> parse_model in
      (match model with
