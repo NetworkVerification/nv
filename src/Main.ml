@@ -47,7 +47,7 @@ let run_smt file cfg info ds =
         let decls, vars, f = MapUnrolling.unroll info decls in
         let decls = Inline.inline_declarations info decls in
         let fs = f :: fs in
-        (Smt2.solve cfg.query (smt_query_file file) decls ~symbolic_vars:vars, fs)
+        (Smt2.solve info cfg.query (smt_query_file file) decls ~symbolic_vars:vars, fs)
       with MapUnrolling.Cannot_unroll e ->
         let msg =
           Printf.sprintf
@@ -55,8 +55,8 @@ let run_smt file cfg info ds =
             (Printing.exp_to_string e)
         in
         Console.warning msg ;
-        (Smt2.solve cfg.query (smt_query_file file) decls ~symbolic_vars:[], fs))
-    else (Smt2.solve cfg.query (smt_query_file file) decls ~symbolic_vars:[], fs)
+        (Smt2.solve info cfg.query (smt_query_file file) decls ~symbolic_vars:[], fs))
+    else (Smt2.solve info cfg.query (smt_query_file file) decls ~symbolic_vars:[], fs)
   in
   match res with
   | Unsat -> (Success None, None)
@@ -176,15 +176,17 @@ let compress info decls cfg networkOp =
        | Some f' ->
           loop f' ds
   in
+  Printf.printf "Relevant slices size: %d\n%!" (BatSet.cardinal relevantSliceGroups);
   BatSet.iter
     (fun prefixes ->
-      Printf.printf "Checking SRP for prefixes: %s" (Slicing.printPrefixes prefixes);
+      Printf.printf "Checking SRP for prefixes: %s\n%!" (Slicing.printPrefixes prefixes);
       (* get a prefix from this class of prefixes *)
       let pre = BatSet.min_elt prefixes in
       (* find the nodes this class is announced from *)
       let ds = BatMap.find pre relevantSlices in
       (* find the initial abstraction function for these destinations *)
       let f = Abstraction.findAbstraction network.graph transMap mergeMap ds in
+      Printf.printf "found abstraction\n%!";
       (* run_simulator cfg info decls  *)
       loop f ds) relevantSliceGroups
   

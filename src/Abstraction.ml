@@ -39,11 +39,14 @@ let refineTopological (f: abstractionMap) (g: Graph.t)
   BatSet.fold (fun us f' -> AbstractionMap.split f' us) (Collections.groupKeysByValue vmap) f
 
 let rec abstractionTopological (f: abstractionMap) (g: Graph.t) : abstractionMap =
-  let f' = AbstractionMap.fold (fun _ us facc ->
+  let f' = AbstractionMap.fold (fun us facc ->
+               Printf.printf "refining %s\n" (AbstractNode.printAbstractNode us);
                if (BatSet.cardinal us > 1) then
                  refineTopological facc g us 
                else
                  facc) f f in
+  let groups = AbstractionMap.printAbstractGroups f "\n" in
+  Console.show_message groups Console.T.Blue "Abstract groups";
   if (size f = size f') then normalize f' 
   else abstractionTopological f' g
 
@@ -73,13 +76,16 @@ let refineAbstraction (f: abstractionMap) (g: Graph.t)
 let rec abstraction (f: abstractionMap) (g: Graph.t)
                     (transMap: (Edge.t, int * Syntax.exp) Hashtbl.t)
                     (mergeMap: (Vertex.t, int * Syntax.exp) Hashtbl.t) : abstractionMap =
-  let f' = AbstractionMap.fold (fun _ us facc ->
-               if (BatSet.cardinal us > 1) then
-                 refineAbstraction facc g transMap mergeMap us 
-               else
-                 facc) f f in
-  if (size f = size f') then normalize f' 
-  else abstraction f' g transMap mergeMap
+  abstractionTopological f g
+  (* let f' = AbstractionMap.fold (fun _ us facc -> *)
+  (*              if (BatSet.cardinal us > 1) then *)
+  (*                refineAbstraction facc g transMap mergeMap us  *)
+  (*              else *)
+  (*                facc) f f in *)
+  (* Printf.printf "size of f and f', %d %d \n%!" (size f) (size f'); *)
+  (* if (size f = size f') then normalize f'  *)
+  (* else abstraction f' g transMap mergeMap *)
+
 
 let partialEvalTrans (graph : Graph.t)
                      (trans : Syntax.exp) : (Edge.t, int * Syntax.exp) Hashtbl.t  =
@@ -125,7 +131,6 @@ let findAbstraction (graph: Graph.t)
   let f =
     BatSet.fold (fun d facc -> AbstractionMap.split facc (BatSet.singleton d))
                 ds (createAbstractionMap graph) in
-  
   (* compute the abstraction function *)
   let f = abstraction f graph transMap mergeMap in
   f

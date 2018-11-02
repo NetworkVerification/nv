@@ -101,11 +101,12 @@ let createAbstractionMap g : abstractionMap =
   partitionNodes f (f.nextId) (Graph.get_vertices g);
   f
 
-let fold (g: Vertex.t -> AbstractNode.t -> 'a -> 'a) (f: abstractionMap) (acc: 'a) : 'a =
-  VertexMap.fold (fun u idx acc -> g u (getGroupById f idx) acc) f.groupId acc
+let fold (g: AbstractNode.t -> 'a -> 'a) (f: abstractionMap) (acc: 'a) : 'a =
+  GroupMap.fold (fun idx us acc -> g us acc) f.absGroups acc
 
 let size (f: abstractionMap) : int =
-  f.nextId |> UInt32.to_int
+  GroupMap.cardinal (f.absGroups)
+  (* f.nextId |> UInt32.to_int *)
 
 let normalize (f: abstractionMap) =
   let (nextIdN, groupIdN, absGroupsN) =

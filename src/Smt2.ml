@@ -22,8 +22,18 @@ let printList (printer: 'a -> string) (ls: 'a list) (first : string)
   in
   first ^ (loop ls) ^ last
 
-let printVerbose (msg: string) (descr: string) (span: Span.t) =
-  Printf.sprintf "; %s: %s on %s\n" msg descr (Syntax.show_span span)
+let printVerbose (msg: string) (descr: string) (span: Span.t) info =
+  let sl =
+    match Console.get_position_opt span.start info with
+    | Some (sl, _) -> sl
+    | _ -> -1
+  in
+  let fl =
+    match Console.get_position_opt span.finish info with
+    | Some (fl, _) -> fl
+    | _ -> -1
+  in
+  Printf.sprintf "; %s: %s on %d-%d\n" msg descr sl fl
    
 module SmtLang =
   struct
@@ -194,9 +204,9 @@ module SmtLang =
          let args = printList smt_term_to_smt ts "" " " "" in 
          Printf.sprintf "(%s %s)" (smt_term_to_smt t) args
 
-    let term_to_smt verbose (tm : term) =
+    let term_to_smt verbose info (tm : term) =
       (if verbose then
-         printVerbose "Translating expression:" tm.tdescr tm.tloc
+         printVerbose "Translating expression:" tm.tdescr tm.tloc info
        else "") ^
         smt_term_to_smt tm.t
 
@@ -216,22 +226,22 @@ module SmtLang =
                      dt.name
                      (printList constructor_to_smt dt.constructors "" " " "")
       
-    let const_decl_to_smt ?(verbose=false) const : string =
+    let const_decl_to_smt ?(verbose=false) info const : string =
       (if verbose then
-         printVerbose "Constant declared about:" const.cdescr const.cloc
+         printVerbose "Constant declared about:" const.cdescr const.cloc info
        else
          "") ^
         Printf.sprintf "(declare-const %s %s)" const.cname
           (sort_to_smt const.csort)
 
-    let smt_command_to_smt (comm : smt_command) : string =
+    let smt_command_to_smt info (comm : smt_command) : string =
       match comm with
       | Echo s ->
          Printf.sprintf "(echo %s)" s
       | Eval tm ->
-         Printf.sprintf "(eval %s)" (term_to_smt false tm)
+         Printf.sprintf "(eval %s)" (term_to_smt false info tm)
       | Assert tm ->
-         Printf.sprintf "(assert %s)" (term_to_smt false tm)
+         Printf.sprintf "(assert %s)" (term_to_smt false info tm)
       | CheckSat ->
          Printf.sprintf "(check-sat)"
       | GetModel ->
@@ -239,15 +249,25 @@ module SmtLang =
 
     (* NOTE: this currently ignores the comment/loc of the term inside
        the command. Perhaps we would like to combine them in some way
-       *)
-    let command_to_smt (verbose : bool) (com : command) : string =
-      (if verbose then
-         printVerbose "Translating command:" com.comdescr com.comloc
-       else "") ^
-        smt_command_to_smt com.com
+     *)
 
-    let commands_to_smt (verbose : bool) (coms : command list) : string =
-      printList (fun c -> command_to_smt verbose c) coms "\n" "\n" "\n"
+    let command_of_term_meta info (comm : command) : string =
+      match comm.com with
+      | Eval tm | Assert tm ->
+         (printVerbose "Translating command:" comm.comdescr comm.comloc info) ^
+           printVerbose "Translating command:" tm.tdescr tm.tloc info
+      | _ ->
+         printVerbose "Translating command:" comm.comdescr comm.comloc info
+         
+        
+    let command_to_smt (verbose : bool) info (com : command) : string =
+      (if verbose then
+         command_of_term_meta info com
+       else "") ^ 
+        smt_command_to_smt info com.com
+
+    let commands_to_smt (verbose : bool) info (coms : command list) : string =
+      printList (fun c -> command_to_smt verbose info c) coms "\n" "\n" "\n"
 
     type smt_answer =
       UNSAT | SAT | UNKNOWN
@@ -483,7 +503,7 @@ let rec encode_exp_z3 descr env (e: exp) : term =
   | ELet (x, e1, e2) ->
       let xstr = create_name descr x in
       let za = mk_constant env xstr (oget e1.ety |> ty_to_sort)
-                           ~cloc:e.espan ~cdescr: (descr ^ "let") in
+                           ~cloc:e.espan ~cdescr: (descr ^ "-let") in
       let ze1 = encode_exp_z3 descr env e1 in
       let ze2 = encode_exp_z3 descr env e2 in
       add_constraint env (mk_term (mk_eq za.t ze1.t));
@@ -509,7 +529,8 @@ let rec encode_exp_z3 descr env (e: exp) : term =
        mk_term ~tloc:e.espan
   | EMatch (e, bs) ->
       let name = create_fresh descr "match" in
-      let za = mk_constant env name (ty_to_sort (oget e.ety)) in
+      let za = mk_constant env name (ty_to_sort (oget e.ety))
+                           ~cdescr:(descr ^ "-match") ~cloc:e.espan in
       let ze1 = encode_exp_z3 descr env e in
       add_constraint env (mk_term ~tloc:e.espan (mk_eq za.t ze1.t));
       encode_branches_z3 descr env za bs (oget e.ety)
@@ -1172,21 +1193,23 @@ let translate_model (m : (string, string) BatMap.t) : Solution.t =
   
 (** ** Translate the environment to SMT-LIB2 *)
   
-let env_to_smt ?(verbose=false) (env : smt_env) =
+let env_to_smt ?(verbose=false) info (env : smt_env) =
   (* Emit context *)
-  let context = List.rev_map (fun c -> command_to_smt verbose c) env.ctx in
+  let context = List.rev_map (fun c -> command_to_smt verbose info c) env.ctx in
   let context = String.concat "\n" context in
 
   (* Emit constants *)
   let constants = BatSet.to_list env.const_decls in
   let constants =
     String.concat "\n"
-                  (List.map (fun c -> const_decl_to_smt ~verbose:verbose c) constants) in
+                  (List.map (fun c -> const_decl_to_smt ~verbose:verbose info c) constants) in
   (* Emit type declarations *)
   let decls = BatMap.bindings env.type_decls in
   let decls = String.concat "\n"
             (List.map (fun (_,typ) -> type_decl_to_smt typ) decls) in
-  Printf.sprintf "%s%!" (decls ^ constants ^ context)
+  Printf.sprintf "%s\n" (decls ^ constants ^ context)
+(* this new line is super important otherwise we don't get a reply
+   from Z3.. not understanding why*)
 
 let check_sat (env: smt_env) =
   env.ctx <- (CheckSat |> mk_command) :: env.ctx
@@ -1198,27 +1221,25 @@ let time_profile msg (f: unit -> 'a) : 'a =
   Printf.printf "%s took: %f secs to complete\n%!" msg (finish_time -. start_time);
   res
   
-let solve query chan ?symbolic_vars ?(params=[]) ds =
+let solve info query chan ?symbolic_vars ?(params=[]) ds =
   let sym_vars =
     match symbolic_vars with None -> [] | Some ls -> ls
   in
   let verbose = false in
 
   (* compute the encoding of the network *)
-  (* let env = time_profile "encoding network" (fun () -> encode_z3 ds sym_vars) in *)
-  let env = encode_z3 ds sym_vars in
-  (* check_sat env; *)
-  (* let smt_encoding = time_profile "compiling query" *)
-  (*                                 (fun () -> env_to_smt ~verbose:verbose env) in *)
-  let smt_encoding =  env_to_smt ~verbose:verbose env in
+  let env = time_profile "encoding network" (fun () -> encode_z3 ds sym_vars) in
+  (* let env = encode_z3 ds sym_vars in *)
+  check_sat env;
+  let smt_encoding = time_profile "compiling query"
+                                  (fun () -> env_to_smt ~verbose:verbose info env) in
+  (* let smt_encoding =  env_to_smt ~verbose:verbose env in *)
   if query then
     ( Printf.fprintf chan "%s" smt_encoding; flush chan);
   (* start communication with solver process *)
   let solver = start_solver params in
   ask_solver solver smt_encoding;
-  (* Printf.printf "just asked solver%!"; *)
   let reply = solver |> parse_reply in
-  Printf.printf "did i get an answer%!";
   match reply with
   | UNSAT -> Unsat
   | SAT ->
@@ -1230,8 +1251,8 @@ let solve query chan ?symbolic_vars ?(params=[]) ds =
      in
      let eassert = get_assert ds in
      let model = eval_model env.symbolics num_nodes eassert in
-     let model_question = commands_to_smt verbose model in
-     (* Printf.printf "%s\n%!" model_question; *)
+     let model_question = commands_to_smt verbose info model in
+     Printf.printf "%s\n%!" model_question;
      ask_solver solver model_question;
      let model = solver |> parse_model in
      (match model with

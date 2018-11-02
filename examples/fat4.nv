@@ -1,6 +1,8 @@
 type attribute = (option[int],option[int],option[(int, int, int, int)],option[(int,int,int,int)],option[int])
 
-symbolic d : (int, int)
+symbolic d = (1174406656, 32)
+
+require d = (1174406656, 32)
 
 let edges = {
   4-8;
@@ -525,7 +527,7 @@ let trans edge x =
    transferRoute edge x
 
 let assert node x =
- if (d = (1174405888, 32)) then
+ if (d = (1174406656, 32)) then
     match x with
     | (None, None, None, None, None) -> false
     | _ -> true
