@@ -691,65 +691,67 @@ let exp_to_z3 = encode_exp_z3
               
 let encode_z3_merge str env e =
   match e.e with
-  | EFun
-      { arg= node
-      ; argty= nodety
-      ; body=
-          { e=
-              EFun
-                { arg= x
-                ; argty= xty
-                ; body= {e= EFun {arg= y; argty= yty; body= exp}} }
-          } } ->
-      let nodestr =
-        mk_constant env (create_name str node) (ty_to_sort (oget nodety))
-                    ~cdescr:"merge node argument" ~cloc:e.espan
-      in
-      let xstr =
-        mk_constant env (create_name str x) (ty_to_sort (oget xty))
-                    ~cdescr:"merge x argument" ~cloc:e.espan
-      in
-      let ystr =
-        mk_constant env (create_name str y) (ty_to_sort (oget yty))
-                    ~cdescr:"merge y argument" ~cloc:e.espan
-      in
-      let name = Printf.sprintf "%s-result" str in
-      let result = mk_constant env name (oget exp.ety |> ty_to_sort) in
-      let e = encode_exp_z3 str env exp in
-      add_constraint env (mk_term (mk_eq result.t e.t));
-      (result, nodestr, xstr, ystr)
+  | EFun { arg= x
+         ; argty= xty
+         ; body= {e= EFun {arg= y; argty= yty; body= exp} }} ->
+     let xstr =
+       mk_constant env (create_name str x) (ty_to_sort (oget xty))
+                   ~cdescr:"merge x argument" ~cloc:e.espan
+     in
+     let ystr =
+       mk_constant env (create_name str y) (ty_to_sort (oget yty))
+                   ~cdescr:"merge y argument" ~cloc:e.espan
+     in
+     let name = Printf.sprintf "%s-result" str in
+     let result = mk_constant env name (oget exp.ety |> ty_to_sort) in
+     let e = encode_exp_z3 str env exp in
+     add_constraint env (mk_term (mk_eq result.t e.t));
+     (result, xstr, ystr)
   | _ -> failwith "internal error (encode_z3_merge)"
 
-let encode_z3_trans str env e =
-  match e.e with
-  | EFun
-      { arg= edge
-      ; argty= edgety
-      ; body= {e= EFun {arg= x; argty= xty; body= exp}} } ->
-      let edgestr = mk_constant env (create_name str edge) (ty_to_sort (oget edgety))
-      in
-      let xstr = mk_constant env (create_name str x) (ty_to_sort  (oget xty))      
-      in
-      let name = Printf.sprintf "%s-result" str in
-      let result =
-        mk_constant env name (oget exp.ety |> ty_to_sort) in
-      let e = encode_exp_z3 str env exp in
-      add_constraint env (mk_term (mk_eq result.t e.t));
-      (result, edgestr, xstr)
+let encode_z3_trans str env edge trans =
+  let edge = avalue (vtuple [vint (fst edge); vint (snd edge)],
+                     Some Typing.edge_ty, Span.default) in
+  let etrans_uv = Interp.interp_partial_fun trans [edge] in
+  match etrans_uv.e with
+  | EFun {arg= x; argty= xty; body= exp} ->
+     (* let edgestr = mk_constant env (create_name str edgevar)
+        (ty_to_s    ort (oget edgety)) in *) 
+     let xstr = mk_constant env (create_name str x) (ty_to_sort  (oget xty))      
+     in
+     let name = Printf.sprintf "%s-result" str in
+     let result =
+       mk_constant env name (oget exp.ety |> ty_to_sort) in
+     let e = encode_exp_z3 str env exp in
+     add_constraint env (mk_term (mk_eq result.t e.t));
+     (result, xstr)
   | _ -> failwith "internal error"
 
-let encode_z3_init str env e =
+let encode_z3_init str env i e =
   match e.e with
-  | EFun {arg= node; argty= nodety; body= e} ->
-     let nodestr = mk_constant env (create_name str node) (ty_to_sort (oget nodety)) in
-      let name = Printf.sprintf "%s-result" str in
-      let result = mk_constant env name (oget e.ety |> ty_to_sort) in
-      let e = encode_exp_z3 str env e in
-      add_constraint env (mk_term (mk_eq result.t e.t));
-      (result, nodestr)
+  | EFun {arg= node; argty= nodety; body= _} ->
+     let einit_i = Interp.interp_partial_fun e [vint i] in
+     (* let nodestr = mk_constant env (create_name str node) (ty_to_sort (oget nodety)) in *)
+     let name = Printf.sprintf "%s-result" str in
+     let result = mk_constant env name (oget einit_i.ety |> ty_to_sort) in
+     let e = encode_exp_z3 str env einit_i in
+     add_constraint env (mk_term (mk_eq result.t e.t));
+     result
   | _ -> failwith "internal error"
 
-let encode_z3_assert = encode_z3_trans
+let encode_z3_assert str env node assertion =
+  let node = avalue (vint node, Some Typing.node_ty, Span.default) in
+  let eassert_u = Interp.interp_partial_fun assertion [node] in
+  match eassert_u.e with
+  | EFun {arg= x; argty= xty; body= exp} ->
+     let xstr = mk_constant env (create_name str x) (ty_to_sort (oget xty)) in     
+     let name = Printf.sprintf "%s-result" str in
+     let result =
+       mk_constant env name (oget exp.ety |> ty_to_sort) in
+     let e = encode_exp_z3 str env exp in
+     add_constraint env (mk_term (mk_eq result.t e.t));
+     (result, xstr)
+  | _ -> failwith "internal error"
 
 module EdgeMap = Map.Make (struct
   type t = UInt32.t * UInt32.t
@@ -819,10 +821,10 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
   (* map each node to the init result variable *)
   let init_map = ref Graph.VertexMap.empty in
   for i = 0 to UInt32.to_int nodes - 1 do
-    let init, n =
-      encode_z3_init (Printf.sprintf "init-%d" i) env einit
+    let init =
+      encode_z3_init (Printf.sprintf "init-%d" i) env (UInt32.of_int i) einit
     in
-    add_constraint env (mk_term (mk_eq n.t (mk_int i)));
+    (* add_constraint env (mk_term (mk_eq n.t (mk_int i))); *)
     init_map := Graph.VertexMap.add (UInt32.of_int i) init !init_map
   done ;
   (* map each edge to transfer function result *)
@@ -838,19 +840,19 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
         with _ ->
           incoming_map :=
             Graph.VertexMap.add j [(i, j)] !incoming_map ) ;
-      let trans, e, x =
+      let trans, x =
         encode_z3_trans
           (Printf.sprintf "trans-%d-%d" (UInt32.to_int i)
-             (UInt32.to_int j))
-          env etrans
+                          (UInt32.to_int j)) 
+          env (i, j) etrans
       in
       trans_input_map := EdgeMap.add (i, j) x !trans_input_map ;
-      let ie = mk_int_u32 i in
-      let je = mk_int_u32 j in
-      let tup_ty = TTuple [TInt 32; TInt 32] in
-      let pair_decl = compute_decl env tup_ty  in
-      let f = (pair_decl |> get_constructors |> List.hd).constr_name in
-      add_constraint env (mk_term (mk_eq e.t (mk_app (mk_constructor f (ty_to_sort tup_ty)) [ie; je]))) ;
+      (* let ie = mk_int_u32 i in *)
+      (* let je = mk_int_u32 j in *)
+      (* let tup_ty = TTuple [TInt 32; TInt 32] in *)
+      (* let pair_decl = compute_decl env tup_ty  in *)
+      (* let f = (pair_decl |> get_constructors |> List.hd).constr_name in *)
+      (* add_constraint env (mk_term (mk_eq e.t (mk_app (mk_constructor f (ty_to_sort tup_ty)) [ie; je]))) ; *)
       trans_map := EdgeMap.add (i, j) trans !trans_map )
     edges ;
   (* compute the labelling as the merge of all inputs *)
@@ -861,6 +863,8 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
       try Graph.VertexMap.find (UInt32.of_int i) !incoming_map
       with Not_found -> []
     in
+    let node = avalue (vint (UInt32.of_int i), Some Typing.node_ty, Span.default) in
+    let emerge_i = Interp.interp_partial_fun emerge [node] in
     let idx = ref 0 in
     let merged =
       List.fold_left
@@ -868,12 +872,12 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
           incr idx ;
           let trans = EdgeMap.find (x, y) !trans_map in
           let str = Printf.sprintf "merge-%d-%d" i !idx in
-          let merge_result, n, x, y =
-            encode_z3_merge str env emerge
+          let merge_result, x, y =
+            encode_z3_merge str env emerge_i
           in
           add_constraint env (mk_term (mk_eq trans.t x.t));
           add_constraint env (mk_term (mk_eq acc.t y.t));
-          add_constraint env (mk_term (mk_eq n.t (mk_int i)));
+          (* add_constraint env (mk_term (mk_eq n.t (mk_int i))); *)
           merge_result )
         init in_edges
     in
@@ -895,11 +899,11 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
         let label =
           Graph.VertexMap.find (UInt32.of_int i) !labelling
         in
-        let result, n, x =
-          encode_z3_assert (assert_var (UInt32.of_int i)) env eassert
+        let result, x =
+          encode_z3_assert (assert_var (UInt32.of_int i)) env (UInt32.of_int i) eassert
         in
         add_constraint env (mk_term (mk_eq x.t label.t));
-        add_constraint env (mk_term (mk_eq n.t (mk_int i)));
+        (* add_constraint env (mk_term (mk_eq n.t (mk_int i))); *)
         let assertion_holds = mk_eq result.t (mk_bool true) in
         all_good :=
           mk_and !all_good assertion_holds
