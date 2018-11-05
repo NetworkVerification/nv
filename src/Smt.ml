@@ -1,4 +1,5 @@
 open Collections
+open Unsigned
 open Syntax
 open Solution
 open Z3
@@ -15,29 +16,30 @@ let create_name descr n =
   if descr = "" then Var.to_string n
   else Printf.sprintf "%s-%s" descr (Var.to_string n)
 
-let mk_bv_sized ctx i =
-  Expr.mk_numeral_string ctx (Z.to_string @@ Integer.value i)
-    (BitVector.mk_sort ctx @@ Integer.size i)
+let mk_int_z ctx i =
+  Expr.mk_numeral_string ctx (Z.to_string i)
+    (Arithmetic.Integer.mk_sort ctx)
 
-let mk_bv_int ctx i = mk_bv_sized ctx (Integer.of_int i)
+let mk_int ctx i = mk_int_z ctx (Z.of_int i)
 
 let mk_bool ctx b = Boolean.mk_val ctx b
 
-let add_f ctx width =
-  let zero = mk_bv_sized ctx (Integer.create ~value:0 ~size:width) in
-  BitVector.mk_add ctx zero zero |> Expr.get_func_decl
+(* TODO: These are currently unsound, as they do not include the mod operation *)
+let add_f ctx =
+  let zero = mk_int ctx 0 in
+  Arithmetic.mk_add ctx [zero; zero] |> Expr.get_func_decl
 
-let sub_f ctx width =
-  let zero = mk_bv_sized ctx (Integer.create ~value:0 ~size:width) in
-  BitVector.mk_sub ctx zero zero |> Expr.get_func_decl
+let sub_f ctx =
+  let zero = mk_int ctx 0 in
+  Arithmetic.mk_sub ctx [zero; zero] |> Expr.get_func_decl
 
-let lt_f ctx width =
-  let zero = mk_bv_sized ctx (Integer.create ~value:0 ~size:width) in
-  BitVector.mk_ult ctx zero zero |> Expr.get_func_decl
+let lt_f ctx =
+  let zero = mk_int ctx 0 in
+  Arithmetic.mk_lt ctx zero zero |> Expr.get_func_decl
 
-let le_f ctx width =
-  let zero = mk_bv_sized ctx (Integer.create ~value:0 ~size:width) in
-  BitVector.mk_ule ctx zero zero |> Expr.get_func_decl
+let le_f ctx =
+  let zero = mk_int ctx 0 in
+  Arithmetic.mk_le ctx zero zero |> Expr.get_func_decl
 
 let eq_f ctx e = Boolean.mk_eq ctx e e |> Expr.get_func_decl
 
@@ -57,12 +59,7 @@ let ite_f ctx e2 e3 =
   let tru = mk_bool ctx true in
   Boolean.mk_ite ctx tru e2 e3 |> Expr.get_func_decl
 
-(* I think the intention of this is to take any value from a constant
-   array, I am doing so using a constant of the right sort which is
-   essentially thrown away afterwards *)
-let peel ctx e =
-  let sort = Z3Array.get_domain (Expr.get_sort e) in
-  Z3Array.mk_select ctx e (Expr.mk_const_s ctx (create_fresh "peel" "const") sort)
+let peel ctx e = Z3Array.mk_select ctx e (mk_int ctx 0)
 
 let add solver args =
   (* List.iter (fun e -> Printf.printf "(assert %s)\n" (Expr.to_string e)) args; *)
@@ -92,7 +89,7 @@ let mk_array_sort ctx sort1 sort2 = Z3Array.mk_sort ctx sort1 sort2
 let rec ty_to_sort ctx (ty: ty) : Z3.Sort.sort =
   match ty with
   | TVar {contents= Link t} -> ty_to_sort ctx t
-  | TInt width -> Z3.BitVector.mk_sort ctx width
+  | TInt _ -> Z3.Arithmetic.Integer.mk_sort ctx
   | TOption t ->
     let issome = Z3.Symbol.mk_string ctx "is-some" in
     let isnone = Z3.Symbol.mk_string ctx "is-none" in
@@ -179,17 +176,21 @@ let rec encode_exp_z3 descr env arr (e: exp) =
       | UAdd width, _ ->
         let f =
           if arr.lift then fun e1 e2 ->
-            Z3Array.mk_map env.ctx (add_f env.ctx width) [e1; e2]
-          else fun e1 e2 -> BitVector.mk_add env.ctx e1 e2
+            Z3Array.mk_map env.ctx (add_f env.ctx) [e1; e2]
+          else fun e1 e2 ->
+            Arithmetic.mk_add env.ctx [e1; e2]
         in
         encode_op_z3 descr env f arr es
       | USub width, _ ->
         let f =
           if arr.lift then fun e1 e2 ->
-            Z3Array.mk_map env.ctx (sub_f env.ctx width) [e1; e2]
-          else fun e1 e2 -> BitVector.mk_sub env.ctx e1 e2
+            Z3Array.mk_map env.ctx (sub_f env.ctx) [e1; e2]
+          else fun e1 e2 ->
+            Arithmetic.mk_sub env.ctx [e1; e2]
         in
         encode_op_z3 descr env f arr es
+      (* TODO: This doesn't exactly match the semantics of nv, since it has no
+         information about bitsizes *)
       | UEq, _ ->
         let f =
           if arr.lift then fun e1 e2 ->
@@ -199,31 +200,26 @@ let rec encode_exp_z3 descr env arr (e: exp) =
           else Boolean.mk_eq env.ctx
         in
         encode_op_z3 descr env f arr es
-      | ULess width, _ ->
+      | ULess _, _ ->
         let f =
           if arr.lift then fun e1 e2 ->
-            Z3Array.mk_map env.ctx (lt_f env.ctx width) [e1; e2]
-          else BitVector.mk_ult env.ctx
+            Z3Array.mk_map env.ctx (lt_f env.ctx) [e1; e2]
+          else Arithmetic.mk_lt env.ctx
         in
         encode_op_z3 descr env f arr es
-      | ULeq width, _ ->
+      | ULeq _, _ ->
         let f =
           if arr.lift then fun e1 e2 ->
-            Z3Array.mk_map env.ctx (le_f env.ctx width) [e1; e2]
-          else BitVector.mk_ule env.ctx
+            Z3Array.mk_map env.ctx (le_f env.ctx) [e1; e2]
+          else Arithmetic.mk_le env.ctx
         in
         encode_op_z3 descr env f arr es
-    | MCreate, [e1] ->
-       if arr.lift then failwith "not supported yet" ;
-       let kty =
-         match get_inner_type (oget e.ety) with
-         | TMap (kty, _) -> kty
-         | _ -> failwith "runtime error: missing map key type"
-       in
-       let sort = ty_to_sort env.ctx kty |> arr.f in
-       let e1 = encode_exp_z3 descr env arr e1 in
-       Z3Array.mk_const_array env.ctx sort e1
-    | MGet, [e1; e2] ->
+      | MCreate, [e1] ->
+        if arr.lift then failwith "not supported yet" ;
+        let e1 = encode_exp_z3 descr env arr e1 in
+        let sort = Arithmetic.Integer.mk_sort env.ctx |> arr.f in
+        Z3Array.mk_const_array env.ctx sort e1
+      | MGet, [e1; e2] ->
         if arr.lift then failwith "not supported yet" ;
         let e1 = encode_exp_z3 descr env arr e1 in
         let e2 = encode_exp_z3 descr env arr e2 in
@@ -434,12 +430,12 @@ and encode_pattern_z3 descr env arr zname p (t: ty) =
     else Boolean.mk_eq env.ctx zname (Boolean.mk_val env.ctx b)
   | PInt i, TInt _ ->
     if arr.lift then
-      let a = arr.make (mk_bv_sized env.ctx i) in
+      let a = arr.make (mk_int_z env.ctx (Integer.value i)) in
       Z3Array.mk_map env.ctx
         (eq_f env.ctx (peel env.ctx zname))
         [zname; a]
     else
-      let const = mk_bv_sized env.ctx i in
+      let const = mk_int_z env.ctx (Integer.value i) in
       Boolean.mk_eq env.ctx zname const
   | PTuple ps, TTuple ts -> (
       match (ps, ts) with
@@ -520,7 +516,7 @@ and encode_value_z3 descr env arr (v: Syntax.value) =
     let b = mk_bool env.ctx b in
     if arr.lift then arr.make b else b
   | VInt i ->
-    let i = mk_bv_sized env.ctx i in
+    let i = mk_int_z env.ctx (Integer.value i) in
     if arr.lift then arr.make i else i
   | VTuple vs -> (
       match oget v.vty with
@@ -715,7 +711,7 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
     let init, n =
       encode_z3_init (Printf.sprintf "init-%d" i) env einit
     in
-    add env.solver [Boolean.mk_eq env.ctx n (mk_bv_int env.ctx i)] ;
+    add env.solver [Boolean.mk_eq env.ctx n (mk_int env.ctx i)] ;
     init_map := Graph.VertexMap.add (Integer.of_int i) init !init_map
   done ;
   (* map each edge to transfer function result *)
@@ -738,10 +734,9 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
            env etrans
        in
        trans_input_map := EdgeMap.add (i, j) x !trans_input_map ;
-       let ie = mk_bv_sized env.ctx i in
-       let je = mk_bv_sized env.ctx j in
+       let ie = mk_int_z env.ctx (Integer.value i) in
+       let je = mk_int_z env.ctx (Integer.value j) in
        let pair_sort =
-         (* Both should just be the type we use for nodes, which right now is TInt 32 *)
          ty_to_sort env.ctx (TTuple [TInt (Integer.size i); TInt (Integer.size j)])
        in
        let f = Datatype.get_constructors pair_sort |> List.hd in
@@ -752,6 +747,9 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
   (* compute the labelling as the merge of all inputs *)
   let labelling = ref Graph.VertexMap.empty in
   for i = 0 to Integer.to_int nodes - 1 do
+    (* FIXME: This and other calls to Integer.of_int rely on the fact that nodes
+       are implicitly size 32. If that changes, this part of the code is likely
+       to break. *)
     let init = Graph.VertexMap.find (Integer.of_int i) !init_map in
     let in_edges =
       try Graph.VertexMap.find (Integer.of_int i) !incoming_map
@@ -769,7 +767,7 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
            in
            add env.solver [Boolean.mk_eq env.ctx trans x] ;
            add env.solver [Boolean.mk_eq env.ctx acc y] ;
-           add env.solver [Boolean.mk_eq env.ctx n (mk_bv_int env.ctx i)] ;
+           add env.solver [Boolean.mk_eq env.ctx n (mk_int env.ctx i)] ;
            merge_result )
         init in_edges
     in
@@ -800,7 +798,7 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
           encode_z3_assert (Printf.sprintf "assert-%d" i) env eassert
         in
         add env.solver [Boolean.mk_eq env.ctx x label] ;
-        add env.solver [Boolean.mk_eq env.ctx n (mk_bv_int env.ctx i)] ;
+        add env.solver [Boolean.mk_eq env.ctx n (mk_int env.ctx i)] ;
         let assertion_holds =
           Boolean.mk_eq env.ctx result (mk_bool env.ctx true)
         in
@@ -848,23 +846,12 @@ let rec parse_custom_type s : ty * string =
     let count, remaining = grab_int remaining in
     let tys, r = parse_list count remaining in
     (TTuple tys, r)
-    (* else if starts_with s "Int" then
-       let remaining =
-        if len = 3 then "" else String.sub s 3 (len - 3)
-       in
-       (TInt 32, remaining) *)
-  else if starts_with s "BitVec" then
-    let bv_regex = Str.regexp "BitVec\\([0-9]+\\)" in
-    let width_str =
-      if (Str.string_match bv_regex s 0)
-      then Str.matched_group 1 s
-      else failwith @@ "parse_custom_type: bad bitvector sort string: " ^ s
-    in
-    let bv_len = 6 + (String.length width_str) in
+  else if starts_with s "Int" then
+    (* TODO: Not sure how to do this yet *)
     let remaining =
-      if len = bv_len then "" else String.sub s bv_len (len - bv_len)
+      if len = 3 then "" else String.sub s 3 (len - 3)
     in
-    (TInt (int_of_string width_str), remaining)
+    (TInt 32, remaining)
   else if starts_with s "Bool" then
     let remaining =
       if len = 4 then "" else String.sub s 4 (len - 4)
@@ -880,36 +867,28 @@ and parse_list n s =
     (ty :: rest, s)
 
 let sort_to_ty s =
-  let sanitize_str str =
-    (* Replace bitvector sorts: e.g. (_ BitVec 5) -> BitVec5. Removes spaces, so
-       later processing is easier.*)
-    let bv_regex = Str.regexp "(_ BitVec \\([0-9]+\\))" in
-    let str = Str.global_replace bv_regex "BitVec\\1" str in
-    (* Remove outermost parens, if they exist *)
+  let rec aux str =
     let has_parens = String.sub str 0 1 = "(" in
     let str =
       if has_parens then String.sub str 1 (String.length str - 2)
       else str
     in
-    str
-  in
-  let rec aux str =
-    let str = sanitize_str str in
     let strs = String.split_on_char ' ' str in
+    (* TODO: Not sure how to do this yet *)
     match strs with
-    (* | ["Int"] -> TInt 32 *)
+    | ["Int"] -> TInt 32
     | ["Bool"] -> TBool
     | ["Array"; k; v] -> TMap (aux k, aux v)
     | [x] ->
       let ty, _ = parse_custom_type x in
       ty
-    | _ -> failwith @@ "cannot convert SMT sort to type: " ^ str
+    | _ -> failwith "cannot convert SMT sort to type"
   in
   aux (Sort.to_string s)
 
 let rec z3_to_value m (e: Expr.expr) : Syntax.value =
   try
-    let i = Integer.of_bv_string (Expr.to_string e) in
+    let i = Integer.of_string (Expr.to_string e) in
     vint i
   with _ ->
     let f = Expr.get_func_decl e in
