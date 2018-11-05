@@ -19,7 +19,7 @@ let files_to_test : (string * bool * bool) list =
     ("examples/env.nv", true, true);
     ("examples/failure.nv", true, false);
     ("examples/failure2.nv", true, false);
-    (* ("examples/fattree.nv", true, true); *)
+    ("examples/fattree.nv", true, false);
     ("examples/map.nv", true, true);
     ("examples/map2.nv", false, false);
     ("examples/minesweeper.nv", true, false);
