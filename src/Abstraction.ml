@@ -426,6 +426,11 @@ module BuildAbstractNetwork =
       (* build the abstract assert function *)
       let asserthat = buildAbstractAssert assertMap f in
       let symbD = List.map (fun (d, tye) -> DSymbolic (d,tye)) symb in
+      if !debugAbstraction then
+        begin
+          let agraph = Graph.add_edges (Graph.create n) edgeshat in
+          Graph.print agraph
+        end;
       (failuresMap, (DATy attrTy) :: (DNodes n) :: (DEdges edgeshat) :: symbolics @ symbD
                     @ ((DMerge mergehat) :: (DTrans transhat) :: (DInit inithat)
                        :: [DAssert asserthat]))
@@ -521,37 +526,54 @@ module FailuresAbstraction =
 
     (* Try to find a failure for which splitting would make the most
        sense. This is based on heuristics, currently: 
-       * 1. Choose a u,v with |v| > 1 or |u| > 1, so we can split it.  
-       * 2. Choose failure (u,v) such that v can reach the destination and u cannot.  
-       * 3. Choose u with the biggest cost (thus distance from the
-       destination). This is good for our splitting based on the
-       path. *)
+       * 1. Choose a u,v with |u| > 1 or |v| > 1, so we can split it.  
+       * 2. Choose failure (u,v) such that u can reach the destination and v 
+            cannot.  
+       * 3. Choose u with the biggest cost (thus "distance" from the
+            destination). This is good for our splitting based on the
+            path. *)
     let findVertexToRefine f (failed: EdgeSet.t) sol =
       let lbl = sol.Solution.labels in
       let candidate1 =
-        EdgeSet.filter (fun (u,v) -> ((AbstractNode.cardinal (getGroupById f v)) > 1))
+        EdgeSet.filter (fun (u,v) -> ((AbstractNode.cardinal (getGroupById f u)) > 1))
                       failed in
       let isEmpty1 = EdgeSet.is_empty candidate1 in
+      (* if there is no failed edge <u,v> with |u| > 1 *)
       let candidate1 = if isEmpty1 then
                          EdgeSet.filter (fun (u,v) ->
-                             ((AbstractNode.cardinal (getGroupById f u)) > 1))
+                             ((AbstractNode.cardinal (getGroupById f v)) > 1))
                                        failed
                        else
                          candidate1
       in
+      (* This is kind of fragile, it matches on the expected value of
+         the label of a vertex that has a path vs one that doesn't. If
+         the value changes this won't work. Perhaps, one way would be
+         to typecheck this against the attribute type, or use the
+         default value as elsewhere *)
       let candidate2 =
         EdgeSet.filter (fun (u,v) ->
             match (VertexMap.find u lbl).v, (VertexMap.find v lbl).v with
-            | VOption None, VOption (Some _) -> true
+            | VTuple [_;_;_;_; bestu], VTuple [_;_;_;_; bestv] ->
+               (match bestu.v, bestv.v with
+                | VOption (Some _), VOption None ->
+                   true
+                | _, _ -> false)
             | _ -> false)
                       candidate1 in
-      let selector = if isEmpty1 then fst else snd in
-      match EdgeSet.is_empty candidate2 with
-      | false ->
-         (* not sure how to implement this right now *)
-         selector (EdgeSet.choose candidate2)
-      | true ->
-         selector (EdgeSet.choose candidate1)
+      let selector = if isEmpty1 then snd else fst in
+      let candidate3 =
+        match EdgeSet.is_empty candidate2 with
+        | false ->
+           (* not sure how to implement this right now *)
+           EdgeSet.choose candidate2
+        | true ->
+           EdgeSet.choose candidate1
+      in
+      let res = selector candidate3 in
+      if !debugAbstraction then
+        Printf.printf "Abstract Vertex to split: %s\n" (Vertex.printVertex res);
+      res
         
     let splitSet_debug us =
       if !debugAbstraction then
@@ -568,7 +590,7 @@ module FailuresAbstraction =
                      "Abstract groups after refine for failures "
       
     let refineForFailures (g: Graph.t) (f: abstractionMap) (failVars: Var.t EdgeMap.t)
-                          (sol: Solution.t) (k: int) : abstractionMap option =
+          (sol: Solution.t) (k: int) : abstractionMap option =
       (* Collections.StringMap.iter (fun k _ -> Printf.printf "symb: %s\n" k) sol.symbolics; *)
       (* EdgeMap.iter (fun e k -> Printf.printf "edge %d,%d %s\n" (UInt32.to_int (fst e)) *)
       (*                                        (UInt32.to_int (snd e)) (Var.to_string k)) failVars; *)

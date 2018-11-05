@@ -92,12 +92,14 @@ let split (f: abstractionMap) (us: AbstractNode.t) : abstractionMap =
   partitionNodes f' (f'.nextId) us;
   f'
 
-let getAbstractGroups (f: abstractionMap) : AbstractNode.t list =
-  List.map (fun (k,v) -> v) (GroupMap.bindings f.absGroups)
+let getAbstractGroups (f: abstractionMap) : (GroupMap.key * AbstractNode.t) list =
+  GroupMap.bindings f.absGroups
 
 let printAbstractGroups (f: abstractionMap) (sep: string) : string =
-  List.fold_left (fun acc us -> (AbstractNode.printAbstractNode us) ^ sep ^ acc)
-                 "" (getAbstractGroups f)
+  List.fold_left (fun acc (k, us) ->
+      (UInt32.to_string k) ^ ": " ^
+        (AbstractNode.printAbstractNode us) ^ sep ^ acc)
+    "" (getAbstractGroups f)
 
 
 let createAbstractionMap g : abstractionMap =

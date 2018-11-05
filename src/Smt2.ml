@@ -827,9 +827,14 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
     (* add_constraint env (mk_term (mk_eq n.t (mk_int i))); *)
     init_map := Graph.VertexMap.add (UInt32.of_int i) init !init_map
   done ;
-  (* map each edge to transfer function result *)
+  
+  (* Map each edge to transfer function result *)
+  
+  (* incoming_map is a map from vertices to list of incoming edges *)
   let incoming_map = ref Graph.VertexMap.empty in
+  (* trans_map maps each edge to the variable that holds the result *)
   let trans_map = ref EdgeMap.empty in
+  (* trans_input_map maps each edge to the incoming message variable *)
   let trans_input_map = ref EdgeMap.empty in
   List.iter
     (fun (i, j) ->
@@ -847,15 +852,10 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
           env (i, j) etrans
       in
       trans_input_map := EdgeMap.add (i, j) x !trans_input_map ;
-      (* let ie = mk_int_u32 i in *)
-      (* let je = mk_int_u32 j in *)
-      (* let tup_ty = TTuple [TInt 32; TInt 32] in *)
-      (* let pair_decl = compute_decl env tup_ty  in *)
-      (* let f = (pair_decl |> get_constructors |> List.hd).constr_name in *)
-      (* add_constraint env (mk_term (mk_eq e.t (mk_app (mk_constructor f (ty_to_sort tup_ty)) [ie; je]))) ; *)
       trans_map := EdgeMap.add (i, j) trans !trans_map )
     edges ;
-  (* compute the labelling as the merge of all inputs *)
+  
+  (* Compute the labelling as the merge of all inputs *)
   let labelling = ref Graph.VertexMap.empty in
   for i = 0 to UInt32.to_int nodes - 1 do
     let init = Graph.VertexMap.find (UInt32.of_int i) !init_map in
@@ -877,7 +877,6 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
           in
           add_constraint env (mk_term (mk_eq trans.t x.t));
           add_constraint env (mk_term (mk_eq acc.t y.t));
-          (* add_constraint env (mk_term (mk_eq n.t (mk_int i))); *)
           merge_result )
         init in_edges
     in
@@ -913,221 +912,7 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
   add_symbolic_constraints env (get_requires ds) (env.symbolics (*@ sym_vars*));
   env
 
-exception Model_conversion
-
-let is_num (c: char) =
-  c = '0' || c = '1' || c = '2' || c = '3' || c = '4' || c = '5'
-  || c = '6' || c = '7' || c = '8' || c = '9'
-
-let grab_int str : int * string =
-  let len = String.length str in
-  let idx = ref (-1) in
-  for i = 0 to len - 1 do
-    let c = str.[i] in
-    if not (is_num c) && !idx < 0 then idx := i
-  done ;
-  let num = String.sub str 0 !idx in
-  let remaining = String.sub str !idx (len - !idx) in
-  (int_of_string num, remaining)
-
-let starts_with s1 s2 =
-  let len1 = String.length s1 in
-  let len2 = String.length s2 in
-  if len1 < len2 then false
-  else
-    let pfx = String.sub s1 0 len2 in
-    pfx = s2
-
-let rec parse_custom_type s : ty * string =
-  let len = String.length s in
-  if starts_with s "Option" then
-    let remaining = String.sub s 6 (len - 6) in
-    let ty, r = parse_custom_type remaining in
-    (TOption ty, r)
-  else if starts_with s "Pair" then
-    let remaining = String.sub s 4 (len - 4) in
-    let count, remaining = grab_int remaining in
-    let tys, r = parse_list count remaining in
-    (TTuple tys, r)
-  else if starts_with s "Int" then
-    let remaining =
-      if len = 3 then "" else String.sub s 3 (len - 3)
-    in
-    (TInt 32, remaining)
-  else if starts_with s "Bool" then
-    let remaining =
-      if len = 4 then "" else String.sub s 4 (len - 4)
-    in
-    (TBool, remaining)
-  else failwith (Printf.sprintf "parse_custom_type: %s" s)
-
-and parse_list n s =
-  if n = 0 then ([], s)
-  else
-    let ty, s = parse_custom_type s in
-    let rest, s = parse_list (n - 1) s in
-    (ty :: rest, s)
-
-(*let sort_to_ty s =
-  let rec aux str =
-    let has_parens = String.sub str 0 1 = "(" in
-    let str =
-      if has_parens then String.sub str 1 (String.length str - 2)
-      else str
-    in
-    let strs = String.split_on_char ' ' str in
-    match strs with
-    | ["Int"] -> TInt 32
-    | ["Bool"] -> TBool
-    | ["Array"; k; v] -> TMap (aux k, aux v)
-    | [x] ->
-        let ty, _ = parse_custom_type x in
-        ty
-    | _ -> failwith "cannot convert SMT sort to type"
-  in
-  aux (Sort.to_string s)
-
-let rec z3_to_value m (e: Expr.expr) : Syntax.value =
-  try
-    let i = UInt32.of_string (Expr.to_string e) in
-    vint i
-  with _ ->
-    let f = Expr.get_func_decl e in
-    let es = Expr.get_args e in
-    let name = FuncDecl.get_name f |> Symbol.to_string in
-    match (name, es) with
-    | "true", _ -> vbool true
-    | "false", _ -> vbool false
-    | "some", [e1] -> voption (Some (z3_to_value m e1))
-    | "none", _ -> voption None
-    | "store", [e1; e2; e3] -> (
-        let v1 = z3_to_value m e1 in
-        let v2 = z3_to_value m e2 in
-        let v3 = z3_to_value m e3 in
-        match v1.v with
-        | VMap m -> vmap (BddMap.update m v2 v3)
-        | _ -> raise Model_conversion )
-    | "const", [e1] -> (
-        let sort = Z3.Expr.get_sort e in
-        let ty = sort_to_ty sort in
-        match get_inner_type ty with
-        | TMap (kty, _) ->
-            let e1 = z3_to_value m e1 in
-            vmap (BddMap.create ~key_ty:kty e1)
-        | _ -> failwith "internal error (z3_to_exp)" )
-    | "as-array", _ -> (
-        let x = FuncDecl.get_parameters f |> List.hd in
-        let f = FuncDecl.Parameter.get_func_decl x in
-        let y = Model.get_func_interp m f in
-        match y with
-        | None -> failwith "impossible"
-        | Some x ->
-            let e = Model.FuncInterp.get_else x in
-            let e = z3_to_exp m e in
-            let env = {ty= Env.empty; value= Env.empty} in
-            let key = Var.create "key" in
-            let func =
-              {arg= key; argty= None; resty= None; body= e}
-            in
-            vclosure (env, func) )
-    | _ ->
-        if String.length name >= 7 && String.sub name 0 7 = "mk-pair"
-        then
-          let es = List.map (z3_to_value m) es in
-          vtuple es
-        else raise Model_conversion
-
-and z3_to_exp m (e: Expr.expr) : Syntax.exp =
-  try e_val (z3_to_value m e) with _ ->
-    try
-      let f = Expr.get_func_decl e in
-      let es = Expr.get_args e in
-      let name = FuncDecl.get_name f |> Symbol.to_string in
-      match (name, es) with
-      | "ite", [e1; e2; e3] ->
-          eif (z3_to_exp m e1) (z3_to_exp m e2) (z3_to_exp m e3)
-      | "not", [e1] -> eop Not [z3_to_exp m e1]
-      | "and", e :: es ->
-          let base = z3_to_exp m e in
-          List.fold_left
-            (fun e1 e2 -> eop And [e1; z3_to_exp m e2])
-            base es
-      | "or", e :: es ->
-          let base = z3_to_exp m e in
-          List.fold_left
-            (fun e1 e2 -> eop Or [e1; z3_to_exp m e2])
-            base es
-      | "=", [e1; e2] -> eop UEq [z3_to_exp m e1; z3_to_exp m e2]
-      | _ -> raise Model_conversion
-    with _ -> evar (Var.create "key") *)
-
 type smt_result = Unsat | Unknown | Sat of Solution.t
-
-(* let rec z3_to_value m (e: Expr.expr) : Syntax.value = *)
-(*   try *)
-(*     let i = UInt32.of_string (Expr.to_string e) in *)
-(*     vint i *)
-(*   with _ -> *)
-(*         let f = Expr.get_func_decl e in *)
-(*         let es = Expr.get_args e in *)
-(*         let name = FuncDecl.get_name f |> Symbol.to_string in *)
-(*         match (name, es) with *)
-(*         | "true", _ -> vbool true *)
-(*         | "false", _ -> vbool false *)
-(*         | "some", [e1] -> voption (Some (z3_to_value m e1)) *)
-(*         | "none", _ -> voption None *)
-(*         (\* | "store", [e1; e2; e3] -> ( *)
-(*          *   let v1 = z3_to_value m e1 in *)
-(*          *   let v2 = z3_to_value m e2 in *)
-(*          *   let v3 = z3_to_value m e3 in *)
-(*          *   match v1.v with *)
-(*          *   | VMap m -> vmap (BddMap.update m v2 v3) *)
-(*          *   | _ -> raise Model_conversion ) *)
-(*          * | "const", [e1] -> ( *)
-(*          *   let sort = Z3.Expr.get_sort e in *)
-(*          *   let ty = sort_to_ty sort in *)
-(*          *   match get_inner_type ty with *)
-(*          *   | TMap (kty, _) -> *)
-(*          *      let e1 = z3_to_value m e1 in *)
-(*          *      vmap (BddMap.create ~key_ty:kty e1) *)
-(*          *   | _ -> failwith "internal error (z3_to_exp)" ) *)
-(*          * | "as-array", _ -> ( *)
-(*          *   let x = FuncDecl.get_parameters f |> List.hd in *)
-(*          *   let f = FuncDecl.Parameter.get_func_decl x in *)
-(*          *   let y = Model.get_func_interp m f in *)
-(*          *   match y with *)
-(*          *   | None -> failwith "impossible" *)
-(*          *   | Some x -> *)
-(*          *      let e = Model.FuncInterp.get_else x in *)
-(*          *      let e = z3_to_exp m e in *)
-(*          *      let env = {ty= Env.empty; value= Env.empty} in *)
-(*          *      let key = Var.create "key" in *)
-(*          *      let func = *)
-(*          *        {arg= key; argty= None; resty= None; body= e} *)
-(*          *      in *)
-(*          *      vclosure (env, func) ) *\) *)
-(*         | _ -> *)
-(*            if String.length name >= 7 && String.sub name 0 6 = "mkPair" *)
-(*            then *)
-(*              let es = List.map (z3_to_value m) es in *)
-(*              vtuple es *)
-(*            else raise Model_conversion *)
-                                         
-(* let eval ctx m str ty = *)
-(*   let l = Expr.mk_const_s ctx str (get_sort m ty) in *)
-(*   let e = Model.eval m l true |> oget in *)
-(*   z3_to_value m e *)
-
-(* let build_symbolic_assignment ctx symbolics m = *)
-(*   let sym_map = ref StringMap.empty in *)
-(*   List.iter *)
-(*     (fun (x, e) -> *)
-(*       let ty = match e with Ty ty -> ty | Exp e -> oget e.ety in *)
-(*       let name = Var.to_string x in *)
-(*       let e = eval ctx m name ty in *)
-(*       sym_map := StringMap.add name e !sym_map ) *)
-(*     symbolics ; *)
-(*   !sym_map *)
 
 (** Emits the code that evaluates the model returned by Z3. *)  
 let eval_model (symbolics: (Var.t * Syntax.ty_or_exp) list)
@@ -1224,6 +1009,10 @@ let time_profile msg (f: unit -> 'a) : 'a =
   let finish_time = Sys.time () in
   Printf.printf "%s took: %f secs to complete\n%!" msg (finish_time -. start_time);
   res
+
+let printQuery (chan: out_channel Lazy.t) (msg: string) =
+  let chan = Lazy.force chan in
+  Printf.fprintf chan "%s" msg; flush chan
   
 let solve info query chan ?symbolic_vars ?(params=[]) ds =
   let sym_vars =
@@ -1239,7 +1028,7 @@ let solve info query chan ?symbolic_vars ?(params=[]) ds =
                                   (fun () -> env_to_smt ~verbose:verbose info env) in
   (* let smt_encoding =  env_to_smt ~verbose:verbose env in *)
   if query then
-    ( Printf.fprintf chan "%s" smt_encoding; flush chan);
+    printQuery chan smt_encoding;
   (* start communication with solver process *)
   let solver = start_solver params in
   ask_solver solver smt_encoding;
@@ -1256,6 +1045,7 @@ let solve info query chan ?symbolic_vars ?(params=[]) ds =
      let eassert = get_assert ds in
      let model = eval_model env.symbolics num_nodes eassert in
      let model_question = commands_to_smt verbose info model in
+     printQuery chan model_question;
      (* Printf.printf "%s\n%!" model_question; *)
      ask_solver solver model_question;
      let model = solver |> parse_model in

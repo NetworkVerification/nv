@@ -82,7 +82,7 @@ val getGroupId: abstractionMap -> AbstractNode.t -> abstrId
 val split : abstractionMap -> AbstractNode.t -> abstractionMap
 
 (** Given an abstraction returns the abstract groups *)
-val getAbstractGroups : abstractionMap -> AbstractNode.t list
+val getAbstractGroups : abstractionMap -> (GroupMap.key * AbstractNode.t) list
 
 (** [printAbstractGroups f sep] returns a string with the abstract
    groups created by [f], separated by [sep] *)

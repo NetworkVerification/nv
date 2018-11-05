@@ -13,6 +13,7 @@ open Syntax
 open Typing
 open Abstraction
 open BuildAbstractNetwork
+open Lazy
 
 exception Success
    
@@ -28,8 +29,11 @@ let init_renamer sol =
 let rec apply_all s fs =
   match fs with [] -> s | f :: fs -> apply_all (f s) fs
 
-let smt_query_file (file: string) =
-  open_out (file ^ "-query")
+let smt_query_file =
+  let counter = ref (-1) in
+  fun (file: string) ->
+  incr counter;
+  lazy (open_out (file ^ "-query" ^ (string_of_int !counter)))
 
 type answer =
   | Success of (Solution.t option)
