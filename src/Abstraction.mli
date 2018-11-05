@@ -13,7 +13,7 @@ val partialEvalMerge: Graph.t -> Syntax.exp -> (Graph.Vertex.t, int * Syntax.exp
 val findAbstraction :
   Graph.t -> (Graph.Edge.t, int * Syntax.exp) Hashtbl.t ->
   (Graph.Vertex.t, int * Syntax.exp) Hashtbl.t ->
-  Graph.Vertex.t BatSet.t -> AbstractionMap.abstractionMap
+  Graph.VertexSet.t -> AbstractionMap.abstractionMap
 
 module FailuresAbstraction :
   sig  
@@ -23,7 +23,7 @@ module FailuresAbstraction :
     val refineForFailures :
       Graph.t ->
       AbstractionMap.abstractionMap ->
-      (Graph.Edge.t, Var.t) BatMap.t ->
+      Var.t Graph.EdgeMap.t ->
       Solution.t ->
       int ->
       AbstractionMap.abstractionMap option
@@ -39,10 +39,10 @@ sig
                              (Graph.Edge.t, int * Syntax.exp) Hashtbl.t ->
                              (Graph.Vertex.t, Syntax.exp) Hashtbl.t ->
                              (Graph.Vertex.t, Syntax.exp) Hashtbl.t ->
-                             Graph.Vertex.t BatSet.t ->
+                             Graph.VertexSet.t ->
                              Syntax.ty ->
                              (Syntax.var * Syntax.ty_or_exp) list ->
-                             int -> ((Graph.Edge.t, Var.t) BatMap.t) * Syntax.declarations
+                             int -> (Var.t Graph.EdgeMap.t) * Syntax.declarations
 
   (** [abstractToConcreteEdge g f ehat] returns the set of concrete
    edges that map to the abstract edge [ehat] *)

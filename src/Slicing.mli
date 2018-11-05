@@ -9,15 +9,21 @@ type network =
   }
 
 (** The type of network prefixes *)
-type prefix = Unsigned.UInt32.t * Unsigned.UInt32.t
+module Prefix : Map.OrderedType with type t = Unsigned.UInt32.t * Unsigned.UInt32.t
 
-val printPrefix : prefix -> string
+module PrefixSet : BatSet.S with type elt = Prefix.t
 
-val printPrefixes : prefix BatSet.t -> string
+module PrefixMap : BatMap.S with type key = Prefix.t
+
+module PrefixSetSet : BatSet.S with type elt = PrefixSet.t
+     
+val printPrefix : Prefix.t -> string
+
+val printPrefixes : PrefixSet.t -> string
 
 (** [relevantPrefixes assertTable] returns the prefixes that are used by the
    assertion function*)
-val relevantPrefixes: (Unsigned.UInt32.t, Syntax.exp) Hashtbl.t -> prefix BatSet.t
+val relevantPrefixes: (Unsigned.UInt32.t, Syntax.exp) Hashtbl.t -> PrefixSet.t
 
 (** [partialEvalInit network] returns a table that maps each node to
    its initial state function *)
@@ -31,5 +37,6 @@ val partialEvalAssert: network -> (Unsigned.UInt32.t, Syntax.exp) Hashtbl.t
    with the property that each node in the set announces this
    prefix. *)
 val findInitialSlices: (Unsigned.UInt32.t, Syntax.exp) Hashtbl.t ->
-                       (prefix, Graph.Vertex.t BatSet.t) BatMap.t
+                       (Graph.VertexSet.t) PrefixMap.t
 
+val groupPrefixesByVertices: Graph.VertexSet.t PrefixMap.t -> PrefixSetSet.t

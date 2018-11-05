@@ -36,7 +36,8 @@ type answer =
   | CounterExample of Solution.t
   
 let run_smt file cfg info ds =
-  let fs = [init_renamer] in
+  (* let fs = [init_renamer] in *)
+  let fs = [] in
   let decls = Inline.inline_declarations info ds in
   let decls, f = Renaming.alpha_convert_declarations decls in
   let fs = f :: fs in
@@ -71,7 +72,7 @@ let run_test cfg info ds =
       let ds, f = Renaming.alpha_convert_declarations ds in
       let fs = f :: fs in
       let ds = Inline.inline_declarations info ds in
-      (Quickcheck.check_smart info ds ~iterations:cfg.ntests, fs)
+      (Quickcheck.check_random ds ~iterations:cfg.ntests, fs) (*used to be check_smart *)
     else (Quickcheck.check_random ds ~iterations:cfg.ntests, fs)
   in
   match sol with
@@ -151,11 +152,11 @@ let compress info decls cfg networkOp =
   let slices = Slicing.findInitialSlices initMap in
   (* keep only the relevant slices, i.e. prefixes that are used by the assertion *)
   let relevantSlices =
-    BatMap.filter (fun pre _ -> BatSet.mem pre assertionPrefixes) slices in
+    PrefixMap.filter (fun pre _ -> PrefixSet.mem pre assertionPrefixes) slices in
   (* each set of prefixes represents an SRP *)
-  let relevantSliceGroups = Collections.groupKeysByValue relevantSlices in
+  let relevantSliceGroups = Slicing.groupPrefixesByVertices relevantSlices in
 
-  let rec loop (f: AbstractionMap.abstractionMap) (ds: Graph.Vertex.t BatSet.t) =
+  let rec loop (f: AbstractionMap.abstractionMap) (ds: Graph.VertexSet.t) =
     (* build abstract network *)
     let failVars, decls = buildAbstractNetwork f network.graph mergeMap transMap
                                                initMap assertMap ds
@@ -176,17 +177,16 @@ let compress info decls cfg networkOp =
        | Some f' ->
           loop f' ds
   in
-  Printf.printf "Relevant slices size: %d\n%!" (BatSet.cardinal relevantSliceGroups);
-  BatSet.iter
+  PrefixSetSet.iter
     (fun prefixes ->
-      Printf.printf "Checking SRP for prefixes: %s\n%!" (Slicing.printPrefixes prefixes);
+      Console.show_message (Slicing.printPrefixes prefixes)
+                           Console.T.Green "Checking SRP for prefixes";
       (* get a prefix from this class of prefixes *)
-      let pre = BatSet.min_elt prefixes in
+      let pre = PrefixSet.min_elt prefixes in
       (* find the nodes this class is announced from *)
-      let ds = BatMap.find pre relevantSlices in
+      let ds = PrefixMap.find pre relevantSlices in
       (* find the initial abstraction function for these destinations *)
       let f = Abstraction.findAbstraction network.graph transMap mergeMap ds in
-      Printf.printf "found abstraction\n%!";
       (* run_simulator cfg info decls  *)
       loop f ds) relevantSliceGroups
   

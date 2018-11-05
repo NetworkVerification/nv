@@ -1,5 +1,6 @@
 open Syntax
 open Unsigned
+open BatSet
 
 type network =
   { attr_type : Syntax.ty;
@@ -10,13 +11,21 @@ type network =
     graph     : Graph.t;
   }
    
-type prefix = Unsigned.UInt32.t * Unsigned.UInt32.t
+module Prefix =
+  struct
+    type t = Unsigned.UInt32.t * Unsigned.UInt32.t
+    let compare = Pervasives.compare
+  end
 
-let printPrefix ((ip, pre) : prefix) =
+module PrefixSet = BatSet.Make(Prefix)
+module PrefixSetSet = BatSet.Make(PrefixSet)
+module PrefixMap = BatMap.Make(Prefix)
+  
+let printPrefix ((ip, pre) : Prefix.t) =
   Printf.sprintf "(%d, %d)" (UInt32.to_int ip) (UInt32.to_int pre)
 
-let printPrefixes (prefixes : prefix BatSet.t) =
-  "{" ^ BatSet.fold (fun pre acc -> (printPrefix pre) ^ "," ^ acc) prefixes "}"
+let printPrefixes (prefixes : PrefixSet.t) =
+  "{" ^ PrefixSet.fold (fun pre acc -> (printPrefix pre) ^ "," ^ acc) prefixes "}"
             
 let partialEvalOverNodes (g : Graph.t) (e: Syntax.exp) =
   let tbl = Hashtbl.create (Unsigned.UInt32.to_int (Graph.num_vertices g)) in
@@ -27,7 +36,7 @@ let partialEvalOverNodes (g : Graph.t) (e: Syntax.exp) =
   tbl
 
 (* deprecated *)
-let get_prefixes_from_val (dictv : Syntax.value) : prefix list =
+let get_prefixes_from_val (dictv : Syntax.value) : Prefix.t list =
   match dictv.v with
   | VMap dict ->
      List.map (fun (prefixv, _) ->
@@ -40,16 +49,17 @@ let get_prefixes_from_val (dictv : Syntax.value) : prefix list =
   | _ -> failwith "value is not a dict"
 
 let build_prefix_map (u : Unsigned.UInt32.t)
-                     (prefixes: prefix BatSet.t)
-                     (acc : (prefix, Graph.Vertex.t BatSet.t) BatMap.t):
-      (prefix, Graph.Vertex.t BatSet.t) BatMap.t =
-  BatSet.fold (fun pre acc ->
-      BatMap.modify_def BatSet.empty pre (fun us -> BatSet.add u us) acc)
-              prefixes acc
+                     (prefixes: PrefixSet.t)
+                     (acc : Graph.VertexSet.t PrefixMap.t):
+      Graph.VertexSet.t PrefixMap.t =
+  PrefixSet.fold (fun pre acc ->
+      PrefixMap.modify_def Graph.VertexSet.empty pre
+                           (fun us -> Graph.VertexSet.add u us) acc)
+                 prefixes acc
 
 (* Finds the prefixes used by an expression *)
-let get_prefixes_from_expr (expr: Syntax.exp) : prefix BatSet.t =
-  let prefixes = ref BatSet.empty in
+let get_prefixes_from_expr (expr: Syntax.exp) : PrefixSet.t =
+  let prefixes = ref PrefixSet.empty in
   Visitors.iter_exp (fun e ->
       match e.e with
       | EOp (UEq, [var; pre]) when is_value pre ->
@@ -61,7 +71,7 @@ let get_prefixes_from_expr (expr: Syntax.exp) : prefix BatSet.t =
                  | VTuple [v1;v2] ->
                     (match v1.v, v2.v with
                      | VUInt32 ip, VUInt32 p ->
-                        prefixes := BatSet.add (ip, p) !prefixes
+                        prefixes := PrefixSet.add (ip, p) !prefixes
                      | _ -> ())
                  | _ -> ()
                end
@@ -73,7 +83,7 @@ let get_prefixes_from_expr (expr: Syntax.exp) : prefix BatSet.t =
 let relevantPrefixes (assertionTable : (Unsigned.UInt32.t, Syntax.exp) Hashtbl.t) =
   Hashtbl.fold (fun _ eu acc ->
       let prefixes = get_prefixes_from_expr eu in
-      BatSet.union prefixes acc) assertionTable BatSet.empty
+      PrefixSet.union prefixes acc) assertionTable PrefixSet.empty
 
 let partialEvalInit (n : network) =
   partialEvalOverNodes n.graph n.init
@@ -81,8 +91,8 @@ let partialEvalInit (n : network) =
 let partialEvalAssert (n : network) =
   partialEvalOverNodes n.graph n.assertion
 
-let get_prefixes_from_expr (expr: Syntax.exp) : prefix BatSet.t =
-  let prefixes = ref BatSet.empty in
+let get_prefixes_from_expr (expr: Syntax.exp) : PrefixSet.t =
+  let prefixes = ref PrefixSet.empty in
   Visitors.iter_exp (fun e ->
       match e.e with
       | EOp (UEq, [var; pre]) when is_value pre ->
@@ -94,7 +104,7 @@ let get_prefixes_from_expr (expr: Syntax.exp) : prefix BatSet.t =
                  | VTuple [v1;v2] ->
                     (match v1.v, v2.v with
                      | VUInt32 ip, VUInt32 p ->
-                        prefixes := BatSet.add (ip, p) !prefixes
+                        prefixes := PrefixSet.add (ip, p) !prefixes
                      | _ -> ())
                  | _ -> ()
                end
@@ -108,8 +118,18 @@ let findInitialSlices initTbl =
   Hashtbl.fold
     (fun u initu acc ->
       let prefixes = get_prefixes_from_expr initu in
-      build_prefix_map u prefixes acc) initTbl BatMap.empty
+      build_prefix_map u prefixes acc) initTbl PrefixMap.empty
 
-(* let sliceAssertion (prefixes : prefix BatSet.t) *)
+let groupPrefixesByVertices (umap: Graph.VertexSet.t PrefixMap.t) : PrefixSetSet.t =
+  let reverseMap : PrefixSet.t Graph.VertexSetMap.t =
+    PrefixMap.fold (fun u vhat acc ->
+        Graph.VertexSetMap.modify_opt vhat (fun us -> match us with
+                                          | None -> Some (PrefixSet.singleton u)
+                                          | Some us -> Some (PrefixSet.add u us)) acc)
+                 umap Graph.VertexSetMap.empty in
+  Graph.VertexSetMap.fold (fun _ v acc -> PrefixSetSet.add v acc)
+                       reverseMap PrefixSetSet.empty
+  
+(* let sliceAssertion (prefixes : PrefixSet.t) *)
 (*                    (assertionTable : (Unsigned.UInt32.t, Syntax.exp) Hashtbl.t) = *)
   

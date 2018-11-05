@@ -1,10 +1,12 @@
 open Unsigned
    
 module AbstractNode :
-  sig
-    type t = Graph.Vertex.t BatSet.t 
-    val printAbstractNode : t -> string
-    val randomSplit : t -> t * t
+sig
+  include module type of Graph.VertexSet
+  val toSet : t -> Graph.VertexSet.t
+  val fromSet : Graph.VertexSet.t -> t
+  val printAbstractNode : t -> string
+  val randomSplit : t -> t * t
   end
 module UInts : sig type t = UInt32.t val compare : t -> t -> int end
 module GroupMap :

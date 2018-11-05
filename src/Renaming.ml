@@ -1,9 +1,9 @@
 open Collections
 open Syntax
 
-   
-let map_back bmap x y =
-  bmap := StringMap.add (Var.to_string x) (Var.to_string y) !bmap
+(* Maps fresh names back to the original names *)
+let map_back bmap new_name old_name =
+  bmap := StringMap.add (Var.to_string new_name) (Var.to_string old_name) !bmap
 
 let fresh x = Var.fresh (Var.to_string x)
 
@@ -78,13 +78,13 @@ let alpha_convert_declaration bmap (env: Var.t Env.t)
       (env, DLet (y, tyo, e))
   | DSymbolic (x, Exp e) ->
       let y = fresh x in
-      map_back bmap x y ;
+      map_back bmap y x ;
       let env = Env.update env x y in
       let e = alpha_convert_exp env e in
       (env, DSymbolic (y, Exp e))
   | DSymbolic (x, Ty ty) ->
       let y = fresh x in
-      map_back bmap x y ;
+      map_back bmap y x ;
       let env = Env.update env x y in
       (env, DSymbolic (y, Ty ty))
   | DMerge e -> (env, DMerge (alpha_convert_exp env e))

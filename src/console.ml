@@ -13,7 +13,7 @@ let get_position_opt idx info =
 let show_message msg color label =
   T.print_string [] "\n" ;
   T.print_string [T.Foreground color; T.Bold] (label ^ ": ") ;
-  Printf.printf "%s\n" msg ;
+  Printf.printf "%s" msg ;
   T.print_string [] "\n"
 
 let error msg =

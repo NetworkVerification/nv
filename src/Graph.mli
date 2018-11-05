@@ -10,11 +10,17 @@ module Vertex :
 
 module Edge : Map.OrderedType with type t = UInt32.t * UInt32.t
 
-module VertexMap : Map.S with type key = Vertex.t
+val printEdge : Edge.t -> string
+     
+module VertexMap : BatMap.S with type key = Vertex.t
 
-module VertexSet : Set.S with type elt = Vertex.t
+module VertexSet : BatSet.S with type elt = Vertex.t
+module VertexSetSet : BatSet.S with type elt = VertexSet.t
+module VertexSetMap : BatMap.S with type key = VertexSet.t
 
 module EdgeSet : Set.S with type elt = Edge.t
+
+module EdgeMap : BatMap.S with type key = Edge.t
 
 (* VertexMap auxiliaries *)
 
@@ -46,7 +52,7 @@ val num_vertices : t -> UInt32.t
 val fold_vertices : (Vertex.t -> 'a -> 'a) -> UInt32.t -> 'a -> 'a
   
 (** Vertices in the adjacency graph *)
-val get_vertices : t -> Vertex.t BatSet.t
+val get_vertices : t -> VertexSet.t
   
 (* edges in the graph *)
 

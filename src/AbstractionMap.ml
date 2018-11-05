@@ -4,7 +4,11 @@ open Vertex
    
 module AbstractNode =
   struct
-    type t = Vertex.t BatSet.t
+    include Graph.VertexSet
+
+    let toSet x = x
+    let fromSet x = x
+                  
     let printAbstractNode (us : t) =
       let rec printAux lst acc =
         match lst with
@@ -12,15 +16,15 @@ module AbstractNode =
         | [u] -> printAux [] ((Printf.sprintf "%s" (printVertex u)) :: acc)
         | u :: lst -> printAux lst ((Printf.sprintf "%s," (printVertex u)) :: acc)
       in
-      String.concat "" (List.rev (printAux (BatSet.elements us) ["{"]))
+      String.concat "" (List.rev (printAux (VertexSet.elements us) ["{"]))
 
     let randomSplit (us : t) : (t * t) =
       let u1, u2, _ =
-        BatSet.fold (fun u (s1,s2,b) ->
+        VertexSet.fold (fun u (s1,s2,b) ->
             if b then
-              (BatSet.add u s1, s2, false)
+              (VertexSet.add u s1, s2, false)
             else
-              (s1, BatSet.add u s2, true)) us (BatSet.empty, BatSet.empty, true)
+              (s1, VertexSet.add u s2, true)) us (VertexSet.empty, VertexSet.empty, true)
       in
       (u1, u2)
   end
@@ -44,7 +48,7 @@ let getId (f: abstractionMap) (u: Vertex.t) : abstrId =
   VertexMap.find u (f.groupId)
 
 let getIdPartial (f: abstractionMap) (u: Vertex.t) : abstrId option =
-  VertexMap.find_opt u (f.groupId)
+  VertexMap.Exceptionless.find u (f.groupId)
 
 let getGroupById (f: abstractionMap) (idx: abstrId) : AbstractNode.t =
   GroupMap.find idx (f.absGroups)
@@ -53,7 +57,7 @@ let getGroup (f: abstractionMap) (u: Vertex.t) : AbstractNode.t =
   getGroupById f (getId f u)
 
 let getGroupRepresentative (f: abstractionMap) (u: AbstractNode.t) : Vertex.t =
-  BatSet.min_elt u
+  VertexSet.min_elt u
 
 let getGroupRepresentativeId (f: abstractionMap) (uhat: abstrId) : Vertex.t =
   getGroupRepresentative f (getGroupById f uhat)
@@ -66,8 +70,8 @@ let partitionNode (f: abstractionMap) (newId: abstrId) (u: Vertex.t) : unit =
   let _ =  match getIdPartial f u with
     | Some idx ->
        let us = getGroupById f idx in
-       let newUs = BatSet.remove u us in
-       if BatSet.is_empty newUs then
+       let newUs = VertexSet.remove u us in
+       if VertexSet.is_empty newUs then
          f.absGroups <- GroupMap.remove idx (f.absGroups)
        else
          f.absGroups <- GroupMap.add idx newUs (f.absGroups)
@@ -78,7 +82,7 @@ let partitionNode (f: abstractionMap) (newId: abstrId) (u: Vertex.t) : unit =
 (* Removes the nodes us from their current abstract group and adds
    them to a new abstract group designated by identifier i*)
 let partitionNodes (f: abstractionMap) (i: abstrId) (us: AbstractNode.t) : unit =
-  BatSet.iter (fun u -> partitionNode f i u) us;
+  VertexSet.iter (fun u -> partitionNode f i u) us;
   f.absGroups <- GroupMap.add i us (f.absGroups)
 
 let split (f: abstractionMap) (us: AbstractNode.t) : abstractionMap =
@@ -112,7 +116,7 @@ let normalize (f: abstractionMap) =
   let (nextIdN, groupIdN, absGroupsN) =
     GroupMap.fold (fun id us (nextIdN, groupIdN, absGroupsN) ->
         (UInt32.add nextIdN UInt32.one,
-         BatSet.fold (fun u acc -> VertexMap.add u nextIdN acc) us groupIdN,
+         VertexSet.fold (fun u acc -> VertexMap.add u nextIdN acc) us groupIdN,
          GroupMap.add nextIdN (getGroupById f id) absGroupsN))
                    f.absGroups (UInt32.zero, VertexMap.empty, GroupMap.empty)
   in

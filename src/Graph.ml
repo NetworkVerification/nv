@@ -9,8 +9,10 @@ module Vertex = struct
   let compare = UInt32.compare
 end
 
-module VertexMap = Map.Make (Vertex)
-module VertexSet = Set.Make(Vertex)
+module VertexMap = BatMap.Make (Vertex)
+module VertexSet = BatSet.Make(Vertex)
+module VertexSetSet : BatSet.S with type elt = VertexSet.t = BatSet.Make(VertexSet)
+module VertexSetMap : BatMap.S with type key = VertexSet.t = BatMap.Make(VertexSet)
 
 module Edge = struct
   type t = Vertex.t * Vertex.t
@@ -20,7 +22,11 @@ module Edge = struct
     else UInt32.compare w1 w2
 end
 
+let printEdge (e : Edge.t) =
+  Printf.sprintf "<%d,%d>\n" (UInt32.to_int (fst e)) (UInt32.to_int (snd e)); 
+            
 module EdgeSet = Set.Make(Edge)
+module EdgeMap = BatMap.Make(Edge)
             
 (* OCaml 4.06 contains find_opt and update built in. upgrade compiler. *)
 let find_opt v m =
@@ -68,8 +74,8 @@ let fold_vertices (f: Vertex.t -> 'a -> 'a) i (acc: 'a) : 'a =
    the ones that have an outgoing edge.*)
 let get_vertices (m, i) =
   let rec loop j =
-    if i = j then BatSet.empty
-    else BatSet.add j (loop (UInt32.add j UInt32.one))
+    if i = j then VertexSet.empty
+    else VertexSet.add j (loop (UInt32.add j UInt32.one))
   in
   loop UInt32.zero
 

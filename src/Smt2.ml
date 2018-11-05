@@ -1256,7 +1256,7 @@ let solve info query chan ?symbolic_vars ?(params=[]) ds =
      let eassert = get_assert ds in
      let model = eval_model env.symbolics num_nodes eassert in
      let model_question = commands_to_smt verbose info model in
-     Printf.printf "%s\n%!" model_question;
+     (* Printf.printf "%s\n%!" model_question; *)
      ask_solver solver model_question;
      let model = solver |> parse_model in
      (match model with
@@ -1268,14 +1268,4 @@ let solve info query chan ?symbolic_vars ?(params=[]) ds =
   | UNKNOWN -> Unknown
   | _ -> failwith "unexpected answer from solver\n"
   
-    
-  (* let (solver, ctx) = init_solver () in *)
-  (* let parsed_query = Z3.SMT.parse_smtlib2_string ctx smt_query [] [] [] [] in *)
-  (* Solver.add solver [parsed_query]; *)
-  (* match Solver.check solver [] with
-   * | UNSATISFIABLE -> Unsat
-   * | SATISFIABLE ->
-   *    let m = Solver.get_model solver in
-   *    build_result m ctx env.symbolics aty num_nodes eassert
-   * | UNKNOWN -> Unknown *)
   

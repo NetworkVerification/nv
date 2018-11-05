@@ -103,14 +103,14 @@ let add_blocking_require info ds map var_map =
   let ds = Typing.infer_declarations info ds in
   ds
 
-let smart_symbolics info prog_constants var_map ds =
-  (* print_endline (Printing.declarations_to_string ds) ; *)
-  let map = Smt.symvar_assign ds in
-  match map with
-  | None -> (ds, None)
-  | Some map ->
-      let ds' = List.map (smart_symbolic prog_constants map) ds in
-      (add_blocking_require info ds map var_map, Some ds')
+(* let smart_symbolics info prog_constants var_map ds = *)
+(*   (\* print_endline (Printing.declarations_to_string ds) ; *\) *)
+(*   let map = Smt.symvar_assign ds in *)
+(*   match map with *)
+(*   | None -> (ds, None) *)
+(*   | Some map -> *)
+(*       let ds' = List.map (smart_symbolic prog_constants map) ds in *)
+(*       (add_blocking_require info ds map var_map, Some ds') *)
 
 type check_stats = {iterations: int; num_rejected: int}
 
@@ -134,11 +134,11 @@ let check_random ds ~iterations =
   let info = {decls= ds; iterations; num_rejected; generator} in
   check info iterations num_rejected
 
-let check_smart info ds ~iterations =
-  let prog_constants = collect_all_values ds in
-  let num_rejected = ref 0 in
-  let generator ds =
-    smart_symbolics info prog_constants (var_map ds) ds
-  in
-  let info = {decls= ds; iterations; num_rejected; generator} in
-  check info iterations (ref 0)
+(* let check_smart info ds ~iterations = *)
+(*   let prog_constants = collect_all_values ds in *)
+(*   let num_rejected = ref 0 in *)
+(*   let generator ds = *)
+(*     smart_symbolics info prog_constants (var_map ds) ds *)
+(*   in *)
+(*   let info = {decls= ds; iterations; num_rejected; generator} in *)
+(*   check info iterations (ref 0) *)
