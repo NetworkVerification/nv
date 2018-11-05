@@ -42,6 +42,6 @@ let make_test file =
 
 (* Name the test cases and group them together *)
 let tests =
-  "Test_BDDs"
+  "Test_end_to_end"
   >:::
   List.map make_test files_to_test
