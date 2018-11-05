@@ -594,19 +594,25 @@ module FailuresAbstraction =
       (* Collections.StringMap.iter (fun k _ -> Printf.printf "symb: %s\n" k) sol.symbolics; *)
       (* EdgeMap.iter (fun e k -> Printf.printf "edge %d,%d %s\n" (UInt32.to_int (fst e)) *)
       (*                                        (UInt32.to_int (snd e)) (Var.to_string k)) failVars; *)
-      let failures =
-        EdgeMap.fold (fun edge fvar acc ->
+
+      (* get set of failures, and also build abstract graph useful for
+         splitting, at least until we can get forwarding information
+         in labels *)
+      let failures, agraph =
+        EdgeMap.fold (fun edge fvar (acc, ag) ->
             let bv = Collections.StringMap.find (Var.to_string fvar) sol.symbolics in
             match bv.v with
             | VBool b ->
                if b then
                  begin
                    Printf.printf "failed: %s\n" (Graph.printEdge edge); 
-                   EdgeSet.add edge acc
+                   (EdgeSet.add edge acc, Graph.add_edge ag edge)
                  end
-                   else acc
-            | _ -> failwith "This should be a boolean variable") failVars EdgeSet.empty in
-
+               else (acc, Graph.add_edge ag edge)
+            | _ -> failwith "This should be a boolean variable") failVars
+          (EdgeSet.empty, Graph.create (AbstractionMap.size f |> UInt32.of_int))
+      in
+      
       let total_failures = EdgeSet.fold (fun ehat acc ->
                                (BuildAbstractNetwork.getEdgeMultiplicity g f ehat) + acc)
                                         failures 0 in

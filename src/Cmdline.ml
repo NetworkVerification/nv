@@ -16,6 +16,8 @@ type t =
   ; no_cutoff: bool                    (** disables mtbdd early termination        *)
   ; inline: bool      [@short "-i"]    (** inline the policy before simulation     *)
   ; compress: int                      (** compress the network for n failures     *)
+  ; split_heuristic: string            (** heuristic with which to split nodes,
+                                        ["random", "neighbor"] *)
   }
 [@@deriving
   show
@@ -39,7 +41,8 @@ let default =
   ; no_caching=false
   ; no_cutoff=false
   ; inline=false
-  ; compress= -1}
+  ; compress= -1
+  ; split_heuristic="random"}
 
 let cfg = ref default 
 
