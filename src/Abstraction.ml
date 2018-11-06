@@ -69,25 +69,25 @@ let refineTopological (f: abstractionMap) (g: Graph.t)
                    (neighbors g u)
   in
   let vmap = AbstractNode.fold (fun u acc -> refineOne u acc) us VertexMap.empty in
-  Printf.printf "The map:\n";
-  VertexMap.iter (fun u vs -> Printf.printf "%d: {" (Integer.to_int u);
-                           (AbsIdSet.iter (fun v -> Printf.printf "%d," (Integer.to_int v))
-                                        vs);
-                           Printf.printf "}\n"
-              ) vmap;
-  Printf.printf "The groups: \n";
-  let groups = (groupVerticesByAbsId vmap) in
-  Graph.VertexSetSet.iter (fun us -> Printf.printf "{";
-                         VertexSet.iter (fun u -> Printf.printf "%d," (Integer.to_int u)) us;
-                         Printf.printf "}\n") groups;
-  Printf.printf "cardinal: %d\n" (VertexSetSet.cardinal groups);
-  Printf.printf "end of iter\n%!";
+  (* Printf.printf "The map:\n"; *)
+  (* VertexMap.iter (fun u vs -> Printf.printf "%d: {" (Integer.to_int u); *)
+  (*                          (AbsIdSet.iter (fun v -> Printf.printf "%d," (Integer.to_int v)) *)
+  (*                                       vs); *)
+  (*                          Printf.printf "}\n" *)
+  (*             ) vmap; *)
+  (* Printf.printf "The groups: \n"; *)
+  (* let groups = (groupVerticesByAbsId vmap) in *)
+  (* Graph.VertexSetSet.iter (fun us -> Printf.printf "{"; *)
+  (*                        VertexSet.iter (fun u -> Printf.printf "%d," (Integer.to_int u)) us; *)
+  (*                        Printf.printf "}\n") groups; *)
+  (* Printf.printf "cardinal: %d\n" (VertexSetSet.cardinal groups); *)
+  (* Printf.printf "end of iter\n%!"; *)
   VertexSetSet.fold (fun us f' -> AbstractionMap.split f' (AbstractNode.fromSet us))
                     (groupVerticesByAbsId vmap) f
 
 let rec abstractionTopological (f: abstractionMap) (g: Graph.t) : abstractionMap =
   let f' = AbstractionMap.fold (fun us facc ->
-               Printf.printf "refining %s\n" (AbstractNode.printAbstractNode us);
+               (* Printf.printf "refining %s\n" (AbstractNode.printAbstractNode us); *)
                if (AbstractNode.cardinal us > 1) then
                  refineTopological facc g us 
                else
@@ -183,13 +183,10 @@ let findAbstraction (graph: Graph.t)
   (* Separate destination nodes from the rest *)
   let f =
     VertexSet.fold (fun d facc ->
-        Printf.printf "splitting %s\n" (Vertex.printVertex d);
         AbstractionMap.split facc (AbstractNode.singleton d))
                    ds (createAbstractionMap graph) in
-  show_message (printAbstractGroups f "\n") T.Blue
-               "Abstract groups: ";
   (* compute the abstraction function *)
-  let f = abstractionTopological f graph (* transMap mergeMap *) in
+  let f = abstraction f graph transMap mergeMap in
   f
 
 (** * Functions related to creating the declarations of an abstract network *)

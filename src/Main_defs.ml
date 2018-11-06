@@ -153,7 +153,6 @@ let compress info decls cfg networkOp =
   
   (* find the prefixes that are relevant to the assertions *)
   let assertionPrefixes = Slicing.relevantPrefixes assertMap in
-  PrefixSet.iter (fun p -> Printf.printf "%s\n" (printPrefix p)) assertionPrefixes;
   (* find where each prefix is announced from *)
   let slices = Slicing.findInitialSlices initMap in
   (* keep only the relevant slices, i.e. prefixes that are used by the assertion *)
