@@ -1,8 +1,11 @@
-PKGS = -package integers -package ounit -package z3
-BUILD = ocamlbuild -use-ocamlfind -use-menhir -r $(PKGS)
+PKGS = -package integers -package oUnit -package z3
+DIRS = src,test
+BUILD = ocamlbuild -use-ocamlfind -use-menhir -r -Is $(DIRS) $(PKGS)
 MLFILES= src/*.ml src/*.mli test/*.ml
 FORMATFILES=$(shell find src/ -name "*.ml" | grep -v Cmdline.ml)
 FORMATFILES+=$(shell find src/ -name "*.mli")
+
+.PHONY: test clean
 
 default:  src/Main
 
@@ -27,7 +30,7 @@ profile: $(MLFILES)
 	$(BUILD) $@.native
 
 test: $(MLFILES)
-	$(BUILD) src/Test.native
+	$(BUILD) test/Test.native
 	./Test.native
 
 run_tests: tests

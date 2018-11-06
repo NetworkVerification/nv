@@ -1,4 +1,3 @@
-open Unsigned
 open Syntax
 open Printing
 open Printf
@@ -29,7 +28,7 @@ let update_tys env tvs tys =
 let rec equal_val v1 v2 =
   match (v1.v, v2.v) with
   | VBool b1, VBool b2 -> b1 = b2
-  | VUInt32 i1, VUInt32 i2 -> UInt32.compare i1 i2 = 0
+  | VInt i1, VInt i2 -> Integer.equal i1 i2
   | VMap m1, VMap m2 -> BddMap.equal m1 m2
   | VTuple vs1, VTuple vs2 -> equal_vals vs1 vs2
   | VOption None, VOption None -> true
@@ -53,12 +52,12 @@ let rec matches p (v: Syntax.value) : Syntax.value Env.t option =
   | PVar x, _ -> Some (Env.bind x v)
   | PBool true, VBool true -> Some Env.empty
   | PBool false, VBool false -> Some Env.empty
-  | PUInt32 i1, VUInt32 i2 ->
-      if UInt32.compare i1 i2 = 0 then Some Env.empty else None
+  | PInt i1, VInt i2 ->
+      if Integer.equal i1 i2 then Some Env.empty else None
   | PTuple ps, VTuple vs -> matches_list ps vs
   | POption None, VOption None -> Some Env.empty
   | POption (Some p), VOption (Some v) -> matches p v
-  | (PBool _ | PUInt32 _ | PTuple _ | POption _), _ -> None
+  | (PBool _ | PInt _ | PTuple _ | POption _), _ -> None
 
 and matches_list ps vs =
   match (ps, vs) with
@@ -147,16 +146,15 @@ and interp_op env ty op es =
   | And, [{v= VBool b1}; {v= VBool b2}] -> vbool (b1 && b2)
   | Or, [{v= VBool b1}; {v= VBool b2}] -> vbool (b1 || b2)
   | Not, [{v= VBool b1}] -> vbool (not b1)
-  | UAdd, [{v= VUInt32 i1}; {v= VUInt32 i2}] ->
-      vint (UInt32.add i1 i2)
+  | UAdd _, [{v= VInt i1}; {v= VInt i2}] ->
+      vint (Integer.add i1 i2)
   | UEq, [v1; v2] ->
       if equal_values ~cmp_meta:false v1 v2 then vbool true
       else vbool false
-  | ULess, [{v= VUInt32 i1}; {v= VUInt32 i2}] ->
-      if UInt32.compare i1 i2 = -1 then vbool true else vbool false
-  | ULeq, [{v= VUInt32 i1}; {v= VUInt32 i2}] ->
-      if not (UInt32.compare i1 i2 = 1) then vbool true
-      else vbool false
+  | ULess _, [{v= VInt i1}; {v= VInt i2}] ->
+      if Integer.lt i1 i2 then vbool true else vbool false
+  | ULeq _, [{v= VInt i1}; {v= VInt i2}] ->
+      if Integer.leq i1 i2 then vbool true else vbool false
   | MCreate, [v] -> (
     match get_inner_type ty with
     | TMap (kty, _) -> vmap (BddMap.create ~key_ty:kty v)
@@ -303,16 +301,15 @@ and interp_op_partial env ty op es =
       | And, [{v= VBool b1}; {v= VBool b2}] -> vbool (b1 && b2)
       | Or, [{v= VBool b1}; {v= VBool b2}] -> vbool (b1 || b2)
       | Not, [{v= VBool b1}] -> vbool (not b1)
-      | UAdd, [{v= VUInt32 i1}; {v= VUInt32 i2}] ->
-         vint (UInt32.add i1 i2)
+      | UAdd _, [{v= VInt i1}; {v= VInt i2}] ->
+         vint (Integer.add i1 i2)
       | UEq, [v1; v2] ->
          if equal_values ~cmp_meta:false v1 v2 then vbool true
          else vbool false
-      | ULess, [{v= VUInt32 i1}; {v= VUInt32 i2}] ->
-         if UInt32.compare i1 i2 = -1 then vbool true else vbool false
-      | ULeq, [{v= VUInt32 i1}; {v= VUInt32 i2}] ->
-         if not (UInt32.compare i1 i2 = 1) then vbool true
-         else vbool false
+      | ULess _, [{v= VInt i1}; {v= VInt i2}] ->
+         if Integer.lt i1 i2 then vbool true else vbool false
+      | ULeq _, [{v= VInt i1}; {v= VInt i2}] ->
+         if Integer.leq i1 i2 then vbool true else vbool false
       | MCreate, [v] -> (
         match get_inner_type ty with
         | TMap (kty, _) -> vmap (BddMap.create ~key_ty:kty v)

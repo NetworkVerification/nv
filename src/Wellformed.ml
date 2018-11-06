@@ -43,7 +43,7 @@ let rec check_closure info (x: VarSet.t) (e: exp) =
   | EVal v -> ()
   | EOp (op, es) ->
       ( match op with
-      | And | Or | Not | UEq | UAdd | ULess | ULeq | USub -> ()
+      | And | Or | Not | UEq | UAdd _ | ULess _ | ULeq _ | USub _ -> ()
       | _ ->
           let msg =
             Printf.sprintf
@@ -79,7 +79,7 @@ let rec check_closure info (x: VarSet.t) (e: exp) =
 
 and pattern_vars (p: pattern) =
   match p with
-  | PWild | PBool _ | PUInt32 _ | POption None -> VarSet.empty
+  | PWild | PBool _ | PInt _ | POption None -> VarSet.empty
   | PVar v -> VarSet.singleton v
   | PTuple ps ->
       List.fold_left

@@ -9,7 +9,7 @@ let fresh x = Var.fresh (Var.to_string x)
 let rec update_pattern (env: Var.t Env.t) (p: pattern) :
     pattern * Var.t Env.t =
   match p with
-  | PWild | PBool _ | PUInt32 _ -> (p, env)
+  | PWild | PBool _ | PInt _ -> (p, env)
   | PVar x ->
       let y = fresh x in
       (PVar y, Env.update env x y)

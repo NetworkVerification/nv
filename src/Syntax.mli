@@ -1,7 +1,8 @@
 open Cudd
-open Unsigned
 
 type index = int
+
+type bitwidth = int
 
 type level = int
 
@@ -11,7 +12,7 @@ type ty =
   | TVar of tyvar ref
   | QVar of tyname
   | TBool
-  | TInt of index
+  | TInt of bitwidth
   | TArrow of ty * ty
   | TTuple of ty list
   | TOption of ty
@@ -25,11 +26,11 @@ type op =
   | And
   | Or
   | Not
-  | UAdd
-  | USub
+  | UAdd of bitwidth
+  | USub of bitwidth
   | UEq
-  | ULess
-  | ULeq
+  | ULess of bitwidth
+  | ULeq of bitwidth
   | MCreate
   | MGet
   | MSet
@@ -41,13 +42,13 @@ type pattern =
   | PWild
   | PVar of var
   | PBool of bool
-  | PUInt32 of UInt32.t
+  | PInt of Integer.t
   | PTuple of pattern list
   | POption of pattern option
 
 type v = private
   | VBool of bool
-  | VUInt32 of UInt32.t
+  | VInt of Integer.t
   | VMap of mtbdd
   | VTuple of value list
   | VOption of value option
@@ -93,8 +94,8 @@ type declaration =
   | DInit of exp
   | DAssert of exp
   | DRequire of exp
-  | DNodes of UInt32.t
-  | DEdges of (UInt32.t * UInt32.t) list
+  | DNodes of Integer.t
+  | DEdges of (Integer.t * Integer.t) list
 
 type declarations = declaration list
 
@@ -102,7 +103,7 @@ type declarations = declaration list
 
 val vbool : bool -> value
 
-val vint : UInt32.t -> value
+val vint : Integer.t -> value
 
 val vmap : mtbdd -> value
 
@@ -138,7 +139,9 @@ val ety : exp -> ty -> exp
 
 val arity : op -> int
 
-val tint : ty
+val tint_of_size : int -> ty
+
+val tint_of_value : Integer.t -> ty
 
 val exp : e -> exp
 
@@ -184,9 +187,9 @@ val get_init : declarations -> exp option
 
 val get_assert : declarations -> exp option
 
-val get_edges : declarations -> (UInt32.t * UInt32.t) list option
+val get_edges : declarations -> (Integer.t * Integer.t) list option
 
-val get_nodes : declarations -> UInt32.t option
+val get_nodes : declarations -> Integer.t option
 
 val get_symbolics : declarations -> (var * ty_or_exp) list
 
@@ -201,6 +204,8 @@ val hash_exp : hash_meta:bool -> exp -> int
 val compare_values : value -> value -> int
 
 val compare_exps : exp -> exp -> int
+
+val show_exp : exp -> string
 
 val get_inner_type : ty -> ty
 

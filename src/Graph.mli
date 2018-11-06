@@ -1,14 +1,12 @@
-open Unsigned
-
 module Vertex :
   sig
-    type t = Unsigned.UInt32.t
+    type t = Integer.t
 
     val printVertex : t -> string
     val compare : t -> t -> int
   end
 
-module Edge : Map.OrderedType with type t = UInt32.t * UInt32.t
+module Edge : Map.OrderedType with type t = Integer.t * Integer.t
 
 module VertexMap : Map.S with type key = Vertex.t
 
@@ -28,7 +26,7 @@ type t
   
 (* raise BadVertex if a vertex v does not belong to a graph's set of vertices, ie: 0..num_vertex-1 *)
 
-exception BadVertex of UInt32.t
+exception BadVertex of Integer.t
 
 val good_vertex : t -> Vertex.t -> unit
 
@@ -36,11 +34,11 @@ val good_graph : t -> unit
 
 (* create a graph with i vertices named 0..i-1 *)
 
-val create : UInt32.t -> t
+val create : Integer.t -> t
 
 (* number of vertices in the graph (named 0..i-1) *)
 
-val num_vertices : t -> UInt32.t
+val num_vertices : t -> Integer.t
 
   
 val fold_vertices : (Vertex.t -> 'a -> 'a) -> t -> 'a -> 'a
@@ -50,7 +48,7 @@ val get_vertices : t -> VertexSet.t
   
 (* edges in the graph *)
 
-val edges : t -> (UInt32.t * UInt32.t) list
+val edges : t -> (Integer.t * Integer.t) list
 
 (* add_edge g e adds directed edge e to g *)
 

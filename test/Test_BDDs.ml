@@ -1,19 +1,18 @@
 open BatSet
 open OUnit2
 open Syntax
-open Unsigned
 
 (* Unit tests for the BddMap data structure *)
 
-let zero_u = Unsigned.UInt32.zero
+let zero_u = Integer.of_int 0
 
-let one_u = Unsigned.UInt32.one
+let one_u = Integer.of_int 1
 
-let two_u = Unsigned.UInt32.of_int 2
+let two_u = Integer.of_int 2
 
-let three_u = Unsigned.UInt32.of_int 3
+let three_u = Integer.of_int 3
 
-let five_u = Unsigned.UInt32.of_int 5
+let five_u = Integer.of_int 5
 
 let zero = vint zero_u
 
@@ -140,7 +139,7 @@ let test5 _ =
   let bf = fal in
   let x = Var.create "x" in
   let var = evar x in
-  let cmp = eop ULeq [var; e_val two] in
+  let cmp = eop (ULeq 32) [var; e_val two] in
   let init_x = BddFunc.create_value ty_int in
   let env = Env.update Env.empty x init_x in
   let value = BddFunc.eval env cmp in
@@ -173,8 +172,8 @@ let test6 _ =
   let bf = fal in
   let x = Var.create "x" in
   let var = evar x in
-  let sum = eop UAdd [var; e_val one] in
-  let cmp = eop ULess [sum; e_val two] in
+  let sum = eop (UAdd 32) [var; e_val one] in
+  let cmp = eop (ULess 32) [sum; e_val two] in
   let init_x = BddFunc.create_value ty_int in
   let env = Env.update Env.empty x init_x in
   let value = BddFunc.eval env cmp in
@@ -207,9 +206,9 @@ let test7 _ =
   let bf = fal in
   let x = Var.create "x" in
   let var = evar x in
-  let e1 = eop ULess [var; e_val three] in
-  let e2 = eop ULess [var; e_val five] in
-  let e3 = eop ULess [var; e_val two] in
+  let e1 = eop (ULess 32) [var; e_val three] in
+  let e2 = eop (ULess 32) [var; e_val five] in
+  let e3 = eop (ULess 32) [var; e_val two] in
   let e = eif e1 e2 e3 in
   let init_x = BddFunc.create_value ty_int in
   let env = Env.update Env.empty x init_x in
@@ -234,8 +233,8 @@ let test7 _ =
   assert_equal_values x5 bf
 
 (* Name the test cases and group them together *)
-let suite =
-  "suite"
+let tests =
+  "Test_BDDs"
   >::: [ "BddMap find/update/create" >:: test1
        ; "BddMap with nested types" >:: test2
        ; "BddMap merge/equality" >:: test3
@@ -243,5 +242,3 @@ let suite =
        ; "BddMap map_when/leq " >:: test5
        ; "BddMap map_when/lt/add" >:: test6
        ; "BddMap map_when/ite" >:: test7 ]
-
-let () = run_test_tt_main suite

@@ -48,11 +48,11 @@ let rec tuplify_exp tymap e : exp =
     | And, _
      |Or, _
      |Not, _
-     |UAdd, _
-     |USub, _
+     |UAdd _, _
+     |USub _, _
      |UEq, _
-     |ULess, _
-     |ULeq, _ ->
+     |ULess _, _
+     |ULeq _, _ ->
         eop op (List.map (tuplify_exp tymap) es)
     | MCreate, [e1] ->
         (* createMap n e --> (e,e,e,...) *)
@@ -299,7 +299,7 @@ let map_back orig_sym_types (map: ExprSet.elt list TypeMap.t)
             vmap map
         | _ -> failwith "internal error (map_back1)" )
     | TBool, VBool _ -> v
-    | TInt _, VUInt32 _ -> v
+    | TInt _, VInt _ -> v
     | TOption t, VOption None -> v
     | TOption t, VOption (Some v) -> voption (Some (aux t v))
     | TTuple ts, VTuple vs ->

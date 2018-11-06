@@ -1,0 +1,45 @@
+(* merge returns a wrong solution or causes a crash,
+depending on the order of the branches in mergeValues.
+0:[0:=Some(1),default:=None]
+1:[0:=Some(2),default:=Some(7720)]
+Success: all assertions passed *)
+
+type attribute = dict[int,option[int]]
+
+let edges = { 0-1;}
+let nodes = 2
+
+let mergeValues x y =
+match (x,y) with
+| (None, None) -> None
+| (None, Some y) -> None
+| (Some _, None) -> x
+| (Some x, Some y) ->
+  if x < y then Some x else Some y
+
+let merge node x y = combine mergeValues x y 
+
+(*let merge node x y =
+   let z = createDict(None) in
+   let x0 = x[0] in
+   let y0 = y[0] in
+   let z0 = mergeValues x0 y0 in
+    z[0 := z0] *)
+
+let transferRoute edge x =
+match x with
+| None -> None
+| Some x -> Some (x+1)
+
+(*let trans edge x = map (transferRoute edge) x*)
+
+let trans edge x =
+let x0 = x[0] in
+let y0 = transferRoute edge x0 in
+x[0 := x0]
+
+let init node =
+    let d = createDict(None) in
+    match node with
+    | 0 -> d[0 := Some 1]
+    | 1 -> d
