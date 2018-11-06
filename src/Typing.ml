@@ -180,9 +180,10 @@ let rec unify info e t1 t2 : unit =
   if try_unify t1 t2 then ()
   else
     let msg =
-      Printf.sprintf "unable to unify types: %s and %s"
+      Printf.sprintf "unable to unify types: %s and\n %s"
         (ty_to_string t1) (ty_to_string t2)
     in
+    Printf.printf "%s\n" msg;
     Console.error_position info e.espan msg
 
 and unifies info (e: exp) ts1 ts2 =
@@ -318,8 +319,8 @@ let rec infer_exp i info env (e: exp) : exp =
     | EVar x -> (
       match Env.lookup_opt env x with
       | None ->
-          Console.error_position info e.espan
-            ("unbound variable " ^ Var.to_string x)
+          (* Console.error_position info e.espan *)
+         failwith ("unbound variable " ^ Var.to_string x)
       | Some t -> texp (e, substitute t, e.espan) )
     | EVal v ->
         let v, t = infer_value info env v |> textractv in
@@ -521,9 +522,16 @@ and infer_value info env (v: Syntax.value) : Syntax.value =
         in
         match vs with
         | [] ->
-            let ty = fresh_tyvar () in
-            let map = BddMap.create ~key_ty:ty default in
-            tvalue (vmap map, TMap (ty, dty), v.vspan)
+           (* let ty = fresh_tyvar () in *)
+           let ty = fresh_tyvar () in
+           tvalue (vmap m, TMap (ty, dty), v.vspan)
+           (* (match v.vty with *)
+           (*  | None -> *)
+           (*     let ty = fresh_tyvar () in *)
+           (*     tvalue (vmap m, TMap (ty, dty), v.vspan) *)
+           (*  | Some ty -> *)
+           (*     let map = BddMap.create ~key_ty:ty default in *)
+           (*     tvalue (vmap map, TMap (ty, dty), v.vspan)) *)
         | (kv, vv) :: _ ->
             let kv, kvty = infer_value info env kv |> textractv in
             let vv, vvty = infer_value info env vv |> textractv in

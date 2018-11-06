@@ -8,13 +8,16 @@ type t =
   ; ntests: int                        (** number of random test cases to try      *)
   ; smart_gen: bool   [@short "-g"]    (** generate relevant randomized inputs     *)
   ; smt: bool         [@short "-m"]    (** search for bugs using an smt solver     *)
+  ; query: bool                        (** emit the query used by the smt solver   *)
   ; unroll_maps: bool [@short "-u"]    (** try to unroll dictionaries as tuples    *)
   ; hashcons: bool    [@short "-c"]    (** enables hashconsing of all ast terms    *)
   ; memoize: bool     [@short "-z"]    (** memoizes the interpreter for reuse      *)
   ; no_caching: bool                   (** disables mtbdd operation caching        *)
   ; no_cutoff: bool                    (** disables mtbdd early termination        *)
   ; inline: bool      [@short "-i"]    (** inline the policy before simulation     *)
-  ; compress: bool                     (** compress the network before simulation  *)
+  ; compress: int                      (** compress the network for n failures     *)
+  ; split_heuristic: string            (** heuristic with which to split nodes,
+                                        ["random", "neighbor"] *)
   }
 [@@deriving
   show
@@ -31,13 +34,15 @@ let default =
   ; ntests = 100
   ; smart_gen= false
   ; smt= false
+  ; query= false
   ; unroll_maps= false
   ; hashcons=false
   ; memoize = false
   ; no_caching=false
   ; no_cutoff=false
   ; inline=false
-  ; compress=false}
+  ; compress= -1
+  ; split_heuristic="random"}
 
 let cfg = ref default 
 

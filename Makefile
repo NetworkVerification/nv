@@ -20,11 +20,17 @@ install:
 build: $(MLFILES)
 	$(BUILD) src/Main.native
 
+# optimize: $(MLFILES)
+# 	$(BUILD) -tag native src/Main.native
+
 debug: $(MLFILES)
-	$(BUILD) -tag 'debug' src/Main.native
+	$(BUILD) -tag debug src/Main.native
 
 profile: $(MLFILES)
-	$(BUILD) -tag 'profile' src/Main.native
+	$(BUILD) -tag profile src/Main.native
+
+byte: $(MLFILES)
+	$(BUILD) -tag byte src/Main.byte
 
 %: %.ml
 	$(BUILD) $@.native

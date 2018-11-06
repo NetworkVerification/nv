@@ -7,18 +7,24 @@ module Vertex = struct
   let compare = Integer.compare
 end
 
-module VertexMap = Map.Make (Vertex)
-module VertexSet = Set.Make(Vertex)
+module VertexMap = BatMap.Make (Vertex)
+module VertexSet = BatSet.Make(Vertex)
+module VertexSetSet : BatSet.S with type elt = VertexSet.t = BatSet.Make(VertexSet)
+module VertexSetMap : BatMap.S with type key = VertexSet.t = BatMap.Make(VertexSet)
 
 module Edge = struct
   type t = Vertex.t * Vertex.t
 
   let compare (v1, w1) (v2, w2) =
-    if Integer.compare v1 v2 != 0 then Integer.compare v1 v2
+    if Integer.compare v1 v2 <> 0 then Integer.compare v1 v2
     else Integer.compare w1 w2
 end
 
-module EdgeSet = Set.Make(Edge)
+let printEdge (e : Edge.t) =
+  Printf.sprintf "<%d,%d>\n" (Integer.to_int (fst e)) (Integer.to_int (snd e)); 
+            
+module EdgeSet = BatSet.Make(Edge)
+module EdgeMap = BatMap.Make(Edge)
             
 (* OCaml 4.06 contains find_opt and update built in. upgrade compiler. *)
 let find_opt v m =
@@ -54,7 +60,7 @@ let num_vertices (m, i) = i
 (*   VertexMap.fold (fun k _ acc -> VertexSet.add k acc) *)
 (*                  m VertexSet.empty *)
 
-let fold_vertices (f: Vertex.t -> 'a -> 'a) (_, i) (acc: 'a) : 'a =
+let fold_vertices (f: Vertex.t -> 'a -> 'a) i (acc: 'a) : 'a =
   let rec loop j =
     if i = j then acc
     else f j (loop (Integer.succ j))

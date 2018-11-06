@@ -8,11 +8,17 @@ module Vertex :
 
 module Edge : Map.OrderedType with type t = Integer.t * Integer.t
 
-module VertexMap : Map.S with type key = Vertex.t
+val printEdge : Edge.t -> string
+     
+module VertexMap : BatMap.S with type key = Vertex.t
 
-module VertexSet : Set.S with type elt = Vertex.t
+module VertexSet : BatSet.S with type elt = Vertex.t
+module VertexSetSet : BatSet.S with type elt = VertexSet.t
+module VertexSetMap : BatMap.S with type key = VertexSet.t
 
-module EdgeSet : Set.S with type elt = Edge.t
+module EdgeSet : BatSet.S with type elt = Edge.t
+
+module EdgeMap : BatMap.S with type key = Edge.t
 
 (* VertexMap auxiliaries *)
 
@@ -41,7 +47,7 @@ val create : Integer.t -> t
 val num_vertices : t -> Integer.t
 
   
-val fold_vertices : (Vertex.t -> 'a -> 'a) -> t -> 'a -> 'a
+val fold_vertices : (Vertex.t -> 'a -> 'a) -> Integer.t -> 'a -> 'a
   
 (** Vertices in the adjacency graph *)
 val get_vertices : t -> VertexSet.t

@@ -31,13 +31,20 @@ let files_to_test : (string * bool * bool) list =
   ]
 ;;
 
+let bool_of_answer (a : Main_defs.answer * ((Solution.t -> Solution.t) list option)) =
+  match a with
+  | Success _, _ -> true
+  | CounterExample _,_-> false
+
 let make_test file =
   let filename, sim_success, smt_success = file in
   filename >:: fun _ ->
     let args = Array.of_list ["nv"; "-s"; "-m"; filename] in
-    let cfg, info, decls = parse_input args in
-    assert_equal ~printer:string_of_bool sim_success @@ run_simulator cfg info decls;
-    assert_equal ~printer:string_of_bool smt_success @@ run_smt cfg info decls;
+    let cfg, info, file, decls = parse_input args in
+    assert_equal ~printer:string_of_bool sim_success @@
+      bool_of_answer @@ run_simulator cfg info decls;
+    assert_equal ~printer:string_of_bool smt_success @@
+      bool_of_answer @@ run_smt file cfg info decls;
 ;;
 
 (* Name the test cases and group them together *)

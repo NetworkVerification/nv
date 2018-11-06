@@ -24,7 +24,7 @@ type ty =
   | TMap of ty * ty
 
 and tyvar = Unbound of tyname * level | Link of ty
-
+                                              
 type var = Var.t
 
 type op =
@@ -656,6 +656,15 @@ let exp_of_value v =
 
 let func x body = {arg= x; argty= None; resty= None; body}
 
+let funcFull x argty resty body = {arg= x; argty= argty; resty= resty; body}
+
+let efunc f =
+  match f.argty, f.resty with
+  | Some argty, Some resty ->
+     aexp (exp (EFun f), Some (TArrow (argty, resty)), Span.default)
+  | _, _ ->
+     exp (EFun f)
+
 let lam x body = exp (EFun (func x body))
 
 let annot ty e = {e with ety= Some ty; espan= e.espan}
@@ -731,6 +740,16 @@ let get_requires ds =
 let rec get_inner_type t : ty =
   match t with TVar {contents= Link t} -> get_inner_type t | _ -> t
 
+let get_ty_from_tyexp (et : ty_or_exp) : ty =
+  match et with
+  | Ty t -> t
+  | Exp e -> oget (e.ety)
+
+let bool_of_val (v : value) : bool option =
+  match v.v with
+  | VBool b -> Some b
+  | _ -> None
+           
 open BatSet
 
 let rec free (seen: Var.t PSet.t) (e: exp) : Var.t PSet.t =
@@ -884,7 +903,7 @@ module BddUtils = struct
     | TTuple ts ->
       List.fold_left (fun acc t -> acc + ty_to_size t) 0 ts
     | TArrow _ | TMap _ | TVar _ | QVar _ ->
-      failwith "internal error (ty_to_size)"
+        failwith ("internal error (ty_to_size): " ^ (show_ty ty))
 
   let tbl =
     Mtbdd.make_table

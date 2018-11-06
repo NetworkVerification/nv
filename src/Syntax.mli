@@ -19,7 +19,7 @@ type ty =
   | TMap of ty * ty
 
 and tyvar = Unbound of tyname * level | Link of ty
-
+                                              
 type var = Var.t
 
 type op =
@@ -163,6 +163,10 @@ val exp_of_value : value -> exp
 
 val func : var -> exp -> func
 
+val funcFull : var -> ty option -> ty option -> exp -> func
+
+val efunc : func -> exp
+
 val lam : var -> exp -> exp
 
 val is_value : exp -> bool
@@ -205,8 +209,6 @@ val compare_values : value -> value -> int
 
 val compare_exps : exp -> exp -> int
 
-val show_exp : exp -> string
-
 val get_inner_type : ty -> ty
 
 val free : Var.t BatSet.PSet.t -> exp -> Var.t BatSet.PSet.t
@@ -214,6 +216,17 @@ val free : Var.t BatSet.PSet.t -> exp -> Var.t BatSet.PSet.t
 val free_dead_vars : exp -> exp
 
 val show_exp : show_meta:bool -> exp -> string
+
+val show_value : show_meta:bool -> value -> string
+
+val show_span: Span.t -> string
+
+(** [get_ty_from_tyexp t] @return the type wrapped by [Ty] or the type
+   of the expression wrapped by [Exp]. Fails if the expression has no
+   type. *)
+val get_ty_from_tyexp: ty_or_exp -> ty
+
+val bool_of_val: value -> bool option
 
 module type MEMOIZER = sig
   type t

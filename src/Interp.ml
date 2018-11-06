@@ -108,7 +108,8 @@ let rec interp_exp env e =
              (Var.to_string x))
     | Some v -> v )
   | EVal v -> v
-  | EOp (op, es) -> interp_op env (oget e.ety) op es
+  | EOp (op, es) ->
+     interp_op env (oget e.ety) op es
   | EFun f -> vclosure (env, f)
   | EApp (e1, e2) -> (
       let v1 = interp_exp env e1 in
@@ -229,69 +230,73 @@ let interp_closure cl (args: value list) =
   
 (** * Partial Interpreter *)
 
-let rec interp_exp_partial env e =
+let rec interp_exp_partial isapp env e =
   match e.e with
-  | ETy (e, _) -> interp_exp_partial env e
+  | ETy (e, _) -> interp_exp_partial isapp env e
   | EVar x -> (
     match Env.lookup_opt env.value x with
-    | None -> e
+    | None ->
+       e
     | Some v ->
-       e_val v)
+       aexp (e_val v, v.vty, v.vspan))
   | EVal v -> e
   | EOp (op, es) ->
-     interp_op_partial env (oget e.ety) op es
+     aexp (interp_op_partial env (oget e.ety) op es, e.ety, e.espan)
   | EFun f ->
-     (* This is kind of a hack: I think it only works if you inline
-        functions, because it only applies to top-level definitions -
-        otherwise the closure (env) is wrong *)
-     (* exp_of_value (vclosure (env, {f with body = interp_exp_partial env f.body})) *)
-     e
-  | EApp (e1, e2) ->
-    let pe1 = interp_exp_partial env e1 in
-    let pe2 = interp_exp_partial env e2 in
-    (match pe1.e with
-     | EFun f ->
-        if is_value pe2 then
-          (*   interp_exp_partial (update_value c_env f.arg (to_value pe2)) f.body *)
-          interp_exp_partial (update_value env f.arg (to_value pe2)) f.body
-        else
-          eapp pe1 pe2
-     | _ -> failwith ("bad functional application: " ^ (show_exp ~show_meta:false e1)) )
-  | EIf (e1, e2, e3) -> (
-    let pe1 = interp_exp_partial env e1 in
-    if is_value pe1 then
-      (match (to_value pe1).v with
-       | VBool true  -> interp_exp_partial env e2
-       | VBool false -> interp_exp_partial env e3
-       | _ -> failwith "bad if condition")
-    else
-      eif pe1 (interp_exp_partial env e2) (interp_exp_partial env e3))
-  | ELet (x, e1, e2) ->
-     let pe1 = interp_exp_partial env e1 in
-     if is_value pe1 then
-       interp_exp_partial (update_value env x (to_value pe1)) e2
+     (*Also note that we avoid using closures for our comfort, and
+        since they are not needed for inlined functions *)
+     (* if isapp then *)
+     (*   exp_of_value (vclosure (env, f)) *)
+     (* else *)
+     (*   exp_of_value (vclosure (env, {f with body = interp_exp_partial false env f.body})) *)
+     if isapp then
+       e
      else
-       elet x pe1 (interp_exp_partial env e2)
+       aexp (efun {f with body = interp_exp_partial false env f.body}, e.ety, e.espan)
+  | EApp (e1, e2) ->
+    let pe1 = interp_exp_partial true env e1 in
+    let pe2 = interp_exp_partial false env e2 in
+    (match pe1.e with
+     | EFun f when is_value pe2 ->
+        interp_exp_partial false (update_value env f.arg (to_value pe2)) f.body
+     | _ -> aexp (eapp pe1 pe2, e.ety, e.espan))
+  | EIf (e1, e2, e3) -> 
+     let pe1 = interp_exp_partial false env e1 in
+     if is_value pe1 then
+       (match (to_value pe1).v with
+        | VBool true  -> interp_exp_partial false env e2
+        | VBool false -> interp_exp_partial false env e3
+        | _ -> failwith "bad if condition")
+     else
+       aexp (eif pe1 (interp_exp_partial false env e2) (interp_exp_partial false env e3),
+             e.ety, e.espan)
+  | ELet (x, e1, e2) ->
+     let pe1 = interp_exp_partial false env e1 in
+     if is_value pe1 then
+       interp_exp_partial false (update_value env x (to_value pe1)) e2
+     else
+       aexp (elet x pe1 (interp_exp_partial false env e2),
+             e.ety, e.espan)
   | ETuple es ->
-     etuple (List.map (interp_exp_partial env) es)
-  | ESome e -> esome (interp_exp_partial env e)
+     aexp (etuple (List.map (interp_exp_partial false env) es),
+           e.ety, e.espan)
+  | ESome e' -> aexp (esome (interp_exp_partial false env e'), e.ety, e.espan)
   | EMatch (e1, branches) ->
-     let pe1 = interp_exp_partial env e1 in
+     let pe1 = interp_exp_partial false env e1 in
      if is_value pe1 then
        (match match_branches branches (to_value pe1) with
-        | Some (env2, e) -> interp_exp_partial (update_values env env2) e
+        | Some (env2, e) -> interp_exp_partial false (update_values env env2) e
         | None ->
            failwith
              ( "value " ^ value_to_string (to_value pe1)
                ^ " did not match any pattern in match statement"))
      else
-       ematch pe1 (List.map (fun (p,eb) -> (p, interp_exp_partial env eb)) branches)
+       aexp (ematch pe1 (List.map (fun (p,eb) ->
+                             (p, interp_exp_partial false env eb)) branches),
+             e.ety, e.espan)
+
 and interp_op_partial env ty op es =
-  (* if arity op != List.length es then
-    failwith
-      (sprintf "operation %s has arity %d not arity %d"
-         (op_to_string op) (arity op) (List.length es)) ; *)
-  let pes = List.map (interp_exp_partial env) es in
+  let pes = List.map (interp_exp_partial false env) es in
   if List.exists (fun pe -> not (is_value pe)) pes then
     eop op pes
   else
@@ -373,7 +378,7 @@ and interp_op_partial env ty op es =
                            (Printing.op_to_string op))
     end
     
-let interp_partial = fun e -> interp_exp_partial empty_env e
+let interp_partial = fun e -> interp_exp_partial false empty_env e
 
 (* let interp_partial_closure cl (args: value list) = *)
 (*   interp_partial (Syntax.apply_closure cl args) *)

@@ -1,38 +1,14 @@
 open Unsigned
    
 module AbstractNode :
-  sig
-    type elt = Graph.Vertex.t
-    type t = Graph.VertexSet.t
-    val empty : t
-    val is_empty : t -> bool
-    val mem : elt -> t -> bool
-    val add : elt -> t -> t
-    val singleton : elt -> t
-    val remove : elt -> t -> t
-    val union : t -> t -> t
-    val inter : t -> t -> t
-    val diff : t -> t -> t
-    val compare : t -> t -> int
-    val equal : t -> t -> bool
-    val subset : t -> t -> bool
-    val iter : (elt -> unit) -> t -> unit
-    val map : (elt -> elt) -> t -> t
-    val fold : (elt -> 'a -> 'a) -> t -> 'a -> 'a
-    val for_all : (elt -> bool) -> t -> bool
-    val exists : (elt -> bool) -> t -> bool
-    val filter : (elt -> bool) -> t -> t
-    val partition : (elt -> bool) -> t -> t * t
-    val cardinal : t -> int
-    val elements : t -> elt list
-    val choose : t -> elt
-    val choose_opt : t -> elt option
-    val split : elt -> t -> t * bool * t
-    val of_list : elt list -> t
-    val printAbstractNode : t -> string
-    val randomSplit : t -> t * t
+sig
+  include module type of Graph.VertexSet
+  val toSet : t -> Graph.VertexSet.t
+  val fromSet : Graph.VertexSet.t -> t
+  val printAbstractNode : t -> string
+  val randomSplit : t -> t * t
   end
-module UInts : sig type t = UInt32.t val compare : t -> t -> int end
+module UInts : sig type t = Integer.t val compare : t -> t -> int end
 module GroupMap :
   sig
     type key = UInts.t
@@ -76,7 +52,7 @@ module GroupMap :
 
 (** The type of abstraction maps *)
 type abstractionMap
-type abstrId = UInt32.t
+type abstrId = Integer.t
 
 (** Given an abstraction map and a node, returns its abstraction. 
     Raises [Not_found] *)
@@ -106,7 +82,7 @@ val getGroupId: abstractionMap -> AbstractNode.t -> abstrId
 val split : abstractionMap -> AbstractNode.t -> abstractionMap
 
 (** Given an abstraction returns the abstract groups *)
-val getAbstractGroups : abstractionMap -> AbstractNode.t list
+val getAbstractGroups : abstractionMap -> (GroupMap.key * AbstractNode.t) list
 
 (** [printAbstractGroups f sep] returns a string with the abstract
    groups created by [f], separated by [sep] *)
@@ -115,7 +91,7 @@ val printAbstractGroups: abstractionMap -> string -> string
 (** Given a graph, creates an initial abstraction *)
 val createAbstractionMap : Graph.t -> abstractionMap
 
-val fold: (Graph.Vertex.t -> AbstractNode.t -> 'a -> 'a) -> abstractionMap -> 'a -> 'a
+val fold: (AbstractNode.t -> 'a -> 'a) -> abstractionMap -> 'a -> 'a
 
 (** Returns the number of abstract nodes *)
 val size: abstractionMap -> int
