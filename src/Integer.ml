@@ -2,8 +2,11 @@ type t = {size: Z.t; value: Z.t}
 
 let modulo = Big_int_Z.mod_big_int
 
+let pow2 n = (Z.pow (Z.of_int 2) (Z.to_int n))
+
 let mod_by_size (x : t) : t =
-  {size = x.size; value = modulo x.value x.size}
+  {size = x.size;
+   value = modulo x.value (pow2 x.size)}
 
 let of_string (s : string) : t =
   let lst = List.map Z.of_string @@ Str.split (Str.regexp "u") s in
@@ -50,25 +53,25 @@ let to_string x = (Z.to_string x.value) ^ "u" ^ (Z.to_string x.size)
 
 let add x y =
   check x y ;
-  let value = modulo (Z.add x.value y.value) x.size in
-  {size= x.size; value}
+  let value = Z.add x.value y.value in
+  mod_by_size @@ {size= x.size; value}
 
 let sub x y =
   check x y ;
-  let value = modulo (Z.sub x.value y.value) x.size in
-  {size= x.size; value}
+  let value = Z.sub x.value y.value in
+  mod_by_size @@ {size= x.size; value}
 
 let shift_left (x : t) (n : int) =
-  let value = modulo (Z.shift_left x.value n) x.size in
-  {size= x.size; value}
+  let value = Z.shift_left x.value n in
+  mod_by_size @@ {size= x.size; value}
 
 let pred x =
-  let value = modulo (Z.sub x.value Z.one) x.size in
-  {size = x.size; value}
+  let value = Z.sub x.value Z.one in
+  mod_by_size @@ {size = x.size; value}
 
 let succ x =
-  let value = modulo (Z.add x.value Z.one) x.size in
-  {size = x.size; value}
+  let value = Z.add x.value Z.one in
+  mod_by_size @@ {size = x.size; value}
 
 let lt x y = check x y ; Z.lt x.value y.value
 
