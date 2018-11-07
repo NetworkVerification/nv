@@ -173,7 +173,9 @@ let compress info decls cfg networkOp =
     | Success _, _ -> Printf.printf "No counterexamples found\n"
     | (CounterExample sol), fs ->
        let sol = apply_all sol (oget fs) in
-       let f' = FailuresAbstraction.refineForFailures network.graph f failVars sol k in
+       let f' = FailuresAbstraction.refineForFailures network.graph f failVars
+                  sol k ds network.attr_type
+       in
        match f' with
        | None -> print_solution sol;
        | Some f' ->

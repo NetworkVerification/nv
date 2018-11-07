@@ -17,15 +17,16 @@ val findAbstraction :
 
 module FailuresAbstraction :
   sig  
-    (** [refineForFailures g f failVars sol k] decides whether there
-       is need to further refine the abstraction, and does so
-       leveraging the given path if possible *)
+    (** [refineForFailures g f failVars sol k dst attr] decides whether there
+       is need to further refine the abstraction. *)
     val refineForFailures :
       Graph.t ->
       AbstractionMap.abstractionMap ->
       Var.t Graph.EdgeMap.t ->
       Solution.t ->
       int ->
+      Graph.VertexSet.t ->
+      Syntax.ty ->
       AbstractionMap.abstractionMap option
   end
 

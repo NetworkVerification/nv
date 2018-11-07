@@ -524,40 +524,55 @@ module FailuresAbstraction =
       let u1, u2 = AbstractNode.randomSplit (getGroupById f uid) in
       loop path uid (AbstractNodeSet.of_list [u1;u2], float_of_int max_int)
 
-    (*let splitBasedOnNeighbor (g : Graph.t) (ag: Graph.t) (sol: Solution.t)
-                              (f: abstractionMap) (uid: abstrId)=
-      let neighborsu = Graph.neighbors ag uid in
-      let sol = sol.Solution.labels in 
-      let candidate1 = List.filter (fun vhat -> 
-      
-      let rec loop path current best =
-        match path with
-        | [] -> best
-        | vid :: path ->
-           let curGroup = getGroupById f current in
-           match findSplittingByConnectivity curGroup (getGroupById f vid) g with
-           | Groups us when AbstractNodeSet.cardinal us = 2 ->
-              (us, 0.0)
-           | Groups us ->
-              let szNew = AbstractNodeSet.cardinal us in
-              let szCur = AbstractNode.cardinal curGroup in
-              let ratio = (float_of_int szNew) /. (float_of_int szCur) in
-              (* heuristic *)
-              if (ratio < snd best) then
-                loop path vid (us, ratio)
-              else
-                loop path vid best
-           | Mesh ->
-              (* do a randomSplit if necessary, but maybe there are better options*)
-              if (snd best) > 1.0 then
-                let u1, u2 = AbstractNode.randomSplit curGroup in
-                (AbstractNodeSet.of_list [u1;u2], 1.0)
-              else
-                best
-      in
-      let u1, u2 = AbstractNode.randomSplit (getGroupById f uid) in
-      loop path uid (AbstractNodeSet.of_list [u1;u2], float_of_int max_int)*)
+    (** Returns true if the given value is not the default for the
+       given attribute type. A non-default value indicates that this
+       message has a path to the destination *)
+    let validAttribute (attrTy: Syntax.ty) (m : Syntax.value) : bool =
+      not (default_value attrTy = m)
+      (* match m with
+       * | VTuple [_;_;_;_; bestu], VTuple [_;_;_;_; bestv] ->
+       *    (match bestu.v, bestv.v with
+       *     | VOption (Some _), VOption None ->
+       *        true
+       *     | _, _ -> false)
+       * | _ -> false) *)
 
+    (** Finds a path in the graph starting from abstract vertex
+       uid. Will stop once it reaches the destination or a cycle. It
+       tries to find a good path by first looking at neighbors who
+       have a solution *)
+    let findRandomPath (ag: Graph.t) (sol: Solution.t)
+          (uid: abstrId) (ds: Graph.VertexSet.t) (attrTy: Syntax.ty) =
+      (* finding incoming messages the hard way for now. Why are edges
+         not treated the other way around? *)
+      let rec loop uid acc =
+        (* Find neighbors of uid that have a valid attribute *)
+        let neighborsu =
+          BatList.filter_map
+            (fun (i,j) -> if uid = j then Some i else None) (Graph.edges ag)
+        in
+        let sol = sol.Solution.labels in 
+        let valid_neighbors =
+          List.filter (fun vhat -> validAttribute attrTy
+                                     (Graph.VertexMap.find vhat sol)) neighborsu
+        in
+        (* If there are none with a valid attribute, look into the other ones *)
+        let neighborsu =
+          if BatList.is_empty valid_neighbors then
+            neighborsu else valid_neighbors
+        in
+        (* Pick one randomly *)
+        let vhat = BatList.hd neighborsu in
+        (* Stop if at destination *)
+        if VertexSet.mem vhat ds then
+          BatList.rev (vhat :: acc)
+        else if BatList.mem vhat acc then
+          (* Or if we've visited this vertex before *)
+          BatList.rev acc
+        else
+          loop vhat (vhat :: acc)
+      in
+      loop uid []
 
     (* Try to find a failure for which splitting would make the most
        sense. This is based on heuristics, currently: 
@@ -567,7 +582,7 @@ module FailuresAbstraction =
        * 3. Choose u with the biggest cost (thus "distance" from the
             destination). This is good for our splitting based on the
             path. *)
-    let findVertexToRefine f (failed: EdgeSet.t) sol =
+    let findVertexToRefine f (failed: EdgeSet.t) sol attrTy =
       let lbl = sol.Solution.labels in
       let candidate1 =
         EdgeSet.filter (fun (u,v) -> ((AbstractNode.cardinal (getGroupById f u)) > 1))
@@ -583,19 +598,13 @@ module FailuresAbstraction =
       in
       (* This is kind of fragile, it matches on the expected value of
          the label of a vertex that has a path vs one that doesn't. If
-         the value changes this won't work. Perhaps, one way would be
-         to typecheck this against the attribute type, or use the
-         default value as elsewhere *)
+         the value changes this won't work. *)
       let candidate2 =
         EdgeSet.filter (fun (u,v) ->
-            match (VertexMap.find u lbl).v, (VertexMap.find v lbl).v with
-            | VTuple [_;_;_;_; bestu], VTuple [_;_;_;_; bestv] ->
-               (match bestu.v, bestv.v with
-                | VOption (Some _), VOption None ->
-                   true
-                | _, _ -> false)
-            | _ -> false)
-                      candidate1 in
+            match validAttribute attrTy (VertexMap.find u lbl),
+                  validAttribute attrTy(VertexMap.find v lbl) with
+            | true, false -> true
+            | _, _ -> false) candidate1 in
       let selector = if isEmpty1 then snd else fst in
       let candidate3 =
         match EdgeSet.is_empty candidate2 with
@@ -624,8 +633,9 @@ module FailuresAbstraction =
         show_message (printAbstractGroups f "\n") T.Blue
                      "Abstract groups after refine for failures "
       
-    let refineForFailures (g: Graph.t) (f: abstractionMap) (failVars: Var.t EdgeMap.t)
-          (sol: Solution.t) (k: int) : abstractionMap option =
+    let refineForFailures (g: Graph.t) (f: abstractionMap)
+          (failVars: Var.t EdgeMap.t) (sol: Solution.t) (k: int)
+          (dst: VertexSet.t) (attrTy : Syntax.ty) : abstractionMap option =
       (* Collections.StringMap.iter (fun k _ -> Printf.printf "symb: %s\n" k) sol.symbolics; *)
       (* EdgeMap.iter (fun e k -> Printf.printf "edge %d,%d %s\n" (UInt32.to_int (fst e)) *)
       (*                                        (UInt32.to_int (snd e)) (Var.to_string k)) failVars; *)
@@ -648,16 +658,27 @@ module FailuresAbstraction =
           (EdgeSet.empty, Graph.create (AbstractionMap.size f |> Integer.of_int))
       in
       
-      let total_failures = EdgeSet.fold (fun ehat acc ->
-                               (BuildAbstractNetwork.getEdgeMultiplicity g f ehat) + acc)
-                                        failures 0 in
+      let total_failures =
+        EdgeSet.fold (fun ehat acc ->
+            (BuildAbstractNetwork.getEdgeMultiplicity g f ehat) + acc)
+          failures 0
+      in
       if (total_failures <= k) then
         None
       else
         begin
-          let uhat = findVertexToRefine f failures sol in
-          (* TODO: find path to use here instead of [] *)
-          let (uss, _) = bestSplitForFailures g f uhat [] in
+          let uhat = findVertexToRefine f failures sol attrTy in
+          (* what path to use for refining, by default will look for a
+             (somewhat) random path. random indicates a random split
+             of the node selected for refinement. That's probably the
+             worst possible option. *)
+          let path_heuristic = "somePath" in (* make it an option at some point? *)
+          let path =
+            if path_heuristic = "random" then []
+            else
+              findRandomPath agraph sol uhat dst attrTy
+          in  
+          let (uss, _) = bestSplitForFailures g f uhat path in
           let f' = splitSet f uss in
           let f'' =  abstractionTopological f' g in
           (* refineForFailures_debug f''; *)

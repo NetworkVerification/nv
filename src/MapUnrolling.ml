@@ -236,6 +236,7 @@ let update_with tymap ty e =
     TypeMap.add ty (ExprSet.add e es) tymap
   with _ -> TypeMap.add ty (ExprSet.singleton e) tymap
 
+(* Returns all occurences of map types in the program *)
 let collect_all_map_tys ds =
   let all_tys = ref TypeMap.empty in
   let f d e =
