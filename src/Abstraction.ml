@@ -524,6 +524,40 @@ module FailuresAbstraction =
       let u1, u2 = AbstractNode.randomSplit (getGroupById f uid) in
       loop path uid (AbstractNodeSet.of_list [u1;u2], float_of_int max_int)
 
+    (*let splitBasedOnNeighbor (g : Graph.t) (ag: Graph.t) (sol: Solution.t)
+                              (f: abstractionMap) (uid: abstrId)=
+      let neighborsu = Graph.neighbors ag uid in
+      let sol = sol.Solution.labels in 
+      let candidate1 = List.filter (fun vhat -> 
+      
+      let rec loop path current best =
+        match path with
+        | [] -> best
+        | vid :: path ->
+           let curGroup = getGroupById f current in
+           match findSplittingByConnectivity curGroup (getGroupById f vid) g with
+           | Groups us when AbstractNodeSet.cardinal us = 2 ->
+              (us, 0.0)
+           | Groups us ->
+              let szNew = AbstractNodeSet.cardinal us in
+              let szCur = AbstractNode.cardinal curGroup in
+              let ratio = (float_of_int szNew) /. (float_of_int szCur) in
+              (* heuristic *)
+              if (ratio < snd best) then
+                loop path vid (us, ratio)
+              else
+                loop path vid best
+           | Mesh ->
+              (* do a randomSplit if necessary, but maybe there are better options*)
+              if (snd best) > 1.0 then
+                let u1, u2 = AbstractNode.randomSplit curGroup in
+                (AbstractNodeSet.of_list [u1;u2], 1.0)
+              else
+                best
+      in
+      let u1, u2 = AbstractNode.randomSplit (getGroupById f uid) in
+      loop path uid (AbstractNodeSet.of_list [u1;u2], float_of_int max_int)*)
+
 
     (* Try to find a failure for which splitting would make the most
        sense. This is based on heuristics, currently: 
