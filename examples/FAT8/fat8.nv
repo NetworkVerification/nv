@@ -1,0 +1,2584 @@
+type attribute = (option[int],option[int],option[(int, int, int, int)],option[(int,int,int,int)],option[int])
+
+symbolic d : (int, int)
+
+let edges = {
+  19-20;
+  54-6;
+  11-20;
+  60-49;
+  67-63;
+  39-37;
+  65-49;
+  74-65;
+  58-64;
+  58-73;
+  25-31;
+  24-7;
+  1-34;
+  19-40;
+  68-15;
+  79-72;
+  3-44;
+  35-37;
+  34-55;
+  75-46;
+  59-64;
+  41-28;
+  54-60;
+  60-16;
+  6-52;
+  37-35;
+  36-38;
+  49-39;
+  79-48;
+  22-11;
+  63-16;
+  55-6;
+  26-14;
+  9-20;
+  58-66;
+  51-79;
+  11-68;
+  25-66;
+  52-39;
+  5-38;
+  34-1;
+  62-10;
+  32-31;
+  23-14;
+  53-56;
+  61-16;
+  35-5;
+  40-28;
+  61-10;
+  39-55;
+  29-34;
+  60-10;
+  59-73;
+  72-14;
+  25-1;
+  6-54;
+  57-77;
+  53-67;
+  63-10;
+  34-31;
+  58-70;
+  17-27;
+  32-1;
+  50-72;
+  47-40;
+  50-12;
+  39-4;
+  56-77;
+  4-38;
+  31-34;
+  70-62;
+  50-3;
+  46-28;
+  63-67;
+  59-68;
+  49-60;
+  12-44;
+  43-75;
+  44-13;
+  52-17;
+  40-35;
+  66-14;
+  6-26;
+  65-64;
+  65-73;
+  28-31;
+  43-7;
+  6-33;
+  41-35;
+  8-60;
+  61-46;
+  63-56;
+  9-72;
+  53-3;
+  70-79;
+  71-62;
+  7-26;
+  30-37;
+  28-41;
+  75-74;
+  18-60;
+  30-70;
+  49-17;
+  47-13;
+  56-53;
+  17-54;
+  55-60;
+  10-62;
+  75-73;
+  77-42;
+  15-26;
+  15-33;
+  75-64;
+  30-72;
+  46-35;
+  8-62;
+  0-34;
+  46-7;
+  77-45;
+  63-57;
+  70-9;
+  16-60;
+  78-42;
+  78-51;
+  39-52;
+  11-57;
+  44-49;
+  38-37;
+  44-3;
+  52-60;
+  69-46;
+  73-65;
+  64-65;
+  79-51;
+  78-45;
+  18-62;
+  57-59;
+  6-23;
+  63-68;
+  7-33;
+  2-44;
+  43-47;
+  30-66;
+  35-46;
+  68-63;
+  76-65;
+  69-45;
+  14-26;
+  43-35;
+  13-44;
+  7-23;
+  46-47;
+  77-51;
+  25-70;
+  29-25;
+  72-25;
+  4-39;
+  71-50;
+  50-71;
+  61-43;
+  69-41;
+  38-4;
+  38-56;
+  47-12;
+  48-78;
+  49-34;
+  9-70;
+  13-53;
+  69-42;
+  62-8;
+  69-51;
+  71-9;
+  33-6;
+  67-53;
+  12-53;
+  41-7;
+  66-25;
+  9-27;
+  72-9;
+  38-67;
+  23-6;
+  40-7;
+  31-25;
+  68-53;
+  30-4;
+  43-61;
+  35-36;
+  66-9;
+  34-52;
+  27-11;
+  63-8;
+  10-60;
+  71-25;
+  44-12;
+  70-50;
+  47-46;
+  66-50;
+  70-25;
+  71-14;
+  19-22;
+  53-12;
+  28-43;
+  72-50;
+  68-77;
+  58-76;
+  60-8;
+  62-66;
+  6-49;
+  52-6;
+  67-77;
+  32-29;
+  28-1;
+  55-39;
+  20-17;
+  9-21;
+  75-41;
+  58-72;
+  20-11;
+  79-71;
+  26-6;
+  45-79;
+  7-43;
+  68-38;
+  25-29;
+  21-11;
+  60-52;
+  11-27;
+  14-24;
+  54-34;
+  42-78;
+  17-49;
+  45-78;
+  55-34;
+  62-16;
+  64-58;
+  24-6;
+  78-55;
+  27-17;
+  67-38;
+  32-57;
+  60-55;
+  49-6;
+  17-20;
+  37-38;
+  73-58;
+  57-63;
+  51-78;
+  52-34;
+  74-58;
+  68-32;
+  39-5;
+  11-21;
+  67-15;
+  14-70;
+  56-63;
+  32-68;
+  76-58;
+  67-32;
+  7-40;
+  17-21;
+  39-49;
+  53-2;
+  15-67;
+  75-76;
+  28-40;
+  41-69;
+  77-68;
+  7-24;
+  55-17;
+  52-78;
+  42-77;
+  30-71;
+  66-79;
+  33-14;
+  54-44;
+  62-71;
+  65-76;
+  15-56;
+  78-52;
+  45-77;
+  10-63;
+  12-50;
+  72-79;
+  44-2;
+  68-11;
+  8-63;
+  55-44;
+  34-29;
+  28-0;
+  39-54;
+  5-39;
+  49-44;
+  50-2;
+  33-15;
+  31-32;
+  47-41;
+  17-55;
+  47-43;
+  59-67;
+  50-66;
+  50-70;
+  61-8;
+  49-78;
+  14-72;
+  28-29;
+  34-0;
+  55-78;
+  77-57;
+  59-56;
+  73-75;
+  35-40;
+  25-72;
+  11-56;
+  48-79;
+  44-55;
+  2-47;
+  2-50;
+  59-76;
+  70-30;
+  56-15;
+  16-63;
+  32-0;
+  40-61;
+  43-69;
+  13-50;
+  65-54;
+  47-2;
+  67-11;
+  0-28;
+  19-27;
+  29-32;
+  11-67;
+  1-28;
+  69-40;
+  34-49;
+  19-41;
+  61-40;
+  65-55;
+  9-71;
+  79-66;
+  3-47;
+  69-48;
+  6-24;
+  3-50;
+  46-61;
+  34-54;
+  18-63;
+  57-15;
+  1-32;
+  14-23;
+  19-46;
+  41-47;
+  57-32;
+  35-43;
+  35-41;
+  39-36;
+  0-25;
+  13-47;
+  25-71;
+  65-52;
+  76-75;
+  77-48;
+  3-53;
+  56-32;
+  46-69;
+  78-48;
+  1-25;
+  44-54;
+  74-75;
+  19-43;
+  15-24;
+  41-61;
+  56-59;
+  16-62;
+  2-53;
+  40-69;
+  0-32;
+  12-47;
+  30-36;
+  20-19;
+  29-28;
+  71-58;
+  32-67;
+  47-3;
+  49-65;
+  61-41;
+  37-39;
+  69-43;
+  40-47;
+  66-30;
+  66-62;
+  9-66;
+  64-75;
+  21-9;
+  54-39;
+  15-23;
+  64-59;
+  56-38;
+  40-75;
+  18-61;
+  32-56;
+  22-9;
+  41-75;
+  38-36;
+  16-61;
+  44-52;
+  75-40;
+  55-65;
+  79-45;
+  24-14;
+  57-38;
+  35-4;
+  65-74;
+  53-68;
+  14-66;
+  28-46;
+  20-9;
+  25-0;
+  60-18;
+  15-57;
+  57-53;
+  41-19;
+  6-55;
+  62-72;
+  46-75;
+  8-61;
+  79-70;
+  70-14;
+  43-19;
+  52-65;
+  19-21;
+  21-19;
+  53-13;
+  72-62;
+  58-71;
+  53-57;
+  15-68;
+  27-9;
+  77-67;
+  59-57;
+  4-30;
+  43-28;
+  71-30;
+  46-19;
+  4-35;
+  50-13;
+  58-74;
+  27-19;
+  31-28;
+  10-61;
+  59-74;
+  61-18;
+  5-30;
+  72-30;
+  40-19;
+  5-35;
+  17-22;
+  30-5;
+  57-11;
+  22-17;
+  74-59;
+  36-30;
+  38-68;
+  54-78;
+  77-56;
+  51-77;
+  63-18;
+  52-44;
+  45-69;
+  75-43;
+  79-42;
+  54-17;
+  23-15;
+  14-71;
+  38-57;
+  22-19;
+  71-79;
+  24-15;
+  37-30;
+  21-17;
+  42-79;
+  62-18;
+  56-11;
+  36-35;
+  78-49;
+  62-70;
+  14-33;
+  33-7;
+  26-15;
+  42-69;
+  48-77;
+  23-7;
+  67-59;
+  7-46;
+  38-5;
+  70-58;
+  17-52;
+  54-65;
+  76-59;
+  36-39;
+  66-58;
+  78-54;
+  7-41;
+  26-7;
+  60-54;
+  48-69;
+  9-22;
+  73-59;
+  72-58;
+  68-59;
+  11-22;
+  51-69;
+}
+
+let nodes = 80
+
+let ospfIntraArea = 0
+let ospfInterArea = 1
+let ospfE1 = 2
+let ospfE2 = 3
+
+let protoConn = 0
+let protoStatic = 1
+let protoOspf = 2
+let protoBgp = 3
+
+let min x y = if x < y then x else y
+
+let max x y = if x < y then y else x
+
+let pickOption f x y =
+  match (x,y) with
+  | (None, None) -> None
+  | (None, Some _) -> y  | (Some _, None) -> x
+  | (Some a, Some b) -> Some (f a b)
+
+let betterOspf o1 o2 =
+  let (_,cost1,areaType1,_) = o1 in
+  let (_,cost2,areaType2,_) = o2 in
+  if areaType1 > areaType2 then o1
+  else if areaType2 > areaType1 then o2
+  else if cost1 <= cost2 then o1 else o2
+
+let betterBgp o1 o2 =
+  let (_,lp1,cost1,med1) = o1 in
+  let (_,lp2,cost2,med2) = o2 in
+  if lp1 > lp2 then o1
+  else if lp2 > lp1 then o2
+  else if cost1 < cost2 then o1
+  else if cost2 < cost1 then o2  else if med1 >= med2 then o1 else o2
+
+let betterEqOption o1 o2 =
+  match (o1,o2) with
+  | (None, None) -> true
+  | (Some _, None) -> true
+  | (None, Some _) -> false
+  | (Some a, Some b) -> a <= b
+
+let best c s o b =
+  match (c,s,o,b) with
+  | (None,None,None,None) -> None
+  | _ -> 
+      let o = match o with | None -> None | Some (ad,_,_,_) -> Some ad in
+      let b = match b with | None -> None | Some (ad,_,_,_) -> Some ad in
+      let (x,p1) = if betterEqOption c s then (c,0) else (s,1) in
+      let (y,p2) = if betterEqOption o b then (o,2) else (b,3) in
+      Some (if betterEqOption x y then p1 else p2)
+
+let mergeValues x y =
+  let (cx,sx,ox,bx,_) = x in
+  let (cy,sy,oy,by,_) = y in
+  let c = pickOption min cx cy in
+  let s = pickOption min sx sy in
+  let o = pickOption betterOspf ox oy in
+  let b = pickOption betterBgp bx by in
+  (c,s,o,b, best c s o b)
+
+let merge node x y = mergeValues x y
+
+let init node =
+  match node with
+  | 0 -> 
+     if (d = (167776256, 31)) || (d = (167778304, 31)) || (d = (167777280, 31)) || (d = (1174412288, 32)) || (d = (167779328, 31)) || (d = (1174412288, 31)) || (d = (1174412290, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else if (d = (1174412288, 24)) then
+       let c = None in
+       let s = Some 1 in
+       let o = None in
+       let b = Some (20, 100, 0, 80) in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 1 -> 
+     if (d = (167777536, 31)) || (d = (167776512, 31)) || (d = (1174412544, 32)) || (d = (167779584, 31)) || (d = (167778560, 31)) || (d = (1174412544, 31)) || (d = (1174412546, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else if (d = (1174412544, 24)) then
+       let c = None in
+       let s = Some 1 in
+       let o = None in
+       let b = Some (20, 100, 0, 80) in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 2 -> 
+     if (d = (167773696, 31)) || (d = (167772672, 31)) || (d = (167775744, 31)) || (d = (167774720, 31)) || (d = (1174410752, 31)) || (d = (1174410752, 32)) || (d = (1174410754, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else if (d = (1174410752, 24)) then
+       let c = None in
+       let s = Some 1 in
+       let o = None in
+       let b = Some (20, 100, 0, 80) in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 3 -> 
+     if (d = (167773952, 31)) || (d = (167772928, 31)) || (d = (167776000, 31)) || (d = (167774976, 31)) || (d = (1174411008, 31)) || (d = (1174411008, 32)) || (d = (1174411010, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else if (d = (1174411008, 24)) then
+       let c = None in
+       let s = Some 1 in
+       let o = None in
+       let b = Some (20, 100, 0, 80) in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 4 -> 
+     if (d = (1174422530, 31)) || (d = (1174422528, 31)) || (d = (1174422528, 32)) || (d = (167796736, 31)) || (d = (167798784, 31)) || (d = (167797760, 31)) || (d = (167799808, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else if (d = (1174422528, 24)) then
+       let c = None in
+       let s = Some 1 in
+       let o = None in
+       let b = Some (20, 100, 0, 80) in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 5 -> 
+     if (d = (1174422786, 31)) || (d = (1174422784, 31)) || (d = (1174422784, 32)) || (d = (167796992, 31)) || (d = (167799040, 31)) || (d = (167798016, 31)) || (d = (167800064, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else if (d = (1174422784, 24)) then
+       let c = None in
+       let s = Some 1 in
+       let o = None in
+       let b = Some (20, 100, 0, 80) in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 6 -> 
+     if (d = (167814912, 31)) || (d = (167816960, 31)) || (d = (167819008, 31)) || (d = (167821056, 31)) || (d = (1174423808, 32)) || (d = (167802624, 31)) || (d = (167802368, 31)) || (d = (167802112, 31)) || (d = (167801856, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 7 -> 
+     if (d = (167806720, 31)) || (d = (167808768, 31)) || (d = (167810816, 31)) || (d = (167812864, 31)) || (d = (1174423552, 32)) || (d = (167801600, 31)) || (d = (167801344, 31)) || (d = (167801088, 31)) || (d = (167800832, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 8 -> 
+     if (d = (1174420992, 32)) || (d = (1174420992, 31)) || (d = (167793152, 31)) || (d = (1174420994, 31)) || (d = (167795200, 31)) || (d = (167794176, 31)) || (d = (167796224, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else if (d = (1174420992, 24)) then
+       let c = None in
+       let s = Some 1 in
+       let o = None in
+       let b = Some (20, 100, 0, 80) in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 9 -> 
+     if (d = (167784192, 31)) || (d = (167783936, 31)) || (d = (167783680, 31)) || (d = (167783424, 31)) || (d = (1174414080, 32)) || (d = (167830016, 31)) || (d = (167832064, 31)) || (d = (167834112, 31)) || (d = (167836160, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 10 -> 
+     if (d = (1174421248, 32)) || (d = (1174421248, 31)) || (d = (1174421250, 31)) || (d = (167794432, 31)) || (d = (167793408, 31)) || (d = (167796480, 31)) || (d = (167795456, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else if (d = (1174421248, 24)) then
+       let c = None in
+       let s = Some 1 in
+       let o = None in
+       let b = Some (20, 100, 0, 80) in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 11 -> 
+     if (d = (167782656, 31)) || (d = (167782400, 31)) || (d = (167783168, 31)) || (d = (167782912, 31)) || (d = (1174413824, 32)) || (d = (167821824, 31)) || (d = (167823872, 31)) || (d = (167825920, 31)) || (d = (167827968, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 12 -> 
+     if (d = (167774208, 31)) || (d = (167773184, 31)) || (d = (167772160, 31)) || (d = (167775232, 31)) || (d = (1174410240, 31)) || (d = (1174410240, 32)) || (d = (1174410242, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else if (d = (1174410240, 24)) then
+       let c = None in
+       let s = Some 1 in
+       let o = None in
+       let b = Some (20, 100, 0, 80) in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 13 -> 
+     if (d = (167773440, 31)) || (d = (167772416, 31)) || (d = (167775488, 31)) || (d = (167774464, 31)) || (d = (1174410496, 31)) || (d = (1174410496, 32)) || (d = (1174410498, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else if (d = (1174410496, 24)) then
+       let c = None in
+       let s = Some 1 in
+       let o = None in
+       let b = Some (20, 100, 0, 80) in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 14 -> 
+     if (d = (1174424320, 32)) || (d = (167831296, 31)) || (d = (167833344, 31)) || (d = (167835392, 31)) || (d = (167837440, 31)) || (d = (167804672, 31)) || (d = (167804160, 31)) || (d = (167804416, 31)) || (d = (167803904, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 15 -> 
+     if (d = (167823104, 31)) || (d = (167825152, 31)) || (d = (1174424064, 32)) || (d = (167827200, 31)) || (d = (167829248, 31)) || (d = (167803648, 31)) || (d = (167803392, 31)) || (d = (167803136, 31)) || (d = (167802880, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 16 -> 
+     if (d = (1174420480, 32)) || (d = (1174420480, 31)) || (d = (167792640, 31)) || (d = (1174420482, 31)) || (d = (167794688, 31)) || (d = (167793664, 31)) || (d = (167795712, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else if (d = (1174420480, 24)) then
+       let c = None in
+       let s = Some 1 in
+       let o = None in
+       let b = Some (20, 100, 0, 80) in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 17 -> 
+     if (d = (167813632, 31)) || (d = (167781632, 31)) || (d = (167781376, 31)) || (d = (167782144, 31)) || (d = (167781888, 31)) || (d = (167815680, 31)) || (d = (167817728, 31)) || (d = (1174413568, 32)) || (d = (167819776, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 18 -> 
+     if (d = (1174420736, 32)) || (d = (1174420736, 31)) || (d = (167792896, 31)) || (d = (1174420738, 31)) || (d = (167794944, 31)) || (d = (167793920, 31)) || (d = (167795968, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else if (d = (1174420736, 24)) then
+       let c = None in
+       let s = Some 1 in
+       let o = None in
+       let b = Some (20, 100, 0, 80) in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 19 -> 
+     if (d = (167807488, 31)) || (d = (167809536, 31)) || (d = (167811584, 31)) || (d = (1174413312, 32)) || (d = (167780352, 31)) || (d = (167781120, 31)) || (d = (167780864, 31)) || (d = (167780608, 31)) || (d = (167805440, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 20 -> 
+     if (d = (167782656, 31)) || (d = (167781632, 31)) || (d = (167780608, 31)) || (d = (1174414592, 31)) || (d = (167783680, 31)) || (d = (1174414592, 32)) || (d = (1174414594, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else if (d = (1174414592, 24)) then
+       let c = None in
+       let s = Some 1 in
+       let o = None in
+       let b = Some (20, 100, 0, 80) in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 21 -> 
+     if (d = (167781888, 31)) || (d = (167780864, 31)) || (d = (1174414848, 31)) || (d = (167783936, 31)) || (d = (167782912, 31)) || (d = (1174414848, 32)) || (d = (1174414850, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else if (d = (1174414848, 24)) then
+       let c = None in
+       let s = Some 1 in
+       let o = None in
+       let b = Some (20, 100, 0, 80) in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 22 -> 
+     if (d = (167782144, 31)) || (d = (167781120, 31)) || (d = (1174415104, 31)) || (d = (167784192, 31)) || (d = (167783168, 31)) || (d = (1174415104, 32)) || (d = (1174415106, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else if (d = (1174415104, 24)) then
+       let c = None in
+       let s = Some 1 in
+       let o = None in
+       let b = Some (20, 100, 0, 80) in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 23 -> 
+     if (d = (1174424834, 31)) || (d = (1174424832, 32)) || (d = (1174424832, 31)) || (d = (167801088, 31)) || (d = (167803136, 31)) || (d = (167802112, 31)) || (d = (167804160, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else if (d = (1174424832, 24)) then
+       let c = None in
+       let s = Some 1 in
+       let o = None in
+       let b = Some (20, 100, 0, 80) in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 24 -> 
+     if (d = (1174425090, 31)) || (d = (1174425088, 32)) || (d = (1174425088, 31)) || (d = (167801344, 31)) || (d = (167803392, 31)) || (d = (167802368, 31)) || (d = (167804416, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else if (d = (1174425088, 24)) then
+       let c = None in
+       let s = Some 1 in
+       let o = None in
+       let b = Some (20, 100, 0, 80) in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 25 -> 
+     if (d = (1174412032, 32)) || (d = (167780096, 31)) || (d = (167779840, 31)) || (d = (167779584, 31)) || (d = (167779328, 31)) || (d = (167829760, 31)) || (d = (167831808, 31)) || (d = (167833856, 31)) || (d = (167835904, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 26 -> 
+     if (d = (1174425346, 31)) || (d = (1174425344, 32)) || (d = (1174425344, 31)) || (d = (167801600, 31)) || (d = (167803648, 31)) || (d = (167802624, 31)) || (d = (167804672, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else if (d = (1174425344, 24)) then
+       let c = None in
+       let s = Some 1 in
+       let o = None in
+       let b = Some (20, 100, 0, 80) in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 27 -> 
+     if (d = (167780352, 31)) || (d = (167782400, 31)) || (d = (167781376, 31)) || (d = (1174414336, 31)) || (d = (167783424, 31)) || (d = (1174414336, 32)) || (d = (1174414338, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else if (d = (1174414336, 24)) then
+       let c = None in
+       let s = Some 1 in
+       let o = None in
+       let b = Some (20, 100, 0, 80) in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 28 -> 
+     if (d = (167807232, 31)) || (d = (167776256, 31)) || (d = (167809280, 31)) || (d = (167777024, 31)) || (d = (167776768, 31)) || (d = (167776512, 31)) || (d = (167811328, 31)) || (d = (1174411264, 32)) || (d = (167805184, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 29 -> 
+     if (d = (167777792, 31)) || (d = (167776768, 31)) || (d = (1174412800, 32)) || (d = (167779840, 31)) || (d = (167778816, 31)) || (d = (1174412800, 31)) || (d = (1174412802, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else if (d = (1174412800, 24)) then
+       let c = None in
+       let s = Some 1 in
+       let o = None in
+       let b = Some (20, 100, 0, 80) in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 30 -> 
+     if (d = (1174422272, 32)) || (d = (167831040, 31)) || (d = (167833088, 31)) || (d = (167835136, 31)) || (d = (167800576, 31)) || (d = (167800320, 31)) || (d = (167800064, 31)) || (d = (167799808, 31)) || (d = (167837184, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 31 -> 
+     if (d = (167778048, 31)) || (d = (167777024, 31)) || (d = (1174413056, 32)) || (d = (167780096, 31)) || (d = (167779072, 31)) || (d = (1174413056, 31)) || (d = (1174413058, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else if (d = (1174413056, 24)) then
+       let c = None in
+       let s = Some 1 in
+       let o = None in
+       let b = Some (20, 100, 0, 80) in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 32 -> 
+     if (d = (167778304, 31)) || (d = (1174411776, 32)) || (d = (167779072, 31)) || (d = (167778816, 31)) || (d = (167778560, 31)) || (d = (167821568, 31)) || (d = (167823616, 31)) || (d = (167825664, 31)) || (d = (167827712, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 33 -> 
+     if (d = (1174424578, 31)) || (d = (1174424576, 32)) || (d = (1174424576, 31)) || (d = (167800832, 31)) || (d = (167802880, 31)) || (d = (167801856, 31)) || (d = (167803904, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else if (d = (1174424576, 24)) then
+       let c = None in
+       let s = Some 1 in
+       let o = None in
+       let b = Some (20, 100, 0, 80) in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 34 -> 
+     if (d = (167778048, 31)) || (d = (167777792, 31)) || (d = (167777536, 31)) || (d = (167777280, 31)) || (d = (1174411520, 32)) || (d = (167813376, 31)) || (d = (167815424, 31)) || (d = (167817472, 31)) || (d = (167819520, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 35 -> 
+     if (d = (167806464, 31)) || (d = (167808512, 31)) || (d = (167810560, 31)) || (d = (167812608, 31)) || (d = (1174421504, 32)) || (d = (167797248, 31)) || (d = (167796992, 31)) || (d = (167796736, 31)) || (d = (167797504, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 36 -> 
+     if (d = (1174423042, 31)) || (d = (1174423040, 31)) || (d = (1174423040, 32)) || (d = (167797248, 31)) || (d = (167799296, 31)) || (d = (167798272, 31)) || (d = (167800320, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else if (d = (1174423040, 24)) then
+       let c = None in
+       let s = Some 1 in
+       let o = None in
+       let b = Some (20, 100, 0, 80) in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 37 -> 
+     if (d = (1174423298, 31)) || (d = (1174423296, 31)) || (d = (1174423296, 32)) || (d = (167799552, 31)) || (d = (167798528, 31)) || (d = (167797504, 31)) || (d = (167800576, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else if (d = (1174423296, 24)) then
+       let c = None in
+       let s = Some 1 in
+       let o = None in
+       let b = Some (20, 100, 0, 80) in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 38 -> 
+     if (d = (167822848, 31)) || (d = (167824896, 31)) || (d = (167826944, 31)) || (d = (1174422016, 32)) || (d = (167828992, 31)) || (d = (167799552, 31)) || (d = (167799296, 31)) || (d = (167799040, 31)) || (d = (167798784, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 39 -> 
+     if (d = (167814656, 31)) || (d = (167816704, 31)) || (d = (167818752, 31)) || (d = (1174421760, 32)) || (d = (167820800, 31)) || (d = (167798016, 31)) || (d = (167797760, 31)) || (d = (167798528, 31)) || (d = (167798272, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 40 -> 
+     if (d = (167807232, 31)) || (d = (167806976, 31)) || (d = (167807744, 31)) || (d = (167808000, 31)) || (d = (167807488, 31)) || (d = (167808768, 31)) || (d = (167808256, 31)) || (d = (167808512, 31)) || (d = (1174405376, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 41 -> 
+     if (d = (167806720, 31)) || (d = (167806208, 31)) || (d = (167806464, 31)) || (d = (1174405120, 32)) || (d = (167805184, 31)) || (d = (167804928, 31)) || (d = (167805696, 31)) || (d = (167805952, 31)) || (d = (167805440, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 42 -> 
+     if (d = (1174416384, 32)) || (d = (167784448, 31)) || (d = (1174416384, 31)) || (d = (167786496, 31)) || (d = (167785472, 31)) || (d = (167787520, 31)) || (d = (1174416386, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else if (d = (1174416384, 24)) then
+       let c = None in
+       let s = Some 1 in
+       let o = None in
+       let b = Some (20, 100, 0, 80) in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 43 -> 
+     if (d = (1174405888, 32)) || (d = (167811328, 31)) || (d = (167811072, 31)) || (d = (167811840, 31)) || (d = (167812096, 31)) || (d = (167811584, 31)) || (d = (167812864, 31)) || (d = (167812352, 31)) || (d = (167812608, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 44 -> 
+     if (d = (167773952, 31)) || (d = (167773696, 31)) || (d = (167773440, 31)) || (d = (167773184, 31)) || (d = (167813120, 31)) || (d = (1174409472, 32)) || (d = (167815168, 31)) || (d = (167817216, 31)) || (d = (167819264, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 45 -> 
+     if (d = (1174416640, 32)) || (d = (167784704, 31)) || (d = (1174416640, 31)) || (d = (167786752, 31)) || (d = (167785728, 31)) || (d = (167787776, 31)) || (d = (1174416642, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else if (d = (1174416640, 24)) then
+       let c = None in
+       let s = Some 1 in
+       let o = None in
+       let b = Some (20, 100, 0, 80) in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 46 -> 
+     if (d = (167809280, 31)) || (d = (167809024, 31)) || (d = (167809792, 31)) || (d = (167810048, 31)) || (d = (167809536, 31)) || (d = (1174405632, 32)) || (d = (167810816, 31)) || (d = (167810304, 31)) || (d = (167810560, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 47 -> 
+     if (d = (167772928, 31)) || (d = (167772672, 31)) || (d = (167772416, 31)) || (d = (167772160, 31)) || (d = (167806976, 31)) || (d = (1174409216, 32)) || (d = (167809024, 31)) || (d = (167811072, 31)) || (d = (167804928, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 48 -> 
+     if (d = (1174416896, 32)) || (d = (1174416896, 31)) || (d = (167785984, 31)) || (d = (167784960, 31)) || (d = (167788032, 31)) || (d = (167787008, 31)) || (d = (1174416898, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else if (d = (1174416896, 24)) then
+       let c = None in
+       let s = Some 1 in
+       let o = None in
+       let b = Some (20, 100, 0, 80) in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 49 -> 
+     if (d = (1174406400, 32)) || (d = (167816448, 31)) || (d = (167815424, 31)) || (d = (167815168, 31)) || (d = (167815936, 31)) || (d = (167816192, 31)) || (d = (167815680, 31)) || (d = (167816960, 31)) || (d = (167816704, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 50 -> 
+     if (d = (167776000, 31)) || (d = (167775744, 31)) || (d = (167775488, 31)) || (d = (167775232, 31)) || (d = (1174409984, 32)) || (d = (167829504, 31)) || (d = (167831552, 31)) || (d = (167833600, 31)) || (d = (167835648, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 51 -> 
+     if (d = (1174417152, 32)) || (d = (1174417152, 31)) || (d = (167786240, 31)) || (d = (167785216, 31)) || (d = (167788288, 31)) || (d = (167787264, 31)) || (d = (1174417154, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else if (d = (1174417152, 24)) then
+       let c = None in
+       let s = Some 1 in
+       let o = None in
+       let b = Some (20, 100, 0, 80) in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 52 -> 
+     if (d = (1174406144, 32)) || (d = (167814400, 31)) || (d = (167813376, 31)) || (d = (167813120, 31)) || (d = (167813888, 31)) || (d = (167814144, 31)) || (d = (167813632, 31)) || (d = (167814912, 31)) || (d = (167814656, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 53 -> 
+     if (d = (167774208, 31)) || (d = (167774976, 31)) || (d = (167774720, 31)) || (d = (167774464, 31)) || (d = (1174409728, 32)) || (d = (167821312, 31)) || (d = (167823360, 31)) || (d = (167825408, 31)) || (d = (167827456, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 54 -> 
+     if (d = (1174406912, 32)) || (d = (167820544, 31)) || (d = (167819520, 31)) || (d = (167819264, 31)) || (d = (167820032, 31)) || (d = (167820288, 31)) || (d = (167819776, 31)) || (d = (167821056, 31)) || (d = (167820800, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 55 -> 
+     if (d = (1174406656, 32)) || (d = (167818496, 31)) || (d = (167817472, 31)) || (d = (167817216, 31)) || (d = (167817984, 31)) || (d = (167818240, 31)) || (d = (167817728, 31)) || (d = (167819008, 31)) || (d = (167818752, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 56 -> 
+     if (d = (1174407424, 32)) || (d = (167824640, 31)) || (d = (167823616, 31)) || (d = (167824384, 31)) || (d = (167823360, 31)) || (d = (167824128, 31)) || (d = (167824896, 31)) || (d = (167823872, 31)) || (d = (167825152, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 57 -> 
+     if (d = (1174407168, 32)) || (d = (167822592, 31)) || (d = (167821568, 31)) || (d = (167822336, 31)) || (d = (167821312, 31)) || (d = (167822080, 31)) || (d = (167822848, 31)) || (d = (167821824, 31)) || (d = (167823104, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 58 -> 
+     if (d = (1174418176, 32)) || (d = (167792384, 31)) || (d = (167792128, 31)) || (d = (167791872, 31)) || (d = (167791616, 31)) || (d = (167830528, 31)) || (d = (167832576, 31)) || (d = (167834624, 31)) || (d = (167836672, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 59 -> 
+     if (d = (167822336, 31)) || (d = (1174417920, 32)) || (d = (167791104, 31)) || (d = (167790848, 31)) || (d = (167790592, 31)) || (d = (167824384, 31)) || (d = (167791360, 31)) || (d = (167826432, 31)) || (d = (167828480, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 60 -> 
+     if (d = (167814400, 31)) || (d = (167816448, 31)) || (d = (167818496, 31)) || (d = (167820544, 31)) || (d = (1174419712, 32)) || (d = (167794432, 31)) || (d = (167794176, 31)) || (d = (167793920, 31)) || (d = (167793664, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 61 -> 
+     if (d = (167806208, 31)) || (d = (167808256, 31)) || (d = (167810304, 31)) || (d = (167812352, 31)) || (d = (1174419456, 32)) || (d = (167793152, 31)) || (d = (167792896, 31)) || (d = (167792640, 31)) || (d = (167793408, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 62 -> 
+     if (d = (1174420224, 32)) || (d = (167796480, 31)) || (d = (167796224, 31)) || (d = (167795968, 31)) || (d = (167795712, 31)) || (d = (167830784, 31)) || (d = (167832832, 31)) || (d = (167834880, 31)) || (d = (167836928, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 63 -> 
+     if (d = (1174419968, 32)) || (d = (167822592, 31)) || (d = (167824640, 31)) || (d = (167826688, 31)) || (d = (167795200, 31)) || (d = (167794944, 31)) || (d = (167794688, 31)) || (d = (167828736, 31)) || (d = (167795456, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 64 -> 
+     if (d = (1174419200, 31)) || (d = (1174419200, 32)) || (d = (167790336, 31)) || (d = (167789312, 31)) || (d = (1174419202, 31)) || (d = (167792384, 31)) || (d = (167791360, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else if (d = (1174419200, 24)) then
+       let c = None in
+       let s = Some 1 in
+       let o = None in
+       let b = Some (20, 100, 0, 80) in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 65 -> 
+     if (d = (167814144, 31)) || (d = (167816192, 31)) || (d = (1174417664, 32)) || (d = (167818240, 31)) || (d = (167820288, 31)) || (d = (167790336, 31)) || (d = (167790080, 31)) || (d = (167789824, 31)) || (d = (167789568, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 66 -> 
+     if (d = (1174408192, 32)) || (d = (167829760, 31)) || (d = (167829504, 31)) || (d = (167831296, 31)) || (d = (167830784, 31)) || (d = (167830272, 31)) || (d = (167830016, 31)) || (d = (167831040, 31)) || (d = (167830528, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 67 -> 
+     if (d = (1174407936, 32)) || (d = (167828736, 31)) || (d = (167827712, 31)) || (d = (167828480, 31)) || (d = (167827456, 31)) || (d = (167828224, 31)) || (d = (167828992, 31)) || (d = (167827968, 31)) || (d = (167829248, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 68 -> 
+     if (d = (1174407680, 32)) || (d = (167826688, 31)) || (d = (167825664, 31)) || (d = (167826432, 31)) || (d = (167825408, 31)) || (d = (167826176, 31)) || (d = (167826944, 31)) || (d = (167825920, 31)) || (d = (167827200, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 69 -> 
+     if (d = (167807744, 31)) || (d = (167809792, 31)) || (d = (167811840, 31)) || (d = (167784704, 31)) || (d = (167784448, 31)) || (d = (1174415360, 32)) || (d = (167785216, 31)) || (d = (167784960, 31)) || (d = (167805696, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 70 -> 
+     if (d = (1174408960, 32)) || (d = (167835904, 31)) || (d = (167835648, 31)) || (d = (167837440, 31)) || (d = (167836928, 31)) || (d = (167836416, 31)) || (d = (167836160, 31)) || (d = (167837184, 31)) || (d = (167836672, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 71 -> 
+     if (d = (1174408704, 32)) || (d = (167833856, 31)) || (d = (167833600, 31)) || (d = (167835392, 31)) || (d = (167834880, 31)) || (d = (167834368, 31)) || (d = (167834112, 31)) || (d = (167835136, 31)) || (d = (167834624, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 72 -> 
+     if (d = (1174408448, 32)) || (d = (167831808, 31)) || (d = (167831552, 31)) || (d = (167833344, 31)) || (d = (167832832, 31)) || (d = (167832320, 31)) || (d = (167832064, 31)) || (d = (167833088, 31)) || (d = (167832576, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 73 -> 
+     if (d = (1174418432, 31)) || (d = (167788544, 31)) || (d = (1174418432, 32)) || (d = (167790592, 31)) || (d = (167789568, 31)) || (d = (1174418434, 31)) || (d = (167791616, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else if (d = (1174418432, 24)) then
+       let c = None in
+       let s = Some 1 in
+       let o = None in
+       let b = Some (20, 100, 0, 80) in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 74 -> 
+     if (d = (1174418688, 31)) || (d = (167788800, 31)) || (d = (1174418688, 32)) || (d = (167790848, 31)) || (d = (167789824, 31)) || (d = (1174418690, 31)) || (d = (167791872, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else if (d = (1174418688, 24)) then
+       let c = None in
+       let s = Some 1 in
+       let o = None in
+       let b = Some (20, 100, 0, 80) in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 75 -> 
+     if (d = (167808000, 31)) || (d = (167810048, 31)) || (d = (167812096, 31)) || (d = (1174417408, 32)) || (d = (167788800, 31)) || (d = (167788544, 31)) || (d = (167789312, 31)) || (d = (167789056, 31)) || (d = (167805952, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 76 -> 
+     if (d = (1174418944, 31)) || (d = (1174418944, 32)) || (d = (167791104, 31)) || (d = (167790080, 31)) || (d = (167789056, 31)) || (d = (1174418946, 31)) || (d = (167792128, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else if (d = (1174418944, 24)) then
+       let c = None in
+       let s = Some 1 in
+       let o = None in
+       let b = Some (20, 100, 0, 80) in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 77 -> 
+     if (d = (1174415872, 32)) || (d = (167786752, 31)) || (d = (167786496, 31)) || (d = (167787264, 31)) || (d = (167787008, 31)) || (d = (167822080, 31)) || (d = (167824128, 31)) || (d = (167826176, 31)) || (d = (167828224, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 78 -> 
+     if (d = (167813888, 31)) || (d = (167815936, 31)) || (d = (167817984, 31)) || (d = (1174415616, 32)) || (d = (167786240, 31)) || (d = (167785984, 31)) || (d = (167785728, 31)) || (d = (167785472, 31)) || (d = (167820032, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 79 -> 
+     if (d = (1174416128, 32)) || (d = (167788288, 31)) || (d = (167787776, 31)) || (d = (167788032, 31)) || (d = (167787520, 31)) || (d = (167830272, 31)) || (d = (167832320, 31)) || (d = (167834368, 31)) || (d = (167836416, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | _ -> (None,None,None,None,None)
+
+ let transferOspf edge o =
+   match o with
+   | None -> None
+   | Some (ad,cost,areaType,areaId) -> (
+   match edge with
+   | (19,20) -> None
+   | (54,6) -> None
+   | (11,20) -> None
+   | (60,49) -> None
+   | (67,63) -> None
+   | (39,37) -> None
+   | (65,49) -> None
+   | (74,65) -> None
+   | (58,64) -> None
+   | (58,73) -> None
+   | (25,31) -> None
+   | (24,7) -> None
+   | (1,34) -> None
+   | (19,40) -> None
+   | (68,15) -> None
+   | (79,72) -> None
+   | (3,44) -> None
+   | (35,37) -> None
+   | (34,55) -> None
+   | (75,46) -> None
+   | (59,64) -> None
+   | (41,28) -> None
+   | (54,60) -> None
+   | (60,16) -> None
+   | (6,52) -> None
+   | (37,35) -> None
+   | (36,38) -> None
+   | (49,39) -> None
+   | (79,48) -> None
+   | (22,11) -> None
+   | (63,16) -> None
+   | (55,6) -> None
+   | (26,14) -> None
+   | (9,20) -> None
+   | (58,66) -> None
+   | (51,79) -> None
+   | (11,68) -> None
+   | (25,66) -> None
+   | (52,39) -> None
+   | (5,38) -> None
+   | (34,1) -> None
+   | (62,10) -> None
+   | (32,31) -> None
+   | (23,14) -> None
+   | (53,56) -> None
+   | (61,16) -> None
+   | (35,5) -> None
+   | (40,28) -> None
+   | (61,10) -> None
+   | (39,55) -> None
+   | (29,34) -> None
+   | (60,10) -> None
+   | (59,73) -> None
+   | (72,14) -> None
+   | (25,1) -> None
+   | (6,54) -> None
+   | (57,77) -> None
+   | (53,67) -> None
+   | (63,10) -> None
+   | (34,31) -> None
+   | (58,70) -> None
+   | (17,27) -> None
+   | (32,1) -> None
+   | (50,72) -> None
+   | (47,40) -> None
+   | (50,12) -> None
+   | (39,4) -> None
+   | (56,77) -> None
+   | (4,38) -> None
+   | (31,34) -> None
+   | (70,62) -> None
+   | (50,3) -> None
+   | (46,28) -> None
+   | (63,67) -> None
+   | (59,68) -> None
+   | (49,60) -> None
+   | (12,44) -> None
+   | (43,75) -> None
+   | (44,13) -> None
+   | (52,17) -> None
+   | (40,35) -> None
+   | (66,14) -> None
+   | (6,26) -> None
+   | (65,64) -> None
+   | (65,73) -> None
+   | (28,31) -> None
+   | (43,7) -> None
+   | (6,33) -> None
+   | (41,35) -> None
+   | (8,60) -> None
+   | (61,46) -> None
+   | (63,56) -> None
+   | (9,72) -> None
+   | (53,3) -> None
+   | (70,79) -> None
+   | (71,62) -> None
+   | (7,26) -> None
+   | (30,37) -> None
+   | (28,41) -> None
+   | (75,74) -> None
+   | (18,60) -> None
+   | (30,70) -> None
+   | (49,17) -> None
+   | (47,13) -> None
+   | (56,53) -> None
+   | (17,54) -> None
+   | (55,60) -> None
+   | (10,62) -> None
+   | (75,73) -> None
+   | (77,42) -> None
+   | (15,26) -> None
+   | (15,33) -> None
+   | (75,64) -> None
+   | (30,72) -> None
+   | (46,35) -> None
+   | (8,62) -> None
+   | (0,34) -> None
+   | (46,7) -> None
+   | (77,45) -> None
+   | (63,57) -> None
+   | (70,9) -> None
+   | (16,60) -> None
+   | (78,42) -> None
+   | (78,51) -> None
+   | (39,52) -> None
+   | (11,57) -> None
+   | (44,49) -> None
+   | (38,37) -> None
+   | (44,3) -> None
+   | (52,60) -> None
+   | (69,46) -> None
+   | (73,65) -> None
+   | (64,65) -> None
+   | (79,51) -> None
+   | (78,45) -> None
+   | (18,62) -> None
+   | (57,59) -> None
+   | (6,23) -> None
+   | (63,68) -> None
+   | (7,33) -> None
+   | (2,44) -> None
+   | (43,47) -> None
+   | (30,66) -> None
+   | (35,46) -> None
+   | (68,63) -> None
+   | (76,65) -> None
+   | (69,45) -> None
+   | (14,26) -> None
+   | (43,35) -> None
+   | (13,44) -> None
+   | (7,23) -> None
+   | (46,47) -> None
+   | (77,51) -> None
+   | (25,70) -> None
+   | (29,25) -> None
+   | (72,25) -> None
+   | (4,39) -> None
+   | (71,50) -> None
+   | (50,71) -> None
+   | (61,43) -> None
+   | (69,41) -> None
+   | (38,4) -> None
+   | (38,56) -> None
+   | (47,12) -> None
+   | (48,78) -> None
+   | (49,34) -> None
+   | (9,70) -> None
+   | (13,53) -> None
+   | (69,42) -> None
+   | (62,8) -> None
+   | (69,51) -> None
+   | (71,9) -> None
+   | (33,6) -> None
+   | (67,53) -> None
+   | (12,53) -> None
+   | (41,7) -> None
+   | (66,25) -> None
+   | (9,27) -> None
+   | (72,9) -> None
+   | (38,67) -> None
+   | (23,6) -> None
+   | (40,7) -> None
+   | (31,25) -> None
+   | (68,53) -> None
+   | (30,4) -> None
+   | (43,61) -> None
+   | (35,36) -> None
+   | (66,9) -> None
+   | (34,52) -> None
+   | (27,11) -> None
+   | (63,8) -> None
+   | (10,60) -> None
+   | (71,25) -> None
+   | (44,12) -> None
+   | (70,50) -> None
+   | (47,46) -> None
+   | (66,50) -> None
+   | (70,25) -> None
+   | (71,14) -> None
+   | (19,22) -> None
+   | (53,12) -> None
+   | (28,43) -> None
+   | (72,50) -> None
+   | (68,77) -> None
+   | (58,76) -> None
+   | (60,8) -> None
+   | (62,66) -> None
+   | (6,49) -> None
+   | (52,6) -> None
+   | (67,77) -> None
+   | (32,29) -> None
+   | (28,1) -> None
+   | (55,39) -> None
+   | (20,17) -> None
+   | (9,21) -> None
+   | (75,41) -> None
+   | (58,72) -> None
+   | (20,11) -> None
+   | (79,71) -> None
+   | (26,6) -> None
+   | (45,79) -> None
+   | (7,43) -> None
+   | (68,38) -> None
+   | (25,29) -> None
+   | (21,11) -> None
+   | (60,52) -> None
+   | (11,27) -> None
+   | (14,24) -> None
+   | (54,34) -> None
+   | (42,78) -> None
+   | (17,49) -> None
+   | (45,78) -> None
+   | (55,34) -> None
+   | (62,16) -> None
+   | (64,58) -> None
+   | (24,6) -> None
+   | (78,55) -> None
+   | (27,17) -> None
+   | (67,38) -> None
+   | (32,57) -> None
+   | (60,55) -> None
+   | (49,6) -> None
+   | (17,20) -> None
+   | (37,38) -> None
+   | (73,58) -> None
+   | (57,63) -> None
+   | (51,78) -> None
+   | (52,34) -> None
+   | (74,58) -> None
+   | (68,32) -> None
+   | (39,5) -> None
+   | (11,21) -> None
+   | (67,15) -> None
+   | (14,70) -> None
+   | (56,63) -> None
+   | (32,68) -> None
+   | (76,58) -> None
+   | (67,32) -> None
+   | (7,40) -> None
+   | (17,21) -> None
+   | (39,49) -> None
+   | (53,2) -> None
+   | (15,67) -> None
+   | (75,76) -> None
+   | (28,40) -> None
+   | (41,69) -> None
+   | (77,68) -> None
+   | (7,24) -> None
+   | (55,17) -> None
+   | (52,78) -> None
+   | (42,77) -> None
+   | (30,71) -> None
+   | (66,79) -> None
+   | (33,14) -> None
+   | (54,44) -> None
+   | (62,71) -> None
+   | (65,76) -> None
+   | (15,56) -> None
+   | (78,52) -> None
+   | (45,77) -> None
+   | (10,63) -> None
+   | (12,50) -> None
+   | (72,79) -> None
+   | (44,2) -> None
+   | (68,11) -> None
+   | (8,63) -> None
+   | (55,44) -> None
+   | (34,29) -> None
+   | (28,0) -> None
+   | (39,54) -> None
+   | (5,39) -> None
+   | (49,44) -> None
+   | (50,2) -> None
+   | (33,15) -> None
+   | (31,32) -> None
+   | (47,41) -> None
+   | (17,55) -> None
+   | (47,43) -> None
+   | (59,67) -> None
+   | (50,66) -> None
+   | (50,70) -> None
+   | (61,8) -> None
+   | (49,78) -> None
+   | (14,72) -> None
+   | (28,29) -> None
+   | (34,0) -> None
+   | (55,78) -> None
+   | (77,57) -> None
+   | (59,56) -> None
+   | (73,75) -> None
+   | (35,40) -> None
+   | (25,72) -> None
+   | (11,56) -> None
+   | (48,79) -> None
+   | (44,55) -> None
+   | (2,47) -> None
+   | (2,50) -> None
+   | (59,76) -> None
+   | (70,30) -> None
+   | (56,15) -> None
+   | (16,63) -> None
+   | (32,0) -> None
+   | (40,61) -> None
+   | (43,69) -> None
+   | (13,50) -> None
+   | (65,54) -> None
+   | (47,2) -> None
+   | (67,11) -> None
+   | (0,28) -> None
+   | (19,27) -> None
+   | (29,32) -> None
+   | (11,67) -> None
+   | (1,28) -> None
+   | (69,40) -> None
+   | (34,49) -> None
+   | (19,41) -> None
+   | (61,40) -> None
+   | (65,55) -> None
+   | (9,71) -> None
+   | (79,66) -> None
+   | (3,47) -> None
+   | (69,48) -> None
+   | (6,24) -> None
+   | (3,50) -> None
+   | (46,61) -> None
+   | (34,54) -> None
+   | (18,63) -> None
+   | (57,15) -> None
+   | (1,32) -> None
+   | (14,23) -> None
+   | (19,46) -> None
+   | (41,47) -> None
+   | (57,32) -> None
+   | (35,43) -> None
+   | (35,41) -> None
+   | (39,36) -> None
+   | (0,25) -> None
+   | (13,47) -> None
+   | (25,71) -> None
+   | (65,52) -> None
+   | (76,75) -> None
+   | (77,48) -> None
+   | (3,53) -> None
+   | (56,32) -> None
+   | (46,69) -> None
+   | (78,48) -> None
+   | (1,25) -> None
+   | (44,54) -> None
+   | (74,75) -> None
+   | (19,43) -> None
+   | (15,24) -> None
+   | (41,61) -> None
+   | (56,59) -> None
+   | (16,62) -> None
+   | (2,53) -> None
+   | (40,69) -> None
+   | (0,32) -> None
+   | (12,47) -> None
+   | (30,36) -> None
+   | (20,19) -> None
+   | (29,28) -> None
+   | (71,58) -> None
+   | (32,67) -> None
+   | (47,3) -> None
+   | (49,65) -> None
+   | (61,41) -> None
+   | (37,39) -> None
+   | (69,43) -> None
+   | (40,47) -> None
+   | (66,30) -> None
+   | (66,62) -> None
+   | (9,66) -> None
+   | (64,75) -> None
+   | (21,9) -> None
+   | (54,39) -> None
+   | (15,23) -> None
+   | (64,59) -> None
+   | (56,38) -> None
+   | (40,75) -> None
+   | (18,61) -> None
+   | (32,56) -> None
+   | (22,9) -> None
+   | (41,75) -> None
+   | (38,36) -> None
+   | (16,61) -> None
+   | (44,52) -> None
+   | (75,40) -> None
+   | (55,65) -> None
+   | (79,45) -> None
+   | (24,14) -> None
+   | (57,38) -> None
+   | (35,4) -> None
+   | (65,74) -> None
+   | (53,68) -> None
+   | (14,66) -> None
+   | (28,46) -> None
+   | (20,9) -> None
+   | (25,0) -> None
+   | (60,18) -> None
+   | (15,57) -> None
+   | (57,53) -> None
+   | (41,19) -> None
+   | (6,55) -> None
+   | (62,72) -> None
+   | (46,75) -> None
+   | (8,61) -> None
+   | (79,70) -> None
+   | (70,14) -> None
+   | (43,19) -> None
+   | (52,65) -> None
+   | (19,21) -> None
+   | (21,19) -> None
+   | (53,13) -> None
+   | (72,62) -> None
+   | (58,71) -> None
+   | (53,57) -> None
+   | (15,68) -> None
+   | (27,9) -> None
+   | (77,67) -> None
+   | (59,57) -> None
+   | (4,30) -> None
+   | (43,28) -> None
+   | (71,30) -> None
+   | (46,19) -> None
+   | (4,35) -> None
+   | (50,13) -> None
+   | (58,74) -> None
+   | (27,19) -> None
+   | (31,28) -> None
+   | (10,61) -> None
+   | (59,74) -> None
+   | (61,18) -> None
+   | (5,30) -> None
+   | (72,30) -> None
+   | (40,19) -> None
+   | (5,35) -> None
+   | (17,22) -> None
+   | (30,5) -> None
+   | (57,11) -> None
+   | (22,17) -> None
+   | (74,59) -> None
+   | (36,30) -> None
+   | (38,68) -> None
+   | (54,78) -> None
+   | (77,56) -> None
+   | (51,77) -> None
+   | (63,18) -> None
+   | (52,44) -> None
+   | (45,69) -> None
+   | (75,43) -> None
+   | (79,42) -> None
+   | (54,17) -> None
+   | (23,15) -> None
+   | (14,71) -> None
+   | (38,57) -> None
+   | (22,19) -> None
+   | (71,79) -> None
+   | (24,15) -> None
+   | (37,30) -> None
+   | (21,17) -> None
+   | (42,79) -> None
+   | (62,18) -> None
+   | (56,11) -> None
+   | (36,35) -> None
+   | (78,49) -> None
+   | (62,70) -> None
+   | (14,33) -> None
+   | (33,7) -> None
+   | (26,15) -> None
+   | (42,69) -> None
+   | (48,77) -> None
+   | (23,7) -> None
+   | (67,59) -> None
+   | (7,46) -> None
+   | (38,5) -> None
+   | (70,58) -> None
+   | (17,52) -> None
+   | (54,65) -> None
+   | (76,59) -> None
+   | (36,39) -> None
+   | (66,58) -> None
+   | (78,54) -> None
+   | (7,41) -> None
+   | (26,7) -> None
+   | (60,54) -> None
+   | (48,69) -> None
+   | (9,22) -> None
+   | (73,59) -> None
+   | (72,58) -> None
+   | (68,59) -> None
+   | (11,22) -> None
+   | (51,69) -> None
+)
+ let transferBgp edge b =
+   match b with
+   | None -> None
+   | Some (ad,lp,cost,med) -> (
+   match edge with
+   | (19,20) -> Some (ad, lp, cost + 1, med)
+   | (54,6) -> Some (ad, lp, cost + 1, med)
+   | (11,20) -> Some (ad, lp, cost + 1, med)
+   | (60,49) -> Some (ad, lp, cost + 1, med)
+   | (67,63) -> Some (ad, lp, cost + 1, med)
+   | (39,37) -> Some (ad, lp, cost + 1, med)
+   | (65,49) -> Some (ad, lp, cost + 1, med)
+   | (74,65) -> Some (ad, lp, cost + 1, med)
+   | (58,64) -> Some (ad, lp, cost + 1, med)
+   | (58,73) -> Some (ad, lp, cost + 1, med)
+   | (25,31) -> Some (ad, lp, cost + 1, med)
+   | (24,7) -> Some (ad, lp, cost + 1, med)
+   | (1,34) -> Some (ad, lp, cost + 1, med)
+   | (19,40) -> Some (ad, lp, cost + 1, med)
+   | (68,15) -> Some (ad, lp, cost + 1, med)
+   | (79,72) -> Some (ad, lp, cost + 1, med)
+   | (3,44) -> Some (ad, lp, cost + 1, med)
+   | (35,37) -> Some (ad, lp, cost + 1, med)
+   | (34,55) -> Some (ad, lp, cost + 1, med)
+   | (75,46) -> Some (ad, lp, cost + 1, med)
+   | (59,64) -> Some (ad, lp, cost + 1, med)
+   | (41,28) -> Some (ad, lp, cost + 1, med)
+   | (54,60) -> Some (ad, lp, cost + 1, med)
+   | (60,16) -> Some (ad, lp, cost + 1, med)
+   | (6,52) -> Some (ad, lp, cost + 1, med)
+   | (37,35) -> Some (ad, lp, cost + 1, med)
+   | (36,38) -> Some (ad, lp, cost + 1, med)
+   | (49,39) -> Some (ad, lp, cost + 1, med)
+   | (79,48) -> Some (ad, lp, cost + 1, med)
+   | (22,11) -> Some (ad, lp, cost + 1, med)
+   | (63,16) -> Some (ad, lp, cost + 1, med)
+   | (55,6) -> Some (ad, lp, cost + 1, med)
+   | (26,14) -> Some (ad, lp, cost + 1, med)
+   | (9,20) -> Some (ad, lp, cost + 1, med)
+   | (58,66) -> Some (ad, lp, cost + 1, med)
+   | (51,79) -> Some (ad, lp, cost + 1, med)
+   | (11,68) -> Some (ad, lp, cost + 1, med)
+   | (25,66) -> Some (ad, lp, cost + 1, med)
+   | (52,39) -> Some (ad, lp, cost + 1, med)
+   | (5,38) -> Some (ad, lp, cost + 1, med)
+   | (34,1) -> Some (ad, lp, cost + 1, med)
+   | (62,10) -> Some (ad, lp, cost + 1, med)
+   | (32,31) -> Some (ad, lp, cost + 1, med)
+   | (23,14) -> Some (ad, lp, cost + 1, med)
+   | (53,56) -> Some (ad, lp, cost + 1, med)
+   | (61,16) -> Some (ad, lp, cost + 1, med)
+   | (35,5) -> Some (ad, lp, cost + 1, med)
+   | (40,28) -> Some (ad, lp, cost + 1, med)
+   | (61,10) -> Some (ad, lp, cost + 1, med)
+   | (39,55) -> Some (ad, lp, cost + 1, med)
+   | (29,34) -> Some (ad, lp, cost + 1, med)
+   | (60,10) -> Some (ad, lp, cost + 1, med)
+   | (59,73) -> Some (ad, lp, cost + 1, med)
+   | (72,14) -> Some (ad, lp, cost + 1, med)
+   | (25,1) -> Some (ad, lp, cost + 1, med)
+   | (6,54) -> Some (ad, lp, cost + 1, med)
+   | (57,77) -> Some (ad, lp, cost + 1, med)
+   | (53,67) -> Some (ad, lp, cost + 1, med)
+   | (63,10) -> Some (ad, lp, cost + 1, med)
+   | (34,31) -> Some (ad, lp, cost + 1, med)
+   | (58,70) -> Some (ad, lp, cost + 1, med)
+   | (17,27) -> Some (ad, lp, cost + 1, med)
+   | (32,1) -> Some (ad, lp, cost + 1, med)
+   | (50,72) -> Some (ad, lp, cost + 1, med)
+   | (47,40) -> Some (ad, lp, cost + 1, med)
+   | (50,12) -> Some (ad, lp, cost + 1, med)
+   | (39,4) -> Some (ad, lp, cost + 1, med)
+   | (56,77) -> Some (ad, lp, cost + 1, med)
+   | (4,38) -> Some (ad, lp, cost + 1, med)
+   | (31,34) -> Some (ad, lp, cost + 1, med)
+   | (70,62) -> Some (ad, lp, cost + 1, med)
+   | (50,3) -> Some (ad, lp, cost + 1, med)
+   | (46,28) -> Some (ad, lp, cost + 1, med)
+   | (63,67) -> Some (ad, lp, cost + 1, med)
+   | (59,68) -> Some (ad, lp, cost + 1, med)
+   | (49,60) -> Some (ad, lp, cost + 1, med)
+   | (12,44) -> Some (ad, lp, cost + 1, med)
+   | (43,75) -> Some (ad, lp, cost + 1, med)
+   | (44,13) -> Some (ad, lp, cost + 1, med)
+   | (52,17) -> Some (ad, lp, cost + 1, med)
+   | (40,35) -> Some (ad, lp, cost + 1, med)
+   | (66,14) -> Some (ad, lp, cost + 1, med)
+   | (6,26) -> Some (ad, lp, cost + 1, med)
+   | (65,64) -> Some (ad, lp, cost + 1, med)
+   | (65,73) -> Some (ad, lp, cost + 1, med)
+   | (28,31) -> Some (ad, lp, cost + 1, med)
+   | (43,7) -> Some (ad, lp, cost + 1, med)
+   | (6,33) -> Some (ad, lp, cost + 1, med)
+   | (41,35) -> Some (ad, lp, cost + 1, med)
+   | (8,60) -> Some (ad, lp, cost + 1, med)
+   | (61,46) -> Some (ad, lp, cost + 1, med)
+   | (63,56) -> Some (ad, lp, cost + 1, med)
+   | (9,72) -> Some (ad, lp, cost + 1, med)
+   | (53,3) -> Some (ad, lp, cost + 1, med)
+   | (70,79) -> Some (ad, lp, cost + 1, med)
+   | (71,62) -> Some (ad, lp, cost + 1, med)
+   | (7,26) -> Some (ad, lp, cost + 1, med)
+   | (30,37) -> Some (ad, lp, cost + 1, med)
+   | (28,41) -> Some (ad, lp, cost + 1, med)
+   | (75,74) -> Some (ad, lp, cost + 1, med)
+   | (18,60) -> Some (ad, lp, cost + 1, med)
+   | (30,70) -> Some (ad, lp, cost + 1, med)
+   | (49,17) -> Some (ad, lp, cost + 1, med)
+   | (47,13) -> Some (ad, lp, cost + 1, med)
+   | (56,53) -> Some (ad, lp, cost + 1, med)
+   | (17,54) -> Some (ad, lp, cost + 1, med)
+   | (55,60) -> Some (ad, lp, cost + 1, med)
+   | (10,62) -> Some (ad, lp, cost + 1, med)
+   | (75,73) -> Some (ad, lp, cost + 1, med)
+   | (77,42) -> Some (ad, lp, cost + 1, med)
+   | (15,26) -> Some (ad, lp, cost + 1, med)
+   | (15,33) -> Some (ad, lp, cost + 1, med)
+   | (75,64) -> Some (ad, lp, cost + 1, med)
+   | (30,72) -> Some (ad, lp, cost + 1, med)
+   | (46,35) -> Some (ad, lp, cost + 1, med)
+   | (8,62) -> Some (ad, lp, cost + 1, med)
+   | (0,34) -> Some (ad, lp, cost + 1, med)
+   | (46,7) -> Some (ad, lp, cost + 1, med)
+   | (77,45) -> Some (ad, lp, cost + 1, med)
+   | (63,57) -> Some (ad, lp, cost + 1, med)
+   | (70,9) -> Some (ad, lp, cost + 1, med)
+   | (16,60) -> Some (ad, lp, cost + 1, med)
+   | (78,42) -> Some (ad, lp, cost + 1, med)
+   | (78,51) -> Some (ad, lp, cost + 1, med)
+   | (39,52) -> Some (ad, lp, cost + 1, med)
+   | (11,57) -> Some (ad, lp, cost + 1, med)
+   | (44,49) -> Some (ad, lp, cost + 1, med)
+   | (38,37) -> Some (ad, lp, cost + 1, med)
+   | (44,3) -> Some (ad, lp, cost + 1, med)
+   | (52,60) -> Some (ad, lp, cost + 1, med)
+   | (69,46) -> Some (ad, lp, cost + 1, med)
+   | (73,65) -> Some (ad, lp, cost + 1, med)
+   | (64,65) -> Some (ad, lp, cost + 1, med)
+   | (79,51) -> Some (ad, lp, cost + 1, med)
+   | (78,45) -> Some (ad, lp, cost + 1, med)
+   | (18,62) -> Some (ad, lp, cost + 1, med)
+   | (57,59) -> Some (ad, lp, cost + 1, med)
+   | (6,23) -> Some (ad, lp, cost + 1, med)
+   | (63,68) -> Some (ad, lp, cost + 1, med)
+   | (7,33) -> Some (ad, lp, cost + 1, med)
+   | (2,44) -> Some (ad, lp, cost + 1, med)
+   | (43,47) -> Some (ad, lp, cost + 1, med)
+   | (30,66) -> Some (ad, lp, cost + 1, med)
+   | (35,46) -> Some (ad, lp, cost + 1, med)
+   | (68,63) -> Some (ad, lp, cost + 1, med)
+   | (76,65) -> Some (ad, lp, cost + 1, med)
+   | (69,45) -> Some (ad, lp, cost + 1, med)
+   | (14,26) -> Some (ad, lp, cost + 1, med)
+   | (43,35) -> Some (ad, lp, cost + 1, med)
+   | (13,44) -> Some (ad, lp, cost + 1, med)
+   | (7,23) -> Some (ad, lp, cost + 1, med)
+   | (46,47) -> Some (ad, lp, cost + 1, med)
+   | (77,51) -> Some (ad, lp, cost + 1, med)
+   | (25,70) -> Some (ad, lp, cost + 1, med)
+   | (29,25) -> Some (ad, lp, cost + 1, med)
+   | (72,25) -> Some (ad, lp, cost + 1, med)
+   | (4,39) -> Some (ad, lp, cost + 1, med)
+   | (71,50) -> Some (ad, lp, cost + 1, med)
+   | (50,71) -> Some (ad, lp, cost + 1, med)
+   | (61,43) -> Some (ad, lp, cost + 1, med)
+   | (69,41) -> Some (ad, lp, cost + 1, med)
+   | (38,4) -> Some (ad, lp, cost + 1, med)
+   | (38,56) -> Some (ad, lp, cost + 1, med)
+   | (47,12) -> Some (ad, lp, cost + 1, med)
+   | (48,78) -> Some (ad, lp, cost + 1, med)
+   | (49,34) -> Some (ad, lp, cost + 1, med)
+   | (9,70) -> Some (ad, lp, cost + 1, med)
+   | (13,53) -> Some (ad, lp, cost + 1, med)
+   | (69,42) -> Some (ad, lp, cost + 1, med)
+   | (62,8) -> Some (ad, lp, cost + 1, med)
+   | (69,51) -> Some (ad, lp, cost + 1, med)
+   | (71,9) -> Some (ad, lp, cost + 1, med)
+   | (33,6) -> Some (ad, lp, cost + 1, med)
+   | (67,53) -> Some (ad, lp, cost + 1, med)
+   | (12,53) -> Some (ad, lp, cost + 1, med)
+   | (41,7) -> Some (ad, lp, cost + 1, med)
+   | (66,25) -> Some (ad, lp, cost + 1, med)
+   | (9,27) -> Some (ad, lp, cost + 1, med)
+   | (72,9) -> Some (ad, lp, cost + 1, med)
+   | (38,67) -> Some (ad, lp, cost + 1, med)
+   | (23,6) -> Some (ad, lp, cost + 1, med)
+   | (40,7) -> Some (ad, lp, cost + 1, med)
+   | (31,25) -> Some (ad, lp, cost + 1, med)
+   | (68,53) -> Some (ad, lp, cost + 1, med)
+   | (30,4) -> Some (ad, lp, cost + 1, med)
+   | (43,61) -> Some (ad, lp, cost + 1, med)
+   | (35,36) -> Some (ad, lp, cost + 1, med)
+   | (66,9) -> Some (ad, lp, cost + 1, med)
+   | (34,52) -> Some (ad, lp, cost + 1, med)
+   | (27,11) -> Some (ad, lp, cost + 1, med)
+   | (63,8) -> Some (ad, lp, cost + 1, med)
+   | (10,60) -> Some (ad, lp, cost + 1, med)
+   | (71,25) -> Some (ad, lp, cost + 1, med)
+   | (44,12) -> Some (ad, lp, cost + 1, med)
+   | (70,50) -> Some (ad, lp, cost + 1, med)
+   | (47,46) -> Some (ad, lp, cost + 1, med)
+   | (66,50) -> Some (ad, lp, cost + 1, med)
+   | (70,25) -> Some (ad, lp, cost + 1, med)
+   | (71,14) -> Some (ad, lp, cost + 1, med)
+   | (19,22) -> Some (ad, lp, cost + 1, med)
+   | (53,12) -> Some (ad, lp, cost + 1, med)
+   | (28,43) -> Some (ad, lp, cost + 1, med)
+   | (72,50) -> Some (ad, lp, cost + 1, med)
+   | (68,77) -> Some (ad, lp, cost + 1, med)
+   | (58,76) -> Some (ad, lp, cost + 1, med)
+   | (60,8) -> Some (ad, lp, cost + 1, med)
+   | (62,66) -> Some (ad, lp, cost + 1, med)
+   | (6,49) -> Some (ad, lp, cost + 1, med)
+   | (52,6) -> Some (ad, lp, cost + 1, med)
+   | (67,77) -> Some (ad, lp, cost + 1, med)
+   | (32,29) -> Some (ad, lp, cost + 1, med)
+   | (28,1) -> Some (ad, lp, cost + 1, med)
+   | (55,39) -> Some (ad, lp, cost + 1, med)
+   | (20,17) -> Some (ad, lp, cost + 1, med)
+   | (9,21) -> Some (ad, lp, cost + 1, med)
+   | (75,41) -> Some (ad, lp, cost + 1, med)
+   | (58,72) -> Some (ad, lp, cost + 1, med)
+   | (20,11) -> Some (ad, lp, cost + 1, med)
+   | (79,71) -> Some (ad, lp, cost + 1, med)
+   | (26,6) -> Some (ad, lp, cost + 1, med)
+   | (45,79) -> Some (ad, lp, cost + 1, med)
+   | (7,43) -> Some (ad, lp, cost + 1, med)
+   | (68,38) -> Some (ad, lp, cost + 1, med)
+   | (25,29) -> Some (ad, lp, cost + 1, med)
+   | (21,11) -> Some (ad, lp, cost + 1, med)
+   | (60,52) -> Some (ad, lp, cost + 1, med)
+   | (11,27) -> Some (ad, lp, cost + 1, med)
+   | (14,24) -> Some (ad, lp, cost + 1, med)
+   | (54,34) -> Some (ad, lp, cost + 1, med)
+   | (42,78) -> Some (ad, lp, cost + 1, med)
+   | (17,49) -> Some (ad, lp, cost + 1, med)
+   | (45,78) -> Some (ad, lp, cost + 1, med)
+   | (55,34) -> Some (ad, lp, cost + 1, med)
+   | (62,16) -> Some (ad, lp, cost + 1, med)
+   | (64,58) -> Some (ad, lp, cost + 1, med)
+   | (24,6) -> Some (ad, lp, cost + 1, med)
+   | (78,55) -> Some (ad, lp, cost + 1, med)
+   | (27,17) -> Some (ad, lp, cost + 1, med)
+   | (67,38) -> Some (ad, lp, cost + 1, med)
+   | (32,57) -> Some (ad, lp, cost + 1, med)
+   | (60,55) -> Some (ad, lp, cost + 1, med)
+   | (49,6) -> Some (ad, lp, cost + 1, med)
+   | (17,20) -> Some (ad, lp, cost + 1, med)
+   | (37,38) -> Some (ad, lp, cost + 1, med)
+   | (73,58) -> Some (ad, lp, cost + 1, med)
+   | (57,63) -> Some (ad, lp, cost + 1, med)
+   | (51,78) -> Some (ad, lp, cost + 1, med)
+   | (52,34) -> Some (ad, lp, cost + 1, med)
+   | (74,58) -> Some (ad, lp, cost + 1, med)
+   | (68,32) -> Some (ad, lp, cost + 1, med)
+   | (39,5) -> Some (ad, lp, cost + 1, med)
+   | (11,21) -> Some (ad, lp, cost + 1, med)
+   | (67,15) -> Some (ad, lp, cost + 1, med)
+   | (14,70) -> Some (ad, lp, cost + 1, med)
+   | (56,63) -> Some (ad, lp, cost + 1, med)
+   | (32,68) -> Some (ad, lp, cost + 1, med)
+   | (76,58) -> Some (ad, lp, cost + 1, med)
+   | (67,32) -> Some (ad, lp, cost + 1, med)
+   | (7,40) -> Some (ad, lp, cost + 1, med)
+   | (17,21) -> Some (ad, lp, cost + 1, med)
+   | (39,49) -> Some (ad, lp, cost + 1, med)
+   | (53,2) -> Some (ad, lp, cost + 1, med)
+   | (15,67) -> Some (ad, lp, cost + 1, med)
+   | (75,76) -> Some (ad, lp, cost + 1, med)
+   | (28,40) -> Some (ad, lp, cost + 1, med)
+   | (41,69) -> Some (ad, lp, cost + 1, med)
+   | (77,68) -> Some (ad, lp, cost + 1, med)
+   | (7,24) -> Some (ad, lp, cost + 1, med)
+   | (55,17) -> Some (ad, lp, cost + 1, med)
+   | (52,78) -> Some (ad, lp, cost + 1, med)
+   | (42,77) -> Some (ad, lp, cost + 1, med)
+   | (30,71) -> Some (ad, lp, cost + 1, med)
+   | (66,79) -> Some (ad, lp, cost + 1, med)
+   | (33,14) -> Some (ad, lp, cost + 1, med)
+   | (54,44) -> Some (ad, lp, cost + 1, med)
+   | (62,71) -> Some (ad, lp, cost + 1, med)
+   | (65,76) -> Some (ad, lp, cost + 1, med)
+   | (15,56) -> Some (ad, lp, cost + 1, med)
+   | (78,52) -> Some (ad, lp, cost + 1, med)
+   | (45,77) -> Some (ad, lp, cost + 1, med)
+   | (10,63) -> Some (ad, lp, cost + 1, med)
+   | (12,50) -> Some (ad, lp, cost + 1, med)
+   | (72,79) -> Some (ad, lp, cost + 1, med)
+   | (44,2) -> Some (ad, lp, cost + 1, med)
+   | (68,11) -> Some (ad, lp, cost + 1, med)
+   | (8,63) -> Some (ad, lp, cost + 1, med)
+   | (55,44) -> Some (ad, lp, cost + 1, med)
+   | (34,29) -> Some (ad, lp, cost + 1, med)
+   | (28,0) -> Some (ad, lp, cost + 1, med)
+   | (39,54) -> Some (ad, lp, cost + 1, med)
+   | (5,39) -> Some (ad, lp, cost + 1, med)
+   | (49,44) -> Some (ad, lp, cost + 1, med)
+   | (50,2) -> Some (ad, lp, cost + 1, med)
+   | (33,15) -> Some (ad, lp, cost + 1, med)
+   | (31,32) -> Some (ad, lp, cost + 1, med)
+   | (47,41) -> Some (ad, lp, cost + 1, med)
+   | (17,55) -> Some (ad, lp, cost + 1, med)
+   | (47,43) -> Some (ad, lp, cost + 1, med)
+   | (59,67) -> Some (ad, lp, cost + 1, med)
+   | (50,66) -> Some (ad, lp, cost + 1, med)
+   | (50,70) -> Some (ad, lp, cost + 1, med)
+   | (61,8) -> Some (ad, lp, cost + 1, med)
+   | (49,78) -> Some (ad, lp, cost + 1, med)
+   | (14,72) -> Some (ad, lp, cost + 1, med)
+   | (28,29) -> Some (ad, lp, cost + 1, med)
+   | (34,0) -> Some (ad, lp, cost + 1, med)
+   | (55,78) -> Some (ad, lp, cost + 1, med)
+   | (77,57) -> Some (ad, lp, cost + 1, med)
+   | (59,56) -> Some (ad, lp, cost + 1, med)
+   | (73,75) -> Some (ad, lp, cost + 1, med)
+   | (35,40) -> Some (ad, lp, cost + 1, med)
+   | (25,72) -> Some (ad, lp, cost + 1, med)
+   | (11,56) -> Some (ad, lp, cost + 1, med)
+   | (48,79) -> Some (ad, lp, cost + 1, med)
+   | (44,55) -> Some (ad, lp, cost + 1, med)
+   | (2,47) -> Some (ad, lp, cost + 1, med)
+   | (2,50) -> Some (ad, lp, cost + 1, med)
+   | (59,76) -> Some (ad, lp, cost + 1, med)
+   | (70,30) -> Some (ad, lp, cost + 1, med)
+   | (56,15) -> Some (ad, lp, cost + 1, med)
+   | (16,63) -> Some (ad, lp, cost + 1, med)
+   | (32,0) -> Some (ad, lp, cost + 1, med)
+   | (40,61) -> Some (ad, lp, cost + 1, med)
+   | (43,69) -> Some (ad, lp, cost + 1, med)
+   | (13,50) -> Some (ad, lp, cost + 1, med)
+   | (65,54) -> Some (ad, lp, cost + 1, med)
+   | (47,2) -> Some (ad, lp, cost + 1, med)
+   | (67,11) -> Some (ad, lp, cost + 1, med)
+   | (0,28) -> Some (ad, lp, cost + 1, med)
+   | (19,27) -> Some (ad, lp, cost + 1, med)
+   | (29,32) -> Some (ad, lp, cost + 1, med)
+   | (11,67) -> Some (ad, lp, cost + 1, med)
+   | (1,28) -> Some (ad, lp, cost + 1, med)
+   | (69,40) -> Some (ad, lp, cost + 1, med)
+   | (34,49) -> Some (ad, lp, cost + 1, med)
+   | (19,41) -> Some (ad, lp, cost + 1, med)
+   | (61,40) -> Some (ad, lp, cost + 1, med)
+   | (65,55) -> Some (ad, lp, cost + 1, med)
+   | (9,71) -> Some (ad, lp, cost + 1, med)
+   | (79,66) -> Some (ad, lp, cost + 1, med)
+   | (3,47) -> Some (ad, lp, cost + 1, med)
+   | (69,48) -> Some (ad, lp, cost + 1, med)
+   | (6,24) -> Some (ad, lp, cost + 1, med)
+   | (3,50) -> Some (ad, lp, cost + 1, med)
+   | (46,61) -> Some (ad, lp, cost + 1, med)
+   | (34,54) -> Some (ad, lp, cost + 1, med)
+   | (18,63) -> Some (ad, lp, cost + 1, med)
+   | (57,15) -> Some (ad, lp, cost + 1, med)
+   | (1,32) -> Some (ad, lp, cost + 1, med)
+   | (14,23) -> Some (ad, lp, cost + 1, med)
+   | (19,46) -> Some (ad, lp, cost + 1, med)
+   | (41,47) -> Some (ad, lp, cost + 1, med)
+   | (57,32) -> Some (ad, lp, cost + 1, med)
+   | (35,43) -> Some (ad, lp, cost + 1, med)
+   | (35,41) -> Some (ad, lp, cost + 1, med)
+   | (39,36) -> Some (ad, lp, cost + 1, med)
+   | (0,25) -> Some (ad, lp, cost + 1, med)
+   | (13,47) -> Some (ad, lp, cost + 1, med)
+   | (25,71) -> Some (ad, lp, cost + 1, med)
+   | (65,52) -> Some (ad, lp, cost + 1, med)
+   | (76,75) -> Some (ad, lp, cost + 1, med)
+   | (77,48) -> Some (ad, lp, cost + 1, med)
+   | (3,53) -> Some (ad, lp, cost + 1, med)
+   | (56,32) -> Some (ad, lp, cost + 1, med)
+   | (46,69) -> Some (ad, lp, cost + 1, med)
+   | (78,48) -> Some (ad, lp, cost + 1, med)
+   | (1,25) -> Some (ad, lp, cost + 1, med)
+   | (44,54) -> Some (ad, lp, cost + 1, med)
+   | (74,75) -> Some (ad, lp, cost + 1, med)
+   | (19,43) -> Some (ad, lp, cost + 1, med)
+   | (15,24) -> Some (ad, lp, cost + 1, med)
+   | (41,61) -> Some (ad, lp, cost + 1, med)
+   | (56,59) -> Some (ad, lp, cost + 1, med)
+   | (16,62) -> Some (ad, lp, cost + 1, med)
+   | (2,53) -> Some (ad, lp, cost + 1, med)
+   | (40,69) -> Some (ad, lp, cost + 1, med)
+   | (0,32) -> Some (ad, lp, cost + 1, med)
+   | (12,47) -> Some (ad, lp, cost + 1, med)
+   | (30,36) -> Some (ad, lp, cost + 1, med)
+   | (20,19) -> Some (ad, lp, cost + 1, med)
+   | (29,28) -> Some (ad, lp, cost + 1, med)
+   | (71,58) -> Some (ad, lp, cost + 1, med)
+   | (32,67) -> Some (ad, lp, cost + 1, med)
+   | (47,3) -> Some (ad, lp, cost + 1, med)
+   | (49,65) -> Some (ad, lp, cost + 1, med)
+   | (61,41) -> Some (ad, lp, cost + 1, med)
+   | (37,39) -> Some (ad, lp, cost + 1, med)
+   | (69,43) -> Some (ad, lp, cost + 1, med)
+   | (40,47) -> Some (ad, lp, cost + 1, med)
+   | (66,30) -> Some (ad, lp, cost + 1, med)
+   | (66,62) -> Some (ad, lp, cost + 1, med)
+   | (9,66) -> Some (ad, lp, cost + 1, med)
+   | (64,75) -> Some (ad, lp, cost + 1, med)
+   | (21,9) -> Some (ad, lp, cost + 1, med)
+   | (54,39) -> Some (ad, lp, cost + 1, med)
+   | (15,23) -> Some (ad, lp, cost + 1, med)
+   | (64,59) -> Some (ad, lp, cost + 1, med)
+   | (56,38) -> Some (ad, lp, cost + 1, med)
+   | (40,75) -> Some (ad, lp, cost + 1, med)
+   | (18,61) -> Some (ad, lp, cost + 1, med)
+   | (32,56) -> Some (ad, lp, cost + 1, med)
+   | (22,9) -> Some (ad, lp, cost + 1, med)
+   | (41,75) -> Some (ad, lp, cost + 1, med)
+   | (38,36) -> Some (ad, lp, cost + 1, med)
+   | (16,61) -> Some (ad, lp, cost + 1, med)
+   | (44,52) -> Some (ad, lp, cost + 1, med)
+   | (75,40) -> Some (ad, lp, cost + 1, med)
+   | (55,65) -> Some (ad, lp, cost + 1, med)
+   | (79,45) -> Some (ad, lp, cost + 1, med)
+   | (24,14) -> Some (ad, lp, cost + 1, med)
+   | (57,38) -> Some (ad, lp, cost + 1, med)
+   | (35,4) -> Some (ad, lp, cost + 1, med)
+   | (65,74) -> Some (ad, lp, cost + 1, med)
+   | (53,68) -> Some (ad, lp, cost + 1, med)
+   | (14,66) -> Some (ad, lp, cost + 1, med)
+   | (28,46) -> Some (ad, lp, cost + 1, med)
+   | (20,9) -> Some (ad, lp, cost + 1, med)
+   | (25,0) -> Some (ad, lp, cost + 1, med)
+   | (60,18) -> Some (ad, lp, cost + 1, med)
+   | (15,57) -> Some (ad, lp, cost + 1, med)
+   | (57,53) -> Some (ad, lp, cost + 1, med)
+   | (41,19) -> Some (ad, lp, cost + 1, med)
+   | (6,55) -> Some (ad, lp, cost + 1, med)
+   | (62,72) -> Some (ad, lp, cost + 1, med)
+   | (46,75) -> Some (ad, lp, cost + 1, med)
+   | (8,61) -> Some (ad, lp, cost + 1, med)
+   | (79,70) -> Some (ad, lp, cost + 1, med)
+   | (70,14) -> Some (ad, lp, cost + 1, med)
+   | (43,19) -> Some (ad, lp, cost + 1, med)
+   | (52,65) -> Some (ad, lp, cost + 1, med)
+   | (19,21) -> Some (ad, lp, cost + 1, med)
+   | (21,19) -> Some (ad, lp, cost + 1, med)
+   | (53,13) -> Some (ad, lp, cost + 1, med)
+   | (72,62) -> Some (ad, lp, cost + 1, med)
+   | (58,71) -> Some (ad, lp, cost + 1, med)
+   | (53,57) -> Some (ad, lp, cost + 1, med)
+   | (15,68) -> Some (ad, lp, cost + 1, med)
+   | (27,9) -> Some (ad, lp, cost + 1, med)
+   | (77,67) -> Some (ad, lp, cost + 1, med)
+   | (59,57) -> Some (ad, lp, cost + 1, med)
+   | (4,30) -> Some (ad, lp, cost + 1, med)
+   | (43,28) -> Some (ad, lp, cost + 1, med)
+   | (71,30) -> Some (ad, lp, cost + 1, med)
+   | (46,19) -> Some (ad, lp, cost + 1, med)
+   | (4,35) -> Some (ad, lp, cost + 1, med)
+   | (50,13) -> Some (ad, lp, cost + 1, med)
+   | (58,74) -> Some (ad, lp, cost + 1, med)
+   | (27,19) -> Some (ad, lp, cost + 1, med)
+   | (31,28) -> Some (ad, lp, cost + 1, med)
+   | (10,61) -> Some (ad, lp, cost + 1, med)
+   | (59,74) -> Some (ad, lp, cost + 1, med)
+   | (61,18) -> Some (ad, lp, cost + 1, med)
+   | (5,30) -> Some (ad, lp, cost + 1, med)
+   | (72,30) -> Some (ad, lp, cost + 1, med)
+   | (40,19) -> Some (ad, lp, cost + 1, med)
+   | (5,35) -> Some (ad, lp, cost + 1, med)
+   | (17,22) -> Some (ad, lp, cost + 1, med)
+   | (30,5) -> Some (ad, lp, cost + 1, med)
+   | (57,11) -> Some (ad, lp, cost + 1, med)
+   | (22,17) -> Some (ad, lp, cost + 1, med)
+   | (74,59) -> Some (ad, lp, cost + 1, med)
+   | (36,30) -> Some (ad, lp, cost + 1, med)
+   | (38,68) -> Some (ad, lp, cost + 1, med)
+   | (54,78) -> Some (ad, lp, cost + 1, med)
+   | (77,56) -> Some (ad, lp, cost + 1, med)
+   | (51,77) -> Some (ad, lp, cost + 1, med)
+   | (63,18) -> Some (ad, lp, cost + 1, med)
+   | (52,44) -> Some (ad, lp, cost + 1, med)
+   | (45,69) -> Some (ad, lp, cost + 1, med)
+   | (75,43) -> Some (ad, lp, cost + 1, med)
+   | (79,42) -> Some (ad, lp, cost + 1, med)
+   | (54,17) -> Some (ad, lp, cost + 1, med)
+   | (23,15) -> Some (ad, lp, cost + 1, med)
+   | (14,71) -> Some (ad, lp, cost + 1, med)
+   | (38,57) -> Some (ad, lp, cost + 1, med)
+   | (22,19) -> Some (ad, lp, cost + 1, med)
+   | (71,79) -> Some (ad, lp, cost + 1, med)
+   | (24,15) -> Some (ad, lp, cost + 1, med)
+   | (37,30) -> Some (ad, lp, cost + 1, med)
+   | (21,17) -> Some (ad, lp, cost + 1, med)
+   | (42,79) -> Some (ad, lp, cost + 1, med)
+   | (62,18) -> Some (ad, lp, cost + 1, med)
+   | (56,11) -> Some (ad, lp, cost + 1, med)
+   | (36,35) -> Some (ad, lp, cost + 1, med)
+   | (78,49) -> Some (ad, lp, cost + 1, med)
+   | (62,70) -> Some (ad, lp, cost + 1, med)
+   | (14,33) -> Some (ad, lp, cost + 1, med)
+   | (33,7) -> Some (ad, lp, cost + 1, med)
+   | (26,15) -> Some (ad, lp, cost + 1, med)
+   | (42,69) -> Some (ad, lp, cost + 1, med)
+   | (48,77) -> Some (ad, lp, cost + 1, med)
+   | (23,7) -> Some (ad, lp, cost + 1, med)
+   | (67,59) -> Some (ad, lp, cost + 1, med)
+   | (7,46) -> Some (ad, lp, cost + 1, med)
+   | (38,5) -> Some (ad, lp, cost + 1, med)
+   | (70,58) -> Some (ad, lp, cost + 1, med)
+   | (17,52) -> Some (ad, lp, cost + 1, med)
+   | (54,65) -> Some (ad, lp, cost + 1, med)
+   | (76,59) -> Some (ad, lp, cost + 1, med)
+   | (36,39) -> Some (ad, lp, cost + 1, med)
+   | (66,58) -> Some (ad, lp, cost + 1, med)
+   | (78,54) -> Some (ad, lp, cost + 1, med)
+   | (7,41) -> Some (ad, lp, cost + 1, med)
+   | (26,7) -> Some (ad, lp, cost + 1, med)
+   | (60,54) -> Some (ad, lp, cost + 1, med)
+   | (48,69) -> Some (ad, lp, cost + 1, med)
+   | (9,22) -> Some (ad, lp, cost + 1, med)
+   | (73,59) -> Some (ad, lp, cost + 1, med)
+   | (72,58) -> Some (ad, lp, cost + 1, med)
+   | (68,59) -> Some (ad, lp, cost + 1, med)
+   | (11,22) -> Some (ad, lp, cost + 1, med)
+   | (51,69) -> Some (ad, lp, cost + 1, med)
+)
+
+let transferRoute edge x = 
+  let (c,s,o,b,fib) = x in
+  let o = transferOspf edge o in
+  let b = transferBgp edge b in
+  (None, None, o, b, fib)
+
+let trans edge x =
+   transferRoute edge x
+
+let assert node x =
+    if d = (1174410752, 24) then
+      match x with
+      | (None, None, None, None, None) -> false
+      | _ -> true
+    else true

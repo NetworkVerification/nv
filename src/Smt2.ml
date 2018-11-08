@@ -5,22 +5,13 @@ open Unsigned
 open Syntax
 open Solution
 open SmtUtil
+open Profile
 
 (* TODO: 
    * make everything an smt_command. i.e. assert, declarations, etc.?
    * Make smt_term wrap around terms, print out more helpful
    comments, include location of ocaml source file
    * Have verbosity levels, we don't always need comments everywhere.*)
-   
-let printList (printer: 'a -> string) (ls: 'a list) (first : string)
-              (sep : string) (last : string) =
-  let rec loop ls =
-    match ls with
-    | [] -> ""
-    | [l] -> printer l
-    | l :: ls -> (printer l) ^ sep ^ (loop ls)
-  in
-  first ^ (loop ls) ^ last
 
 let printVerbose (msg: string) (descr: string) (span: Span.t) info =
   let sl =
@@ -995,13 +986,7 @@ let env_to_smt ?(verbose=false) info (env : smt_env) =
 let check_sat (env: smt_env) =
   env.ctx <- (CheckSat |> mk_command) :: env.ctx
 
-let time_profile msg (f: unit -> 'a) : 'a =
-  let start_time = Sys.time () in
-  let res = f () in
-  let finish_time = Sys.time () in
-  Printf.printf "%s took: %f secs to complete\n%!" msg (finish_time -. start_time);
-  res
-
+(* Emits the query to a file in the disk *)
 let printQuery (chan: out_channel Lazy.t) (msg: string) =
   let chan = Lazy.force chan in
   Printf.fprintf chan "%s" msg; flush chan

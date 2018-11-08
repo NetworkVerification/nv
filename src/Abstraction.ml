@@ -11,8 +11,7 @@ let debugAbstraction = ref true
 
 let zero = Integer.create ~value:0 ~size:32
 let one = Integer.create ~value:1 ~size:32
-                  
-                     
+                                       
 (** Sets of Abstract Nodes *)
 module AbstractNodeSet : BatSet.S with type elt = AbstractNode.t = BatSet.Make(AbstractNode)
 module AbstractNodeMap = BatMap.Make(AbstractNode)
@@ -547,32 +546,42 @@ module FailuresAbstraction =
          not treated the other way around? *)
       let rec loop uid acc =
         (* Find neighbors of uid that have a valid attribute *)
+        let sol = sol.Solution.labels in
         let neighborsu =
           BatList.filter_map
-            (fun (i,j) -> if uid = j then Some i else None) (Graph.edges ag)
-        in
-        let sol = sol.Solution.labels in 
-        let valid_neighbors =
-          List.filter (fun vhat -> validAttribute attrTy
-                                     (Graph.VertexMap.find vhat sol)) neighborsu
+            (fun (i,j) ->
+              if uid = j then
+                Some (i, validAttribute attrTy (Graph.VertexMap.find i sol))
+              else None) (Graph.edges ag)
         in
         (* If there are none with a valid attribute, look into the other ones *)
-        let neighborsu =
-          if BatList.is_empty valid_neighbors then
-            neighborsu else valid_neighbors
+        let neighborsu = List.sort (fun (u, bu) (v, bv) ->
+                             - (Pervasives.compare bu bv)) neighborsu
         in
-        (* Pick one randomly *)
-        let vhat = BatList.hd neighborsu in
-        (* Stop if at destination *)
-        if VertexSet.mem vhat ds then
-          BatList.rev (vhat :: acc)
-        else if BatList.mem vhat acc then
-          (* Or if we've visited this vertex before *)
-          BatList.rev acc
-        else
-          loop vhat (vhat :: acc)
+        Printf.printf "%s" (Collections.printList (fun (u,b) ->
+            Printf.sprintf "%b" b) neighborsu "sorted:" "," "\n");
+        let rec pickRandom neighborsu =
+          match neighborsu with
+          | [] ->
+             (* if there are none left, then we've visited all of the neighbors *)
+             BatList.rev acc
+          | (vhat, _) :: neighborsu ->
+              (* Stop if at destination *)
+              if VertexSet.mem vhat ds then
+                BatList.rev (vhat :: acc)
+              else if BatList.mem vhat acc then
+                (* If we've visited this vertex before try another one *)
+                pickRandom neighborsu
+              else
+                (* otherwise add it to the path *)
+                loop vhat (vhat :: acc)
+        in
+        pickRandom neighborsu
       in
-      loop uid []
+      (* add uid to avoid revisiting it when searching for path but
+         throw it away in the end, as the code that does the
+         refinement assumes the vertex refined is not in the path used for refinement *)
+      List.tl (loop uid [uid])
 
     (* Try to find a failure for which splitting would make the most
        sense. This is based on heuristics, currently: 
@@ -677,7 +686,9 @@ module FailuresAbstraction =
             if path_heuristic = "random" then []
             else
               findRandomPath agraph sol uhat dst attrTy
-          in  
+          in
+          Printf.printf "splitting over path: %s"
+                        (Collections.printList (Vertex.printVertex) path "" "," "\n");
           let (uss, _) = bestSplitForFailures g f uhat path in
           let f' = splitSet f uss in
           let f'' =  abstractionTopological f' g in

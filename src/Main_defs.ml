@@ -14,6 +14,7 @@ open Typing
 open Abstraction
 open BuildAbstractNetwork
 open Lazy
+open Profile
 
 type answer =
   | Success of (Solution.t option)
@@ -163,9 +164,11 @@ let compress info decls cfg networkOp =
 
   let rec loop (f: AbstractionMap.abstractionMap) (ds: Graph.VertexSet.t) =
     (* build abstract network *)
-    let failVars, decls = buildAbstractNetwork f network.graph mergeMap transMap
-                                               initMap assertMap ds
-                                               network.attr_type symb k in
+    let failVars, decls =
+      time_profile "Build abstract network"
+                   (fun () -> buildAbstractNetwork f network.graph mergeMap transMap
+                                                   initMap assertMap ds
+                                                   network.attr_type symb k) in
     let decls = Typing.infer_declarations info decls in
     let groups = AbstractionMap.printAbstractGroups f "\n" in
     Console.show_message groups Console.T.Blue "Abstract groups";
@@ -173,8 +176,10 @@ let compress info decls cfg networkOp =
     | Success _, _ -> Printf.printf "No counterexamples found\n"
     | (CounterExample sol), fs ->
        let sol = apply_all sol (oget fs) in
-       let f' = FailuresAbstraction.refineForFailures network.graph f failVars
-                  sol k ds network.attr_type
+       let f' =
+         time_profile "Refining abstraction after failures"
+                      (fun () -> FailuresAbstraction.refineForFailures
+                                   network.graph f failVars sol k ds network.attr_type)
        in
        match f' with
        | None -> print_solution sol;
@@ -190,7 +195,11 @@ let compress info decls cfg networkOp =
       (* find the nodes this class is announced from *)
       let ds = PrefixMap.find pre relevantSlices in
       (* find the initial abstraction function for these destinations *)
-      let f = Abstraction.findAbstraction network.graph transMap mergeMap ds in
+      let f =
+        time_profile "Computing Abstraction"
+                     (fun () -> Abstraction.findAbstraction network.graph
+                                                            transMap mergeMap ds)
+      in
       (* run_simulator cfg info decls  *)
       loop f ds) relevantSliceGroups
 

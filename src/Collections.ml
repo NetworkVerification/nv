@@ -39,3 +39,13 @@ module ValueMap = Map.Make (struct
     let cfg = Cmdline.get_cfg () in
     if cfg.hashcons then v1.vtag - v2.vtag else compare v1 v2
 end)
+
+let printList (printer: 'a -> string) (ls: 'a list) (first : string)
+              (sep : string) (last : string) =
+  let rec loop ls =
+    match ls with
+    | [] -> ""
+    | [l] -> printer l
+    | l :: ls -> (printer l) ^ sep ^ (loop ls)
+  in
+  first ^ (loop ls) ^ last
