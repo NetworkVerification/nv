@@ -2577,7 +2577,7 @@ let trans edge x =
    transferRoute edge x
 
 let assert node x =
-    if d = (1174410752, 24) then
+    if (d = (1174418688, 24)) then
       match x with
       | (None, None, None, None, None) -> false
       | _ -> true

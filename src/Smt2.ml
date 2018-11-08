@@ -1022,7 +1022,8 @@ let solve info query chan ?symbolic_vars ?(params=[]) ds =
      let eassert = get_assert ds in
      let model = eval_model env.symbolics num_nodes eassert in
      let model_question = commands_to_smt verbose info model in
-     printQuery chan model_question;
+     if query then
+       printQuery chan model_question;
      ask_solver solver model_question;
      let model = solver |> parse_model in
      (match model with
