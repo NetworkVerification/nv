@@ -11,7 +11,9 @@ open Profile
    * make everything an smt_command. i.e. assert, declarations, etc.?
    * Make smt_term wrap around terms, print out more helpful
    comments, include location of ocaml source file
-   * Have verbosity levels, we don't always need comments everywhere.*)
+   * Have verbosity levels, we don't always need comments everywhere.
+   * Don't hardcode tactics, try psmt (preliminary results were bad),
+     consider par-and/par-or once we have multiple problems to solve.*)
 
 let printVerbose (msg: string) (descr: string) (span: Span.t) info =
   let sl =
@@ -234,7 +236,9 @@ module SmtLang =
       | Assert tm ->
          Printf.sprintf "(assert %s)" (term_to_smt false info tm)
       | CheckSat ->
-         Printf.sprintf "(check-sat)"
+         (* for now i am hardcoding the tactics here. *)
+         Printf.sprintf "(check-sat-using (then simplify \
+                         propagate-values solve-eqs smt))"
       | GetModel ->
          Printf.sprintf "(get-model)"
 
