@@ -35,7 +35,7 @@ let collect_all_values ds : ValueSet.t TypeMap.t =
 let check_assertions (sol: Solution.t) =
   match sol.assertions with
   | None -> true
-  | Some ass -> Graph.VertexMap.for_all (fun _ b -> b) ass
+  | Some ass -> AdjGraph.VertexMap.for_all (fun _ b -> b) ass
 
 let rec check_aux info iters acc =
   match (info.iterations, acc) with

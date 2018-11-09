@@ -1,4 +1,4 @@
-open Graph
+open AdjGraph
 open ANSITerminal
 open Collections
 
@@ -15,7 +15,7 @@ let print_solution solution =
       (fun k v ->
         Printf.printf "%s:%s\n" k (Printing.value_to_string v) )
       solution.symbolics ;
-    Graph.VertexMap.iter
+    AdjGraph.VertexMap.iter
       (fun k v ->
         Printf.printf "%s:%s\n"
           (Integer.to_string k)
@@ -26,12 +26,12 @@ let print_solution solution =
       print_string [green; Bold] "Success: " ;
       Printf.printf "all assertions passed\n"
   | Some m ->
-      let all_pass = Graph.VertexMap.for_all (fun _ b -> b) m in
+      let all_pass = AdjGraph.VertexMap.for_all (fun _ b -> b) m in
       if all_pass then (
         print_string [green; Bold] "Success: " ;
         Printf.printf "all assertions passed\n" )
       else
-        Graph.VertexMap.iter
+        AdjGraph.VertexMap.iter
           (fun k v ->
             if not v then (
               print_string [red; Bold] "Failed: " ;

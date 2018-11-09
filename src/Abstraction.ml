@@ -1,4 +1,4 @@
-open Graph
+open AdjGraph
 open AbstractionMap
 open Unsigned
 open Console
@@ -56,7 +56,7 @@ let groupVerticesByAbsId (umap: (AbsIdSet.t) VertexMap.t) : VertexSetSet.t =
                  
 (** ** Topological only abstraction *)
 (* This does not handle a forall-forall abstraction. *)  
-let refineTopological (f: abstractionMap) (g: Graph.t)
+let refineTopological (f: abstractionMap) (g: AdjGraph.t)
                       (us: AbstractNode.t) : abstractionMap =
   let refineOne (u : Vertex.t) (umap : AbsIdSet.t VertexMap.t) =
     List.fold_left (fun acc v ->
@@ -76,7 +76,7 @@ let refineTopological (f: abstractionMap) (g: Graph.t)
   (*             ) vmap; *)
   (* Printf.printf "The groups: \n"; *)
   (* let groups = (groupVerticesByAbsId vmap) in *)
-  (* Graph.VertexSetSet.iter (fun us -> Printf.printf "{"; *)
+  (* AdjGraph.VertexSetSet.iter (fun us -> Printf.printf "{"; *)
   (*                        VertexSet.iter (fun u -> Printf.printf "%d," (Integer.to_int u)) us; *)
   (*                        Printf.printf "}\n") groups; *)
   (* Printf.printf "cardinal: %d\n" (VertexSetSet.cardinal groups); *)
@@ -84,7 +84,7 @@ let refineTopological (f: abstractionMap) (g: Graph.t)
   VertexSetSet.fold (fun us f' -> AbstractionMap.split f' (AbstractNode.fromSet us))
                     (groupVerticesByAbsId vmap) f
 
-let rec abstractionTopological (f: abstractionMap) (g: Graph.t) : abstractionMap =
+let rec abstractionTopological (f: abstractionMap) (g: AdjGraph.t) : abstractionMap =
   let f' = AbstractionMap.fold (fun us facc ->
                (* Printf.printf "refining %s\n" (AbstractNode.printAbstractNode us); *)
                if (AbstractNode.cardinal us > 1) then
@@ -105,7 +105,7 @@ let groupVerticesByPolicyAbsId (umap: (PolicyAbsId.t) VertexMap.t) : VertexSetSe
   PolicyAbsIdMap.fold (fun _ v acc -> VertexSetSet.add v acc)
               reverseMap VertexSetSet.empty
   
-let refineAbstraction (f: abstractionMap) (g: Graph.t)
+let refineAbstraction (f: abstractionMap) (g: AdjGraph.t)
                       (transMap: (Edge.t, int * Syntax.exp) Hashtbl.t)
                       (mergeMap: (Vertex.t, int * Syntax.exp) Hashtbl.t)
                       (us: AbstractNode.t) : abstractionMap =
@@ -127,7 +127,7 @@ let refineAbstraction (f: abstractionMap) (g: Graph.t)
   VertexSetSet.fold (fun us f' -> AbstractionMap.split f' (AbstractNode.fromSet us))
                     (groupVerticesByPolicyAbsId vmap) f
 
-let rec abstraction (f: abstractionMap) (g: Graph.t)
+let rec abstraction (f: abstractionMap) (g: AdjGraph.t)
                     (transMap: (Edge.t, int * Syntax.exp) Hashtbl.t)
                     (mergeMap: (Vertex.t, int * Syntax.exp) Hashtbl.t) : abstractionMap =
   let f' = AbstractionMap.fold (fun us facc ->
@@ -139,10 +139,10 @@ let rec abstraction (f: abstractionMap) (g: Graph.t)
   else abstraction f' g transMap mergeMap
 
 
-let partialEvalTrans (graph : Graph.t)
+let partialEvalTrans (graph : AdjGraph.t)
                      (trans : Syntax.exp) : (Edge.t, int * Syntax.exp) Hashtbl.t  =
   let edge_to_val e = vtuple [vint (fst e); vint (snd e)] in
-  let es = Graph.edges graph in
+  let es = AdjGraph.edges graph in
   let tbl = Hashtbl.create (List.length es) in
   List.iter (fun e ->
       (* Printf.printf "%s\n" *)
@@ -156,10 +156,10 @@ let partialEvalTrans (graph : Graph.t)
       Hashtbl.add tbl e ((Syntax.hash_exp ~hash_meta:false ptrans), ptrans)) es;
   tbl
 
-let partialEvalMerge (graph : Graph.t)
+let partialEvalMerge (graph : AdjGraph.t)
                      (merge : Syntax.exp) : (Vertex.t, int * Syntax.exp) Hashtbl.t =
   let node_to_val n = vint n in
-  let ns = Graph.get_vertices graph in
+  let ns = AdjGraph.get_vertices graph in
   let tbl = Hashtbl.create (VertexSet.cardinal ns) in
   VertexSet.iter (fun v ->
       let pmerge = Interp.interp_partial_fun merge [node_to_val v] in
@@ -168,14 +168,14 @@ let partialEvalMerge (graph : Graph.t)
 
 (* Given a concrete graph g, an abstraction function f and an abstract
    node id returns its abstract edges *)
-let findAbstractEdges (g: Graph.t) (f: abstractionMap) (uhat: abstrId) : EdgeSet.t =
+let findAbstractEdges (g: AdjGraph.t) (f: abstractionMap) (uhat: abstrId) : EdgeSet.t =
   let repru = getGroupRepresentativeId f uhat in
   let ns = neighbors g repru in
   List.fold_left (fun acc v -> EdgeSet.add (uhat, getId f v) acc) EdgeSet.empty ns
 
 (* Given a concrete graph, transfer, merge functions a destinations
    computes an abstract network *)
-let findAbstraction (graph: Graph.t)
+let findAbstraction (graph: AdjGraph.t)
                     (transMap : (Edge.t, int * Syntax.exp) Hashtbl.t)
                     (mergeMap : (Vertex.t, int * Syntax.exp) Hashtbl.t)
                     (ds: VertexSet.t) : abstractionMap =
@@ -194,7 +194,7 @@ module BuildAbstractNetwork =
     
     (* Given a concrete graph and an abstraction function returns the node
    and edges of the abstract graph *)
-    let buildAbstractGraphDecls (g: Graph.t) (f: abstractionMap) : Integer.t * (Edge.t list) =
+    let buildAbstractAdjGraphDecls (g: AdjGraph.t) (f: abstractionMap) : Integer.t * (Edge.t list) =
       let n = Integer.create ~value:(size f) ~size:32 in
       let rec edges uhat =
         if uhat = n then EdgeSet.empty
@@ -250,7 +250,7 @@ module BuildAbstractNetwork =
     (* Given the abstract edges and a concrete transfer function, 
    synthesizes an abstract transfer function. *)
     let buildAbstractTrans
-          (g : Graph.t)
+          (g : AdjGraph.t)
           (aedges : Edge.t list)
           (trans: (Edge.t, int * Syntax.exp) Hashtbl.t)
           (attrTy: Syntax.ty)
@@ -404,7 +404,7 @@ module BuildAbstractNetwork =
     (* Given an abstraction function, a concrete graph, transfer and merge
    function, and the number of maximum link failures builds an
    abstract network *)
-    let buildAbstractNetwork (f: abstractionMap) (graph: Graph.t)
+    let buildAbstractNetwork (f: abstractionMap) (graph: AdjGraph.t)
                              (mergeMap: (Vertex.t, int * Syntax.exp) Hashtbl.t)
                              (transMap: (Edge.t, int * Syntax.exp) Hashtbl.t)
                              (initMap: (Vertex.t, Syntax.exp) Hashtbl.t)
@@ -414,7 +414,7 @@ module BuildAbstractNetwork =
                              (symb: (Syntax.var * Syntax.ty_or_exp) list)
                              (k: int) =
       (* build the abstract graph based on the abstraction function *)
-      let (n, edgeshat) = buildAbstractGraphDecls graph f in
+      let (n, edgeshat) = buildAbstractAdjGraphDecls graph f in
       (* build the symbolic representation of failures *) 
       let (failuresMap, symbolics) = buildSymbolicFailures edgeshat k in
       (* build the abstract merge function *)
@@ -428,21 +428,21 @@ module BuildAbstractNetwork =
       let symbD = List.map (fun (d, tye) -> DSymbolic (d,tye)) symb in
       if !debugAbstraction then
         begin
-          let agraph = Graph.add_edges (Graph.create n) edgeshat in
-          Graph.print agraph
+          let agraph = AdjGraph.add_edges (AdjGraph.create n) edgeshat in
+          AdjGraph.print agraph
         end;
       (failuresMap, (DATy attrTy) :: (DNodes n) :: (DEdges edgeshat) :: symbolics @ symbD
                     @ ((DMerge mergehat) :: (DTrans transhat) :: (DInit inithat)
                        :: [DAssert asserthat]))
 
-    let abstractToConcreteEdge (g: Graph.t) (f: abstractionMap) (ehat: Edge.t) : EdgeSet.t =
+    let abstractToConcreteEdge (g: AdjGraph.t) (f: abstractionMap) (ehat: Edge.t) : EdgeSet.t =
       let (uhat, vhat) = ehat in
       let us = getGroupById f uhat in (* get nodes represented by uhat *)
       AbstractNode.fold
         (fun u acc ->
           EdgeSet.union (EdgeSet.of_list (getNeighborsInVhat f g u vhat)) acc) us EdgeSet.empty
       
-    let getEdgeMultiplicity (g: Graph.t) (f: abstractionMap) (ehat: Edge.t) : int =
+    let getEdgeMultiplicity (g: AdjGraph.t) (f: abstractionMap) (ehat: Edge.t) : int =
       EdgeSet.cardinal (abstractToConcreteEdge g f ehat)
 
   end
@@ -470,7 +470,7 @@ module FailuresAbstraction =
        nodes in uhat into subsets s.t. that nodes in the same subset have
        edges to the same concrete nodes in [vhat] *)                              
     let findSplittingByConnectivity (uhat : AbstractNode.t) (vhat : AbstractNode.t)
-                         (g: Graph.t) : splittings = 
+                         (g: AdjGraph.t) : splittings = 
       let addNeighbor u =
         let neighborsOfu = neighbors g u in
         let neighborsOfUinV =
@@ -493,7 +493,7 @@ module FailuresAbstraction =
        - returns a random split with ratio 1.0 if you immediately get to a full mesh.
        TODO: no need to return a ratio of 1.0, do max_int. Also avoid enforcing invariants
        with the ratio *)
-    let bestSplitForFailures (g : Graph.t) (f: abstractionMap)
+    let bestSplitForFailures (g : AdjGraph.t) (f: abstractionMap)
                              (uid: abstrId) (path: abstrId list) =
       let rec loop path current best =
         match path with
@@ -540,8 +540,8 @@ module FailuresAbstraction =
        uid. Will stop once it reaches the destination or a cycle. It
        tries to find a good path by first looking at neighbors who
        have a solution *)
-    let findRandomPath (ag: Graph.t) (sol: Solution.t)
-          (uid: abstrId) (ds: Graph.VertexSet.t) (attrTy: Syntax.ty) =
+    let findRandomPath (ag: AdjGraph.t) (sol: Solution.t)
+          (uid: abstrId) (ds: AdjGraph.VertexSet.t) (attrTy: Syntax.ty) =
       (* finding incoming messages the hard way for now. Why are edges
          not treated the other way around? *)
       let rec loop uid acc =
@@ -551,8 +551,8 @@ module FailuresAbstraction =
           BatList.filter_map
             (fun (i,j) ->
               if uid = j then
-                Some (i, validAttribute attrTy (Graph.VertexMap.find i sol))
-              else None) (Graph.edges ag)
+                Some (i, validAttribute attrTy (AdjGraph.VertexMap.find i sol))
+              else None) (AdjGraph.edges ag)
         in
         (* If there are none with a valid attribute, look into the other ones *)
         let neighborsu = List.sort (fun (u, bu) (v, bv) ->
@@ -636,13 +636,13 @@ module FailuresAbstraction =
     let splitSet f (uss : AbstractNodeSet.t) : abstractionMap =
       AbstractNodeSet.fold
         (fun us f' -> splitSet_debug us; AbstractionMap.split f' us) uss f
-
+      
     let refineForFailures_debug (f: abstractionMap) =
       if !debugAbstraction then
-        show_message (printAbstractGroups f "\n") T.Blue
-                     "Abstract groups after refine for failures "
+          show_message (printAbstractGroups f "\n") T.Blue
+            "Abstract groups after refine for failures "
       
-    let refineForFailures (g: Graph.t) (f: abstractionMap)
+    let refineForFailures (draw: bool) (file: string) (g: AdjGraph.t) (f: abstractionMap)
           (failVars: Var.t EdgeMap.t) (sol: Solution.t) (k: int)
           (dst: VertexSet.t) (attrTy : Syntax.ty) : abstractionMap option =
       (* Collections.StringMap.iter (fun k _ -> Printf.printf "symb: %s\n" k) sol.symbolics; *)
@@ -659,14 +659,23 @@ module FailuresAbstraction =
             | VBool b ->
                if b then
                  begin
-                   Printf.printf "failed: %s\n" (Graph.printEdge edge); 
-                   (EdgeSet.add edge acc, Graph.add_edge ag edge)
+                   Printf.printf "failed: %s\n" (AdjGraph.printEdge edge); 
+                   (EdgeSet.add edge acc, AdjGraph.add_edge ag edge)
                  end
-               else (acc, Graph.add_edge ag edge)
+               else (acc, AdjGraph.add_edge ag edge)
             | _ -> failwith "This should be a boolean variable") failVars
-          (EdgeSet.empty, Graph.create (AbstractionMap.size f |> Integer.of_int))
+          (EdgeSet.empty, AdjGraph.create (AbstractionMap.size f |> Integer.of_int))
       in
+
+      (* Draw the abstract graph if asked *)
+      if draw then
+        begin
+          let dotfile = AdjGraph.DrawableGraph.graph_dot_file k file in
+          AdjGraph.DrawableGraph.drawGraph agraph dotfile
+        end;
       
+
+      (* number of concrete links failed in the network *)
       let total_failures =
         EdgeSet.fold (fun ehat acc ->
             (BuildAbstractNetwork.getEdgeMultiplicity g f ehat) + acc)

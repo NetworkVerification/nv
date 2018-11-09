@@ -1,10 +1,10 @@
-open Graph
+open AdjGraph
 open Unsigned
 open Vertex
    
 module AbstractNode =
   struct
-    include Graph.VertexSet
+    include AdjGraph.VertexSet
 
     let toSet x = x
     let fromSet x = x
@@ -106,7 +106,7 @@ let createAbstractionMap g : abstractionMap =
   let f = { absGroups = GroupMap.empty;
             groupId = VertexMap.empty;
             nextId = Integer.create ~value:0 ~size:32} in
-  partitionNodes f (f.nextId) (Graph.get_vertices g);
+  partitionNodes f (f.nextId) (AdjGraph.get_vertices g);
   f
 
 let fold (g: AbstractNode.t -> 'a -> 'a) (f: abstractionMap) (acc: 'a) : 'a =

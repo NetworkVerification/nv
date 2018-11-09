@@ -806,48 +806,48 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
           "missing definition of nodes, edges, merge, trans or init"
   in
   (* map each node to the init result variable *)
-  let init_map = ref Graph.VertexMap.empty in
+  let init_map = ref AdjGraph.VertexMap.empty in
   for i = 0 to Integer.to_int nodes - 1 do
     let init =
       encode_z3_init (Printf.sprintf "init-%d" i) env (Integer.of_int i) einit
     in
     (* add_constraint env (mk_term (mk_eq n.t (mk_int i))); *)
-    init_map := Graph.VertexMap.add (Integer.of_int i) init !init_map
+    init_map := AdjGraph.VertexMap.add (Integer.of_int i) init !init_map
   done ;
   
   (* Map each edge to transfer function result *)
   
   (* incoming_map is a map from vertices to list of incoming edges *)
-  let incoming_map = ref Graph.VertexMap.empty in
+  let incoming_map = ref AdjGraph.VertexMap.empty in
   (* trans_map maps each edge to the variable that holds the result *)
-  let trans_map = ref Graph.EdgeMap.empty in
+  let trans_map = ref AdjGraph.EdgeMap.empty in
   (* trans_input_map maps each edge to the incoming message variable *)
-  let trans_input_map = ref Graph.EdgeMap.empty in
+  let trans_input_map = ref AdjGraph.EdgeMap.empty in
   List.iter
     (fun (i, j) ->
       ( try
-          let idxs = Graph.VertexMap.find j !incoming_map in
+          let idxs = AdjGraph.VertexMap.find j !incoming_map in
           incoming_map :=
-            Graph.VertexMap.add j ((i, j) :: idxs) !incoming_map
+            AdjGraph.VertexMap.add j ((i, j) :: idxs) !incoming_map
         with _ ->
           incoming_map :=
-            Graph.VertexMap.add j [(i, j)] !incoming_map ) ;
+            AdjGraph.VertexMap.add j [(i, j)] !incoming_map ) ;
       let trans, x =
         encode_z3_trans
           (Printf.sprintf "trans-%d-%d" (Integer.to_int i)
                           (Integer.to_int j)) 
           env (i, j) etrans
       in
-      trans_input_map := Graph.EdgeMap.add (i, j) x !trans_input_map ;
-      trans_map := Graph.EdgeMap.add (i, j) trans !trans_map )
+      trans_input_map := AdjGraph.EdgeMap.add (i, j) x !trans_input_map ;
+      trans_map := AdjGraph.EdgeMap.add (i, j) trans !trans_map )
     edges ;
   
   (* Compute the labelling as the merge of all inputs *)
-  let labelling = ref Graph.VertexMap.empty in
+  let labelling = ref AdjGraph.VertexMap.empty in
   for i = 0 to Integer.to_int nodes - 1 do
-    let init = Graph.VertexMap.find (Integer.of_int i) !init_map in
+    let init = AdjGraph.VertexMap.find (Integer.of_int i) !init_map in
     let in_edges =
-      try Graph.VertexMap.find (Integer.of_int i) !incoming_map
+      try AdjGraph.VertexMap.find (Integer.of_int i) !incoming_map
       with Not_found -> []
     in
     let node = avalue (vint (Integer.of_int i), Some Typing.node_ty, Span.default) in
@@ -857,7 +857,7 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
       List.fold_left
         (fun acc (x, y) ->
           incr idx ;
-          let trans = Graph.EdgeMap.find (x, y) !trans_map in
+          let trans = AdjGraph.EdgeMap.find (x, y) !trans_map in
           let str = Printf.sprintf "merge-%d-%d" i !idx in
           let merge_result, x, y =
             encode_z3_merge str env emerge_i
@@ -869,12 +869,12 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
     in
     let l = mk_constant env (label_var (Integer.of_int i)) (ty_to_sort aty) in
     add_constraint env (mk_term (mk_eq l.t merged.t));
-    labelling := Graph.VertexMap.add (Integer.of_int i) l !labelling
+    labelling := AdjGraph.VertexMap.add (Integer.of_int i) l !labelling
   done ;
   (* Propagate labels across edges outputs *)
-  Graph.EdgeMap.iter
+  AdjGraph.EdgeMap.iter
     (fun (i, j) x ->
-      let label = Graph.VertexMap.find i !labelling in
+      let label = AdjGraph.VertexMap.find i !labelling in
       add_constraint env (mk_term (mk_eq label.t x.t))) !trans_input_map ;
   (* add assertions at the end *)
   ( match eassert with
@@ -883,7 +883,7 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
       let all_good = ref (mk_bool true) in
       for i = 0 to Integer.to_int nodes - 1 do
         let label =
-          Graph.VertexMap.find (Integer.of_int i) !labelling
+          AdjGraph.VertexMap.find (Integer.of_int i) !labelling
         in
         let result, x =
           encode_z3_assert (assert_var (Integer.of_int i)) env (Integer.of_int i) eassert
@@ -908,7 +908,7 @@ let eval_model (symbolics: (Var.t * Syntax.ty_or_exp) list)
   let var x = "Var:" ^ x in
   (* Compute eval statements for labels *)
   let labels =
-    Graph.fold_vertices (fun u acc ->
+    AdjGraph.fold_vertices (fun u acc ->
         let tm = mk_var (label_var u) |> mk_term in
         let ev = mk_eval tm |> mk_command in
         let ec = mk_echo ("\"" ^ (var (label_var u)) ^ "\"") |> mk_command in
@@ -918,7 +918,7 @@ let eval_model (symbolics: (Var.t * Syntax.ty_or_exp) list)
     match eassert with
     | None -> labels
     | Some _ ->
-       Graph.fold_vertices (fun u acc ->
+       AdjGraph.fold_vertices (fun u acc ->
            let tm = mk_var ((assert_var u) ^ "-result") |> mk_term in
            let ev = mk_eval tm |> mk_command in
            let ec = mk_echo ("\"" ^ (var ((assert_var u) ^ "-result")) ^ "\"")
@@ -949,22 +949,22 @@ let translate_model (m : (string, string) BatMap.t) : Solution.t =
       let nvval = parse_val v in
       match k with
       | k when BatString.starts_with k "label" ->
-         {sol with labels= Graph.VertexMap.add (node_of_label_var k) nvval sol.labels}
+         {sol with labels= AdjGraph.VertexMap.add (node_of_label_var k) nvval sol.labels}
       | k when BatString.starts_with k "assert-" ->
          {sol with assertions=
                      match sol.assertions with
                      | None ->
-                        Some (Graph.VertexMap.add (node_of_assert_var k)
+                        Some (AdjGraph.VertexMap.add (node_of_assert_var k)
                                                   (nvval |> Syntax.bool_of_val |> oget)
-                                                  Graph.VertexMap.empty)
+                                                  AdjGraph.VertexMap.empty)
                      | Some m ->
-                        Some (Graph.VertexMap.add (node_of_assert_var k)
+                        Some (AdjGraph.VertexMap.add (node_of_assert_var k)
                                                   (nvval |> Syntax.bool_of_val |> oget) m)
          }
       | k ->
          {sol with symbolics= Collections.StringMap.add k nvval sol.symbolics}) m
                {symbolics = StringMap.empty;
-                labels = Graph.VertexMap.empty;
+                labels = AdjGraph.VertexMap.empty;
                 assertions= None}
   
 (** ** Translate the environment to SMT-LIB2 *)

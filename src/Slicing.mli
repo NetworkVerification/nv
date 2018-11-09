@@ -5,7 +5,7 @@ type network =
     trans     : Syntax.exp;
     merge     : Syntax.exp;
     assertion : Syntax.exp;
-    graph     : Graph.t;
+    graph     : AdjGraph.t;
   }
 
 (** The type of network prefixes *)
@@ -37,6 +37,6 @@ val partialEvalAssert: network -> (Integer.t, Syntax.exp) Hashtbl.t
    with the property that each node in the set announces this
    prefix. *)
 val findInitialSlices: (Integer.t, Syntax.exp) Hashtbl.t ->
-                       (Graph.VertexSet.t) PrefixMap.t
+                       (AdjGraph.VertexSet.t) PrefixMap.t
 
-val groupPrefixesByVertices: Graph.VertexSet.t PrefixMap.t -> PrefixSetSet.t
+val groupPrefixesByVertices: AdjGraph.VertexSet.t PrefixMap.t -> PrefixSetSet.t

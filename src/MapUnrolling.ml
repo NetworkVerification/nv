@@ -312,7 +312,7 @@ let map_back orig_sym_types (map: ExprSet.elt list TypeMap.t)
   in
   let aty = oget (get_attr_type ds) |> Typing.strip_ty in
   let update_labels ls =
-    Graph.VertexMap.map (fun v -> aux aty v) ls
+    AdjGraph.VertexMap.map (fun v -> aux aty v) ls
   in
   let update_symbolics sol =
     let syms =
