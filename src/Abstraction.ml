@@ -521,8 +521,26 @@ module FailuresAbstraction =
                 best
       in
       let u1, u2 = AbstractNode.randomSplit (getGroupById f uid) in
-      loop path uid (AbstractNodeSet.of_list [u1;u2], float_of_int max_int)
-
+      let (uss, _) =
+        loop path uid (AbstractNodeSet.of_list [u1;u2], float_of_int max_int)
+      in
+      (* If the group is larger than 2 try to randomly make it more
+         abstract by creating groups of two *)
+      if AbstractNodeSet.cardinal uss > 2 then
+        begin
+          let b = ref false in
+          let uss1, uss2 = AbstractNodeSet.partition (fun _ -> b := not !b; !b) uss in
+          let us1 = AbstractNodeSet.fold (fun us acc -> AbstractNode.union us acc)
+                                          uss1 AbstractNode.empty
+          in
+          let us2 = AbstractNodeSet.fold (fun us acc -> AbstractNode.union us acc)
+                                          uss2 AbstractNode.empty
+          in
+          AbstractNodeSet.add us2 (AbstractNodeSet.singleton us1)
+        end
+      else
+        uss
+            
     (** Returns true if the given value is not the default for the
        given attribute type. A non-default value indicates that this
        message has a path to the destination *)
@@ -558,8 +576,6 @@ module FailuresAbstraction =
         let neighborsu = List.sort (fun (u, bu) (v, bv) ->
                              - (Pervasives.compare bu bv)) neighborsu
         in
-        Printf.printf "%s" (Collections.printList (fun (u,b) ->
-            Printf.sprintf "%b" b) neighborsu "sorted:" "," "\n");
         let rec pickRandom neighborsu =
           match neighborsu with
           | [] ->
@@ -698,7 +714,7 @@ module FailuresAbstraction =
           in
           Printf.printf "splitting over path: %s"
                         (Collections.printList (Vertex.printVertex) path "" "," "\n");
-          let (uss, _) = bestSplitForFailures g f uhat path in
+          let uss = bestSplitForFailures g f uhat path in
           let f' = splitSet f uss in
           let f'' =  abstractionTopological f' g in
           (* refineForFailures_debug f''; *)

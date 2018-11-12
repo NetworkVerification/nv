@@ -64,7 +64,7 @@ let smart_symbolic prog_constants map d =
   | DSymbolic (x, te) ->
       let ty = match te with Exp e -> oget e.ety | Ty ty -> ty in
       let v =
-        match StringMap.find_opt (Var.to_string x) map with
+        match StringMap.Exceptionless.find (Var.to_string x) map with
         | None -> random_value prog_constants default_max_map_size ty
         | Some v -> v
       in

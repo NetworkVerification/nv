@@ -104,7 +104,7 @@ let rec alpha_convert_aux bmap env (ds: declarations) : declarations =
 let update_symbolics bmap smap =
   StringMap.fold
     (fun s v acc ->
-      match StringMap.find_opt s bmap with
+      match StringMap.Exceptionless.find s bmap with
       | None -> StringMap.add s v acc
       | Some k -> StringMap.add k v acc )
     smap StringMap.empty

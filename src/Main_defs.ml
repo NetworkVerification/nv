@@ -27,7 +27,8 @@ let smt_query_file =
   let counter = ref (-1) in
   fun (file: string) ->
   incr counter;
-  lazy (open_out (file ^ "-" ^ (string_of_int !counter) ^ "-query"))
+  lazy (open_out (file ^ "-" ^
+                    (string_of_int !counter) ^ "-query"))
                                    
 let run_smt file cfg info ds =
   let fs = [] in

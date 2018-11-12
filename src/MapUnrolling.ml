@@ -337,7 +337,7 @@ let rec collect_all_symbolics ds =
   match ds with
   | [] -> StringMap.empty
   | d :: ds ->
-      StringMap.union
+      StringMap.merge
         (fun _ _ _ -> None)
         (collect_all_symbolics_d d)
         (collect_all_symbolics ds)

@@ -43,8 +43,8 @@ let default =
   ; no_cutoff=false
   ; inline=false
   ; compress= -1
-  ; split_heuristic="random"
-  ; draw=true}
+  ; split_heuristic="randomPath"
+  ; draw=false}
 
 let cfg = ref default 
 
