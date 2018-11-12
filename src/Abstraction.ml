@@ -480,8 +480,10 @@ module FailuresAbstraction =
       in
       let connectivityMap = AbstractNode.fold (fun u acc ->
                                 VertexMap.add u (addNeighbor u) acc)
-                                              uhat VertexMap.empty in
+                              uhat VertexMap.empty in
+      (* VertexMap.iter (fun k v -> Printf.printf "%d -> %s\n" (Integer.to_int k) (AbstractNode.printAbstractNode (AbstractNode.fromSet v))) connectivityMap; *)
       let us = groupAbsNodesByVertexSet connectivityMap in
+      (* AbstractNodeSet.iter (fun u -> Printf.printf "%s\n" (AbstractNode.printAbstractNode u)) us; *)
       if ((AbstractNodeSet.cardinal us) = 1) then
         Mesh
       else
@@ -500,6 +502,9 @@ module FailuresAbstraction =
         | [] -> best
         | vid :: path ->
            let curGroup = getGroupById f current in
+           (* Printf.printf "vid:%d\n" (Integer.to_int vid); *)
+           (* I think the arguments curGroup and getGroupById.. should
+              be the other way around *)
            match findSplittingByConnectivity curGroup (getGroupById f vid) g with
            | Groups us when AbstractNodeSet.cardinal us = 2 ->
               (us, 0.0)
@@ -515,8 +520,10 @@ module FailuresAbstraction =
            | Mesh ->
               (* do a randomSplit if necessary, but maybe there are better options*)
               if (snd best) > 1.0 then
-                let u1, u2 = AbstractNode.randomSplit curGroup in
-                (AbstractNodeSet.of_list [u1;u2], 1.0)
+                begin
+                  let u1, u2 = AbstractNode.randomSplit curGroup in
+                  (AbstractNodeSet.of_list [u1;u2], 1.0)
+                end
               else
                 best
       in
@@ -524,6 +531,7 @@ module FailuresAbstraction =
       let (uss, _) =
         loop path uid (AbstractNodeSet.of_list [u1;u2], float_of_int max_int)
       in
+      (* AbstractNodeSet.iter (fun us -> Printf.printf "%s," (AbstractNode.printAbstractNode us)) uss; *)
       (* If the group is larger than 2 try to randomly make it more
          abstract by creating groups of two *)
       if AbstractNodeSet.cardinal uss > 2 then
@@ -599,7 +607,7 @@ module FailuresAbstraction =
          refinement assumes the vertex refined is not in the path used for refinement *)
       List.tl (loop uid [uid])
 
-    (* Try to find a failure for which splitting would make the most
+    (** Try to find a failure for which splitting would make the most
        sense. This is based on heuristics, currently: 
        * 1. Choose a u,v with |u| > 1 or |v| > 1, so we can split it.  
        * 2. Choose failure (u,v) such that u can reach the destination and v 
@@ -710,15 +718,31 @@ module FailuresAbstraction =
           let path =
             if path_heuristic = "random" then []
             else
-              findRandomPath agraph sol uhat dst attrTy
+              findRandomPath agraph sol uhat
+                (VertexSet.map (fun d -> getId f d) dst) attrTy
           in
           Printf.printf "splitting over path: %s"
                         (Collections.printList (Vertex.printVertex) path "" "," "\n");
           let uss = bestSplitForFailures g f uhat path in
           let f' = splitSet f uss in
           let f'' =  abstractionTopological f' g in
-          (* refineForFailures_debug f''; *)
-          Some f''
+          (* if no progress was made, then do a random split on uhat *)
+          (* the group of uhat in abstraction f *)
+          let group_uhat_f = AbstractionMap.getGroupById f uhat in
+          (* the group of uhat in f'' *)
+          let group_uhat_f'' = AbstractionMap.getGroup f''
+                                 (AbstractionMap.getGroupRepresentativeId f uhat)
+          in
+          if (AbstractNode.equal group_uhat_f group_uhat_f'') then
+            begin
+              let uhat1, uhat2 = AbstractNode.randomSplit group_uhat_f in
+              let f = splitSet f'' (AbstractNodeSet.of_list [uhat1; uhat2]) in
+              let f = abstractionTopological f g in
+              Some f
+            end
+          else
+            (* refineForFailures_debug f''; *)
+            Some f''
         end
   end
 
