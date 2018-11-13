@@ -258,7 +258,7 @@ module SmtLang =
       | CheckSat ->
          (* for now i am hardcoding the tactics here. *)
          Printf.sprintf "(check-sat-using (then simplify \
-                         propagate-values solve-eqs smt))"
+                         ctx-simplify solve-eqs smt))"
       | GetModel ->
          Printf.sprintf "(get-model)"
 
@@ -469,6 +469,11 @@ let create_map descr env (typ: Syntax.ty) (arg: string) (body : SmtLang.term) =
 let is_symbolic syms x =
   List.exists (fun (y, e) -> Var.equals x y) syms
 
+let is_var (tm: SmtLang.term) =
+  match tm.t with
+  | Var _ -> true
+  | _ -> false
+
 let rec encode_exp_z3 descr env (e: exp) : term =
   (* Printf.printf "expr: %s\n" (Printing.exp_to_string e) ; *)
   match e.e with
@@ -583,12 +588,17 @@ let rec encode_exp_z3 descr env (e: exp) : term =
      mk_app (mk_constructor f.constr_name sort) [ze.t] |>
        mk_term ~tloc:e.espan
   | EMatch (e, bs) ->
-      let name = create_fresh descr "match" in
-      let za = mk_constant env name (ty_to_sort (oget e.ety))
-                           ~cdescr:(descr ^ "-match") ~cloc:e.espan in
-      let ze1 = encode_exp_z3 descr env e in
-      add_constraint env (mk_term ~tloc:e.espan (mk_eq za.t ze1.t));
-      encode_branches_z3 descr env za bs (oget e.ety)
+     let ze1 = encode_exp_z3 descr env e in
+     if is_var ze1 then
+       encode_branches_z3 descr env ze1 bs (oget e.ety)
+     else
+       begin
+         let name = create_fresh descr "match" in
+         let za = mk_constant env name (ty_to_sort (oget e.ety))
+                              ~cdescr:(descr ^ "-match") ~cloc:e.espan in
+         add_constraint env (mk_term ~tloc:e.espan (mk_eq za.t ze1.t));
+         encode_branches_z3 descr env za bs (oget e.ety)
+       end
   | ETy (e, ty) -> encode_exp_z3 descr env e
   | EFun _ | EApp _ -> failwith "function in smt encoding"
 
@@ -662,13 +672,13 @@ and encode_pattern_z3 descr env zname p (t: ty) =
     | [p], [t] -> encode_pattern_z3 descr env zname p t
     | ps, ts ->
         let znames =
-          List.mapi
-            (fun i t ->
+          BatList.map2i
+            (fun i t p ->
               let sort = ty_to_sort t in
               ( mk_constant env (Printf.sprintf "elem%d" i |> create_fresh descr) sort
               , sort
               , t ) )
-            ts
+            ts ps
         in
         let tup_decl = compute_decl env ty |> oget in
         let fs = tup_decl |> get_constructors |> List.hd |> get_projections in
@@ -1164,7 +1174,7 @@ let solve info query chan ?symbolic_vars ?(params=[]) ds =
   let verbose = false in
 
   (* compute the encoding of the network *)
-  let optimize = true in
+  let optimize = false in
   let renaming, env =
     time_profile "Encoding network"
                  (fun () -> let env = encode_z3 ds sym_vars in
