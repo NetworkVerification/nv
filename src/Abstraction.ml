@@ -615,7 +615,7 @@ module FailuresAbstraction =
        * 3. Choose u with the biggest cost (thus "distance" from the
             destination). This is good for our splitting based on the
             path. *)
-    let findVertexToRefine f (failed: EdgeSet.t) sol attrTy =
+    let findVertexToRefine finit f (failed: EdgeSet.t) sol attrTy =
       let lbl = sol.Solution.labels in
       let candidate1 =
         EdgeSet.filter (fun (u,v) -> ((AbstractNode.cardinal (getGroupById f u)) > 1))
@@ -641,9 +641,12 @@ module FailuresAbstraction =
       let selector = if isEmpty1 then snd else fst in
       let candidate3 =
         match EdgeSet.is_empty candidate2 with
-        | false ->
-           (* not sure how to implement this right now *)
-           EdgeSet.choose candidate2
+        |  false ->
+            let (u, v) = EdgeSet.choose candidate2 in
+            let vedges = EdgeSet.filter (fun (x,y) -> y = x) candidate2 in
+            if EdgeSet.cardinal vedges > 1 then
+              begin
+              (*TODO*)
         | true ->
            EdgeSet.choose candidate1
       in
@@ -666,13 +669,11 @@ module FailuresAbstraction =
           show_message (printAbstractGroups f "\n") T.Blue
             "Abstract groups after refine for failures "
       
-    let refineForFailures (draw: bool) (file: string) (g: AdjGraph.t) (f: abstractionMap)
+    let refineForFailures (draw: bool) (file: string) (g: AdjGraph.t)
+          (finit: abstractionMap) (f: abstractionMap)
           (failVars: Var.t EdgeMap.t) (sol: Solution.t) (k: int)
           (dst: VertexSet.t) (attrTy : Syntax.ty) : abstractionMap option =
-      (* Collections.StringMap.iter (fun k _ -> Printf.printf "symb: %s\n" k) sol.symbolics; *)
-      (* EdgeMap.iter (fun e k -> Printf.printf "edge %d,%d %s\n" (UInt32.to_int (fst e)) *)
-      (*                                        (UInt32.to_int (snd e)) (Var.to_string k)) failVars; *)
-
+      
       (* get set of failures, and also build abstract graph useful for
          splitting, at least until we can get forwarding information
          in labels *)
@@ -709,7 +710,7 @@ module FailuresAbstraction =
         None
       else
         begin
-          let uhat = findVertexToRefine f failures sol attrTy in
+          let uhat = findVertexToRefine finit f failures sol attrTy in
           (* what path to use for refining, by default will look for a
              (somewhat) random path. random indicates a random split
              of the node selected for refinement. That's probably the
