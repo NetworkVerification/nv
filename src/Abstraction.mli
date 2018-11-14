@@ -17,13 +17,14 @@ val findAbstraction :
 
 module FailuresAbstraction :
   sig  
-    (** [refineForFailures draw file g f failVars sol k dst attr]
+    (** [refineForFailures draw file g finit f failVars sol k dst attr]
        decides whether there is need to further refine the
        abstraction. *)
     val refineForFailures :
       bool ->
       string ->
       AdjGraph.t ->
+      AbstractionMap.abstractionMap ->
       AbstractionMap.abstractionMap ->
       Var.t AdjGraph.EdgeMap.t ->
       Solution.t ->

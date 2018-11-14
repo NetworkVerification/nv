@@ -615,7 +615,7 @@ module FailuresAbstraction =
        * 3. Choose u with the biggest cost (thus "distance" from the
             destination). This is good for our splitting based on the
             path. *)
-    let findVertexToRefine finit f (failed: EdgeSet.t) sol attrTy =
+    let findVertexToRefine finit f (ag: AdjGraph.t) (failed: EdgeSet.t) sol attrTy =
       let lbl = sol.Solution.labels in
       let candidate1 =
         EdgeSet.filter (fun (u,v) -> ((AbstractNode.cardinal (getGroupById f u)) > 1))
@@ -642,11 +642,43 @@ module FailuresAbstraction =
       let candidate3 =
         match EdgeSet.is_empty candidate2 with
         |  false ->
+            (* choose an edge randomly *)
             let (u, v) = EdgeSet.choose candidate2 in
-            let vedges = EdgeSet.filter (fun (x,y) -> y = x) candidate2 in
+            (* keep only the failures towards v if there are many *)
+            let vedges = EdgeSet.filter (fun (x,y) -> y = v) candidate2 in
             if EdgeSet.cardinal vedges > 1 then
               begin
-              (*TODO*)
+                (* compute the group that v originally belonged to *)
+                let vrepr = AbstractionMap.getGroupRepresentativeId f v in
+                let oldGroupOfV = AbstractionMap.getGroup finit vrepr in
+                if AbstractNode.cardinal oldGroupOfV =
+                     AbstractNode.cardinal (AbstractionMap.getGroupById f v) then
+                  (* v has never been split yet *)
+                  (u,v)
+                else
+                  begin
+                    (* v was split before *)
+                    let findNeighborsInOriginalV u =
+                      let neigh = AdjGraph.neighbors ag u in
+                      List.fold_left (fun acc what ->
+                          let vrepr = AbstractionMap.getGroupRepresentativeId f what in
+                          let oldW = AbstractionMap.getGroup finit vrepr in
+                          if AbstractNode.equal oldW oldGroupOfV then
+                            acc + 1
+                          else acc) 0 neigh
+                    in
+                    EdgeSet.fold
+                      (fun (u,v) acc ->
+                        let n = findNeighborsInOriginalV u in
+                        if n >= snd acc then
+                          ((u,v), n)
+                        else acc) vedges ((u,v), 0)
+                    |> fst
+                  end
+              end
+            else
+              (u,v)
+                          
         | true ->
            EdgeSet.choose candidate1
       in
@@ -710,7 +742,7 @@ module FailuresAbstraction =
         None
       else
         begin
-          let uhat = findVertexToRefine finit f failures sol attrTy in
+          let uhat = findVertexToRefine finit f agraph failures sol attrTy in
           (* what path to use for refining, by default will look for a
              (somewhat) random path. random indicates a random split
              of the node selected for refinement. That's probably the

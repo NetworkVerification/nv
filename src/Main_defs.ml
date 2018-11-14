@@ -170,7 +170,9 @@ let compress file info decls cfg networkOp =
   (* each set of prefixes represents an SRP *)
   let relevantSliceGroups = Slicing.groupPrefixesByVertices relevantSlices in
 
-  let rec loop (f: AbstractionMap.abstractionMap) (ds: AdjGraph.VertexSet.t) =
+  let rec loop (finit: AbstractionMap.abstractionMap)
+               (f: AbstractionMap.abstractionMap)
+               (ds: AdjGraph.VertexSet.t) =
     (* build abstract network *)
     let failVars, decls =
       time_profile "Build abstract network"
@@ -187,12 +189,12 @@ let compress file info decls cfg networkOp =
        let f' =
          time_profile "Refining abstraction after failures"
                       (fun () -> FailuresAbstraction.refineForFailures
-                                   cfg.draw file network.graph f failVars sol k ds network.attr_type)
+                                   cfg.draw file network.graph finit f failVars sol k ds network.attr_type)
        in
        match f' with
        | None -> print_solution sol;
        | Some f' ->
-          loop f' ds
+          loop finit f' ds
   in
   PrefixSetSet.iter
     (fun prefixes ->
@@ -209,7 +211,7 @@ let compress file info decls cfg networkOp =
                                                             transMap mergeMap ds)
       in
       (* run_simulator cfg info decls  *)
-      loop f ds) relevantSliceGroups
+      loop f f ds) relevantSliceGroups
 
 let parse_input (args : string array)
   : Cmdline.t * Console.info * string * Syntax.declarations =
