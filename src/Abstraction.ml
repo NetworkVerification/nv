@@ -644,8 +644,17 @@ module FailuresAbstraction =
         |  false ->
             (* choose an edge randomly *)
             let (u, v) = EdgeSet.choose candidate2 in
+            Printf.printf "chose randomly: %s\n" (printEdge (u,v));
             (* keep only the failures towards v if there are many *)
-            let vedges = EdgeSet.filter (fun (x,y) -> y = v) candidate2 in
+            let vedges = EdgeSet.filter (fun (x,y) ->
+                             Printf.printf "x,y,v:%s,%s,%s\n" (Vertex.printVertex x) (Vertex.printVertex y) (Vertex.printVertex v);
+                             if y = v then
+                               begin
+                                 Printf.printf "true\n";
+                                 true
+                               end
+                             else false) candidate2 in
+            Printf.printf "did I keep at least 2? %d\n" (EdgeSet.cardinal vedges);
             if EdgeSet.cardinal vedges > 1 then
               begin
                 (* compute the group that v originally belonged to *)
@@ -658,6 +667,7 @@ module FailuresAbstraction =
                 else
                   begin
                     (* v was split before *)
+                    Printf.printf "got in the good case\n";
                     let findNeighborsInOriginalV u =
                       let neigh = AdjGraph.neighbors ag u in
                       List.fold_left (fun acc what ->
