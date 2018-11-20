@@ -1,0 +1,372 @@
+\documentclass{article}
+
+\usepackage{fancyhdr}
+\usepackage{extramarks}
+\usepackage{amsfonts}
+\usepackage{syntax}
+\usepackage{stmaryrd}
+\usepackage{mathpartir}
+
+%
+% Basic Document Settings
+%
+
+\topmargin=-0.45in
+\evensidemargin=0in
+\oddsidemargin=0in
+\textwidth=6.5in
+\textheight=9.0in
+\headsep=0.25in
+
+\linespread{1.1}
+
+\pagestyle{fancy}
+\chead{NV Grammar}
+\lfoot{\lastxmark}
+\cfoot{\thepage}
+
+\renewcommand\headrulewidth{0.4pt}
+\renewcommand\footrulewidth{0.4pt}
+
+\setlength\parindent{30pt}
+
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\Zt}{$\Z$}
+
+% Create a relational rule
+% [#1] - Additional mathpartir arguments
+% {#2} - Name of the rule
+% {#3} - Premises for the rule
+% {#4} - Conclusions for the rule
+\newcommand{\relationRule}[4][]{\inferrule*[lab={\sc #2},#1]{#3}{#4}}
+
+\newcommand{\rel}[1]{\ensuremath{\llbracket {#1} \rrbracket}}
+\newcommand{\ttt}{\texttt}
+
+
+\begin{document}
+Before evaluating this relation, we are given a map type $\tau_m = \texttt{dict}[\tau_k][\tau_v]$ and a set of literals $\{k_1, \dots, k_n\}$ of type $\tau_k$ representing possible keys into maps of type $\tau_m$. For now we will assume that this set contains \emph{all} keys that are used in the program; we will probably be able to relax this assumption later. We also assume that we have run type inference, so we can determine the type of an expression during evaluation.
+
+This relation transforms all values of type $\tau_m$ to the tuple type $\tau_t = ((\tau_k, \tau_v), \dots (\tau_k, \tau_v))$ composed of $n$ pairs. Note that we don't need to keep track of the default value, since it will be assigned during construction; however, if we ever extend \ttt{filter} to work on non-set types,
+we will probably need to track the default as well.
+
+%Notes: filter can only be used on sets, and uses the default value of false.
+%map cannot change the type of the map, but otherwise works as expected. It also changes the default value.
+%mapif p f m changes values whose key satisfies p, and leaves other values unchanged.
+%combine f m1 m2 creates a new map whose value for key k is f m1[k] m2[k]
+
+\section*{Values}
+
+\begin{mathpar}
+	\relationRule{identifer}{
+		\null
+	}{
+		\rel{x} = x
+	}
+\end{mathpar}
+
+\begin{mathpar}
+	\relationRule{literal - bool}{
+		b : \texttt{bool}
+	}{
+		\rel{b} = b
+	}
+\end{mathpar}
+
+\begin{mathpar}
+	\relationRule{literal - int}{
+		n \mbox{ has an integer type} 
+	}{
+		\rel{n} = n
+	}
+\end{mathpar}
+
+\begin{mathpar}
+	\relationRule{literal - none}{
+		\null		
+	}{
+		\rel{\texttt{None}} = \ttt{None}
+	}
+\end{mathpar}
+
+\begin{mathpar}
+	\relationRule{Some}{
+		\null
+	}{
+		\rel{\texttt{Some}\ e} = \ttt{Some} \rel{e}
+	}
+\end{mathpar}
+
+
+\begin{mathpar}
+	\relationRule{Tuple}{
+		\null
+	}{
+		\rel{(e_1, e_2, \dots, e_n)} = (\rel{e_1}, \rel{e_2}, \dots, \rel{e_n})
+	}
+\end{mathpar}
+
+\begin{mathpar}
+	\relationRule{Function}{
+		\null
+	}{
+		\rel{\texttt{fun}\ x_1, \dots, x_n \to e} = \ttt{fun}\ x_1, \dots, x_n \to \rel{e}
+	}
+\end{mathpar}
+
+\begin{mathpar}
+	\relationRule{Emptyset - not type $\tau_m$}{
+		e = \{\} \\
+		e \not: \tau_m
+	}{
+		\rel{e} = e
+	}
+\end{mathpar}
+
+\begin{mathpar}
+	\relationRule{Emptyset - type $\tau_m$}{
+		e = \{\} \\
+		e : \tau_m
+	}{
+		\rel{e} = ((k_1, false), (k_2, false), \dots, (k_n, false))
+	}
+\end{mathpar}
+
+\section*{Non-map Expressions}
+
+\begin{mathpar}
+	\relationRule{Not}{
+		\null
+	}{
+		\rel{!e_1} = !\rel{e_1}	
+	}
+\end{mathpar}
+	
+\begin{mathpar}
+\relationRule{Binop}{
+	 \oplus \mbox{ is a binary operator}
+   }{
+   	\rel{e_1 \oplus e_2} = \rel{e_1} \oplus \rel{e_2}	
+   }
+\end{mathpar}
+
+\begin{mathpar}
+	\relationRule{Function application}{
+		\null
+	}{
+		\rel{e_1 e_2} = \rel{e_1} \rel{e_2}	
+	}
+\end{mathpar}
+
+\begin{mathpar}
+	\relationRule{Let-binding}{
+		\null
+	}{
+		\rel{\ttt{let}\ p = e_1\ \ttt{in}\ e_2} = \ttt{let}\ p = \rel{e_1}\ \ttt{in}\ \rel{e_2}	
+	}
+\end{mathpar}
+
+\begin{mathpar}
+	\relationRule{Match}{
+		\null
+	}{
+		\rel{\ttt{match}\ e\ \ttt{with}\ |\ p_1 \to e_1 \dots |\ p_k \to e_k} = 
+		\ttt{match}\ \rel{e}\ \ttt{with}\ |\ p_1 \to \rel{e_1} \dots |\ p_k \to \rel{e_k}
+	}
+\end{mathpar}
+
+\begin{mathpar}
+	\relationRule{If-else}{
+		\null
+	}{
+		\rel{\ttt{if}\ e_1\ \ttt{then}\ e_2\ \ttt{else}\ e_3} = 
+		\ttt{if}\ \rel{e_1}\ \ttt{then}\ \rel{e_2}\ \ttt{else}\ \rel{e_3}
+	}
+\end{mathpar}
+
+\section*{Declarations}
+
+\begin{mathpar}
+	\relationRule{Let declaration}{
+		\null
+	}{
+		\rel{\ttt{let}\ x = e} = \ttt{let}\ x = \rel{e}
+	}
+\end{mathpar}
+
+\begin{mathpar}
+	\relationRule{Attribute type - not $\tau_m$}{
+		\tau \neq \tau_m
+	}{
+		\rel{\ttt{type attribute} = \tau} = \ttt{type attribute} = \tau
+	}
+\end{mathpar}
+
+
+\begin{mathpar}
+	\relationRule{Attribute type - $\tau_m$}{
+		\null
+	}{
+		\rel{\ttt{type attribute} = \tau_m} = \ttt{type attribute} = \tau_t
+	}
+\end{mathpar}
+
+\begin{mathpar}
+	\relationRule{Symbolic type - not $\tau_m$}{
+		\tau \neq \tau_m
+	}{
+		\rel{\ttt{symbolic}\ x : \tau} = \ttt{symbolic}\ x : \tau
+	}
+\end{mathpar}
+
+\begin{mathpar}
+	\relationRule{Symbolic type - $\tau_m$}{
+		\null
+	}{
+		\rel{\ttt{symbolic}\ x : \tau_m} = \ttt{symbolic}\ x : \tau_t
+	}
+\end{mathpar}
+
+\begin{mathpar}
+	\relationRule{Symbolic value}{
+		\null
+	}{
+		\rel{\ttt{symbolic}\ x = e} = \ttt{symbolic}\ x = \rel{e}
+	}
+\end{mathpar}
+
+\begin{mathpar}
+	\relationRule{Require}{
+		\null
+	}{
+		\rel{\ttt{require}\ e} = \ttt{require}\ \rel{e}
+	}
+\end{mathpar}
+
+\begin{mathpar}
+	\relationRule{Node declaration}{
+		\null
+	}{
+		\rel{\ttt{let nodes} = n} = \ttt{let nodes}\ = n
+	}
+\end{mathpar}
+
+\begin{mathpar}
+	\relationRule{Edge declaration}{
+		\null
+	}{
+		\rel{\ttt{let edges} = lst} = \ttt{let edges}\ = lst
+	}
+\end{mathpar}
+
+\section*{Map expressions}
+Each of the following expressions have at least one subexpression which must be a map. The following rules apply if and only if those subexpressions have type $\tau_m$. If not, we recurse as usual but don't otherwise change the expression.
+
+I'm noting that some of these rules involve a lot of duplication, so we might want to look into translations
+which e.g. store duplicated expressions in a local variable first.
+
+They also involve a lot of extra unpacking since we don't have syntax for getting/setting with tuples. It
+would probably be good to extend the map syntax to work on tuples as well, so long as that doesn't mess
+anything up; we could also create a new syntax for tuples.
+
+\begin{mathpar}
+	\relationRule{CreateDict}{
+		e' = \rel{e}
+	}{
+		\rel{\ttt{createDict}\ e} = ((k_1, e'), (k_2, e'), \dots, (k_n, e'))	
+	}
+\end{mathpar}
+
+\begin{mathpar}
+	\relationRule{Get}{
+		k = k_i \\
+		x_i \mbox{ fresh}
+	}{
+		\rel{m[k]} = 
+		\ttt{let}\ ((\_, \_), \dots, (\_, x_i), \dots, (\_, \_)) = \rel{m}\ \ttt{in}\ 
+		x_i
+	}
+\end{mathpar}
+
+\begin{mathpar}
+	\relationRule{Set}{
+		k = k_i \\
+		x_1, \dots, x_n \mbox{ fresh}
+	}{
+		\rel{m[k := e]} = 
+		\ttt{let}\ ((\_, x_1), \dots, (\_, x_n)) = \rel{m}\ \ttt{in}\ 
+		((k_1, x_1), \dots, (k_i, \rel{e}), \dots, (k_n, x_n))
+	}
+\end{mathpar}
+
+\begin{mathpar}
+	\relationRule{Map}{
+		f' = \rel{f} \\
+		x_1, \dots, x_n \mbox{ fresh}
+	}{
+		\rel{\ttt{map}\ f\ m} = 
+		\ttt{let}\ ((\_, x_1), \dots, (\_, x_n)) = \rel{m}\ \ttt{in}\ 
+		((k_1, f'\ x_1), \dots, (k_n, f'\ x_n))
+	}
+\end{mathpar}
+
+\begin{mathpar}
+	\relationRule{MapIf}{
+		f' = \ttt{fun}\ k\ v\ \to \ttt{if}\ p\ k\ \ttt{then}\ (k, \rel{f}\ v)\ \ttt{else}\ (k, v) \\
+		x_1, \dots, x_n \mbox{ fresh}
+	}{
+		\rel{\ttt{mapIf}\ p\ f\ m} = 
+		\ttt{let}\ ((\_, x_1), \dots, (\_, x_n)) = \rel{m}\ \ttt{in}\ 
+		(f'\ (k_1, x_1), \dots, f'\ (k_n, x_n))
+	}
+\end{mathpar}
+
+\begin{mathpar}
+	\relationRule{Filter}{
+		p' = \ttt{fun}\ k\ v\ \to \ttt{if}\ p\ k\ \ttt{then}\ (k, v)\ \ttt{else}\ (k, \ttt{false}) \\
+		x_1, \dots, x_n \mbox{ fresh}
+	}{
+		\rel{\ttt{filter}\ p\ m} = 
+		\ttt{let}\ ((\_, x_1), \dots, (\_, x_n)) = \rel{m}\ \ttt{in}\ 
+		(p'\ (k_1, x_1), \dots, p'\ (k_n, x_n))
+	}
+\end{mathpar}
+
+\begin{mathpar}
+	\relationRule{Combine}{
+		f' = \rel{f} \\
+		x_1, \dots, x_n, y_1, \dots y_n \mbox{ fresh}
+	}{
+		\rel{\ttt{combine}\ f\ m_1\ m_2} = 
+		\ttt{let}\ ((\_, x_1), \dots, (\_, x_n)) = \rel{m_1}\ \ttt{in}\ 
+		\ttt{let}\ ((\_, y_1), \dots, (\_, y_n)) = \rel{m_2}\ \ttt{in}\ \\ 
+		((k_1, f'\ x_1\ y_1), \dots, (k_n, f'\ x_n\ y_n))
+	}
+\end{mathpar}
+
+\begin{mathpar}
+	\relationRule{Union}{
+		f' = \rel{f} \\
+		x_1, \dots, x_n, y_1, \dots y_n \mbox{ fresh}
+	}{
+		\rel{m_1\ \ttt{union}\ m_2} = 
+		\ttt{let}\ ((\_, x_1), \dots, (\_, x_n)) = \rel{m_1}\ \ttt{in}\ 
+		\ttt{let}\ ((\_, y_1), \dots, (\_, y_n)) = \rel{m_2}\ \ttt{in}\ \\ 
+		((k_1, x_1\ \|\ y_1), \dots, (k_n, x_n\ \|\ y_n))
+	}
+\end{mathpar}
+
+
+\begin{mathpar}
+	\relationRule{Intersection}{
+		f' = \rel{f} \\
+		x_1, \dots, x_n, y_1, \dots y_n \mbox{ fresh}
+	}{
+		\rel{m_1\ \ttt{inter}\ m_2} = 
+		\ttt{let}\ ((\_, x_1), \dots, (\_, x_n)) = \rel{m_1}\ \ttt{in}\ 
+		\ttt{let}\ ((\_, y_1), \dots, (\_, y_n)) = \rel{m_2}\ \ttt{in}\ \\ 
+		((k_1, x_1\ \&\&\ y_1), \dots, (k_n, x_n\ \&\&\ y_n))
+	}
+\end{mathpar}
+
+\end{document}
