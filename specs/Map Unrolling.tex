@@ -45,10 +45,16 @@
 
 
 \begin{document}
-Before evaluating this relation, we are given a map type $\tau_m = \texttt{dict}[\tau_k][\tau_v]$ and a set of literals $\{k_1, \dots, k_n\}$ of type $\tau_k$ representing possible keys into maps of type $\tau_m$. For now we will assume that this set contains \emph{all} keys that are used in the program; we will probably be able to relax this assumption later. We also assume that we have run type inference, so we can determine the type of an expression during evaluation.
+This document defines a transformation $\rel{\ }$, which transforms an NV program containing maps of a certain type into an equivalent NV program where all maps of that type have been replaced by tuples.
 
-This relation transforms all values of type $\tau_m$ to the tuple type $\tau_t = ((\tau_k, \tau_v), \dots (\tau_k, \tau_v))$ composed of $n$ pairs. Note that we don't need to keep track of the default value, since it will be assigned during construction; however, if we ever extend \ttt{filter} to work on non-set types,
-we will probably need to track the default as well.
+This transformation is defined with respect to:
+\begin{itemize}
+	\item $\tau_m = \texttt{dict}[\tau_k][\tau_v]$ , the type of  map we are replacing
+	\item A set of literals $\{k_1, \dots, k_n\}$ of type $\tau_k$, containing all keys which are used in a map indexing expression into a map of type $\tau_m$.
+	\item A context $\Gamma$ which allows us to determine the type of an expression, which changes in the obvious way during evaluaton (e.g. when we bind a variable).
+\end{itemize}
+
+This relation transforms all values of type $\tau_m$ to the tuple type $\tau_t = (\tau_v, \dots \tau_v)$ composed of $n$ values. The $n$th entry is the value corresponding to key $k_n$.
 
 %Notes: filter can only be used on sets, and uses the default value of false.
 %map cannot change the type of the map, but otherwise works as expected. It also changes the default value.
@@ -117,7 +123,8 @@ we will probably need to track the default as well.
 \begin{mathpar}
 	\relationRule{Emptyset - not type $\tau_m$}{
 		e = \{\} \\
-		e \not: \tau_m
+		\Gamma \vdash e : \tau \\
+		\tau \neq \tau_m
 	}{
 		\rel{e} = e
 	}
@@ -126,9 +133,9 @@ we will probably need to track the default as well.
 \begin{mathpar}
 	\relationRule{Emptyset - type $\tau_m$}{
 		e = \{\} \\
-		e : \tau_m
+		\Gamma \vdash e : \tau_m
 	}{
-		\rel{e} = ((k_1, false), (k_2, false), \dots, (k_n, false))
+		\rel{e} = (\ttt{false}, \dots, \ttt{false})
 	}
 \end{mathpar}
 
@@ -273,7 +280,7 @@ anything up; we could also create a new syntax for tuples.
 	\relationRule{CreateDict}{
 		e' = \rel{e}
 	}{
-		\rel{\ttt{createDict}\ e} = ((k_1, e'), (k_2, e'), \dots, (k_n, e'))	
+		\rel{\ttt{createDict}\ e} = (e', \dots, e')	
 	}
 \end{mathpar}
 
@@ -282,20 +289,29 @@ anything up; we could also create a new syntax for tuples.
 		k = k_i \\
 		x_i \mbox{ fresh}
 	}{
-		\rel{m[k]} = 
-		\ttt{let}\ ((\_, \_), \dots, (\_, x_i), \dots, (\_, \_)) = \rel{m}\ \ttt{in}\ 
+		\rel{m[k_i]} = 
+		\ttt{let}\ (\_, \dots, x_i, \dots, \_) = \rel{m}\ \ttt{in}\ 
 		x_i
 	}
 \end{mathpar}
 
 \begin{mathpar}
-	\relationRule{Set}{
+	\relationRule{Set - known key}{
 		k = k_i \\
 		x_1, \dots, x_n \mbox{ fresh}
 	}{
 		\rel{m[k := e]} = 
-		\ttt{let}\ ((\_, x_1), \dots, (\_, x_n)) = \rel{m}\ \ttt{in}\ 
-		((k_1, x_1), \dots, (k_i, \rel{e}), \dots, (k_n, x_n))
+		\ttt{let}\ (x_1, \dots, x_n) = \rel{m}\ \ttt{in}\ 
+		(x_1, \dots, \rel{e}, \dots, x_n)
+	}
+\end{mathpar}
+
+\begin{mathpar}
+	\relationRule{Set - unknown key}{
+		\forall i.k \neq k_i \\
+		x_1, \dots, x_n \mbox{ fresh}
+	}{
+		\rel{m[k := e]} = \rel{m}
 	}
 \end{mathpar}
 
@@ -305,29 +321,29 @@ anything up; we could also create a new syntax for tuples.
 		x_1, \dots, x_n \mbox{ fresh}
 	}{
 		\rel{\ttt{map}\ f\ m} = 
-		\ttt{let}\ ((\_, x_1), \dots, (\_, x_n)) = \rel{m}\ \ttt{in}\ 
-		((k_1, f'\ x_1), \dots, (k_n, f'\ x_n))
+		\ttt{let}\ (x_1, \dots, x_n) = \rel{m}\ \ttt{in}\ 
+		(f'\ x_1, \dots, f'\ x_n)
 	}
 \end{mathpar}
 
 \begin{mathpar}
 	\relationRule{MapIf}{
-		f' = \ttt{fun}\ k\ v\ \to \ttt{if}\ p\ k\ \ttt{then}\ (k, \rel{f}\ v)\ \ttt{else}\ (k, v) \\
+		f' = \ttt{fun}\ (k, v)\ \to \ttt{if}\ p\ k\ \ttt{then}\ \rel{f}\ v\ \ttt{else}\ v \\
 		x_1, \dots, x_n \mbox{ fresh}
 	}{
 		\rel{\ttt{mapIf}\ p\ f\ m} = 
-		\ttt{let}\ ((\_, x_1), \dots, (\_, x_n)) = \rel{m}\ \ttt{in}\ 
+		\ttt{let}\ (x_1, \dots, x_n) = \rel{m}\ \ttt{in}\ 
 		(f'\ (k_1, x_1), \dots, f'\ (k_n, x_n))
 	}
 \end{mathpar}
 
 \begin{mathpar}
 	\relationRule{Filter}{
-		p' = \ttt{fun}\ k\ v\ \to \ttt{if}\ p\ k\ \ttt{then}\ (k, v)\ \ttt{else}\ (k, \ttt{false}) \\
+		p' = \ttt{fun}\ (k, v)\ \to \ttt{if}\ p\ k\ \ttt{then}\ v\ \ttt{else}\ \ttt{false} \\
 		x_1, \dots, x_n \mbox{ fresh}
 	}{
 		\rel{\ttt{filter}\ p\ m} = 
-		\ttt{let}\ ((\_, x_1), \dots, (\_, x_n)) = \rel{m}\ \ttt{in}\ 
+		\ttt{let}\ (x_1, \dots, x_n) = \rel{m}\ \ttt{in}\ 
 		(p'\ (k_1, x_1), \dots, p'\ (k_n, x_n))
 	}
 \end{mathpar}
@@ -338,9 +354,9 @@ anything up; we could also create a new syntax for tuples.
 		x_1, \dots, x_n, y_1, \dots y_n \mbox{ fresh}
 	}{
 		\rel{\ttt{combine}\ f\ m_1\ m_2} = 
-		\ttt{let}\ ((\_, x_1), \dots, (\_, x_n)) = \rel{m_1}\ \ttt{in}\ 
-		\ttt{let}\ ((\_, y_1), \dots, (\_, y_n)) = \rel{m_2}\ \ttt{in}\ \\ 
-		((k_1, f'\ x_1\ y_1), \dots, (k_n, f'\ x_n\ y_n))
+		\ttt{let}\ ( x_1, \dots, x_n) = \rel{m_1}\ \ttt{in}\ 
+		\ttt {let}\ (y_1, \dots,  y_n) = \rel{m_2}\ \ttt{in}\ \\ 
+		(f'\ x_1\ y_1, \dots, f'\ x_n\ y_n))
 	}
 \end{mathpar}
 
@@ -350,9 +366,9 @@ anything up; we could also create a new syntax for tuples.
 		x_1, \dots, x_n, y_1, \dots y_n \mbox{ fresh}
 	}{
 		\rel{m_1\ \ttt{union}\ m_2} = 
-		\ttt{let}\ ((\_, x_1), \dots, (\_, x_n)) = \rel{m_1}\ \ttt{in}\ 
-		\ttt{let}\ ((\_, y_1), \dots, (\_, y_n)) = \rel{m_2}\ \ttt{in}\ \\ 
-		((k_1, x_1\ \|\ y_1), \dots, (k_n, x_n\ \|\ y_n))
+		\ttt{let}\ (x_1, \dots, x_n) = \rel{m_1}\ \ttt{in}\ 
+		\ttt{let}\ (y_1, \dots, y_n) = \rel{m_2}\ \ttt{in}\
+		(x_1\ \|\ y_1, \dots, x_n\ \|\ y_n)
 	}
 \end{mathpar}
 
@@ -363,9 +379,9 @@ anything up; we could also create a new syntax for tuples.
 		x_1, \dots, x_n, y_1, \dots y_n \mbox{ fresh}
 	}{
 		\rel{m_1\ \ttt{inter}\ m_2} = 
-		\ttt{let}\ ((\_, x_1), \dots, (\_, x_n)) = \rel{m_1}\ \ttt{in}\ 
-		\ttt{let}\ ((\_, y_1), \dots, (\_, y_n)) = \rel{m_2}\ \ttt{in}\ \\ 
-		((k_1, x_1\ \&\&\ y_1), \dots, (k_n, x_n\ \&\&\ y_n))
+		\ttt{let}\ (x_1, \dots, x_n) = \rel{m_1}\ \ttt{in}\ 
+		\ttt{let}\ (y_1, \dots, y_n) = \rel{m_2}\ \ttt{in}\
+		(x_1\ \&\&\ y_1, \dots, x_n\ \&\&\ y_n)
 	}
 \end{mathpar}
 
