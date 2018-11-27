@@ -83,6 +83,16 @@ let rec collect_in_exp (exp : Syntax.exp) (acc : maplist) : maplist =
             | None -> failwith "MapUnrollingUtils: unable to retrieve type for expressions"
           else
             failwith @@
+            "MapUnrollingUtils: Non-literal used as key into map: " ^
+            Printing.exp_to_string exp
+        | MSet, [m; key; _] ->
+          if is_literal key then
+            match m.ety with
+            | Some ty ->
+              add_if_map_type (ty, ExpSet.singleton key) acc
+            | None -> failwith "MapUnrollingUtils: unable to retrieve type for expressions"
+          else
+            failwith @@
             "MapUnrollingUtils: Non-literal used as key into map" ^
             Printing.exp_to_string exp
         | _ -> acc
