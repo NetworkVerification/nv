@@ -3,7 +3,8 @@ open Collections
 
 let has_target_type (target : ty) (e : exp) : bool =
   match e.ety with
-  | Some (ty) -> equal_tys target ty
+  | Some (ty) ->
+    equal_tys target (Typing.strip_ty ty)
   | None ->
     failwith "Found expression with no ety during map unrolling"
 ;;

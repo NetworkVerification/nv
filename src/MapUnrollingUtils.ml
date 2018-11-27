@@ -37,8 +37,7 @@ let add_if_map_type (ty, keys) lst : maplist =
   match stripped_ty with
   | Some (TMap (ty1, ty2)) ->
     add_to_maplist (TMap (ty1, ty2), keys) lst
-  | Some ty -> print_endline @@ "NOPE : " ^ Printing.ty_to_string ty; lst
-  | _ -> print_endline "NONE"; lst
+  | _ -> lst
 ;;
 
 let rec is_literal (exp : Syntax.exp) : bool =
@@ -77,10 +76,6 @@ let rec collect_in_exp (exp : Syntax.exp) (acc : maplist) : maplist =
       let acc =
         match op, es with
         | MGet, [e1; key] ->
-          print_endline @@
-          "Adding key from " ^
-          Printing.exp_to_string e1 ^ "[" ^
-          Printing.exp_to_string key ^ "]";
           if is_literal key then
             match e1.ety with
             | Some ty ->
