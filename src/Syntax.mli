@@ -199,9 +199,20 @@ val equal_values : cmp_meta:bool -> value -> value -> bool
 
 val hash_value : hash_meta:bool -> value -> int
 
+(* Operates only on the 'v' element of the value records, ignoring
+   all other entries *)
+val compare_vs : value -> value -> int
+
+(* As above, but for exps *)
+val compare_es : exp -> exp -> int
+
+(* Operates on all entries in the value records *)
 val compare_values : value -> value -> int
 
+(* As above, but for exps *)
 val compare_exps : exp -> exp -> int
+
+val equal_tys : ty -> ty -> bool
 
 val show_exp : exp -> string
 
@@ -228,14 +239,14 @@ module BddMap : sig
     op_key:exp * value BatSet.PSet.t -> (value -> value) -> t -> t
 
   val map_when :
-       op_key:exp * value BatSet.PSet.t
+    op_key:exp * value BatSet.PSet.t
     -> bool Mtbdd.t
     -> (value -> value)
     -> t
     -> t
 
   val merge :
-       ?opt:value * value * value * value
+    ?opt:value * value * value * value
     -> op_key:exp * value BatSet.PSet.t
     -> (value -> value -> value)
     -> t

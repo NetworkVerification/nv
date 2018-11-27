@@ -10,8 +10,10 @@ type bitwidth = int
 
 (* see:  http://okmij.org/ftp/ML/generalization.html *)
 type level = int
+[@@deriving ord, eq]
 
 type tyname = Var.t
+[@@deriving ord, eq]
 
 type ty =
   | TVar of tyvar ref
@@ -22,10 +24,12 @@ type ty =
   | TTuple of ty list
   | TOption of ty
   | TMap of ty * ty
+[@@deriving ord, eq]
 
 and tyvar = Unbound of tyname * level | Link of ty
 
 type var = Var.t
+[@@deriving ord, eq]
 
 type op =
   | And
@@ -51,6 +55,7 @@ type pattern =
   | PInt of Integer.t
   | PTuple of pattern list
   | POption of pattern option
+[@@deriving ord]
 
 type v =
   | VBool of bool
@@ -59,14 +64,23 @@ type v =
   | VTuple of value list
   | VOption of value option
   | VClosure of closure
+[@@deriving ord]
 
 and value =
-  {v: v; vty: ty option; vspan: Span.t; vtag: int; vhkey: int}
+    {v: v;
+     vty: ty option [@compare fun _ _ -> 0];
+     vspan: Span.t [@compare fun _ _ -> 0];
+     vtag: int [@compare fun _ _ -> 0];
+     vhkey: int [@compare fun _ _ -> 0];
+    }
+[@@deriving ord]
 
 and mtbdd = (value Mtbdd.t * ty)
+      [@compare fun _ _ -> failwith "Map value comparison not supported"]
+[@@deriving ord]
 
 and e =
-  | EVar of var
+    | EVar of var
   | EVal of value
   | EOp of op * exp list
   | EFun of func
@@ -77,14 +91,24 @@ and e =
   | ESome of exp
   | EMatch of exp * branches
   | ETy of exp * ty
+[@@deriving ord]
 
-and exp = {e: e; ety: ty option; espan: Span.t; etag: int; ehkey: int}
+and exp =
+    {e: e;
+     ety: ty option [@compare fun _ _ -> 0];
+     espan: Span.t [@compare fun _ _ -> 0];
+     etag: int [@compare fun _ _ -> 0];
+     ehkey: int [@compare fun _ _ -> 0];
+    }
+[@@deriving ord]
 
 and branches = (pattern * exp) list
 
 and func = {arg: var; argty: ty option; resty: ty option; body: exp}
 
 and closure = (env * func)
+      [@compare fun _ _ -> failwith "Map value comparison not supported"]
+[@@deriving ord]
 
 and env = {ty: ty Env.t; value: value Env.t}
 
@@ -809,6 +833,9 @@ end
 
 module MemoizeValue = Memoize (VKey)
 module MemoizeExp = Memoize (EKey)
+
+let compare_vs = compare_value
+let compare_es = compare_exp
 
 let compare_values v1 v2 =
   let cfg = Cmdline.get_cfg () in

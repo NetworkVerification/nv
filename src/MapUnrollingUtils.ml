@@ -1,12 +1,14 @@
 open Syntax
+open Collections
 
-type maplist = (Syntax.ty * Syntax.exp list) list;;
+type maplist = (Syntax.ty * ExpSet.t) list;;
 
-let maplist_to_string lst =
+let maplist_to_string (lst : maplist) =
   let entry_to_string (ty, keys) =
     "( " ^ Printing.ty_to_string ty ^ ", [ " ^
-    (List.fold_left (fun s1 s2 -> s1 ^ s2 ^ "; ") "" @@
-     List.map Printing.exp_to_string keys)
+    (ExpSet.fold
+       (fun e s -> s ^ Printing.exp_to_string e ^ "; ")
+       keys "")
     ^ "] )"
   in
   "[ " ^
@@ -19,11 +21,8 @@ let rec add_to_maplist (ty, keys) lst : maplist =
   match lst with
   | [] -> [(ty, keys)]
   | (ty2, keys2) :: tl ->
-    if ty2 = ty then
-      let newkeys =
-        (List.filter (fun k -> not @@ List.mem k keys2) keys)
-      in
-      (ty, keys2 @ newkeys) :: tl
+    if equal_tys ty ty2 then
+      (ty, ExpSet.union keys keys2) :: tl
     else
       (ty2, keys2) :: add_to_maplist (ty, keys) tl
 ;;
@@ -68,7 +67,7 @@ let rec collect_in_exp (exp : Syntax.exp) (acc : maplist) : maplist =
     | None -> failwith "MapUnrollingUtils: unable to retrieve type for expression"
   in
   (* If our current expression has map type, add that to our list *)
-  let acc = add_if_map_type (curr_ty, []) acc in
+  let acc = add_if_map_type (curr_ty, ExpSet.empty) acc in
   match exp.e with
   | EVar _
   | EVal _ -> acc
@@ -85,7 +84,7 @@ let rec collect_in_exp (exp : Syntax.exp) (acc : maplist) : maplist =
           if is_literal key then
             match e1.ety with
             | Some ty ->
-              add_if_map_type (ty, [key]) acc
+              add_if_map_type (ty, ExpSet.singleton key) acc
             | None -> failwith "MapUnrollingUtils: unable to retrieve type for expressions"
           else
             failwith @@
@@ -128,7 +127,7 @@ let collect_in_decl (d : declaration) (acc : maplist): maplist =
     let acc =
       match tyo with
       | Some ty ->
-        add_if_map_type (ty, []) acc
+        add_if_map_type (ty, ExpSet.empty) acc
       | None -> failwith "MapUnrollingUtils: Unable to retrieve type for decl"
     in
     collect_in_exp exp acc
@@ -136,11 +135,11 @@ let collect_in_decl (d : declaration) (acc : maplist): maplist =
     begin
       match toe with
       | Ty ty ->
-        add_if_map_type (ty, []) acc
+        add_if_map_type (ty, ExpSet.empty) acc
       | Exp exp -> collect_in_exp exp acc
     end
   | DATy ty ->
-    add_if_map_type (ty, []) acc
+    add_if_map_type (ty, ExpSet.empty) acc
   | DMerge exp
   | DTrans exp
   | DInit exp

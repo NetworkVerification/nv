@@ -20,7 +20,9 @@ let from_var (s, i) = (s, i)
 
 let to_string (s, i) = s ^ string_of_int i
 
-let equals (s1, i1) (s2, i2) = s1 = s2 && i1 = i2
+let equal (s1, i1) (s2, i2) = s1 = s2 && i1 = i2
+
+let equals = equal
 
 let equal_names (s1, i1) (s2, i2) = s1 = s2
 

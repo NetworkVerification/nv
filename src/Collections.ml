@@ -18,6 +18,12 @@ module VarSet = Set.Make (struct
   let compare = Var.compare
 end)
 
+module ExpSet = Set.Make (struct
+    type t = exp
+
+    let compare = compare_es
+end)
+
 module TypeMap = Map.Make (struct
   type t = ty
 

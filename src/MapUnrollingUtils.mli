@@ -1,7 +1,7 @@
 (* Each entry in this list is a pair of a map type, as well as
    the set of keys which appear in any MGet expression for that
    map type. *)
-type maplist = (Syntax.ty * Syntax.exp list) list
+type maplist = (Syntax.ty * Collections.ExpSet.t) list
 
 val maplist_to_string : maplist -> string
 
