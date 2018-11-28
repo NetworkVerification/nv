@@ -184,7 +184,7 @@ let rec unroll_exp
             List.map2 make_result keys freshvars
           in
           ematch (unroll_exp map) [(pattern, etuple result)]
-      | MMerge, [f; map1; map2] ->
+      | MMerge, f :: map1 :: map2 :: _ ->
         if not ((has_target_type map1) && (has_target_type map2)) then
           eop MMerge [unroll_exp f; unroll_exp map1; unroll_exp map2]
         else
@@ -208,7 +208,8 @@ let rec unroll_exp
             (etuple [unroll_exp map1; unroll_exp map2])
             [(pattern, etuple result)]
       | _ ->
-        failwith "Failed to unroll map: Incorrect number of arguments to map operation"
+        failwith @@ "Failed to unroll map: Incorrect number of arguments to map operation : "
+                    ^ Printing.exp_to_string e
   in
   aexp (unrolled_exp, None, e.espan)
 ;;
