@@ -248,12 +248,12 @@ let unroll_decl
 
 let unroll_one_map_type
     (ty : ty)
-    (keys : ExpSet.t)
+    (keys : exp list)
     (decls : declarations)
   : declarations
   =
   (* According to the docs, ExpSet.elements returns a sorted list.
      This is important because we need a consistent numbering for
      our keys *)
-  List.map (unroll_decl ty (ExpSet.elements keys)) decls
+  List.map (unroll_decl ty keys) decls
 ;;
