@@ -248,6 +248,12 @@ let equal_opt e o1 o2 =
   | None, Some _ | Some _, None -> false
   | Some x, Some y -> e x y
 
+let rec equal_lists eq_elts lst1 lst2 =
+  match lst1, lst2 with
+  | [], [] -> true
+  | [], _ :: _ | _ :: _, [] -> false
+  | t1 :: ts1, t2 :: ts2 -> eq_elts t1 t2 && equal_lists eq_elts ts1 ts2
+
 let rec equal_tys ty1 ty2 =
   match (ty1, ty2) with
   | TVar t1, TVar t2 -> (
@@ -260,17 +266,29 @@ let rec equal_tys ty1 ty2 =
   | TBool, TBool | TInt _, TInt _ -> true
   | TArrow (t1, t2), TArrow (s1, s2) ->
     equal_tys t1 s1 && equal_tys t2 s2
-  | TTuple ts1, TTuple ts2 -> equal_tys_list ts1 ts2
+  | TTuple ts1, TTuple ts2 -> equal_lists equal_tys ts1 ts2
   | TOption t1, TOption t2 -> equal_tys t1 t2
   | TMap (t1, t2), TMap (s1, s2) ->
     equal_tys t1 s1 && equal_tys t2 s2
   | _ -> false
 
-and equal_tys_list ts1 ts2 =
-  match (ts1, ts2) with
-  | [], [] -> true
-  | [], _ :: _ | _ :: _, [] -> false
-  | t1 :: ts1, t2 :: ts2 -> equal_tys t1 t2 && equal_tys_list ts1 ts2
+let rec equiv_tys ty1 ty2 =
+  match (ty1, ty2) with
+  | TVar {contents = Link t}, t'
+  | t, TVar {contents = Link t'} -> equiv_tys t t'
+  | TVar {contents = Unbound (n1, x1)},
+    TVar {contents = Unbound (n2, x2)} ->
+    Var.equals n1 n2 && x1 = x2
+  | QVar n1, QVar n2 -> Var.equals n1 n2
+  | TBool, TBool -> true
+  | TInt n1, TInt n2 -> n1 = n2
+  | TArrow (t1, t2), TArrow (s1, s2) ->
+    equiv_tys t1 s1 && equiv_tys t2 s2
+  | TTuple ts1, TTuple ts2 -> equal_lists equiv_tys ts1 ts2
+  | TOption t1, TOption t2 -> equiv_tys t1 t2
+  | TMap (t1, t2), TMap (s1, s2) ->
+    equiv_tys t1 s1 && equiv_tys t2 s2
+  | _ -> false
 
 let rec equal_values ~cmp_meta (v1: value) (v2: value) =
   let cfg = Cmdline.get_cfg () in

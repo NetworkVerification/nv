@@ -81,7 +81,7 @@ let rec ty_to_string_p prec t =
     | TInt i -> "int" ^ string_of_int i
     | TArrow (t1, t2) ->
         ty_to_string_p p t1 ^ " -> " ^ ty_to_string_p prec t2
-    | TTuple ts -> sep "*" (ty_to_string_p p) ts
+    | TTuple ts -> "(" ^ sep "*" (ty_to_string_p p) ts ^ ")"
     | TOption t -> "option[" ^ ty_to_string_p p t ^ "]"
     | TMap (t1, t2) ->
         "dict[" ^ ty_to_string_p p t1 ^ "," ^ ty_to_string_p p t2
