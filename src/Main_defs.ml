@@ -47,7 +47,10 @@ let run_smt cfg info ds =
     else (Smt.solve decls ~symbolic_vars:[], fs)
   in
   match res with
-  | Unsat -> false
+  | Unsat ->
+    print_string [green; Bold] "Success: " ;
+    Printf.printf "No assertions can be violated\n";
+    false
   | Unknown -> Console.error "SMT returned unknown"
   | Sat solution ->
     print_solution (apply_all solution fs);
