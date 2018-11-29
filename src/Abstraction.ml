@@ -84,15 +84,19 @@ let refineTopological (f: abstractionMap) (g: AdjGraph.t)
   VertexSetSet.fold (fun us f' -> AbstractionMap.split f' (AbstractNode.fromSet us))
                     (groupVerticesByAbsId vmap) f
 
-let rec abstractionTopological (f: abstractionMap) (g: AdjGraph.t) : abstractionMap =
-  let f' = AbstractionMap.fold (fun us facc ->
-               (* Printf.printf "refining %s\n" (AbstractNode.printAbstractNode us); *)
-               if (AbstractNode.cardinal us > 1) then
-                 refineTopological facc g us 
-               else
-                 facc) f f in
-  if (size f = size f') then normalize f' 
-  else abstractionTopological f' g
+let abstractionTopological (f: abstractionMap) (g: AdjGraph.t) : abstractionMap =
+  let rec loop fi =
+    let fprev = AbstractionMap.copyMap f in
+    let f' = AbstractionMap.fold (fun us facc ->
+                 (* Printf.printf "refining %s\n" (AbstractNode.printAbstractNode us); *)
+                 if (AbstractNode.cardinal us > 1) then
+                   refineTopological facc g us 
+                 else
+                   facc) fi fi in
+    if (size fi = size f') then normalize fprev f' 
+    else loop f'
+  in
+  loop f
 
 (** * Proper policy+topology abstraction *)  
 
@@ -127,17 +131,20 @@ let refineAbstraction (f: abstractionMap) (g: AdjGraph.t)
   VertexSetSet.fold (fun us f' -> AbstractionMap.split f' (AbstractNode.fromSet us))
                     (groupVerticesByPolicyAbsId vmap) f
 
-let rec abstraction (f: abstractionMap) (g: AdjGraph.t)
+let abstraction (f: abstractionMap) (g: AdjGraph.t)
                     (transMap: (Edge.t, int * Syntax.exp) Hashtbl.t)
                     (mergeMap: (Vertex.t, int * Syntax.exp) Hashtbl.t) : abstractionMap =
-  let f' = AbstractionMap.fold (fun us facc ->
-               if (AbstractNode.cardinal us > 1) then
-                 refineAbstraction facc g transMap mergeMap us
-               else
-                 facc) f f in
-  if (size f = size f') then normalize f'
-  else abstraction f' g transMap mergeMap
-
+  let fprev = AbstractionMap.copyMap f in
+  let rec loop fi =
+    let f' = AbstractionMap.fold (fun us facc ->
+                 if (AbstractNode.cardinal us > 1) then
+                   refineAbstraction facc g transMap mergeMap us
+                 else
+                   facc) fi fi in
+    if (size fi = size f') then normalize fprev f'
+    else loop f'
+  in
+  loop f
 
 let partialEvalTrans (graph : AdjGraph.t)
                      (trans : Syntax.exp) : (Edge.t, int * Syntax.exp) Hashtbl.t  =
@@ -196,6 +203,8 @@ module BuildAbstractNetwork =
    and edges of the abstract graph *)
     let buildAbstractAdjGraphDecls (g: AdjGraph.t) (f: abstractionMap) : Integer.t * (Edge.t list) =
       let n = Integer.create ~value:(size f) ~size:32 in
+      (* show_message (printAbstractGroups f "\n") T.Blue *)
+      (*              "Abstract groups before crash "; *)
       let rec edges uhat =
         if uhat = n then EdgeSet.empty
         else
@@ -507,6 +516,7 @@ module FailuresAbstraction =
               be the other way around *)
            match findSplittingByConnectivity curGroup (getGroupById f vid) g with
            | Groups us when AbstractNodeSet.cardinal us = 2 ->
+              (* Printf.printf "best-split was vertex: %d\n" (Integer.to_int current); *) 
               (us, 0.0)
            | Groups us ->
               let szNew = AbstractNodeSet.cardinal us in
@@ -519,8 +529,10 @@ module FailuresAbstraction =
                 loop path vid best
            | Mesh ->
               (* do a randomSplit if necessary, but maybe there are better options*)
+              (* Printf.printf "best-split was due to mesh: %d\n" (Integer.to_int current); *)
               if (snd best) > 1.0 then
                 begin
+                  (* Printf.printf "best-split was random\n"; *)
                   let u1, u2 = AbstractNode.randomSplit curGroup in
                   (AbstractNodeSet.of_list [u1;u2], 1.0)
                 end
@@ -531,9 +543,9 @@ module FailuresAbstraction =
       let (uss, _) =
         loop path uid (AbstractNodeSet.of_list [u1;u2], float_of_int max_int)
       in
-      (* AbstractNodeSet.iter (fun us -> Printf.printf "%s," (AbstractNode.printAbstractNode us)) uss; *)
-      (* If the group is larger than 2 try to randomly make it more
-         abstract by creating groups of two *)
+      AbstractNodeSet.iter (fun us -> Printf.printf "%s," (AbstractNode.printAbstractNode us)) uss;
+      (* If the group is larger than 2 try to randomly make it more *)
+      (*    abstract by creating groups of two *)
       if AbstractNodeSet.cardinal uss > 2 then
         begin
           let b = ref false in
@@ -591,14 +603,17 @@ module FailuresAbstraction =
              BatList.rev acc
           | (vhat, _) :: neighborsu ->
               (* Stop if at destination *)
-              if VertexSet.mem vhat ds then
-                BatList.rev (vhat :: acc)
-              else if BatList.mem vhat acc then
-                (* If we've visited this vertex before try another one *)
-                pickRandom neighborsu
-              else
-                (* otherwise add it to the path *)
-                loop vhat (vhat :: acc)
+             if VertexSet.mem vhat ds then
+               if (List.tl acc = []) then
+                 pickRandom neighborsu
+               else
+                 BatList.rev (vhat :: acc)
+             else if BatList.mem vhat acc then
+               (* If we've visited this vertex before try another one *)
+               pickRandom neighborsu
+             else
+               (* otherwise add it to the path *)
+               loop vhat (vhat :: acc)
         in
         pickRandom neighborsu
       in
@@ -607,27 +622,55 @@ module FailuresAbstraction =
          refinement assumes the vertex refined is not in the path used for refinement *)
       List.tl (loop uid [uid])
 
+    (** ** Various heuristics for splitting abstract nodes*)
+
+    (** Returns the subset of failed edges for which the abstract node
+       (fst or snd) has a cardinality larger than 1 and thus we can
+       split *)
+    let splittable (f: abstractionMap) proj (failed: EdgeSet.t) =
+      EdgeSet.filter (fun e -> ((AbstractNode.cardinal (getGroupById f (proj e))) > 1))
+                     failed
+
+    (** Given a set of failed variables, for each (u,v) it will select
+       one s.t. |neighbors(u)| <= k if it exists otherwise it will
+       return a random failed edge. *)
+    let chooseRandomForK (ag: AdjGraph.t) (failed: EdgeSet.t) (k: int) =
+      let rec loop fs =
+        if EdgeSet.is_empty fs then
+          EdgeSet.choose failed
+        else
+          begin
+            let e, fs = EdgeSet.pop_min fs in
+            let u = fst e in
+            if List.length (neighbors ag u) <= k then
+              e
+            else
+              loop fs
+          end
+      in
+      loop failed
+      
     (** Try to find a failure for which splitting would make the most
        sense. This is based on heuristics, currently: 
        * 1. Choose a u,v with |u| > 1 or |v| > 1, so we can split it.  
        * 2. Choose failure (u,v) such that u can reach the destination and v 
-            cannot.  
-       * 3. Choose u with the biggest cost (thus "distance" from the
-            destination). This is good for our splitting based on the
-            path. *)
-    let findVertexToRefine finit f (ag: AdjGraph.t) (failed: EdgeSet.t) sol attrTy =
+            cannot. Not sure if that's relevant anymore.
+       * 3. If we have two or more failures (u_1,v) (u_2,v) etc. then split the u_i that 
+            is connected with the most abstract nodes that used to be in the same group 
+            as v. That way, we may avoid splitting for them as well in a separate 
+            iteration.
+       * 4. When choosing between vertices u and v to split, 
+            split one that has at most k neighbors if possible. 
+            Chances are we were going to have to split that too. *)
+    let findVertexToRefine finit f (ag: AdjGraph.t) (failed: EdgeSet.t) sol attrTy k =
       let lbl = sol.Solution.labels in
-      let candidate1 =
-        EdgeSet.filter (fun (u,v) -> ((AbstractNode.cardinal (getGroupById f u)) > 1))
-                      failed in
-      let isEmpty1 = EdgeSet.is_empty candidate1 in
+      let candidates = splittable f fst failed in
+      let isEmpty1 = EdgeSet.is_empty candidates in
       (* if there is no failed edge <u,v> with |u| > 1 *)
-      let candidate1 = if isEmpty1 then
-                         EdgeSet.filter (fun (u,v) ->
-                             ((AbstractNode.cardinal (getGroupById f v)) > 1))
-                                       failed
+      let candidates = if isEmpty1 then
+                         splittable f snd failed
                        else
-                         candidate1
+                         candidates
       in
       (* This is kind of fragile, it matches on the expected value of
          the label of a vertex that has a path vs one that doesn't. If
@@ -637,24 +680,25 @@ module FailuresAbstraction =
             match validAttribute attrTy (VertexMap.find u lbl),
                   validAttribute attrTy(VertexMap.find v lbl) with
             | true, false -> true
-            | _, _ -> false) candidate1 in
+            | _, _ -> false) candidates in
       let selector = if isEmpty1 then snd else fst in
       let candidate3 =
         match EdgeSet.is_empty candidate2 with
         |  false ->
             (* choose an edge randomly *)
-            let (u, v) = EdgeSet.choose candidate2 in
-            Printf.printf "chose randomly: %s\n" (printEdge (u,v));
+            let (u, v) = chooseRandomForK ag candidate2 k in
+            (* Printf.printf "chose randomly: %s\n" (printEdge (u,v)); *)
             (* keep only the failures towards v if there are many *)
             let vedges = EdgeSet.filter (fun (x,y) ->
-                             Printf.printf "x,y,v:%s,%s,%s\n" (Vertex.printVertex x) (Vertex.printVertex y) (Vertex.printVertex v);
+                             Printf.printf "x,y,v:%s,%s,%s\n" (Vertex.printVertex x)
+                                           (Vertex.printVertex y) (Vertex.printVertex v);
                              if y = v then
                                begin
                                  Printf.printf "true\n";
                                  true
                                end
                              else false) candidate2 in
-            Printf.printf "did I keep at least 2? %d\n" (EdgeSet.cardinal vedges);
+            (* Printf.printf "did I keep at least 2? %d\n" (EdgeSet.cardinal vedges); *)
             if EdgeSet.cardinal vedges > 1 then
               begin
                 (* compute the group that v originally belonged to *)
@@ -667,7 +711,6 @@ module FailuresAbstraction =
                 else
                   begin
                     (* v was split before *)
-                    Printf.printf "got in the good case\n";
                     let findNeighborsInOriginalV u =
                       let neigh = AdjGraph.neighbors ag u in
                       List.fold_left (fun acc what ->
@@ -677,20 +720,26 @@ module FailuresAbstraction =
                             acc + 1
                           else acc) 0 neigh
                     in
-                    EdgeSet.fold
-                      (fun (u,v) acc ->
-                        let n = findNeighborsInOriginalV u in
-                        if n >= snd acc then
-                          ((u,v), n)
-                        else acc) vedges ((u,v), 0)
-                    |> fst
+                    let mostNeighbors, n = EdgeSet.fold
+                                             (fun (u,v) acc ->
+                                               let n = findNeighborsInOriginalV u in
+                                               if n >= snd acc then
+                                                 (((u,v), n) :: (fst acc), n)
+                                               else
+                                                 (((u,v),n) :: fst acc, snd acc))
+                                             vedges ([], 0)
+                    in
+                    let filteredMax =
+                      BatList.filter_map (fun (e,m) -> if m = n then Some e else None)
+                                         mostNeighbors |> EdgeSet.of_list
+                    in
+                    chooseRandomForK ag filteredMax k
                   end
               end
             else
               (u,v)
-                          
         | true ->
-           EdgeSet.choose candidate1
+           EdgeSet.choose candidates
       in
       let res = selector candidate3 in
       if !debugAbstraction then
@@ -752,7 +801,7 @@ module FailuresAbstraction =
         None
       else
         begin
-          let uhat = findVertexToRefine finit f agraph failures sol attrTy in
+          let uhat = findVertexToRefine finit f agraph failures sol attrTy k in
           (* what path to use for refining, by default will look for a
              (somewhat) random path. random indicates a random split
              of the node selected for refinement. That's probably the

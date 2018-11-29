@@ -671,51 +671,51 @@ and encode_pattern_z3 descr env zname p (t: ty) =
     match (ps, ts) with
     | [p], [t] -> encode_pattern_z3 descr env zname p t
     | ps, ts ->
-       (* let znames =
-        *   List.mapi
-        *     (fun i t ->
-        *       let sort = ty_to_sort t in
-        *       ( mk_constant env (Printf.sprintf "elem%d" i |> create_fresh descr) sort
-        *       , sort
-        *        , t ) )
-        *     ts
-        * in *)
        let znames =
-         BatList.map2i
-           (fun i t p ->
+         List.mapi
+           (fun i t ->
              let sort = ty_to_sort t in
-             ( (match p with
-                | PVar x ->
-                   let local_name = create_name descr x in
-                   mk_constant env local_name sort
-                | _ ->
-                   mk_constant env (Printf.sprintf "elem%d" i |> create_fresh descr) sort)
+             ( mk_constant env (Printf.sprintf "elem%d" i |> create_fresh descr) sort
              , sort
-             , t ) )
-           ts ps
+              , t ) )
+           ts
        in
+       (* let znames = *)
+       (*   BatList.map2i *)
+       (*     (fun i t p -> *)
+       (*       let sort = ty_to_sort t in *)
+       (*       ( (match p with *)
+       (*          | PVar x -> *)
+       (*             let local_name = create_name descr x in *)
+       (*             mk_constant env local_name sort *)
+       (*          | _ -> *)
+       (*             mk_constant env (Printf.sprintf "elem%d" i |> create_fresh descr) sort) *)
+       (*       , sort *)
+       (*       , t ) ) *)
+       (*     ts ps *)
+       (* in *)
        let tup_decl = compute_decl env ty |> oget in
        let fs = tup_decl |> get_constructors |> List.hd |> get_projections in
        List.combine znames fs
        |> List.iter (fun ((elem, _, _), (f, _)) ->
               let e = mk_term (mk_app (mk_var f) [zname.t]) in
               add_constraint env ((mk_eq elem.t e.t) |> mk_term));
-       (* let apps = List.map (fun (f, _) -> *)
-       (*                let e = mk_term (mk_app (mk_var f) [zname.t]) in *)
-       (*                e) fs *)
-       (* in *)
-       let matches =
-         List.map
-           (fun (p, (zname, _, ty)) ->
-             match p with
-             | PVar x -> mk_bool true |> mk_term
-             | _ -> encode_pattern_z3 descr env zname p ty )
-           (List.combine ps znames)
-           (* let matches = *)
-           (*   List.mapi *)
-           (*     (fun i (p, app) -> *)
-           (*       encode_pattern_z3 descr env app p (List.nth ts i)) *)
-           (*     (List.combine ps apps) *)
+       let apps = List.map (fun (f, _) ->
+                      let e = mk_term (mk_app (mk_var f) [zname.t]) in
+                      e) fs
+       in
+       (* let matches = *)
+       (*   List.map *)
+       (*     (fun (p, (zname, _, ty)) -> *)
+       (*       match p with *)
+       (*       | PVar x -> mk_bool true |> mk_term *)
+       (*       | _ -> encode_pattern_z3 descr env zname p ty ) *)
+       (*     (List.combine ps znames) *)
+           let matches =
+             List.mapi
+               (fun i (p, app) ->
+                 encode_pattern_z3 descr env app p (List.nth ts i))
+               (List.combine ps apps)
        in
        let f acc e = mk_and acc e.t in
        let b = mk_bool true in

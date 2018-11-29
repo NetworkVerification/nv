@@ -96,7 +96,9 @@ val fold: (AbstractNode.t -> 'a -> 'a) -> abstractionMap -> 'a -> 'a
 (** Returns the number of abstract nodes *)
 val size: abstractionMap -> int
 
+val copyMap: abstractionMap -> abstractionMap
+  
 (** [normalize f] returns f with indices reordered to be contigious*)
-val normalize: abstractionMap -> abstractionMap
+val normalize: abstractionMap -> abstractionMap -> abstractionMap
   
 

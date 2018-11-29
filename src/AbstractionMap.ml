@@ -38,6 +38,9 @@ end
 module GroupMap = Map.Make(UInts)
 type abstrId = UInts.t
 
+(* when doing this in a functional style, it hangs. I am pretty sure,
+   I created an infinite loop, I can't imagine the performance being
+   so horrible *)
 type abstractionMap =
   { mutable absGroups : AbstractNode.t GroupMap.t; (* mapping each id to a set of nodes *)
     mutable groupId   : abstrId VertexMap.t;       (* mapping each node to an id *)
@@ -64,7 +67,7 @@ let getGroupRepresentativeId (f: abstractionMap) (uhat: abstrId) : Vertex.t =
   
 let getGroupId (f: abstractionMap) (u: AbstractNode.t) : abstrId =
   getId f (getGroupRepresentative f u)
-
+  
 (* Removes the node u from it's current abstract group and assigns it to the id newId *)
 let partitionNode (f: abstractionMap) (newId: abstrId) (u: Vertex.t) : unit =
   let _ =  match getIdPartial f u with
@@ -114,35 +117,46 @@ let fold (g: AbstractNode.t -> 'a -> 'a) (f: abstractionMap) (acc: 'a) : 'a =
 
 let size (f: abstractionMap) : int =
   GroupMap.cardinal (f.absGroups)
-  (* f.nextId |> UInt32.to_int *)
+(* f.nextId |> UInt32.to_int *)
+
+let copyMap (f: abstractionMap) =
+  {absGroups = f.absGroups; groupId = f.groupId; nextId = f.nextId}
 
 (* does not preserve ids through refinements *)
-(* let normalize (f: abstractionMap) =
- *   let init =  (Integer.create ~value:0 ~size:32, VertexMap.empty, GroupMap.empty) in
- *   let (nextIdN, groupIdN, absGroupsN) =
- *     GroupMap.fold (fun id us (nextIdN, groupIdN, absGroupsN) ->
- *         (Integer.succ nextIdN,
- *          VertexSet.fold (fun u acc -> VertexMap.add u nextIdN acc) us groupIdN,
- *          GroupMap.add nextIdN (getGroupById f id) absGroupsN))
- *                   f.absGroups init
- *   in
- *   { absGroups = absGroupsN; groupId = groupIdN; nextId = nextIdN} *)
+(* let normalize f (f: abstractionMap) = *)
+(*   let init =  (Integer.create ~value:0 ~size:32, VertexMap.empty, GroupMap.empty) in *)
+(*   let (nextIdN, groupIdN, absGroupsN) = *)
+(*     GroupMap.fold (fun id us (nextIdN, groupIdN, absGroupsN) -> *)
+(*         (Integer.succ nextIdN, *)
+(*          VertexSet.fold (fun u acc -> VertexMap.add u nextIdN acc) us groupIdN, *)
+(*          GroupMap.add nextIdN (getGroupById f id) absGroupsN)) *)
+(*                   f.absGroups init *)
+(*   in *)
+(*   { absGroups = absGroupsN; groupId = groupIdN; nextId = nextIdN} *)
 
-let normalize (f: abstractionMap) =
+(* TODO, investigate why non mutables don't work *)
+let normalize (fprev: abstractionMap) (f: abstractionMap) =
   let init = ([], VertexMap.empty, GroupMap.empty) in
-  (* get size of previous abstraction *)
-  let sz = size f in
-
-  (* insert into the new abstraction map the nodes that have a valid
-     (< sz) id *)
+  Printf.printf "in normalize fprev: %s" (printAbstractGroups fprev "\n");
+  Printf.printf "in normalize f: %s" (printAbstractGroups f "\n");
+  (* insert into the new abstractionmap the nodes that existed in the
+     previous one with the same id as before *)
   let (leftovers, groupIdN, absGroupsN) =
     GroupMap.fold (fun id us (leftovers, groupIdN, absGroupsN) ->
-        if Integer.to_int id < sz then
+        let repr = getGroupRepresentative f us in
+        let oldid = getId fprev repr in
+        if not (GroupMap.mem oldid absGroupsN) then
+          begin
+            Printf.printf "enter for oldid:%d\n" (Integer.to_int oldid);
           (leftovers,
-           VertexSet.fold (fun u acc -> VertexMap.add u id acc) us groupIdN,
-           GroupMap.add id us absGroupsN)
+           VertexSet.fold (fun u acc -> VertexMap.add u oldid acc) us groupIdN,
+           GroupMap.add oldid us absGroupsN)
+          end
         else
-          ((id,us) :: leftovers, groupIdN, absGroupsN)
+          begin
+              Printf.printf "else for oldid:%d\n" (Integer.to_int oldid);
+              ((id,us) :: leftovers, groupIdN, absGroupsN)
+            end
       )
       f.absGroups init in
   (* any node that has an id >= sz should be inserted with a new fresh
@@ -150,10 +164,14 @@ let normalize (f: abstractionMap) =
   (*todo fix this second part *)
   let (nextIdN, groupIdN, absGroupsN) =
     List.fold_left (fun (nextIdN, groupIdN, absGroupsN) (id, us) ->
-        (Integer.succ nextIdN,
-         VertexSet.fold (fun u acc -> VertexMap.add u nextIdN acc) us groupIdN,
-         GroupMap.add nextIdN us absGroupsN))
-      (Integer.create ~value:0 ~size:32, groupIdN, absGroupsN) leftovers
+        let freshId = ref nextIdN in
+        while GroupMap.mem !freshId absGroupsN do
+          freshId := Integer.succ !freshId;
+        done;
+        (Integer.succ !freshId,
+         VertexSet.fold (fun u acc -> VertexMap.add u !freshId acc) us groupIdN,
+         GroupMap.add !freshId us absGroupsN))
+                   (Integer.create ~value:0 ~size:32, groupIdN, absGroupsN) leftovers
   in { absGroups = absGroupsN; groupId = groupIdN; nextId = nextIdN}
 
     
