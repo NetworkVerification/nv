@@ -116,14 +116,44 @@ let size (f: abstractionMap) : int =
   GroupMap.cardinal (f.absGroups)
   (* f.nextId |> UInt32.to_int *)
 
+(* does not preserve ids through refinements *)
+(* let normalize (f: abstractionMap) =
+ *   let init =  (Integer.create ~value:0 ~size:32, VertexMap.empty, GroupMap.empty) in
+ *   let (nextIdN, groupIdN, absGroupsN) =
+ *     GroupMap.fold (fun id us (nextIdN, groupIdN, absGroupsN) ->
+ *         (Integer.succ nextIdN,
+ *          VertexSet.fold (fun u acc -> VertexMap.add u nextIdN acc) us groupIdN,
+ *          GroupMap.add nextIdN (getGroupById f id) absGroupsN))
+ *                   f.absGroups init
+ *   in
+ *   { absGroups = absGroupsN; groupId = groupIdN; nextId = nextIdN} *)
+
 let normalize (f: abstractionMap) =
-  let init =  (Integer.create ~value:0 ~size:32, VertexMap.empty, GroupMap.empty) in
+  let init = ([], VertexMap.empty, GroupMap.empty) in
+  (* get size of previous abstraction *)
+  let sz = size f in
+
+  (* insert into the new abstraction map the nodes that have a valid
+     (< sz) id *)
+  let (leftovers, groupIdN, absGroupsN) =
+    GroupMap.fold (fun id us (leftovers, groupIdN, absGroupsN) ->
+        if Integer.to_int id < sz then
+          (leftovers,
+           VertexSet.fold (fun u acc -> VertexMap.add u id acc) us groupIdN,
+           GroupMap.add id us absGroupsN)
+        else
+          ((id,us) :: leftovers, groupIdN, absGroupsN)
+      )
+      f.absGroups init in
+  (* any node that has an id >= sz should be inserted with a new fresh
+     id s.t. new_id < sz*)
+  (*todo fix this second part *)
   let (nextIdN, groupIdN, absGroupsN) =
-    GroupMap.fold (fun id us (nextIdN, groupIdN, absGroupsN) ->
+    List.fold_left (fun (nextIdN, groupIdN, absGroupsN) (id, us) ->
         (Integer.succ nextIdN,
          VertexSet.fold (fun u acc -> VertexMap.add u nextIdN acc) us groupIdN,
-         GroupMap.add nextIdN (getGroupById f id) absGroupsN))
-                  f.absGroups init
-  in
-  { absGroups = absGroupsN; groupId = groupIdN; nextId = nextIdN}
+         GroupMap.add nextIdN us absGroupsN))
+      (Integer.create ~value:0 ~size:32, groupIdN, absGroupsN) leftovers
+  in { absGroups = absGroupsN; groupId = groupIdN; nextId = nextIdN}
+
     
