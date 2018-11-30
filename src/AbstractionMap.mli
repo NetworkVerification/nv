@@ -99,6 +99,6 @@ val size: abstractionMap -> int
 val copyMap: abstractionMap -> abstractionMap
   
 (** [normalize f] returns f with indices reordered to be contigious*)
-val normalize: abstractionMap -> abstractionMap -> abstractionMap
+val normalize: abstractionMap -> abstractionMap
   
 

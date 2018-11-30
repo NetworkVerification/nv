@@ -86,14 +86,13 @@ let refineTopological (f: abstractionMap) (g: AdjGraph.t)
 
 let abstractionTopological (f: abstractionMap) (g: AdjGraph.t) : abstractionMap =
   let rec loop fi =
-    let fprev = AbstractionMap.copyMap f in
     let f' = AbstractionMap.fold (fun us facc ->
                  (* Printf.printf "refining %s\n" (AbstractNode.printAbstractNode us); *)
                  if (AbstractNode.cardinal us > 1) then
                    refineTopological facc g us 
                  else
                    facc) fi fi in
-    if (size fi = size f') then normalize fprev f' 
+    if (size fi = size f') then normalize f' 
     else loop f'
   in
   loop f
@@ -134,14 +133,13 @@ let refineAbstraction (f: abstractionMap) (g: AdjGraph.t)
 let abstraction (f: abstractionMap) (g: AdjGraph.t)
                     (transMap: (Edge.t, int * Syntax.exp) Hashtbl.t)
                     (mergeMap: (Vertex.t, int * Syntax.exp) Hashtbl.t) : abstractionMap =
-  let fprev = AbstractionMap.copyMap f in
   let rec loop fi =
     let f' = AbstractionMap.fold (fun us facc ->
                  if (AbstractNode.cardinal us > 1) then
                    refineAbstraction facc g transMap mergeMap us
                  else
                    facc) fi fi in
-    if (size fi = size f') then normalize fprev f'
+    if (size fi = size f') then normalize f'
     else loop f'
   in
   loop f

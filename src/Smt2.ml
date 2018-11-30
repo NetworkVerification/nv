@@ -79,20 +79,12 @@ module SmtLang =
         cloc   : Span.t
       }
 
-    type map_def =
-      { fname   : string;
-        fkey    : string * sort;
-        resSort : sort;
-        body    : term
-      }
-
     (* NOTE: Do we want to have constants as commands? Ordering issues
        must be considered. If we want to have all declarations on top. *)
     type smt_command =
       | Echo : string -> smt_command
       | Eval : term -> smt_command
       | Assert : term -> smt_command
-      | MapDef : map_def -> smt_command
       | CheckSat : smt_command
       | GetModel : smt_command
 
@@ -138,13 +130,7 @@ module SmtLang =
 
     let mk_term ?(tdescr="") ?(tloc= Span.default) (t: smt_term) =
       {t; tdescr; tloc}
-      
-    let mk_map_def name key ksort resSort body =
-      { fname = name;
-        fkey = key, ksort;
-        resSort = resSort;
-        body = body }
-      
+            
     (** ** Constructors for SMT commands *)
 
     let mk_echo s = Echo s
@@ -152,8 +138,6 @@ module SmtLang =
     let mk_eval tm = Eval tm
 
     let mk_assert tm = Assert tm
-
-    let mk_mapDef mdef = MapDef mdef
 
     let mk_command ?(comdescr ="") ?(comloc=Span.default) (com : smt_command) =
       {com; comdescr; comloc}
@@ -251,10 +235,6 @@ module SmtLang =
          Printf.sprintf "(eval %s)" (term_to_smt false info tm)
       | Assert tm ->
          Printf.sprintf "(assert %s)" (term_to_smt false info tm)
-      | MapDef f -> 
-         Printf.sprintf "(define-fun %s ((%s %s)) %s %s)"
-                        f.fname (fst f.fkey) (sort_to_smt (snd f.fkey))
-                        (sort_to_smt f.resSort) (term_to_smt false info f.body)
       | CheckSat ->
          (* for now i am hardcoding the tactics here. *)
          Printf.sprintf "(check-sat-using (then simplify \
@@ -445,26 +425,8 @@ let mk_constant (env : smt_env) ?(cdescr = "") ?(cloc = Span.default) cname csor
   add_constant env ~cdescr:cdescr ~cloc:cloc cname csort;
   (mk_var cname) |> (mk_term ~tdescr:cdescr ~tloc:cloc)
 
-let mk_map (env : smt_env) ?(cdescr = "") ?(cloc = Span.default) mdef =
-  env.ctx <- (mk_command ~comdescr:cdescr ~comloc:cloc (mk_mapDef mdef)) :: env.ctx;
-  (mk_var mdef.fname) |> (mk_term ~tdescr:cdescr ~tloc:cloc)
-
 let add_constraint (env : smt_env) (c : term) =
   env.ctx <- (mk_assert c |> mk_command) :: env.ctx
-
-let create_map descr env (typ: Syntax.ty) (arg: string) (body : SmtLang.term) =
-  let name = create_fresh descr "map" in
-  match typ with
-  | TMap (kty, valty) ->
-     (* Compute declaration of key/val sort, in case it's some datatype *)
-     let _ = compute_decl env kty in
-     let ksort = ty_to_sort kty in
-     let _ = compute_decl env valty in
-     let vsort = ty_to_sort valty in
-     (* add definition of map, return variable *)
-     mk_map_def name arg ksort vsort body |>
-       mk_map env
-  | _ -> failwith "expected a map type"
 
 let is_symbolic syms x =
   List.exists (fun (y, e) -> Var.equals x y) syms
@@ -530,25 +492,11 @@ let rec encode_exp_z3 descr env (e: exp) : term =
        mk_leq ze1.t ze2.t |>
          mk_term ~tloc:e.espan
     | MCreate, [e1] ->
-       let body = encode_exp_z3 descr env e1 in
-       let keyarg = "k" in
-       create_map descr env (get_inner_type (oget e.ety)) keyarg body
+       failwith "not implemented"
     | MGet, [e1; e2] ->
-       let emap = encode_exp_z3 descr env e1 in
-       let ekey = encode_exp_z3 descr env e2 in
-       mk_app emap.t [ekey.t] |>
-         mk_term ~tloc:e.espan
+       failwith "not implemented"
     | MSet, [e1; e2; e3] ->
-       let key = "k" in
-       let keyVar = mk_var key in
-       let emap = encode_exp_z3 descr env e1 in
-       let ekey = encode_exp_z3 descr env e2 in
-       let eval = encode_exp_z3 descr env e2 in
-       let guard = mk_eq ekey.t keyVar in
-       let body = mk_ite guard eval.t (mk_app emap.t [keyVar]) |>
-                    mk_term ~tloc:e.espan
-       in
-       create_map descr env (oget e1.ety) key body
+       failwith "not implemented"
     | MMap, [{e= EFun {arg= x; argty= ty1; resty= ty2; body= e1}}; e2] ->
        failwith "not implemented yet"
     | MMapFilter, _ 
