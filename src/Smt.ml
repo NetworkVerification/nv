@@ -69,6 +69,7 @@ let rec ty_to_smtlib (ty: ty) : string =
   match ty with
   | TVar {contents= Link t} -> ty_to_smtlib t
   | TBool -> "Bool"
+  | TVoid -> "Bool" (* See comment on ty_to_sort *)
   | TInt i -> Printf.sprintf "_ BitVec %s" (string_of_int i)
   | TTuple ts -> (
       match ts with
@@ -105,6 +106,10 @@ let rec ty_to_sort ctx (ty: ty) : Z3.Sort.sort =
     let name = Printf.sprintf "Option%s" (Z3.Sort.to_string ty) in
     Z3.Datatype.mk_sort_s ctx name [none; some]
   | TBool -> Z3.Boolean.mk_sort ctx
+  | TVoid ->
+    (* SMT doesn't support empty sorts. I think it's sound to encode
+       Void as Integer since by definition Void is never used *)
+    Z3.Boolean.mk_sort ctx
   | TTuple ts ->
     let len = List.length ts in
     let istup = Z3.Symbol.mk_string ctx "is-pair" in

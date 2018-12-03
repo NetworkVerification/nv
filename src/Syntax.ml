@@ -16,6 +16,7 @@ type tyname = Var.t
 [@@deriving ord, eq]
 
 type ty =
+  | TVoid
   | TVar of tyvar ref
   | QVar of tyname
   | TBool
@@ -144,6 +145,7 @@ let show_list s ls =
 
 let rec show_ty ty =
   match ty with
+  | TVoid -> "TVoid"
   | TVar tyvar -> (
       match !tyvar with
       | Unbound (name, _) ->
@@ -421,6 +423,7 @@ let hash_string str =
 
 let rec hash_ty ty =
   match ty with
+  | TVoid -> 0
   | TVar tyvar -> (
       match !tyvar with
       | Unbound (name, x) -> hash_string (Var.to_string name) + x
@@ -881,7 +884,7 @@ module BddUtils = struct
 
   let rec ty_to_size ty =
     match get_inner_type ty with
-    | TBool -> 1
+    | TBool | TVoid -> 1
     | TInt _ -> 32
     | TOption tyo -> 1 + ty_to_size tyo
     | TTuple ts ->
@@ -920,7 +923,10 @@ end
 module BddMap = struct
   module B = BddUtils
 
-  (* TODO: optimize variable ordering  *)
+(* TODO: optimize variable ordering  *)
+(* FIXME: Currently, the TVoid type is implemented identically to the
+   TBool type. This should be sound, since the Void type is by definition
+   never actually used, but it's hacky. *)
 
   type t = mtbdd
 
@@ -939,7 +945,7 @@ module BddMap = struct
   let rec default_value ty =
     let v =
       match ty with
-      | TBool -> VBool false
+      | TBool | TVoid -> VBool false
       | TInt size -> VInt (Integer.create ~value:0 ~size:size)
       | TTuple ts -> VTuple (List.map default_value ts)
       | TOption ty -> VOption None
@@ -986,7 +992,7 @@ module BddMap = struct
     let rec aux idx ty =
       let v, i =
         match get_inner_type ty with
-        | TBool ->
+        | TBool | TVoid ->
           (VBool (B.tbool_to_bool vars.(idx)) |> value, idx + 1)
         | TInt size ->
           let acc = ref (Integer.create ~value:0 ~size:size) in
@@ -996,7 +1002,7 @@ module BddMap = struct
               let add = Integer.shift_left (Integer.create ~value:1 ~size:size) i in
               acc := Integer.add !acc add
           done ;
-          (value (VInt !acc), idx + 32)
+          (value (VInt !acc), idx + size)
         | TTuple ts ->
           let vs, i =
             List.fold_left
@@ -1057,7 +1063,7 @@ module BddMap = struct
     match get_inner_type ty with
     | QVar _ | TVar _ | TArrow _ | TMap _ ->
       failwith "internal error (size)"
-    | TBool -> 1
+    | TBool | TVoid -> 1
     | TInt _ -> 32
     | TTuple ts -> List.fold_left (fun acc t -> acc + size t) 0 ts
     | TOption t -> 1 + size t
@@ -1247,7 +1253,7 @@ module BddFunc = struct
   let create_value (ty: ty) : t =
     let rec aux i ty =
       match get_inner_type ty with
-      | TBool -> (BBool (B.ithvar i), i + 1)
+      | TBool | TVoid -> (BBool (B.ithvar i), i + 1)
       | TInt size ->
         (BInt (Array.init size (fun j -> B.ithvar (i + j))), i + size)
       | TTuple ts ->

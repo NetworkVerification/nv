@@ -28,10 +28,10 @@ let rec unroll_type
   (* print_endline @@  "Unrolling type: " ^ Printing.ty_to_string ty2; *)
   let unroll_type = unroll_type ty keys in
   match ty2 with
-  | TBool ->
-    TBool
-  | TInt n ->
-    TInt n
+  | TBool
+  | TInt _
+  | TVoid ->
+    ty2
   | TArrow (t1, t2) ->
     TArrow (unroll_type t1, unroll_type t2)
   | TTuple tys ->
