@@ -3,6 +3,20 @@ open Collections
 open MapUnrolling2
 open Typing
 
+(* Infer type of a value; if we don't know, use TVoid *)
+(* let rec infer_value_type (v : value) =
+   match v.v with
+   | VBool _ -> TBool
+   | VInt n -> TInt (Integer.size n)
+   | VTuple (vs) -> TTuple (List.map infer_value_type vs)
+   | VOption vo ->
+    begin
+      match vo with
+      | Some v' -> TOption (infer_value_type v')
+      | None -> TOption (TVoid)
+    end
+   | VMap mtbdd *)
+
 (* e must be a literal *)
 let rec exp_to_value (e : exp) : value =
   match e.e with
@@ -92,15 +106,22 @@ let convert_symbolics
          let oldty = match e with Ty ty -> ty | Exp e -> oget e.ety in
          let newty = unroll_type ty keys oldty in
          if Typing.equiv_tys oldty newty then None
-         else Some (Var.to_string v))
+         else Some (Var.to_string v, oldty))
       symbolics
   in
-  let new_symbolics = StringMap.mapi
-      (fun k v ->
-         if not (List.mem k symbolics_to_convert) then v
-         else convert_value v (oget v.vty)
-      )
-      sol.symbolics
+  let convert_symbolic var v =
+    let symb =
+      List.find_opt
+        (fun (var', _) -> String.equal var var')
+        symbolics_to_convert
+    in
+    match symb with
+    | None -> v
+    | Some(_, original_ty) ->
+      convert_value v original_ty
+  in
+  let new_symbolics =
+    StringMap.mapi convert_symbolic sol.symbolics
   in
   new_symbolics
 
@@ -115,7 +136,7 @@ let convert_attrs
   if Typing.equiv_tys attr_ty unrolled_attr_ty then sol.labels
   else (* Attribute type involved a map, so transform all attributes *)
     Graph.VertexMap.map
-      (fun v -> convert_value ty keys v (oget v.vty))
+      (fun v -> convert_value ty keys v attr_ty)
       sol.labels
 ;;
 

@@ -13,17 +13,18 @@ open Main_defs
 *)
 let files_to_test : (string * bool * bool) list =
   [
-    ("examples/debug-combine.nv", true, true);
+    (* Re-enable when we switch to the alternate SMT encoding *)
+    (* ("examples/debug-combine.nv", true, true); *)
     ("examples/diamond.nv", true, true);
     ("examples/diamond-ospf.nv", true, true);
     ("examples/env.nv", true, true);
     ("examples/failure.nv", true, false);
     ("examples/failure2.nv", true, false);
-    ("examples/fattree.nv", true, false);
+    ("examples/fattree.nv", true, true);
     ("examples/map.nv", true, true);
     ("examples/map2.nv", false, false);
     ("examples/minesweeper.nv", true, false);
-    ("examples/property.nv", true, false);
+    ("examples/property.nv", true, true);
     ("examples/set.nv", true, true);
     ("examples/simple.nv", true, true);
     ("examples/symbolic.nv", true, false);
@@ -34,7 +35,7 @@ let files_to_test : (string * bool * bool) list =
 let make_test file =
   let filename, sim_success, smt_success = file in
   filename >:: fun _ ->
-    let args = Array.of_list ["nv"; "-s"; "-m"; filename] in
+    let args = Array.of_list ["nv"; "-s"; "-m"; "-u"; filename] in
     let cfg, info, decls = parse_input args in
     assert_equal ~printer:string_of_bool sim_success @@ run_simulator cfg info decls;
     assert_equal ~printer:string_of_bool smt_success @@ run_smt cfg info decls;

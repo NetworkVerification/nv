@@ -50,7 +50,7 @@ let run_smt cfg info ds =
   | Unsat ->
     print_string [green; Bold] "Success: " ;
     Printf.printf "No assertions can be violated\n";
-    false
+    true
   | Unknown -> Console.error "SMT returned unknown"
   | Sat solution ->
     print_solution (apply_all solution fs);
