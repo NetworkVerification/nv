@@ -68,20 +68,20 @@ type v =
 [@@deriving ord]
 
 and value =
-    {v: v;
-     vty: ty option [@compare fun _ _ -> 0];
-     vspan: Span.t [@compare fun _ _ -> 0];
-     vtag: int [@compare fun _ _ -> 0];
-     vhkey: int [@compare fun _ _ -> 0];
-    }
+  {v: v;
+   vty: ty option [@compare fun _ _ -> 0];
+   vspan: Span.t [@compare fun _ _ -> 0];
+   vtag: int [@compare fun _ _ -> 0];
+   vhkey: int [@compare fun _ _ -> 0];
+  }
 [@@deriving ord]
 
 and mtbdd = (value Mtbdd.t * ty)
-      [@compare fun _ _ -> failwith "Map value comparison not supported"]
+    [@compare fun _ _ -> failwith "Map value comparison not supported"]
 [@@deriving ord]
 
 and e =
-    | EVar of var
+  | EVar of var
   | EVal of value
   | EOp of op * exp list
   | EFun of func
@@ -95,12 +95,12 @@ and e =
 [@@deriving ord]
 
 and exp =
-    {e: e;
-     ety: ty option [@compare fun _ _ -> 0];
-     espan: Span.t [@compare fun _ _ -> 0];
-     etag: int [@compare fun _ _ -> 0];
-     ehkey: int [@compare fun _ _ -> 0];
-    }
+  {e: e;
+   ety: ty option [@compare fun _ _ -> 0];
+   espan: Span.t [@compare fun _ _ -> 0];
+   etag: int [@compare fun _ _ -> 0];
+   ehkey: int [@compare fun _ _ -> 0];
+  }
 [@@deriving ord]
 
 and branches = (pattern * exp) list
@@ -108,7 +108,7 @@ and branches = (pattern * exp) list
 and func = {arg: var; argty: ty option; resty: ty option; body: exp}
 
 and closure = (env * func)
-      [@compare fun _ _ -> failwith "Map value comparison not supported"]
+    [@compare fun _ _ -> failwith "Map value comparison not supported"]
 [@@deriving ord]
 
 and env = {ty: ty Env.t; value: value Env.t}
@@ -272,24 +272,7 @@ let rec equal_tys ty1 ty2 =
   | TOption t1, TOption t2 -> equal_tys t1 t2
   | TMap (t1, t2), TMap (s1, s2) ->
     equal_tys t1 s1 && equal_tys t2 s2
-  | _ -> false
-
-let rec equiv_tys ty1 ty2 =
-  match (ty1, ty2) with
-  | TVar {contents = Link t}, t'
-  | t, TVar {contents = Link t'} -> equiv_tys t t'
-  | TVar {contents = Unbound (n1, x1)},
-    TVar {contents = Unbound (n2, x2)} ->
-    Var.equals n1 n2 && x1 = x2
-  | QVar n1, QVar n2 -> Var.equals n1 n2
-  | TBool, TBool -> true
-  | TInt n1, TInt n2 -> n1 = n2
-  | TArrow (t1, t2), TArrow (s1, s2) ->
-    equiv_tys t1 s1 && equiv_tys t2 s2
-  | TTuple ts1, TTuple ts2 -> equal_lists equiv_tys ts1 ts2
-  | TOption t1, TOption t2 -> equiv_tys t1 t2
-  | TMap (t1, t2), TMap (s1, s2) ->
-    equiv_tys t1 s1 && equiv_tys t2 s2
+  | TVoid, TVoid -> true
   | _ -> false
 
 let rec equal_values ~cmp_meta (v1: value) (v2: value) =
@@ -705,6 +688,11 @@ let oget (x: 'a option) : 'a =
   | None -> failwith "internal error (oget)"
   | Some y -> y
 
+let omap (f : 'a -> 'b) (x: 'a option): 'b option =
+  match x with
+  | None -> None
+  | Some y -> Some(f y)
+
 let rec lams params body =
   match params with
   | [] -> failwith "lams: no parameters"
@@ -923,10 +911,10 @@ end
 module BddMap = struct
   module B = BddUtils
 
-(* TODO: optimize variable ordering  *)
-(* FIXME: Currently, the TVoid type is implemented identically to the
-   TBool type. This should be sound, since the Void type is by definition
-   never actually used, but it's hacky. *)
+  (* TODO: optimize variable ordering  *)
+  (* FIXME: Currently, the TVoid type is implemented identically to the
+     TBool type. This should be sound, since the Void type is by definition
+     never actually used, but it's hacky. *)
 
   type t = mtbdd
 

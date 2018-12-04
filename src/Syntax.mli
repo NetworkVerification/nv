@@ -172,6 +172,8 @@ val to_value : exp -> value
 
 val oget : 'a option -> 'a
 
+val omap : ('a -> 'b) -> 'a option -> 'b option
+
 val lams : var list -> exp -> exp
 
 val apps : exp -> exp list -> exp
@@ -213,10 +215,8 @@ val compare_values : value -> value -> int
 (* As above, but for exps *)
 val compare_exps : exp -> exp -> int
 
-(* As equal_tys, but we consider that TVars with a link to ty2
-   to be equivalent to ty2 *)
-val equiv_tys : ty -> ty -> bool
-
+(* Actual equality. For equivalence, consider using
+   Typing.equiv_tys instead *)
 val equal_tys : ty -> ty -> bool
 
 val show_exp : exp -> string

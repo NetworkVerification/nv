@@ -1,6 +1,7 @@
 open Syntax
 open Collections
 open MapUnrolling2
+open Typing
 
 (* e must be a literal *)
 let rec exp_to_value (e : exp) : value =
@@ -29,7 +30,7 @@ let rec convert_value
   =
   (* TODO: Potentially add on span and type info *)
   let convert_value = convert_value ty keys in
-  match v.v, original_ty with
+  match v.v, (canonicalize_type original_ty) with
   | VBool _, TBool
   | VInt _, TInt _ ->
     v
@@ -59,7 +60,7 @@ let rec convert_value
     (* Don't have to look at key type since we can't have
        key types involving maps *)
     let unrolled_vty = unroll_type ty keys vty in
-    if equiv_tys vty unrolled_vty
+    if Typing.equiv_tys vty unrolled_vty
     then v (* No change to value type *)
     else (* value type contains our map type *)
       let default = default_value vty in
@@ -90,7 +91,7 @@ let convert_symbolics
       (fun (v, e) ->
          let oldty = match e with Ty ty -> ty | Exp e -> oget e.ety in
          let newty = unroll_type ty keys oldty in
-         if equiv_tys oldty newty then None
+         if Typing.equiv_tys oldty newty then None
          else Some (Var.to_string v))
       symbolics
   in
@@ -109,13 +110,9 @@ let convert_attrs
     (decls : declarations)
     (sol : Solution.t)
   =
-  let attr_ty =
-    match get_attr_type decls with
-    | Some t -> t
-    | None -> failwith "Cannot unroll: no attribute type! "
-  in
+  let attr_ty = oget (get_attr_type decls) in
   let unrolled_attr_ty = unroll_type ty keys attr_ty in
-  if equiv_tys attr_ty unrolled_attr_ty then sol.labels
+  if Typing.equiv_tys attr_ty unrolled_attr_ty then sol.labels
   else (* Attribute type involved a map, so transform all attributes *)
     Graph.VertexMap.map
       (fun v -> convert_value ty keys v (oget v.vty))

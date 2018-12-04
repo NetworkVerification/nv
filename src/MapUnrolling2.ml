@@ -1,10 +1,11 @@
 open Syntax
 open Collections
+open Typing
 
 let has_target_type (target : ty) (e : exp) : bool =
   match e.ety with
   | Some (ty) ->
-    equiv_tys target (Typing.strip_ty ty)
+    equiv_tys target ty
   | None ->
     failwith "Found expression with no ety during map unrolling"
 ;;
@@ -27,7 +28,7 @@ let rec unroll_type
   =
   (* print_endline @@  "Unrolling type: " ^ Printing.ty_to_string ty2; *)
   let unroll_type = unroll_type ty keys in
-  match ty2 with
+  match (canonicalize_type ty2) with
   | TBool
   | TInt _
   | TVoid ->
@@ -41,20 +42,13 @@ let rec unroll_type
   | TMap (key_ty, val_ty) ->
     if equiv_tys ty ty2 then
       (* Don't need to recurse since types cannot contain themselves *)
-      TTuple (BatList.make (List.length keys) (val_ty))
+      TTuple (BatList.make (List.length keys) (canonicalize_type val_ty))
     else
       TMap (unroll_type key_ty, unroll_type val_ty)
-  (* Not totally sure about handling of TVars and QVars *)
   | QVar tyname ->
     failwith "Cannot unroll a type containing a QVar!";
-  | TVar r ->
-    match !r with
-    | Link ty ->
-      (* r := Link (unroll_type ty);
-         TVar r *)
-      unroll_type ty
-    | _ -> failwith "Cannot unroll an unbound TVar!";
-
+  | TVar _ ->
+    failwith "Encountered TVar after canonicalization"
 ;;
 
 let rec unroll_exp

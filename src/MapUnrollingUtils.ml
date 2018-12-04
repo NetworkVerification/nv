@@ -21,50 +21,22 @@ let rec add_to_maplist (ty, keys) lst : maplist =
   match lst with
   | [] -> [(ty, keys)]
   | (ty2, keys2) :: tl ->
-    if equal_tys ty ty2 then
+    if Typing.equiv_tys ty ty2 then
       (ty, ExpSet.union keys keys2) :: tl
     else
       (ty2, keys2) :: add_to_maplist (ty, keys) tl
 ;;
 
 let add_if_map_type (ty, keys) lst : maplist =
-  let stripped_ty =
-    try
-      Some(Typing.strip_ty ty)
-    with
-    | _ -> None
-  in
-  match stripped_ty with
-  | Some (TMap (ty1, ty2)) ->
+  match Typing.canonicalize_type ty with
+  | TMap (ty1, ty2) ->
     add_to_maplist (TMap (ty1, ty2), keys) lst
   | _ -> lst
 ;;
 
-let rec is_literal (exp : Syntax.exp) : bool =
-  match exp.e with
-  | EVar _
-  | EOp _
-  | EFun _
-  | EApp _
-  | EIf _
-  | ELet _
-  | EMatch _ ->
-    false
-  | ESome exp2 ->
-    is_literal exp2
-  | ETuple es ->
-    List.fold_left (fun b exp -> b && is_literal exp) true es
-  | EVal _ -> true
-  | ETy (exp2, _) -> is_literal exp2
-;;
-
 let rec collect_in_exp (exp : Syntax.exp) (acc : maplist) : maplist =
   (* print_endline @@ "Collecting in expr " ^ Printing.exp_to_string exp; *)
-  let curr_ty =
-    match exp.ety with
-    | Some ty -> ty
-    | None -> failwith "MapUnrollingUtils: unable to retrieve type for expression"
-  in
+  let curr_ty = oget exp.ety in
   (* If our current expression has map type, add that to our list *)
   let acc = add_if_map_type (curr_ty, ExpSet.empty) acc in
   match exp.e with
@@ -75,26 +47,9 @@ let rec collect_in_exp (exp : Syntax.exp) (acc : maplist) : maplist =
       (* Collect key if necessary *)
       let acc =
         match op, es with
-        | MGet, [e1; key] ->
-          if is_literal key then
-            match e1.ety with
-            | Some ty ->
-              add_if_map_type (ty, ExpSet.singleton key) acc
-            | None -> failwith "MapUnrollingUtils: unable to retrieve type for expressions"
-          else
-            failwith @@
-            "MapUnrollingUtils: Non-literal used as key into map: " ^
-            Printing.exp_to_string exp
+        | MGet, [m; key]
         | MSet, [m; key; _] ->
-          if is_literal key then
-            match m.ety with
-            | Some ty ->
-              add_if_map_type (ty, ExpSet.singleton key) acc
-            | None -> failwith "MapUnrollingUtils: unable to retrieve type for expressions"
-          else
-            failwith @@
-            "MapUnrollingUtils: Non-literal used as key into map" ^
-            Printing.exp_to_string exp
+          add_if_map_type ((oget m.ety), ExpSet.singleton key) acc
         | _ -> acc
       in
       List.fold_left (BatPervasives.flip collect_in_exp) acc es
@@ -129,13 +84,8 @@ let collect_in_decl (d : declaration) (acc : maplist): maplist =
   (* print_endline @@ "Collecting in decl " ^ Printing.declaration_to_string d; *)
   match d with
   | DLet (_, tyo, exp) ->
-    let acc =
-      match tyo with
-      | Some ty ->
-        add_if_map_type (ty, ExpSet.empty) acc
-      | None -> failwith "MapUnrollingUtils: Unable to retrieve type for decl"
-    in
-    collect_in_exp exp acc
+    add_if_map_type (oget tyo, ExpSet.empty) acc
+    |> collect_in_exp exp
   | DSymbolic (_, toe) ->
     begin
       match toe with
