@@ -4,7 +4,7 @@ open Solution
 open Syntax
 
 type srp =
-  { graph: Graph.t
+  { graph: AdjGraph.t
   ; trans: Syntax.closure
   ; merge: Syntax.closure
   ; assertion: Syntax.closure option }
@@ -19,9 +19,9 @@ exception Simulation_error of string
 
 (* Simulation States *)
 (* Solution Invariant: All valid graph vertices are associated with an attribute initially (and always) *)
-type solution = value Graph.VertexMap.t
+type solution = value AdjGraph.VertexMap.t
 
-type queue = Graph.Vertex.t QueueSet.queue
+type queue = AdjGraph.Vertex.t QueueSet.queue
 
 type state = solution * queue
 
@@ -31,14 +31,14 @@ let create_state n cl : state =
       let next_n = Integer.pred n in
       let next_q = QueueSet.add q next_n in
       let next_m =
-        Graph.VertexMap.add next_n
+        AdjGraph.VertexMap.add next_n
           (Interp.interp_closure cl [vint next_n])
           m
       in
       loop next_n next_q next_m
     else (m, q)
   in
-  loop n (QueueSet.empty Integer.compare) Graph.VertexMap.empty
+  loop n (QueueSet.empty Integer.compare) AdjGraph.VertexMap.empty
 
 type info =
   { mutable env: Syntax.env
@@ -146,7 +146,7 @@ let declarations_to_srp ds ~throw_requires =
     ; es= Some es
     ; init= Some cl } ->
       let srp =
-        { graph= Graph.add_edges (Graph.create n) es
+        { graph= AdjGraph.add_edges (AdjGraph.create n) es
         ; trans= tf
         ; merge= mf
         ; assertion= a }
@@ -160,15 +160,15 @@ let declarations_to_srp ds ~throw_requires =
 
 let declarations_to_state ds ~throw_requires =
   let srp, init, syms = declarations_to_srp ds ~throw_requires in
-  let state = create_state (Graph.num_vertices srp.graph) init in
+  let state = create_state (AdjGraph.num_vertices srp.graph) init in
   (srp, state, syms)
                   
 let solution_to_string s =
-  Graph.vertex_map_to_string Printing.value_to_string s
+  AdjGraph.vertex_map_to_string Printing.value_to_string s
 
 let get_attribute v s =
   let find_opt v m =
-    try Some (Graph.VertexMap.find v m) with Not_found -> None
+    try Some (AdjGraph.VertexMap.find v m) with Not_found -> None
   in
   match find_opt v s with
   | None -> failwith ("no attribute at vertex " ^ Integer.to_string v)
@@ -189,10 +189,10 @@ let simulate_step {graph= g; trans; merge} s x =
     in
     if equal_values ~cmp_meta:false n_old_attribute n_new_attribute
     then (s, todo)
-    else (Graph.VertexMap.add n n_new_attribute s, n :: todo)
+    else (AdjGraph.VertexMap.add n n_new_attribute s, n :: todo)
   in
   let initial_attribute = get_attribute x s in
-  let neighbors = Graph.neighbors g x in
+  let neighbors = AdjGraph.neighbors g x in
   List.fold_left (do_neighbor initial_attribute) (s, []) neighbors
 
 (* simulate srp s q simulates srp starting with initial state (s,q) *)
@@ -226,7 +226,7 @@ let check_assertion srp node v =
       | _ -> failwith "internal error (check_assertion)"
 
 let check_assertions srp vals =
-  Graph.VertexMap.mapi (fun n v -> check_assertion srp n v) vals
+  AdjGraph.VertexMap.mapi (fun n v -> check_assertion srp n v) vals
 
 let simulate_declarations ds =
   let srp, state, syms =

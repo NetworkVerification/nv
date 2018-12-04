@@ -8,7 +8,7 @@ type network =
     trans     : Syntax.exp;
     merge     : Syntax.exp;
     assertion : Syntax.exp;
-    graph     : Graph.t;
+    graph     : AdjGraph.t;
   }
    
 module Prefix =
@@ -27,12 +27,12 @@ let printPrefix ((ip, pre) : Prefix.t) =
 let printPrefixes (prefixes : PrefixSet.t) =
   "{" ^ PrefixSet.fold (fun pre acc -> (printPrefix pre) ^ "," ^ acc) prefixes "}"
             
-let partialEvalOverNodes (g : Graph.t) (e: Syntax.exp) =
-  let tbl = Hashtbl.create (Integer.to_int (Graph.num_vertices g)) in
-  Graph.fold_vertices
+let partialEvalOverNodes (g : AdjGraph.t) (e: Syntax.exp) =
+  let tbl = Hashtbl.create (Integer.to_int (AdjGraph.num_vertices g)) in
+  AdjGraph.fold_vertices
     (fun u _ ->
       let initu = Interp.interp_partial (Syntax.apps e [e_val (vint u)]) in
-      Hashtbl.add tbl u initu) (Graph.num_vertices g) ();
+      Hashtbl.add tbl u initu) (AdjGraph.num_vertices g) ();
   tbl
 
 (* deprecated *)
@@ -50,11 +50,11 @@ let partialEvalOverNodes (g : Graph.t) (e: Syntax.exp) =
 
 let build_prefix_map (u : Integer.t)
                      (prefixes: PrefixSet.t)
-                     (acc : Graph.VertexSet.t PrefixMap.t):
-      Graph.VertexSet.t PrefixMap.t =
+                     (acc : AdjGraph.VertexSet.t PrefixMap.t):
+      AdjGraph.VertexSet.t PrefixMap.t =
   PrefixSet.fold (fun pre acc ->
-      PrefixMap.modify_def Graph.VertexSet.empty pre
-                           (fun us -> Graph.VertexSet.add u us) acc)
+      PrefixMap.modify_def AdjGraph.VertexSet.empty pre
+                           (fun us -> AdjGraph.VertexSet.add u us) acc)
                  prefixes acc
 
 (* Finds the prefixes used by an expression *)
@@ -98,13 +98,13 @@ let findInitialSlices initTbl =
       let prefixes = get_prefixes_from_expr initu in
       build_prefix_map u prefixes acc) initTbl PrefixMap.empty
 
-let groupPrefixesByVertices (umap: Graph.VertexSet.t PrefixMap.t) : PrefixSetSet.t =
-  let reverseMap : PrefixSet.t Graph.VertexSetMap.t =
+let groupPrefixesByVertices (umap: AdjGraph.VertexSet.t PrefixMap.t) : PrefixSetSet.t =
+  let reverseMap : PrefixSet.t AdjGraph.VertexSetMap.t =
     PrefixMap.fold (fun u vhat acc ->
-        Graph.VertexSetMap.modify_opt vhat (fun us -> match us with
+        AdjGraph.VertexSetMap.modify_opt vhat (fun us -> match us with
                                           | None -> Some (PrefixSet.singleton u)
                                           | Some us -> Some (PrefixSet.add u us)) acc)
-                 umap Graph.VertexSetMap.empty in
-  Graph.VertexSetMap.fold (fun _ v acc -> PrefixSetSet.add v acc)
+                 umap AdjGraph.VertexSetMap.empty in
+  AdjGraph.VertexSetMap.fold (fun _ v acc -> PrefixSetSet.add v acc)
                        reverseMap PrefixSetSet.empty
   

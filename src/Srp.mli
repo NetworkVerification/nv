@@ -8,12 +8,12 @@ exception Simulation_error of string
 exception Require_false
 
 type srp =
-  { graph: Graph.t
+  { graph: AdjGraph.t
   ; trans: Syntax.closure
   ; merge: Syntax.closure
   ; assertion: Syntax.closure option }
         
-type queue = Graph.Vertex.t QueueSet.queue
+type queue = AdjGraph.Vertex.t QueueSet.queue
 
 val simulate_declarations : declarations -> Solution.t
 

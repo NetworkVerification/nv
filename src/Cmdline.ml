@@ -18,6 +18,7 @@ type t =
   ; compress: int                      (** compress the network for n failures     *)
   ; split_heuristic: string            (** heuristic with which to split nodes,
                                         ["random", "neighbor"] *)
+  ; draw: bool                         (** emits a .jpg file of the graph         *)
   }
 [@@deriving
   show
@@ -42,7 +43,8 @@ let default =
   ; no_cutoff=false
   ; inline=false
   ; compress= -1
-  ; split_heuristic="random"}
+  ; split_heuristic="randomPath"
+  ; draw=false}
 
 let cfg = ref default 
 

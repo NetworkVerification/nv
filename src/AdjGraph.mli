@@ -79,3 +79,11 @@ val print : t -> unit
 (* graph to string *)
 
 val to_string : t -> string
+
+module DrawableGraph :
+sig
+
+  val graph_dot_file: int -> string -> string
+  (** [drawGraph g name] draws the graph g in a file called name.jpg *)
+  val drawGraph : t -> string -> unit
+end

@@ -5,6 +5,8 @@ module Vertex = struct
     Printf.sprintf "%d" (Integer.to_int i)
 
   let compare = Integer.compare
+  let equal = Integer.equal
+  let hash = Hashtbl.hash 
 end
 
 module VertexMap = BatMap.Make (Vertex)
@@ -157,3 +159,49 @@ let to_string g =
   Buffer.add_string b (Integer.to_string (num_vertices g) ^ "\n") ;
   add_edges (edges g) ;
   Buffer.contents b
+
+open Graph
+
+module BoolOrdered = struct
+  type t = bool
+  let default = false
+  let compare = compare
+end
+
+module DrawableGraph = struct
+
+  let graph_dot_file =
+    let counter = ref (-1) in
+    fun (k: int) (file: string) ->
+    incr counter;
+    file ^ "-" ^ (string_of_int k) ^ "-" ^ (string_of_int !counter)
+  
+  module G = Graph.Persistent.Graph.Concrete (Vertex)
+           
+  let createGraph ((m,i): t)  =
+    VertexMap.fold (fun u es acc ->
+        List.fold_left (fun acc v ->
+            G.add_edge_e acc (G.E.create u () v)) acc es) m G.empty
+
+  module Dot = Graph.Graphviz.Dot(struct
+                   include G
+                   let edge_attributes e =
+                       [`Color 3711; `Dir `None]
+                   let default_edge_attributes _ = []
+                   let get_subgraph _ = None
+                   let vertex_attributes v =
+                     let label = Vertex.printVertex v in
+                     [`Shape `Circle; `Label label; `Fontsize 11;]
+                   let vertex_name v = string_of_int (Integer.to_int v)
+                   let default_vertex_attributes _ = []
+                   let graph_attributes _ = [`Center true; `Nodesep 0.45; 
+                                             `Ranksep 0.45; `Size (82.67, 62.42)]
+                 end)
+
+  let drawGraph (g: t) (dotfile: string)  =
+    let chan = open_out (dotfile ^ ".dot") in
+    Dot.output_graph chan (createGraph g);
+    let _ = Sys.command ("dot -Tjpg " ^ dotfile ^
+                           ".dot -o " ^ dotfile ^ ".jpg") in
+    close_out chan
+end

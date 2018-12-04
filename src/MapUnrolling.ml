@@ -236,6 +236,7 @@ let update_with tymap ty e =
     TypeMap.add ty (ExprSet.add e es) tymap
   with _ -> TypeMap.add ty (ExprSet.singleton e) tymap
 
+(* Returns all occurences of map types in the program *)
 let collect_all_map_tys ds =
   let all_tys = ref TypeMap.empty in
   let f d e =
@@ -311,7 +312,7 @@ let map_back orig_sym_types (map: ExprSet.elt list TypeMap.t)
   in
   let aty = oget (get_attr_type ds) |> Typing.strip_ty in
   let update_labels ls =
-    Graph.VertexMap.map (fun v -> aux aty v) ls
+    AdjGraph.VertexMap.map (fun v -> aux aty v) ls
   in
   let update_symbolics sol =
     let syms =
@@ -336,7 +337,7 @@ let rec collect_all_symbolics ds =
   match ds with
   | [] -> StringMap.empty
   | d :: ds ->
-      StringMap.union
+      StringMap.merge
         (fun _ _ _ -> None)
         (collect_all_symbolics_d d)
         (collect_all_symbolics ds)

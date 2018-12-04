@@ -35,7 +35,7 @@ let collect_all_values ds : ValueSet.t TypeMap.t =
 let check_assertions (sol: Solution.t) =
   match sol.assertions with
   | None -> true
-  | Some ass -> Graph.VertexMap.for_all (fun _ b -> b) ass
+  | Some ass -> AdjGraph.VertexMap.for_all (fun _ b -> b) ass
 
 let rec check_aux info iters acc =
   match (info.iterations, acc) with
@@ -64,7 +64,7 @@ let smart_symbolic prog_constants map d =
   | DSymbolic (x, te) ->
       let ty = match te with Exp e -> oget e.ety | Ty ty -> ty in
       let v =
-        match StringMap.find_opt (Var.to_string x) map with
+        match StringMap.Exceptionless.find (Var.to_string x) map with
         | None -> random_value prog_constants default_max_map_size ty
         | Some v -> v
       in

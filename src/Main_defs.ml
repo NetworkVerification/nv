@@ -14,6 +14,7 @@ open Typing
 open Abstraction
 open BuildAbstractNetwork
 open Lazy
+open Profile
 
 type answer =
   | Success of (Solution.t option)
@@ -26,7 +27,8 @@ let smt_query_file =
   let counter = ref (-1) in
   fun (file: string) ->
   incr counter;
-  lazy (open_out (file ^ "-query" ^ (string_of_int !counter)))
+  lazy (open_out (file ^ "-" ^
+                    (string_of_int !counter) ^ "-query"))
                                    
 let run_smt file cfg info ds =
   let fs = [] in
@@ -58,7 +60,7 @@ let run_smt file cfg info ds =
      match solution.assertions with
      | None -> Success (Some solution), Some fs
      | Some m ->
-        if Graph.VertexMap.exists (fun _ b -> not b) m then
+        if AdjGraph.VertexMap.exists (fun _ b -> not b) m then
           CounterExample solution, Some fs
         else
           Success (Some solution), Some fs
@@ -114,14 +116,14 @@ let run_simulator cfg info decls =
     match solution.assertions with
     | None -> Success (Some solution), Some fs
     | Some m ->
-       if Graph.VertexMap.exists (fun _ b -> not b) m then
+       if AdjGraph.VertexMap.exists (fun _ b -> not b) m then
          CounterExample solution, Some fs
        else
          Success (Some solution), Some fs
   with Srp.Require_false ->
     Console.error "required conditions not satisfied"
 
-let compress info decls cfg networkOp =
+let compress file info decls cfg networkOp =
   let decls = Inline.inline_declarations info decls in
   let network, symb =
     match
@@ -136,7 +138,7 @@ let compress info decls cfg networkOp =
     with
     | Some emerge, Some etrans, Some einit, Some n, Some es,
       Some aty, Some eassert, symb ->
-       let graph = Graph.add_edges (Graph.create n) es in
+       let graph = AdjGraph.add_edges (AdjGraph.create n) es in
        { attr_type = aty; init = einit; trans = etrans;
          merge = emerge; assertion = eassert; graph = graph }, symb
     | _ ->
@@ -150,6 +152,13 @@ let compress info decls cfg networkOp =
   let mergeMap = Abstraction.partialEvalMerge network.graph network.merge in
   let initMap = Slicing.partialEvalInit network in
   let assertMap = Slicing.partialEvalAssert network in
+
+  (*printing concrete graph *)
+  if cfg.draw then
+    begin
+      let fname = AdjGraph.DrawableGraph.graph_dot_file k file in
+      AdjGraph.DrawableGraph.drawGraph network.graph fname
+    end;
   
   (* find the prefixes that are relevant to the assertions *)
   let assertionPrefixes = Slicing.relevantPrefixes assertMap in
@@ -161,11 +170,15 @@ let compress info decls cfg networkOp =
   (* each set of prefixes represents an SRP *)
   let relevantSliceGroups = Slicing.groupPrefixesByVertices relevantSlices in
 
-  let rec loop (f: AbstractionMap.abstractionMap) (ds: Graph.VertexSet.t) =
+  let rec loop (finit: AbstractionMap.abstractionMap)
+               (f: AbstractionMap.abstractionMap)
+               (ds: AdjGraph.VertexSet.t) =
     (* build abstract network *)
-    let failVars, decls = buildAbstractNetwork f network.graph mergeMap transMap
-                                               initMap assertMap ds
-                                               network.attr_type symb k in
+    let failVars, decls =
+      time_profile "Build abstract network"
+                   (fun () -> buildAbstractNetwork f network.graph mergeMap transMap
+                                                   initMap assertMap ds
+                                                   network.attr_type symb k) in
     let decls = Typing.infer_declarations info decls in
     let groups = AbstractionMap.printAbstractGroups f "\n" in
     Console.show_message groups Console.T.Blue "Abstract groups";
@@ -173,11 +186,15 @@ let compress info decls cfg networkOp =
     | Success _, _ -> Printf.printf "No counterexamples found\n"
     | (CounterExample sol), fs ->
        let sol = apply_all sol (oget fs) in
-       let f' = FailuresAbstraction.refineForFailures network.graph f failVars sol k in
+       let f' =
+         time_profile "Refining abstraction after failures"
+                      (fun () -> FailuresAbstraction.refineForFailures
+                                   cfg.draw file network.graph finit f failVars sol k ds network.attr_type)
+       in
        match f' with
        | None -> print_solution sol;
        | Some f' ->
-          loop f' ds
+          loop finit f' ds
   in
   PrefixSetSet.iter
     (fun prefixes ->
@@ -188,9 +205,13 @@ let compress info decls cfg networkOp =
       (* find the nodes this class is announced from *)
       let ds = PrefixMap.find pre relevantSlices in
       (* find the initial abstraction function for these destinations *)
-      let f = Abstraction.findAbstraction network.graph transMap mergeMap ds in
+      let f =
+        time_profile "Computing Abstraction"
+                     (fun () -> Abstraction.findAbstraction network.graph
+                                                            transMap mergeMap ds)
+      in
       (* run_simulator cfg info decls  *)
-      loop f ds) relevantSliceGroups
+      loop f f ds) relevantSliceGroups
 
 let parse_input (args : string array)
   : Cmdline.t * Console.info * string * Syntax.declarations =

@@ -11,7 +11,7 @@ let main =
   in
   if cfg.compress >= 0 then
     begin
-      compress info decls cfg networkOp
+      compress file info decls cfg networkOp
     end
   else
     begin
