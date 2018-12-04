@@ -24,7 +24,7 @@ let print_solution solution =
   ( match solution.assertions with
   | None ->
       print_string [green; Bold] "Success: " ;
-      Printf.printf "all assertions passed\n"
+      Printf.printf "No assertions provided, so none failed\n"
   | Some m ->
       let all_pass = Graph.VertexMap.for_all (fun _ b -> b) m in
       if all_pass then (

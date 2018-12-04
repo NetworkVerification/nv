@@ -1,0 +1,119 @@
+\documentclass{article}
+
+\usepackage{fancyhdr}
+\usepackage{extramarks}
+\usepackage{amsfonts}
+\usepackage{syntax}
+
+%
+% Basic Document Settings
+%
+
+\topmargin=-0.45in
+\evensidemargin=0in
+\oddsidemargin=0in
+\textwidth=6.5in
+\textheight=9.0in
+\headsep=0.25in
+
+\linespread{1.1}
+
+\pagestyle{fancy}
+\chead{NV Grammar}
+\lfoot{\lastxmark}
+\cfoot{\thepage}
+
+\renewcommand\headrulewidth{0.4pt}
+\renewcommand\footrulewidth{0.4pt}
+
+\setlength\parindent{30pt}
+
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\Zt}{$\Z$}
+
+\begin{document}
+	\setlength{\grammarparsep}{20pt plus 1pt minus 1pt} % increase separation between rules
+	\setlength{\grammarindent}{12em} % increase separation between LHS/RHS 
+	
+	Note: does not include type annotations
+	\begin{grammar}
+		
+		<declaration> ::= 
+		let <ident> = <expr>
+		\alt type attribute = <type>
+		\alt let nodes = \Zt
+		\alt let edges = \{ <edgedecl>; <edgedecl>; ...; <edgedecl>\}
+		\alt symbolic <ident> = <expr>
+		\alt symbolic <ident> : <type>
+		\alt require <expr>
+		
+		<edgedecl> ::= \Zt-\Zt \alt \Zt=\Zt
+		
+		<pattern> ::=
+		\_
+		\alt <ident>
+		\alt true
+		\alt false
+		\alt \Zt<width>
+		\alt (<pattern>, <pattern>, ..., <pattern>)
+		\alt None
+		\alt Some <pattern>
+		
+		<branch> ::= | <pattern> -> <expr>
+		
+		<expr> ::=
+		<literal>
+		\alt <ident>
+		\alt !<expr>
+		\alt <expr> \&\& <expr>
+		\alt <expr> $\|$ <expr>
+		\alt <expr> <binop><width> <expr>
+		\alt <expr> <expr>
+		\alt let <pattern> = <expr> in <expr>
+		\alt if <expr> then <expr> else <expr>
+		\alt (<expr>, <expr>, ... <expr>)
+		\alt Some <expr>
+		\alt (<ident> : <type>) % How is this used?
+		\alt match <expr> with <branch> <branch> ... <branch>
+		\alt createDict <expr>
+		\alt <expr>[<expr>]
+		\alt <expr>[<expr> := <expr>]
+		\alt <expr> union <expr>
+		\alt <expr> inter <expr>
+		\alt filter <expr> <expr>
+		\alt map <expr> <expr>
+		\alt mapIf <expr> <expr> <expr>
+		\alt combine <expr> <expr> <expr>
+		
+		<binop> ::=
+		+
+		\alt -
+		\alt \textless
+		\alt \textless=
+		\alt \textgreater
+		\alt \textgreater=
+		\alt =
+		
+		<literal> ::= 
+		true 
+		\alt false 
+		\alt $\mathbb{Z}$ 
+		\alt \{\} 
+		\alt (<literal>, <literal>, ..., <literal>) 
+		\alt Some <literal>
+		\alt None
+		\alt \texttt{fun} <ident> <ident> ... <ident> -> <expr>
+		
+		<width> ::= $\epsilon$ \alt u\Zt
+		
+		<type> :: = 
+		int<width> 
+		\alt bool 
+		\alt (<type>, <type>, ..., <type>)
+		\alt option[<type>]
+		\alt dict[<type>,<type>]
+		
+	\end{grammar}
+\end{document}
+\end{document}
+
