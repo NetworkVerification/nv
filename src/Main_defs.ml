@@ -207,8 +207,10 @@ let compress file info decls cfg networkOp =
       (* find the initial abstraction function for these destinations *)
       let f =
         time_profile "Computing Abstraction"
-                     (fun () -> Abstraction.findAbstraction network.graph
-                                                            transMap mergeMap ds)
+                     (fun () ->
+                       let f = Abstraction.findAbstraction network.graph
+                                                           transMap mergeMap ds in
+                       FailuresAbstraction.refineK network.graph f ds k)
       in
       (* run_simulator cfg info decls  *)
       loop f f ds) relevantSliceGroups

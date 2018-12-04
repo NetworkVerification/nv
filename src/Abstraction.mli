@@ -32,6 +32,9 @@ module FailuresAbstraction :
       AdjGraph.VertexSet.t ->
       Syntax.ty ->
       AbstractionMap.abstractionMap option
+
+    val refineK : AdjGraph.t -> AbstractionMap.abstractionMap ->
+                  AdjGraph.VertexSet.t -> int -> AbstractionMap.abstractionMap
   end
 
      

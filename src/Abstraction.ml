@@ -199,7 +199,8 @@ module BuildAbstractNetwork =
     
     (* Given a concrete graph and an abstraction function returns the node
    and edges of the abstract graph *)
-    let buildAbstractAdjGraphDecls (g: AdjGraph.t) (f: abstractionMap) : Integer.t * (Edge.t list) =
+    let buildAbstractAdjGraphDecls (g: AdjGraph.t) (f: abstractionMap)
+        : Integer.t * (Edge.t list) =
       let n = Integer.create ~value:(size f) ~size:32 in
       (* show_message (printAbstractGroups f "\n") T.Blue *)
       (*              "Abstract groups before crash "; *)
@@ -210,6 +211,13 @@ module BuildAbstractNetwork =
       in
       (n, EdgeSet.to_list (edges zero))
 
+    let buildAbstractAdjGraph (g: AdjGraph.t) (f: abstractionMap) : AdjGraph.t =
+      let n = Integer.create ~value:(size f) ~size:32 in
+      let ag = AdjGraph.create n in
+      fold_vertices (fun uhat ag ->
+          let es = findAbstractEdges g f uhat in
+          EdgeSet.fold (fun e ag -> add_edge ag e) es ag) n ag
+      
     (* Helper function that constructs an MGet expression *)
     let mget (m : exp) (i : exp) : exp =
       eop MGet [m; i]
@@ -759,9 +767,9 @@ module FailuresAbstraction =
             "Abstract groups after refine for failures "
       
     let refineForFailures (draw: bool) (file: string) (g: AdjGraph.t)
-          (finit: abstractionMap) (f: abstractionMap)
-          (failVars: Var.t EdgeMap.t) (sol: Solution.t) (k: int)
-          (dst: VertexSet.t) (attrTy : Syntax.ty) : abstractionMap option =
+                          (finit: abstractionMap) (f: abstractionMap)
+                          (failVars: Var.t EdgeMap.t) (sol: Solution.t) (k: int)
+                          (dst: VertexSet.t) (attrTy : Syntax.ty) : abstractionMap option =
       
       (* get set of failures, and also build abstract graph useful for
          splitting, at least until we can get forwarding information
@@ -778,7 +786,7 @@ module FailuresAbstraction =
                  end
                else (acc, AdjGraph.add_edge ag edge)
             | _ -> failwith "This should be a boolean variable") failVars
-          (EdgeSet.empty, AdjGraph.create (AbstractionMap.size f |> Integer.of_int))
+                     (EdgeSet.empty, AdjGraph.create (AbstractionMap.size f |> Integer.of_int))
       in
 
       (* Draw the abstract graph if asked *)
@@ -793,7 +801,7 @@ module FailuresAbstraction =
       let total_failures =
         EdgeSet.fold (fun ehat acc ->
             (BuildAbstractNetwork.getEdgeMultiplicity g f ehat) + acc)
-          failures 0
+                     failures 0
       in
       if (total_failures <= k) then
         None
@@ -809,7 +817,7 @@ module FailuresAbstraction =
             if path_heuristic = "random" then []
             else
               findRandomPath agraph sol uhat
-                (VertexSet.map (fun d -> getId f d) dst) attrTy
+                             (VertexSet.map (fun d -> getId f d) dst) attrTy
           in
           Printf.printf "splitting over path: %s"
                         (Collections.printList (Vertex.printVertex) path "" "," "\n");
@@ -821,7 +829,7 @@ module FailuresAbstraction =
           let group_uhat_f = AbstractionMap.getGroupById f uhat in
           (* the group of uhat in f'' *)
           let group_uhat_f'' = AbstractionMap.getGroup f''
-                                 (AbstractionMap.getGroupRepresentativeId f uhat)
+                                                       (AbstractionMap.getGroupRepresentativeId f uhat)
           in
           if (AbstractNode.equal group_uhat_f group_uhat_f'') then
             begin
@@ -834,6 +842,24 @@ module FailuresAbstraction =
             (* refineForFailures_debug f''; *)
             Some f''
         end
+
+    (* computes a refinement of f, s.t. all sources (currently sources
+       are not defined, all nodes are considered sources) have at
+       least k+1 disjoint paths to the destination *) 
+    let refineK (g: AdjGraph.t) (f: abstractionMap) (ds: VertexSet.t) (k: int) =
+      let ag = BuildAbstractNetwork.buildAbstractAdjGraph g f in
+      let d = getId f (VertexSet.choose ds) in (*assume only one destination for now *)
+      let cuts = fold_vertices (fun u acc ->
+                     if u <> d then
+                       let (es, _, _) =  min_cut ag d u in
+                       es :: acc
+                     else
+                       acc) (num_vertices ag) []
+      in
+      List.iter (fun es -> EdgeSet.iter (fun e -> Printf.printf "%s" (printEdge e)) es) cuts;
+      f
+                 
+      
   end
 
   
