@@ -4,8 +4,8 @@ open Syntax
 
 let is_keyword_op op =
   match op with
-  | And | Or | Not | UAdd _ | USub _ | UEq | ULess _ | ULeq _ | MGet -> false
-  | MCreate | MSet | MMap | MMerge | MMapFilter -> true
+  | And | Or | Not | UAdd _ | USub _ | UEq | ULess _ | ULeq _ | MGet | TGet _-> false
+  | MCreate | MSet | MMap | MMerge | MMapFilter | TSet _-> true
 
 (* set to true if you want to print universal quanifiers explicitly *)
 let quantifiers = true
@@ -28,6 +28,8 @@ let prec_op op =
   | MMap -> 5
   | MMerge -> 5
   | MMapFilter -> 5
+  | TGet _ -> 5
+  | TSet _ -> 3
 
 let prec_exp e =
   match e.e with
@@ -62,6 +64,7 @@ let max_prec = 10
 
 let ty_prec t =
   match t with
+  | TVoid -> 0
   | TVar _ -> 0
   | QVar _ -> 0
   | TBool -> 0
@@ -75,6 +78,7 @@ let rec ty_to_string_p prec t =
   let p = ty_prec t in
   let s =
     match t with
+    | TVoid -> "void"
     | TVar {contents= tv} -> tyvar_to_string tv
     | QVar name -> "{" ^ Var.to_string name ^ "}"
     | TBool -> "bool"
@@ -113,6 +117,8 @@ let op_to_string op =
   | MMap -> "map"
   | MMapFilter -> "mapIf"
   | MMerge -> "combine"
+  | TGet n -> "at" ^ "u" ^ (string_of_int n)
+  | TSet n -> "set" ^ "u" ^ (string_of_int n)
 
 let rec pattern_to_string pattern =
   match pattern with

@@ -47,6 +47,8 @@ type op =
   | MMap
   | MMapFilter
   | MMerge
+  | TGet of int
+  | TSet of int
 [@@deriving show, ord, eq]
 
 type pattern =
@@ -550,6 +552,8 @@ and hash_op op =
   | USub n -> 11  + n + 64
   | ULess n -> 11 + n + 64 * 2
   | ULeq n -> 11  + n + 64 * 3
+  | TGet n -> 11  + n + 64 * 4 (* Probably overkill *)
+  | TSet n -> 12  + n + 64 * 3
 
 (* hashconsing information/tables *)
 
@@ -595,6 +599,8 @@ let arity op =
   | MMap -> 2
   | MMapFilter -> 3
   | MMerge -> 3
+  | TGet _ -> 2
+  | TSet _ -> 3
 
 (* Useful constructors *)
 
@@ -1386,7 +1392,7 @@ module BddFunc = struct
         | ULess _, [e1; e2] -> lt (eval env e1) (eval env e2)
         | ULeq _, [e1; e2] -> leq (eval env e1) (eval env e2)
         | USub _, [e1; e2] -> failwith "subtraction not implemented"
-        | _ -> failwith "internal error (eval)" )
+        | _ -> failwith "internal error 2 (eval)" )
     | EIf (e1, e2, e3) -> (
         let v1 = eval env e1 in
         let v2 = eval env e2 in

@@ -302,7 +302,7 @@ let op_typ op =
   | ULess size-> ([tint_of_size size; tint_of_size size], TBool)
   | ULeq size -> ([tint_of_size size; tint_of_size size], TBool)
   (* Map operations *)
-  | MCreate | MGet | MSet | MMap | MMerge | MMapFilter | UEq ->
+  | MCreate | MGet | MSet | MMap | MMerge | MMapFilter | UEq | TGet _ | TSet _ ->
     failwith "internal error (op_typ)"
 
 let texp (e, ty, span) = aexp (e, Some ty, span)
@@ -424,7 +424,44 @@ let rec infer_exp i info env (e: exp) : exp =
               [el0; el1; er0; er1]
           in
           texp (eop o ([e1; e2; e3] @ es), mapty1, e.espan)
-        | MGet, _ | MSet, _ | MCreate, _ | MMap, _ ->
+        | TGet n, [e1; e2] ->
+          let e1, tuplety =
+            infer_exp (i + 1) info env e1 |> textract
+          in
+          (* Do so that e2's ety field is set correctly
+             Since we require e2 to be a literal, this is otherwise unnecessary
+          *)
+          let e2, _ =
+            infer_exp (i + 1) info env e2 |> textract
+          in
+          let idx =
+            match e2.e with
+            | EVal {v = (VInt index); _} -> Integer.to_int index
+            | _ -> failwith "Index to tuple was not integer literal"
+          in
+          let valtys = List.map (fun _ -> fresh_tyvar ()) (BatList.make n ()) in
+          unify info e tuplety (TTuple valtys) ;
+          texp (eop o [e1; e2], (List.nth valtys idx), e.espan)
+        | TSet n, [e1; e2; e3] ->
+          let e1, tuplety =
+            infer_exp (i + 1) info env e1 |> textract
+          in
+          let e2, _ =
+            infer_exp (i + 1) info env e2 |> textract
+          in
+          let e3, valty =
+            infer_exp (i + 1) info env e3 |> textract
+          in
+          let idx =
+            match e2.e with
+            | EVal {v = (VInt index); _} -> Integer.to_int index
+            | _ -> failwith "Index to tuple was not integer literal"
+          in
+          let valtys = List.map (fun _ -> fresh_tyvar ()) (BatList.make n ()) in
+          unify info e tuplety (TTuple valtys) ;
+          unify info e valty (List.nth valtys idx) ;
+          texp (eop o [e1; e2; e3], tuplety, e.espan)
+        | MGet, _ | MSet, _ | MCreate, _ | MMap, _ | TGet _, _ | TSet _, _->
           Console.error_position info e.espan
             (Printf.sprintf "invalid number of parameters")
         | UEq, [e1; e2] ->

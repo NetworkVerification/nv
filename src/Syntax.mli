@@ -38,6 +38,8 @@ type op =
   | MMap
   | MMapFilter
   | MMerge
+  | TGet of int (* tuple size *)
+  | TSet of int (* tuple size *)
 
 type pattern =
   | PWild
