@@ -504,6 +504,43 @@ module FailuresAbstraction =
       else
         Groups us
 
+
+    (* Given a group of abstract nodes, creates two new abstract
+       nodes, trying to maintain the other abstract nodes.
+       This is done as follows:
+       if {u1,u2,u3} and {u4,u5,u6} are two abstract groups each with same connectivity,
+       the new abstract nodes are {u1,u4,u3,u6} {u2,u5} i.e. picking
+       one node from each group *)
+    let createFreshAbstractNodes (uss: AbstractNodeSet.t) =
+      if AbstractNodeSet.cardinal uss > 2 then
+        begin
+          (* old code that did not try to avoid splitting neighbors *)
+        (*   let b = ref false in *)
+        (*   let uss1, uss2 = AbstractNodeSet.partition (fun _ -> b := not !b; !b) uss in *)
+        (*   let us1 = AbstractNodeSet.fold (fun us acc -> AbstractNode.union us acc) *)
+        (*                                   uss1 AbstractNode.empty *)
+        (*   in *)
+        (*   let us2 = AbstractNodeSet.fold (fun us acc -> AbstractNode.union us acc) *)
+        (*                                   uss2 AbstractNode.empty *)
+        (*   in *)
+          (*   AbstractNodeSet.add us2 (AbstractNodeSet.singleton us1) *)
+          let (_, us1, us2) =
+            AbstractNodeSet.fold (fun us (b, us1, us2) ->
+                if (AbstractNode.cardinal us) > 1 then
+                  let usl, usr = AbstractNode.randomSplit us in
+                  (b, AbstractNode.union usl us1, AbstractNode.union usr us2)
+                else
+                  if b then
+                    (not b, AbstractNode.union us us1, us2)
+                  else
+                    (not b, us1, AbstractNode.union us us2)) uss
+                                 (true, AbstractNode.empty, AbstractNode.empty)
+          in
+          AbstractNodeSet.add us2 (AbstractNodeSet.singleton us1)
+        end
+      else
+        uss
+
     (* using the abstract group id on path for efficiency reasons *)
     (* - assumes uid can be split
        - returns a random split with maximum ratio if the path was empty
@@ -535,7 +572,6 @@ module FailuresAbstraction =
                 loop path vid best
            | Mesh ->
               (* do a randomSplit if necessary, but maybe there are better options*)
-              (* Printf.printf "best-split was due to mesh: %d\n" (Integer.to_int current); *)
               if (snd best) > 1.0 then
                 begin
                   (* Printf.printf "best-split was random\n"; *)
@@ -549,23 +585,11 @@ module FailuresAbstraction =
       let (uss, _) =
         loop path uid (AbstractNodeSet.of_list [u1;u2], float_of_int max_int)
       in
-      AbstractNodeSet.iter (fun us -> Printf.printf "%s," (AbstractNode.printAbstractNode us)) uss;
-      (* If the group is larger than 2 try to randomly make it more *)
-      (*    abstract by creating groups of two *)
-      if AbstractNodeSet.cardinal uss > 2 then
-        begin
-          let b = ref false in
-          let uss1, uss2 = AbstractNodeSet.partition (fun _ -> b := not !b; !b) uss in
-          let us1 = AbstractNodeSet.fold (fun us acc -> AbstractNode.union us acc)
-                                          uss1 AbstractNode.empty
-          in
-          let us2 = AbstractNodeSet.fold (fun us acc -> AbstractNode.union us acc)
-                                          uss2 AbstractNode.empty
-          in
-          AbstractNodeSet.add us2 (AbstractNodeSet.singleton us1)
-        end
-      else
-        uss
+      AbstractNodeSet.iter (fun us -> Printf.printf "%s," (AbstractNode.printAbstractNode us))
+                           uss;
+      (* If the group is larger than 2 try to make it more abstract by
+         creating groups of two *)
+      createFreshAbstractNodes uss
             
     (** Returns true if the given value is not the default for the
        given attribute type. A non-default value indicates that this
