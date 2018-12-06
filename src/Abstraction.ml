@@ -852,8 +852,9 @@ module FailuresAbstraction =
           (* the group of uhat in abstraction f *)
           let group_uhat_f = AbstractionMap.getGroupById f uhat in
           (* the group of uhat in f'' *)
-          let group_uhat_f'' = AbstractionMap.getGroup f''
-                                                       (AbstractionMap.getGroupRepresentativeId f uhat)
+          let group_uhat_f'' =
+            AbstractionMap.getGroup f''
+              (AbstractionMap.getGroupRepresentativeId f uhat)
           in
           if (AbstractNode.equal group_uhat_f group_uhat_f'') then
             begin
@@ -867,19 +868,87 @@ module FailuresAbstraction =
             Some f''
         end
 
+    module VertexFreq =
+      struct
+        type t = int * Vertex.t
+        let compare (f1, u1) (f2, u2) =
+          let fcmp = Pervasives.compare f1 f2 in
+          if fcmp = 0 then
+            Vertex.compare u1 u2
+          else
+            fcmp
+      end
+
+    module VertexFreqSet = BatSet.Make(VertexFreq)
+
+    let rec updateList (u: 'a) (f: 'b option -> 'b) (xs: ('a*'b) list) =
+      match xs with
+      | [] -> [(u,f None)]
+      | (x,y) :: xs ->
+         if (x = u) then
+           (x, f (Some y)) :: xs
+         else
+           (x,y) :: (updateList u f xs)
+           
+    (* given a list of cut-sets, returns: 
+       1. the reachable nodes that
+       appear in the cut-sets sorted by their frequency.
+       2. the reachables nodes that have cardinality > 1
+       3. the unreachable nodes that have cardinality < 1 *)
+    let reachable_by_freq f (cuts: EdgeSet.t list)
+        : ((Vertex.t * int) list) * (Vertex.t list) * (Vertex.t list) =
+      let accfreq, accReachAbs, accUnreachAbs =
+        List.fold_left (fun acc cutset ->
+            EdgeSet.fold (fun (u,v) (accfreq, accReachAbs, accUnreachAbs) ->
+                (updateList u (fun freq -> match freq with
+                                           | None -> 1
+                                           | Some f -> f+1) accfreq,
+                 (if (AbstractNode.cardinal (getGroupById f u)) > 1 then
+                    u :: accReachAbs
+                  else accReachAbs),
+                 (if (AbstractNode.cardinal (getGroupById f v)) > 1 then
+                    v :: accUnreachAbs
+                  else accUnreachAbs))) cutset acc ) ([], [], []) cuts
+      in
+      let accfreq = List.sort (fun (_,f) (_,f') -> Pervasives.compare f f') accfreq in 
+      (accfreq, accReachAbs, accUnreachAbs)
+          
+      
     (* computes a refinement of f, s.t. all sources (currently sources
        are not defined, all nodes are considered sources) have at
-       least k+1 disjoint paths to the destination *) 
-    let refineK (g: AdjGraph.t) (f: abstractionMap) (ds: VertexSet.t) (k: int) =
-      let ag = BuildAbstractNetwork.buildAbstractAdjGraph g f in
-      let d = getId f (VertexSet.choose ds) in (*assume only one destination for now *)
+       least k+1 disjoint paths to the destination *)
+      (*TODO: do the actua refinement and put this in a loop,
+              until the set of cuts is empty*)
+    let refineK (g: AdjGraph.t) (forig: abstractionMap) (ds: VertexSet.t) (k: int) =
+      let ag = BuildAbstractNetwork.buildAbstractAdjGraph g forig in
+      let d = getId forig (VertexSet.choose ds) in (*assume only one destination for now *)
       let cuts = fold_vertices (fun u acc ->
                      if u <> d then
                        let (es, _, _) =  min_cut ag d u in
-                       es :: acc
+                       if EdgeSet.cardinal es > k then
+                         acc
+                       else
+                         es :: acc
                      else
                        acc) (num_vertices ag) []
       in
+      (* sort (reachable) vertices by frequency of appereance in cut-sets. *)
+      let cut_freq = reachable_by_freq cuts in
+      let most_freq =
+        try
+          Some (BatList.find (fun (u,_) -> AbstractNode.cardinal u > 1) cut_freq)
+        with Not_found -> None
+      in
+      match most_freq with
+      | None ->
+         EdgeSet.fold (fu
+      List
+      match cut_freq with
+      | [] -> failwith "cannot be empty"
+      | (u,f) :: freq ->
+         if (AbstractNode.cardinal u) > 1 then
+           u
+      
       List.iter (fun es -> EdgeSet.iter (fun e -> Printf.printf "%s" (printEdge e)) es) cuts;
       f
                  
