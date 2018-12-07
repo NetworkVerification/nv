@@ -2,6 +2,8 @@ type attribute = (option[int],option[int],option[(int, int, int, int)],option[(i
 
 symbolic d : (int, int)
 
+require d = (1174418688, 24)
+
 let edges = {
   19-20;
   54-6;

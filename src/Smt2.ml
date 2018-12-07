@@ -997,6 +997,13 @@ let find_and_update (s : StringSetSet.t) (elt1: string) (elt2: string) =
 
 (** Removes all variable equalities *)
 let propagate_eqs (env : smt_env) =
+  let updateUnionFind eqSets s =
+    try
+      StringMap.find s eqSets, eqSets
+    with Not_found ->
+      let r = BatUref.uref s in
+      r, StringMap.add s r eqSets
+  in
   (* compute equality classes of variables and remove equalities between variables *)
   let (eqSets, new_ctx) = List.fold_left (fun (eqSets, acc) c ->
                               match c.com with
@@ -1005,20 +1012,16 @@ let propagate_eqs (env : smt_env) =
                                   | Eq (tm1, tm2) ->
                                      (match tm1, tm2 with
                                       | Var s1, Var s2 ->
-                                         (find_and_update eqSets s1 s2, acc)
+                                         let r1, eqSets = updateUnionFind eqSets s1 in
+                                         let r2, eqSets = updateUnionFind eqSets s2 in
+                                         BatUref.unite r1 r2;
+                                         (eqSets, acc)
                                       | _ -> (eqSets, c :: acc))
                                   | _ -> (eqSets, c :: acc))
-                              | _ -> (eqSets, c :: acc)) (StringSetSet.empty, []) env.ctx
-  in
-  (* choose a variable name from each set to be the representative of that set,
-     then create a map where all other variables in that set point to the representative *)
-  let renaming =
-    StringSetSet.fold (fun vs vmap ->
-        let (repr, rest) = StringSet.pop_min vs in
-        StringSet.fold (fun v vmap ->
-            StringMap.add v repr vmap) rest vmap) eqSets StringMap.empty
+                              | _ -> (eqSets, c :: acc)) (StringMap.empty, []) env.ctx
   in
 
+  let renaming = StringMap.map (fun r -> BatUref.uget r) eqSets in
   (* apply the computed renaming *)
   env.ctx <- BatList.rev_map (fun c ->
                  match c.com with
@@ -1028,8 +1031,46 @@ let propagate_eqs (env : smt_env) =
 (* remove unnecessary declarations *)
   env.const_decls <-
     ConstantSet.filter (fun cdecl ->
-        if StringMap.mem cdecl.cname renaming then false else true) env.const_decls;
+        try
+          let repr = StringMap.find cdecl.cname renaming in
+          if repr = cdecl.cname then true else false
+      with Not_found -> true) env.const_decls;
   renaming, env
+  
+(* let propagate_eqs (env : smt_env) = *)
+(*   (\* compute equality classes of variables and remove equalities between variables *\) *)
+(*   let (eqSets, new_ctx) = List.fold_left (fun (eqSets, acc) c -> *)
+(*                               match c.com with *)
+(*                               | Assert tm -> *)
+(*                                  (match tm.t with *)
+(*                                   | Eq (tm1, tm2) -> *)
+(*                                      (match tm1, tm2 with *)
+(*                                       | Var s1, Var s2 -> *)
+(*                                          (find_and_update eqSets s1 s2, acc) *)
+(*                                       | _ -> (eqSets, c :: acc)) *)
+(*                                   | _ -> (eqSets, c :: acc)) *)
+(*                               | _ -> (eqSets, c :: acc)) (StringSetSet.empty, []) env.ctx *)
+(*   in *)
+(*   (\* choose a variable name from each set to be the representative of that set, *)
+(*      then create a map where all other variables in that set point to the representative *\) *)
+(*   let renaming = *)
+(*     StringSetSet.fold (fun vs vmap -> *)
+(*         let (repr, rest) = StringSet.pop_min vs in *)
+(*         StringSet.fold (fun v vmap -> *)
+(*             StringMap.add v repr vmap) rest vmap) eqSets StringMap.empty *)
+(*   in *)
+
+(*   (\* apply the computed renaming *\) *)
+(*   env.ctx <- BatList.rev_map (fun c -> *)
+(*                  match c.com with *)
+(*                  | Assert tm -> {c with com = Assert (alpha_rename_term renaming tm)} *)
+(*                  | Eval tm -> {c with com = Eval (alpha_rename_term renaming tm)} *)
+(*                  | _  -> c) new_ctx; *)
+(* (\* remove unnecessary declarations *\) *)
+(*   env.const_decls <- *)
+(*     ConstantSet.filter (fun cdecl -> *)
+(*         if StringMap.mem cdecl.cname renaming then false else true) env.const_decls; *)
+(*   renaming, env *)
 
 type smt_result = Unsat | Unknown | Sat of Solution.t
 
