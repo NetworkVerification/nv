@@ -537,9 +537,10 @@ let rec encode_exp_z3 descr env (e: exp) : term =
        mk_term ~tloc:e.espan
   | EMatch (e, bs) ->
      let ze1 = encode_exp_z3 descr env e in
-     (* if is_var ze1 then
-      *   encode_branches_z3 descr env ze1 bs (oget e.ety)
-      * else *)
+     (* do not create a new SMT variable if you are matching on a variable *)
+     if is_var ze1 then
+       encode_branches_z3 descr env ze1 bs (oget e.ety)
+     else
        begin
          let name = create_fresh descr "match" in
          let za = mk_constant env name (ty_to_sort (oget e.ety))
@@ -619,51 +620,54 @@ and encode_pattern_z3 descr env zname p (t: ty) =
     match (ps, ts) with
     | [p], [t] -> encode_pattern_z3 descr env zname p t
     | ps, ts ->
-       let znames =
-         List.mapi
-           (fun i t ->
-             let sort = ty_to_sort t in
-             ( mk_constant env (Printf.sprintf "elem%d" i |> create_fresh descr) sort
-             , sort
-              , t ) )
-           ts
-       in
+       (* old encoding in commented code.
+          Would create a new variable for each expression in the tuple.
+          New encoding avoids doing that when the expression is a variable *)
        (* let znames = *)
-       (*   BatList.map2i *)
-       (*     (fun i t p -> *)
+       (*   List.mapi *)
+       (*     (fun i t -> *)
        (*       let sort = ty_to_sort t in *)
-       (*       ( (match p with *)
-       (*          | PVar x -> *)
-       (*             let local_name = create_name descr x in *)
-       (*             mk_constant env local_name sort *)
-       (*          | _ -> *)
-       (*             mk_constant env (Printf.sprintf "elem%d" i |> create_fresh descr) sort) *)
+       (*       ( mk_constant env (Printf.sprintf "elem%d" i |> create_fresh descr) sort *)
        (*       , sort *)
-       (*       , t ) ) *)
-       (*     ts ps *)
+       (*        , t ) ) *)
+       (*     ts *)
        (* in *)
+       let znames =
+         BatList.map2i
+           (fun i t p ->
+             let sort = ty_to_sort t in
+             ( (match p with
+                | PVar x ->
+                   let local_name = create_name descr x in
+                   mk_constant env local_name sort
+                | _ ->
+                   mk_constant env (Printf.sprintf "elem%d" i |> create_fresh descr) sort)
+             , sort
+             , t ) )
+           ts ps
+       in
        let tup_decl = compute_decl env ty |> oget in
        let fs = tup_decl |> get_constructors |> List.hd |> get_projections in
        List.combine znames fs
        |> List.iter (fun ((elem, _, _), (f, _)) ->
               let e = mk_term (mk_app (mk_var f) [zname.t]) in
               add_constraint env ((mk_eq elem.t e.t) |> mk_term));
-       let apps = List.map (fun (f, _) ->
-                      let e = mk_term (mk_app (mk_var f) [zname.t]) in
-                      e) fs
-       in
-       (* let matches = *)
-       (*   List.map *)
-       (*     (fun (p, (zname, _, ty)) -> *)
-       (*       match p with *)
-       (*       | PVar x -> mk_bool true |> mk_term *)
-       (*       | _ -> encode_pattern_z3 descr env zname p ty ) *)
-       (*     (List.combine ps znames) *)
-           let matches =
-             List.mapi
-               (fun i (p, app) ->
-                 encode_pattern_z3 descr env app p (List.nth ts i))
-               (List.combine ps apps)
+       (* let apps = List.map (fun (f, _) -> *)
+       (*                let e = mk_term (mk_app (mk_var f) [zname.t]) in *)
+       (*                e) fs *)
+       (* in *)
+       let matches =
+         List.map
+           (fun (p, (zname, _, ty)) ->
+             match p with
+             | PVar x -> mk_bool true |> mk_term
+             | _ -> encode_pattern_z3 descr env zname p ty )
+           (List.combine ps znames)
+           (* let matches = *)
+           (*   List.mapi *)
+           (*     (fun i (p, app) -> *)
+           (*       encode_pattern_z3 descr env app p (List.nth ts i)) *)
+           (*     (List.combine ps apps) *)
        in
        let f acc e = mk_and acc e.t in
        let b = mk_bool true in
@@ -977,24 +981,6 @@ let rec alpha_rename_smt_term (renaming: string StringMap.t) (tm: smt_term) =
 let alpha_rename_term (renaming: string StringMap.t) (tm: term) =
   {tm with t = alpha_rename_smt_term renaming tm.t}
   
-let find_and_update (s : StringSetSet.t) (elt1: string) (elt2: string) =
-  let rec loop ssub =
-    if StringSetSet.is_empty ssub then
-      StringSetSet.add (StringSet.add elt2 (StringSet.singleton elt1)) s
-    else
-      begin
-        let (selt, ssub) = StringSetSet.pop_min ssub in
-        if (StringSet.mem elt1 selt) || (StringSet.mem elt2 selt) then
-          begin
-            let selt' = StringSet.add elt1 (StringSet.add elt2 selt) in
-            StringSetSet.update selt selt' s
-          end
-        else
-          loop ssub
-      end
-  in
-  loop s
-
 (** Removes all variable equalities *)
 let propagate_eqs (env : smt_env) =
   let updateUnionFind eqSets s =
@@ -1034,7 +1020,7 @@ let propagate_eqs (env : smt_env) =
         try
           let repr = StringMap.find cdecl.cname renaming in
           if repr = cdecl.cname then true else false
-      with Not_found -> true) env.const_decls;
+        with Not_found -> true) env.const_decls;
   renaming, env
   
 (* let propagate_eqs (env : smt_env) = *)

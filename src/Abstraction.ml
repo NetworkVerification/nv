@@ -928,100 +928,120 @@ module FailuresAbstraction =
         if p v then (k, v)
         else loop m
       in loop m
+
+
+    (* TODO: add more factors here, such as number of nodes that have <= k cut-sets *)
+    let compare_refinements (g: AdjGraph.t) f f' =
+      Pervasives.compare (AbstractionMap.size f) (AbstractionMap.size f')
+
       
+
     (* computes a refinement of f, s.t. all sources (currently sources
        are not defined, all nodes are considered sources) have at
        least k+1 disjoint paths to the destination *)
-      (*TODO: do the actual refinement and put this in a loop,
-              until the set of cuts is empty*)
-    let refineK (g: AdjGraph.t) (forig: abstractionMap) (ds: VertexSet.t) (k: int) =
-      let rec loop (f: abstractionMap) =
-        let ag = BuildAbstractNetwork.buildAbstractAdjGraph g f in
-        let d = getId f (VertexSet.choose ds) in (*assume only one destination for now *)
-        let cuts = fold_vertices (fun u acc ->
-                       if u <> d then
-                         let (es, _, _) =  min_cut ag d u in
-                         if EdgeSet.cardinal es > k then
-                           acc
-                         else
-                           es :: acc
-                       else
-                         acc) (num_vertices ag) []
-        in
-        match cuts with
-        | [] -> (* no min-cuts <= k, we are done. *)
-           f
-        | _ ->
-           (* sort (reachable) vertices by frequency of appereance in cut-sets. *)
-           let (cut_freq, reachAbs, unreachAbs) = cuts_choices forig f cuts in
-           (* find the reachable node that appears the most in the cut-sets *)
-           let most_freq =
-             try
-               Some (BatList.find (fun (u,_) ->
-                         AbstractNode.cardinal (getGroupById f u) > 1) cut_freq)
-             with Not_found -> None
-           in
-           (* abstract node to split, right now this is just one,
-              maybe it makes sense to try to split more *)
-           let nodes_to_split =
-             match most_freq with
-             | None ->
-                let us =
-                  try Some
-                        ((snd (findPred (fun us ->
-                                   List.for_all (fun u ->
-                                       AbstractNode.cardinal (getGroupById f u) > 1) us) reachAbs)))
-                  with Not_found -> None
-                in
-                (match us with
-                 | None -> (* Some abstract nodes in the cut-sets that
-                              belonged to the same original abstract
-                              node could not be split *)
-                    (try Some ((snd
-                                  (findPred (fun us ->
-                                       List.for_all (fun u ->
-                                           AbstractNode.cardinal (getGroupById f u) > 1) us) unreachAbs)))
-                     with Not_found -> failwith "choose_a_random_splittable_node_from_cutset_or_nothing")
-                 | Some _ -> us)
-             | Some (u,_) -> Some [u]
-           in
-           match nodes_to_split with
-           | None -> (* cannot refine *) f
-           | Some uhats ->
-              (* for each element of the list, note that they all belong the same original group:
-                 1. Remove duplicates based on cardinality, because they are likely to lead to similar refinements.
-                 2. Get all their neighbors.
-                 3. Try all refinements on them and pick the best.
-                 2. if one of them is in the unreachable set, then try to refine based on that.
-                 3. otherwise pick one randomly for now, TODO: pick the one that is the most common among them *)
-              let uhats = BatList.sort_unique (fun x y -> Pervasives.compare
-                                                            (AbstractNode.cardinal (getGroupById f x))
-                                                            (AbstractNode.cardinal (getGroupById f y))) uhats
-              in
-              let uhat_neighbors = BatList.map (fun uhat -> (uhat, neighbors ag uhat)) uhats in
-              let refinements = BatList.map (fun (uhat, vhats) ->
-                                    let uhatGroup = getGroupById f uhat in
-                                    BatList.filter_map
-                                      (fun vhat ->
-                                        let vhatGroup = getGroupById f vhat in
-                                        match findSplittingByConnectivity uhatGroup vhatGroup g with
-                                        | Mesh -> None
-                                        | Groups uss ->
-                                           let uss = createFreshAbstractNodes uss in
-                                           let f' = splitSet f uss in
-                                           Some (abstractionTopological f' g)) vhats
-                                           (*TODO: return here *)
-              
+    (*TODO: implement a todo set, so we don't do min-cuts on the nodes
+       that are done.  Initially todo has all the abstract nodes
+       (except for the destination).  Iterate over todo nodes, if a
+       node has a cut-set larger than k then it doesn't go into the
+       todo set, otherwise it goes in the todo set.
+       After refinement, we need to update the todo set. We do that by:
+       Go over each abstract node in the new set, get their represtantive,
+       then go to the previous abstract node and see if it was in the todo-node.
+       If it was, then the new abstract node goes into the todo, otherwise it does not.
+
+ *)
+    let refineK (g: AdjGraph.t) (forig: abstractionMap) (ds: VertexSet.t) (k: int) = forig
+      (* let rec loop (f: abstractionMap) = *)
+      (*   let ag = BuildAbstractNetwork.buildAbstractAdjGraph g f in *)
+      (*   let d = getId f (VertexSet.choose ds) in (\*assume only one destination for now *\) *)
+      (*   let cuts = fold_vertices (fun u acc -> *)
+      (*                  if u <> d then *)
+      (*                    let (es, _, _) =  min_cut ag d u in *)
+      (*                    if EdgeSet.cardinal es > k then *)
+      (*                      acc *)
+      (*                    else *)
+      (*                      es :: acc *)
+      (*                  else *)
+      (*                    acc) (num_vertices ag) [] *)
+      (*   in *)
+      (*   match cuts with *)
+      (*   | [] -> (\* no min-cuts <= k, we are done. *\) *)
+      (*      f *)
+      (*   | _ -> *)
+      (*      (\* sort (reachable) vertices by frequency of appereance in cut-sets. *\) *)
+      (*      let (cut_freq, reachAbs, unreachAbs) = cuts_choices forig f cuts in *)
+      (*      (\* find the reachable node that appears the most in the cut-sets *\) *)
+      (*      let most_freq = *)
+      (*        try *)
+      (*          Some (BatList.find (fun (u,_) -> *)
+      (*                    AbstractNode.cardinal (getGroupById f u) > 1) cut_freq) *)
+      (*        with Not_found -> None *)
+      (*      in *)
+      (*      (\* abstract node to split, right now this is just one, *)
+      (*         maybe it makes sense to try to split more *\) *)
+      (*      let nodes_to_split = *)
+      (*        match most_freq with *)
+      (*        | None -> *)
+      (*           let us = *)
+      (*             try Some *)
+      (*                   ((snd (findPred (fun us -> *)
+      (*                              List.for_all (fun u -> *)
+      (*                                  AbstractNode.cardinal (getGroupById f u) > 1) us) reachAbs))) *)
+      (*             with Not_found -> None *)
+      (*           in *)
+      (*           (match us with *)
+      (*            | None -> (\* Some abstract nodes in the cut-sets that *)
+      (*                         belonged to the same original abstract *)
+      (*                         node could not be split *\) *)
+      (*               (try Some ((snd *)
+      (*                             (findPred (fun us -> *)
+      (*                                  List.for_all (fun u -> *)
+      (*                                      AbstractNode.cardinal (getGroupById f u) > 1) us) unreachAbs))) *)
+      (*                with Not_found -> failwith "choose_a_random_splittable_node_from_cutset_or_nothing") *)
+      (*            | Some _ -> us) *)
+      (*        | Some (u,_) -> Some [u] *)
+      (*      in *)
+      (*      match nodes_to_split with *)
+      (*      | None -> (\* cannot refine *\) f *)
+      (*      | Some uhats -> *)
+      (*         (\* for each element of the list, note that they all belong the same original group:  *)
+      (*            2. Get all their neighbors. *)
+      (*            3. Try all refinements on them and pick the best. *)
+      (*            2. if one of them is in the unreachable set, then try to refine based on that. *)
+      (*            3. otherwise pick one randomly for now, TODO: pick the one that is the most common among them *\) *)
+      (*         (\* Remove duplicates based on cardinality, because they *)
+      (*            are likely to lead to similar refinements.*\) *)
+      (*         let uhats = *)
+      (*           BatList.sort_unique (fun x y -> Pervasives.compare *)
+      (*                                             (AbstractNode.cardinal (getGroupById f x)) *)
+      (*                                             (AbstractNode.cardinal (getGroupById f y))) uhats *)
+      (*         in *)
+      (*         (\* for each node to split, compute a refinement with each of its neighbor *\) *)
+      (*         let uhat_neighbors = BatList.map (fun uhat -> (uhat, neighbors ag uhat)) uhats in *)
+      (*         let refinements = *)
+      (*           BatList.fold_left (fun acc (uhat, vhats) -> *)
+      (*               let uhatGroup = getGroupById f uhat in *)
+      (*               (BatList.filter_map *)
+      (*                  (fun vhat -> *)
+      (*                    let vhatGroup = getGroupById f vhat in *)
+      (*                    match findSplittingByConnectivity uhatGroup vhatGroup g with *)
+      (*                    | Mesh -> None *)
+      (*                    | Groups uss -> *)
+      (*                       let uss = createFreshAbstractNodes uss in *)
+      (*                       let f' = splitSet f uss in *)
+      (*                       Some (abstractionTopological f' g)) vhats) @ acc) [] uhat_neighbors *)
+      (*         in *)
+      (*         (\*min_max to get min, max of list *\) *)
+      (*         BatList *)
            
            
-           
-      | [] -> failwith "cannot be empty"
-      | (u,f) :: freq ->
-         if (AbstractNode.cardinal u) > 1 then
-           u
+      (* | [] -> failwith "cannot be empty" *)
+      (* | (u,f) :: freq -> *)
+      (*    if (AbstractNode.cardinal u) > 1 then *)
+      (*      u *)
       
-      List.iter (fun es -> EdgeSet.iter (fun e -> Printf.printf "%s" (printEdge e)) es) cuts;
-      f
+      (* List.iter (fun es -> EdgeSet.iter (fun e -> Printf.printf "%s" (printEdge e)) es) cuts; *)
+      (* f *)
                  
       
   end
