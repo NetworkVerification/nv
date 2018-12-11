@@ -64,7 +64,6 @@ let max_prec = 10
 
 let ty_prec t =
   match t with
-  | TVoid -> 0
   | TVar _ -> 0
   | QVar _ -> 0
   | TBool -> 0
@@ -78,7 +77,6 @@ let rec ty_to_string_p prec t =
   let p = ty_prec t in
   let s =
     match t with
-    | TVoid -> "void"
     | TVar {contents= tv} -> tyvar_to_string tv
     | QVar name -> "{" ^ Var.to_string name ^ "}"
     | TBool -> "bool"

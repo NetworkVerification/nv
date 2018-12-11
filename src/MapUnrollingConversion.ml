@@ -3,7 +3,7 @@ open Collections
 open MapUnrolling2
 open Typing
 
-(* Infer type of a value; if we don't know, use TVoid *)
+(* Infer type of a value; if we don't know, use TBool *)
 (* let rec infer_value_type (v : value) =
    match v.v with
    | VBool _ -> TBool
@@ -13,7 +13,7 @@ open Typing
     begin
       match vo with
       | Some v' -> TOption (infer_value_type v')
-      | None -> TOption (TVoid)
+      | None -> TOption (TBool)
     end
    | VMap mtbdd *)
 

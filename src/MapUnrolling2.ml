@@ -30,8 +30,7 @@ let rec unroll_type
   let unroll_type = unroll_type ty keys in
   match (canonicalize_type ty2) with
   | TBool
-  | TInt _
-  | TVoid ->
+  | TInt _ ->
     ty2
   | TArrow (t1, t2) ->
     TArrow (unroll_type t1, unroll_type t2)

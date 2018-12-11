@@ -19,11 +19,9 @@ let rec random_value ~hints ~max_map_size ty =
       vtuple
         (List.map (fun ty -> random_value hints max_map_size ty) ts)
     | TOption ty ->
-      if ty = TVoid then voption None
-      else
-        let b = Random.bool () in
-        if b then voption None
-        else voption (Some (random_value hints max_map_size ty))
+      let b = Random.bool () in
+      if b then voption None
+      else voption (Some (random_value hints max_map_size ty))
     | TMap (ty1, ty2) ->
       let default = random_value hints max_map_size ty2 in
       let map = ref (BddMap.create ~key_ty:ty1 default) in
@@ -34,7 +32,7 @@ let rec random_value ~hints ~max_map_size ty =
         map := BddMap.update !map k v
       done ;
       vmap !map
-    | QVar _ | TVar _ | TVoid -> failwith "internal error (random_value)"
+    | QVar _ | TVar _ -> failwith "internal error (random_value)"
     | TArrow (ty1, ty2) -> failwith "unimplemented"
 
 let random_symbolic hints max_map_size d =

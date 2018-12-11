@@ -9,7 +9,6 @@ type level = int
 type tyname = Var.t
 
 type ty =
-  | TVoid
   | TVar of tyvar ref
   | QVar of tyname
   | TBool
