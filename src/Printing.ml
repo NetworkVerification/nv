@@ -121,8 +121,8 @@ let op_to_string op =
   | MMap -> "map"
   | MMapFilter -> "mapIf"
   | MMerge -> "combine"
-  | TGet n -> "at" ^ "u" ^ (string_of_int n)
-  | TSet n -> "set" ^ "u" ^ (string_of_int n)
+  | TGet n -> "at" ^ (string_of_int n)
+  | TSet n -> "set" ^ (string_of_int n)
 
 let rec pattern_to_string pattern =
   match pattern with
