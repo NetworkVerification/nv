@@ -49,6 +49,7 @@ sig
                              (AdjGraph.Vertex.t, Syntax.exp) Hashtbl.t ->
                              AdjGraph.VertexSet.t ->
                              Syntax.ty ->
+                             Slicing.Prefix.t ->
                              (Syntax.var * Syntax.ty_or_exp) list ->
                              int -> (Var.t AdjGraph.EdgeMap.t) * Syntax.declarations
 

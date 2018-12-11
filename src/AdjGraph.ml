@@ -207,7 +207,7 @@ let dfs (g: t) (rg : int EdgeMap.t) (s: Vertex.t) =
   loop s VertexSet.empty
           
 let min_cut g s t =
-  let rg = ref (edges_map g (fun _ -> 0)) in
+  let rg = ref (edges_map g (fun _ -> 1)) in
   let rec loop reach path =
     if reach then
       begin

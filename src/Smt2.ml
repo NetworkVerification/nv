@@ -238,7 +238,7 @@ module SmtLang =
       | CheckSat ->
          (* for now i am hardcoding the tactics here. *)
          Printf.sprintf "(check-sat-using (then simplify \
-                         ctx-simplify solve-eqs smt))"
+                          solve-eqs smt))"
       | GetModel ->
          Printf.sprintf "(get-model)"
 
@@ -583,10 +583,10 @@ and encode_branches_z3 descr env name bs (t: ty) =
   match List.rev bs with
   | [] -> failwith "internal error (encode_branches)"
   | (p, e) :: bs ->
-      let ze = encode_exp_z3 descr env e in
-      (* we make the last branch fire no matter what *)
-      let _ = encode_pattern_z3 descr env name p t in
-      encode_branches_aux_z3 descr env name (List.rev bs) ze t
+     let ze = encode_exp_z3 descr env e in
+     (* we make the last branch fire no matter what *)
+     let _ = encode_pattern_z3 descr env name p t in
+     encode_branches_aux_z3 descr env name (List.rev bs) ze t
 
 (* I'm assuming here that the cases are exhaustive *)
 and encode_branches_aux_z3 descr env name bs accze (t: ty) =
@@ -632,48 +632,64 @@ and encode_pattern_z3 descr env zname p (t: ty) =
        (*        , t ) ) *)
        (*     ts *)
        (* in *)
-       let znames =
-         BatList.map2i
-           (fun i t p ->
-             let sort = ty_to_sort t in
-             ( (match p with
-                | PVar x ->
-                   let local_name = create_name descr x in
-                   mk_constant env local_name sort
-                | _ ->
-                   mk_constant env (Printf.sprintf "elem%d" i |> create_fresh descr) sort)
-             , sort
-             , t ) )
-           ts ps
-       in
-       let tup_decl = compute_decl env ty |> oget in
-       let fs = tup_decl |> get_constructors |> List.hd |> get_projections in
-       List.combine znames fs
-       |> List.iter (fun ((elem, _, _), (f, _)) ->
-              let e = mk_term (mk_app (mk_var f) [zname.t]) in
-              add_constraint env ((mk_eq elem.t e.t) |> mk_term));
-       (* let apps = List.map (fun (f, _) -> *)
-       (*                let e = mk_term (mk_app (mk_var f) [zname.t]) in *)
-       (*                e) fs *)
-       (* in *)
+
+       (* if set to false, patterns won't use intermediate variables,
+          so far always slower to disable intermediate vars *)
+       let tuples_intermediate_vars = true in
        let matches =
-         List.map
-           (fun (p, (zname, _, ty)) ->
-             match p with
-             | PVar x -> mk_bool true |> mk_term
-             | _ -> encode_pattern_z3 descr env zname p ty )
-           (List.combine ps znames)
-           (* let matches = *)
-           (*   List.mapi *)
-           (*     (fun i (p, app) -> *)
-           (*       encode_pattern_z3 descr env app p (List.nth ts i)) *)
-           (*     (List.combine ps apps) *)
+         if tuples_intermediate_vars then
+           let znames =
+             BatList.map2i
+               (fun i t p ->
+                 let sort = ty_to_sort t in
+                 ( (match p with
+                    | PVar x ->
+                       let local_name = create_name descr x in
+                       mk_constant env local_name sort
+                    | _ ->
+                       mk_constant env (Printf.sprintf "elem%d" i |> create_fresh descr) sort)
+                 , sort
+                 , t ) )
+               ts ps
+           in
+           let tup_decl = compute_decl env ty |> oget in
+           let fs = tup_decl |> get_constructors |> List.hd |> get_projections in
+           List.combine znames fs
+           |> List.iter (fun ((elem, _, _), (f, _)) ->
+                  let e = mk_term (mk_app (mk_var f) [zname.t]) in
+                  add_constraint env ((mk_eq elem.t e.t) |> mk_term));
+           (* let apps = List.map (fun (f, _) -> *)
+           (*                let e = mk_term (mk_app (mk_var f) [zname.t]) in *)
+           (*                e) fs *)
+           (* in *)
+           List.map
+             (fun (p, (zname, _, ty)) ->
+               match p with
+               | PVar x -> mk_bool true |> mk_term
+               | _ -> encode_pattern_z3 descr env zname p ty )
+             (List.combine ps znames)
+               (* let matches = *)
+               (*   List.mapi *)
+               (*     (fun i (p, app) -> *)
+               (*       encode_pattern_z3 descr env app p (List.nth ts i)) *)
+               (*     (List.combine ps apps) *)
+         else
+           let znames =
+             BatList.map2i
+               (fun i t p ->  p, t ) ts ps
+           in
+           let tup_decl = compute_decl env ty |> oget in
+           let fs = tup_decl |> get_constructors |> List.hd |> get_projections in
+           List.combine znames fs
+           |> List.map (fun ((p, ty) , (f, _)) ->
+                  let e = mk_term (mk_app (mk_var f) [zname.t]) in
+                  encode_pattern_z3 descr env e p ty)
        in
        let f acc e = mk_and acc e.t in
        let b = mk_bool true in
        let base = b in
-       (List.fold_left f base matches) |>
-         mk_term)
+       (List.fold_left f base matches) |> mk_term
+  )
   | POption None, TOption _ ->
      let opt_decl = compute_decl env ty |> oget in
       let f = opt_decl |> get_constructors |> List.hd |> get_recognizer in
