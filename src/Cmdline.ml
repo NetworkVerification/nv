@@ -9,7 +9,6 @@ type t =
   ; smart_gen: bool   [@short "-g"]    (** generate relevant randomized inputs     *)
   ; smt: bool         [@short "-m"]    (** search for bugs using an smt solver     *)
   ; query: bool                        (** emit the query used by the smt solver   *)
-  ; unroll_maps: bool [@short "-u"]    (** try to unroll dictionaries as tuples    *)
   ; hashcons: bool    [@short "-c"]    (** enables hashconsing of all ast terms    *)
   ; memoize: bool     [@short "-z"]    (** memoizes the interpreter for reuse      *)
   ; no_caching: bool                   (** disables mtbdd operation caching        *)
@@ -36,7 +35,6 @@ let default =
   ; smart_gen= false
   ; smt= false
   ; query= false
-  ; unroll_maps= false
   ; hashcons=false
   ; memoize = false
   ; no_caching=false
@@ -46,7 +44,7 @@ let default =
   ; split_heuristic="randomPath"
   ; draw=false}
 
-let cfg = ref default 
+let cfg = ref default
 
 let get_cfg () = !cfg
 

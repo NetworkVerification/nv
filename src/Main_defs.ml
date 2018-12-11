@@ -26,8 +26,8 @@ let rec apply_all s fs =
 let smt_query_file =
   let counter = ref (-1) in
   fun (file: string) ->
-  incr counter;
-  lazy (open_out (file ^ "-" ^
+    incr counter;
+    lazy (open_out (file ^ "-" ^
                     (string_of_int !counter) ^ "-query"))
 
 let run_smt file cfg info ds =
@@ -36,34 +36,24 @@ let run_smt file cfg info ds =
   let decls, f = Renaming.alpha_convert_declarations decls in
   let fs = f :: fs in
   let decls = Typing.infer_declarations info decls in
+  let decls, vars, f = MapUnrolling.unroll info decls in
+  let decls = Inline.inline_declarations info decls in
+  let fs = f :: fs in
+  (* Do we need to rename here? *)
   let res, fs =
-    if cfg.unroll_maps then (
-      try
-        let decls, vars, f = MapUnrolling.unroll info decls in
-        let decls = Inline.inline_declarations info decls in
-        let fs = f :: fs in
-        (Smt2.solve info cfg.query (smt_query_file file) decls ~symbolic_vars:vars, fs)
-      with MapUnrolling.Cannot_unroll e ->
-        let msg =
-          Printf.sprintf
-            "unable to unroll map due to non constant index: %s"
-            (Printing.exp_to_string e)
-        in
-        Console.warning msg ;
-        (Smt2.solve info cfg.query (smt_query_file file) decls ~symbolic_vars:[], fs))
-    else (Smt2.solve info cfg.query (smt_query_file file) decls ~symbolic_vars:[], fs)
+    (Smt2.solve info cfg.query (smt_query_file file) decls ~symbolic_vars:vars, fs)
   in
   match res with
   | Unsat -> (Success None, None)
   | Unknown -> Console.error "SMT returned unknown"
   | Sat solution ->
-     match solution.assertions with
-     | None -> Success (Some solution), Some fs
-     | Some m ->
-        if AdjGraph.VertexMap.exists (fun _ b -> not b) m then
-          CounterExample solution, Some fs
-        else
-          Success (Some solution), Some fs
+    match solution.assertions with
+    | None -> Success (Some solution), Some fs
+    | Some m ->
+      if AdjGraph.VertexMap.exists (fun _ b -> not b) m then
+        CounterExample solution, Some fs
+      else
+        Success (Some solution), Some fs
 
 let run_test cfg info ds =
   let fs = [] in
@@ -78,12 +68,12 @@ let run_test cfg info ds =
   match sol with
   | None -> (Success None, None)
   | Some sol ->
-      print_newline () ;
-      print_string [Bold] "Test cases: " ;
-      Printf.printf "%d\n" stats.iterations ;
-      print_string [Bold] "Rejected: " ;
-      Printf.printf "%d\n" stats.num_rejected ;
-      (CounterExample sol, Some fs)
+    print_newline () ;
+    print_string [Bold] "Test cases: " ;
+    Printf.printf "%d\n" stats.iterations ;
+    print_string [Bold] "Rejected: " ;
+    Printf.printf "%d\n" stats.num_rejected ;
+    (CounterExample sol, Some fs)
 
 let run_simulator cfg info decls =
   let fs, decls =
@@ -105,21 +95,21 @@ let run_simulator cfg info decls =
     ( match QueueSet.pop q with
       | None -> ()
       | Some _ ->
-         print_string [] "non-quiescent nodes:" ;
-         QueueSet.iter
-           (fun q ->
+        print_string [] "non-quiescent nodes:" ;
+        QueueSet.iter
+          (fun q ->
              print_string [] (Integer.to_string q ^ ";") )
-           q ;
-         print_newline () ;
-         print_newline () ;
+          q ;
+        print_newline () ;
+        print_newline () ;
     );
     match solution.assertions with
     | None -> Success (Some solution), Some fs
     | Some m ->
-       if AdjGraph.VertexMap.exists (fun _ b -> not b) m then
-         CounterExample solution, Some fs
-       else
-         Success (Some solution), Some fs
+      if AdjGraph.VertexMap.exists (fun _ b -> not b) m then
+        CounterExample solution, Some fs
+      else
+        Success (Some solution), Some fs
   with Srp.Require_false ->
     Console.error "required conditions not satisfied"
 
@@ -138,12 +128,12 @@ let compress file info decls cfg networkOp =
     with
     | Some emerge, Some etrans, Some einit, Some n, Some es,
       Some aty, Some eassert, symb ->
-       let graph = AdjGraph.add_edges (AdjGraph.create n) es in
-       { attr_type = aty; init = einit; trans = etrans;
-         merge = emerge; assertion = eassert; graph = graph }, symb
+      let graph = AdjGraph.add_edges (AdjGraph.create n) es in
+      { attr_type = aty; init = einit; trans = etrans;
+        merge = emerge; assertion = eassert; graph = graph }, symb
     | _ ->
-       Console.error
-         "missing definition of nodes, edges, merge, trans, init or assert"
+      Console.error
+        "missing definition of nodes, edges, merge, trans, init or assert"
   in
 
   let k = cfg.compress in
@@ -171,47 +161,47 @@ let compress file info decls cfg networkOp =
   let relevantSliceGroups = Slicing.groupPrefixesByVertices relevantSlices in
 
   let rec loop (finit: AbstractionMap.abstractionMap)
-               (f: AbstractionMap.abstractionMap)
-               (ds: AdjGraph.VertexSet.t) =
+      (f: AbstractionMap.abstractionMap)
+      (ds: AdjGraph.VertexSet.t) =
     (* build abstract network *)
     let failVars, decls =
       time_profile "Build abstract network"
-                   (fun () -> buildAbstractNetwork f network.graph mergeMap transMap
-                                                   initMap assertMap ds
-                                                   network.attr_type symb k) in
+        (fun () -> buildAbstractNetwork f network.graph mergeMap transMap
+            initMap assertMap ds
+            network.attr_type symb k) in
     let decls = Typing.infer_declarations info decls in
     let groups = AbstractionMap.printAbstractGroups f "\n" in
     Console.show_message groups Console.T.Blue "Abstract groups";
     match networkOp cfg info decls with
     | Success _, _ -> Printf.printf "No counterexamples found\n"
     | (CounterExample sol), fs ->
-       let sol = apply_all sol (oget fs) in
-       let f' =
-         time_profile "Refining abstraction after failures"
-                      (fun () -> FailuresAbstraction.refineForFailures
-                                   cfg.draw file network.graph finit f failVars sol k ds network.attr_type)
-       in
-       match f' with
-       | None -> print_solution sol;
-       | Some f' ->
-          loop finit f' ds
+      let sol = apply_all sol (oget fs) in
+      let f' =
+        time_profile "Refining abstraction after failures"
+          (fun () -> FailuresAbstraction.refineForFailures
+              cfg.draw file network.graph finit f failVars sol k ds network.attr_type)
+      in
+      match f' with
+      | None -> print_solution sol;
+      | Some f' ->
+        loop finit f' ds
   in
   PrefixSetSet.iter
     (fun prefixes ->
-      Console.show_message (Slicing.printPrefixes prefixes)
-                           Console.T.Green "Checking SRP for prefixes";
-      (* get a prefix from this class of prefixes *)
-      let pre = PrefixSet.min_elt prefixes in
-      (* find the nodes this class is announced from *)
-      let ds = PrefixMap.find pre relevantSlices in
-      (* find the initial abstraction function for these destinations *)
-      let f =
-        time_profile "Computing Abstraction"
-                     (fun () -> Abstraction.findAbstraction network.graph
-                                                            transMap mergeMap ds)
-      in
-      (* run_simulator cfg info decls  *)
-      loop f f ds) relevantSliceGroups
+       Console.show_message (Slicing.printPrefixes prefixes)
+         Console.T.Green "Checking SRP for prefixes";
+       (* get a prefix from this class of prefixes *)
+       let pre = PrefixSet.min_elt prefixes in
+       (* find the nodes this class is announced from *)
+       let ds = PrefixMap.find pre relevantSlices in
+       (* find the initial abstraction function for these destinations *)
+       let f =
+         time_profile "Computing Abstraction"
+           (fun () -> Abstraction.findAbstraction network.graph
+               transMap mergeMap ds)
+       in
+       (* run_simulator cfg info decls  *)
+       loop f f ds) relevantSliceGroups
 
 let parse_input (args : string array)
   : Cmdline.t * Console.info * string * Syntax.declarations =
