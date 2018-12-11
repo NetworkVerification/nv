@@ -135,7 +135,7 @@ let convert_attrs
   let unrolled_attr_ty = unroll_type ty keys attr_ty in
   if Typing.equiv_tys attr_ty unrolled_attr_ty then sol.labels
   else (* Attribute type involved a map, so transform all attributes *)
-    Graph.VertexMap.map
+    AdjGraph.VertexMap.map
       (fun v -> convert_value ty keys v attr_ty)
       sol.labels
 ;;

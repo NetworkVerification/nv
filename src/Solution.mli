@@ -1,4 +1,4 @@
-open Graph
+open AdjGraph
 open Collections
 
 type t =

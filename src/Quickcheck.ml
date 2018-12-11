@@ -35,7 +35,7 @@ let collect_all_values ds : ValueSet.t TypeMap.t =
 let check_assertions (sol: Solution.t) =
   match sol.assertions with
   | None -> true
-  | Some ass -> Graph.VertexMap.for_all (fun _ b -> b) ass
+  | Some ass -> AdjGraph.VertexMap.for_all (fun _ b -> b) ass
 
 let rec check_aux info iters acc =
   match (info.iterations, acc) with
@@ -64,7 +64,7 @@ let smart_symbolic prog_constants map d =
   | DSymbolic (x, te) ->
       let ty = match te with Exp e -> oget e.ety | Ty ty -> ty in
       let v =
-        match StringMap.find_opt (Var.to_string x) map with
+        match StringMap.Exceptionless.find (Var.to_string x) map with
         | None -> random_value prog_constants default_max_map_size ty
         | Some v -> v
       in
@@ -103,14 +103,14 @@ let add_blocking_require info ds map var_map =
   let ds = Typing.infer_declarations info ds in
   ds
 
-let smart_symbolics info prog_constants var_map ds =
-  (* print_endline (Printing.declarations_to_string ds) ; *)
-  let map = Smt.symvar_assign ds in
-  match map with
-  | None -> (ds, None)
-  | Some map ->
-      let ds' = List.map (smart_symbolic prog_constants map) ds in
-      (add_blocking_require info ds map var_map, Some ds')
+(* let smart_symbolics info prog_constants var_map ds = *)
+(*   (\* print_endline (Printing.declarations_to_string ds) ; *\) *)
+(*   let map = Smt.symvar_assign ds in *)
+(*   match map with *)
+(*   | None -> (ds, None) *)
+(*   | Some map -> *)
+(*       let ds' = List.map (smart_symbolic prog_constants map) ds in *)
+(*       (add_blocking_require info ds map var_map, Some ds') *)
 
 type check_stats = {iterations: int; num_rejected: int}
 
@@ -134,11 +134,11 @@ let check_random ds ~iterations =
   let info = {decls= ds; iterations; num_rejected; generator} in
   check info iterations num_rejected
 
-let check_smart info ds ~iterations =
-  let prog_constants = collect_all_values ds in
-  let num_rejected = ref 0 in
-  let generator ds =
-    smart_symbolics info prog_constants (var_map ds) ds
-  in
-  let info = {decls= ds; iterations; num_rejected; generator} in
-  check info iterations (ref 0)
+(* let check_smart info ds ~iterations = *)
+(*   let prog_constants = collect_all_values ds in *)
+(*   let num_rejected = ref 0 in *)
+(*   let generator ds = *)
+(*     smart_symbolics info prog_constants (var_map ds) ds *)
+(*   in *)
+(*   let info = {decls= ds; iterations; num_rejected; generator} in *)
+(*   check info iterations (ref 0) *)

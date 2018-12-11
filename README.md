@@ -12,5 +12,6 @@ opam install ppx_deriving
 opam install ppx_deriving_argparse
 opam install lru-cache
 opam install zarith
+opam install ocamlgraph
 opam install z3
   

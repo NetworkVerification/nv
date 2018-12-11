@@ -20,6 +20,8 @@ let updates env1 env2 = M.union (fun k v1 v2 -> Some v2) env1 env2
 
 let bind x entry = M.add x entry empty
 
+let filter env f = M.filter f env
+
 let to_string entry_to_string env =
   M.fold
     (fun k v s -> Var.to_string k ^ "=" ^ entry_to_string v ^ ";" ^ s)

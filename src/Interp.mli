@@ -13,3 +13,7 @@ val interp_op : env -> ty -> op -> exp list -> value
 val interp : exp -> value
 
 val interp_closure : closure -> value list -> value
+
+val interp_partial : exp -> exp
+
+val interp_partial_fun : exp -> value list -> exp

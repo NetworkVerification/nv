@@ -1,8 +1,9 @@
 open Collections
 open Syntax
 
-let map_back bmap x y =
-  bmap := StringMap.add (Var.to_string y) (Var.to_string x) !bmap
+(* Maps fresh names back to the original names *)
+let map_back bmap new_name old_name =
+  bmap := StringMap.add (Var.to_string new_name) (Var.to_string old_name) !bmap
 
 let fresh x = Var.fresh (Var.to_string x)
 
@@ -77,13 +78,13 @@ let alpha_convert_declaration bmap (env: Var.t Env.t)
       (env, DLet (y, tyo, e))
   | DSymbolic (x, Exp e) ->
       let y = fresh x in
-      map_back bmap x y ;
+      map_back bmap y x ;
       let env = Env.update env x y in
       let e = alpha_convert_exp env e in
       (env, DSymbolic (y, Exp e))
   | DSymbolic (x, Ty ty) ->
       let y = fresh x in
-      map_back bmap x y ;
+      map_back bmap y x ;
       let env = Env.update env x y in
       (env, DSymbolic (y, Ty ty))
   | DMerge e -> (env, DMerge (alpha_convert_exp env e))
@@ -103,7 +104,7 @@ let rec alpha_convert_aux bmap env (ds: declarations) : declarations =
 let update_symbolics bmap smap =
   StringMap.fold
     (fun s v acc ->
-      match StringMap.find_opt s bmap with
+      match StringMap.Exceptionless.find s bmap with
       | None -> StringMap.add s v acc
       | Some k -> StringMap.add k v acc )
     smap StringMap.empty
@@ -116,3 +117,53 @@ let rec alpha_convert_declarations (ds: declarations) =
   let bmap = ref StringMap.empty in
   let prog = alpha_convert_aux bmap Env.empty ds in
   (prog, adjust_solution !bmap)
+
+module Tests =
+  struct
+
+    exception Duplicate
+            
+    let collect_unique_vars e =
+      let vars = ref BatSet.empty in
+      let checkCollect x =
+        if BatSet.mem x !vars then
+          raise Duplicate
+        else
+          vars := BatSet.add x !vars
+      in
+      Visitors.iter_exp (fun e ->
+          match e.e with
+          | EVar x -> checkCollect x
+          | EFun f -> checkCollect f.arg
+          | ELet (x, _, _) -> checkCollect x
+          | _ -> ()) e;
+      !vars
+
+    let collect_vars e =
+      let vars = ref [] in
+      Visitors.iter_exp (fun e ->
+          match e.e with
+          | EVar x -> vars := x :: !vars
+          | EFun f -> vars := f.arg :: !vars
+          | ELet (x, _, _) -> vars := x :: !vars
+          | _ -> ()) e;
+      !vars
+                            
+    let alpha_exp_no_duplicates_prop env e =
+      let aexp = alpha_convert_exp env e in
+      try
+        let _ = collect_unique_vars aexp in
+        true
+      with | Duplicate -> false
+                        
+    let alpha_exp_number_of_vars_prop env e =
+      let aexp = alpha_convert_exp env e in
+      try
+        begin
+          let avars = collect_unique_vars aexp in
+          let vars = collect_vars e in
+          List.length vars = BatSet.cardinal avars
+        end
+      with | Duplicate -> false
+
+  end

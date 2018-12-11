@@ -6,25 +6,32 @@ open Hashcons
 open Printing
 open Quickcheck
 open Renaming
-open Smt
+open Smt2
 open Solution
+open Slicing
 open Syntax
 open Typing
+open Abstraction
+open BuildAbstractNetwork
+open Lazy
+open Profile
 
-let init_renamer sol =
-  let drop_zero s = String.sub s 0 (String.length s - 1) in
-  let syms =
-    Collections.StringMap.fold
-      (fun s v acc -> Collections.StringMap.add (drop_zero s) v acc)
-      sol.symbolics Collections.StringMap.empty
-  in
-  {sol with symbolics= syms}
+type answer =
+  | Success of (Solution.t option)
+  | CounterExample of Solution.t
 
 let rec apply_all s fs =
   match fs with [] -> s | f :: fs -> apply_all (f s) fs
 
-let run_smt cfg info ds =
-  let fs = [init_renamer] in
+let smt_query_file =
+  let counter = ref (-1) in
+  fun (file: string) ->
+  incr counter;
+  lazy (open_out (file ^ "-" ^
+                    (string_of_int !counter) ^ "-query"))
+
+let run_smt file cfg info ds =
+  let fs = [] in
   let decls = Inline.inline_declarations info ds in
   let decls, f = Renaming.alpha_convert_declarations decls in
   let fs = f :: fs in
@@ -35,7 +42,7 @@ let run_smt cfg info ds =
         let decls, vars, f = MapUnrolling.unroll info decls in
         let decls = Inline.inline_declarations info decls in
         let fs = f :: fs in
-        (Smt.solve decls ~symbolic_vars:vars, fs)
+        (Smt2.solve info cfg.query (smt_query_file file) decls ~symbolic_vars:vars, fs)
       with MapUnrolling.Cannot_unroll e ->
         let msg =
           Printf.sprintf
@@ -43,49 +50,49 @@ let run_smt cfg info ds =
             (Printing.exp_to_string e)
         in
         Console.warning msg ;
-        (Smt.solve decls ~symbolic_vars:[], fs) )
-    else (Smt.solve decls ~symbolic_vars:[], fs)
+        (Smt2.solve info cfg.query (smt_query_file file) decls ~symbolic_vars:[], fs))
+    else (Smt2.solve info cfg.query (smt_query_file file) decls ~symbolic_vars:[], fs)
   in
   match res with
-  | Unsat ->
-    print_string [green; Bold] "Success: " ;
-    Printf.printf "No assertions can be violated\n";
-    true
+  | Unsat -> (Success None, None)
   | Unknown -> Console.error "SMT returned unknown"
   | Sat solution ->
-    print_solution (apply_all solution fs);
-    match solution.assertions with
-    | None -> true
-    | Some m -> Graph.VertexMap.for_all (fun _ b -> b) m
+     match solution.assertions with
+     | None -> Success (Some solution), Some fs
+     | Some m ->
+        if AdjGraph.VertexMap.exists (fun _ b -> not b) m then
+          CounterExample solution, Some fs
+        else
+          Success (Some solution), Some fs
 
 let run_test cfg info ds =
-  let fs = [init_renamer] in
+  let fs = [] in
   let (sol, stats), fs =
     if cfg.smart_gen then
       let ds, f = Renaming.alpha_convert_declarations ds in
       let fs = f :: fs in
       let ds = Inline.inline_declarations info ds in
-      (Quickcheck.check_smart info ds ~iterations:cfg.ntests, fs)
+      (Quickcheck.check_random ds ~iterations:cfg.ntests, fs) (*used to be check_smart *)
     else (Quickcheck.check_random ds ~iterations:cfg.ntests, fs)
   in
   match sol with
-  | None -> false
+  | None -> (Success None, None)
   | Some sol ->
-    print_newline () ;
-    print_string [Bold] "Test cases: " ;
-    Printf.printf "%d\n" stats.iterations ;
-    print_string [Bold] "Rejected: " ;
-    Printf.printf "%d\n" stats.num_rejected ;
-    print_solution (apply_all sol fs);
-    true
+      print_newline () ;
+      print_string [Bold] "Test cases: " ;
+      Printf.printf "%d\n" stats.iterations ;
+      print_string [Bold] "Rejected: " ;
+      Printf.printf "%d\n" stats.num_rejected ;
+      (CounterExample sol, Some fs)
 
 let run_simulator cfg info decls =
   let fs, decls =
     if cfg.inline then
+      (* why are we renaming here?*)
       let decls, f = Renaming.alpha_convert_declarations decls in
       let decls = Inline.inline_declarations info decls in
-      ([f; init_renamer], decls)
-    else ([init_renamer], decls)
+      ([f], decls)
+    else ([], decls)
   in
   try
     let solution, q =
@@ -95,26 +102,119 @@ let run_simulator cfg info decls =
         , QueueSet.empty Integer.compare )
       | Some b -> Srp.simulate_declarations_bound decls b
     in
-    print_solution (apply_all solution fs) ;
     ( match QueueSet.pop q with
       | None -> ()
       | Some _ ->
-        print_string [] "non-quiescent nodes:" ;
-        QueueSet.iter
-          (fun q ->
+         print_string [] "non-quiescent nodes:" ;
+         QueueSet.iter
+           (fun q ->
              print_string [] (Integer.to_string q ^ ";") )
-          q ;
-        print_newline () ;
-        print_newline () ;
+           q ;
+         print_newline () ;
+         print_newline () ;
     );
     match solution.assertions with
-    | None -> true
-    | Some m -> Graph.VertexMap.for_all (fun _ b -> b) m
+    | None -> Success (Some solution), Some fs
+    | Some m ->
+       if AdjGraph.VertexMap.exists (fun _ b -> not b) m then
+         CounterExample solution, Some fs
+       else
+         Success (Some solution), Some fs
   with Srp.Require_false ->
     Console.error "required conditions not satisfied"
 
+let compress file info decls cfg networkOp =
+  let decls = Inline.inline_declarations info decls in
+  let network, symb =
+    match
+      ( get_merge decls
+      , get_trans decls
+      , get_init decls
+      , get_nodes decls
+      , get_edges decls
+      , get_attr_type decls
+      , get_assert decls
+      , get_symbolics decls )
+    with
+    | Some emerge, Some etrans, Some einit, Some n, Some es,
+      Some aty, Some eassert, symb ->
+       let graph = AdjGraph.add_edges (AdjGraph.create n) es in
+       { attr_type = aty; init = einit; trans = etrans;
+         merge = emerge; assertion = eassert; graph = graph }, symb
+    | _ ->
+       Console.error
+         "missing definition of nodes, edges, merge, trans, init or assert"
+  in
+
+  let k = cfg.compress in
+  (* partially evaluate the functions of the network *)
+  let transMap = Abstraction.partialEvalTrans network.graph network.trans in
+  let mergeMap = Abstraction.partialEvalMerge network.graph network.merge in
+  let initMap = Slicing.partialEvalInit network in
+  let assertMap = Slicing.partialEvalAssert network in
+
+  (*printing concrete graph *)
+  if cfg.draw then
+    begin
+      let fname = AdjGraph.DrawableGraph.graph_dot_file k file in
+      AdjGraph.DrawableGraph.drawGraph network.graph fname
+    end;
+
+  (* find the prefixes that are relevant to the assertions *)
+  let assertionPrefixes = Slicing.relevantPrefixes assertMap in
+  (* find where each prefix is announced from *)
+  let slices = Slicing.findInitialSlices initMap in
+  (* keep only the relevant slices, i.e. prefixes that are used by the assertion *)
+  let relevantSlices =
+    PrefixMap.filter (fun pre _ -> PrefixSet.mem pre assertionPrefixes) slices in
+  (* each set of prefixes represents an SRP *)
+  let relevantSliceGroups = Slicing.groupPrefixesByVertices relevantSlices in
+
+  let rec loop (finit: AbstractionMap.abstractionMap)
+               (f: AbstractionMap.abstractionMap)
+               (ds: AdjGraph.VertexSet.t) =
+    (* build abstract network *)
+    let failVars, decls =
+      time_profile "Build abstract network"
+                   (fun () -> buildAbstractNetwork f network.graph mergeMap transMap
+                                                   initMap assertMap ds
+                                                   network.attr_type symb k) in
+    let decls = Typing.infer_declarations info decls in
+    let groups = AbstractionMap.printAbstractGroups f "\n" in
+    Console.show_message groups Console.T.Blue "Abstract groups";
+    match networkOp cfg info decls with
+    | Success _, _ -> Printf.printf "No counterexamples found\n"
+    | (CounterExample sol), fs ->
+       let sol = apply_all sol (oget fs) in
+       let f' =
+         time_profile "Refining abstraction after failures"
+                      (fun () -> FailuresAbstraction.refineForFailures
+                                   cfg.draw file network.graph finit f failVars sol k ds network.attr_type)
+       in
+       match f' with
+       | None -> print_solution sol;
+       | Some f' ->
+          loop finit f' ds
+  in
+  PrefixSetSet.iter
+    (fun prefixes ->
+      Console.show_message (Slicing.printPrefixes prefixes)
+                           Console.T.Green "Checking SRP for prefixes";
+      (* get a prefix from this class of prefixes *)
+      let pre = PrefixSet.min_elt prefixes in
+      (* find the nodes this class is announced from *)
+      let ds = PrefixMap.find pre relevantSlices in
+      (* find the initial abstraction function for these destinations *)
+      let f =
+        time_profile "Computing Abstraction"
+                     (fun () -> Abstraction.findAbstraction network.graph
+                                                            transMap mergeMap ds)
+      in
+      (* run_simulator cfg info decls  *)
+      loop f f ds) relevantSliceGroups
+
 let parse_input (args : string array)
-  : Cmdline.t * Console.info * Syntax.declarations =
+  : Cmdline.t * Console.info * string * Syntax.declarations =
   let cfg, rest = argparse default "nv" args in
   Cmdline.set_cfg cfg ;
   if cfg.debug then Printexc.record_backtrace true ;
@@ -123,4 +223,4 @@ let parse_input (args : string array)
   let decls = Typing.infer_declarations info ds in
   Typing.check_annot_decls decls ;
   Wellformed.check info decls ;
-  (cfg, info, decls)
+  (cfg, info, file, decls)

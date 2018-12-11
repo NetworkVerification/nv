@@ -146,12 +146,25 @@ let rec encode_exp_z3 descr env arr (e: exp) =
   (* Printf.printf "expr: %s\n" (Printing.exp_to_string e) ; *)
   match e.e with
   | EVar x ->
+<<<<<<< HEAD
     let name =
       if is_symbolic env.symbolics x then Var.to_string x
       else create_name descr x
     in
     let sort = ty_to_sort env.ctx (oget e.ety) |> arr.f in
     Z3.Expr.mk_const_s env.ctx name sort
+=======
+      let name =
+        if is_symbolic env.symbolics x then
+          begin
+            Printf.printf "var:%s\n" (Var.to_string x);
+            Var.to_string x
+            end
+        else create_name descr x
+      in
+      let sort = ty_to_sort env.ctx (oget e.ety) |> arr.f in
+      Z3.Expr.mk_const_s env.ctx name sort
+>>>>>>> smt-alt
   | EVal v -> encode_value_z3 descr env arr v
   | EOp (op, es) -> (
       match (op, es) with
@@ -706,27 +719,27 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
         "missing definition of nodes, edges, merge, trans or init"
   in
   (* map each node to the init result variable *)
-  let init_map = ref Graph.VertexMap.empty in
+  let init_map = ref AdjGraph.VertexMap.empty in
   for i = 0 to Integer.to_int nodes - 1 do
     let init, n =
       encode_z3_init (Printf.sprintf "init-%d" i) env einit
     in
     add env.solver [Boolean.mk_eq env.ctx n (mk_int env.ctx i)] ;
-    init_map := Graph.VertexMap.add (Integer.of_int i) init !init_map
+    init_map := AdjGraph.VertexMap.add (Integer.of_int i) init !init_map
   done ;
   (* map each edge to transfer function result *)
-  let incoming_map = ref Graph.VertexMap.empty in
+  let incoming_map = ref AdjGraph.VertexMap.empty in
   let trans_map = ref EdgeMap.empty in
   let trans_input_map = ref EdgeMap.empty in
   List.iter
     (fun (i, j) ->
        ( try
-           let idxs = Graph.VertexMap.find j !incoming_map in
+           let idxs = AdjGraph.VertexMap.find j !incoming_map in
            incoming_map :=
-             Graph.VertexMap.add j ((i, j) :: idxs) !incoming_map
+             AdjGraph.VertexMap.add j ((i, j) :: idxs) !incoming_map
          with _ ->
            incoming_map :=
-             Graph.VertexMap.add j [(i, j)] !incoming_map ) ;
+             AdjGraph.VertexMap.add j [(i, j)] !incoming_map ) ;
        let trans, e, x =
          encode_z3_trans
            (Printf.sprintf "trans-%d-%d" (Integer.to_int i)
@@ -745,14 +758,14 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
        trans_map := EdgeMap.add (i, j) trans !trans_map )
     edges ;
   (* compute the labelling as the merge of all inputs *)
-  let labelling = ref Graph.VertexMap.empty in
+  let labelling = ref AdjGraph.VertexMap.empty in
   for i = 0 to Integer.to_int nodes - 1 do
     (* FIXME: This and other calls to Integer.of_int rely on the fact that nodes
        are implicitly size 32. If that changes, this part of the code is likely
        to break. *)
-    let init = Graph.VertexMap.find (Integer.of_int i) !init_map in
+    let init = AdjGraph.VertexMap.find (Integer.of_int i) !init_map in
     let in_edges =
-      try Graph.VertexMap.find (Integer.of_int i) !incoming_map
+      try AdjGraph.VertexMap.find (Integer.of_int i) !incoming_map
       with Not_found -> []
     in
     let idx = ref 0 in
@@ -777,12 +790,12 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
         (ty_to_sort env.ctx aty)
     in
     add env.solver [Boolean.mk_eq env.ctx l merged] ;
-    labelling := Graph.VertexMap.add (Integer.of_int i) l !labelling
+    labelling := AdjGraph.VertexMap.add (Integer.of_int i) l !labelling
   done ;
   (* Propagate labels across edges outputs *)
   EdgeMap.iter
     (fun (i, j) x ->
-       let label = Graph.VertexMap.find i !labelling in
+       let label = AdjGraph.VertexMap.find i !labelling in
        add env.solver [Boolean.mk_eq env.ctx label x] )
     !trans_input_map ;
   (* add assertions at the end *)
@@ -792,7 +805,7 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
       let all_good = ref (mk_bool env.ctx true) in
       for i = 0 to Integer.to_int nodes - 1 do
         let label =
-          Graph.VertexMap.find (Integer.of_int i) !labelling
+          AdjGraph.VertexMap.find (Integer.of_int i) !labelling
         in
         let result, n, x =
           encode_z3_assert (Printf.sprintf "assert-%d" i) env eassert
@@ -983,17 +996,17 @@ let build_result m env aty num_nodes eassert =
   | None -> failwith "internal error (encode)"
   | Some m ->
     (* print_endline (Model.to_string m) ; *)
-    let map = ref Graph.VertexMap.empty in
+    let map = ref AdjGraph.VertexMap.empty in
     (* grab the model from z3 *)
     for i = 0 to Integer.to_int num_nodes - 1 do
       let e = eval env m (Printf.sprintf "label-%d" i) aty in
-      map := Graph.VertexMap.add (Integer.of_int i) e !map
+      map := AdjGraph.VertexMap.add (Integer.of_int i) e !map
     done ;
     let assertions =
       match eassert with
       | None -> None
       | Some _ ->
-        let assertions = ref Graph.VertexMap.empty in
+        let assertions = ref AdjGraph.VertexMap.empty in
         for i = 0 to Integer.to_int num_nodes - 1 do
           let e =
             eval env m
@@ -1003,7 +1016,7 @@ let build_result m env aty num_nodes eassert =
           match (e, eassert) with
           | {v= VBool b}, Some _ ->
             assertions :=
-              Graph.VertexMap.add (Integer.of_int i) b
+              AdjGraph.VertexMap.add (Integer.of_int i) b
                 !assertions
           | _ -> failwith "internal error (build_result)"
         done ;
@@ -1037,7 +1050,7 @@ let solve ?symbolic_vars ds =
   in
   let eassert = get_assert ds in
   let env = encode_z3 ds sym_vars in
-  (* print_endline (Solver.to_string env.solver) ; *)
+  print_endline (Solver.to_string env.solver) ;
   let q = Solver.check env.solver [] in
   match q with
   | UNSATISFIABLE -> Unsat

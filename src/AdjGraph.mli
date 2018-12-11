@@ -1,8 +1,24 @@
-module Vertex : Map.OrderedType with type t = Integer.t
+module Vertex :
+  sig
+    type t = Integer.t
+
+    val printVertex : t -> string
+    val compare : t -> t -> int
+  end
 
 module Edge : Map.OrderedType with type t = Integer.t * Integer.t
 
-module VertexMap : Map.S with type key = Vertex.t
+val printEdge : Edge.t -> string
+     
+module VertexMap : BatMap.S with type key = Vertex.t
+
+module VertexSet : BatSet.S with type elt = Vertex.t
+module VertexSetSet : BatSet.S with type elt = VertexSet.t
+module VertexSetMap : BatMap.S with type key = VertexSet.t
+
+module EdgeSet : BatSet.S with type elt = Edge.t
+
+module EdgeMap : BatMap.S with type key = Edge.t
 
 (* VertexMap auxiliaries *)
 
@@ -13,7 +29,7 @@ val print_vertex_map : ('a -> string) -> 'a VertexMap.t -> unit
 (* graph *)
 
 type t
-
+  
 (* raise BadVertex if a vertex v does not belong to a graph's set of vertices, ie: 0..num_vertex-1 *)
 
 exception BadVertex of Integer.t
@@ -30,6 +46,12 @@ val create : Integer.t -> t
 
 val num_vertices : t -> Integer.t
 
+  
+val fold_vertices : (Vertex.t -> 'a -> 'a) -> Integer.t -> 'a -> 'a
+  
+(** Vertices in the adjacency graph *)
+val get_vertices : t -> VertexSet.t
+  
 (* edges in the graph *)
 
 val edges : t -> (Integer.t * Integer.t) list
@@ -57,3 +79,11 @@ val print : t -> unit
 (* graph to string *)
 
 val to_string : t -> string
+
+module DrawableGraph :
+sig
+
+  val graph_dot_file: int -> string -> string
+  (** [drawGraph g name] draws the graph g in a file called name.jpg *)
+  val drawGraph : t -> string -> unit
+end
