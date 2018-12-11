@@ -172,13 +172,14 @@ let compress file info decls cfg networkOp =
 
   let rec loop (finit: AbstractionMap.abstractionMap)
                (f: AbstractionMap.abstractionMap)
+               (pre: Prefix.t)
                (ds: AdjGraph.VertexSet.t) =
     (* build abstract network *)
     let failVars, decls =
       time_profile "Build abstract network"
                    (fun () -> buildAbstractNetwork f network.graph mergeMap transMap
                                                    initMap assertMap ds
-                                                   network.attr_type symb k) in
+                                                   network.attr_type pre symb k) in
     let decls = Typing.infer_declarations info decls in
     let groups = AbstractionMap.printAbstractGroups f "\n" in
     Console.show_message groups Console.T.Blue "Abstract groups";
@@ -189,12 +190,13 @@ let compress file info decls cfg networkOp =
        let f' =
          time_profile "Refining abstraction after failures"
                       (fun () -> FailuresAbstraction.refineForFailures
-                                   cfg.draw file network.graph finit f failVars sol k ds network.attr_type)
+                                   cfg.draw file network.graph finit f failVars sol
+                                   k ds network.attr_type)
        in
        match f' with
        | None -> print_solution sol;
        | Some f' ->
-          loop finit f' ds
+          loop finit f' pre ds
   in
   PrefixSetSet.iter
     (fun prefixes ->
@@ -206,12 +208,16 @@ let compress file info decls cfg networkOp =
       let ds = PrefixMap.find pre relevantSlices in
       (* find the initial abstraction function for these destinations *)
       let f =
-        time_profile "Computing Abstraction"
-                     (fun () -> Abstraction.findAbstraction network.graph
-                                                            transMap mergeMap ds)
+        time_profile "Computing Abstraction for K failures"
+                     (fun () ->
+                       let f = Abstraction.findAbstraction network.graph
+                                                           transMap mergeMap ds in
+                       FailuresAbstraction.refineK network.graph f ds k)
       in
+      (* let groups = AbstractionMap.printAbstractGroups f "\n" in *)
+      (* Console.show_message groups Console.T.Blue "Abstract groups after refineK"; *)
       (* run_simulator cfg info decls  *)
-      loop f f ds) relevantSliceGroups
+      loop f f pre ds) relevantSliceGroups
 
 let parse_input (args : string array)
   : Cmdline.t * Console.info * string * Syntax.declarations =

@@ -238,7 +238,7 @@ module SmtLang =
       | CheckSat ->
          (* for now i am hardcoding the tactics here. *)
          Printf.sprintf "(check-sat-using (then simplify \
-                         ctx-simplify solve-eqs smt))"
+                          solve-eqs smt))"
       | GetModel ->
          Printf.sprintf "(get-model)"
 
@@ -537,9 +537,10 @@ let rec encode_exp_z3 descr env (e: exp) : term =
        mk_term ~tloc:e.espan
   | EMatch (e, bs) ->
      let ze1 = encode_exp_z3 descr env e in
-     (* if is_var ze1 then
-      *   encode_branches_z3 descr env ze1 bs (oget e.ety)
-      * else *)
+     (* do not create a new SMT variable if you are matching on a variable *)
+     if is_var ze1 then
+       encode_branches_z3 descr env ze1 bs (oget e.ety)
+     else
        begin
          let name = create_fresh descr "match" in
          let za = mk_constant env name (ty_to_sort (oget e.ety))
@@ -582,10 +583,10 @@ and encode_branches_z3 descr env name bs (t: ty) =
   match List.rev bs with
   | [] -> failwith "internal error (encode_branches)"
   | (p, e) :: bs ->
-      let ze = encode_exp_z3 descr env e in
-      (* we make the last branch fire no matter what *)
-      let _ = encode_pattern_z3 descr env name p t in
-      encode_branches_aux_z3 descr env name (List.rev bs) ze t
+     let ze = encode_exp_z3 descr env e in
+     (* we make the last branch fire no matter what *)
+     let _ = encode_pattern_z3 descr env name p t in
+     encode_branches_aux_z3 descr env name (List.rev bs) ze t
 
 (* I'm assuming here that the cases are exhaustive *)
 and encode_branches_aux_z3 descr env name bs accze (t: ty) =
@@ -619,57 +620,76 @@ and encode_pattern_z3 descr env zname p (t: ty) =
     match (ps, ts) with
     | [p], [t] -> encode_pattern_z3 descr env zname p t
     | ps, ts ->
-       let znames =
-         List.mapi
-           (fun i t ->
-             let sort = ty_to_sort t in
-             ( mk_constant env (Printf.sprintf "elem%d" i |> create_fresh descr) sort
-             , sort
-              , t ) )
-           ts
-       in
+       (* old encoding in commented code.
+          Would create a new variable for each expression in the tuple.
+          New encoding avoids doing that when the expression is a variable *)
        (* let znames = *)
-       (*   BatList.map2i *)
-       (*     (fun i t p -> *)
+       (*   List.mapi *)
+       (*     (fun i t -> *)
        (*       let sort = ty_to_sort t in *)
-       (*       ( (match p with *)
-       (*          | PVar x -> *)
-       (*             let local_name = create_name descr x in *)
-       (*             mk_constant env local_name sort *)
-       (*          | _ -> *)
-       (*             mk_constant env (Printf.sprintf "elem%d" i |> create_fresh descr) sort) *)
+       (*       ( mk_constant env (Printf.sprintf "elem%d" i |> create_fresh descr) sort *)
        (*       , sort *)
-       (*       , t ) ) *)
-       (*     ts ps *)
+       (*        , t ) ) *)
+       (*     ts *)
        (* in *)
-       let tup_decl = compute_decl env ty |> oget in
-       let fs = tup_decl |> get_constructors |> List.hd |> get_projections in
-       List.combine znames fs
-       |> List.iter (fun ((elem, _, _), (f, _)) ->
-              let e = mk_term (mk_app (mk_var f) [zname.t]) in
-              add_constraint env ((mk_eq elem.t e.t) |> mk_term));
-       let apps = List.map (fun (f, _) ->
-                      let e = mk_term (mk_app (mk_var f) [zname.t]) in
-                      e) fs
-       in
-       (* let matches = *)
-       (*   List.map *)
-       (*     (fun (p, (zname, _, ty)) -> *)
-       (*       match p with *)
-       (*       | PVar x -> mk_bool true |> mk_term *)
-       (*       | _ -> encode_pattern_z3 descr env zname p ty ) *)
-       (*     (List.combine ps znames) *)
-           let matches =
-             List.mapi
-               (fun i (p, app) ->
-                 encode_pattern_z3 descr env app p (List.nth ts i))
-               (List.combine ps apps)
+
+       (* if set to false, patterns won't use intermediate variables,
+          so far always slower to disable intermediate vars *)
+       let tuples_intermediate_vars = true in
+       let matches =
+         if tuples_intermediate_vars then
+           let znames =
+             BatList.map2i
+               (fun i t p ->
+                 let sort = ty_to_sort t in
+                 ( (match p with
+                    | PVar x ->
+                       let local_name = create_name descr x in
+                       mk_constant env local_name sort
+                    | _ ->
+                       mk_constant env (Printf.sprintf "elem%d" i |> create_fresh descr) sort)
+                 , sort
+                 , t ) )
+               ts ps
+           in
+           let tup_decl = compute_decl env ty |> oget in
+           let fs = tup_decl |> get_constructors |> List.hd |> get_projections in
+           List.combine znames fs
+           |> List.iter (fun ((elem, _, _), (f, _)) ->
+                  let e = mk_term (mk_app (mk_var f) [zname.t]) in
+                  add_constraint env ((mk_eq elem.t e.t) |> mk_term));
+           (* let apps = List.map (fun (f, _) -> *)
+           (*                let e = mk_term (mk_app (mk_var f) [zname.t]) in *)
+           (*                e) fs *)
+           (* in *)
+           List.map
+             (fun (p, (zname, _, ty)) ->
+               match p with
+               | PVar x -> mk_bool true |> mk_term
+               | _ -> encode_pattern_z3 descr env zname p ty )
+             (List.combine ps znames)
+               (* let matches = *)
+               (*   List.mapi *)
+               (*     (fun i (p, app) -> *)
+               (*       encode_pattern_z3 descr env app p (List.nth ts i)) *)
+               (*     (List.combine ps apps) *)
+         else
+           let znames =
+             BatList.map2i
+               (fun i t p ->  p, t ) ts ps
+           in
+           let tup_decl = compute_decl env ty |> oget in
+           let fs = tup_decl |> get_constructors |> List.hd |> get_projections in
+           List.combine znames fs
+           |> List.map (fun ((p, ty) , (f, _)) ->
+                  let e = mk_term (mk_app (mk_var f) [zname.t]) in
+                  encode_pattern_z3 descr env e p ty)
        in
        let f acc e = mk_and acc e.t in
        let b = mk_bool true in
        let base = b in
-       (List.fold_left f base matches) |>
-         mk_term)
+       (List.fold_left f base matches) |> mk_term
+  )
   | POption None, TOption _ ->
      let opt_decl = compute_decl env ty |> oget in
       let f = opt_decl |> get_constructors |> List.hd |> get_recognizer in
@@ -977,26 +997,15 @@ let rec alpha_rename_smt_term (renaming: string StringMap.t) (tm: smt_term) =
 let alpha_rename_term (renaming: string StringMap.t) (tm: term) =
   {tm with t = alpha_rename_smt_term renaming tm.t}
   
-let find_and_update (s : StringSetSet.t) (elt1: string) (elt2: string) =
-  let rec loop ssub =
-    if StringSetSet.is_empty ssub then
-      StringSetSet.add (StringSet.add elt2 (StringSet.singleton elt1)) s
-    else
-      begin
-        let (selt, ssub) = StringSetSet.pop_min ssub in
-        if (StringSet.mem elt1 selt) || (StringSet.mem elt2 selt) then
-          begin
-            let selt' = StringSet.add elt1 (StringSet.add elt2 selt) in
-            StringSetSet.update selt selt' s
-          end
-        else
-          loop ssub
-      end
-  in
-  loop s
-
 (** Removes all variable equalities *)
 let propagate_eqs (env : smt_env) =
+  let updateUnionFind eqSets s =
+    try
+      StringMap.find s eqSets, eqSets
+    with Not_found ->
+      let r = BatUref.uref s in
+      r, StringMap.add s r eqSets
+  in
   (* compute equality classes of variables and remove equalities between variables *)
   let (eqSets, new_ctx) = List.fold_left (fun (eqSets, acc) c ->
                               match c.com with
@@ -1005,20 +1014,16 @@ let propagate_eqs (env : smt_env) =
                                   | Eq (tm1, tm2) ->
                                      (match tm1, tm2 with
                                       | Var s1, Var s2 ->
-                                         (find_and_update eqSets s1 s2, acc)
+                                         let r1, eqSets = updateUnionFind eqSets s1 in
+                                         let r2, eqSets = updateUnionFind eqSets s2 in
+                                         BatUref.unite r1 r2;
+                                         (eqSets, acc)
                                       | _ -> (eqSets, c :: acc))
                                   | _ -> (eqSets, c :: acc))
-                              | _ -> (eqSets, c :: acc)) (StringSetSet.empty, []) env.ctx
-  in
-  (* choose a variable name from each set to be the representative of that set,
-     then create a map where all other variables in that set point to the representative *)
-  let renaming =
-    StringSetSet.fold (fun vs vmap ->
-        let (repr, rest) = StringSet.pop_min vs in
-        StringSet.fold (fun v vmap ->
-            StringMap.add v repr vmap) rest vmap) eqSets StringMap.empty
+                              | _ -> (eqSets, c :: acc)) (StringMap.empty, []) env.ctx
   in
 
+  let renaming = StringMap.map (fun r -> BatUref.uget r) eqSets in
   (* apply the computed renaming *)
   env.ctx <- BatList.rev_map (fun c ->
                  match c.com with
@@ -1028,8 +1033,46 @@ let propagate_eqs (env : smt_env) =
 (* remove unnecessary declarations *)
   env.const_decls <-
     ConstantSet.filter (fun cdecl ->
-        if StringMap.mem cdecl.cname renaming then false else true) env.const_decls;
+        try
+          let repr = StringMap.find cdecl.cname renaming in
+          if repr = cdecl.cname then true else false
+        with Not_found -> true) env.const_decls;
   renaming, env
+  
+(* let propagate_eqs (env : smt_env) = *)
+(*   (\* compute equality classes of variables and remove equalities between variables *\) *)
+(*   let (eqSets, new_ctx) = List.fold_left (fun (eqSets, acc) c -> *)
+(*                               match c.com with *)
+(*                               | Assert tm -> *)
+(*                                  (match tm.t with *)
+(*                                   | Eq (tm1, tm2) -> *)
+(*                                      (match tm1, tm2 with *)
+(*                                       | Var s1, Var s2 -> *)
+(*                                          (find_and_update eqSets s1 s2, acc) *)
+(*                                       | _ -> (eqSets, c :: acc)) *)
+(*                                   | _ -> (eqSets, c :: acc)) *)
+(*                               | _ -> (eqSets, c :: acc)) (StringSetSet.empty, []) env.ctx *)
+(*   in *)
+(*   (\* choose a variable name from each set to be the representative of that set, *)
+(*      then create a map where all other variables in that set point to the representative *\) *)
+(*   let renaming = *)
+(*     StringSetSet.fold (fun vs vmap -> *)
+(*         let (repr, rest) = StringSet.pop_min vs in *)
+(*         StringSet.fold (fun v vmap -> *)
+(*             StringMap.add v repr vmap) rest vmap) eqSets StringMap.empty *)
+(*   in *)
+
+(*   (\* apply the computed renaming *\) *)
+(*   env.ctx <- BatList.rev_map (fun c -> *)
+(*                  match c.com with *)
+(*                  | Assert tm -> {c with com = Assert (alpha_rename_term renaming tm)} *)
+(*                  | Eval tm -> {c with com = Eval (alpha_rename_term renaming tm)} *)
+(*                  | _  -> c) new_ctx; *)
+(* (\* remove unnecessary declarations *\) *)
+(*   env.const_decls <- *)
+(*     ConstantSet.filter (fun cdecl -> *)
+(*         if StringMap.mem cdecl.cname renaming then false else true) env.const_decls; *)
+(*   renaming, env *)
 
 type smt_result = Unsat | Unknown | Sat of Solution.t
 

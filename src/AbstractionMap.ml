@@ -35,8 +35,9 @@ module UInts = struct
   let compare = Integer.compare
 end
 
-module GroupMap = Map.Make(UInts)
 type abstrId = UInts.t
+module GroupMap = BatMap.Make(UInts)
+
 
 (* when doing this in a functional style, it hangs. I am pretty sure,
    I created an infinite loop, I can't imagine the performance being

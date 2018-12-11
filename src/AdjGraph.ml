@@ -80,20 +80,28 @@ let get_vertices (m, i) =
   loop (Integer.create ~value:0 ~size:32)
 
 let edges (m, i) =
-  let my_edges v neighbors =
-    List.fold_left (fun a w -> (v, w) :: a) [] neighbors
+  let my_edges v neighbors acc =
+    List.fold_left (fun a w -> (v, w) :: a) acc neighbors
   in
   List.rev
     (VertexMap.fold
-       (fun v neighbors a -> my_edges v neighbors @ a)
+       (fun v neighbors a -> my_edges v neighbors a)
        m [])
+
+let edges_map (m, i) (f: Edge.t -> 'a) =
+  let my_edges v neighbors a =
+    List.fold_left (fun a w -> EdgeMap.add (v, w) (f (v,w)) a) a neighbors
+  in
+  VertexMap.fold
+    (fun v neighbors a -> my_edges v neighbors a)
+    m EdgeMap.empty
 
 (* a vertex v does not belong to a graph's set of vertices *)
 exception BadVertex of Integer.t
 
 let good_vertex (m, i) v =
   if Integer.compare v (Integer.of_int 0) < 0 || not (Integer.compare i v > 0)
-  then raise (BadVertex v)
+  then (Printf.printf "bad: %s" (Vertex.printVertex v); raise (BadVertex v))
 
 let good_graph g =
   List.iter
@@ -160,6 +168,79 @@ let to_string g =
   add_edges (edges g) ;
   Buffer.contents b
 
+let bfs (g: t) (rg : int EdgeMap.t) (s: Vertex.t) (t: Vertex.t) =
+  let visited = VertexSet.singleton s in
+  let path = VertexMap.empty |> VertexMap.add s s in
+  let q = Queue.create () in
+  Queue.push s q;
+  let rec loop path visited =
+    if not (Queue.is_empty q) then
+      begin
+        let u = Queue.pop q in
+        let vs = neighbors g u in
+        let visited, path =
+          List.fold_left (fun (accvs, accpath) (v: Vertex.t) ->
+              if ((not (VertexSet.mem v accvs)) && (EdgeMap.find (u,v) rg > 0)) then
+                begin
+                  Queue.push v q;
+                  (VertexSet.add v accvs, VertexMap.add v u accpath)
+                end
+              else
+                (accvs, accpath)) (visited, path) vs
+        in
+        loop path visited
+      end
+    else (path, visited)
+  in
+  let path, visited = loop path visited in
+  (VertexSet.mem t visited, path)
+
+let dfs (g: t) (rg : int EdgeMap.t) (s: Vertex.t) =
+  let rec loop u visited =
+    let visited = VertexSet.add u visited in
+    let vs = neighbors g u in
+    List.fold_left (fun accvs v ->
+        if ((EdgeMap.find (u,v) rg > 0) && (not (VertexSet.mem v accvs))) then
+          loop v accvs
+        else accvs) visited vs
+  in
+  loop s VertexSet.empty
+          
+let min_cut g s t =
+  let rg = ref (edges_map g (fun _ -> 1)) in
+  let rec loop reach path =
+    if reach then
+      begin
+        let path_flow = ref max_int in
+        let u = ref t in
+        while (!u <> s) do
+          let v = !u in
+          u := VertexMap.find !u path;
+          path_flow := min !path_flow (EdgeMap.find (!u, v) !rg)
+        done;
+        u := t;
+        while (!u <> s) do
+          let v = !u in (*current node*)
+          u := VertexMap.find !u path; (*parent node*)
+          rg := EdgeMap.modify (!u, v) (fun n -> n - !path_flow) !rg;
+          rg := EdgeMap.modify (v, !u) (fun n -> n + !path_flow) !rg
+        done;
+        let reach, path = bfs g !rg s t in
+        loop reach path
+      end
+  in
+  let reach, path = bfs g !rg s t in
+  loop reach path;
+
+  let visited = dfs g !rg s in
+  let acc = (EdgeSet.empty, VertexSet.empty, VertexSet.empty) in
+  EdgeMap.fold (fun (u,v) _ (cutset, sset, tset) ->
+      if (VertexSet.mem u visited) && (not (VertexSet.mem v visited)) then
+        (EdgeSet.add (u,v) cutset, VertexSet.add u sset, VertexSet.add v tset)
+      else
+        (cutset, sset, tset)) !rg acc
+  
+        
 open Graph
 
 module BoolOrdered = struct

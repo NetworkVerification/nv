@@ -32,6 +32,9 @@ module FailuresAbstraction :
       AdjGraph.VertexSet.t ->
       Syntax.ty ->
       AbstractionMap.abstractionMap option
+
+    val refineK : AdjGraph.t -> AbstractionMap.abstractionMap ->
+                  AdjGraph.VertexSet.t -> int -> AbstractionMap.abstractionMap
   end
 
      
@@ -46,6 +49,7 @@ sig
                              (AdjGraph.Vertex.t, Syntax.exp) Hashtbl.t ->
                              AdjGraph.VertexSet.t ->
                              Syntax.ty ->
+                             Slicing.Prefix.t ->
                              (Syntax.var * Syntax.ty_or_exp) list ->
                              int -> (Var.t AdjGraph.EdgeMap.t) * Syntax.declarations
 

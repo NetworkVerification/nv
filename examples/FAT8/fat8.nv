@@ -1,6 +1,9 @@
 type attribute = (option[int],option[int],option[(int, int, int, int)],option[(int,int,int,int)],option[int])
 
+
 symbolic d : (int, int)
+
+(*let d = (1174418688, 24) *)
 
 let edges = {
   19-20;
@@ -1530,8 +1533,8 @@ let init node =
      else (None,None,None,None,None)
   | _ -> (None,None,None,None,None)
 
- let transferOspf edge o =
-   match o with
+ let transferOspf edge o = None
+  (* match o with
    | None -> None
    | Some (ad,cost,areaType,areaId) -> (
    match edge with
@@ -2047,7 +2050,7 @@ let init node =
    | (68,59) -> None
    | (11,22) -> None
    | (51,69) -> None
-)
+) *)
  let transferBgp edge b =
    match b with
    | None -> None
