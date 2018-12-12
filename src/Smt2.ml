@@ -195,8 +195,8 @@ module SmtLang =
       | Var s -> s
       | AtMost (ts, t1) ->
          Printf.sprintf "((_ pble %s %s) %s)"
-                        (printList (fun _ -> "1") ts "" " " "")
                         (smt_term_to_smt t1)
+                        (printList (fun _ -> "1") ts "" " " "")
                         (printList (fun x -> smt_term_to_smt x) ts "" " " "")
       | Constructor (name, sort) -> name
       | App (Constructor (name, sort), ts) when ts = [] ->
