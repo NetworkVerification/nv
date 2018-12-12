@@ -31,6 +31,7 @@ type op =
   | UEq
   | ULess of bitwidth
   | ULeq of bitwidth
+  | AtMost of int
   | MCreate
   | MGet
   | MSet

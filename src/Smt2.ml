@@ -63,6 +63,7 @@ module SmtLang =
       | Leq of smt_term * smt_term
       | Ite of smt_term * smt_term * smt_term
       | Var of string
+      | AtMost of (smt_term list) * smt_term
       | Constructor of string * sort (** constructor name, instantiated sort*)
       | App of smt_term * (smt_term list)
              
@@ -128,6 +129,8 @@ module SmtLang =
 
     let mk_ite t1 t2 t3 = Ite (t1, t2, t3)
 
+    let mk_atMost t1 t2 = AtMost (t1, t2)
+
     let mk_term ?(tdescr="") ?(tloc= Span.default) (t: smt_term) =
       {t; tdescr; tloc}
             
@@ -190,6 +193,11 @@ module SmtLang =
          Printf.sprintf "(ite %s %s %s)" (smt_term_to_smt t1) (smt_term_to_smt t2)
                         (smt_term_to_smt t3)
       | Var s -> s
+      | AtMost (ts, t1) ->
+         Printf.sprintf "((_ pble %s %s) %s)"
+                        (printList (fun _ -> "1") ts "" " " "")
+                        (smt_term_to_smt t1)
+                        (printList (fun x -> smt_term_to_smt x) ts "" " " "")
       | Constructor (name, sort) -> name
       | App (Constructor (name, sort), ts) when ts = [] ->
          Printf.sprintf "(as %s %s)" name (sort_to_smt sort) 
@@ -491,6 +499,18 @@ let rec encode_exp_z3 descr env (e: exp) : term =
        let ze2 = encode_exp_z3 descr env e2 in
        mk_leq ze1.t ze2.t |>
          mk_term ~tloc:e.espan
+    | AtMost _, [e1;e2] when is_value e2 ->
+       (match e1.e with
+        | ETuple es when (List.for_all (fun e ->
+                              match e.e with
+                              | EVar _ -> true
+                              | _ -> false) es) ->
+           let zes = List.map (fun e -> (encode_exp_z3 descr env e).t) es in
+           let ze2 = encode_value_z3 descr env (Syntax.to_value e2) in
+           mk_atMost zes ze2.t |>
+             mk_term ~tloc:e.espan
+        | _ -> failwith "AtMost operator requires a list of boolean variables")
+    | AtMost _,_ -> failwith "Wrong arguments for AtMost"
     | MCreate, [e1] ->
        failwith "not implemented"
     | MGet, [e1; e2] ->
@@ -986,6 +1006,9 @@ let rec alpha_rename_smt_term (renaming: string StringMap.t) (tm: smt_term) =
        Ite (alpha_rename_smt_term renaming tm1,
             alpha_rename_smt_term renaming tm2,
             alpha_rename_smt_term renaming tm3)
+    | AtMost (tm1, tm2) ->
+       AtMost (List.map (alpha_rename_smt_term renaming) tm1,
+               alpha_rename_smt_term renaming tm2)
     | Var s ->
        (match StringMap.Exceptionless.find s renaming with
         | None -> tm

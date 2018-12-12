@@ -221,15 +221,9 @@ module BuildAbstractNetwork =
     (* Helper function that constructs an MGet expression *)
     let mget (m : exp) (i : exp) : exp =
       eop MGet [m; i]
-      
-    let buildSymbolicFailures (aedges : Edge.t list) (k : int) =
-      (* symbolic variables of failures, one for each abstract edge *)
-      let failuresMap =
-        List.fold_left (fun acc (u,v) ->
-            let e = Vertex.printVertex u ^ Vertex.printVertex v in
-            let failVar = Var.fresh ("failed-" ^ e) in
-            EdgeMap.add (u,v) failVar acc) EdgeMap.empty aedges in
 
+    let failuresConstraint_arith (k: int) (aedges : Edge.t list)
+                                 (failuresMap: Var.t EdgeMap.t) : Syntax.exp =
       (*building the requires clause that requires
         fail1 + fail2 + .. <= k *)
       let bool2int_exp arg =
@@ -242,10 +236,34 @@ module BuildAbstractNetwork =
                       [(bool2int_exp (evar (EdgeMap.find (uhat, vhat) failuresMap))); acc],
                   Some Typing.node_ty, Span.default))
                        (e_val (vint zero)) aedges in
-      let failures_leq_k = aexp(eop (ULeq 32)
-                                    [failuresSum;
-                                     e_val (vint (Integer.create ~value:k ~size:32))],
-                                Some TBool, Span.default) in
+      aexp(eop (ULeq 32)
+               [failuresSum;
+                e_val (vint (Integer.create ~value:k ~size:32))],
+           Some TBool, Span.default)
+      
+      let failuresConstraint_pb (k: int) (failuresMap: Var.t EdgeMap.t) : Syntax.exp =
+        let arg1 = aexp(etuple (EdgeMap.fold (fun _ fv acc ->
+                                    (evar fv) :: acc) failuresMap []),
+                        Some (TTuple (List.init (EdgeMap.cardinal failuresMap)
+                                                (fun _ -> TBool))),
+                        Span.default
+                       )
+        in
+        let arg2 = aexp (e_val (vint (Integer.of_int k)), Some (TInt 32), Span.default) in
+        aexp (eop (AtMost (EdgeMap.cardinal failuresMap)) [arg1; arg2],
+              Some TBool,
+              Span.default)
+
+      
+    let buildSymbolicFailures (aedges : Edge.t list) (k : int) =
+      (* symbolic variables of failures, one for each abstract edge *)
+      let failuresMap =
+        List.fold_left (fun acc (u,v) ->
+            let e = Vertex.printVertex u ^ Vertex.printVertex v in
+            let failVar = Var.fresh ("failed-" ^ e) in
+            EdgeMap.add (u,v) failVar acc) EdgeMap.empty aedges in
+
+      let failures_leq_k = failuresConstraint_pb k failuresMap in
       (*build and returning the declarations *)
       (failuresMap, (EdgeMap.fold (fun _ fvar acc ->
                          (DSymbolic (fvar, Ty TBool) :: acc)) failuresMap

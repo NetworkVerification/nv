@@ -36,6 +36,7 @@ type op =
   | UEq
   | ULess of bitwidth
   | ULeq of bitwidth
+  | AtMost of int
   | MCreate
   | MGet
   | MSet
@@ -525,11 +526,11 @@ and hash_op op =
   | MMap -> 8
   | MMapFilter -> 9
   | MMerge -> 10
-  | UAdd n -> 11  + n
-  | USub n -> 11  + n + 64
-  | ULess n -> 11 + n + 64 * 2
-  | ULeq n -> 11  + n + 64 * 3
-
+  | UAdd n -> 11  + n + 256
+  | USub n -> 11  + n + 256 * 2
+  | ULess n -> 11 + n + 256 * 3
+  | ULeq n -> 11  + n + 256 * 4
+  | AtMost n -> 12 + n
 (* hashconsing information/tables *)
 
 let meta_v : (v, value) meta =
@@ -568,6 +569,7 @@ let arity op =
   | UEq -> 2
   | ULess _ -> 2
   | ULeq _ -> 2
+  | AtMost _ -> 2
   | MCreate -> 1
   | MGet -> 2
   | MSet -> 3
