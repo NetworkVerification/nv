@@ -138,7 +138,7 @@ let inline_declaration (env: exp Env.t) (d: declaration) =
   match d with
   | DLet (x, tyo, e) ->
      let e = inline_exp env e in
-     (* TODO: Ask Ryan, why not always inline? *)
+     (* TODO: Ask Ryan, why not always inline? performance reasons presumably? *)
      (Env.update env x e, None)
       (* if is_function_ty e then (Env.update env x e, None) *)
       (* else (env, Some (DLet (x, tyo, e))) *)

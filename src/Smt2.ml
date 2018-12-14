@@ -326,7 +326,7 @@ type smt_env =
   { mutable ctx: command list
   ; mutable const_decls: ConstantSet.t (** named constant and its sort *)
   ; mutable type_decls: datatype_decl StringMap.t
-  ; symbolics: (Var.t * ty_or_exp) list }
+  ; mutable symbolics: Syntax.ty_or_exp VarMap.t }
   
 let create_fresh descr s =
   Printf.sprintf "%s-%s" descr (Var.fresh s |> Var.to_string)
@@ -436,9 +436,12 @@ let mk_constant (env : smt_env) ?(cdescr = "") ?(cloc = Span.default) cname csor
 let add_constraint (env : smt_env) (c : term) =
   env.ctx <- (mk_assert c |> mk_command) :: env.ctx
 
-let is_symbolic syms x =
-  List.exists (fun (y, e) -> Var.equals x y) syms
+let add_symbolic (env : smt_env) (b: Var.t) (ty: Syntax.ty) =
+  env.symbolics <- VarMap.add b (Syntax.Ty ty) env.symbolics
 
+let is_symbolic syms x =
+  VarMap.mem x syms
+  
 let is_var (tm: SmtLang.term) =
   match tm.t with
   | Var _ -> true
@@ -982,6 +985,114 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
   add_symbolic_constraints env (get_requires ds) (env.symbolics (*@ sym_vars*));
   env
 
+(** * Alternative SMT encoding *)
+
+let node_exp (u: Integer.t) : Syntax.exp =
+  aexp(e_val (vint u), Some Typing.node_ty, Span.default)
+
+let edge_exp (u: Integer.t) (v: Integer.t) : Syntax.exp =
+  aexp(e_val (vtuple [vint u; vint v]),
+       Some Typing.edge_ty, Span.default)
+  
+(** An alternative SMT encoding, where we build an NV expression for
+   each label, partially evaluate it and then encode it *)
+let encode_z3_normalized (ds: declarations) sym_vars : smt_env =
+  let env = init_solver ds in
+  let eassert = get_assert ds in
+  let emerge, etrans, einit, nodes, edges, aty =
+    match
+      ( get_merge ds
+      , get_trans ds
+      , get_init ds
+      , get_nodes ds
+      , get_edges ds
+      , get_attr_type ds )
+    with
+    | Some emerge, Some etrans, Some einit, Some n, Some es, Some aty ->
+       (emerge, etrans, einit, n, es, aty)
+    | _ ->
+       Console.error
+         "missing definition of nodes, edges, merge, trans or init"
+  in
+  (* Create a map from nodes to smt variables denoting the label of the node*)
+  let labelling =
+    AdjGraph.fold_vertices (fun u acc ->
+        add_symbolic env (label_var u |> Var.create) aty;
+        let lblt = mk_constant env (label_var u) (ty_to_sort aty) in
+        AdjGraph.VertexMap.add u lblt acc)
+                           nodes AdjGraph.VertexMap.empty
+  in
+
+
+  let init_exp u = eapp einit (node_exp u) in
+  let trans_exp u v x = eapp (eapp etrans (edge_exp u v)) x in
+  let merge_exp u x y = eapp (eapp (eapp emerge (node_exp u)) x) y in
+
+
+  (* map from nodes to incoming messages*)
+  let incoming_messages_map =
+    List.fold_left (fun acc (u,v) -> 
+        let lblu = try let varu,tyu = AdjGraph.VertexMap.find u env.symbolics in
+                         aexp (evar varu, Some tyu, Span.default)
+                   with Not_found -> failwith "label variable not found"
+        in
+        let transuv = trans_exp u v lblu in
+        AdjGraph.VertexMap.modify_def [] v
+                                      (fun us -> transuv :: us) acc)
+                   AdjGraph.VertexMap.empty edges
+  in
+
+  (* map from nodes to the merged messages *)
+  let merged_messages_map =
+    AdjGraph.fold_vertices (fun u acc ->
+        let messages = AdjGraph.VertexMap.find_default [] u incoming_messages_map in
+        let best = List.fold_left (fun accm m -> merge_exp u m accm)
+                                  (init_exp u) messages
+        in
+        let str = Printf.sprintf "merge-%d" (Integer.to_int u) in
+        let best_smt = Interp.CBN.interp_exp best |> encode_exp_z3 str env in
+        AdjGraph.VertexMap.add u best_smt acc) nodes AdjGraph.VertexMap.empty
+  in
+
+  AdjGraph.fold_vertices (fun u () ->
+      let lblu = try AdjGraph.VertexMap.find u labelling
+                 with Not_found -> failwith "label variable not found"
+      in
+      let merged = try AdjGraph.VertexMap.find u merged_messages_map
+                   with Not_found -> failwith "merged variable not found"
+      in
+      let lblu_smt = mk_constant env (label_var (Integer.of_int i)) (ty_to_sort aty) in
+      add_constraint env (mk_term (mk_eq lblu
+  (* smt-label-0 = encode ([[merge 0 (merge 0 (trans (1,0) label-1) (trans (2,0) label-2)) init-0]]) *)
+  
+
+  for i = 0 to Integer.to_int nodes - 1 do
+    let init = AdjGraph.VertexMap.find (Integer.of_int i) !init_map in
+    let in_edges =
+      try AdjGraph.VertexMap.find (Integer.of_int i) !incoming_map
+      with Not_found -> []
+    in
+    let node = avalue (vint (Integer.of_int i), Some Typing.node_ty, Span.default) in
+    let emerge_i = Interp.interp_partial_fun emerge [node] in
+    let idx = ref 0 in
+    let merged =
+      List.fold_left
+        (fun acc (x, y) ->
+          incr idx ;
+          let trans = AdjGraph.EdgeMap.find (x, y) !trans_map in
+          let str = Printf.sprintf "merge-%d-%d" i !idx in
+          let merge_result, x, y =
+            encode_z3_merge str env emerge_i
+          in
+          add_constraint env (mk_term (mk_eq trans.t x.t));
+          add_constraint env (mk_term (mk_eq acc.t y.t));
+          merge_result )
+        init in_edges
+    in
+    let l = mk_constant env (label_var (Integer.of_int i)) (ty_to_sort aty) in
+    add_constraint env (mk_term (mk_eq l.t merged.t));
+    labelling := AdjGraph.VertexMap.add (Integer.of_int i) l !labelling
+  
 (** ** SMT query optimization *)
 let rec alpha_rename_smt_term (renaming: string StringMap.t) (tm: smt_term) =
     match tm with

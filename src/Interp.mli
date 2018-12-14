@@ -17,3 +17,9 @@ val interp_closure : closure -> value list -> value
 val interp_partial : exp -> exp
 
 val interp_partial_fun : exp -> value list -> exp
+
+module CBN :
+sig
+  val interp_partial : exp -> exp
+  val interp_partial_fun : exp -> exp list -> exp
+end
