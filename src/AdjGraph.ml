@@ -233,13 +233,13 @@ let min_cut g s t =
   loop reach path;
 
   let visited = dfs g !rg s in
-  let acc = (EdgeSet.empty, VertexSet.empty, VertexSet.empty) in
-  EdgeMap.fold (fun (u,v) _ (cutset, sset, tset) ->
-      if (VertexSet.mem u visited) && (not (VertexSet.mem v visited)) then
-        (EdgeSet.add (u,v) cutset, VertexSet.add u sset, VertexSet.add v tset)
-      else
-        (cutset, sset, tset)) !rg acc
-  
+  let cut = EdgeMap.fold (fun (u,v) _ cutset ->
+                if (VertexSet.mem u visited) && (not (VertexSet.mem v visited)) then
+                  (EdgeSet.add (u,v) cutset)
+                else
+                  cutset) !rg EdgeSet.empty
+  in
+  (cut, visited, VertexSet.diff (get_vertices g) visited)
         
 open Graph
 

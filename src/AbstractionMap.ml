@@ -111,11 +111,16 @@ let createAbstractionMap g : abstractionMap =
   partitionNodes f (f.nextId) (AdjGraph.get_vertices g)
 
 let fold (g: AbstractNode.t -> 'a -> 'a) (f: abstractionMap) (acc: 'a) : 'a =
-  GroupMap.fold (fun idx us acc -> g us acc) f.absGroups acc
+  GroupMap.fold (fun _ us acc -> g us acc) f.absGroups acc
+
+let foldi (g: abstrId -> AbstractNode.t -> 'a -> 'a) (f: abstractionMap) (acc: 'a) : 'a =
+  GroupMap.fold (fun idx us acc -> g idx us acc) f.absGroups acc
 
 let size (f: abstractionMap) : int =
   GroupMap.cardinal (f.absGroups)
-(* f.nextId |> UInt32.to_int *)
+
+let normalized_size (f: abstractionMap) : int =
+  f.nextId |> Integer.to_int
 
 let copyMap (f: abstractionMap) =
   {absGroups = f.absGroups; groupId = f.groupId; nextId = f.nextId}

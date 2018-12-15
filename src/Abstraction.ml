@@ -7,7 +7,7 @@ open Hashtbl
 open Syntax
 open BatSet
 
-let debugAbstraction = ref true
+let debugAbstraction = ref false
 
 let zero = Integer.create ~value:0 ~size:32
 let one = Integer.create ~value:1 ~size:32
@@ -955,36 +955,72 @@ module FailuresAbstraction =
 
 
     (* TODO: add more factors here, such as number of nodes that have <= k cut-sets *)
-    let compare_refinements (g: AdjGraph.t) f f' =
-      Pervasives.compare (AbstractionMap.size f) (AbstractionMap.size f')
+    let compare_refinements f f' =
+      Pervasives.compare (AbstractionMap.normalized_size f)
+                         (AbstractionMap.normalized_size f')
 
-    (* compute the cuts out here, so we can use them to compare refinements. *)
-    let compute_cuts (g : AdjGraph.t) (d: abstrId) k =
-      fold_vertices (fun u acc ->
+    (* Returns a pair of cuts and set of vertices that have min-cuts <= k *)
+    let compute_cuts (g : AdjGraph.t) (d: abstrId) k (todo: VertexSet.t) =
+      let rec loop todo cuts new_todo =
+        try
+          let u, todo' = VertexSet.pop_min todo in
           if u <> d then
             begin
-              let (es, _, _) =  min_cut g d u in
+              let (es, sset, tset) =  min_cut g d u in
               (* Printf.printf "cut for node %d: " (Integer.to_int u); *)
               (* EdgeSet.iter (fun e -> Printf.printf "%s, " (printEdge e)) es; *)
+              (* Printf.printf "tset:\n"; *)
+              (* VertexSet.iter (fun u -> Printf.printf "%s, " (Vertex.printVertex u)) tset; *)
+              (* Printf.printf "sset:\n"; *)
+              (* VertexSet.iter (fun u -> Printf.printf "%s, " (Vertex.printVertex u)) sset; *)
               (* Printf.printf "\n"; *)
               if EdgeSet.cardinal es > k then
-                acc
+                loop todo' cuts new_todo
               else
-                es :: acc
+                loop (VertexSet.diff todo' tset) (es :: cuts) (VertexSet.union tset new_todo)
             end
           else
-            acc) (num_vertices g) []
+            loop todo' cuts new_todo
+        with | Not_found -> (cuts, new_todo)
+      in loop todo [] VertexSet.empty
 
-    let refinement_breadth = 3
+    (* old version that does not remove the tset from todo *)
+      (* VertexSet.fold (fun u (cuts, new_todo) -> *)
+      (*     if u <> d then *)
+      (*       begin *)
+      (*         let (es, _, _) =  min_cut g d u in *)
+      (*         (\* Printf.printf "cut for node %d: " (Integer.to_int u); *\) *)
+      (*         (\* EdgeSet.iter (fun e -> Printf.printf "%s, " (printEdge e)) es; *\) *)
+      (*         (\* Printf.printf "\n"; *\) *)
+      (*         if EdgeSet.cardinal es > k then *)
+      (*           (cuts, new_todo) *)
+      (*         else *)
+      (*           (es :: cuts, VertexSet.add u new_todo) *)
+      (*       end *)
+      (*     else *)
+      (*       (cuts, new_todo)) todo ([], VertexSet.empty) *)
+
+    (* given a set of nodes in the abstraction f that need to be
+       checked for min-cut, returns a new set of nodes in fnew, a
+       refinement of f, that should be checked for min-cut *)
+    let update_todo_set (f: abstractionMap) (fnew: abstractionMap) (todo: VertexSet.t) =
+      AbstractionMap.foldi (fun uhat _ acc ->
+          let uhat_orig = get_orig_group f fnew uhat in
+          if VertexSet.mem uhat_orig todo then
+            VertexSet.add uhat acc
+          else acc) fnew VertexSet.empty
+
+    let refinement_breadth = 4
                            
-    let refine_step (g: AdjGraph.t) forig (f: abstractionMap) ds k=
+    let refine_step (g: AdjGraph.t) forig (f: abstractionMap) (todo: VertexSet.t) ds k =
       let ag = BuildAbstractNetwork.buildAbstractAdjGraph g f in
       let d = getId f (VertexSet.choose ds) in (*assume only one destination for now *)
-      let cuts = compute_cuts ag d k in
+      let cuts, todo = compute_cuts ag d k todo in
       (* AdjGraph.print ag; *)
       match cuts with
       | [] -> (* no min-cuts <= k, we are done. *)
          (* Printf.printf "stopped because of no cuts\n"; *)
+         assert (VertexSet.is_empty todo);
          []
       | _ ->
          (* sort (reachable) vertices by frequency of appereance in cut-sets. *)
@@ -1027,6 +1063,8 @@ module FailuresAbstraction =
          in
          match nodes_to_split with
          | None -> (* cannot refine further, return an empty list.*)
+            (* what happens in this case with todo?*)
+            (* assert (VertexSet.is_empty todo); *)
             []
          | Some uhats ->
             (* for each element of the list, note that they all belong the same original group:
@@ -1057,13 +1095,18 @@ module FailuresAbstraction =
                           let uss = createFreshAbstractNodes uss in
                           let f' = splitSet f uss in
                           Some (abstractionTopological f' g)) vhats) @ acc) [] uhat_neighbors
-              |> BatList.sort (compare_refinements g)
+              |> BatList.sort (compare_refinements)
             in
-            Printf.printf "size of refinements:%d\n" (List.length refinements);
-            (*get the single best refinement. If none are available,
-                 it means all of them are full mesh, so just split the
-                 node randomly. *)
-            let best_refinements = BatList.take refinement_breadth refinements in
+            (* Printf.printf "size of refinements:%d\n" (List.length refinements); *)
+            (*get k-best refinements (defined by
+               refinement_breadth). If none are available, it means
+               all of them are full mesh, so just split the node
+               randomly. *)
+            BatList.iter (fun f -> Printf.printf " refinements before filtering:%d\n" (AbstractionMap.size f)) refinements;
+            let best_refinements =
+              BatList.take refinement_breadth refinements |>
+                BatList.sort_unique (fun x y -> compare_refinements x y)
+            in
             match best_refinements with
             | [] -> (* if everything was a full mesh, take a random split *)
                let us1, us2 =
@@ -1075,45 +1118,70 @@ module FailuresAbstraction =
                                              (AbstractNodeSet.singleton us1)
                in
                let f' = splitSet f uss in
-               [abstractionTopological f' g]
-            | _ -> best_refinements
+               let f' = abstractionTopological f' g in
+               [(f', update_todo_set f f' todo)]
+            | _ -> List.map (fun fnew -> (fnew, update_todo_set f fnew todo)) best_refinements
       
     (* computes a refinement of f, s.t. all sources (currently sources
        are not defined, all nodes are considered sources) have at
        least k+1 disjoint paths to the destination *)
-        (* TODO: find source nodes, we only want to min-cut source nodes *)
-    (*TODO: implement a todo set, so we don't do min-cuts on the nodes
-       that are done.  Initially todo has all the abstract nodes
-       (except for the destination).  Iterate over todo nodes, if a
-       node has a cut-set larger than k then it doesn't go into the
-       todo set, otherwise it goes in the todo set.
-       After refinement, we need to update the todo set. We do that by:
-       Go over each abstract node in the new set, get their represtantive,
-       then go to the previous abstract node and see if it was in the todo-node.
-       If it was, then the new abstract node goes into the todo, otherwise it does not.
-
-     *)
+    (* TODO: find source nodes, we only want to min-cut source nodes *)
     let refineK (g: AdjGraph.t) (forig: abstractionMap) (ds: VertexSet.t) (k: int) =
       let q = Queue.create () in
-      Queue.add forig q;
-      let groups = AbstractionMap.printAbstractGroups forig "\n" in
-      Console.show_message groups Console.T.Blue "Abstract groups before refineK";
-      let rec loop completed =
+      let todo =
+        AdjGraph.fold_vertices
+          (fun uhat acc -> VertexSet.add uhat acc)
+          (AbstractionMap.normalized_size forig |> Integer.of_int) VertexSet.empty in
+      Queue.add (forig, todo) q;
+      (* let groups = AbstractionMap.printAbstractGroups forig "\n" in *)
+      (* Console.show_message groups Console.T.Blue "Abstract groups before refineK"; *)
+      (* making minimum a reference, as an optimization on the final step*)
+      let counter = ref 0 in
+      let rec loop completed minimum =
         try
-          let f = Queue.pop q in
-          match refine_step g forig f ds k with
-          | [] -> loop (f :: completed)
+          let (f, todo) = Queue.pop q in
+          match refine_step g forig f todo ds k with
+          | [] ->
+             ( match minimum with
+               | None -> loop (completed+1) (Some f)
+               | Some minimum ->
+                  if (compare_refinements f minimum < 0) then
+                    loop (completed+1) (Some f)
+                  else
+                    loop (completed+1) (Some minimum))
           | fs ->
-             List.iter (fun f -> Queue.push f q) fs;
-             loop completed
+             incr counter;
+             Printf.printf "counter: %d\n" !counter;
+             (* If we have already find a refinement that is better
+                   than the one we are exploring right now, then stop
+                   exploring it *)
+             List.iter (fun (f,todo) ->
+                 Printf.printf "size of refinements:%d\n" (AbstractionMap.size f);
+                 match minimum with
+                 | None ->
+                    Queue.push (f,todo) q
+                 | Some minimum ->
+                    if compare_refinements f minimum = -1 then
+                      Queue.push (f,todo) q
+                    else ()) fs;
+             loop completed minimum
         with
-          Queue.Empty -> completed
+          Queue.Empty -> completed, minimum
       in
-      let fs = loop [] in
-      List.iter (fun f -> Printf.printf "completed_sizes: %d\n" (AbstractionMap.size f)) fs;
-      Printf.printf "completed refinements: %d\n" (List.length fs);
-      let f = fst (BatList.min_max ~cmp:(compare_refinements g) fs) in
-      f
+      match loop 0 None with
+      | completed, Some f ->
+         Printf.printf "completed refinements: %d\n" completed;
+         (* for statistics only *)
+         (* let ag = BuildAbstractNetwork.buildAbstractAdjGraph g f in *)
+         (* let d = getId f (VertexSet.choose ds) in *)
+         (* for u=0 to (AdjGraph.num_vertices ag |> Integer.to_int) do *)
+         (*    let (es, sset, tset) =  min_cut ag d (Integer.of_int u) in *)
+         (*      if (EdgeSet.cardinal es > (k+1)) then *)
+         (*        Printf.printf "not optimal\n" *)
+         (* done; *)
+         f
+      | _, _ ->
+         failwith "found no refinement"
            
   end
 

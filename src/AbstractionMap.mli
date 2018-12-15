@@ -55,8 +55,14 @@ val createAbstractionMap : AdjGraph.t -> abstractionMap
 
 val fold: (AbstractNode.t -> 'a -> 'a) -> abstractionMap -> 'a -> 'a
 
+val foldi: (abstrId -> AbstractNode.t -> 'a -> 'a) -> abstractionMap -> 'a -> 'a
+
 (** Returns the number of abstract nodes *)
 val size: abstractionMap -> int
+
+(** Returns the number of abstract node. Only use on normalized maps,
+   O(1) instead of O(logn) operation *)
+val normalized_size: abstractionMap -> int
 
 val copyMap: abstractionMap -> abstractionMap
   
