@@ -173,7 +173,8 @@ let compress file info decls cfg networkOp =
   let rec loop (finit: AbstractionMap.abstractionMap)
                (f: AbstractionMap.abstractionMap)
                (pre: Prefix.t)
-               (ds: AdjGraph.VertexSet.t) =
+               (ds: AdjGraph.VertexSet.t)
+               (k: int) =
     (* build abstract network *)
     let failVars, decls =
       time_profile "Build abstract network"
@@ -196,7 +197,7 @@ let compress file info decls cfg networkOp =
        match f' with
        | None -> print_solution sol;
        | Some f' ->
-          loop finit f' pre ds
+          loop finit f' pre ds k
   in
   PrefixSetSet.iter
     (fun prefixes ->
@@ -206,18 +207,23 @@ let compress file info decls cfg networkOp =
       let pre = PrefixSet.min_elt prefixes in
       (* find the nodes this class is announced from *)
       let ds = PrefixMap.find pre relevantSlices in
-      (* find the initial abstraction function for these destinations *)
-      let f =
-        time_profile "Computing Abstraction for K failures"
-                     (fun () ->
-                       let f = Abstraction.findAbstraction network.graph
-                                                           transMap mergeMap ds in
-                       FailuresAbstraction.refineK network.graph f ds k)
-      in
+      (* do abstraction for 0...k failures *)
+      for i=0 to k do
+        Console.show_message "" Console.T.Green
+                             (Printf.sprintf "Checking for %d failures" i);
+        (* find the initial abstraction function for these destinations *)
+        let f =
+          time_profile "Computing Abstraction for K failures"
+                       (fun () ->
+                         let f = Abstraction.findAbstraction network.graph
+                                                             transMap mergeMap ds in
+                         FailuresAbstraction.refineK network.graph f ds i)
+        in
       (* let groups = AbstractionMap.printAbstractGroups f "\n" in *)
       (* Console.show_message groups Console.T.Blue "Abstract groups after refineK"; *)
       (* run_simulator cfg info decls  *)
-      loop f f pre ds) relevantSliceGroups
+        loop f f pre ds i
+      done) relevantSliceGroups
 
 let parse_input (args : string array)
   : Cmdline.t * Console.info * string * Syntax.declarations =

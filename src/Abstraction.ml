@@ -1102,7 +1102,7 @@ module FailuresAbstraction =
                refinement_breadth). If none are available, it means
                all of them are full mesh, so just split the node
                randomly. *)
-            BatList.iter (fun f -> Printf.printf " refinements before filtering:%d\n" (AbstractionMap.size f)) refinements;
+            (* BatList.iter (fun f -> Printf.printf " refinements before filtering:%d\n" (AbstractionMap.size f)) refinements; *)
             let best_refinements =
               BatList.take refinement_breadth refinements |>
                 BatList.sort_unique (fun x y -> compare_refinements x y)
@@ -1136,7 +1136,6 @@ module FailuresAbstraction =
       (* let groups = AbstractionMap.printAbstractGroups forig "\n" in *)
       (* Console.show_message groups Console.T.Blue "Abstract groups before refineK"; *)
       (* making minimum a reference, as an optimization on the final step*)
-      let counter = ref 0 in
       let rec loop completed minimum =
         try
           let (f, todo) = Queue.pop q in
@@ -1150,13 +1149,11 @@ module FailuresAbstraction =
                   else
                     loop (completed+1) (Some minimum))
           | fs ->
-             incr counter;
-             Printf.printf "counter: %d\n" !counter;
              (* If we have already find a refinement that is better
                    than the one we are exploring right now, then stop
                    exploring it *)
              List.iter (fun (f,todo) ->
-                 Printf.printf "size of refinements:%d\n" (AbstractionMap.size f);
+                 (* Printf.printf "size of refinements:%d\n" (AbstractionMap.size f); *)
                  match minimum with
                  | None ->
                     Queue.push (f,todo) q
@@ -1170,7 +1167,7 @@ module FailuresAbstraction =
       in
       match loop 0 None with
       | completed, Some f ->
-         Printf.printf "completed refinements: %d\n" completed;
+         Printf.printf "Completed refinements: %d\n" completed;
          (* for statistics only *)
          (* let ag = BuildAbstractNetwork.buildAbstractAdjGraph g f in *)
          (* let d = getId f (VertexSet.choose ds) in *)
