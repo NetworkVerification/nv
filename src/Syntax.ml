@@ -601,7 +601,7 @@ let wrap exp e = {e with ety= exp.ety; espan= exp.espan}
 
 (* Constructors *)
 
-let vbool b = value (VBool b)
+let vbool b = {(value (VBool b)) with vty = Some TBool}
 
 let vint i = value (VInt i)
 
@@ -964,18 +964,19 @@ module BddMap = struct
     (Mtbdd.cst B.mgr B.tbl v, ty)
 
   let rec default_value ty =
-    let v =
-      match ty with
-      | TBool -> VBool false
-      | TInt size -> VInt (Integer.create ~value:0 ~size:size)
-      | TTuple ts -> VTuple (List.map default_value ts)
-      | TOption ty -> VOption None
-      | TMap (ty1, ty2) ->
-        VMap (create ~key_ty:ty1 (default_value ty2))
-      | TVar _ | QVar _ | TArrow _ ->
-        failwith "internal error (default_value)"
-    in
-    value v
+    match ty with
+    | TBool -> avalue (vbool false, Some ty, Span.default)
+    | TInt size ->
+       avalue (vint (Integer.create ~value:0 ~size:size), Some ty, Span.default)
+    | TTuple ts ->
+       avalue (vtuple (List.map default_value ts), Some ty, Span.default)
+    | TOption _ ->
+       avalue (voption None, Some ty, Span.default)
+    | TMap (ty1, ty2) ->
+       avalue (vmap (create ~key_ty:ty1 (default_value ty2)), Some ty, Span.default)
+    | TVar _ | QVar _ | TArrow _ ->
+       failwith "internal error (default_value)"
+
 
   let value_to_bdd (v: value) : Bdd.vt =
     let rec aux v idx =

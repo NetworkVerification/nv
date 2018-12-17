@@ -768,6 +768,311 @@ and encode_value_z3 descr env (v: Syntax.value) =
   | VClosure _ -> failwith "internal error (closure in smt)"
   | VMap map -> failwith "not doing maps yet"
 
+(** * SMT encoding without SMT-datatypes *)
+
+module Unboxed =
+  struct    
+    let rec encode_exp_z3 descr env (e: exp) : term list =
+      match e.e with
+      | EVar x ->
+         let name =
+           if is_symbolic env.symbolics x then
+             begin
+               (* Printf.printf "var:%s\n" (Var.to_string x); *)
+               Var.to_string x
+             end
+           else create_name descr x
+         in
+         match e.ety with
+         | None -> failwith "need the type to encode variable"
+         | Some ty ->
+            match ty with
+            | TOption ty ->
+               [(mk_var ("isSome-" ^ name) |> (mk_term ~tloc:e.espan));
+                (mk_var ("val-" ^ name) |> (mk_term ~tloc:e.espan))]
+            | TTuple ts ->
+         (mk_var name) |> (mk_term ~tloc:e.espan)
+      | EVal v -> encode_value_z3 descr env v
+      | EOp (op, es) -> (
+        match (op, es) with
+        | Syntax.And, [e1;e2] ->
+           let ze1 = encode_exp_z3 descr env e1 in
+           let ze2 = encode_exp_z3 descr env e2 in
+           mk_and (ze1.t) (ze2.t) |>
+             mk_term ~tloc:e.espan
+        | Syntax.Or, [e1;e2] ->
+           let ze1 = encode_exp_z3 descr env e1 in
+           let ze2 = encode_exp_z3 descr env e2 in
+           mk_or ze1.t ze2.t |>
+             mk_term ~tloc:e.espan
+        | Not, _ ->
+           let ze = List.hd es |> encode_exp_z3 descr env in
+           mk_not ze.t |>
+             mk_term ~tloc:e.espan
+        | Syntax.UAdd _, [e1;e2] ->
+           let ze1 = encode_exp_z3 descr env e1 in
+           let ze2 = encode_exp_z3 descr env e2 in
+           mk_add ze1.t ze2.t |>
+             mk_term ~tloc:e.espan
+        | Syntax.USub _, [e1;e2] ->
+           let ze1 = encode_exp_z3 descr env e1 in
+           let ze2 = encode_exp_z3 descr env e2 in
+           mk_sub ze1.t ze2.t |>
+             mk_term ~tloc:e.espan
+        | UEq, [e1;e2] ->
+           let ze1 = encode_exp_z3 descr env e1 in
+           let ze2 = encode_exp_z3 descr env e2 in
+           mk_eq ze1.t ze2.t |>
+             mk_term ~tloc:e.espan
+        | ULess _, [e1;e2] ->
+           let ze1 = encode_exp_z3 descr env e1 in
+           let ze2 = encode_exp_z3 descr env e2 in
+           mk_lt ze1.t ze2.t |>
+             mk_term ~tloc:e.espan
+        | ULeq _, [e1;e2] ->
+           let ze1 = encode_exp_z3 descr env e1 in
+           let ze2 = encode_exp_z3 descr env e2 in
+           mk_leq ze1.t ze2.t |>
+             mk_term ~tloc:e.espan
+        | AtMost _, [e1;e2] when is_value e2 ->
+           (match e1.e with
+            | ETuple es when (List.for_all (fun e ->
+                                  match e.e with
+                                  | EVar _ -> true
+                                  | _ -> false) es) ->
+               let zes = List.map (fun e -> (encode_exp_z3 descr env e).t) es in
+               let ze2 = encode_value_z3 descr env (Syntax.to_value e2) in
+               mk_atMost zes ze2.t |>
+                 mk_term ~tloc:e.espan
+            | _ -> failwith "AtMost operator requires a list of boolean variables")
+        | AtMost _,_ -> failwith "Wrong arguments for AtMost"
+        | MCreate, [e1] ->
+           failwith "not implemented"
+        | MGet, [e1; e2] ->
+           failwith "not implemented"
+        | MSet, [e1; e2; e3] ->
+           failwith "not implemented"
+        | MMap, [{e= EFun {arg= x; argty= ty1; resty= ty2; body= e1}}; e2] ->
+           failwith "not implemented yet"
+        | MMapFilter, _ 
+          | MMerge, _
+          | _ -> failwith "internal error (encode_exp_z3)" )
+      | EIf (e1, e2, e3) ->
+         let ze1 = encode_exp_z3 descr env e1 in
+         let ze2 = encode_exp_z3 descr env e2 in
+         let ze3 = encode_exp_z3 descr env e3 in
+         mk_ite ze1.t ze2.t ze3.t |>
+           mk_term ~tloc:e.espan
+      | ELet (x, e1, e2) ->
+         let xstr = create_name descr x in
+         let za = mk_constant env xstr (oget e1.ety |> ty_to_sort)
+                              ~cloc:e.espan ~cdescr: (descr ^ "-let") in
+         let ze1 = encode_exp_z3 descr env e1 in
+         let ze2 = encode_exp_z3 descr env e2 in
+         add_constraint env (mk_term (mk_eq za.t ze1.t));
+         ze2
+      | ETuple es -> (
+        let ty = oget e.ety in
+        match ty with
+        | TTuple ts ->
+           let pair_decl = compute_decl env ty |> oget in
+           let pair_sort = ty_to_sort ty in
+           let zes = List.map (fun e -> (encode_exp_z3 descr env e).t) es in
+           let f = get_constructors pair_decl |> List.hd in
+           mk_app (mk_constructor f.constr_name pair_sort) zes |>
+             mk_term ~tloc:e.espan
+        | _ -> failwith "internal error (encode_exp_z3)" )
+      | ESome e1 ->
+         let ty = oget e.ety in
+         let decl = compute_decl env ty |> oget in
+         let sort = ty_to_sort ty in
+         let f = List.nth (get_constructors decl) 1 in
+         let ze = encode_exp_z3 descr env e1 in
+         mk_app (mk_constructor f.constr_name sort) [ze.t] |>
+           mk_term ~tloc:e.espan
+      | EMatch (e, bs) ->
+         let ze1 = encode_exp_z3 descr env e in
+         (* do not create a new SMT variable if you are matching on a variable *)
+         if is_var ze1 then
+           encode_branches_z3 descr env ze1 bs (oget e.ety)
+         else
+           begin
+             let name = create_fresh descr "match" in
+             let za = mk_constant env name (ty_to_sort (oget e.ety))
+                                  ~cdescr:(descr ^ "-match") ~cloc:e.espan in
+             add_constraint env (mk_term ~tloc:e.espan (mk_eq za.t ze1.t));
+             encode_branches_z3 descr env za bs (oget e.ety)
+           end
+      | ETy (e, ty) -> encode_exp_z3 descr env e
+      | EFun _ | EApp _ -> failwith "function in smt encoding"
+
+    and encode_branches_z3 descr env name bs (t: ty) =
+      match List.rev bs with
+      | [] -> failwith "internal error (encode_branches)"
+      | (p, e) :: bs ->
+         let ze = encode_exp_z3 descr env e in
+         (* we make the last branch fire no matter what *)
+         let _ = encode_pattern_z3 descr env name p t in
+         encode_branches_aux_z3 descr env name (List.rev bs) ze t
+
+    (* I'm assuming here that the cases are exhaustive *)
+    and encode_branches_aux_z3 descr env name bs accze (t: ty) =
+      match bs with
+      | [] -> accze
+      | (p, e) :: bs ->
+         let ze = encode_exp_z3 descr env e in
+         let zp = encode_pattern_z3 descr env name p t in
+         let ze = mk_ite zp.t ze.t accze.t |> mk_term in
+         encode_branches_aux_z3 descr env name bs ze t
+
+    and encode_pattern_z3 descr env zname p (t: ty) =
+      let ty = get_inner_type t in
+      match (p, ty) with
+      | PWild, _ ->
+         mk_bool true |>
+           mk_term
+      | PVar x, t ->
+         let local_name = create_name descr x in
+         let za = mk_constant env local_name (ty_to_sort t) in
+         add_constraint env (mk_term (mk_eq za.t zname.t));
+         mk_bool true |> mk_term
+      | PBool b, TBool ->
+         mk_eq zname.t (mk_bool b) |>
+           mk_term
+      | PInt i, TInt _ ->
+         let const = mk_int_u32 i in
+         mk_eq zname.t const |>
+           mk_term
+      | PTuple ps, TTuple ts -> (
+        match (ps, ts) with
+        | [p], [t] -> encode_pattern_z3 descr env zname p t
+        | ps, ts ->
+           (* old encoding in commented code.
+          Would create a new variable for each expression in the tuple.
+          New encoding avoids doing that when the expression is a variable *)
+           (* let znames = *)
+           (*   List.mapi *)
+           (*     (fun i t -> *)
+           (*       let sort = ty_to_sort t in *)
+           (*       ( mk_constant env (Printf.sprintf "elem%d" i |> create_fresh descr) sort *)
+           (*       , sort *)
+           (*        , t ) ) *)
+           (*     ts *)
+           (* in *)
+
+           (* if set to false, patterns won't use intermediate variables,
+          so far always slower to disable intermediate vars *)
+           let tuples_intermediate_vars = true in
+           let matches =
+             if tuples_intermediate_vars then
+               let znames =
+                 BatList.map2i
+                   (fun i t p ->
+                     let sort = ty_to_sort t in
+                     ( (match p with
+                        | PVar x ->
+                           let local_name = create_name descr x in
+                           mk_constant env local_name sort
+                        | _ ->
+                           mk_constant env (Printf.sprintf "elem%d" i |> create_fresh descr) sort)
+                     , sort
+                     , t ) )
+                   ts ps
+               in
+               let tup_decl = compute_decl env ty |> oget in
+               let fs = tup_decl |> get_constructors |> List.hd |> get_projections in
+               List.combine znames fs
+               |> List.iter (fun ((elem, _, _), (f, _)) ->
+                      let e = mk_term (mk_app (mk_var f) [zname.t]) in
+                      add_constraint env ((mk_eq elem.t e.t) |> mk_term));
+               (* let apps = List.map (fun (f, _) -> *)
+               (*                let e = mk_term (mk_app (mk_var f) [zname.t]) in *)
+               (*                e) fs *)
+               (* in *)
+               List.map
+                 (fun (p, (zname, _, ty)) ->
+                   match p with
+                   | PVar x -> mk_bool true |> mk_term
+                   | _ -> encode_pattern_z3 descr env zname p ty )
+                 (List.combine ps znames)
+                 (* let matches = *)
+                 (*   List.mapi *)
+                 (*     (fun i (p, app) -> *)
+                 (*       encode_pattern_z3 descr env app p (List.nth ts i)) *)
+                 (*     (List.combine ps apps) *)
+             else
+               let znames =
+                 BatList.map2i
+                   (fun i t p ->  p, t ) ts ps
+               in
+               let tup_decl = compute_decl env ty |> oget in
+               let fs = tup_decl |> get_constructors |> List.hd |> get_projections in
+               List.combine znames fs
+               |> List.map (fun ((p, ty) , (f, _)) ->
+                      let e = mk_term (mk_app (mk_var f) [zname.t]) in
+                      encode_pattern_z3 descr env e p ty)
+           in
+           let f acc e = mk_and acc e.t in
+           let b = mk_bool true in
+           let base = b in
+           (List.fold_left f base matches) |> mk_term
+      )
+      | POption None, TOption _ ->
+         let opt_decl = compute_decl env ty |> oget in
+         let f = opt_decl |> get_constructors |> List.hd |> get_recognizer in
+         mk_app (mk_var f) [zname.t] |>
+           mk_term
+      | POption (Some p), TOption t ->
+         let new_name = create_fresh descr "option" in
+         let za = mk_constant env new_name (ty_to_sort t) in
+         let opt_decl = compute_decl env ty |> oget in
+         let some_cons = List.nth (opt_decl |> get_constructors) 1 in
+         let get_some, _ = some_cons |> get_projections |> List.hd in
+         let is_some = some_cons |> get_recognizer in
+         let e = mk_app (mk_var get_some) [zname.t]in
+         add_constraint env (mk_term (mk_eq za.t e));
+         let zp = encode_pattern_z3 descr env za p t in
+         mk_and (mk_app (mk_var is_some) [zname.t]) zp.t |>
+           mk_term
+      | _ ->
+         Console.error
+           (Printf.sprintf "internal error (encode_pattern): (%s, %s)"
+                           (Printing.pattern_to_string p)
+                           (Printing.ty_to_string (get_inner_type t)))
+
+    and encode_value_z3 descr env (v: Syntax.value) =
+      (* Printf.printf "value: %s\n" (Printing.value_to_string v) ; *)
+      match v.v with
+      | VBool b ->
+         mk_bool b |>
+           mk_term ~tloc:v.vspan
+      | VInt i ->
+         mk_int_u32 i |>
+           mk_term ~tloc:v.vspan       
+      | VTuple vs -> (
+        match oget v.vty with
+        | TTuple ts ->
+           let pair_decl = compute_decl env (oget v.vty) in
+           let zes = List.map (fun v -> (encode_value_z3 descr env v).t) vs in
+           let f = (pair_decl |> oget |> get_constructors |> List.hd).constr_name in
+           mk_app (mk_constructor f (ty_to_sort (oget v.vty))) zes |>
+             mk_term ~tloc:v.vspan
+        | _ -> failwith "internal error (encode_value)" )
+      | VOption None ->
+         let opt_decl = compute_decl env (oget v.vty) in
+         let f = (opt_decl |> oget |> get_constructors |> List.hd).constr_name in
+         let e = mk_app (mk_constructor f (ty_to_sort (oget v.vty))) [] in
+         mk_term ~tloc:v.vspan e
+      | VOption (Some v1) ->
+         let opt_decl = compute_decl env (oget v.vty) in
+         let f = (List.nth (opt_decl |> oget |> get_constructors) 1).constr_name in
+         let zv = encode_value_z3 descr env v1 in
+         mk_app (mk_constructor f (ty_to_sort (oget v.vty))) [zv.t] |>
+           mk_term ~tloc:v.vspan
+      | VClosure _ -> failwith "internal error (closure in smt)"
+      | VMap map -> failwith "not doing maps yet"
+  end
+
 let exp_to_z3 = encode_exp_z3
               
 let encode_z3_merge str env e =
@@ -845,14 +1150,14 @@ let node_of_label_var s =
 let assert_var i =
   Printf.sprintf "assert-%d" (Integer.to_int i)
 
-  (* this is flaky, the variable name used by SMT will be
+(* this is flaky, the variable name used by SMT will be
      assert-n-result, we need to chop both ends *)
 let node_of_assert_var s =
   Integer.of_string (BatString.lchop ~n:7 s |> BatString.rchop ~n:7)
 
 let symbolic_var (s: Var.t) =
   Var.to_string s
-        
+  
 let add_symbolic_constraints env requires sym_vars =
   (* Declare the symbolic variables: ignore the expression in case of SMT *)
   VarMap.iter
