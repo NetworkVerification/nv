@@ -389,12 +389,11 @@ let interp_partial_fun (fn : Syntax.exp) (args: value list) =
   Syntax.apps fn (List.map (fun a -> e_val a) args) |>
     interp_partial
   
-(** * "CBN" Partial Interpreter *)
+(** * Full reduction Partial Interpreter *)
 
-module CBN =
+module Full =
   struct
-
-
+    
     type 'a isMatch =
       Match of 'a
     | NoMatch
@@ -618,12 +617,4 @@ module CBN =
 
     let interp_partial = fun e -> interp_exp_partial Env.empty e
 
-    (* let interp_partial_closure cl (args: value list) = *)
-    (*   interp_partial (Syntax.apply_closure cl args) *)
-
-    let interp_partial = MemoizeExp.memoize ~size:1000 interp_partial
-
-    let interp_partial_fun (fn : Syntax.exp) (args: value list) =
-      Syntax.apps fn (List.map (fun a -> e_val a) args) |>
-        interp_partial
   end
