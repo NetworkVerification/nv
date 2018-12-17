@@ -650,11 +650,20 @@ let rec to_value e =
   | ESome e1 -> avalue (voption (Some (to_value e1)), e.ety, e.espan)
   | _ -> failwith "internal error (to_value)"
 
+
 let exp_of_v x = exp (EVal (value x))
 
-let exp_of_value v =
-  let e = e_val v in
-  {e with ety= v.vty; espan= v.vspan}
+let rec exp_of_value v =
+  match v.v with
+  | VBool _ | VInt _ | VMap _ | VClosure _ | VOption None ->
+     let e = e_val v in
+     {e with ety= v.vty; espan=v.vspan}
+  | VTuple vs ->
+     let e = etuple (List.map exp_of_value vs) in
+     {e with ety= v.vty; espan=v.vspan}
+  | VOption (Some v1) ->
+     let e = esome (exp_of_value v1) in
+     {e with ety= v.vty; espan=v.vspan}
 
 let func x body = {arg= x; argty= None; resty= None; body}
 

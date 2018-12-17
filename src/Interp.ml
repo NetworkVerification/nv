@@ -389,3 +389,232 @@ let interp_partial_fun (fn : Syntax.exp) (args: value list) =
   Syntax.apps fn (List.map (fun a -> e_val a) args) |>
     interp_partial
   
+(** * Full reduction Partial Interpreter *)
+
+module Full =
+  struct
+    
+    type 'a isMatch =
+      Match of 'a
+    | NoMatch
+    | Delayed
+    
+    (* matches p b is Some env if v matches p and None otherwise; assumes no repeated variables in pattern *)
+    let rec matches p (e: Syntax.exp) : Syntax.exp Env.t isMatch =
+      match p with
+      | PWild -> Match Env.empty
+      | PVar x -> Match (Env.bind x e)
+      | PBool true ->
+         if is_value e then
+           match (to_value e).v with
+           | VBool true -> Match Env.empty
+           | _ -> NoMatch
+         else
+           Delayed
+      | PBool false ->
+         if is_value e then
+           match (to_value e).v with
+           | VBool false -> Match Env.empty
+           | _ -> NoMatch
+         else
+           Delayed
+      | PInt i1 ->
+         if is_value e then
+           match (to_value e).v with
+           | VInt i2 ->
+              if Integer.equal i1 i2 then Match Env.empty else NoMatch
+           | _ -> NoMatch
+         else
+           Delayed
+      | PTuple ps ->
+         (* only match tuples when all components match *)
+         if is_value e then
+           (match e.e with
+            | ETuple es ->
+               matches_list ps es Env.empty
+            | _ ->
+               (* Note that this works because, etuple returns an etuple expression *)
+               Delayed)
+          else Delayed
+      | POption None ->
+         if is_value e then
+           match (to_value e).v with
+           | VOption None ->
+              Match Env.empty
+           | _ -> NoMatch
+         else
+           Delayed
+      | POption (Some p) ->
+         (match e.e with
+          | ESome e1 ->
+             matches p e1
+          | _ when is_value e ->
+             (match (to_value e).v with
+              | VOption (Some v) ->
+                 matches p (exp_of_value v)
+              | _ -> NoMatch)
+          | _ -> Delayed)
+
+    and matches_list ps es env =
+      match (ps, es) with
+      | [], [] -> Match env
+      | p :: ps, e :: es -> (
+        match matches p e with
+        | NoMatch -> NoMatch
+        | Delayed -> Delayed
+        | Match env1 ->
+           matches_list ps es (Env.updates env env1))
+      | _, _ -> NoMatch
+
+    let rec match_branches branches v =
+      match branches with
+      | [] -> NoMatch
+      | (p, e) :: branches ->
+         match matches p v with
+         | Match env -> Match (env, e)
+         | NoMatch -> match_branches branches v
+         | Delayed ->  Delayed
+
+    (** Assumes that inlining has been performed.  Not CBN in the
+       strict sense. It will just do function applications over
+       expressions, not just values.*)
+    let rec interp_exp_partial (env: Syntax.exp Env.t) e =
+      match e.e with
+      | ETy (e, _) -> interp_exp_partial env e
+      | EVar x -> (
+        match Env.lookup_opt env x with
+        | None ->
+           e
+        | Some e1 ->
+           e1)
+      | EVal v -> e
+      | EOp (op, es) ->
+         aexp (interp_op_partial env (oget e.ety) op es, e.ety, e.espan)
+      | EFun f -> e
+      | EApp (e1, e2) ->
+         let pe1 = interp_exp_partial env e1 in
+         let pe2 = interp_exp_partial env e2 in
+         (match pe1.e with
+          | EFun f ->
+             interp_exp_partial (Env.update env f.arg pe2) f.body
+          | _ ->
+             (*this case shouldn't show up for us *)
+             Console.warning "This case shouldn't show up"; 
+             aexp (eapp pe1 pe2, e.ety, e.espan))
+      | EIf (e1, e2, e3) -> 
+         let pe1 = interp_exp_partial env e1 in
+         if is_value pe1 then
+           (match (to_value pe1).v with
+            | VBool true  -> interp_exp_partial env e2
+            | VBool false -> interp_exp_partial env e3
+            | _ -> failwith "bad if condition")
+         else
+           aexp (eif pe1 (interp_exp_partial env e2) (interp_exp_partial env e3),
+                 e.ety, e.espan)
+      | ELet (x, e1, e2) ->
+         let pe1 = interp_exp_partial env e1 in
+         interp_exp_partial (Env.update env x pe1) e2
+      | ETuple es ->
+         aexp (etuple (List.map (interp_exp_partial env) es),
+               e.ety, e.espan)
+      | ESome e' -> aexp (esome (interp_exp_partial env e'), e.ety, e.espan)
+      | EMatch (e1, branches) ->
+         let pe1 = interp_exp_partial env e1 in
+         (match match_branches branches pe1 with
+          | Match (env2, e) -> interp_exp_partial (Env.updates env env2) e
+          | NoMatch ->
+             failwith
+               ( "exp " ^ (exp_to_string pe1)
+                 ^ " did not match any pattern in match statement")
+          | Delayed ->
+             aexp (ematch pe1 (List.map (fun (p,eb) ->
+                                   (p, interp_exp_partial env eb)) branches),
+                   e.ety, e.espan))
+
+    (* this is same as above, minus the app boolean. see again if we can get rid of that? *)
+    and interp_op_partial env ty op es =
+      let pes = List.map (interp_exp_partial env) es in
+      if List.exists (fun pe -> not (is_value pe)) pes then
+        eop op pes
+      else
+        begin
+          exp_of_value @@ 
+            match (op, List.map to_value pes) with
+            | And, [{v= VBool b1}; {v= VBool b2}] -> vbool (b1 && b2)
+            | Or, [{v= VBool b1}; {v= VBool b2}] -> vbool (b1 || b2)
+            | Not, [{v= VBool b1}] -> vbool (not b1)
+            | UAdd _, [{v= VInt i1}; {v= VInt i2}] ->
+               vint (Integer.add i1 i2)
+            | UEq, [v1; v2] ->
+               if equal_values ~cmp_meta:false v1 v2 then vbool true
+               else vbool false
+            | ULess _, [{v= VInt i1}; {v= VInt i2}] ->
+               if Integer.lt i1 i2 then vbool true else vbool false
+            | ULeq _, [{v= VInt i1}; {v= VInt i2}] ->
+               if Integer.leq i1 i2 then vbool true else vbool false
+            | MCreate, [v] -> (
+              match get_inner_type ty with
+              | TMap (kty, _) -> vmap (BddMap.create ~key_ty:kty v)
+              | _ -> failwith "runtime error: missing map key type" )
+            | MGet, [{v= VMap m}; v] -> BddMap.find m v
+            | MSet, [{v= VMap m}; vkey; vval] ->
+               vmap (BddMap.update m vkey vval)
+            | MMap, [{v= VClosure (c_env, f)}; {v= VMap m}] ->
+               let seen = BatSet.PSet.singleton ~cmp:Var.compare f.arg in
+               let free = Syntax.free seen f.body in
+               let env = build_env c_env free in
+               vmap
+                 (BddMap.map ~op_key:(f.body, env)
+                             (fun v -> apply c_env f v)
+                             m)
+            | ( MMerge
+              , {v= VClosure (c_env, f)}
+                :: {v= VMap m1} :: {v= VMap m2} :: rest )
+              -> (
+              let seen = BatSet.PSet.singleton ~cmp:Var.compare f.arg in
+              let env = build_env c_env (Syntax.free seen f.body) in
+              (* TO DO:  Need to preserve types in VOptions here ? *)
+              let f_lifted v1 v2 =
+                match apply c_env f v1 with
+                | {v= VClosure (c_env, f)} -> apply c_env f v2
+                | _ -> failwith "internal error (interp_op)"
+              in
+              match rest with
+              | [el0; el1; er0; er1] ->
+                 let opt = (el0, el1, er0, er1) in
+                 vmap
+                   (BddMap.merge ~opt ~op_key:(f.body, env) f_lifted m1 m2)
+              | _ -> vmap (BddMap.merge ~op_key:(f.body, env) f_lifted m1 m2)
+            )
+            | ( MMapFilter
+              , [ {v= VClosure (c_env1, f1)}
+                ; {v= VClosure (c_env2, f2)}
+                ; {v= VMap m} ] ) ->
+               let seen = BatSet.PSet.singleton ~cmp:Var.compare f2.arg in
+               let env = build_env c_env2 (Syntax.free seen f2.body) in
+               let mtbdd =
+                 match ExpMap.find_opt f1.body !bddfunc_cache with
+                 | None -> (
+                   let bddf = BddFunc.create_value (oget f1.argty) in
+                   let env = Env.update Env.empty f1.arg bddf in
+                   let bddf = BddFunc.eval env f1.body in
+                   match bddf with
+                   | BBool bdd ->
+                      let mtbdd = BddFunc.wrap_mtbdd bdd in
+                      bddfunc_cache :=
+                        ExpMap.add f1.body mtbdd !bddfunc_cache ;
+                      mtbdd
+                   | _ -> failwith "impossible" )
+                 | Some bddf -> bddf
+               in
+               let f v = apply c_env2 f2 v in
+               vmap (BddMap.map_when ~op_key:(f2.body, env) mtbdd f m)
+            | _, _ ->
+               failwith
+                 (Printf.sprintf "bad operator application: %s"
+                                 (Printing.op_to_string op))
+        end
+
+    let interp_partial = fun e -> interp_exp_partial Env.empty e
+
+  end

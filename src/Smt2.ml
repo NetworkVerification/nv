@@ -326,7 +326,7 @@ type smt_env =
   { mutable ctx: command list
   ; mutable const_decls: ConstantSet.t (** named constant and its sort *)
   ; mutable type_decls: datatype_decl StringMap.t
-  ; symbolics: (Var.t * ty_or_exp) list }
+  ; mutable symbolics: Syntax.ty_or_exp VarMap.t }
   
 let create_fresh descr s =
   Printf.sprintf "%s-%s" descr (Var.fresh s |> Var.to_string)
@@ -436,9 +436,12 @@ let mk_constant (env : smt_env) ?(cdescr = "") ?(cloc = Span.default) cname csor
 let add_constraint (env : smt_env) (c : term) =
   env.ctx <- (mk_assert c |> mk_command) :: env.ctx
 
-let is_symbolic syms x =
-  List.exists (fun (y, e) -> Var.equals x y) syms
+let add_symbolic (env : smt_env) (b: Var.t) (ty: Syntax.ty) =
+  env.symbolics <- VarMap.add b (Syntax.Ty ty) env.symbolics
 
+let is_symbolic syms x =
+  VarMap.mem x syms
+  
 let is_var (tm: SmtLang.term) =
   match tm.t with
   | Var _ -> true
@@ -852,8 +855,8 @@ let symbolic_var (s: Var.t) =
         
 let add_symbolic_constraints env requires sym_vars =
   (* Declare the symbolic variables: ignore the expression in case of SMT *)
-  List.iter
-    (fun (v, e) ->
+  VarMap.iter
+    (fun v e ->
       let _ = mk_constant env (symbolic_var v) (ty_to_sort (Syntax.get_ty_from_tyexp e))
                           ~cdescr:"Symbolic variable decl" in ()) sym_vars ;
   (* add the require clauses *)
@@ -868,7 +871,8 @@ let init_solver ds =
   { ctx = [];
     const_decls = ConstantSet.empty;
     type_decls = StringMap.empty;
-    symbolics = symbolics }
+    symbolics =
+      List.fold_left (fun acc (v,e) -> VarMap.add v e acc) VarMap.empty symbolics }
 
 let encode_z3 (ds: declarations) sym_vars : smt_env =
   let env = init_solver ds in
@@ -950,7 +954,9 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
           merge_result )
         init in_edges
     in
-    let l = mk_constant env (label_var (Integer.of_int i)) (ty_to_sort aty) in
+    let lbl_i = label_var (Integer.of_int i) in
+    let l = mk_constant env lbl_i (ty_to_sort aty) in
+    add_symbolic env (lbl_i |> Var.create) aty;
     add_constraint env (mk_term (mk_eq l.t merged.t));
     labelling := AdjGraph.VertexMap.add (Integer.of_int i) l !labelling
   done ;
@@ -982,6 +988,104 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
   add_symbolic_constraints env (get_requires ds) (env.symbolics (*@ sym_vars*));
   env
 
+(** * Alternative SMT encoding *)
+
+let node_exp (u: Integer.t) : Syntax.exp =
+  aexp(e_val (vint u), Some Typing.node_ty, Span.default)
+
+let edge_exp (u: Integer.t) (v: Integer.t) : Syntax.exp =
+  aexp(e_val (vtuple [vint u; vint v]),
+       Some Typing.edge_ty, Span.default)
+  
+(** An alternative SMT encoding, where we build an NV expression for
+   each label, partially evaluate it and then encode it *)
+let encode_z3_func (ds: declarations) sym_vars : smt_env =
+  let env = init_solver ds in
+  let eassert = get_assert ds in
+  let emerge, etrans, einit, nodes, edges, aty =
+    match
+      ( get_merge ds
+      , get_trans ds
+      , get_init ds
+      , get_nodes ds
+      , get_edges ds
+      , get_attr_type ds )
+    with
+    | Some emerge, Some etrans, Some einit, Some n, Some es, Some aty ->
+       (emerge, etrans, einit, n, es, aty)
+    | _ ->
+       Console.error
+         "missing definition of nodes, edges, merge, trans or init"
+  in
+  (* Create a map from nodes to smt variables denoting the label of the node*)
+  let labelling =
+    AdjGraph.fold_vertices (fun u acc ->
+        add_symbolic env (label_var u |> Var.create) aty;
+        let lblt = mk_constant env (label_var u) (ty_to_sort aty) in
+        AdjGraph.VertexMap.add u lblt acc)
+                           nodes AdjGraph.VertexMap.empty
+  in
+
+
+  let init_exp u = eapp einit (node_exp u) in
+  let trans_exp u v x = eapp (eapp etrans (edge_exp u v)) x in
+  let merge_exp u x y = eapp (eapp (eapp emerge (node_exp u)) x) y in
+
+
+  (* map from nodes to incoming messages*)
+  let incoming_messages_map =
+    List.fold_left (fun acc (u,v) -> 
+        let lblu = aexp (evar (label_var u |> Var.create), Some aty, Span.default) in
+        let transuv = trans_exp u v lblu in
+        AdjGraph.VertexMap.modify_def [] v (fun us -> transuv :: us) acc)
+                   AdjGraph.VertexMap.empty edges
+  in
+
+  (* map from nodes to the merged messages *)
+  let merged_messages_map =
+    AdjGraph.fold_vertices (fun u acc ->
+        let messages = AdjGraph.VertexMap.find_default [] u incoming_messages_map in
+        let best = List.fold_left (fun accm m -> merge_exp u m accm)
+                                  (init_exp u) messages
+        in
+        let str = Printf.sprintf "merge-%d" (Integer.to_int u) in
+        let best_smt = Interp.Full.interp_partial best |> encode_exp_z3 str env in
+        AdjGraph.VertexMap.add u best_smt acc) nodes AdjGraph.VertexMap.empty
+  in
+
+  AdjGraph.fold_vertices (fun u () ->
+      let lblu = try AdjGraph.VertexMap.find u labelling
+                 with Not_found -> failwith "label variable not found"
+      in
+      let merged = try AdjGraph.VertexMap.find u merged_messages_map
+                   with Not_found -> failwith "merged variable not found"
+      in
+      add_constraint env (mk_term (mk_eq lblu.t merged.t))) nodes ();
+  (* add assertions at the end *)
+  (* TODO: same as other encoding make it a function *)
+  ( match eassert with
+    | None -> ()
+    | Some eassert ->
+       let all_good = ref (mk_bool true) in
+       for i = 0 to Integer.to_int nodes - 1 do
+         let label =
+           AdjGraph.VertexMap.find (Integer.of_int i) labelling
+         in
+         let result, x =
+           encode_z3_assert (assert_var (Integer.of_int i)) env (Integer.of_int i) eassert
+         in
+         add_constraint env (mk_term (mk_eq x.t label.t));
+         let assertion_holds = mk_eq result.t (mk_bool true) in
+         all_good :=
+           mk_and !all_good assertion_holds
+       done ;
+       add_constraint env (mk_term (mk_not !all_good))) ;
+  (* add the symbolic variable constraints *)
+  add_symbolic_constraints env (get_requires ds) (env.symbolics (*@ sym_vars*));
+  env
+   
+
+  
 (** ** SMT query optimization *)
 let rec alpha_rename_smt_term (renaming: string StringMap.t) (tm: smt_term) =
     match tm with
@@ -1100,23 +1204,24 @@ let propagate_eqs (env : smt_env) =
 type smt_result = Unsat | Unknown | Sat of Solution.t
 
 (** Emits the code that evaluates the model returned by Z3. *)  
-let eval_model (symbolics: (Var.t * Syntax.ty_or_exp) list)
+let eval_model (symbolics: Syntax.ty_or_exp VarMap.t)
       (num_nodes: Integer.t)
       (eassert: Syntax.exp option)
       (renaming: string StringMap.t) : command list =
   let var x = "Var:" ^ x in
   (* Compute eval statements for labels *)
-  let labels =
-    AdjGraph.fold_vertices (fun u acc ->
-        let lblu = label_var u in
-        let tm = mk_var (StringMap.find_default lblu lblu renaming) |> mk_term in
-        let ev = mk_eval tm |> mk_command in
-        let ec = mk_echo ("\"" ^ (var lblu) ^ "\"") |> mk_command in
-        ec :: ev :: acc) num_nodes [(mk_echo ("\"end_of_model\"") |> mk_command)] in
+  (* let labels = *)
+  (*   AdjGraph.fold_vertices (fun u acc -> *)
+  (*       let lblu = label_var u in *)
+  (*       let tm = mk_var (StringMap.find_default lblu lblu renaming) |> mk_term in *)
+  (*       let ev = mk_eval tm |> mk_command in *)
+  (*       let ec = mk_echo ("\"" ^ (var lblu) ^ "\"") |> mk_command in *)
+  (*       ec :: ev :: acc) num_nodes [(mk_echo ("\"end_of_model\"") |> mk_command)] in *)
+  let base = [(mk_echo ("\"end_of_model\"") |> mk_command)] in
   (* Compute eval statements for assertions *)
   let assertions =
     match eassert with
-    | None -> labels
+    | None -> base
     | Some _ ->
        AdjGraph.fold_vertices (fun u acc ->
            let assu = (assert_var u) ^ "-result" in
@@ -1124,16 +1229,16 @@ let eval_model (symbolics: (Var.t * Syntax.ty_or_exp) list)
            let ev = mk_eval tm |> mk_command in
            let ec = mk_echo ("\"" ^ (var assu) ^ "\"")
                              |> mk_command in
-           ec :: ev :: acc) num_nodes labels
+           ec :: ev :: acc) num_nodes base
   in
   (* Compute eval statements for symbolic variables *)
   let symbols =
-    List.fold_left (fun acc (sv, _) ->
+    VarMap.fold (fun sv _ acc ->
         let sv = symbolic_var sv in
         let tm = mk_var (StringMap.find_default sv sv renaming) |> mk_term in
         let ev = mk_eval tm |> mk_command in
         let ec = mk_echo ("\"" ^ (var sv) ^ "\"") |> mk_command in
-        ec :: ev :: acc) assertions symbolics in
+        ec :: ev :: acc) symbolics assertions in
   symbols
 
 let parse_val (s : string) : Syntax.value =
@@ -1196,25 +1301,46 @@ let check_sat (env: smt_env) =
 let printQuery (chan: out_channel Lazy.t) (msg: string) =
   let chan = Lazy.force chan in
   Printf.fprintf chan "%s\n%!" msg
+
+
+(* Classic encodes the SRP as an SMT expression, Functional encodes
+   the problem as an NV term which is then translated to SMT *)
+type encoding_style = Classic | Functional
+                        
+type smt_options =
+  { verbose : bool;
+    optimize : bool;
+    encoding : encoding_style
+  }
+
+let smt_config : smt_options =
+  { verbose = false;
+    optimize = true;
+    encoding = Classic
+  }
   
 let solve info query chan ?symbolic_vars ?(params=[]) ds =
   let sym_vars =
     match symbolic_vars with None -> [] | Some ls -> ls
   in
-  let verbose = false in
-
   (* compute the encoding of the network *)
-  let optimize = true in
   let renaming, env =
-    time_profile "Encoding network"
-                 (fun () -> let env = encode_z3 ds sym_vars in
-                              if optimize then propagate_eqs env
-                              else StringMap.empty, env) in
+    if smt_config.encoding = Classic then
+      time_profile "Encoding network"
+                   (fun () -> let env = encode_z3 ds sym_vars in
+                              if smt_config.optimize then propagate_eqs env
+                              else StringMap.empty, env)
+    else
+      time_profile "Encoding network"
+                   (fun () -> let env = encode_z3_func ds sym_vars in
+                              if smt_config.optimize then propagate_eqs env
+                              else StringMap.empty, env)
+  in
   (* let env = encode_z3 ds sym_vars in *)
   check_sat env;
   let smt_encoding =
     time_profile "Compiling query"
-                 (fun () -> env_to_smt ~verbose:verbose info env) in
+                 (fun () -> env_to_smt ~verbose:smt_config.verbose info env) in
   (* let smt_encoding =  env_to_smt ~verbose:verbose env in *)
   if query then
     printQuery chan smt_encoding;
@@ -1233,7 +1359,7 @@ let solve info query chan ?symbolic_vars ?(params=[]) ds =
      in
      let eassert = get_assert ds in
      let model = eval_model env.symbolics num_nodes eassert renaming in
-     let model_question = commands_to_smt verbose info model in
+     let model_question = commands_to_smt smt_config.verbose info model in
      if query then
        printQuery chan model_question;
      ask_solver solver model_question;
