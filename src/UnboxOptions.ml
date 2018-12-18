@@ -1,7 +1,5 @@
 open Collections
-open Solution
 open Syntax
-open Visitors
 
 let rec unbox_ty ty =
   match ty with
@@ -14,7 +12,7 @@ let rec unbox_ty ty =
   | TOption t -> TTuple [TBool; (unbox_ty t)]
   | TMap (ty1, ty2) ->
      TMap (unbox_ty ty1, unbox_ty ty2)
-  | QVar _ | TVar _ -> failwith "internal error (tuplify_ty)"
+  | QVar _ | TVar _ -> failwith "internal error (unbox_ty)"
 
 let rec unbox_val v =
   match v.v with
