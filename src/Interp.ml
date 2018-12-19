@@ -283,6 +283,8 @@ let rec interp_exp_partial isapp env e =
   | ESome e' -> aexp (esome (interp_exp_partial false env e'), e.ety, e.espan)
   | EMatch (e1, branches) ->
      let pe1 = interp_exp_partial false env e1 in
+     Printf.printf "%s\n" (show_exp ~show_meta:false e1);
+     Printf.printf "%s\n" (Printing.exp_to_string e);
      if is_value pe1 then
        (match match_branches branches (to_value pe1) with
         | Some (env2, e) -> interp_exp_partial false (update_values env env2) e

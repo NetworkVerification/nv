@@ -125,7 +125,7 @@ let rec show_ty ty =
       match !tyvar with
       | Unbound (name, _) ->
         Printf.sprintf "TVar (Unbound %s)" (Var.to_string name)
-      | Link t -> show_ty t )
+      | Link t -> Printf.sprintf "Link (%s)" (show_ty t) )
   | QVar name -> Printf.sprintf "QVar (%s)" (Var.to_string name)
   | TBool -> "TBool"
   | TInt _ -> "TInt"
@@ -974,9 +974,10 @@ module BddMap = struct
        avalue (voption None, Some ty, Span.default)
     | TMap (ty1, ty2) ->
        avalue (vmap (create ~key_ty:ty1 (default_value ty2)), Some ty, Span.default)
+    | TVar {contents= Link t} ->
+       default_value t
     | TVar _ | QVar _ | TArrow _ ->
        failwith "internal error (default_value)"
-
 
   let value_to_bdd (v: value) : Bdd.vt =
     let rec aux v idx =

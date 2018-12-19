@@ -36,6 +36,15 @@ let run_smt file cfg info ds =
   let decls, f = Renaming.alpha_convert_declarations decls in
   let fs = f :: fs in
   let decls = Typing.infer_declarations info decls in
+  let decls =
+    if cfg.unbox then
+      begin
+        smt_config.unboxing <- true;
+        UnboxOptions.unbox decls
+        (* UnboxOptions.unbox decls |> TupleFlatten.flatten *)
+      end
+    else decls
+  in
   let res, fs =
     if cfg.unroll_maps then (
       try

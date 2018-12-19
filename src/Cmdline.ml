@@ -18,6 +18,7 @@ type t =
   ; compress: int                      (** compress the network for n failures     *)
   ; split_heuristic: string            (** heuristic with which to split nodes,
                                         ["random", "neighbor"] *)
+  ; unbox: bool                        (** unboxes options and flattens tuples *)
   ; draw: bool                         (** emits a .jpg file of the graph         *)
   }
 [@@deriving
@@ -44,6 +45,7 @@ let default =
   ; inline=false
   ; compress= -1
   ; split_heuristic="randomPath"
+  ; unbox = true
   ; draw=false}
 
 let cfg = ref default 

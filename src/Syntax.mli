@@ -222,6 +222,8 @@ val show_value : show_meta:bool -> value -> string
 
 val show_span: Span.t -> string
 
+val show_ty: ty -> string
+
 (** [get_ty_from_tyexp t] @return the type wrapped by [Ty] or the type
    of the expression wrapped by [Exp]. Fails if the expression has no
    type. *)
