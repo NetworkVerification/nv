@@ -490,8 +490,8 @@ and hash_e ~hash_meta e =
     * ((19 * hash_exp ~hash_meta e) + hash_branches ~hash_meta bs)
     + 9
   | ETy (e, ty) ->
-    (19 * ((19 * hash_exp ~hash_meta e) + hash_ty ty)) + 10
-
+     (19 * ((19 * hash_exp ~hash_meta e) + hash_ty ty)) + 10
+ 
 and hash_var x = hash_string (Var.to_string x)
 
 and hash_es ~hash_meta es =
@@ -760,7 +760,11 @@ let bool_of_val (v : value) : bool option =
   match v.v with
   | VBool b -> Some b
   | _ -> None
-           
+
+let proj_var (n: int) (x: var) =
+  let (s,i) = Var.from_var x in
+  Var.to_var (Printf.sprintf "proj-%d-%s" n s,i)
+  
 open BatSet
 
 let rec free (seen: Var.t PSet.t) (e: exp) : Var.t PSet.t =

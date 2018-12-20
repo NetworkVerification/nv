@@ -40,11 +40,11 @@ let run_smt file cfg info ds =
     if cfg.unbox then
       begin
         smt_config.unboxing <- true;
-        UnboxOptions.unbox decls
-        (* UnboxOptions.unbox decls |> TupleFlatten.flatten *)
+        UnboxOptions.unbox decls |> TupleFlatten.flatten
       end
     else decls
   in
+  (* failwith "flattened"; *)
   let res, fs =
     if cfg.unroll_maps then (
       try

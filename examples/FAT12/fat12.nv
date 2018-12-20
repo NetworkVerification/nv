@@ -1,6 +1,7 @@
 type attribute = (option[int],option[int],option[(int, int, int, int)],option[(int,int,int,int)],option[int])
 
-symbolic d : (int, int)
+(*symbolic d : (int, int)*)
+let d = (1174429440, 24)
 
 let edges = {
   0-61;

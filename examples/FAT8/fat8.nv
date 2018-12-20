@@ -3,8 +3,8 @@ type attribute = (option[int],option[int],option[(int, int, int, int)],option[(i
 
 (*symbolic d : (int, int)
 require d = (1174418688, 24)*)
-
-let d = (1174418688, 24)
+(*let d = (1174418688, 24)*)
+let d = (1174418688, 31)
 
 let edges = {
   19-20;
@@ -2581,7 +2581,8 @@ let trans edge x =
    transferRoute edge x
 
 let assert node x =
-    if (d = (1174418688, 24)) then
+  (*  if (d = (1174418688, 24)) then *)
+    if (d = (1174418688, 31)) then
       match x with
       | (None, None, None, None, None) -> false
       | _ -> true

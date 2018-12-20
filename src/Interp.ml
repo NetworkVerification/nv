@@ -278,13 +278,18 @@ let rec interp_exp_partial isapp env e =
        aexp (elet x pe1 (interp_exp_partial false env e2),
              e.ety, e.espan)
   | ETuple es ->
-     aexp (etuple (List.map (interp_exp_partial false env) es),
-           e.ety, e.espan)
+     (* let es = List.map (interp_exp_partial false env) es in *)
+     (* if List.for_all is_value es then *)
+     (*   aexp (e_val (etuple (List.map to_value es)), e.ety, e.espan) *)
+     (* else *)
+       aexp (etuple (List.map (interp_exp_partial false env) es),
+             e.ety, e.espan)
   | ESome e' -> aexp (esome (interp_exp_partial false env e'), e.ety, e.espan)
   | EMatch (e1, branches) ->
      let pe1 = interp_exp_partial false env e1 in
-     Printf.printf "%s\n" (show_exp ~show_meta:false e1);
-     Printf.printf "%s\n" (Printing.exp_to_string e);
+     (* Printf.printf "Match: %s\n" (Printing.exp_to_string e); *)
+     (* Printf.printf "pe1: %s\n" ((\* Syntax.show_exp ~show_meta:false *\) Printing.exp_to_string pe1); *)
+          
      if is_value pe1 then
        (match match_branches branches (to_value pe1) with
         | Some (env2, e) -> interp_exp_partial false (update_values env env2) e

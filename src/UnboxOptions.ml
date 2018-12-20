@@ -40,8 +40,8 @@ let rec unbox_val v =
          avalue (vtuple [(vbool false); (default_value (get_inner_type t))],
                  Some (unbox_ty (oget v.vty)), v.vspan)
      | _ -> failwith "expected option type")
-  | VOption (Some v) ->
-     avalue (vtuple [(vbool true); (unbox_val v)], Some (unbox_ty (oget v.vty)), v.vspan)
+  | VOption (Some v1) ->
+     avalue (vtuple [(vbool true); (unbox_val v1)], Some (unbox_ty (oget v.vty)), v.vspan)
   | VTuple vs ->
      avalue (vtuple (List.map unbox_val vs), Some (unbox_ty (oget v.vty)), v.vspan)
   | VClosure _ -> failwith "Closures not yet implemented"
@@ -66,6 +66,17 @@ let rec unbox_exp e : exp =
      aexp (eif (unbox_exp e1) (unbox_exp e2) (unbox_exp e3),
            Some (unbox_ty (oget e.ety)), e.espan)
   | ELet (x, e1, e2) ->
+     (* The commented piece of code is the correct way to do this
+        transformation. The problem is I don't know how to do it in
+        conjunction with tuple flattening *)
+     (* (match (oget e1.ety) with *)
+     (*  | TOption ty -> *)
+     (*     aexp (ematch (unbox_exp e1) *)
+     (*                  [(PTuple [PVar (proj_var 0 x); PVar (proj_var 1 x)], unbox_exp e2)], *)
+     (*           Some (unbox_ty (oget e.ety)), e.espan) *)
+     (*  | _ -> *)
+     (*     aexp(elet x (unbox_exp e1) (unbox_exp e2), *)
+  (*          Some (unbox_ty (oget e.ety)), e.espan)) *)
      aexp(elet x (unbox_exp e1) (unbox_exp e2),
           Some (unbox_ty (oget e.ety)), e.espan)
   | ETuple es ->
@@ -87,12 +98,12 @@ let rec unbox_exp e : exp =
     | USub _, _
     | UEq, _
     | ULess _, _
+    | AtMost _, _
     | ULeq _, _ ->
        aexp (eop op (List.map unbox_exp es),
              Some (unbox_ty (oget e.ety)), e.espan)
     | _ -> failwith "TODO: implement option unboxing for maps")
                   
-(* no way to pattern match a map, so just keep patterns *)
 and unbox_branches bs ty =
   let rec unbox_pattern p ty =
     let ty = get_inner_type ty in
@@ -116,6 +127,11 @@ and unbox_branches bs ty =
            PTuple (List.map2 unbox_pattern ps ts)
         | _ ->
            failwith "must match on a tuple type")
+    | PVar x ->
+       (match ty with
+        | TOption t -> p
+           (* PTuple [PVar (proj_var 0 x); PVar (proj_var 1 x)] *)
+        | _ -> p)
     | _ -> p
   in
   List.map (fun (p, e) -> (unbox_pattern p ty, unbox_exp e)) bs
