@@ -273,7 +273,7 @@ module SmtLang =
       | CheckSat ->
          (* for now i am hardcoding the tactics here. *)
          Printf.sprintf "(check-sat-using (then simplify \
-                         solve-eqs smt))"
+                         solve-eqs psmt))"
       | GetModel ->
          Printf.sprintf "(get-model)"
 
