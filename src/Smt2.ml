@@ -312,7 +312,7 @@ module SmtLang =
       | Some "unsat" -> UNSAT
       | Some "unknown" -> UNKNOWN
       | None -> OTHER "EOF"
-      | Some r -> OTHER r
+      | Some r -> parse_reply solver
 
     let rec parse_model (solver: solver_proc) =
       let rs = get_reply_until "end_of_model" solver in
@@ -828,17 +828,22 @@ module Unboxed : ExprEncoding =
     let lift2 (f: 'a -> 'b -> 'c) (zes1 : 'a list) (zes2: 'b list) =
       List.map2 (fun ze1 ze2 -> f ze1 ze2) zes1 zes2
 
+    exception False
+            
     let combine_term l =
       match l with
       | [] -> failwith "empty expression"
       | [l] -> l
       | e1 :: l ->
-         List.fold_left
-           (fun acc ze1 ->
-             match ze1.t with
-             | Bool true -> acc
-             | _ -> mk_and ze1.t acc) e1.t l
-      |> mk_term
+         let e = try List.fold_left
+                       (fun acc ze1 ->
+                         match ze1.t with
+                         | Bool true -> acc
+                         | Bool false -> raise False
+                         | _ -> mk_and ze1.t acc) e1.t l
+                 with False -> mk_bool false
+         in
+         mk_term e
 
     let create_strings (str: string) (ty: Syntax.ty) =
       match ty with
@@ -1051,12 +1056,11 @@ module Unboxed : ExprEncoding =
            (* Printf.printf "ps: %s\n" (Printing.pattern_to_string (PTuple ps)); *)
            (* Printf.printf "ts: %s\n" (Printing.ty_to_string (TTuple ts)); *)
            let psts = (List.combine ps ts) in
-           List.map
-             (fun ((p,ty), zname) ->
+           BatList.map2
+             (fun (p,ty) zname ->
                match encode_pattern_z3 descr env [zname] p ty with
                | [pt] -> pt
-               | _ -> failwith "expected a single variable")
-             (List.combine psts znames))
+               | _ -> failwith "expected a single variable") psts znames)
       | _ ->
          Console.error
            (Printf.sprintf "internal error (encode_pattern): (%s, %s)"
@@ -1144,11 +1148,10 @@ module ClassicEncoding (E: ExprEncoding): Encoding =
             | EFun _ ->
                loop exp ((x,xty) :: acc)
             | _ ->
-               let acc = List.rev ((x,xty) :: acc) in
-               let xs = List.map (fun (x,xty) -> create_vars env str x xty) acc in
-               let xstr = List.map (fun x -> mk_constant env x (ty_to_sort xty)
-                                                         ~cdescr:"" ~cloc:merge.espan) xs
-               in
+               let xstr = BatList.rev_map (fun (x,xty) ->
+                            mk_constant env (create_vars env str x xty) (ty_to_sort xty)
+                                        ~cdescr:"" ~cloc:merge.espan )
+                                        ((x,xty) :: acc) in
                let names = create_strings (Printf.sprintf "%s-result" str) (oget exp.ety) in
                let results =
                  lift2 (mk_constant env) names (oget exp.ety |> ty_to_sorts) in     
@@ -1168,11 +1171,10 @@ module ClassicEncoding (E: ExprEncoding): Encoding =
           | EFun _ ->
              loop exp ((x,xty) :: acc)
           | _ ->
-             let acc = List.rev ((x,xty) :: acc) in
-             let xs = List.map (fun (x,xty) -> create_vars env str x xty) acc in
-             let xstr = List.map (fun x -> mk_constant env x (ty_to_sort xty)
-                                    ~cdescr:"transfer x argument" ~cloc:trans.espan ) xs  
-             in
+             let xstr = BatList.rev_map (fun (x,xty) ->
+                          mk_constant env (create_vars env str x xty) (ty_to_sort xty)
+                                      ~cdescr:"transfer x argument" ~cloc:trans.espan)
+                                      ((x,xty) :: acc) in
              let names = create_strings (Printf.sprintf "%s-result" str) (oget exp.ety) in
              let results =
                lift2 (mk_constant env) names (oget exp.ety |> ty_to_sorts) in     
@@ -1203,11 +1205,10 @@ module ClassicEncoding (E: ExprEncoding): Encoding =
           | EFun _ ->
              loop exp ((x,xty) :: acc)
           | _ ->
-             let acc = List.rev ((x,xty) :: acc) in
-             let xs = List.map (fun (x,xty) -> create_vars env str x xty) acc in
-             let xstr = List.map (fun x -> mk_constant env x (ty_to_sort xty)
-                                    ~cdescr:"assert x argument" ~cloc:assertion.espan ) xs
-             in
+             let xstr = BatList.rev_map (fun (x,xty) ->
+                            mk_constant env (create_vars env str x xty) (ty_to_sort xty)
+                                        ~cdescr:"assert x argument" ~cloc:assertion.espan )
+                                        ((x,xty) :: acc) in
              let names = create_strings (Printf.sprintf "%s-result" str) (oget exp.ety) in
              let results =
                lift2 (mk_constant env) names (oget exp.ety |> ty_to_sorts) in     

@@ -44,7 +44,6 @@ let run_smt file cfg info ds =
       end
     else decls
   in
-  (* failwith "flattened"; *)
   let res, fs =
     if cfg.unroll_maps then (
       try
