@@ -818,7 +818,6 @@ module Unboxed : ExprEncoding =
 
     type 'a t = 'a list
               
-        
     let proj (i: int) (name: string) =
       Printf.sprintf "proj-%d-%s" i name
 
@@ -834,13 +833,13 @@ module Unboxed : ExprEncoding =
       match l with
       | [] -> failwith "empty term"
       | e1 :: l -> 
-      let e = try List.fold_left
-                    (fun acc ze1 ->
-                      match ze1.t with
-                      | Bool true -> acc
-                      | Bool false -> raise False
-                      | _ -> mk_and ze1.t acc) e1.t l
-              with False -> mk_bool false
+         let e = try List.fold_left
+                       (fun acc ze1 ->
+                         match ze1.t with
+                         | Bool true -> acc
+                         | Bool false -> raise False
+                         | _ -> mk_and ze1.t acc) e1.t l
+                 with False -> mk_bool false
       in
       mk_term e
 
@@ -864,7 +863,6 @@ module Unboxed : ExprEncoding =
     let rec ty_to_sorts (ty: ty) : sort list =
       match ty with
       | TVar {contents= Link t} ->
-         Printf.printf "depth indicator\n";
          ty_to_sorts t
       | TBool -> [BoolSort]
       | TInt _ -> [IntSort]
@@ -904,60 +902,61 @@ module Unboxed : ExprEncoding =
         ([], [], []) -> []
       | (a1::l1, a2::l2, a3::l3) -> let r = f a1 a2 a3 in r :: map3 f l1 l2 l3
       | (_, _, _) -> invalid_arg "map3"
-      
-    let rec encode_exp_z3 descr env (e: exp) : term list =
+                   
+   let rec encode_exp_z3_single descr env (e: exp) : term =
       match e.e with
       | EVar x ->
-         [create_vars env descr x (oget e.ety) |> mk_var
-          |> (mk_term ~tloc:e.espan)]
-      | EVal v -> encode_value_z3 descr env v
+         create_vars env descr x (oget e.ety)
+         |> mk_var
+         |> (mk_term ~tloc:e.espan)
+      | EVal v -> encode_value_z3_single descr env v
       | EOp (op, es) -> (
         match (op, es) with
         | Syntax.And, [e1;e2] when is_value e1 ->
            (match (to_value e1).v with
             | VBool true ->
-               encode_exp_z3 descr env e2
+               encode_exp_z3_single descr env e2
             | VBool false ->
-               [mk_bool false |> mk_term ~tloc:e.espan]
+               mk_bool false |> mk_term ~tloc:e.espan
             | _ -> failwith "must be a boolean value")
         | Syntax.And, [e1;e2] when is_value e2 ->
            (match (to_value e2).v with
             | VBool true ->
-               encode_exp_z3 descr env e1
+               encode_exp_z3_single descr env e1
             | VBool false ->
-               [mk_bool false |> mk_term ~tloc:e.espan]
+               mk_bool false |> mk_term ~tloc:e.espan
             | _ -> failwith "must be a boolean value")
         | Syntax.And, [e1;e2] ->
-           let ze1 = encode_exp_z3 descr env e1 in
-           let ze2 = encode_exp_z3 descr env e2 in
-           lift2 (fun ze1 ze2 -> mk_and ze1.t ze2.t |> mk_term ~tloc:e.espan) ze1 ze2
+           let ze1 = encode_exp_z3_single descr env e1 in
+           let ze2 = encode_exp_z3_single descr env e2 in
+           mk_and ze1.t ze2.t |> mk_term ~tloc:e.espan
         | Syntax.Or, [e1;e2] ->
-           let ze1 = encode_exp_z3 descr env e1 in
-           let ze2 = encode_exp_z3 descr env e2 in
-           lift2 (fun ze1 ze2 -> mk_or ze1.t ze2.t |> mk_term ~tloc:e.espan) ze1 ze2
-        | Not, _ ->
-           let ze = List.hd es |> encode_exp_z3 descr env in
-           lift1 (fun ze -> mk_not ze.t |> mk_term ~tloc:e.espan) ze
+           let ze1 = encode_exp_z3_single descr env e1 in
+           let ze2 = encode_exp_z3_single descr env e2 in
+           mk_or ze1.t ze2.t |> mk_term ~tloc:e.espan
+        | Not, [e1] ->
+           let ze = encode_exp_z3_single descr env e1 in
+           mk_not ze.t |> mk_term ~tloc:e.espan
         | Syntax.UAdd _, [e1;e2] ->
-           let ze1 = encode_exp_z3 descr env e1 in
-           let ze2 = encode_exp_z3 descr env e2 in
-           lift2 (fun ze1 ze2 -> mk_add ze1.t ze2.t |> mk_term ~tloc:e.espan) ze1 ze2
+           let ze1 = encode_exp_z3_single descr env e1 in
+           let ze2 = encode_exp_z3_single descr env e2 in
+           mk_add ze1.t ze2.t |> mk_term ~tloc:e.espan
         | Syntax.USub _, [e1;e2] ->
-           let ze1 = encode_exp_z3 descr env e1 in
-           let ze2 = encode_exp_z3 descr env e2 in
-           lift2 (fun ze1 ze2 -> mk_sub ze1.t ze2.t |> mk_term ~tloc:e.espan) ze1 ze2
+           let ze1 = encode_exp_z3_single descr env e1 in
+           let ze2 = encode_exp_z3_single descr env e2 in
+           mk_sub ze1.t ze2.t |> mk_term ~tloc:e.espan
         | UEq, [e1;e2] ->
-           let ze1 = encode_exp_z3 descr env e1 in
-           let ze2 = encode_exp_z3 descr env e2 in
-           lift2 (fun ze1 ze2 -> mk_eq ze1.t ze2.t |> mk_term ~tloc:e.espan) ze1 ze2
+           let ze1 = encode_exp_z3_single descr env e1 in
+           let ze2 = encode_exp_z3_single descr env e2 in
+           mk_eq ze1.t ze2.t |> mk_term ~tloc:e.espan
         | ULess _, [e1;e2] ->
-           let ze1 = encode_exp_z3 descr env e1 in
-           let ze2 = encode_exp_z3 descr env e2 in
-           lift2 (fun ze1 ze2 -> mk_lt ze1.t ze2.t |> mk_term ~tloc:e.espan) ze1 ze2
+           let ze1 = encode_exp_z3_single descr env e1 in
+           let ze2 = encode_exp_z3_single descr env e2 in
+           mk_lt ze1.t ze2.t |> mk_term ~tloc:e.espan
         | ULeq _, [e1;e2] ->
-           let ze1 = encode_exp_z3 descr env e1 in
-           let ze2 = encode_exp_z3 descr env e2 in
-           lift2 (fun ze1 ze2 -> mk_leq ze1.t ze2.t |> mk_term ~tloc:e.espan) ze1 ze2
+           let ze1 = encode_exp_z3_single descr env e1 in
+           let ze2 = encode_exp_z3_single descr env e2 in
+           mk_leq ze1.t ze2.t |> mk_term ~tloc:e.espan
         | AtMost _, [e1;e2] when is_value e2 ->
            (match e1.e with
             | ETuple es when (List.for_all (fun e ->
@@ -965,10 +964,10 @@ module Unboxed : ExprEncoding =
                                   | EVar _ -> true
                                   | _ -> false) es) ->
                let zes =
-                 List.map (fun e -> (List.hd (encode_exp_z3 descr env e)).t) es in
-               let ze2 = encode_value_z3 descr env (Syntax.to_value e2) |> List.hd in
-               [mk_atMost zes ze2.t |>
-                  mk_term ~tloc:e.espan]
+                 List.map (fun e -> (encode_exp_z3_single descr env e).t) es in
+               let ze2 = encode_value_z3_single descr env (Syntax.to_value e2) in
+               mk_atMost zes ze2.t |>
+                 mk_term ~tloc:e.espan
             | _ -> failwith "AtMost operator requires a list of boolean variables")
         | AtMost _,_ -> failwith "Wrong arguments for AtMost"
         | MCreate, [e1] ->
@@ -981,7 +980,24 @@ module Unboxed : ExprEncoding =
            failwith "not implemented yet"
         | MMapFilter, _ 
           | MMerge, _
-          | _ -> failwith "internal error (encode_exp_z3)" )
+          | _ -> failwith "internal error (encode_exp_z3)")
+      | ETy (e, ty) -> encode_exp_z3_single descr env e
+      | _ ->
+         (* we always know this is going to be a singleton list *)
+         let es = encode_exp_z3 descr env e in
+         List.hd es
+
+    and encode_exp_z3 descr env (e: exp) : term list =
+      match e.e with
+      | EOp (op, es) ->
+         (match op, es with
+          | UEq, [e1;e2] ->
+             let ze1 = encode_exp_z3 descr env e1 in
+             let ze2 = encode_exp_z3 descr env e2 in
+             lift2 (fun ze1 ze2 -> mk_eq ze1.t ze2.t |> mk_term ~tloc:e.espan) ze1 ze2
+          | _ -> [encode_exp_z3_single descr env e])
+      | EVal v when match v.vty with | Some (TTuple _) -> true | _ -> false ->
+         encode_value_z3 descr env v
       | EIf (e1, e2, e3) ->
          let zes1 = encode_exp_z3 descr env e1 in
          let zes2 = encode_exp_z3 descr env e2 in
@@ -993,13 +1009,13 @@ module Unboxed : ExprEncoding =
          let ty = (oget e1.ety) in
          let sorts = ty |> ty_to_sort in
          let xs = create_vars env descr x ty in
-         let zs = mk_constant env xs sorts ~cloc:e.espan ~cdescr: (descr ^ "-let") in
-         let zes1 = encode_exp_z3 descr env e1 in
+         let za = mk_constant env xs sorts ~cloc:e.espan ~cdescr: (descr ^ "-let") in
+         let ze1 = encode_exp_z3_single descr env e1 in
          let zes2 = encode_exp_z3 descr env e2 in
-         ignore(lift2 (fun ze1 za -> add_constraint env (mk_term (mk_eq za.t ze1.t)))
-                      zes1 [zs]);
+         add_constraint env (mk_term (mk_eq za.t ze1.t));
          zes2
       | ETuple es ->
+         (* Printf.printf "expr: %s\n" (Syntax.show_exp ~show_meta:false e); *)
          (* List.fold_left (fun acc e -> *)
          (*     (encode_exp_z3 descr env e) @ acc) [] es *)
          lift1 (fun e -> encode_exp_z3 descr env e) es |>
@@ -1014,7 +1030,10 @@ module Unboxed : ExprEncoding =
          encode_branches_z3 descr env zes1 bs (oget e1.ety)
       | ETy (e, ty) -> encode_exp_z3 descr env e
       | EFun _ | EApp _ -> failwith "function in smt encoding"
-
+      | _ ->
+         (* Printf.printf "expr: %s\n" (Syntax.show_exp ~show_meta:false e); *)
+         [encode_exp_z3_single descr env e]
+        
     and encode_branches_z3 descr env names bs (t: ty) =
       match List.rev bs with
       | [] -> failwith "internal error (encode_branches)"
@@ -1051,16 +1070,14 @@ module Unboxed : ExprEncoding =
          add_constraint env (mk_term (mk_eq zas.t (List.hd znames).t));
          [mk_bool true |> mk_term]
       | PBool b, TBool ->
-         [mk_eq (List.hd znames).t (mk_bool b) |>  mk_term]
+         [mk_eq (List.hd znames).t (mk_bool b) |> mk_term]
       | PInt i, TInt _ ->
          let const = mk_int_u32 i in
-         [mk_eq (List.hd znames).t const |>  mk_term]
+         [mk_eq (List.hd znames).t const |> mk_term]
       | PTuple ps, TTuple ts -> (
         match (ps, ts) with
         | [p], [t] -> encode_pattern_z3 descr env znames p t
         | ps, ts ->
-           (* Printf.printf "ps: %s\n" (Printing.pattern_to_string (PTuple ps)); *)
-           (* Printf.printf "ts: %s\n" (Printing.ty_to_string (TTuple ts)); *)
            (* let psts = (List.combine ps ts) in *)
            map3 
              (fun p ty zname ->
@@ -1076,10 +1093,10 @@ module Unboxed : ExprEncoding =
     and encode_value_z3 descr env (v: Syntax.value) : term list =
       match v.v with
       | VTuple vs ->
-         List.map (fun v -> encode_single_value_z3 descr env v) vs
-      | _ -> [encode_single_value_z3 descr env v]
+         List.map (fun v -> encode_value_z3_single descr env v) vs
+      | _ -> [encode_value_z3_single descr env v]
            
-    and encode_single_value_z3 descr env (v: Syntax.value) : term =
+    and encode_value_z3_single descr env (v: Syntax.value) : term =
       match v.v with
       | VBool b ->
          mk_bool b |>
