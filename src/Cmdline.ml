@@ -45,7 +45,7 @@ let default =
   ; inline=false
   ; compress= -1
   ; split_heuristic="randomPath"
-  ; unbox = true
+  ; unbox = false
   ; draw=false}
 
 let cfg = ref default 

@@ -1023,7 +1023,7 @@ module FailuresAbstraction =
             VertexSet.add uhat acc
           else acc) fnew VertexSet.empty
 
-    let refinement_breadth = 8
+    let refinement_breadth = 15
                            
     let refine_step (g: AdjGraph.t) forig (f: abstractionMap) (todo: VertexSet.t) ds k =
       let ag = BuildAbstractNetwork.buildAbstractAdjGraph g f in
@@ -1079,7 +1079,7 @@ module FailuresAbstraction =
                                                     (AbstractNode.cardinal (getGroupById f x))
                                                     (AbstractNode.cardinal (getGroupById f y)))
                                       uhats) uhatss
-              |> BatList.flatten 
+              |> BatList.flatten
             in
             (* add in the most_freq node *)
             let uhats = most_freq @ uhats in
@@ -1135,35 +1135,45 @@ module FailuresAbstraction =
           (fun uhat acc -> VertexSet.add uhat acc)
           (AbstractionMap.normalized_size forig |> Integer.of_int) VertexSet.empty in
       Queue.add (forig, todo) q;
-      (* let groups = AbstractionMap.printAbstractGroups forig "\n" in *)
-      (* Console.show_message groups Console.T.Blue "Abstract groups before refineK"; *)
+
       (* making minimum a reference, as an optimization on the final step*)
       let rec loop completed minimum =
         try
           let (f, todo) = Queue.pop q in
-          match refine_step g forig f todo ds k with
-          | [] ->
-             ( match minimum with
-               | None -> loop (completed+1) (Some f)
-               | Some minimum ->
-                  if (compare_refinements f minimum < 0) then
-                    loop (completed+1) (Some f)
-                  else
-                    loop (completed+1) (Some minimum))
-          | fs ->
-             (* If we have already find a refinement that is better
+          let b = match minimum with
+            | None -> false 
+            | Some minimumf ->
+               if (compare_refinements minimumf f <= 0) then
+                 true
+             else
+               false
+          in
+          if b then
+            loop completed minimum
+          else
+            match refine_step g forig f todo ds k with
+            | [] ->
+               ( match minimum with
+                 | None -> loop (completed+1) (Some f)
+                 | Some minimum ->
+                    if (compare_refinements f minimum < 0) then
+                      loop (completed+1) (Some f)
+                    else
+                      loop (completed+1) (Some minimum))
+            | fs ->
+               (* If we have already find a refinement that is better
                    than the one we are exploring right now, then stop
                    exploring it *)
-             List.iter (fun (f,todo) ->
-                 (* Printf.printf "size of refinements:%d\n" (AbstractionMap.size f); *)
-                 match minimum with
-                 | None ->
-                    Queue.push (f,todo) q
-                 | Some minimum ->
-                    if compare_refinements f minimum = -1 then
+               List.iter (fun (f,todo) ->
+                   (* Printf.printf "size of refinements:%d\n" (AbstractionMap.size f); *)
+                   match minimum with
+                   | None ->
                       Queue.push (f,todo) q
-                    else ()) fs;
-             loop completed minimum
+                   | Some minimum ->
+                      if compare_refinements f minimum = -1 then
+                        Queue.push (f,todo) q
+                      else ()) fs;
+               loop completed minimum
         with
           Queue.Empty -> completed, minimum
       in
@@ -1181,7 +1191,7 @@ module FailuresAbstraction =
          f
       | _, _ ->
          failwith "found no refinement"
-           
+        
   end
 
   

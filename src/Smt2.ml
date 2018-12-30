@@ -867,7 +867,9 @@ module Unboxed : ExprEncoding =
     (** Translates a [Syntax.ty] to a list of SMT sorts *)
     let rec ty_to_sorts (ty: ty) : sort list =
       match ty with
-      | TVar {contents= Link t} -> ty_to_sorts t
+      | TVar {contents= Link t} ->
+         Printf.printf "depth indicator\n";
+         ty_to_sorts t
       | TBool -> [BoolSort]
       | TInt _ -> [IntSort]
       | TTuple ts -> (

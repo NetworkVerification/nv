@@ -24,7 +24,7 @@ debug: $(MLFILES)
 	$(BUILD) -tag debug src/Main.native
 
 profile: $(MLFILES)
-	$(BUILD) -tag profile src/Main.byte
+	$(BUILD) -tag profile src/Main.native
 
 byte: $(MLFILES)
 	$(BUILD) -tag byte -tag debug src/Main.byte
