@@ -710,6 +710,63 @@ and valid_patterns env p =
   | [] -> env
   | p :: ps -> valid_patterns (valid_pattern env p) ps
 
+let rec strip_val (v: value) : value =
+  match v.v with
+  | VTuple vs ->
+     avalue (vtuple (List.map strip_val vs), Some (strip_ty (oget v.vty)), v.vspan)
+  | VOption (Some v1) ->
+     avalue (voption (Some (strip_val v1)), Some (strip_ty (oget v.vty)), v.vspan)
+  | VBool _ | VInt _ | VMap _ | VClosure _ | VOption None ->
+     avalue (v, Some (strip_ty (oget v.vty)), v.vspan) 
+    
+let rec strip_exp (e: exp) : exp =
+  match e.e with
+  | EVar _ -> aexp(e, Some (strip_ty (oget e.ety)), e.espan)
+  | EVal v ->
+     aexp(e_val (avalue(strip_val v, Some (strip_ty (oget v.vty)), v.vspan)),
+          Some (strip_ty (oget e.ety)), e.espan)
+  | EOp (op, es) ->
+     aexp (eop op (List.map strip_exp es), Some (strip_ty (oget e.ety)), e.espan)
+  | EFun {arg=x; body= body; argty = Some argty; resty = Some resty} ->
+     aexp (efun (funcFull x (Some (strip_ty argty)) (Some (strip_ty resty)) (strip_exp body)),
+           Some (strip_ty (oget e.ety)), e.espan)
+  | EApp (e1, e2) ->
+     aexp (eapp (strip_exp e1) (strip_exp e2), Some (strip_ty (oget e.ety)), e.espan)
+  | EIf (e1, e2, e3) ->
+     aexp (eif (strip_exp e1) (strip_exp e2) (strip_exp e3), Some (strip_ty (oget e.ety)),
+           e.espan)
+  | ELet (x, e1, e2) ->
+     aexp (elet x (strip_exp e1) (strip_exp e2), Some (strip_ty (oget e.ety)), e.espan)
+  | ETuple es ->
+     aexp (etuple (List.map strip_exp es), Some (strip_ty (oget e.ety)), e.espan)
+  | ESome e1 ->
+     aexp (esome (strip_exp e1), Some (strip_ty (oget e.ety)), e.espan)
+  | EMatch (e, bs) ->
+     aexp (ematch (strip_exp e)
+                  (List.map (fun (p,e) -> (p, strip_exp e)) bs),
+           Some (strip_ty (oget e.ety)), e.espan)
+  | ETy (e, _) -> strip_exp e
+  | EFun _ -> failwith "no types to strip on EFun"
+
+let strip_decl d =
+  match d with
+  | DLet (x, Some ty, e) -> DLet (x, Some (strip_ty ty), strip_exp e)
+  | DLet (x, None, e) -> DLet (x, None, strip_exp e)
+  | DSymbolic (x, tye) -> DSymbolic (x, match tye with
+                                        | Ty ty -> Ty (strip_ty ty)
+                                        | Exp e -> Exp (strip_exp e))
+  | DATy ty -> DATy (strip_ty ty)
+  | DMerge e -> DMerge (strip_exp e)
+  | DTrans e -> DTrans (strip_exp e)
+  | DInit e -> DInit (strip_exp e)
+  | DAssert e -> DAssert (strip_exp e)
+  | DRequire e -> DRequire (strip_exp e)
+  | DNodes _ -> d
+  | DEdges _ -> d
+
+let strip_decls ds =
+  List.map strip_decl ds
+            
 let infer_declarations info (ds: declarations) : declarations =
   match get_attr_type ds with
   | None ->

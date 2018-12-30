@@ -832,18 +832,17 @@ module Unboxed : ExprEncoding =
             
     let combine_term l =
       match l with
-      | [] -> failwith "empty expression"
-      | [l] -> l
-      | e1 :: l ->
-         let e = try List.fold_left
-                       (fun acc ze1 ->
-                         match ze1.t with
-                         | Bool true -> acc
-                         | Bool false -> raise False
-                         | _ -> mk_and ze1.t acc) e1.t l
-                 with False -> mk_bool false
-         in
-         mk_term e
+      | [] -> failwith "empty term"
+      | e1 :: l -> 
+      let e = try List.fold_left
+                    (fun acc ze1 ->
+                      match ze1.t with
+                      | Bool true -> acc
+                      | Bool false -> raise False
+                      | _ -> mk_and ze1.t acc) e1.t l
+              with False -> mk_bool false
+      in
+      mk_term e
 
     let create_strings (str: string) (ty: Syntax.ty) =
       match ty with
@@ -859,10 +858,7 @@ module Unboxed : ExprEncoding =
          List.iter2 (fun b ty ->
              env.symbolics <- VarMap.add b (Syntax.Ty ty) env.symbolics) b ts
       | _ ->
-         match b with
-         | [b] ->
-            env.symbolics <- VarMap.add b (Syntax.Ty ty) env.symbolics
-         | _ -> failwith "expected one variable based on type"
+         env.symbolics <- VarMap.add (List.hd b) (Syntax.Ty ty) env.symbolics
 
     (** Translates a [Syntax.ty] to a list of SMT sorts *)
     let rec ty_to_sorts (ty: ty) : sort list =
@@ -901,7 +897,13 @@ module Unboxed : ExprEncoding =
 
     let mk_constant =
       mk_constant
-      (* lift2 (mk_constant env ~cdescr:cdescr ~cloc:cloc) cnames csorts *)
+    (* lift2 (mk_constant env ~cdescr:cdescr ~cloc:cloc) cnames csorts *)
+
+    let rec map3 f l1 l2 l3 =
+      match (l1, l2, l3) with
+        ([], [], []) -> []
+      | (a1::l1, a2::l2, a3::l3) -> let r = f a1 a2 a3 in r :: map3 f l1 l2 l3
+      | (_, _, _) -> invalid_arg "map3"
       
     let rec encode_exp_z3 descr env (e: exp) : term list =
       match e.e with
@@ -998,6 +1000,8 @@ module Unboxed : ExprEncoding =
                       zes1 [zs]);
          zes2
       | ETuple es ->
+         (* List.fold_left (fun acc e -> *)
+         (*     (encode_exp_z3 descr env e) @ acc) [] es *)
          lift1 (fun e -> encode_exp_z3 descr env e) es |>
            List.concat
       | ESome e1 ->
@@ -1014,16 +1018,17 @@ module Unboxed : ExprEncoding =
     and encode_branches_z3 descr env names bs (t: ty) =
       match List.rev bs with
       | [] -> failwith "internal error (encode_branches)"
-      | (p, e) :: bs ->
+      | (p, e) :: _ ->
          let zes = encode_exp_z3 descr env e in
          (* we make the last branch fire no matter what *)
          let _ = encode_pattern_z3 descr env names p t in
-         encode_branches_aux_z3 descr env names (List.rev bs) zes t
+         encode_branches_aux_z3 descr env names bs zes t
 
     (* I'm assuming here that the cases are exhaustive *)
     and encode_branches_aux_z3 descr env names bs acczes (t: ty) =
       match bs with
-      | [] -> acczes
+      | [] -> failwith "empty branch list"
+      | [(p,e)] -> acczes (* already included*)
       | (p, e) :: bs ->
          let zes = encode_exp_z3 descr env e in
          let zps = encode_pattern_z3 descr env names p t in
@@ -1043,26 +1048,25 @@ module Unboxed : ExprEncoding =
          let local_name = create_vars env descr x t in
          let sort = ty_to_sort t in
          let zas = mk_constant env local_name sort in
-         List.iter2 (fun za zname ->
-             add_constraint env (mk_term (mk_eq za.t zname.t))) [zas] znames;
+         add_constraint env (mk_term (mk_eq zas.t (List.hd znames).t));
          [mk_bool true |> mk_term]
       | PBool b, TBool ->
-         lift1 (fun zname -> mk_eq zname.t (mk_bool b) |>  mk_term) znames
+         [mk_eq (List.hd znames).t (mk_bool b) |>  mk_term]
       | PInt i, TInt _ ->
          let const = mk_int_u32 i in
-         lift1 (fun zname -> mk_eq zname.t const |> mk_term) znames
+         [mk_eq (List.hd znames).t const |>  mk_term]
       | PTuple ps, TTuple ts -> (
         match (ps, ts) with
         | [p], [t] -> encode_pattern_z3 descr env znames p t
         | ps, ts ->
            (* Printf.printf "ps: %s\n" (Printing.pattern_to_string (PTuple ps)); *)
            (* Printf.printf "ts: %s\n" (Printing.ty_to_string (TTuple ts)); *)
-           let psts = (List.combine ps ts) in
-           BatList.map2
-             (fun (p,ty) zname ->
+           (* let psts = (List.combine ps ts) in *)
+           map3 
+             (fun p ty zname ->
                match encode_pattern_z3 descr env [zname] p ty with
                | [pt] -> pt
-               | _ -> failwith "expected a single variable") psts znames)
+               | _ -> failwith "expected a single variable") ps ts znames)
       | _ ->
          Console.error
            (Printf.sprintf "internal error (encode_pattern): (%s, %s)"
