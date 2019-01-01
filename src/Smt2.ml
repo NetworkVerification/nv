@@ -441,7 +441,7 @@ module type ExprEncoding =
     val ty_to_sorts : ty -> sort t
     val encode_exp_z3 : string -> smt_env -> Syntax.exp -> term t 
     val create_strings : string -> Syntax.ty -> string t
-    val create_vars : smt_env -> string -> Syntax.var -> Syntax.ty -> string
+    val create_vars : smt_env -> string -> Syntax.var -> string
     val mk_constant : smt_env -> ?cdescr:string -> ?cloc:Span.t
                       -> string -> sort -> term
     val add_symbolic: smt_env -> Var.t t -> Syntax.ty -> unit
@@ -462,7 +462,7 @@ module Boxed: ExprEncoding =
 
     let create_strings str ty = str
                               
-    let create_vars env descr x ty =
+    let create_vars env descr x =
       let name =
         if is_symbolic env.symbolics x then
           begin
@@ -819,7 +819,7 @@ module Unboxed : ExprEncoding =
     type 'a t = 'a list
               
     let proj (i: int) (name: string) =
-      Printf.sprintf "proj-%d-%s" i name
+      Printf.sprintf "%s-proj-%d" name i
 
     let lift1 (f: 'a -> 'b) (zes1 : 'a list) : 'b list =
       List.map (fun ze1 -> f ze1) zes1
@@ -878,11 +878,11 @@ module Unboxed : ExprEncoding =
            (Printf.sprintf "internal error (ty_to_sort): %s"
                            (Printing.ty_to_string ty))
               
-    let create_vars (env: smt_env) descr (x: Syntax.var) (ty: Syntax.ty) =
+    let create_vars (env: smt_env) descr (x: Syntax.var) =
       let name =
         if is_symbolic env.symbolics x then
           begin
-            Var.to_string x
+            Var.name x
           end
         else create_name descr x
       in
@@ -906,7 +906,7 @@ module Unboxed : ExprEncoding =
    let rec encode_exp_z3_single descr env (e: exp) : term =
       match e.e with
       | EVar x ->
-         create_vars env descr x (oget e.ety)
+         create_vars env descr x
          |> mk_var
          |> (mk_term ~tloc:e.espan)
       | EVal v -> encode_value_z3_single descr env v
@@ -1008,7 +1008,7 @@ module Unboxed : ExprEncoding =
       | ELet (x, e1, e2) ->
          let ty = (oget e1.ety) in
          let sorts = ty |> ty_to_sort in
-         let xs = create_vars env descr x ty in
+         let xs = create_vars env descr x in
          let za = mk_constant env xs sorts ~cloc:e.espan ~cdescr: (descr ^ "-let") in
          let ze1 = encode_exp_z3_single descr env e1 in
          let zes2 = encode_exp_z3 descr env e2 in
@@ -1064,7 +1064,7 @@ module Unboxed : ExprEncoding =
       | PWild, _ ->
          [mk_bool true |> mk_term]
       | PVar x, t ->
-         let local_name = create_vars env descr x t in
+         let local_name = create_vars env descr x in
          let sort = ty_to_sort t in
          let zas = mk_constant env local_name sort in
          add_constraint env (mk_term (mk_eq zas.t (List.hd znames).t));
@@ -1116,8 +1116,16 @@ let label_var i =
   Printf.sprintf "label-%d" (Integer.to_int i)
 
 let node_of_label_var s =
-  Integer.of_string (BatString.lchop ~n:6 s)
-  
+  Integer.of_string
+    (List.nth (BatString.split_on_char '-' s) 1)
+
+let proj_of_var s =
+  try
+    let _, s2 = BatString.split s "proj" in
+    Some (int_of_string
+            (List.nth (BatString.split_on_char '-' s2) 1))
+  with Not_found -> None
+                  
 let assert_var i =
   Printf.sprintf "assert-%d" (Integer.to_int i)
 
@@ -1127,7 +1135,7 @@ let node_of_assert_var s =
   Integer.of_string (BatString.lchop ~n:7 s |> BatString.rchop ~n:7)
 
 let symbolic_var (s: Var.t) =
-  Var.to_string s
+  Var.name s
   
 let init_solver ds =
   Var.reset () ;
@@ -1152,7 +1160,7 @@ module ClassicEncoding (E: ExprEncoding): Encoding =
       (* Declare the symbolic variables: ignore the expression in case of SMT *)
       VarMap.iter
         (fun v e ->
-          let names = create_vars env "" v (Syntax.get_ty_from_tyexp e) in
+          let names = create_vars env "" v in
           mk_constant env names (ty_to_sort (Syntax.get_ty_from_tyexp e))
                       ~cdescr:"Symbolic variable decl"
           |> ignore ) sym_vars ;
@@ -1172,7 +1180,7 @@ module ClassicEncoding (E: ExprEncoding): Encoding =
                loop exp ((x,xty) :: acc)
             | _ ->
                let xstr = BatList.rev_map (fun (x,xty) ->
-                            mk_constant env (create_vars env str x xty) (ty_to_sort xty)
+                            mk_constant env (create_vars env str x) (ty_to_sort xty)
                                         ~cdescr:"" ~cloc:merge.espan )
                                         ((x,xty) :: acc) in
                let names = create_strings (Printf.sprintf "%s-result" str) (oget exp.ety) in
@@ -1195,7 +1203,7 @@ module ClassicEncoding (E: ExprEncoding): Encoding =
              loop exp ((x,xty) :: acc)
           | _ ->
              let xstr = BatList.rev_map (fun (x,xty) ->
-                          mk_constant env (create_vars env str x xty) (ty_to_sort xty)
+                          mk_constant env (create_vars env str x) (ty_to_sort xty)
                                       ~cdescr:"transfer x argument" ~cloc:trans.espan)
                                       ((x,xty) :: acc) in
              let names = create_strings (Printf.sprintf "%s-result" str) (oget exp.ety) in
@@ -1229,7 +1237,7 @@ module ClassicEncoding (E: ExprEncoding): Encoding =
              loop exp ((x,xty) :: acc)
           | _ ->
              let xstr = BatList.rev_map (fun (x,xty) ->
-                            mk_constant env (create_vars env str x xty) (ty_to_sort xty)
+                            mk_constant env (create_vars env str x) (ty_to_sort xty)
                                         ~cdescr:"assert x argument" ~cloc:assertion.espan )
                                         ((x,xty) :: acc) in
              let names = create_strings (Printf.sprintf "%s-result" str) (oget exp.ety) in
@@ -1338,9 +1346,12 @@ module ClassicEncoding (E: ExprEncoding): Encoding =
         in
         let lbl_i_name = label_var (Integer.of_int i) in
         let lbl_i = create_strings lbl_i_name aty in
-        let l =
-          lift2 (mk_constant env) lbl_i (ty_to_sorts aty) in
-        add_symbolic env (lift1 Var.create lbl_i) aty;
+        let lbl_iv = lift1 Var.create lbl_i in
+        add_symbolic env lbl_iv aty;
+        let l = lift2 (fun lbl s -> mk_constant env (create_vars env "" lbl) s)
+                      lbl_iv (ty_to_sorts aty)
+        in
+
         ignore(lift2 (fun l merged ->
                    add_constraint env (mk_term (mk_eq l.t merged.t))) l merged);
         labelling := AdjGraph.VertexMap.add (Integer.of_int i) l !labelling
@@ -1390,7 +1401,7 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
       (* Declare the symbolic variables: ignore the expression in case of SMT *)
       VarMap.iter
         (fun v e ->
-          let names = create_vars env "" v (Syntax.get_ty_from_tyexp e) in
+          let names = create_vars env "" v in
           mk_constant env names (ty_to_sort (Syntax.get_ty_from_tyexp e))
                       ~cdescr:"Symbolic variable decl"
           |> ignore ) sym_vars ;
@@ -1409,7 +1420,7 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
              loop exp ((x,xty) :: acc)
           | _ ->
              let acc = List.rev acc in
-             let xs = List.map (fun (x,xty) -> create_vars env str x xty) acc in
+             let xs = List.map (fun (x,xty) -> create_vars env str x) acc in
              let xstr = List.map (fun x -> mk_constant env x (ty_to_sort xty)
                                     ~cdescr:"assert x argument" ~cloc:assertion.espan ) xs
              in
@@ -1681,6 +1692,50 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
                    {symbolics = StringMap.empty;
                     labels = AdjGraph.VertexMap.empty;
                     assertions= None}
+
+    let box_vals (xs : (int * Syntax.value) list) =
+      match xs with
+      | [(_,v)] -> v
+      | _ ->
+         vtuple (List.sort (fun (x1,x2) (y1,y2) -> compare x1 y1) xs
+                 |> List.map (fun (x,y) -> y))
+
+    (* TODO: boxing for symbolic variables as well *)
+    let translate_model_unboxed (m : (string, string) BatMap.t) : Solution.t =
+      let (symbolics, labels, assertions) =
+        BatMap.foldi (fun k v (symbolics, labels, assertions) ->
+            let nvval = parse_val v in
+            match k with
+            | k when BatString.starts_with k "label" ->
+               (match proj_of_var k with
+                | None ->
+                   ( symbolics,
+                     AdjGraph.VertexMap.add (node_of_label_var k) [(0,nvval)] labels,
+                     assertions )
+                  
+                | Some i ->
+                   ( symbolics,
+                     AdjGraph.VertexMap.modify_def
+                       [(i,nvval)] (node_of_label_var k) (fun xs -> (i,nvval) :: xs) labels,
+                     assertions ))
+          | k when BatString.starts_with k "assert-" ->
+             ( symbolics,
+               labels,
+               match assertions with
+               | None ->
+                  Some (AdjGraph.VertexMap.add (node_of_assert_var k)
+                                               (nvval |> Syntax.bool_of_val |> oget)
+                                               AdjGraph.VertexMap.empty)
+               | Some m ->
+                  Some (AdjGraph.VertexMap.add (node_of_assert_var k)
+                                               (nvval |> Syntax.bool_of_val |> oget) m) )
+          | k ->
+             (Collections.StringMap.add k nvval symbolics, labels, assertions)) m
+                     (StringMap.empty,AdjGraph.VertexMap.empty, None)
+      in
+      { symbolics = symbolics;
+        labels = AdjGraph.VertexMap.map (box_vals) labels;
+        assertions = assertions }
       
     (** ** Translate the environment to SMT-LIB2 *)
       
@@ -1765,7 +1820,11 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
          ask_solver solver model_question;
          let model = solver |> parse_model in
          (match model with
-          | MODEL m -> Sat (translate_model m)
+          | MODEL m ->
+             if smt_config.unboxing then
+               Sat (translate_model_unboxed m)
+             else
+               Sat (translate_model m)
           | OTHER s ->
              Printf.printf "%s\n" s;
              failwith "failed to parse a model"

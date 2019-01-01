@@ -620,13 +620,6 @@ module FailuresAbstraction =
        message has a path to the destination *)
     let validAttribute (attrTy: Syntax.ty) (m : Syntax.value) : bool =
       not (default_value attrTy = m)
-      (* match m with
-       * | VTuple [_;_;_;_; bestu], VTuple [_;_;_;_; bestv] ->
-       *    (match bestu.v, bestv.v with
-       *     | VOption (Some _), VOption None ->
-       *        true
-       *     | _, _ -> false)
-       * | _ -> false) *)
 
     (** Finds a path in the graph starting from abstract vertex
        uid. Will stop once it reaches the destination or a cycle. It
@@ -1023,7 +1016,7 @@ module FailuresAbstraction =
             VertexSet.add uhat acc
           else acc) fnew VertexSet.empty
 
-    let refinement_breadth = 15
+    let refinement_breadth = 18
                            
     let refine_step (g: AdjGraph.t) forig (f: abstractionMap) (todo: VertexSet.t) ds k =
       let ag = BuildAbstractNetwork.buildAbstractAdjGraph g f in
