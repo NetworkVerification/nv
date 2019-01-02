@@ -1742,13 +1742,21 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
     let env_to_smt ?(verbose=false) info (env : smt_env) =
       (* Emit context *)
       let context = List.rev_map (fun c -> command_to_smt verbose info c) env.ctx in
-      let context = String.concat "\n" context in
+      let context = BatString.concat "\n" context in
 
       (* Emit constants *)
       let constants = ConstantSet.to_list env.const_decls in
       let constants =
-        String.concat "\n"
-                      (List.map (fun c -> const_decl_to_smt ~verbose:verbose info c) constants) in
+        BatString.concat "\n"
+                         (List.map (fun c -> const_decl_to_smt ~verbose:verbose info c)
+                                   constants)
+      in
+      (*       let constants = ConstantSet.fold (fun c ls -> *)
+      (*                     (const_decl_to_smt ~verbose:verbose info c) :: ls) env.const_decls [] *)
+      (* in *)
+      (* let constants = *)
+      (*   BatString.concat "\n" constants *)
+      (* in *)
       (* Emit type declarations *)
       let decls = StringMap.bindings env.type_decls in
       let decls = String.concat "\n"
