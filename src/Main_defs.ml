@@ -178,6 +178,7 @@ let compress file info decls cfg networkOp =
   (* each set of prefixes represents an SRP *)
   let relevantSliceGroups = Slicing.groupPrefixesByVertices relevantSlices in
 
+  let fbonsai = ref AbstractionMap.emptyAbstraction in
   let rec loop (finit: AbstractionMap.abstractionMap)
                (f: AbstractionMap.abstractionMap)
                (pre: Prefix.t)
@@ -211,6 +212,7 @@ let compress file info decls cfg networkOp =
        match f' with
        | None -> print_solution sol;
        | Some f' ->
+          fbonsai := f';
           loop finit f' pre ds k (i+1)
   in
   PrefixSetSet.iter
@@ -221,17 +223,17 @@ let compress file info decls cfg networkOp =
       let pre = PrefixSet.min_elt prefixes in
       (* find the nodes this class is announced from *)
       let ds = PrefixMap.find pre relevantSlices in
-      (* do abstraction for 0...k failures *)
+      (* compute the bonsai abstraction *)
+      fbonsai := Abstraction.findAbstraction network.graph transMap mergeMap ds;
+      (* do abstraction for 0...k failures. Reusing previous abstraction *)
       for i=0 to k do
         Console.show_message "" Console.T.Green
                              (Printf.sprintf "Checking for %d failures" i);
         (* find the initial abstraction function for these destinations *)
-        let f =
+        let f = 
           time_profile "Computing Abstraction for K failures"
                        (fun () ->
-                         let f = Abstraction.findAbstraction network.graph
-                                                             transMap mergeMap ds in
-                         FailuresAbstraction.refineK network.graph f ds i)
+                         FailuresAbstraction.refineK network.graph !fbonsai ds i)
         in
         loop f f pre ds i 1
       done

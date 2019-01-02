@@ -50,6 +50,8 @@ val getAbstractGroups : abstractionMap -> (GroupMap.key * AbstractNode.t) list
    groups created by [f], separated by [sep] *)
 val printAbstractGroups: abstractionMap -> string -> string
 
+val emptyAbstraction : abstractionMap
+  
 (** Given a graph, creates an initial abstraction *)
 val createAbstractionMap : AdjGraph.t -> abstractionMap
 

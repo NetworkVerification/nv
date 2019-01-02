@@ -104,10 +104,12 @@ let printAbstractGroups (f: abstractionMap) (sep: string) : string =
         (AbstractNode.printAbstractNode us) ^ sep ^ acc)
     "" (getAbstractGroups f)
 
+let emptyAbstraction = { absGroups = GroupMap.empty;
+                         groupId = VertexMap.empty;
+                         nextId = Integer.create ~value:0 ~size:32}
+  
 let createAbstractionMap g : abstractionMap =
-  let f = { absGroups = GroupMap.empty;
-            groupId = VertexMap.empty;
-            nextId = Integer.create ~value:0 ~size:32} in
+  let f = emptyAbstraction in
   partitionNodes f (f.nextId) (AdjGraph.get_vertices g)
 
 let fold (g: AbstractNode.t -> 'a -> 'a) (f: abstractionMap) (acc: 'a) : 'a =
