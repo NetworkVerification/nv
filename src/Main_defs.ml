@@ -161,47 +161,59 @@ let compress file info decls cfg networkOp =
   let relevantSliceGroups = Slicing.groupPrefixesByVertices relevantSlices in
 
   let rec loop (finit: AbstractionMap.abstractionMap)
-      (f: AbstractionMap.abstractionMap)
-      (ds: AdjGraph.VertexSet.t) =
+               (f: AbstractionMap.abstractionMap)
+               (pre: Prefix.t)
+               (ds: AdjGraph.VertexSet.t)
+               (k: int) =
     (* build abstract network *)
     let failVars, decls =
       time_profile "Build abstract network"
-        (fun () -> buildAbstractNetwork f network.graph mergeMap transMap
-            initMap assertMap ds
-            network.attr_type symb k) in
+                   (fun () -> buildAbstractNetwork f network.graph mergeMap transMap
+                                                   initMap assertMap ds
+                                                   network.attr_type pre symb k) in
     let decls = Typing.infer_declarations info decls in
     let groups = AbstractionMap.printAbstractGroups f "\n" in
     Console.show_message groups Console.T.Blue "Abstract groups";
     match networkOp cfg info decls with
     | Success _, _ -> Printf.printf "No counterexamples found\n"
     | (CounterExample sol), fs ->
-      let sol = apply_all sol (oget fs) in
-      let f' =
-        time_profile "Refining abstraction after failures"
-          (fun () -> FailuresAbstraction.refineForFailures
-              cfg.draw file network.graph finit f failVars sol k ds network.attr_type)
-      in
-      match f' with
-      | None -> print_solution sol;
-      | Some f' ->
-        loop finit f' ds
+       let sol = apply_all sol (oget fs) in
+       let f' =
+         time_profile "Refining abstraction after failures"
+                      (fun () -> FailuresAbstraction.refineForFailures
+                                   cfg.draw file network.graph finit f failVars sol
+                                   k ds network.attr_type)
+       in
+       match f' with
+       | None -> print_solution sol;
+       | Some f' ->
+          loop finit f' pre ds k
   in
   PrefixSetSet.iter
     (fun prefixes ->
-       Console.show_message (Slicing.printPrefixes prefixes)
-         Console.T.Green "Checking SRP for prefixes";
-       (* get a prefix from this class of prefixes *)
-       let pre = PrefixSet.min_elt prefixes in
-       (* find the nodes this class is announced from *)
-       let ds = PrefixMap.find pre relevantSlices in
-       (* find the initial abstraction function for these destinations *)
-       let f =
-         time_profile "Computing Abstraction"
-           (fun () -> Abstraction.findAbstraction network.graph
-               transMap mergeMap ds)
-       in
-       (* run_simulator cfg info decls  *)
-       loop f f ds) relevantSliceGroups
+      Console.show_message (Slicing.printPrefixes prefixes)
+                           Console.T.Green "Checking SRP for prefixes";
+      (* get a prefix from this class of prefixes *)
+      let pre = PrefixSet.min_elt prefixes in
+      (* find the nodes this class is announced from *)
+      let ds = PrefixMap.find pre relevantSlices in
+      (* do abstraction for 0...k failures *)
+      for i=0 to k do
+        Console.show_message "" Console.T.Green
+                             (Printf.sprintf "Checking for %d failures" i);
+        (* find the initial abstraction function for these destinations *)
+        let f =
+          time_profile "Computing Abstraction for K failures"
+                       (fun () ->
+                         let f = Abstraction.findAbstraction network.graph
+                                                             transMap mergeMap ds in
+                         FailuresAbstraction.refineK network.graph f ds i)
+        in
+      (* let groups = AbstractionMap.printAbstractGroups f "\n" in *)
+      (* Console.show_message groups Console.T.Blue "Abstract groups after refineK"; *)
+      (* run_simulator cfg info decls  *)
+        loop f f pre ds i
+      done) relevantSliceGroups
 
 let parse_input (args : string array)
   : Cmdline.t * Console.info * string * Syntax.declarations =

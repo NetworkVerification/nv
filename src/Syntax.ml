@@ -27,7 +27,7 @@ type ty =
 [@@deriving ord, eq]
 
 and tyvar = Unbound of tyname * level | Link of ty
-                                              
+
 type var = Var.t
 [@@deriving ord, eq]
 
@@ -40,6 +40,7 @@ type op =
   | UEq
   | ULess of bitwidth
   | ULeq of bitwidth
+  | AtMost of int
   | MCreate
   | MGet
   | MSet
@@ -551,13 +552,13 @@ and hash_op op =
   | MMap -> 8
   | MMapFilter -> 9
   | MMerge -> 10
-  | UAdd n -> 11  + n
-  | USub n -> 11  + n + 64
-  | ULess n -> 11 + n + 64 * 2
-  | ULeq n -> 11  + n + 64 * 3
-  | TGet n -> 11  + n + 64 * 4 (* Probably overkill *)
-  | TSet n -> 12  + n + 64 * 3
-
+  | UAdd n -> 11  + n + 256
+  | USub n -> 11  + n + 256 * 2
+  | ULess n -> 11 + n + 256 * 3
+  | ULeq n -> 11  + n + 256 * 4
+  | TGet n -> 11  + n + 256 * 5 (* Probably overkill *)
+  | TSet n -> 11  + n + 256 * 6
+  | AtMost n -> 12 + n
 (* hashconsing information/tables *)
 
 let meta_v : (v, value) meta =
@@ -596,6 +597,7 @@ let arity op =
   | UEq -> 2
   | ULess _ -> 2
   | ULeq _ -> 2
+  | AtMost _ -> 2
   | MCreate -> 1
   | MGet -> 2
   | MSet -> 3
@@ -678,11 +680,20 @@ let rec to_value e =
   | ESome e1 -> avalue (voption (Some (to_value e1)), e.ety, e.espan)
   | _ -> failwith "internal error (to_value)"
 
+
 let exp_of_v x = exp (EVal (value x))
 
-let exp_of_value v =
-  let e = e_val v in
-  {e with ety= v.vty; espan= v.vspan}
+let rec exp_of_value v =
+  match v.v with
+  | VBool _ | VInt _ | VMap _ | VClosure _ | VOption None ->
+     let e = e_val v in
+     {e with ety= v.vty; espan=v.vspan}
+  | VTuple vs ->
+     let e = etuple (List.map exp_of_value vs) in
+     {e with ety= v.vty; espan=v.vspan}
+  | VOption (Some v1) ->
+     let e = esome (exp_of_value v1) in
+     {e with ety= v.vty; espan=v.vspan}
 
 let func x body = {arg= x; argty= None; resty= None; body}
 
@@ -784,7 +795,7 @@ let bool_of_val (v : value) : bool option =
   match v.v with
   | VBool b -> Some b
   | _ -> None
-           
+
 open BatSet
 
 let rec free (seen: Var.t PSet.t) (e: exp) : Var.t PSet.t =
@@ -846,23 +857,23 @@ let rec free_dead_vars (e : exp) =
   | EOp (op, es) ->
      eop op (List.map free_dead_vars es)
   | EApp (e1, e2) ->
-     let e1 = free_dead_vars e1 in 
+     let e1 = free_dead_vars e1 in
      let e2 = free_dead_vars e2 in
      eapp e1 e2
   | EIf (e1, e2, e3) ->
-     let e1 = free_dead_vars e1 in 
+     let e1 = free_dead_vars e1 in
      let e2 = free_dead_vars e2 in
      let e3 = free_dead_vars e3 in
      eif e1 e2 e3
   | ELet (x, e1, e2) ->
-     let e1 = free_dead_vars e1 in 
+     let e1 = free_dead_vars e1 in
      let e2 = free_dead_vars e2 in
      elet x e1 e2
   | ETuple es ->
      etuple (List.map free_dead_vars es)
   | ESome e -> esome (free_dead_vars e)
   | EMatch (e1, branches) ->
-     let e1 = free_dead_vars e1 in 
+     let e1 = free_dead_vars e1 in
      ematch e1 (List.map (fun (ps, e) -> (ps, free_dead_vars e)) branches)
 
 (* Memoization *)

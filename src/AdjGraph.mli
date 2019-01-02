@@ -80,6 +80,9 @@ val print : t -> unit
 
 val to_string : t -> string
 
+(** computes min-cut between s and t and the returns the min-cut and the S and T sets *)
+val min_cut : t -> Vertex.t -> Vertex.t -> EdgeSet.t * VertexSet.t * VertexSet.t
+
 module DrawableGraph :
 sig
 
