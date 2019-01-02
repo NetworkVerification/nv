@@ -17,10 +17,10 @@ val findAbstraction :
 
 module FailuresAbstraction :
   sig  
-    (** [refineForFailures draw file g finit f failVars sol k dst attr]
+    (** [refineCounterExample draw file g finit f failVars sol k dst attr iteration]
        decides whether there is need to further refine the
        abstraction. *)
-    val refineForFailures :
+    val refineCounterExample :
       bool ->
       string ->
       AdjGraph.t ->
@@ -31,6 +31,7 @@ module FailuresAbstraction :
       int ->
       AdjGraph.VertexSet.t ->
       Syntax.ty ->
+      int ->
       AbstractionMap.abstractionMap option
 
     val refineK : AdjGraph.t -> AbstractionMap.abstractionMap ->

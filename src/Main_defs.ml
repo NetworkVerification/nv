@@ -30,12 +30,12 @@ let smt_query_file =
   lazy (open_out (file ^ "-" ^
                     (string_of_int !counter) ^ "-query"))
                                    
-let run_smt file cfg info ds =
+let run_smt file cfg info decls =
   let fs = [] in
-  let decls = Inline.inline_declarations info ds in
+  (* let decls = Inline.inline_declarations info decls in *)
+  (* let decls = Typing.infer_declarations info decls in *)
   let decls, f = Renaming.alpha_convert_declarations decls in
   let fs = f :: fs in
-  let decls = Typing.infer_declarations info decls in
   let decls =
     if cfg.unbox then
       begin
@@ -44,6 +44,7 @@ let run_smt file cfg info ds =
       end
     else decls
   in
+
   let res, fs =
     if cfg.unroll_maps then (
       try
@@ -132,7 +133,6 @@ let run_simulator cfg info decls =
     Console.error "required conditions not satisfied"
 
 let compress file info decls cfg networkOp =
-  let decls = Inline.inline_declarations info decls in
   let network, symb =
     match
       ( get_merge decls
@@ -182,30 +182,36 @@ let compress file info decls cfg networkOp =
                (f: AbstractionMap.abstractionMap)
                (pre: Prefix.t)
                (ds: AdjGraph.VertexSet.t)
-               (k: int) =
+               (k: int)
+               (i: int) =
     (* build abstract network *)
     let failVars, decls =
       time_profile "Build abstract network"
                    (fun () -> buildAbstractNetwork f network.graph mergeMap transMap
                                                    initMap assertMap ds
                                                    network.attr_type pre symb k) in
-    let decls = Typing.infer_declarations info decls in
+    let decls = Inline.inline_declarations info decls in
     let groups = AbstractionMap.printAbstractGroups f "\n" in
     Console.show_message groups Console.T.Blue "Abstract groups";
     match networkOp cfg info decls with
     | Success _, _ -> Printf.printf "No counterexamples found\n"
     | (CounterExample sol), fs ->
        let sol = apply_all sol (oget fs) in
+       let aty = if cfg.unbox then
+                   TupleFlatten.flatten_ty (UnboxOptions.unbox_ty network.attr_type)
+                 else
+                   network.attr_type
+       in
        let f' =
          time_profile "Refining abstraction after failures"
-                      (fun () -> FailuresAbstraction.refineForFailures
-                                   cfg.draw file network.graph finit f failVars sol
-                                   k ds network.attr_type)
+                      (fun () ->
+                        FailuresAbstraction.refineCounterExample
+                          cfg.draw file network.graph finit f failVars sol k ds aty i)
        in
        match f' with
        | None -> print_solution sol;
        | Some f' ->
-          loop finit f' pre ds k
+          loop finit f' pre ds k (i+1)
   in
   PrefixSetSet.iter
     (fun prefixes ->
@@ -227,11 +233,9 @@ let compress file info decls cfg networkOp =
                                                              transMap mergeMap ds in
                          FailuresAbstraction.refineK network.graph f ds i)
         in
-      (* let groups = AbstractionMap.printAbstractGroups f "\n" in *)
-      (* Console.show_message groups Console.T.Blue "Abstract groups after refineK"; *)
-      (* run_simulator cfg info decls  *)
-        loop f f pre ds i
-      done) relevantSliceGroups
+        loop f f pre ds i 1
+      done
+    ) relevantSliceGroups
 
 let parse_input (args : string array)
   : Cmdline.t * Console.info * string * Syntax.declarations =
@@ -243,6 +247,12 @@ let parse_input (args : string array)
   let decls = Typing.infer_declarations info ds in
   Typing.check_annot_decls decls ;
   Wellformed.check info decls ;
+  let decls =
+    if cfg.smt || cfg.inline then
+        Inline.inline_declarations info decls
+    else
+      decls
+  in
   (cfg, info, file, decls)
 
   

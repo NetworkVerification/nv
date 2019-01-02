@@ -1716,7 +1716,7 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
                 | Some i ->
                    ( symbolics,
                      AdjGraph.VertexMap.modify_def
-                       [(i,nvval)] (node_of_label_var k) (fun xs -> (i,nvval) :: xs) labels,
+                       [] (node_of_label_var k) (fun xs -> (i,nvval) :: xs) labels,
                      assertions ))
           | k when BatString.starts_with k "assert-" ->
              ( symbolics,

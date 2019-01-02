@@ -5,7 +5,7 @@ open Syntax
 let is_keyword_op op =
   match op with
   | And | Or | Not | UAdd _ | USub _ | UEq | ULess _ | ULeq _ | MGet -> false
-  | MCreate | MSet | MMap | MMerge | MMapFilter -> true
+  | MCreate | MSet | MMap | MMerge | MMapFilter | AtMost _ -> true
 
 (* set to true if you want to print universal quanifiers explicitly *)
 let quantifiers = true
@@ -28,6 +28,7 @@ let prec_op op =
   | MMap -> 5
   | MMerge -> 5
   | MMapFilter -> 5
+  | AtMost _ -> 6
 
 let prec_exp e =
   match e.e with
@@ -113,6 +114,7 @@ let op_to_string op =
   | MMap -> "map"
   | MMapFilter -> "mapIf"
   | MMerge -> "combine"
+  | AtMost _ -> "atMost"
 
 let rec pattern_to_string pattern =
   match pattern with

@@ -57,15 +57,15 @@ let rec alpha_convert_exp (env: Var.t Env.t) (e: exp) =
       etuple (List.map (fun e -> alpha_convert_exp env e) es)
       |> wrap e
   | ESome e1 -> esome (alpha_convert_exp env e1) |> wrap e
-  | EMatch (e, bs) ->
+  | EMatch (e1, bs) ->
       let bs' =
         List.map
-          (fun (p, e) ->
+          (fun (p, ep) ->
             let p, env = update_pattern env p in
-            (p, alpha_convert_exp env e) )
+            (p, alpha_convert_exp env ep) )
           bs
       in
-      ematch (alpha_convert_exp env e) bs' |> wrap e
+      ematch (alpha_convert_exp env e1) bs' |> wrap e
   | ETy (e1, ty) -> ety (alpha_convert_exp env e1) ty |> wrap e
 
 let alpha_convert_declaration bmap (env: Var.t Env.t)

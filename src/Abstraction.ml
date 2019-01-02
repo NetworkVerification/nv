@@ -619,7 +619,7 @@ module FailuresAbstraction =
        given attribute type. A non-default value indicates that this
        message has a path to the destination *)
     let validAttribute (attrTy: Syntax.ty) (m : Syntax.value) : bool =
-      not (default_value attrTy = m)
+      not (equal_values ~cmp_meta:false (default_value attrTy) m)
 
     (** Finds a path in the graph starting from abstract vertex
        uid. Will stop once it reaches the destination or a cycle. It
@@ -627,8 +627,6 @@ module FailuresAbstraction =
        have a solution *)
     let findRandomPath (ag: AdjGraph.t) (sol: Solution.t)
           (uid: abstrId) (ds: AdjGraph.VertexSet.t) (attrTy: Syntax.ty) =
-      (* finding incoming messages the hard way for now. Why are edges
-         not treated the other way around? *)
       let rec loop uid acc =
         (* Find neighbors of uid that have a valid attribute *)
         let sol = sol.Solution.labels in
@@ -696,102 +694,6 @@ module FailuresAbstraction =
           end
       in
       loop failed
-      
-    (** Try to find a failure for which splitting would make the most
-       sense. This is based on heuristics, currently: 
-       * 1. Choose a u,v with |u| > 1 or |v| > 1, so we can split it.  
-       * 2. Choose failure (u,v) such that u can reach the destination and v 
-            cannot. Not sure if that's relevant anymore.
-       * 3. If we have two or more failures (u_1,v) (u_2,v) etc. then split the u_i that 
-            is connected with the most abstract nodes that used to be in the same group 
-            as v. That way, we may avoid splitting for them as well in a separate 
-            iteration.
-       * 4. When choosing between vertices u and v to split, 
-            split one that has at most k neighbors if possible. 
-            Chances are we were going to have to split that too. *)
-    let findVertexToRefine finit f (ag: AdjGraph.t) (failed: EdgeSet.t) sol attrTy k =
-      let lbl = sol.Solution.labels in
-      let candidates = splittable f fst failed in
-      let isEmpty1 = EdgeSet.is_empty candidates in
-      (* if there is no failed edge <u,v> with |u| > 1 *)
-      let candidates = if isEmpty1 then
-                         splittable f snd failed
-                       else
-                         candidates
-      in
-      (* This is kind of fragile, it matches on the expected value of
-         the label of a vertex that has a path vs one that doesn't. If
-         the value changes this won't work. *)
-      let candidate2 =
-        EdgeSet.filter (fun (u,v) ->
-            match validAttribute attrTy (VertexMap.find u lbl),
-                  validAttribute attrTy(VertexMap.find v lbl) with
-            | true, false -> true
-            | _, _ -> false) candidates in
-      let selector = if isEmpty1 then snd else fst in
-      let candidate3 =
-        match EdgeSet.is_empty candidate2 with
-        |  false ->
-            (* choose an edge randomly *)
-            let (u, v) = chooseRandomForK ag candidate2 k in
-            (* Printf.printf "chose randomly: %s\n" (printEdge (u,v)); *)
-            (* keep only the failures towards v if there are many *)
-            let vedges = EdgeSet.filter (fun (x,y) ->
-                             Printf.printf "x,y,v:%s,%s,%s\n" (Vertex.printVertex x)
-                                           (Vertex.printVertex y) (Vertex.printVertex v);
-                             if y = v then
-                               begin
-                                 Printf.printf "true\n";
-                                 true
-                               end
-                             else false) candidate2 in
-            (* Printf.printf "did I keep at least 2? %d\n" (EdgeSet.cardinal vedges); *)
-            if EdgeSet.cardinal vedges > 1 then
-              begin
-                (* compute the group that v originally belonged to *)
-                let vrepr = AbstractionMap.getGroupRepresentativeId f v in
-                let oldGroupOfV = AbstractionMap.getGroup finit vrepr in
-                if AbstractNode.cardinal oldGroupOfV =
-                     AbstractNode.cardinal (AbstractionMap.getGroupById f v) then
-                  (* v has never been split yet *)
-                  (u,v)
-                else
-                  begin
-                    (* v was split before *)
-                    let findNeighborsInOriginalV u =
-                      let neigh = AdjGraph.neighbors ag u in
-                      List.fold_left (fun acc what ->
-                          let vrepr = AbstractionMap.getGroupRepresentativeId f what in
-                          let oldW = AbstractionMap.getGroup finit vrepr in
-                          if AbstractNode.equal oldW oldGroupOfV then
-                            acc + 1
-                          else acc) 0 neigh
-                    in
-                    let mostNeighbors, n = EdgeSet.fold
-                                             (fun (u,v) acc ->
-                                               let n = findNeighborsInOriginalV u in
-                                               if n >= snd acc then
-                                                 (((u,v), n) :: (fst acc), n)
-                                               else
-                                                 (((u,v),n) :: fst acc, snd acc))
-                                             vedges ([], 0)
-                    in
-                    let filteredMax =
-                      BatList.filter_map (fun (e,m) -> if m = n then Some e else None)
-                                         mostNeighbors |> EdgeSet.of_list
-                    in
-                    chooseRandomForK ag filteredMax k
-                  end
-              end
-            else
-              (u,v)
-        | true ->
-           EdgeSet.choose candidates
-      in
-      let res = selector candidate3 in
-      if !debugAbstraction then
-        Printf.printf "Abstract Vertex to split: %s\n" (Vertex.printVertex res);
-      res
         
     let splitSet_debug us =
       if !debugAbstraction then
@@ -805,16 +707,245 @@ module FailuresAbstraction =
     let refineForFailures_debug (f: abstractionMap) =
       if !debugAbstraction then
           show_message (printAbstractGroups f "\n") T.Blue
-            "Abstract groups after refine for failures "
+                       "Abstract groups after refine for failures "
+
+    let compare_refinements f f' =
+      Pervasives.compare (AbstractionMap.normalized_size f)
+                         (AbstractionMap.normalized_size f')
+
+
+    (* given a refined abstraction f and a previous abstraction forig,
+       returns the abstract node that uhat belonged to before being
+       refined *)
+    let get_orig_group forig f (uhat: abstrId) =
+      let repr = getGroupRepresentativeId f uhat in
+      getId forig repr
       
-    let refineForFailures (draw: bool) (file: string) (g: AdjGraph.t)
+    (* creates a map from abstract nodes in f to the nodes that they
+       were split to in fnew *)
+    let buildBackMap (f: abstractionMap) (fnew: abstractionMap) =
+      AbstractionMap.foldi (fun uhat _ acc ->
+          let uhat_orig = get_orig_group f fnew uhat in
+          GroupMap.modify_def [uhat] uhat_orig (fun us -> uhat :: us) acc)
+                           fnew GroupMap.empty
+      
+    (* given a set of nodes in the abstraction f that need to be
+       checked for min-cut, returns a new set of nodes in fnew, a
+       refinement of f, that should be checked for min-cut *)
+    let update_vertex_set backMap (vs: VertexSet.t) =
+      VertexSet.fold (fun uorig acc ->
+          let us = GroupMap.find uorig backMap in
+          List.fold_left (fun acc u ->
+              VertexSet.add u acc) acc us) vs VertexSet.empty
+      
+      (* AbstractionMap.foldi (fun uhat _ acc -> *)
+      (*     let uhat_orig = get_orig_group f fnew uhat in *)
+      (*     if VertexSet.mem uhat_orig vs then *)
+      (*       VertexSet.add uhat acc *)
+      (*     else acc) fnew VertexSet.empty *)
+
+    (* g is the graph that corresponds to the new abstraction *)
+    let update_edge_set backMap (g: AdjGraph.t) (es: EdgeSet.t) =
+      EdgeSet.fold (fun (uorig,vorig) acc ->
+          let us = GroupMap.find uorig backMap in
+          let vs = GroupMap.find vorig backMap in
+          List.fold_left (fun acc u ->
+              let ns = neighbors g u in
+              List.fold_left (fun acc n ->
+                  if List.mem n vs then
+                    EdgeSet.add (u,n) acc
+                  else acc) acc ns) acc us) es EdgeSet.empty
+
+    let min_cuts_map (g : AdjGraph.t) (d: abstrId) (todo: VertexSet.t) =
+      let rec loop todo acc =
+        try
+          let u, todo' = VertexSet.pop_min todo in
+          if u <> d then
+            begin
+              let (es, _, _) =  min_cut g d u in
+              loop todo' (VertexMap.add u (EdgeSet.cardinal es) acc)
+            end
+          else
+            loop todo' acc
+        with | Not_found -> acc
+      in loop todo VertexMap.empty
+
+
+    let refinement_breadth = 3
+      
+    let counterexample_step (g: AdjGraph.t) (forig: abstractionMap) (f: abstractionMap)
+                            origCuts attrTy todo failed lbl ds =
+      let ag = BuildAbstractNetwork.buildAbstractAdjGraph g f in
+      let d = getId f (VertexSet.choose ds) in
+      let cuts = min_cuts_map ag d todo in
+      (* Printf.printf "todo size: %d\n" (VertexSet.cardinal todo); *)
+      let todo =
+        VertexSet.filter (fun u ->
+            VertexMap.find u cuts = VertexMap.find (get_orig_group forig f u) origCuts) todo
+      in
+      match VertexSet.is_empty todo with
+      | true -> (* we are done. *)
+         []
+      | false ->
+         let backMap = buildBackMap forig f in
+         let failed = update_edge_set backMap ag failed in
+         (* Split nodes u, s.t. failed (u,v) /\ reach u /\ ~ reach v *)
+         let failedReachable =
+           EdgeSet.filter (fun (u,v) ->
+               if (validAttribute attrTy (VertexMap.find (get_orig_group forig f u) lbl))
+                  && (VertexSet.mem v todo) then
+                 true
+               else
+                 false) failed
+         in
+         let failedReachableSplittable, failedUnreachableSplittable =
+           EdgeSet.fold (fun (u,v) (acc1, acc2) ->
+               let acc1 = 
+                 if AbstractNode.cardinal (getGroupById f u) > 1 then
+                   VertexSet.add u acc1
+                 else acc1
+               in
+               let acc2 =
+                 if AbstractNode.cardinal (getGroupById f v) > 1 then
+                   VertexSet.add v acc2
+                 else acc2
+               in
+               (acc1, acc2)
+             ) failedReachable (VertexSet.empty, VertexSet.empty)
+         in
+         Printf.printf "failedReachable, failedUnReachable: %d,%d\n"
+                       (VertexSet.cardinal failedReachableSplittable)
+                       (VertexSet.cardinal failedUnreachableSplittable);
+
+         let nodes_to_split =
+           VertexSet.union
+                failedUnreachableSplittable
+               failedReachableSplittable
+         in
+         (* let nodes_to_split = *)
+         (*   if VertexSet.is_empty failedReachableSplittable then *)
+         (*     begin *)
+         (*       failedUnreachableSplittable *)
+         (*     end *)
+         (*   else *)
+         (*     failedReachableSplittable *)
+         (* in *)
+         match VertexSet.is_empty nodes_to_split with
+         | true ->
+            Printf.printf "stopping here\n";
+            []
+           
+         | false ->
+            (* for each node to split, compute a refinement with each of its neighbor *)
+            let uhat_neighbors = VertexSet.fold
+                                   (fun uhat acc -> (uhat, neighbors ag uhat) :: acc)
+                                   nodes_to_split [] in
+            let refinements =
+              BatList.fold_left (fun acc (uhat, vhats) ->
+                  let uhatGroup = getGroupById f uhat in
+                  Printf.printf "splitting %d\n" (Integer.to_int uhat);
+                  (BatList.filter_map
+                     (fun vhat ->
+                       let vhatGroup = getGroupById f vhat in
+                       match findSplittingByConnectivity uhatGroup vhatGroup g with
+                       | Mesh -> None
+                       | Groups uss ->
+                          let uss = createFreshAbstractNodes uss in
+                          let f' = splitSet f uss in
+                          Some (abstractionTopological f' g)) vhats) @ acc) [] uhat_neighbors
+              |> BatList.sort (compare_refinements)
+            in
+            (*get k-best refinements (defined by refinement_breadth).
+              If none are available, it means
+               all of them are full mesh, so just split the node
+               randomly. *)
+            let best_refinements =
+              BatList.take refinement_breadth refinements |>
+                BatList.sort_unique (fun x y -> compare_refinements x y)
+            in
+            match best_refinements with
+            | [] -> (* if everything was a full mesh, take a random split *)
+               let us1, us2 =
+                 VertexSet.min_elt nodes_to_split |>
+                   AbstractionMap.getGroupById f |>
+                   AbstractNode.randomSplit
+               in
+               let uss = AbstractNodeSet.add us2 (AbstractNodeSet.singleton us1)
+               in
+               let f' = splitSet f uss in
+               let f' = abstractionTopological f' g in
+               let backMap = buildBackMap f f' in
+               [(f', update_vertex_set backMap todo)]
+            | _ ->
+               List.map (fun fnew ->
+                   let backMap = buildBackMap f fnew in
+                   (fnew, update_vertex_set backMap todo))
+                        best_refinements
+
+    let counterExampleRefine (g: AdjGraph.t) (forig: abstractionMap)
+                             (origCuts: int VertexMap.t)
+                             (attrTy: Syntax.ty)
+                             (failed: EdgeSet.t)
+                             (lbl: Syntax.value VertexMap.t)
+                             (todo: VertexSet.t) ds =
+      let q = Queue.create () in
+      Queue.add (forig, todo) q;
+      
+      let rec loop completed minimum =
+        try
+          let (f, todo) = Queue.pop q in
+          let b = match minimum with
+            | None -> false 
+            | Some minimumf ->
+               if (compare_refinements minimumf f <= 0) then
+                 true
+               else
+                 false
+          in
+          if b then
+            loop completed minimum
+          else
+            match counterexample_step g forig f origCuts attrTy todo failed lbl ds with
+            | [] ->
+               ( match minimum with
+                 | None -> loop (completed+1) (Some f)
+                 | Some minimum ->
+                    if (compare_refinements f minimum < 0) then
+                      loop (completed+1) (Some f)
+                    else
+                      loop (completed+1) (Some minimum))
+            | fs ->
+               (* If we have already find a refinement that is better
+                   than the one we are exploring right now, then stop
+                   exploring it *)
+               List.iter (fun (f,todo) ->
+                   (* Printf.printf "size of refinements:%d\n" (AbstractionMap.size f); *)
+                   match minimum with
+                   | None ->
+                      Queue.push (f,todo) q
+                   | Some minimum ->
+                      if compare_refinements f minimum = -1 then
+                        Queue.push (f,todo) q
+                      else ()) fs;
+               loop completed minimum
+        with
+          Queue.Empty -> completed, minimum
+      in
+      match loop 0 None with
+      | completed, Some f ->
+         Printf.printf "Completed refinements: %d\n" completed;
+         f
+      | _, _ ->
+         failwith "found no refinement"
+      
+    let refineCounterExample (draw: bool) (file: string) (g: AdjGraph.t)
                           (finit: abstractionMap) (f: abstractionMap)
                           (failVars: Var.t EdgeMap.t) (sol: Solution.t) (k: int)
-                          (dst: VertexSet.t) (attrTy : Syntax.ty) : abstractionMap option =
+                          (dst: VertexSet.t) (attrTy : Syntax.ty)
+                          (iteration: int): abstractionMap option =
       
       (* get set of failures, and also build abstract graph useful for
-         splitting, at least until we can get forwarding information
-         in labels *)
+         splitting. Note that this code works if all edges can fail. *)
       let failures, agraph =
         EdgeMap.fold (fun edge fvar (acc, ag) ->
             let bv = Collections.StringMap.find (Var.to_string fvar) sol.symbolics in
@@ -822,12 +953,13 @@ module FailuresAbstraction =
             | VBool b ->
                if b then
                  begin
-                   Printf.printf "failed: %s\n" (AdjGraph.printEdge edge); 
+                   Printf.printf "Failed edge: %s\n" (AdjGraph.printEdge edge); 
                    (EdgeSet.add edge acc, AdjGraph.add_edge ag edge)
                  end
                else (acc, AdjGraph.add_edge ag edge)
             | _ -> failwith "This should be a boolean variable") failVars
-                     (EdgeSet.empty, AdjGraph.create (AbstractionMap.size f |> Integer.of_int))
+                     (EdgeSet.empty,
+                      AdjGraph.create (AbstractionMap.size f |> Integer.of_int))
       in
 
       (* Draw the abstract graph if asked *)
@@ -848,41 +980,19 @@ module FailuresAbstraction =
         None
       else
         begin
-          let uhat = findVertexToRefine finit f agraph failures sol attrTy k in
-          (* what path to use for refining, by default will look for a
-             (somewhat) random path. random indicates a random split
-             of the node selected for refinement. That's probably the
-             worst possible option. *)
-          let path_heuristic = "somePath" in (* make it an option at some point? *)
-          let path =
-            if path_heuristic = "random" then []
-            else
-              findRandomPath agraph sol uhat
-                             (VertexSet.map (fun d -> getId f d) dst) attrTy
+          (* set of unreachable nodes. TODO: Should be a subset of source nodes *)
+          let unreachable =
+            AdjGraph.fold_vertices (fun u acc ->
+                if not (validAttribute attrTy (VertexMap.find u sol.labels)) then
+                  VertexSet.add u acc
+                else acc) (AdjGraph.num_vertices agraph) VertexSet.empty
           in
-          Printf.printf "splitting over path: %s"
-                        (Collections.printList (Vertex.printVertex) path "" "," "\n");
-          let uss = bestSplitForFailures g f uhat path in
-          let f' = splitSet f uss in
-          let f'' =  abstractionTopological f' g in
-          (* if no progress was made, then do a random split on uhat *)
-          (* the group of uhat in abstraction f *)
-          let group_uhat_f = AbstractionMap.getGroupById f uhat in
-          (* the group of uhat in f'' *)
-          let group_uhat_f'' =
-            AbstractionMap.getGroup f''
-              (AbstractionMap.getGroupRepresentativeId f uhat)
-          in
-          if (AbstractNode.equal group_uhat_f group_uhat_f'') then
-            begin
-              let uhat1, uhat2 = AbstractNode.randomSplit group_uhat_f in
-              let f = splitSet f'' (AbstractNodeSet.of_list [uhat1; uhat2]) in
-              let f = abstractionTopological f g in
-              Some f
-            end
-          else
-            (* refineForFailures_debug f''; *)
-            Some f''
+          Printf.printf "unreachable size:%d\n" (VertexSet.cardinal unreachable);
+          let adst = getId f (VertexSet.choose dst) in
+          let cuts = min_cuts_map agraph adst unreachable in
+          let f' =
+            counterExampleRefine g f cuts attrTy failures sol.labels unreachable dst in
+          Some f'
         end
 
     module VertexFreq =
@@ -907,12 +1017,6 @@ module FailuresAbstraction =
          else
            (x,y) :: (updateList u f xs)
 
-    (* given a refined abstraction f and a previous abstraction forig,
-       returns the abstract node that uhat belonged to before being
-       refined *)
-    let get_orig_group forig f (uhat: abstrId) =
-      let repr = getGroupRepresentativeId f uhat in
-      getId forig repr
       
     (* given a list of cut-sets, returns: 
        1. the reachable nodes that
@@ -961,10 +1065,6 @@ module FailuresAbstraction =
           else loop m acc sz
       in loop m [] 0
 
-    let compare_refinements f f' =
-      Pervasives.compare (AbstractionMap.normalized_size f)
-                         (AbstractionMap.normalized_size f')
-
     (* Returns a pair of cuts and set of vertices that have min-cuts <= k *)
     let compute_cuts (g : AdjGraph.t) (d: abstrId) k (todo: VertexSet.t) =
       let rec loop todo cuts new_todo =
@@ -973,13 +1073,6 @@ module FailuresAbstraction =
           if u <> d then
             begin
               let (es, sset, tset) =  min_cut g d u in
-              (* Printf.printf "cut for node %d: " (Integer.to_int u); *)
-              (* EdgeSet.iter (fun e -> Printf.printf "%s, " (printEdge e)) es; *)
-              (* Printf.printf "tset:\n"; *)
-              (* VertexSet.iter (fun u -> Printf.printf "%s, " (Vertex.printVertex u)) tset; *)
-              (* Printf.printf "sset:\n"; *)
-              (* VertexSet.iter (fun u -> Printf.printf "%s, " (Vertex.printVertex u)) sset; *)
-              (* Printf.printf "\n"; *)
               if EdgeSet.cardinal es > k then
                 loop todo' cuts new_todo
               else
@@ -989,34 +1082,6 @@ module FailuresAbstraction =
             loop todo' cuts new_todo
         with | Not_found -> (cuts, new_todo)
       in loop todo [] VertexSet.empty
-
-    (* old version that does not remove the tset from todo *)
-      (* VertexSet.fold (fun u (cuts, new_todo) -> *)
-      (*     if u <> d then *)
-      (*       begin *)
-      (*         let (es, _, _) =  min_cut g d u in *)
-      (*         (\* Printf.printf "cut for node %d: " (Integer.to_int u); *\) *)
-      (*         (\* EdgeSet.iter (fun e -> Printf.printf "%s, " (printEdge e)) es; *\) *)
-      (*         (\* Printf.printf "\n"; *\) *)
-      (*         if EdgeSet.cardinal es > k then *)
-      (*           (cuts, new_todo) *)
-      (*         else *)
-      (*           (es :: cuts, VertexSet.add u new_todo) *)
-      (*       end *)
-      (*     else *)
-      (*       (cuts, new_todo)) todo ([], VertexSet.empty) *)
-
-    (* given a set of nodes in the abstraction f that need to be
-       checked for min-cut, returns a new set of nodes in fnew, a
-       refinement of f, that should be checked for min-cut *)
-    let update_todo_set (f: abstractionMap) (fnew: abstractionMap) (todo: VertexSet.t) =
-      AbstractionMap.foldi (fun uhat _ acc ->
-          let uhat_orig = get_orig_group f fnew uhat in
-          if VertexSet.mem uhat_orig todo then
-            VertexSet.add uhat acc
-          else acc) fnew VertexSet.empty
-
-    let refinement_breadth = 18
                            
     let refine_step (g: AdjGraph.t) forig (f: abstractionMap) (todo: VertexSet.t) ds k =
       let ag = BuildAbstractNetwork.buildAbstractAdjGraph g f in
@@ -1097,7 +1162,6 @@ module FailuresAbstraction =
                refinement_breadth). If none are available, it means
                all of them are full mesh, so just split the node
                randomly. *)
-            (* BatList.iter (fun f -> Printf.printf " refinements before filtering:%d\n" (AbstractionMap.size f)) refinements; *)
             let best_refinements =
               BatList.take refinement_breadth refinements |>
                 BatList.sort_unique (fun x y -> compare_refinements x y)
@@ -1114,8 +1178,11 @@ module FailuresAbstraction =
                in
                let f' = splitSet f uss in
                let f' = abstractionTopological f' g in
-               [(f', update_todo_set f f' todo)]
-            | _ -> List.map (fun fnew -> (fnew, update_todo_set f fnew todo)) best_refinements
+               let backMap = buildBackMap f f' in
+               [(f', update_vertex_set backMap todo)]
+            | _ -> List.map (fun fnew ->
+                       let backMap = buildBackMap f fnew in
+                       (fnew, update_vertex_set backMap todo)) best_refinements
       
     (* computes a refinement of f, s.t. all sources (currently sources
        are not defined, all nodes are considered sources) have at
