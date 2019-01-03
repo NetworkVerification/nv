@@ -1,23 +1,19 @@
 open Syntax
 
-module StringMap = BatMap.Make (struct
-  type t = string
-
-  let compare = String.compare
-end)
+module StringMap = Syntax.StringMap
 
 module StringSet = BatSet.Make (struct
   type t = String.t
 
   let compare = String.compare
 end)
-                 
+
 module StringSetSet = BatSet.Make (struct
   type t = StringSet.t
 
   let compare = StringSet.compare
 end)
-                 
+
 module VarMap = Map.Make (struct
   type t = Var.t
 
@@ -29,7 +25,7 @@ module VarSet = BatSet.Make (struct
 
   let compare = Var.compare
 end)
-                            
+
 module TypeMap = Map.Make (struct
   type t = ty
 

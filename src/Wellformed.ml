@@ -11,7 +11,7 @@ let rec has_map ty =
   | TTuple ts -> List.exists has_map ts
   | TArrow (ty1, ty2) -> has_map ty1 || has_map ty2
   | TOption ty -> has_map ty
-  | TRecord lst -> List.exists (has_map % snd) lst
+  | TRecord map -> StringMap.exists (fun _ -> has_map) map
   | TMap _ -> true
 
 let rec check_type ty : bool =
@@ -20,7 +20,7 @@ let rec check_type ty : bool =
   | TTuple ts -> List.for_all check_type ts
   | TOption ty -> check_type ty
   | TArrow (ty1, ty2) -> check_type ty1 && check_type ty2
-  | TRecord lst -> List.for_all (check_type % snd) lst
+  | TRecord map -> StringMap.for_all (fun _ -> check_type) map
   | TMap (kty, vty) ->
     not (has_map kty) && check_type kty && check_type vty
 
@@ -70,7 +70,8 @@ let rec check_closure info (x: VarSet.t) (e: exp) =
     check_closure info set e1 ;
     check_closure info set e2
   | ETuple es -> List.iter (check_closure info x) es
-  | ERecord lst -> List.iter ((check_closure info x) % snd) lst
+  | ERecord map -> StringMap.iter (fun _ -> check_closure info x) map
+  | EProject (e, label) -> check_closure info x e
   | ESome e -> check_closure info x e
   | EMatch (e, bs) ->
     check_closure info x e ;
@@ -89,10 +90,10 @@ and pattern_vars (p: pattern) =
     List.fold_left
       (fun acc p -> VarSet.union acc (pattern_vars p))
       VarSet.empty ps
-  | PRecord ps ->
-    List.fold_left
-      (fun acc p -> VarSet.union acc (pattern_vars (snd p)))
-      VarSet.empty ps
+  | PRecord pmap ->
+    StringMap.fold
+      (fun _ p acc -> VarSet.union acc (pattern_vars p))
+      pmap VarSet.empty
   | POption (Some p) -> pattern_vars p
 
 let check_closures info _ (e: exp) =
@@ -117,23 +118,28 @@ let check_record_label_uniqueness info decls =
     | []
     | [_] -> None
     | x1::x2::tl ->
-      if Var.compare x1 x2 = 0
+      if String.equal x1 x2
       then Some x1
       else find_dup (x2::tl)
   in
+  let rec enum_to_list lst enum =
+    match BatEnum.get enum with
+    | None -> lst
+    | Some elt -> enum_to_list (elt::lst) enum
+  in
   let all_labels =
     get_record_types decls
-    |> List.map (List.map fst)
+    |> List.map (fun map -> enum_to_list [] @@ StringMap.keys map)
     |> List.concat
   in
-  let sorted = List.sort Var.compare all_labels in
+  let sorted = List.sort String.compare all_labels in
   match find_dup sorted with
   | None -> ()
   | Some name ->
     let msg =
       Printf.sprintf
         "Record label %s appears more than once!"
-        (Var.name name)
+        name
     in
     Console.error_position info Span.default msg
 

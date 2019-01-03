@@ -8,6 +8,12 @@ type index = int
 type bitwidth = int
 [@@deriving eq, ord, show]
 
+module StringMap = BatMap.Make (struct
+    type t = string
+
+    let compare = String.compare
+  end)
+
 (* see:  http://okmij.org/ftp/ML/generalization.html *)
 type level = int
 
@@ -24,7 +30,7 @@ type ty =
   | TTuple of ty list
   | TOption of ty
   | TMap of ty * ty
-  | TRecord of (var * ty) list
+  | TRecord of ty StringMap.t
 
 and tyvar = Unbound of tyname * level | Link of ty
 
@@ -53,7 +59,7 @@ type pattern =
   | PInt of Integer.t
   | PTuple of pattern list
   | POption of pattern option
-  | PRecord of (var * pattern) list
+  | PRecord of pattern StringMap.t
 
 type v =
   | VBool of bool
@@ -62,7 +68,7 @@ type v =
   | VTuple of value list
   | VOption of value option
   | VClosure of closure
-  | VRecord of (var * value) list
+  | VRecord of value StringMap.t
 
 and value =
   {v: v; vty: ty option; vspan: Span.t; vtag: int; vhkey: int}
@@ -81,8 +87,8 @@ and e =
   | ESome of exp
   | EMatch of exp * branches
   | ETy of exp * ty
-  | ERecord of (var * exp) list
-  | EProject of exp * var
+  | ERecord of exp StringMap.t
+  | EProject of exp * string
 
 and exp = {e: e; ety: ty option; espan: Span.t; etag: int; ehkey: int}
 
@@ -125,6 +131,13 @@ let show_opt s o =
 let show_list s ls =
   "[" ^ List.fold_left (fun acc x -> acc ^ "," ^ s x) "" ls ^ "]"
 
+let show_record f prefix map =
+  let str = StringMap.fold
+      (fun l elt acc -> Printf.sprintf "%s; %s: %s" acc l (f elt))
+      map ""
+  in
+  Printf.sprintf "%s { %s }" prefix str
+
 let rec show_ty ty =
   match ty with
   | TVar tyvar -> (
@@ -143,12 +156,8 @@ let rec show_ty ty =
   | TOption t -> Printf.sprintf "TOption (%s)" (show_ty t)
   | TMap (ty1, ty2) ->
     Printf.sprintf "TMap (%s,%s)" (show_ty ty1) (show_ty ty2)
-  | TRecord lst ->
-    let str = show_list
-        (fun (s,ty) -> Printf.sprintf "%s: %s;" (Var.to_string s) (show_ty ty))
-        lst
-    in
-    Printf.sprintf "TRecord { %s }" str
+  | TRecord map -> show_record show_ty "TRecord" map
+
 
 let rec show_exp ~show_meta e =
   if show_meta then
@@ -182,14 +191,10 @@ and show_e ~show_meta e =
       (show_list (show_branch ~show_meta) bs)
   | ETy (e, ty) ->
     Printf.sprintf "ETy (%s,%s)" (show_exp ~show_meta e) (show_ty ty)
-  | ERecord lst ->
-    let str = show_list
-        (fun (s,e) -> Printf.sprintf "%s: %s;" (Var.to_string s) (show_exp ~show_meta e))
-        lst
-    in
-    Printf.sprintf "TRecord { %s }" str
+  | ERecord map ->
+    show_record (show_exp ~show_meta) "ERecord" map
   | EProject (e, label) ->
-    Printf.sprintf "%s.%s" (show_exp ~show_meta e) (Var.to_string label)
+    Printf.sprintf "%s.%s" (show_exp ~show_meta e) label
 
 and show_func ~show_meta f =
   Printf.sprintf "{arg=%s; argty=%s; resty=%s; body=%s}"
@@ -212,13 +217,8 @@ and show_pattern p =
   | POption None -> "POption None"
   | POption (Some p) ->
     Printf.sprintf "POption (Some %s)" (show_pattern p)
-  | PRecord lst ->
-    let str =
-      show_list
-        (fun (s,p) -> Printf.sprintf "%s: %s;" (Var.to_string s) (show_pattern p))
-        lst
-    in
-    Printf.sprintf "PRecord { %s }" str
+  | PRecord map ->
+    show_record show_pattern "PRecord" map
 
 and show_value ~show_meta v =
   if show_meta then
@@ -239,13 +239,7 @@ and show_v ~show_meta v =
   | VOption vo ->
     Printf.sprintf "VOption (%s)" (show_opt (show_value ~show_meta) vo)
   | VClosure c -> Printf.sprintf "VClosure %s" (show_closure ~show_meta c)
-  | VRecord lst ->
-    let str =
-      show_list
-        (fun (s,v) -> Printf.sprintf "%s: %s;" (Var.to_string s) (show_value ~show_meta v))
-        lst
-    in
-    Printf.sprintf "PRecord { %s }" str
+  | VRecord map -> show_record (show_value ~show_meta) "VRecord" map
 
 and show_closure ~show_meta (e, f) =
   Printf.sprintf "{env=%s; func=%s}" (show_env ~show_meta e) (show_func ~show_meta f)
@@ -433,8 +427,8 @@ let rec hash_ty ty =
     List.fold_left (fun acc t -> acc + hash_ty t) 0 ts + 7
   | TOption t -> 8 + hash_ty t
   | TMap (ty1, ty2) -> 9 + hash_ty ty1 + hash_ty ty2
-  | TRecord lst ->
-    List.fold_left (fun acc (_,t) -> acc + hash_ty t) 0 lst + 10
+  | TRecord map ->
+    StringMap.fold (fun l t acc -> acc + + hash_string l + hash_ty t) map 0 + 10
 
 
 let hash_span (span: Span.t) = (19 * span.start) + span.finish
@@ -479,11 +473,11 @@ and hash_v ~hash_meta v =
         0 vs
     in
     (19 * acc) + 5
-  | VRecord lst ->
+  | VRecord map ->
     let acc =
-      List.fold_left
-        (fun acc (_,v) -> acc + hash_value ~hash_meta v)
-        0 lst
+      StringMap.fold
+        (fun l v acc -> acc + + hash_string l + hash_value ~hash_meta v)
+        map 0
     in
     (19 * acc) + 7
 
@@ -535,10 +529,13 @@ and hash_e ~hash_meta e =
     + 9
   | ETy (e, ty) ->
     (19 * ((19 * hash_exp ~hash_meta e) + hash_ty ty)) + 10
-  | ERecord lst ->
-    (19 * hash_es ~hash_meta (List.map snd lst) + 11)
+  | ERecord map ->
+    (19 *
+     StringMap.fold
+       (fun l e acc -> acc + + hash_string l + hash_exp ~hash_meta e) map 0
+     + 11)
   | EProject (e, label) ->
-    19 * hash_exp ~hash_meta e + hash_var label + 12
+    (19 * hash_exp ~hash_meta e + hash_string label + 12)
 
 and hash_var x = hash_string (Var.to_string x)
 
@@ -559,7 +556,10 @@ and hash_pattern p =
   | PTuple ps -> (19 * hash_patterns ps) + 5
   | POption None -> 6
   | POption (Some p) -> (19 * hash_pattern p) + 7
-  | PRecord lst -> (19 * (hash_patterns (List.map snd lst))) + 8
+  | PRecord map ->
+    (19 *
+     StringMap.fold (fun l p acc -> acc + + hash_string l + hash_pattern p) map 0
+     + 8)
 
 and hash_patterns ps =
   List.fold_left (fun acc p -> acc + hash_pattern p) 0 ps
@@ -659,7 +659,7 @@ let vmap m = value (VMap m)
 
 let vtuple vs = value (VTuple vs)
 
-let vrecord lst = value (VRecord lst)
+let vrecord map = value (VRecord map)
 
 let voption vo = value (VOption vo)
 
@@ -683,7 +683,7 @@ let etuple es = exp (ETuple es)
 
 let eproject e l = exp (EProject (e,l))
 
-let erecord lst = exp (ERecord lst)
+let erecord map = exp (ERecord map)
 
 let esome e = exp (ESome e)
 
@@ -717,11 +717,8 @@ let rec exp_of_value v =
   | VTuple vs ->
     let e = etuple (List.map exp_of_value vs) in
     {e with ety= v.vty; espan=v.vspan}
-  | VRecord lst ->
-    let labels = List.map fst lst in
-    let vs = List.map snd lst in
-    let es = List.map exp_of_value vs in
-    let e = erecord (List.combine labels es) in
+  | VRecord map ->
+    let e = erecord (StringMap.map exp_of_value map) in
     {e with ety= v.vty; espan=v.vspan}
   | VOption (Some v1) ->
     let e = esome (exp_of_value v1) in
@@ -845,11 +842,11 @@ let rec free (seen: Var.t PSet.t) (e: exp) : Var.t PSet.t =
       (fun set e -> PSet.union set (free seen e))
       (PSet.create Var.compare)
       es
-  | ERecord lst ->
-    List.fold_left
-      (fun set (_,e) -> PSet.union set (free seen e))
+  | ERecord map ->
+    StringMap.fold
+      (fun _ e set -> PSet.union set (free seen e))
+      map
       (PSet.create Var.compare)
-      lst
   | EFun f -> free (PSet.add f.arg seen) f.body
   | EApp (e1, e2) -> PSet.union (free seen e1) (free seen e2)
   | EIf (e1, e2, e3) ->
@@ -880,11 +877,11 @@ and pattern_vars p =
       (fun set p -> PSet.union set (pattern_vars p))
       (PSet.create Var.compare)
       ps
-  | PRecord lst ->
-    List.fold_left
-      (fun set (_,p) -> PSet.union set (pattern_vars p))
+  | PRecord map ->
+    StringMap.fold
+      (fun _ p set -> PSet.union set (pattern_vars p))
+      map
       (PSet.create Var.compare)
-      lst
   | POption (Some p) -> pattern_vars p
 
 let rec free_dead_vars (e : exp) =
@@ -917,8 +914,8 @@ let rec free_dead_vars (e : exp) =
     elet x e1 e2
   | ETuple es ->
     etuple (List.map free_dead_vars es)
-  | ERecord lst ->
-    erecord (List.map (fun (s,e) -> (s,free_dead_vars e)) lst)
+  | ERecord map ->
+    erecord (StringMap.map free_dead_vars map)
   | ESome e -> esome (free_dead_vars e)
   | EMatch (e1, branches) ->
     let e1 = free_dead_vars e1 in
@@ -1052,7 +1049,7 @@ module BddMap = struct
       | TBool -> VBool false
       | TInt size -> VInt (Integer.create ~value:0 ~size:size)
       | TTuple ts -> VTuple (List.map default_value ts)
-      | TRecord lst -> VRecord (List.map (fun (s,t) -> (s, default_value t)) lst)
+      | TRecord map -> VRecord (StringMap.map default_value map)
       | TOption ty -> VOption None
       | TMap (ty1, ty2) ->
         VMap (create ~key_ty:ty1 (default_value ty2))

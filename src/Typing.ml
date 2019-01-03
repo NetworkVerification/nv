@@ -92,8 +92,7 @@ let rec check_annot (e: exp) =
     check_annot e ;
     List.iter (fun (_, e) -> check_annot e) bs
   | ETy (e, _) | EProject (e, _) -> check_annot e
-  | ERecord lst -> List.iter (check_annot % snd) lst
-
+  | ERecord map -> StringMap.iter (fun _ -> check_annot) map
 
 let check_annot_decl (d: declaration) =
   match d with
@@ -122,7 +121,7 @@ let rec strip_ty ty =
   | TTuple ts -> TTuple (List.map strip_ty ts)
   | TOption t -> TOption (strip_ty t)
   | TMap (ty1, ty2) -> TMap (strip_ty ty1, strip_ty ty2)
-  | TRecord lst -> TRecord (List.map (fun (s,ty) -> (s,strip_ty ty)) lst)
+  | TRecord map -> TRecord (StringMap.map strip_ty map)
   | QVar _ | TVar _ -> raise Invalid_type
 
 let tyname () = Var.fresh "a"
@@ -146,7 +145,7 @@ let occurs tvr ty =
     | TArrow (t1, t2) -> occ tvr t1 ; occ tvr t2
     | TBool | TInt _ -> ()
     | TTuple ts -> List.iter (occ tvr) ts
-    | TRecord lst -> List.iter (occ tvr % snd) lst
+    | TRecord map -> StringMap.iter (fun _ -> occ tvr) map
     | TOption t -> occ tvr t
     | TMap (t1, t2) -> occ tvr t1 ; occ tvr t2
   in
@@ -183,11 +182,15 @@ let rec unify info e t1 t2 : unit =
       | TOption t1, TOption t2 -> try_unify t1 t2
       | TMap (t1, t2), TMap (t3, t4) ->
         try_unify t1 t3 && try_unify t2 t4
-      | TRecord lst1, TRecord lst2 ->
-        let labels1, ts1 = List.split lst1 in
-        let labels2, ts2 = List.split lst2 in
-        if not (labels1 = labels2) then false
-        else try_unifies ts1 ts2
+      | TRecord map1, TRecord map2 ->
+        if not (BatEnum.equal (String.equal) (StringMap.keys map1) (StringMap.keys map2))
+        then false
+        else BatEnum.fold
+            (fun b l -> b &&
+                        try_unify
+                          (StringMap.find l map1)
+                          (StringMap.find l map2))
+            true (StringMap.keys map1)
       | _, _ -> false
   in
   if try_unify t1 t2 then ()
@@ -226,7 +229,7 @@ let generalize ty =
       let ty2 = gen ty2 in
       TArrow (ty1, ty2)
     | TTuple ts -> TTuple (List.map gen ts)
-    | TRecord lst -> TRecord (List.map (fun (s,t) -> (s, gen t)) lst)
+    | TRecord map -> TRecord (StringMap.map gen map)
     | TOption t ->
       let ty = gen t in
       TOption ty
@@ -257,10 +260,8 @@ let inst subst ty =
     | TTuple ts ->
       let ts = loops subst ts in
       TTuple ts
-    | TRecord lst ->
-      let labels, ts = List.split lst in
-      let ts = loops subst ts in
-      TRecord (List.combine labels ts)
+    | TRecord map ->
+      TRecord (StringMap.map (loop subst) map)
     | TOption t ->
       let t = loop subst t in
       TOption t
@@ -303,7 +304,7 @@ let substitute (ty: ty) : ty =
     | TArrow (ty1, ty2) ->
       TArrow (substitute_aux ty1, substitute_aux ty2)
     | TTuple ts -> TTuple (List.map substitute_aux ts)
-    | TRecord lst -> TRecord (List.map (fun (s,t) -> (s,substitute_aux t)) lst)
+    | TRecord map -> TRecord (StringMap.map substitute_aux map)
     | TOption t -> TOption (substitute_aux t)
     | TMap (ty1, ty2) -> TMap (substitute_aux ty1, substitute_aux ty2)
   in
@@ -497,62 +498,64 @@ let rec infer_exp i info env (e: exp) : exp =
     | ETuple es ->
       let es, tys = infer_exps (i + 1) info env es in
       texp (etuple es, TTuple tys, e.espan)
-    | ERecord lst ->
+    | ERecord emap ->
       (* Retrieve the record type corresponding to this expression.
          All record types should be explicitly declared, and
          all labels should appear in exactly one declaration *)
-      let label = (fst @@ List.hd lst) in
+      let label = (oget @@ BatEnum.peek @@ StringMap.keys emap) in
       let record_types = !record_types in
-      let has_label lst = List.mem label (List.map fst lst) in
-      let record_type =
+      let has_label map = StringMap.mem label map in
+      let tmap =
         match List.find_opt has_label record_types with
         | None ->
           let msg =
             Printf.sprintf
               "Label %s does not appear in any declared record type!"
-              (Var.name label)
+              label
           in
           Console.error_position info e.espan msg
-        | Some lst -> lst
+        | Some map -> map
       in
-      let sort x = List.sort (fun (s1, _) (s2, _) -> Var.compare s1 s2) x in
-      let lst, record_type = sort lst, sort record_type in
-      let labels, es = List.split lst in
-      let labels', tys = List.split record_type in
-      (if not (labels = labels') then
-        (* The only possible record type was not a match *)
-        Console.error_position info e.espan
-          "Record does not match any declared record type!");
+      (if not @@ BatEnum.equal String.equal
+          (StringMap.keys emap)
+          (StringMap.keys tmap) then
+         (* The only possible record type was not a match *)
+         Console.error_position info e.espan
+           "Record does not match any declared record type!");
 
-      let es', tys' = infer_exps (i + 1) info env es in
+      let emap = StringMap.map (infer_exp (i+1) info env) emap in
 
-      List.iter2 (fun (e,t1) t2 -> unify info e t1 t2)
-        (List.combine es' tys') tys;
+      BatEnum.iter
+        (fun l ->
+           let e, t1 = StringMap.find l emap |> textract in
+           let t2 = StringMap.find l tmap in
+           unify info e t1 t2)
+        (StringMap.keys emap);
 
-      texp (erecord (List.combine labels es'), TRecord (record_type), e.espan)
+      texp (erecord emap, TRecord tmap, e.espan)
     | EProject (e1, label) ->
       (* Retrieve the record type containing this label.
          All record types should be explicitly declared, and
          all labels should appear in exactly one declaration *)
       let record_types = !record_types in
-      let has_label lst = List.mem label (List.map fst lst) in
-      let record_type =
+      let has_label map = StringMap.mem label map in
+      let tmap =
         match List.find_opt has_label record_types with
         | None ->
           let msg =
             Printf.sprintf
               "Label %s does not appear in any declared record type!"
-              (Var.name label)
+              label
           in
           Console.error_position info e.espan msg
-        | Some lst -> lst
+        | Some map -> map
       in
-      let _, this_type =
-        List.find (fun (s,_) -> Var.equals s label) record_type
-      in
-      let e1', ety = infer_exp (i + 1) info env e1 |> textract in
-      unify info e1' ety (TRecord record_type) ;
-      texp (eproject e1' label, this_type, e.espan)
+
+      let label_type = StringMap.find label tmap in
+      let e1, ety = infer_exp (i + 1) info env e1 |> textract in
+      unify info e1 ety (TRecord tmap) ;
+
+      texp (eproject e1 label, label_type, e.espan)
     | ESome e ->
       let e, t = infer_exp (i + 1) info env e |> textract in
       texp (esome e, TOption t, e.espan)
@@ -633,10 +636,12 @@ and infer_value info env (v: Syntax.value) : Syntax.value =
     | VTuple vs ->
       let vs, ts = infer_values info env vs in
       tvalue (vtuple vs, TTuple ts, v.vspan)
-    | VRecord lst ->
-      let labels, vs = List.split lst in
-      let vs, ts = infer_values info env vs in
-      tvalue (vrecord (List.combine labels vs), TRecord (List.combine labels ts), v.vspan)
+    | VRecord vmap ->
+      (* All VRecords are constructed via ERecords, so shouldn't need
+         to check that the record type has been properly declared *)
+      let vmap = StringMap.map (infer_value info env) vmap in
+      let tmap = StringMap.map (fun v -> oget v.vty) vmap in
+      tvalue (vrecord vmap, TRecord tmap, v.vspan)
     | VOption None ->
       let tv = fresh_tyvar () in
       tvalue (voption None, TOption tv, v.vspan)
@@ -690,12 +695,15 @@ and infer_pattern i info env e tmatch p =
     let ty = TTuple ts in
     unify info e tmatch ty ;
     infer_patterns (i + 1) info env e ts ps
-  | PRecord lst ->
-    let labels, ps = List.split lst in
-    let ts = List.map (fun p -> fresh_tyvar ()) ps in
-    let ty = TRecord (List.combine labels ts) in
+  | PRecord pmap ->
+    let ptmap = StringMap.map (fun p -> p, fresh_tyvar ()) pmap in
+    let tmap = StringMap.map snd ptmap in
+    let ty = TRecord (tmap) in
     unify info e tmatch ty ;
-    infer_patterns (i + 1) info env e ts ps
+    StringMap.fold
+      (fun _ (p, t) env ->
+         infer_pattern (i + 1) info env e t p)
+      ptmap env
   | POption x ->
     let t = fresh_tyvar () in
     unify info e tmatch (TOption t) ;
@@ -787,7 +795,8 @@ and valid_pattern env p =
             ^ " appears twice in pattern" ) )
   | PBool _ | PInt _ -> env
   | PTuple ps -> valid_patterns env ps
-  | PRecord lst -> valid_patterns env (List.map snd lst)
+  | PRecord map ->
+    StringMap.fold (fun _ p env -> valid_pattern env p) map env
   | POption None -> env
   | POption (Some p) -> valid_pattern env p
 

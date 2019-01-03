@@ -1,8 +1,11 @@
 open Cudd
+open Batteries
 
 type index = int
 
 type bitwidth = int
+
+module StringMap: Map.S with type key = string
 
 type level = int
 
@@ -19,7 +22,7 @@ type ty =
   | TTuple of ty list
   | TOption of ty
   | TMap of ty * ty
-  | TRecord of (var * ty) list
+  | TRecord of ty StringMap.t
 
 and tyvar = Unbound of tyname * level | Link of ty
 
@@ -47,7 +50,7 @@ type pattern =
   | PInt of Integer.t
   | PTuple of pattern list
   | POption of pattern option
-  | PRecord of (var * pattern) list
+  | PRecord of pattern StringMap.t
 
 type v = private
   | VBool of bool
@@ -56,7 +59,7 @@ type v = private
   | VTuple of value list
   | VOption of value option
   | VClosure of closure
-  | VRecord of (var * value) list
+  | VRecord of value StringMap.t
 
 and mtbdd = value Mtbdd.t * ty
 
@@ -75,8 +78,8 @@ and e = private
   | ESome of exp
   | EMatch of exp * branches
   | ETy of exp * ty
-  | ERecord of (var * exp) list
-  | EProject of exp * var
+  | ERecord of exp StringMap.t
+  | EProject of exp * string
 
 and exp = private
   {e: e; ety: ty option; espan: Span.t; etag: int; ehkey: int}
@@ -116,7 +119,7 @@ val vmap : mtbdd -> value
 
 val vtuple : value list -> value
 
-val vrecord : (var * value) list -> value
+val vrecord : value StringMap.t -> value
 
 val voption : value option -> value
 
@@ -138,9 +141,9 @@ val elet : Var.t -> exp -> exp -> exp
 
 val etuple : exp list -> exp
 
-val erecord : (var * exp) list -> exp
+val erecord : exp StringMap.t -> exp
 
-val eproject : exp -> var -> exp
+val eproject : exp -> string -> exp
 
 val esome : exp -> exp
 
@@ -212,7 +215,7 @@ val get_symbolics : declarations -> (var * ty_or_exp) list
 
 val get_requires : declarations -> exp list
 
-val get_record_types : declarations -> (var * ty) list list
+val get_record_types : declarations -> (ty StringMap.t) list
 
 val equal_values : cmp_meta:bool -> value -> value -> bool
 

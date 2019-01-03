@@ -572,7 +572,7 @@ let rec encode_exp_z3 descr env (e: exp) : term =
         encode_branches_z3 descr env za bs (oget e.ety)
       end
   | ETy (e, ty) -> encode_exp_z3 descr env e
-  | ERecord _ -> failwith "record in smt encoding"
+  | ERecord _ | EProject _ -> failwith "record or projection in smt encoding"
   | EFun _ | EApp _ -> failwith "function in smt encoding"
 
 (* and make_map env descr arr x (e1, ty1) e2 = *)

@@ -71,6 +71,22 @@
     let e = exp (eop MCreate [e]) span in
     updates e exprs
 
+  let make_record_map (lst : (Var.t * 'a) list) : 'a StringMap.t =
+    (* Ensure that no labels were used more than once *)
+    let sorted =
+      List.sort (fun (l1,_) (l2, _)-> Var.compare l1 l2) lst
+    in
+    let rec build_map map lst =
+      match lst with
+      | [] -> map
+      | (l,x)::tl ->
+        let l = Var.name l in
+        if StringMap.mem l map
+        then failwith @@ "Label used more than once in a record: " ^ l
+        else build_map (StringMap.add l x map) tl
+    in
+    build_map StringMap.empty sorted
+
 %}
 
 %token <Span.t * Var.t> ID
@@ -157,7 +173,7 @@ ty:
    | TOPTION LBRACKET ty RBRACKET       { TOption $3 }
    | TDICT LBRACKET ty COMMA ty RBRACKET{ TMap ($3,$5) }
    | TSET LBRACKET ty RBRACKET          { TMap ($3,TBool) }
-   | LBRACE record_entry_tys RBRACE     { TRecord ($2) }
+   | LBRACE record_entry_tys RBRACE     { TRecord (make_record_map $2) }
    | ID                                 { get_user_type (snd $1) }
 ;
 
@@ -297,8 +313,8 @@ expr:
                                           let e = exp (efun {arg=vark;argty=None;resty=None;body=e}) span in
                                           let args = match $2 with hd :: tl -> hd::e::tl | _ -> [e] in
                                           exp (eop MMapFilter args) $1 }
-    | expr DOT ID                       { exp (eproject $1 (snd $3)) (Span.extend ($1.espan) (fst $3)) }
-    | LBRACE record_entry_exprs RBRACE  { exp (erecord $2) (Span.extend $1 $3) }
+    | expr DOT ID                       { exp (eproject $1 (Var.name (snd $3))) (Span.extend ($1.espan) (fst $3)) }
+    | LBRACE record_entry_exprs RBRACE  { exp (erecord (make_record_map $2)) (Span.extend $1 $3) }
     | LBRACE exprs RBRACE               { make_set $2 (Span.extend $1 $3) }
     | LBRACE RBRACE                     { make_set [] (Span.extend $1 $2) }
     | expr2                             { $1 }
@@ -347,7 +363,7 @@ pattern:
     | LPAREN patterns RPAREN            { tuple_pattern $2 }
     | NONE                              { POption None }
     | SOME pattern                      { POption (Some $2) }
-    | LBRACE record_entry_ps RBRACE     { PRecord $2 }
+    | LBRACE record_entry_ps RBRACE     { PRecord (make_record_map $2) }
 ;
 
 patterns:
