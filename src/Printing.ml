@@ -44,6 +44,7 @@ let prec_exp e =
   | EMatch _ -> 8
   | ETy (_, _) -> max_prec
   | ERecord _ -> 0
+  | EProject _ -> 0
 
 let rec sep s f xs =
   match xs with
@@ -238,6 +239,7 @@ and exp_to_string_p prec e =
       ^ ")"
     | ETy (e, t) -> exp_to_string_p prec e ^ ty_to_string t
     | ERecord lst -> print_record_list (exp_to_string_p prec) lst
+    | EProject (e, l) -> exp_to_string_p prec e ^ "." ^ Var.to_string l
   in
   if p > prec then "(" ^ s ^ ")" else s
 

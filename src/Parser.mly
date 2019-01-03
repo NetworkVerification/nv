@@ -99,6 +99,7 @@
 %token <Span.t> WITH
 %token <Span.t> BAR
 %token <Span.t> ARROW
+%token <Span.t> DOT
 %token <Span.t> SEMI
 %token <Span.t> LPAREN
 %token <Span.t> RPAREN
@@ -296,6 +297,7 @@ expr:
                                           let e = exp (efun {arg=vark;argty=None;resty=None;body=e}) span in
                                           let args = match $2 with hd :: tl -> hd::e::tl | _ -> [e] in
                                           exp (eop MMapFilter args) $1 }
+    | expr DOT ID                       { exp (eproject $1 (snd $3)) (Span.extend ($1.espan) (fst $3)) }
     | LBRACE record_entry_exprs RBRACE  { exp (erecord $2) (Span.extend $1 $3) }
     | LBRACE exprs RBRACE               { make_set $2 (Span.extend $1 $3) }
     | LBRACE RBRACE                     { make_set [] (Span.extend $1 $2) }

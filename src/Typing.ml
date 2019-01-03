@@ -183,6 +183,11 @@ let rec unify info e t1 t2 : unit =
       | TOption t1, TOption t2 -> try_unify t1 t2
       | TMap (t1, t2), TMap (t3, t4) ->
         try_unify t1 t3 && try_unify t2 t4
+      | TRecord lst1, TRecord lst2 ->
+        let labels1, ts1 = List.split lst1 in
+        let labels2, ts2 = List.split lst2 in
+        if not (labels1 = labels2) then false
+        else try_unifies ts1 ts2
       | _, _ -> false
   in
   if try_unify t1 t2 then ()
@@ -520,7 +525,7 @@ let rec infer_exp i info env (e: exp) : exp =
           "Record does not match any declared record type!");
 
       let es', tys' = infer_exps (i + 1) info env es in
-      
+
       List.iter2 (fun (e,t1) t2 -> unify info e t1 t2)
         (List.combine es' tys') tys;
 
