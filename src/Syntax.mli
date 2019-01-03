@@ -76,6 +76,7 @@ and e = private
   | EMatch of exp * branches
   | ETy of exp * ty
   | ERecord of (var * exp) list
+  | EProject of exp * var
 
 and exp = private
   {e: e; ety: ty option; espan: Span.t; etag: int; ehkey: int}
@@ -138,6 +139,8 @@ val elet : Var.t -> exp -> exp -> exp
 val etuple : exp list -> exp
 
 val erecord : (var * exp) list -> exp
+
+val eproject : exp -> var -> exp
 
 val esome : exp -> exp
 

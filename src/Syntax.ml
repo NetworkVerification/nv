@@ -82,6 +82,7 @@ and e =
   | EMatch of exp * branches
   | ETy of exp * ty
   | ERecord of (var * exp) list
+  | EProject of exp * var
 
 and exp = {e: e; ety: ty option; espan: Span.t; etag: int; ehkey: int}
 
@@ -187,6 +188,8 @@ and show_e ~show_meta e =
         lst
     in
     Printf.sprintf "TRecord { %s }" str
+  | EProject (e, label) ->
+    Printf.sprintf "%s.%s" (show_exp ~show_meta e) (Var.to_string label)
 
 and show_func ~show_meta f =
   Printf.sprintf "{arg=%s; argty=%s; resty=%s; body=%s}"
@@ -534,6 +537,8 @@ and hash_e ~hash_meta e =
     (19 * ((19 * hash_exp ~hash_meta e) + hash_ty ty)) + 10
   | ERecord lst ->
     (19 * hash_es ~hash_meta (List.map snd lst) + 11)
+  | EProject (e, label) ->
+    19 * hash_exp ~hash_meta e + hash_var label + 12
 
 and hash_var x = hash_string (Var.to_string x)
 
@@ -675,6 +680,8 @@ let eif e1 e2 e3 = exp (EIf (e1, e2, e3))
 let elet x e1 e2 = exp (ELet (x, e1, e2))
 
 let etuple es = exp (ETuple es)
+
+let eproject e l = exp (EProject (e,l))
 
 let erecord lst = exp (ERecord lst)
 
@@ -851,7 +858,7 @@ let rec free (seen: Var.t PSet.t) (e: exp) : Var.t PSet.t =
   | ELet (x, e1, e2) ->
     let seen = PSet.add x seen in
     PSet.union (free seen e1) (free seen e2)
-  | ESome e | ETy (e, _) -> free seen e
+  | ESome e | ETy (e, _) | EProject (e, _) -> free seen e
   | EMatch (e, bs) ->
     let bs =
       List.fold_left
@@ -916,7 +923,7 @@ let rec free_dead_vars (e : exp) =
   | EMatch (e1, branches) ->
     let e1 = free_dead_vars e1 in
     ematch e1 (List.map (fun (ps, e) -> (ps, free_dead_vars e)) branches)
-
+  | EProject (e, l) -> eproject (free_dead_vars e) l
 (* Memoization *)
 
 module type MEMOIZER = sig
@@ -1525,7 +1532,7 @@ module BddFunc = struct
               (env, x) bs
           in
           x )
-    | EFun _ | EApp _ | ERecord _ -> failwith "internal error (eval)"
+    | EFun _ | EApp _ | ERecord _ | EProject _ -> failwith "internal error (eval)"
 
   and eval_branch env bddf p : t Env.t * Bdd.vt =
     match (p, bddf) with

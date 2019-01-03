@@ -48,6 +48,9 @@ let reset_tyvars () =
   (* DPW: don't need to do this *)
   level_reset ()
 
+(* List of record types that are declared *)
+let record_types = ref []
+
 let rec check_annot_val (v: value) =
   ( match v.vty with
     | None ->
@@ -88,7 +91,7 @@ let rec check_annot (e: exp) =
   | EMatch (e, bs) ->
     check_annot e ;
     List.iter (fun (_, e) -> check_annot e) bs
-  | ETy (e, ty) -> check_annot e
+  | ETy (e, _) | EProject (e, _) -> check_annot e
   | ERecord lst -> List.iter (check_annot % snd) lst
 
 
@@ -490,9 +493,61 @@ let rec infer_exp i info env (e: exp) : exp =
       let es, tys = infer_exps (i + 1) info env es in
       texp (etuple es, TTuple tys, e.espan)
     | ERecord lst ->
+      (* Retrieve the record type corresponding to this expression.
+         All record types should be explicitly declared, and
+         all labels should appear in exactly one declaration *)
+      let label = (fst @@ List.hd lst) in
+      let record_types = !record_types in
+      let has_label lst = List.mem label (List.map fst lst) in
+      let record_type =
+        match List.find_opt has_label record_types with
+        | None ->
+          let msg =
+            Printf.sprintf
+              "Label %s does not appear in any declared record type!"
+              (Var.name label)
+          in
+          Console.error_position info e.espan msg
+        | Some lst -> lst
+      in
+      let sort x = List.sort (fun (s1, _) (s2, _) -> Var.compare s1 s2) x in
+      let lst, record_type = sort lst, sort record_type in
       let labels, es = List.split lst in
-      let es, tys = infer_exps (i + 1) info env es in
-      texp (erecord (List.combine labels es), TRecord (List.combine labels tys), e.espan)
+      let labels', tys = List.split record_type in
+      (if not (labels = labels') then
+        (* The only possible record type was not a match *)
+        Console.error_position info e.espan
+          "Record does not match any declared record type!");
+
+      let es', tys' = infer_exps (i + 1) info env es in
+      
+      List.iter2 (fun (e,t1) t2 -> unify info e t1 t2)
+        (List.combine es' tys') tys;
+
+      texp (erecord (List.combine labels es'), TRecord (record_type), e.espan)
+    | EProject (e1, label) ->
+      (* Retrieve the record type containing this label.
+         All record types should be explicitly declared, and
+         all labels should appear in exactly one declaration *)
+      let record_types = !record_types in
+      let has_label lst = List.mem label (List.map fst lst) in
+      let record_type =
+        match List.find_opt has_label record_types with
+        | None ->
+          let msg =
+            Printf.sprintf
+              "Label %s does not appear in any declared record type!"
+              (Var.name label)
+          in
+          Console.error_position info e.espan msg
+        | Some lst -> lst
+      in
+      let _, this_type =
+        List.find (fun (s,_) -> Var.equals s label) record_type
+      in
+      let e1', ety = infer_exp (i + 1) info env e1 |> textract in
+      unify info e1' ety (TRecord record_type) ;
+      texp (eproject e1' label, this_type, e.espan)
     | ESome e ->
       let e, t = infer_exp (i + 1) info env e |> textract in
       texp (esome e, TOption t, e.espan)
@@ -741,4 +796,6 @@ let infer_declarations info (ds: declarations) : declarations =
   | None ->
     Console.error
       "attribute type not declared: type attribute = ..."
-  | Some ty -> infer_declarations_aux 0 info Env.empty ty ds
+  | Some ty ->
+    record_types := get_record_types ds ;
+    infer_declarations_aux 0 info Env.empty ty ds
