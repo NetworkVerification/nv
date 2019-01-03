@@ -11,6 +11,8 @@ type bitwidth = int
 (* see:  http://okmij.org/ftp/ML/generalization.html *)
 type level = int
 
+type var = Var.t
+
 type tyname = Var.t
 
 type ty =
@@ -22,11 +24,9 @@ type ty =
   | TTuple of ty list
   | TOption of ty
   | TMap of ty * ty
-  | TRecord of (string * ty) list
+  | TRecord of (var * ty) list
 
 and tyvar = Unbound of tyname * level | Link of ty
-
-type var = Var.t
 
 type op =
   | And
@@ -53,7 +53,7 @@ type pattern =
   | PInt of Integer.t
   | PTuple of pattern list
   | POption of pattern option
-  | PRecord of (string * pattern) list
+  | PRecord of (var * pattern) list
 
 type v =
   | VBool of bool
@@ -62,7 +62,7 @@ type v =
   | VTuple of value list
   | VOption of value option
   | VClosure of closure
-  | VRecord of (string * value) list
+  | VRecord of (var * value) list
 
 and value =
   {v: v; vty: ty option; vspan: Span.t; vtag: int; vhkey: int}
@@ -81,7 +81,7 @@ and e =
   | ESome of exp
   | EMatch of exp * branches
   | ETy of exp * ty
-  | ERecord of (string * exp) list
+  | ERecord of (var * exp) list
 
 and exp = {e: e; ety: ty option; espan: Span.t; etag: int; ehkey: int}
 
@@ -99,7 +99,7 @@ type declaration =
   | DLet of var * ty option * exp
   | DSymbolic of var * ty_or_exp
   | DATy of ty (* Declaration of the attribute type *)
-  | DRTy of ty (* Declaration of a record type *)
+  | DUserTy of var * ty (* Declaration of a record type *)
   | DMerge of exp
   | DTrans of exp
   | DInit of exp
@@ -144,7 +144,7 @@ let rec show_ty ty =
     Printf.sprintf "TMap (%s,%s)" (show_ty ty1) (show_ty ty2)
   | TRecord lst ->
     let str = show_list
-        (fun (s,ty) -> Printf.sprintf "%s: %s;" s (show_ty ty))
+        (fun (s,ty) -> Printf.sprintf "%s: %s;" (Var.to_string s) (show_ty ty))
         lst
     in
     Printf.sprintf "TRecord { %s }" str
@@ -183,7 +183,7 @@ and show_e ~show_meta e =
     Printf.sprintf "ETy (%s,%s)" (show_exp ~show_meta e) (show_ty ty)
   | ERecord lst ->
     let str = show_list
-        (fun (s,e) -> Printf.sprintf "%s: %s;" s (show_exp ~show_meta e))
+        (fun (s,e) -> Printf.sprintf "%s: %s;" (Var.to_string s) (show_exp ~show_meta e))
         lst
     in
     Printf.sprintf "TRecord { %s }" str
@@ -212,7 +212,7 @@ and show_pattern p =
   | PRecord lst ->
     let str =
       show_list
-        (fun (s,p) -> Printf.sprintf "%s: %s;" s (show_pattern p))
+        (fun (s,p) -> Printf.sprintf "%s: %s;" (Var.to_string s) (show_pattern p))
         lst
     in
     Printf.sprintf "PRecord { %s }" str
@@ -239,7 +239,7 @@ and show_v ~show_meta v =
   | VRecord lst ->
     let str =
       show_list
-        (fun (s,v) -> Printf.sprintf "%s: %s;" s (show_value ~show_meta v))
+        (fun (s,v) -> Printf.sprintf "%s: %s;" (Var.to_string s) (show_value ~show_meta v))
         lst
     in
     Printf.sprintf "PRecord { %s }" str

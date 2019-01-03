@@ -1,5 +1,36 @@
 %{
   open Syntax
+  open Batteries
+
+  type user_type = Var.t (* name *) * ty (* type *)
+  let user_types : user_type list ref = ref []
+
+  (* If ty is a record type, return a list of all its labels *)
+  let get_labels ty =
+    match ty with
+    | TRecord lst -> List.map fst lst
+    | _ -> []
+
+  let add_user_type (name : Var.t) (ty : ty) : unit =
+    let tys = List.map snd !user_types in
+    (* Make sure record types don't re-use labels *)
+    let old_labels = List.concat @@ List.map get_labels tys in
+    let new_labels = get_labels ty in
+    if List.exists (fun l -> List.mem l old_labels) new_labels
+    then failwith "Error: same label used in two different record types"
+    else user_types := (name,ty)::!user_types
+
+  let get_user_type (name : Var.t) : ty =
+    let _, ty = List.find (fun (n,_) -> Var.equals name n) !user_types in
+    ty
+
+  (* Retrieve the user-defined record type which uses label l *)
+  let get_record_type (l : Var.t) : ty =
+    let tys = List.map snd !user_types in
+    let has_label ty = List.mem l (get_labels ty) in
+    match List.find_opt has_label tys with
+    | Some ty -> ty
+    | None -> failwith @@ "Error: No declared record type contains label " ^ (Var.to_string l)
 
   let exp e span : exp = aexp (e, None, span)
 
@@ -144,12 +175,23 @@ ty:
    | TOPTION LBRACKET ty RBRACKET       { TOption $3 }
    | TDICT LBRACKET ty COMMA ty RBRACKET{ TMap ($3,$5) }
    | TSET LBRACKET ty RBRACKET          { TMap ($3,TBool) }
+   | LBRACE record_entry_tys RBRACE     { TRecord ($2) }
+   | ID                                 { get_user_type (snd $1) }
 ;
 
 tys:
   | ty                                  { [$1] }
   | ty COMMA tys                        { $1::$3 }
 ;
+
+record_entry_ty:
+  | ID COLON ty                         { snd $1, $3 }
+;
+
+record_entry_tys:
+  | record_entry_ty                       { [$1] }
+  | record_entry_ty SEMI                  { [$1] }
+  | record_entry_ty SEMI record_entry_tys { $1::$3 }
 
 param:
    | ID                                 { (snd $1, None) }
@@ -177,12 +219,23 @@ component:
     | LET EDGES EQ LBRACE edges RBRACE  { DEdges $5 }
     | LET NODES EQ NUM                  { DNodes (snd $4) }
     | TYPE ATTRIBUTE EQ ty              { DATy $4 }
+    | TYPE ID EQ ty                     { (add_user_type (snd $2) $4; DUserTy (snd $2, $4)) }
+
 ;
 
 components:
     | component                         { [$1] }
     | component components              { $1 :: $2 }
 ;
+
+record_entry_expr:
+  | ID COLON expr                       { snd $1, $3 }
+;
+
+record_entry_exprs:
+  | record_entry_expr                         { [$1] }
+  | record_entry_expr SEMI                    { [$1] }
+  | record_entry_expr SEMI record_entry_exprs { $1::$3 }
 
 expreof:
     expr EOF    { $1 }
@@ -262,6 +315,7 @@ expr:
                                           let e = exp (efun {arg=vark;argty=None;resty=None;body=e}) span in
                                           let args = match $2 with hd :: tl -> hd::e::tl | _ -> [e] in
                                           exp (eop MMapFilter args) $1 }
+    | LBRACE record_entry_exprs RBRACE  { exp (erecord $2) (Span.extend $1 $3) }
     | LBRACE exprs RBRACE               { make_set $2 (Span.extend $1 $3) }
     | LBRACE RBRACE                     { make_set [] (Span.extend $1 $2) }
     | expr2                             { $1 }
@@ -310,12 +364,22 @@ pattern:
     | LPAREN patterns RPAREN            { tuple_pattern $2 }
     | NONE                              { POption None }
     | SOME pattern                      { POption (Some $2) }
+    | LBRACE record_entry_ps RBRACE     { PRecord $2 }
 ;
 
 patterns:
     | pattern                           { [$1] }
     | pattern COMMA patterns            { $1::$3 }
 ;
+
+record_entry_p:
+  | ID COLON pattern                    { snd $1, $3 }
+;
+
+record_entry_ps:
+  | record_entry_p                      { [$1] }
+  | record_entry_p SEMI                 { [$1] }
+  | record_entry_p SEMI record_entry_ps { $1::$3 }
 
 branch:
     | BAR pattern ARROW expr            { ($2, $4) }

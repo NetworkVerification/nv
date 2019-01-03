@@ -6,6 +6,8 @@ type bitwidth = int
 
 type level = int
 
+type var = Var.t
+
 type tyname = Var.t
 
 type ty =
@@ -17,11 +19,9 @@ type ty =
   | TTuple of ty list
   | TOption of ty
   | TMap of ty * ty
-  | TRecord of (string * ty) list
+  | TRecord of (var * ty) list
 
 and tyvar = Unbound of tyname * level | Link of ty
-
-type var = Var.t
 
 type op =
   | And
@@ -47,7 +47,7 @@ type pattern =
   | PInt of Integer.t
   | PTuple of pattern list
   | POption of pattern option
-  | PRecord of (string * pattern) list
+  | PRecord of (var * pattern) list
 
 type v = private
   | VBool of bool
@@ -56,7 +56,7 @@ type v = private
   | VTuple of value list
   | VOption of value option
   | VClosure of closure
-  | VRecord of (string * value) list
+  | VRecord of (var * value) list
 
 and mtbdd = value Mtbdd.t * ty
 
@@ -75,7 +75,7 @@ and e = private
   | ESome of exp
   | EMatch of exp * branches
   | ETy of exp * ty
-  | ERecord of (string * exp) list
+  | ERecord of (var * exp) list
 
 and exp = private
   {e: e; ety: ty option; espan: Span.t; etag: int; ehkey: int}
@@ -94,7 +94,7 @@ type declaration =
   | DLet of var * ty option * exp
   | DSymbolic of var * ty_or_exp
   | DATy of ty (* Declaration of the attribute type *)
-  | DRTy of ty (* Declaration of a record type *)
+  | DUserTy of var * ty (* Declaration of a user-defined type *)
   | DMerge of exp
   | DTrans of exp
   | DInit of exp
@@ -115,7 +115,7 @@ val vmap : mtbdd -> value
 
 val vtuple : value list -> value
 
-val vrecord : (string * value) list -> value
+val vrecord : (var * value) list -> value
 
 val voption : value option -> value
 
@@ -137,7 +137,7 @@ val elet : Var.t -> exp -> exp -> exp
 
 val etuple : exp list -> exp
 
-val erecord : (string * exp) list -> exp
+val erecord : (var * exp) list -> exp
 
 val esome : exp -> exp
 

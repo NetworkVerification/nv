@@ -102,7 +102,7 @@ let check_annot_decl (d: declaration) =
   |DAssert e
   |DRequire e ->
     check_annot e
-  | DNodes _ | DEdges _ | DATy _ | DSymbolic _ | DRTy _ -> ()
+  | DNodes _ | DEdges _ | DATy _ | DSymbolic _ | DUserTy _ -> ()
 
 let rec check_annot_decls (ds: declarations) =
   match ds with
@@ -250,8 +250,7 @@ let inst subst ty =
       let ts = loops subst ts in
       TTuple ts
     | TRecord lst ->
-      let labels = List.map fst lst in
-      let ts = List.map snd lst in
+      let labels, ts = List.split lst in
       let ts = loops subst ts in
       TRecord (List.combine labels ts)
     | TOption t ->
@@ -491,10 +490,9 @@ let rec infer_exp i info env (e: exp) : exp =
       let es, tys = infer_exps (i + 1) info env es in
       texp (etuple es, TTuple tys, e.espan)
     | ERecord lst ->
-      let labels = List.map fst lst in
-      let es = List.map snd lst in
+      let labels, es = List.split lst in
       let es, tys = infer_exps (i + 1) info env es in
-      texp (erecord (List.combine labels   es), TRecord (List.combine labels tys), e.espan)
+      texp (erecord (List.combine labels es), TRecord (List.combine labels tys), e.espan)
     | ESome e ->
       let e, t = infer_exp (i + 1) info env e |> textract in
       texp (esome e, TOption t, e.espan)
@@ -576,8 +574,7 @@ and infer_value info env (v: Syntax.value) : Syntax.value =
       let vs, ts = infer_values info env vs in
       tvalue (vtuple vs, TTuple ts, v.vspan)
     | VRecord lst ->
-      let labels = List.map fst lst in
-      let vs = List.map snd lst in
+      let labels, vs = List.split lst in
       let vs, ts = infer_values info env vs in
       tvalue (vrecord (List.combine labels vs), TRecord (List.combine labels ts), v.vspan)
     | VOption None ->
@@ -634,8 +631,7 @@ and infer_pattern i info env e tmatch p =
     unify info e tmatch ty ;
     infer_patterns (i + 1) info env e ts ps
   | PRecord lst ->
-    let labels = List.map fst lst in
-    let ps = List.map snd lst in
+    let labels, ps = List.split lst in
     let ts = List.map (fun p -> fresh_tyvar ()) ps in
     let ty = TRecord (List.combine labels ts) in
     unify info e tmatch ty ;
@@ -714,7 +710,7 @@ and infer_declaration i info env aty d : ty Env.t * declaration =
     let ty = oget e'.ety in
     unify info e ty (init_ty aty) ;
     (Env.update env (Var.create "init") ty, DInit e')
-  | DATy _ | DRTy _ | DNodes _ | DEdges _ -> (env, d)
+  | DATy _ | DUserTy _ | DNodes _ | DEdges _ -> (env, d)
 
 (* ensure patterns do not contain duplicate variables *)
 and valid_pat p = valid_pattern Env.empty p |> ignore
