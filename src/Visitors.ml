@@ -15,6 +15,8 @@ let rec iter_exp f (e: exp) =
       iter_exp f e ;
       List.iter (fun (_, e) -> iter_exp f e) bs
   | ETy (e, _) -> iter_exp f e
+  | ERecord map -> StringMap.iter (fun _ -> f) map
+  | EProject (e,_) -> iter_exp f e
 
 let iter_exp_decl f d =
   match d with
@@ -26,6 +28,6 @@ let iter_exp_decl f d =
    |DRequire e
    |DSymbolic (_, Exp e) ->
       iter_exp (f d) e
-  | DATy _ | DNodes _ | DEdges _ | DSymbolic _ -> ()
+  | DATy _ | DNodes _ | DEdges _ | DSymbolic _ | DUserTy _ -> ()
 
 let rec iter_exp_decls f ds = List.iter (iter_exp_decl f) ds
