@@ -696,7 +696,7 @@ module FailuresAbstraction =
         with | Not_found -> (cuts, new_todo)
       in loop todo [] VertexSet.empty
 
-    let countererexample_refinement_breadth = 13
+    let countererexample_refinement_breadth = 10
 
     let counterexample_step (g: AdjGraph.t) forig (f: abstractionMap) (todo: VertexSet.t)
                             (unused: EdgeSet.t) ds k =
