@@ -5,32 +5,13 @@
   type user_type = Var.t (* name *) * ty (* type *)
   let user_types : user_type list ref = ref []
 
-  (* If ty is a record type, return a list of all its labels *)
-  let get_labels ty =
-    match ty with
-    | TRecord lst -> List.map fst lst
-    | _ -> []
-
   let add_user_type (name : Var.t) (ty : ty) : unit =
-    let tys = List.map snd !user_types in
-    (* Make sure record types don't re-use labels *)
-    let old_labels = List.concat @@ List.map get_labels tys in
-    let new_labels = get_labels ty in
-    if List.exists (fun l -> List.mem l old_labels) new_labels
-    then failwith "Error: same label used in two different record types"
-    else user_types := (name,ty)::!user_types
+    user_types := (name,ty)::!user_types
 
   let get_user_type (name : Var.t) : ty =
-    let _, ty = List.find (fun (n,_) -> Var.equals name n) !user_types in
-    ty
-
-  (* Retrieve the user-defined record type which uses label l *)
-  let get_record_type (l : Var.t) : ty =
-    let tys = List.map snd !user_types in
-    let has_label ty = List.mem l (get_labels ty) in
-    match List.find_opt has_label tys with
-    | Some ty -> ty
-    | None -> failwith @@ "Error: No declared record type contains label " ^ (Var.to_string l)
+    match List.find_opt (fun (n,_) -> Var.equals name n) !user_types with
+    | Some (_, ty) -> ty
+    | None -> failwith @@ "Unknown user-defined type " ^ (Var.name name)
 
   let exp e span : exp = aexp (e, None, span)
 
