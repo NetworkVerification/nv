@@ -108,6 +108,36 @@ let check_closures info _ (e: exp) =
         Console.error_position info e1.espan msg )
   | _ -> ()
 
+(* Checks that no label appears more than once in
+   record declarations *)
+let check_record_label_uniqueness info decls =
+  (* Check if a sorted list has duplicate elements *)
+  let rec find_dup lst =
+    match lst with
+    | []
+    | [_] -> None
+    | x1::x2::tl ->
+      if Var.compare x1 x2 = 0
+      then Some x1
+      else find_dup (x2::tl)
+  in
+  let all_labels =
+    get_record_types decls
+    |> List.map (List.map fst)
+    |> List.concat
+  in
+  let sorted = List.sort Var.compare all_labels in
+  match find_dup sorted with
+  | None -> ()
+  | Some name ->
+    let msg =
+      Printf.sprintf
+        "Record label %s appears more than once!"
+        (Var.name name)
+    in
+    Console.error_position info Span.default msg
+
 let check info (ds: declarations) : unit =
+  check_record_label_uniqueness info ds ;
   Visitors.iter_exp_decls (check_types info) ds ;
   Visitors.iter_exp_decls (check_closures info) ds

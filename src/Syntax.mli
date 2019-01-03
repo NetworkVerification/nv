@@ -209,6 +209,8 @@ val get_symbolics : declarations -> (var * ty_or_exp) list
 
 val get_requires : declarations -> exp list
 
+val get_record_types : declarations -> (var * ty) list list
+
 val equal_values : cmp_meta:bool -> value -> value -> bool
 
 val hash_value : hash_meta:bool -> value -> int

@@ -803,6 +803,15 @@ let get_requires ds =
     [] ds
   |> List.rev
 
+let get_record_types ds =
+  List.fold_left
+    (fun acc d ->
+       match d with
+       | DUserTy (_, TRecord lst) -> (lst) :: acc
+       | _ -> acc
+    )
+    [] ds
+
 let rec get_inner_type t : ty =
   match t with TVar {contents= Link t} -> get_inner_type t | _ -> t
 
