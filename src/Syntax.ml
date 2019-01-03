@@ -22,9 +22,10 @@ type ty =
   | TTuple of ty list
   | TOption of ty
   | TMap of ty * ty
+  | TRecord of (string * ty) list
 
 and tyvar = Unbound of tyname * level | Link of ty
-                                              
+
 type var = Var.t
 
 type op =
@@ -52,6 +53,7 @@ type pattern =
   | PInt of Integer.t
   | PTuple of pattern list
   | POption of pattern option
+  | PRecord of (string * pattern) list
 
 type v =
   | VBool of bool
@@ -60,6 +62,7 @@ type v =
   | VTuple of value list
   | VOption of value option
   | VClosure of closure
+  | VRecord of (string * value) list
 
 and value =
   {v: v; vty: ty option; vspan: Span.t; vtag: int; vhkey: int}
@@ -78,6 +81,7 @@ and e =
   | ESome of exp
   | EMatch of exp * branches
   | ETy of exp * ty
+  | ERecord of (string * exp) list
 
 and exp = {e: e; ety: ty option; espan: Span.t; etag: int; ehkey: int}
 
@@ -94,7 +98,8 @@ and ty_or_exp = Ty of ty | Exp of exp
 type declaration =
   | DLet of var * ty option * exp
   | DSymbolic of var * ty_or_exp
-  | DATy of ty
+  | DATy of ty (* Declaration of the attribute type *)
+  | DRTy of ty (* Declaration of a record type *)
   | DMerge of exp
   | DTrans of exp
   | DInit of exp
@@ -137,13 +142,19 @@ let rec show_ty ty =
   | TOption t -> Printf.sprintf "TOption (%s)" (show_ty t)
   | TMap (ty1, ty2) ->
     Printf.sprintf "TMap (%s,%s)" (show_ty ty1) (show_ty ty2)
+  | TRecord lst ->
+    let str = show_list
+        (fun (s,ty) -> Printf.sprintf "%s: %s;" s (show_ty ty))
+        lst
+    in
+    Printf.sprintf "TRecord { %s }" str
 
 let rec show_exp ~show_meta e =
   if show_meta then
     Printf.sprintf "{e=%s; ety=%s; espan=%s; etag=%d; ehkey=%d}"
-                   (show_e ~show_meta e.e)
-                   (show_opt show_ty e.ety)
-                   (show_span e.espan) e.etag e.ehkey
+      (show_e ~show_meta e.e)
+      (show_opt show_ty e.ety)
+      (show_span e.espan) e.etag e.ehkey
   else
     Printf.sprintf "e=%s" (show_e ~show_meta e.e)
 
@@ -152,24 +163,30 @@ and show_e ~show_meta e =
   | EVar x -> Printf.sprintf "EVar %s" (Var.to_string x)
   | EVal v -> Printf.sprintf "EVal (%s)" (show_value ~show_meta v)
   | EOp (op, es) ->
-      Printf.sprintf "EOp (%s,%s)" (show_op op)
-        (show_list (show_exp ~show_meta) es)
+    Printf.sprintf "EOp (%s,%s)" (show_op op)
+      (show_list (show_exp ~show_meta) es)
   | EFun f -> Printf.sprintf "EFun %s" (show_func ~show_meta f)
   | EApp (e1, e2) ->
-      Printf.sprintf "EApp (%s,%s)" (show_exp ~show_meta e1) (show_exp ~show_meta e2)
+    Printf.sprintf "EApp (%s,%s)" (show_exp ~show_meta e1) (show_exp ~show_meta e2)
   | EIf (e1, e2, e3) ->
-      Printf.sprintf "EIf (%s,%s,%s)" (show_exp ~show_meta e1) (show_exp ~show_meta e2)
-        (show_exp ~show_meta e3)
+    Printf.sprintf "EIf (%s,%s,%s)" (show_exp ~show_meta e1) (show_exp ~show_meta e2)
+      (show_exp ~show_meta e3)
   | ELet (x, e1, e2) ->
-      Printf.sprintf "ELet (%s,%s,%s)" (Var.to_string x)
-        (show_exp ~show_meta e1) (show_exp ~show_meta e2)
+    Printf.sprintf "ELet (%s,%s,%s)" (Var.to_string x)
+      (show_exp ~show_meta e1) (show_exp ~show_meta e2)
   | ETuple es -> Printf.sprintf "ETuple %s" (show_list (show_exp ~show_meta) es)
   | ESome e -> Printf.sprintf "ESome (%s)" (show_exp ~show_meta e)
   | EMatch (e, bs) ->
-      Printf.sprintf "EMatch (%s,%s)" (show_exp ~show_meta e)
-        (show_list (show_branch ~show_meta) bs)
+    Printf.sprintf "EMatch (%s,%s)" (show_exp ~show_meta e)
+      (show_list (show_branch ~show_meta) bs)
   | ETy (e, ty) ->
-      Printf.sprintf "ETy (%s,%s)" (show_exp ~show_meta e) (show_ty ty)
+    Printf.sprintf "ETy (%s,%s)" (show_exp ~show_meta e) (show_ty ty)
+  | ERecord lst ->
+    let str = show_list
+        (fun (s,e) -> Printf.sprintf "%s: %s;" s (show_exp ~show_meta e))
+        lst
+    in
+    Printf.sprintf "TRecord { %s }" str
 
 and show_func ~show_meta f =
   Printf.sprintf "{arg=%s; argty=%s; resty=%s; body=%s}"
@@ -192,16 +209,23 @@ and show_pattern p =
   | POption None -> "POption None"
   | POption (Some p) ->
     Printf.sprintf "POption (Some %s)" (show_pattern p)
+  | PRecord lst ->
+    let str =
+      show_list
+        (fun (s,p) -> Printf.sprintf "%s: %s;" s (show_pattern p))
+        lst
+    in
+    Printf.sprintf "PRecord { %s }" str
 
 and show_value ~show_meta v =
   if show_meta then
     Printf.sprintf "{e=%s; ety=%s; espan=%s; etag=%d; ehkey=%d}"
-                   (show_v ~show_meta v.v)
-                   (show_opt show_ty v.vty)
-                   (show_span v.vspan) v.vtag v.vhkey
+      (show_v ~show_meta v.v)
+      (show_opt show_ty v.vty)
+      (show_span v.vspan) v.vtag v.vhkey
   else
     Printf.sprintf "{v=%s;}"
-                   (show_v ~show_meta v.v)
+      (show_v ~show_meta v.v)
 
 and show_v ~show_meta v =
   match v with
@@ -210,8 +234,15 @@ and show_v ~show_meta v =
   | VMap m -> "VMap <opaque>"
   | VTuple vs -> Printf.sprintf "VTuple %s" (show_list (show_value ~show_meta) vs)
   | VOption vo ->
-      Printf.sprintf "VOption (%s)" (show_opt (show_value ~show_meta) vo)
+    Printf.sprintf "VOption (%s)" (show_opt (show_value ~show_meta) vo)
   | VClosure c -> Printf.sprintf "VClosure %s" (show_closure ~show_meta c)
+  | VRecord lst ->
+    let str =
+      show_list
+        (fun (s,v) -> Printf.sprintf "%s: %s;" s (show_value ~show_meta v))
+        lst
+    in
+    Printf.sprintf "PRecord { %s }" str
 
 and show_closure ~show_meta (e, f) =
   Printf.sprintf "{env=%s; func=%s}" (show_env ~show_meta e) (show_func ~show_meta f)
@@ -399,6 +430,9 @@ let rec hash_ty ty =
     List.fold_left (fun acc t -> acc + hash_ty t) 0 ts + 7
   | TOption t -> 8 + hash_ty t
   | TMap (ty1, ty2) -> 9 + hash_ty ty1 + hash_ty ty2
+  | TRecord lst ->
+    List.fold_left (fun acc (_,t) -> acc + hash_ty t) 0 lst + 10
+
 
 let hash_span (span: Span.t) = (19 * span.start) + span.finish
 
@@ -442,6 +476,13 @@ and hash_v ~hash_meta v =
         0 vs
     in
     (19 * acc) + 5
+  | VRecord lst ->
+    let acc =
+      List.fold_left
+        (fun acc (_,v) -> acc + hash_value ~hash_meta v)
+        0 lst
+    in
+    (19 * acc) + 7
 
 and hash_exp ~hash_meta e =
   let cfg = Cmdline.get_cfg () in
@@ -491,6 +532,8 @@ and hash_e ~hash_meta e =
     + 9
   | ETy (e, ty) ->
     (19 * ((19 * hash_exp ~hash_meta e) + hash_ty ty)) + 10
+  | ERecord lst ->
+    (19 * hash_es ~hash_meta (List.map snd lst) + 11)
 
 and hash_var x = hash_string (Var.to_string x)
 
@@ -511,9 +554,11 @@ and hash_pattern p =
   | PTuple ps -> (19 * hash_patterns ps) + 5
   | POption None -> 6
   | POption (Some p) -> (19 * hash_pattern p) + 7
+  | PRecord lst -> (19 * (hash_patterns (List.map snd lst))) + 8
 
 and hash_patterns ps =
   List.fold_left (fun acc p -> acc + hash_pattern p) 0 ps
+
 and hash_op op =
   match op with
   | And -> 1
@@ -609,6 +654,8 @@ let vmap m = value (VMap m)
 
 let vtuple vs = value (VTuple vs)
 
+let vrecord lst = value (VRecord lst)
+
 let voption vo = value (VOption vo)
 
 let vclosure c = value (VClosure c)
@@ -628,6 +675,8 @@ let eif e1 e2 e3 = exp (EIf (e1, e2, e3))
 let elet x e1 e2 = exp (ELet (x, e1, e2))
 
 let etuple es = exp (ETuple es)
+
+let erecord lst = exp (ERecord lst)
 
 let esome e = exp (ESome e)
 
@@ -656,14 +705,20 @@ let exp_of_v x = exp (EVal (value x))
 let rec exp_of_value v =
   match v.v with
   | VBool _ | VInt _ | VMap _ | VClosure _ | VOption None ->
-     let e = e_val v in
-     {e with ety= v.vty; espan=v.vspan}
+    let e = e_val v in
+    {e with ety= v.vty; espan=v.vspan}
   | VTuple vs ->
-     let e = etuple (List.map exp_of_value vs) in
-     {e with ety= v.vty; espan=v.vspan}
+    let e = etuple (List.map exp_of_value vs) in
+    {e with ety= v.vty; espan=v.vspan}
+  | VRecord lst ->
+    let labels = List.map fst lst in
+    let vs = List.map snd lst in
+    let es = List.map exp_of_value vs in
+    let e = erecord (List.combine labels es) in
+    {e with ety= v.vty; espan=v.vspan}
   | VOption (Some v1) ->
-     let e = esome (exp_of_value v1) in
-     {e with ety= v.vty; espan=v.vspan}
+    let e = esome (exp_of_value v1) in
+    {e with ety= v.vty; espan=v.vspan}
 
 let func x body = {arg= x; argty= None; resty= None; body}
 
@@ -672,9 +727,9 @@ let funcFull x argty resty body = {arg= x; argty= argty; resty= resty; body}
 let efunc f =
   match f.argty, f.resty with
   | Some argty, Some resty ->
-     aexp (exp (EFun f), Some (TArrow (argty, resty)), Span.default)
+    aexp (exp (EFun f), Some (TArrow (argty, resty)), Span.default)
   | _, _ ->
-     exp (EFun f)
+    exp (EFun f)
 
 let lam x body = exp (EFun (func x body))
 
@@ -760,7 +815,7 @@ let bool_of_val (v : value) : bool option =
   match v.v with
   | VBool b -> Some b
   | _ -> None
-           
+
 open BatSet
 
 let rec free (seen: Var.t PSet.t) (e: exp) : Var.t PSet.t =
@@ -774,6 +829,11 @@ let rec free (seen: Var.t PSet.t) (e: exp) : Var.t PSet.t =
       (fun set e -> PSet.union set (free seen e))
       (PSet.create Var.compare)
       es
+  | ERecord lst ->
+    List.fold_left
+      (fun set (_,e) -> PSet.union set (free seen e))
+      (PSet.create Var.compare)
+      lst
   | EFun f -> free (PSet.add f.arg seen) f.body
   | EApp (e1, e2) -> PSet.union (free seen e1) (free seen e2)
   | EIf (e1, e2, e3) ->
@@ -804,42 +864,49 @@ and pattern_vars p =
       (fun set p -> PSet.union set (pattern_vars p))
       (PSet.create Var.compare)
       ps
+  | PRecord lst ->
+    List.fold_left
+      (fun set (_,p) -> PSet.union set (pattern_vars p))
+      (PSet.create Var.compare)
+      lst
   | POption (Some p) -> pattern_vars p
 
 let rec free_dead_vars (e : exp) =
   match e.e with
   | ETy (e, _) -> free_dead_vars e
   | EVal v ->
-     (match v.v with
+    (match v.v with
      | VClosure (env, f) ->
-        let fv = free (PSet.empty) f.body in
-        vclosure ({env with value = Env.filter env.value (fun x _ -> PSet.mem x fv)},
-                  {f with body = free_dead_vars f.body})
-        |> exp_of_value
-        |> wrap e
+       let fv = free (PSet.empty) f.body in
+       vclosure ({env with value = Env.filter env.value (fun x _ -> PSet.mem x fv)},
+                 {f with body = free_dead_vars f.body})
+       |> exp_of_value
+       |> wrap e
      | _ -> e)
   | EVar _ | EFun _ -> e
   | EOp (op, es) ->
-     eop op (List.map free_dead_vars es)
+    eop op (List.map free_dead_vars es)
   | EApp (e1, e2) ->
-     let e1 = free_dead_vars e1 in 
-     let e2 = free_dead_vars e2 in
-     eapp e1 e2
+    let e1 = free_dead_vars e1 in
+    let e2 = free_dead_vars e2 in
+    eapp e1 e2
   | EIf (e1, e2, e3) ->
-     let e1 = free_dead_vars e1 in 
-     let e2 = free_dead_vars e2 in
-     let e3 = free_dead_vars e3 in
-     eif e1 e2 e3
+    let e1 = free_dead_vars e1 in
+    let e2 = free_dead_vars e2 in
+    let e3 = free_dead_vars e3 in
+    eif e1 e2 e3
   | ELet (x, e1, e2) ->
-     let e1 = free_dead_vars e1 in 
-     let e2 = free_dead_vars e2 in
-     elet x e1 e2
+    let e1 = free_dead_vars e1 in
+    let e2 = free_dead_vars e2 in
+    elet x e1 e2
   | ETuple es ->
-     etuple (List.map free_dead_vars es)
+    etuple (List.map free_dead_vars es)
+  | ERecord lst ->
+    erecord (List.map (fun (s,e) -> (s,free_dead_vars e)) lst)
   | ESome e -> esome (free_dead_vars e)
   | EMatch (e1, branches) ->
-     let e1 = free_dead_vars e1 in 
-     ematch e1 (List.map (fun (ps, e) -> (ps, free_dead_vars e)) branches)
+    let e1 = free_dead_vars e1 in
+    ematch e1 (List.map (fun (ps, e) -> (ps, free_dead_vars e)) branches)
 
 (* Memoization *)
 
@@ -913,8 +980,8 @@ module BddUtils = struct
     | TOption tyo -> 1 + ty_to_size tyo
     | TTuple ts ->
       List.fold_left (fun acc t -> acc + ty_to_size t) 0 ts
-    | TArrow _ | TMap _ | TVar _ | QVar _ ->
-        failwith ("internal error (ty_to_size): " ^ (show_ty ty))
+    | TArrow _ | TMap _ | TVar _ | QVar _ | TRecord _ ->
+      failwith ("internal error (ty_to_size): " ^ (show_ty ty))
 
   let tbl =
     Mtbdd.make_table
@@ -969,6 +1036,7 @@ module BddMap = struct
       | TBool -> VBool false
       | TInt size -> VInt (Integer.create ~value:0 ~size:size)
       | TTuple ts -> VTuple (List.map default_value ts)
+      | TRecord lst -> VRecord (List.map (fun (s,t) -> (s, default_value t)) lst)
       | TOption ty -> VOption None
       | TMap (ty1, ty2) ->
         VMap (create ~key_ty:ty1 (default_value ty2))
@@ -1003,7 +1071,7 @@ module BddMap = struct
         let tag = Bdd.eq var (Bdd.dtrue B.mgr) in
         let value, idx = aux dv (idx + 1) in
         (Bdd.dand tag value, idx)
-      | VMap _ | VClosure _ ->
+      | VMap _ | VClosure _ | VRecord _ ->
         failwith "internal error (value_to_bdd)"
     in
     let bdd, _ = aux v 0 in
@@ -1041,7 +1109,7 @@ module BddMap = struct
             else value (VOption None)
           in
           (v, i)
-        | TArrow _ | TMap _ | TVar _ | QVar _ ->
+        | TArrow _ | TMap _ | TVar _ | QVar _ | TRecord _ ->
           failwith "internal error (bdd_to_value)"
       in
       (annotv ty v, i)
@@ -1082,7 +1150,7 @@ module BddMap = struct
 
   let rec size ty =
     match get_inner_type ty with
-    | QVar _ | TVar _ | TArrow _ | TMap _ ->
+    | QVar _ | TVar _ | TArrow _ | TMap _ | TRecord _ ->
       failwith "internal error (size)"
     | TBool -> 1
     | TInt _ -> 32
@@ -1289,7 +1357,7 @@ module BddFunc = struct
       | TOption ty ->
         let v, idx = aux (i + 1) ty in
         (BOption (B.ithvar i, v), idx)
-      | TArrow _ | QVar _ | TVar _ | TMap _ ->
+      | TArrow _ | QVar _ | TVar _ | TMap _ | TRecord _->
         failwith "internal error (create_value)"
     in
     let ret, _ = aux 0 ty in
@@ -1448,7 +1516,7 @@ module BddFunc = struct
               (env, x) bs
           in
           x )
-    | EFun _ | EApp _ -> failwith "internal error (eval)"
+    | EFun _ | EApp _ | ERecord _ -> failwith "internal error (eval)"
 
   and eval_branch env bddf p : t Env.t * Bdd.vt =
     match (p, bddf) with
@@ -1515,7 +1583,7 @@ module BddFunc = struct
       BOption (Bdd.dfalse B.mgr, eval_value env dv)
     | VOption (Some v) -> BOption (Bdd.dtrue B.mgr, eval_value env v)
     | VTuple vs -> BTuple (List.map (eval_value env) vs)
-    | VMap _ | VClosure _ -> failwith "internal error (eval_value)"
+    | VMap _ | VClosure _ | VRecord _ -> failwith "internal error (eval_value)"
 end
 
 let default_value = BddMap.default_value
