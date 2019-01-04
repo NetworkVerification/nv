@@ -1,0 +1,53 @@
+(* Sample file demonstrating integer overflow *)
+
+(* Toy example: a 2-bit integer option representing distance to node 0.
+   None means we don't know yet. *)
+type attribute = option[int2]
+
+let nodes = 5
+
+(* Straight-line network, unidirectional *)
+let edges = {
+ 0-1;
+ 1-2;
+ 2-3;
+ 3-4;
+}
+
+(* The merge function;
+   It must have type UInt32 -> A -> A -> A
+   where A is the type of node attributes.
+   The first argument is the name of the node where the merge is being applied
+   so one can customize the merge to the node you want.
+ *)
+let merge node x y =
+  match (x, y) with
+  | (None, None) -> None
+  | (Some n, None) -> Some n
+  | (None, Some n) -> Some n
+  | (Some n1, Some n2) -> Some (if n1 <u2 n2 then n1 else n2)
+
+(* The trans function;
+   It must have type  (UInt32 * UInt32) -> A -> A;
+   The first argument is the edge (u,v) along which the transformation occurs.
+ *)
+let trans edge x =
+  match x with
+  | None -> None
+  (* +u2 is 2-bit integer addition; 1u2 is the 2-bit representation of 1 *)
+  | Some n -> Some (n +u2 1u2)
+
+(* The initial state of the network;
+   A map from nodes to initial values with type A.
+ *)
+let init node =
+  match node with
+  | 0 -> Some (0u2)
+  | _ -> None
+
+(* Ensure that only node 0 has distance 0 from itself.
+   This will fail for node 4 only if we successfully detect overflow *)
+let assert node x =
+  match x with
+  | Some (0u2) -> node = 0
+  | _ -> true
