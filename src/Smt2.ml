@@ -20,20 +20,32 @@ open Profile
 type encoding_style = Classic | Functional
                               
 type smt_options =
-  { mutable verbose : bool;
+  { mutable verbose  : bool;
     mutable optimize : bool;
     mutable encoding : encoding_style;
-    mutable unboxing : bool
+    mutable unboxing : bool;
+    mutable failures : int option
   }
 
 let smt_config : smt_options =
   { verbose = false;
     optimize = true;
     encoding = Classic;
-    unboxing = false
+    unboxing = false;
+    failures = None
   }
 
-   
+let get_requires_no_failures ds =
+  List.filter (fun e -> match e.e with
+                        | EOp (AtMost _, _) -> false
+                        | _ -> true) (get_requires ds)
+  
+let get_requires_failures ds =
+  List.filter (fun e -> match e.e with
+                        | EOp (AtMost _, _) -> true
+                        | _ -> false) (get_requires ds)
+  |> List.hd
+  
 let printVerbose (msg: string) (descr: string) (span: Span.t) info =
   let sl =
     match Console.get_position_opt span.start info with
@@ -107,6 +119,8 @@ module SmtLang =
       | Assert : term -> smt_command
       | CheckSat : smt_command
       | GetModel : smt_command
+      | Push : smt_command
+      | Pop : smt_command
 
     type command =
       { com      : smt_command;
@@ -276,6 +290,10 @@ module SmtLang =
                          solve-eqs psmt))"
       | GetModel ->
          Printf.sprintf "(get-model)"
+      | Push ->
+         Printf.sprintf "(push)"
+      | Pop ->
+         Printf.sprintf "(pop)"
 
     (* NOTE: this currently ignores the comment/loc of the term inside
        the command. Perhaps we would like to combine them in some way
@@ -1387,7 +1405,7 @@ module ClassicEncoding (E: ExprEncoding): Encoding =
            done ;
            add_constraint env (mk_term (mk_not !all_good))) ;
       (* add the symbolic variable constraints *)
-      add_symbolic_constraints env (get_requires ds) (env.symbolics (*@ sym_vars*));
+      add_symbolic_constraints env (get_requires_no_failures ds) (env.symbolics (*@ sym_vars*));
       env
   end
 
@@ -1534,7 +1552,7 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
            done ;
            add_constraint env (mk_term (mk_not !all_good))) ;
       (* add the symbolic variable constraints *)
-      add_symbolic_constraints env (get_requires ds) (env.symbolics (*@ sym_vars*));
+      add_symbolic_constraints env (get_requires_no_failures ds) (env.symbolics (*@ sym_vars*));
       env
   end
       
@@ -1766,8 +1784,9 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
     (* this new line is super important otherwise we don't get a reply
    from Z3.. not understanding why*)
 
-    let check_sat (env: smt_env) =
-      env.ctx <- (CheckSat |> mk_command) :: env.ctx
+    let check_sat info =
+      Printf.sprintf "%s\n"
+                     ((CheckSat |> mk_command) |> command_to_smt smt_config.verbose info)
 
     (* Emits the query to a file in the disk *)
     let printQuery (chan: out_channel Lazy.t) (msg: string) =
@@ -1778,7 +1797,7 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
       match smt_config.unboxing with
       | true -> (module Unboxed : ExprEncoding)
       | false -> (module Boxed : ExprEncoding)
-               
+
     let solve info query chan ?symbolic_vars ?(params=[]) ds =
       let sym_vars =
         match symbolic_vars with None -> [] | Some ls -> ls
@@ -1798,47 +1817,86 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
                                 if smt_config.optimize then propagate_eqs env
                                 else StringMap.empty, env)
       in
-      (* let env = encode_z3 ds sym_vars in *)
-      check_sat env;
+      (* compile the encoding to SMT-LIB *)
       let smt_encoding =
         time_profile "Compiling query"
                      (fun () -> env_to_smt ~verbose:smt_config.verbose info env) in
-      (* let smt_encoding =  env_to_smt ~verbose:verbose env in *)
+      (* print query to a file if asked to *)
       if query then
         printQuery chan smt_encoding;
       (* Printf.printf "communicating with solver"; *)
       (* start communication with solver process *)
       let solver = start_solver params in
       ask_solver solver smt_encoding;
-      let reply = solver |> parse_reply in
-      match reply with
-      | UNSAT -> Unsat
-      | SAT ->
-         (* build a counterexample based on the model provided by Z3 *)
-         let num_nodes =
-           match get_nodes ds with
-           | Some n -> n
-           | _ -> failwith "internal error (encode)"
+      let get_sat reply =
+        match reply with
+        | UNSAT -> Unsat
+        | SAT ->
+           (* build a counterexample based on the model provided by Z3 *)
+           let num_nodes =
+             match get_nodes ds with
+             | Some n -> n
+             | _ -> failwith "internal error (encode)"
+           in
+           let eassert = get_assert ds in
+           let model = eval_model env.symbolics num_nodes eassert renaming in
+           let model_question = commands_to_smt smt_config.verbose info model in
+           if query then
+             printQuery chan model_question;
+           ask_solver solver model_question;
+           let model = solver |> parse_model in
+           (match model with
+            | MODEL m ->
+               if smt_config.unboxing then
+                 Sat (translate_model_unboxed m)
+               else
+                 Sat (translate_model m)
+            | OTHER s ->
+               Printf.printf "%s\n" s;
+               failwith "failed to parse a model"
+            | _ -> failwith "failed to parse a model")
+        | UNKNOWN ->
+           Unknown
+        | _ -> failwith "unexpected answer from solver\n"
+      in
+      match smt_config.failures with
+      | None -> 
+         ask_solver solver (check_sat info);
+         let reply = solver |> parse_reply in
+         get_sat reply
+      | Some k ->
+         let rec loop i =
+           match (get_requires_failures ds).e with
+           | EOp(AtMost n, [e1;_]) ->
+              let arg2 = aexp (e_val (vint (Integer.of_int i)), Some (TInt 32), Span.default) in
+              let new_req = aexp (eop (AtMost n) [e1; arg2], Some TBool, Span.default) in
+              let zes = ExprEnc.encode_exp_z3 "" env new_req in
+              let zes_smt =
+                ExprEnc.(to_list (lift1 (fun ze -> mk_assert ze |> mk_command) zes))
+              in
+              let q =
+                ((Push |> mk_command) :: (zes_smt @ [CheckSat |> mk_command])) |>
+                  commands_to_smt smt_config.verbose info
+              in
+              if query then
+                printQuery chan q;
+              ask_solver solver q;
+              let reply = solver |> parse_reply in
+              let pop =
+                Printf.sprintf "%s\n" ((Pop |> mk_command) |>
+                                         command_to_smt smt_config.verbose info)
+              in
+              if query then
+                printQuery chan pop;
+              ask_solver solver pop;
+              (match get_sat reply with
+              | Unsat ->
+                 if i = k then Unsat
+                 else
+                   loop (i+1)
+              | Sat m -> Sat m
+              | Unknown -> Unknown)
+           | _ -> failwith "expected failure clause of the form AtMost n"
          in
-         let eassert = get_assert ds in
-         let model = eval_model env.symbolics num_nodes eassert renaming in
-         let model_question = commands_to_smt smt_config.verbose info model in
-         if query then
-           printQuery chan model_question;
-         ask_solver solver model_question;
-         let model = solver |> parse_model in
-         (match model with
-          | MODEL m ->
-             if smt_config.unboxing then
-               Sat (translate_model_unboxed m)
-             else
-               Sat (translate_model m)
-          | OTHER s ->
-             Printf.printf "%s\n" s;
-             failwith "failed to parse a model"
-          | _ -> failwith "failed to parse a model")
-      | UNKNOWN ->
-         Unknown
-      | _ -> failwith "unexpected answer from solver\n"
-           
+         loop 0
            

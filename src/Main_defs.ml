@@ -155,6 +155,8 @@ let compress file info decls cfg networkOp =
   in
 
   let k = cfg.compress in
+  if cfg.smt then
+    smt_config.failures <- Some k;
   (* partially evaluate the functions of the network *)
   let transMap = Abstraction.partialEvalTrans network.graph network.trans in
   let mergeMap = Abstraction.partialEvalMerge network.graph network.merge in
@@ -227,17 +229,16 @@ let compress file info decls cfg networkOp =
       let fbonsai = Abstraction.findAbstraction network.graph transMap mergeMap ds in
       fres := fbonsai;
       (* do abstraction for 0...k failures. Reusing previous abstraction *)
-      for i=0 to k do
-        Console.show_message "" Console.T.Green
-                             (Printf.sprintf "Checking for %d failures" i);
+      (* for i=0 to k do *)
+      (*   Console.show_message "" Console.T.Green *)
+      (*                        (Printf.sprintf "Checking for %d failures" i); *)
         (* find the initial abstraction function for these destinations *)
-        let f = 
-          time_profile "Computing Abstraction for K failures"
-                       (fun () ->
-                         FailuresAbstraction.refineK network.graph !fres ds i)
-        in
-        loop fbonsai f pre ds i 1
-      done
+      let f = 
+        time_profile "Computing Abstraction for K failures"
+                     (fun () ->
+                       FailuresAbstraction.refineK network.graph !fres ds k)
+      in
+      loop fbonsai f pre ds k 1
     ) relevantSliceGroups
 
 let parse_input (args : string array)
