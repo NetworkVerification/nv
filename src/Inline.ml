@@ -1,5 +1,6 @@
 open Syntax
 open Typing
+open RecordUtils
 
 let is_function_ty e =
   match get_inner_type (oget e.ety) with
@@ -11,9 +12,11 @@ let rec has_var p x =
   | PWild | PBool _ | PInt _ -> false
   | PVar y -> Var.equals x y
   | PTuple ps ->
-      List.fold_left (fun acc p -> acc || has_var p x) false ps
+      List.exists (fun p -> has_var p x) ps
   | POption None -> false
   | POption (Some p) -> has_var p x
+  | PRecord map ->
+    StringMap.exists (fun _ p -> has_var p x) map
 
 let rec remove_all env p =
   match p with
@@ -23,6 +26,8 @@ let rec remove_all env p =
       List.fold_left (fun acc p -> remove_all acc p) env ps
   | POption None -> env
   | POption (Some p) -> remove_all env p
+  | PRecord map ->
+    StringMap.fold (fun _ p acc -> remove_all acc p) map env
 
 let rec substitute x e1 e2 =
   match e1.e with
@@ -51,6 +56,10 @@ let rec substitute x e1 e2 =
   | EOp (op, es) ->
       eop op (List.map (fun e -> substitute x e e2) es) |> wrap e1
   | EVal _ -> e1
+  | ERecord map ->
+    erecord (StringMap.map (fun e -> substitute x e e2) map) |> wrap e1
+  | EProject (e, l) ->
+    eproject (substitute x e e2) l |> wrap e1
 
 and substitute_pattern x e2 (p, e) =
   if has_var p x then (p, e) else (p, substitute x e e2)
@@ -78,7 +87,7 @@ let rec inline_app env e1 e2 : exp =
         let branches = List.map (inline_branch_app env e2) bs in
         ematch e branches |> wrap e1
     | EApp _ -> eapp e1 e2 |> wrap e1
-    | ESome _ | ETuple _ | EOp _ | EVal _ ->
+    | ESome _ | ETuple _ | EOp _ | EVal _ | ERecord _ | EProject _->
         failwith
           (Printf.sprintf "inline_app: %s"
              (Printing.exp_to_string e1))
@@ -123,6 +132,8 @@ and inline_exp (env: exp Env.t) (e: exp) : exp =
         ematch (inline_exp env e1) (List.map (inline_branch env) bs)
         |> wrap e
     | ETy (e1, ty) -> ety (inline_exp env e1) ty |> wrap e
+    | ERecord map -> erecord (StringMap.map (inline_exp env) map) |> wrap e
+    | EProject (e1, l) -> eproject (inline_exp env e1) l |> wrap e
   in
   (* Printf.printf "inline: %s\n" (Printing.exp_to_string e);
   Printf.printf "result: %s\n\n" (Printing.exp_to_string ret); *)
@@ -148,7 +159,7 @@ let inline_declaration (env: exp Env.t) (d: declaration) =
   | DInit e -> (env, Some (DInit (inline_exp env e)))
   | DAssert e -> (env, Some (DAssert (inline_exp env e)))
   | DRequire e -> (env, Some (DRequire (inline_exp env e)))
-  | DATy _ | DNodes _ | DEdges _ -> (env, Some d)
+  | DATy _ | DUserTy _ | DNodes _ | DEdges _ -> (env, Some d)
 
 let rec inline_declarations info (ds: declarations) =
   let ds =
