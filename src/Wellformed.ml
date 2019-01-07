@@ -122,14 +122,9 @@ let check_record_label_uniqueness info decls =
       then Some x1
       else find_dup (x2::tl)
   in
-  let rec enum_to_list lst enum =
-    match BatEnum.get enum with
-    | None -> lst
-    | Some elt -> enum_to_list (elt::lst) enum
-  in
   let all_labels =
     get_record_types decls
-    |> List.map (fun map -> enum_to_list [] @@ StringMap.keys map)
+    |> List.map (fun map -> BatList.of_enum @@ StringMap.keys map)
     |> List.concat
   in
   let sorted = List.sort String.compare all_labels in

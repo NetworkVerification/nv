@@ -1,11 +1,10 @@
 open Cudd
+open RecordUtils
 open Batteries
 
 type index = int
 
 type bitwidth = int
-
-module StringMap: Map.S with type key = string
 
 type level = int
 

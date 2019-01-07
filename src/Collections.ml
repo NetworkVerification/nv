@@ -1,6 +1,6 @@
 open Syntax
 
-module StringMap = Syntax.StringMap
+module StringMap = RecordUtils.StringMap
 
 module StringSet = BatSet.Make (struct
   type t = String.t

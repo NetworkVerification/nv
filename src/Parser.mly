@@ -1,5 +1,6 @@
 %{
   open Syntax
+  open RecordUtils
   open Batteries
 
   type user_type = Var.t (* name *) * ty (* type *)

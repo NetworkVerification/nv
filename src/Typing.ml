@@ -5,6 +5,7 @@
 open Syntax
 open Printing
 open Unsigned
+open RecordUtils
 open Batteries
 
 let debug = true
@@ -183,14 +184,14 @@ let rec unify info e t1 t2 : unit =
       | TMap (t1, t2), TMap (t3, t4) ->
         try_unify t1 t3 && try_unify t2 t4
       | TRecord map1, TRecord map2 ->
-        if not (BatEnum.equal (String.equal) (StringMap.keys map1) (StringMap.keys map2))
+        if not (same_labels map1 map2)
         then false
-        else BatEnum.fold
+        else List.fold_left
             (fun b l -> b &&
                         try_unify
                           (StringMap.find l map1)
                           (StringMap.find l map2))
-            true (StringMap.keys map1)
+            true (get_record_labels map1)
       | _, _ -> false
   in
   if try_unify t1 t2 then ()
@@ -502,23 +503,11 @@ let rec infer_exp i info env (e: exp) : exp =
       (* Retrieve the record type corresponding to this expression.
          All record types should be explicitly declared, and
          all labels should appear in exactly one declaration *)
-      let label = (oget @@ BatEnum.peek @@ StringMap.keys emap) in
-      let record_types = !record_types in
-      let has_label map = StringMap.mem label map in
-      let tmap =
-        match List.find_opt has_label record_types with
-        | None ->
-          let msg =
-            Printf.sprintf
-              "Label %s does not appear in any declared record type!"
-              label
-          in
-          Console.error_position info e.espan msg
-        | Some map -> map
-      in
-      (if not @@ BatEnum.equal String.equal
-          (StringMap.keys emap)
-          (StringMap.keys tmap) then
+      let label = (List.hd @@ get_record_labels emap) in
+      let ferr = (Console.error_position info e.espan) in
+      let tmap = get_type_with_label (!record_types) ferr label in
+
+      (if not (same_labels emap tmap) then
          (* The only possible record type was not a match *)
          Console.error_position info e.espan
            "Record does not match any declared record type!");
@@ -537,19 +526,8 @@ let rec infer_exp i info env (e: exp) : exp =
       (* Retrieve the record type containing this label.
          All record types should be explicitly declared, and
          all labels should appear in exactly one declaration *)
-      let record_types = !record_types in
-      let has_label map = StringMap.mem label map in
-      let tmap =
-        match List.find_opt has_label record_types with
-        | None ->
-          let msg =
-            Printf.sprintf
-              "Label %s does not appear in any declared record type!"
-              label
-          in
-          Console.error_position info e.espan msg
-        | Some map -> map
-      in
+      let ferr = (Console.error_position info e.espan) in
+      let tmap = get_type_with_label (!record_types) ferr label in
 
       let label_type = StringMap.find label tmap in
       let e1, ety = infer_exp (i + 1) info env e1 |> textract in

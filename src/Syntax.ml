@@ -1,18 +1,13 @@
 (* Abstract syntax of SRP attribute processing expressions *)
 open Cudd
 open Hashcons
+open RecordUtils
 
 (* indices into maps or map sizes must be static constants *)
 type index = int
 
 type bitwidth = int
 [@@deriving eq, ord, show]
-
-module StringMap = BatMap.Make (struct
-    type t = string
-
-    let compare = String.compare
-  end)
 
 (* see:  http://okmij.org/ftp/ML/generalization.html *)
 type level = int
@@ -1073,6 +1068,10 @@ module BddMap = struct
              let bdd, i = aux v idx in
              (Bdd.dand bdd_acc bdd, i) )
           (base, idx) vs
+      | VRecord map ->
+        (* Convert this to a tuple type, then encode that *)
+        let tup = value @@ VTuple (get_record_entries map) in
+        aux tup idx
       | VOption None ->
         let var = B.ithvar idx in
         let tag = Bdd.eq var (Bdd.dfalse B.mgr) in
@@ -1084,7 +1083,7 @@ module BddMap = struct
         let tag = Bdd.eq var (Bdd.dtrue B.mgr) in
         let value, idx = aux dv (idx + 1) in
         (Bdd.dand tag value, idx)
-      | VMap _ | VClosure _ | VRecord _ ->
+      | VMap _ | VClosure _ ->
         failwith "internal error (value_to_bdd)"
     in
     let bdd, _ = aux v 0 in
@@ -1114,6 +1113,11 @@ module BddMap = struct
               ([], idx) ts
           in
           (value (VTuple (List.rev vs)), i)
+        | TRecord map ->
+          (* This will have been encoded as if it's a tuple.
+             So get the tuple type and use that to decode *)
+          let tup = TTuple (get_record_entries map) in
+          aux idx tup
         | TOption tyo ->
           let tag = B.tbool_to_bool vars.(idx) in
           let v, i = aux (idx + 1) tyo in
@@ -1122,7 +1126,7 @@ module BddMap = struct
             else value (VOption None)
           in
           (v, i)
-        | TArrow _ | TMap _ | TVar _ | QVar _ | TRecord _ ->
+        | TArrow _ | TMap _ | TVar _ | QVar _ ->
           failwith "internal error (bdd_to_value)"
       in
       (annotv ty v, i)
@@ -1163,11 +1167,12 @@ module BddMap = struct
 
   let rec size ty =
     match get_inner_type ty with
-    | QVar _ | TVar _ | TArrow _ | TMap _ | TRecord _ ->
+    | QVar _ | TVar _ | TArrow _ | TMap _ ->
       failwith "internal error (size)"
     | TBool -> 1
     | TInt _ -> 32
     | TTuple ts -> List.fold_left (fun acc t -> acc + size t) 0 ts
+    | TRecord map -> size (TTuple (get_record_entries map))
     | TOption t -> 1 + size t
 
   let pick_default_value (map, ty) =
@@ -1367,10 +1372,12 @@ module BddFunc = struct
             ([], i) ts
         in
         (BTuple (List.rev bs), idx)
+      | TRecord map ->
+        aux i (TTuple (get_record_entries map))
       | TOption ty ->
         let v, idx = aux (i + 1) ty in
         (BOption (B.ithvar i, v), idx)
-      | TArrow _ | QVar _ | TVar _ | TMap _ | TRecord _->
+      | TArrow _ | QVar _ | TVar _ | TMap _ ->
         failwith "internal error (create_value)"
     in
     let ret, _ = aux 0 ty in

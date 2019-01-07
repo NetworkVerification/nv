@@ -77,9 +77,10 @@ let ty_prec t =
 
 let print_record
     (f : 'a -> string)
-    (map : 'a StringMap.t)
+    (map : 'a RecordUtils.StringMap.t)
   : string
   =
+  let open RecordUtils in
   let entries =
     StringMap.fold
       (fun l e acc ->
