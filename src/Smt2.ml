@@ -7,7 +7,7 @@ open Solution
 open SmtUtil
 open Profile
 
-(* TODO: 
+(* TODO:
    * make everything an smt_command. i.e. assert, declarations, etc.?
    * Make smt_term wrap around terms, print out more helpful
    comments, include location of ocaml source file
@@ -27,7 +27,7 @@ let printVerbose (msg: string) (descr: string) (span: Span.t) info =
     | _ -> -1
   in
   Printf.sprintf "; %s: %s on %d-%d\n" msg descr sl fl
-   
+
 module SmtLang =
   struct
 
@@ -36,20 +36,20 @@ module SmtLang =
         params       : sort list;
         constructors : (constructor_decl) list
       }
-      
+
     and constructor_decl =
       { constr_name : string; (** name of constructor *)
         constr_args : (string * sort) list (** projection functions
                                               and their type *)
       }
-      
+
     and sort =
       | BoolSort
       | IntSort
       | MapSort of sort * sort
       | DataTypeSort of string * (sort list)
       | VarSort of string
-                 
+
     type smt_term =
       | Int of string (** unbounded integers *)
       | Bool of bool
@@ -66,13 +66,13 @@ module SmtLang =
       | AtMost of (smt_term list) * smt_term
       | Constructor of string * sort (** constructor name, instantiated sort*)
       | App of smt_term * (smt_term list)
-             
+
     type term =
       { t      : smt_term;
         tdescr : string;
         tloc   : Span.t
       }
-      
+
     type constant =
       { cname  : string;
         csort  : sort;
@@ -96,7 +96,7 @@ module SmtLang =
       }
 
     (** ** Constructors for SMT terms *)
-      
+
     let mk_int_u32 i =
       Int (i |> Integer.to_int |> string_of_int)
 
@@ -107,7 +107,7 @@ module SmtLang =
     let mk_var s = Var s
 
     let mk_constructor f ts = Constructor (f, ts)
-                            
+
     let mk_app f args =
       App (f, args)
 
@@ -133,7 +133,7 @@ module SmtLang =
 
     let mk_term ?(tdescr="") ?(tloc= Span.default) (t: smt_term) =
       {t; tdescr; tloc}
-            
+
     (** ** Constructors for SMT commands *)
 
     let mk_echo s = Echo s
@@ -144,9 +144,9 @@ module SmtLang =
 
     let mk_command ?(comdescr ="") ?(comloc=Span.default) (com : smt_command) =
       {com; comdescr; comloc}
-      
+
     (** ** Functions related to datatype constructors *)
-      
+
     let get_constructors decl =
       decl.constructors
 
@@ -168,7 +168,7 @@ module SmtLang =
          let args = printList sort_to_smt ls "" " " "" in
          Printf.sprintf "(%s %s)" name args
       | VarSort s -> s
-                   
+
     let rec smt_term_to_smt (tm : smt_term) : string =
       match tm with
       | Int s -> s
@@ -188,7 +188,7 @@ module SmtLang =
       | Lt (n, m) ->
          Printf.sprintf "(< %s %s)" (smt_term_to_smt n) (smt_term_to_smt m)
       | Leq (n, m) ->
-         Printf.sprintf "(<= %s %s)" (smt_term_to_smt n) (smt_term_to_smt m)         
+         Printf.sprintf "(<= %s %s)" (smt_term_to_smt n) (smt_term_to_smt m)
       | Ite (t1, t2, t3) ->
          Printf.sprintf "(ite %s %s %s)" (smt_term_to_smt t1) (smt_term_to_smt t2)
                         (smt_term_to_smt t3)
@@ -200,9 +200,9 @@ module SmtLang =
                         (printList (fun x -> smt_term_to_smt x) ts "" " " "")
       | Constructor (name, sort) -> name
       | App (Constructor (name, sort), ts) when ts = [] ->
-         Printf.sprintf "(as %s %s)" name (sort_to_smt sort) 
+         Printf.sprintf "(as %s %s)" name (sort_to_smt sort)
       | App (t, ts) ->
-         let args = printList smt_term_to_smt ts "" " " "" in 
+         let args = printList smt_term_to_smt ts "" " " "" in
          Printf.sprintf "(%s %s)" (smt_term_to_smt t) args
 
     let term_to_smt verbose info (tm : term) =
@@ -220,13 +220,13 @@ module SmtLang =
                Printf.sprintf "(%s %s)" p (sort_to_smt s)) (p :: ps) "" " " ""
          in
          Printf.sprintf "(%s %s)" c.constr_name constrArgs
-         
+
     let rec type_decl_to_smt (dt: datatype_decl) : string =
       Printf.sprintf "(declare-datatypes %s ((%s %s)))"
                      (printList sort_to_smt dt.params "(" " " ")")
                      dt.name
                      (printList constructor_to_smt dt.constructors "" " " "")
-      
+
     let const_decl_to_smt ?(verbose=false) info const : string =
       (if verbose then
          printVerbose "Constant declared about:" const.cdescr const.cloc info
@@ -261,12 +261,12 @@ module SmtLang =
            printVerbose "Translating command:" tm.tdescr tm.tloc info
       | _ ->
          printVerbose "Translating command:" comm.comdescr comm.comloc info
-         
-        
+
+
     let command_to_smt (verbose : bool) info (com : command) : string =
       (if verbose then
          command_of_term_meta info com
-       else "") ^ 
+       else "") ^
         smt_command_to_smt info com.com
 
     let commands_to_smt (verbose : bool) info (coms : command list) : string =
@@ -308,7 +308,7 @@ module SmtLang =
         | _ ->
            failwith "wrong format"
       in loop rs BatMap.empty
-                
+
   end
 
 open SmtLang
@@ -321,13 +321,13 @@ module Constant =
   end
 
 module ConstantSet = BatSet.Make(Constant)
-   
+
 type smt_env =
   { mutable ctx: command list
   ; mutable const_decls: ConstantSet.t (** named constant and its sort *)
   ; mutable type_decls: datatype_decl StringMap.t
   ; mutable symbolics: Syntax.ty_or_exp VarMap.t }
-  
+
 let create_fresh descr s =
   Printf.sprintf "%s-%s" descr (Var.fresh s |> Var.to_string)
 
@@ -399,7 +399,7 @@ let rec ty_to_type_decl (ty: ty) : datatype_decl =
      let param = VarSort "T1" in
      let none = { constr_name = "mkNone"; constr_args = [] } in
      let some = { constr_name = "mkSome"; constr_args = [("getSome", param)]} in
-     { name = name; params = [param]; constructors = [none; some]}        
+     { name = name; params = [param]; constructors = [none; some]}
   | TTuple ts ->
      let len = List.length ts in
      let name = datatype_name ty |> oget in
@@ -418,7 +418,7 @@ let compute_decl (env : smt_env) ty =
   let name = datatype_name ty in
   match name with
   | None -> None
-  | Some name -> 
+  | Some name ->
      match StringMap.Exceptionless.find name env.type_decls  with
      | None ->
         let decl = ty_to_type_decl ty in
@@ -441,7 +441,7 @@ let add_symbolic (env : smt_env) (b: Var.t) (ty: Syntax.ty) =
 
 let is_symbolic syms x =
   VarMap.mem x syms
-  
+
 let is_var (tm: SmtLang.term) =
   match tm.t with
   | Var _ -> true
@@ -522,7 +522,7 @@ let rec encode_exp_z3 descr env (e: exp) : term =
        failwith "not implemented"
     | MMap, [{e= EFun {arg= x; argty= ty1; resty= ty2; body= e1}}; e2] ->
        failwith "not implemented yet"
-    | MMapFilter, _ 
+    | MMapFilter, _
     | MMerge, _
     | _ -> failwith "internal error (encode_exp_z3)" )
   | EIf (e1, e2, e3) ->
@@ -744,7 +744,7 @@ and encode_value_z3 descr env (v: Syntax.value) =
        mk_term ~tloc:v.vspan
   | VInt i ->
      mk_int_u32 i |>
-       mk_term ~tloc:v.vspan       
+       mk_term ~tloc:v.vspan
   | VTuple vs -> (
     match oget v.vty with
     | TTuple ts ->
@@ -769,7 +769,7 @@ and encode_value_z3 descr env (v: Syntax.value) =
   | VMap map -> failwith "not doing maps yet"
 
 let exp_to_z3 = encode_exp_z3
-              
+
 let encode_z3_merge str env e =
   match e.e with
   | EFun { arg= x
@@ -797,8 +797,8 @@ let encode_z3_trans str env edge trans =
   match etrans_uv.e with
   | EFun {arg= x; argty= xty; body= exp} ->
      (* let edgestr = mk_constant env (create_name str edgevar)
-        (ty_to_s    ort (oget edgety)) in *) 
-     let xstr = mk_constant env (create_name str x) (ty_to_sort  (oget xty))      
+        (ty_to_s    ort (oget edgety)) in *)
+     let xstr = mk_constant env (create_name str x) (ty_to_sort  (oget xty))
      in
      let name = Printf.sprintf "%s-result" str in
      let result =
@@ -825,7 +825,7 @@ let encode_z3_assert str env node assertion =
   let eassert_u = Interp.interp_partial_fun assertion [node] in
   match eassert_u.e with
   | EFun {arg= x; argty= xty; body= exp} ->
-     let xstr = mk_constant env (create_name str x) (ty_to_sort (oget xty)) in     
+     let xstr = mk_constant env (create_name str x) (ty_to_sort (oget xty)) in
      let name = Printf.sprintf "%s-result" str in
      let result =
        mk_constant env name (oget exp.ety |> ty_to_sort) in
@@ -841,7 +841,7 @@ let label_var i =
 
 let node_of_label_var s =
   Integer.of_string (BatString.lchop ~n:6 s)
-  
+
 let assert_var i =
   Printf.sprintf "assert-%d" (Integer.to_int i)
 
@@ -852,7 +852,7 @@ let node_of_assert_var s =
 
 let symbolic_var (s: Var.t) =
   Var.to_string s
-        
+
 let add_symbolic_constraints env requires sym_vars =
   (* Declare the symbolic variables: ignore the expression in case of SMT *)
   VarMap.iter
@@ -901,9 +901,9 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
     (* add_constraint env (mk_term (mk_eq n.t (mk_int i))); *)
     init_map := AdjGraph.VertexMap.add (Integer.of_int i) init !init_map
   done ;
-  
+
   (* Map each edge to transfer function result *)
-  
+
   (* incoming_map is a map from vertices to list of incoming edges *)
   let incoming_map = ref AdjGraph.VertexMap.empty in
   (* trans_map maps each edge to the variable that holds the result *)
@@ -922,13 +922,13 @@ let encode_z3 (ds: declarations) sym_vars : smt_env =
       let trans, x =
         encode_z3_trans
           (Printf.sprintf "trans-%d-%d" (Integer.to_int i)
-                          (Integer.to_int j)) 
+                          (Integer.to_int j))
           env (i, j) etrans
       in
       trans_input_map := AdjGraph.EdgeMap.add (i, j) x !trans_input_map ;
       trans_map := AdjGraph.EdgeMap.add (i, j) trans !trans_map )
     edges ;
-  
+
   (* Compute the labelling as the merge of all inputs *)
   let labelling = ref AdjGraph.VertexMap.empty in
   for i = 0 to Integer.to_int nodes - 1 do
@@ -996,7 +996,7 @@ let node_exp (u: Integer.t) : Syntax.exp =
 let edge_exp (u: Integer.t) (v: Integer.t) : Syntax.exp =
   aexp(e_val (vtuple [vint u; vint v]),
        Some Typing.edge_ty, Span.default)
-  
+
 (** An alternative SMT encoding, where we build an NV expression for
    each label, partially evaluate it and then encode it *)
 let encode_z3_func (ds: declarations) sym_vars : smt_env =
@@ -1034,7 +1034,7 @@ let encode_z3_func (ds: declarations) sym_vars : smt_env =
 
   (* map from nodes to incoming messages*)
   let incoming_messages_map =
-    List.fold_left (fun acc (u,v) -> 
+    List.fold_left (fun acc (u,v) ->
         let lblu = aexp (evar (label_var u |> Var.create), Some aty, Span.default) in
         let transuv = trans_exp u v lblu in
         AdjGraph.VertexMap.modify_def [] v (fun us -> transuv :: us) acc)
@@ -1083,9 +1083,9 @@ let encode_z3_func (ds: declarations) sym_vars : smt_env =
   (* add the symbolic variable constraints *)
   add_symbolic_constraints env (get_requires ds) (env.symbolics (*@ sym_vars*));
   env
-   
 
-  
+
+
 (** ** SMT query optimization *)
 let rec alpha_rename_smt_term (renaming: string StringMap.t) (tm: smt_term) =
     match tm with
@@ -1120,10 +1120,10 @@ let rec alpha_rename_smt_term (renaming: string StringMap.t) (tm: smt_term) =
     | App (tm1, tms) ->
        App (alpha_rename_smt_term renaming tm1,
             List.map (alpha_rename_smt_term renaming) tms)
-                                 
+
 let alpha_rename_term (renaming: string StringMap.t) (tm: term) =
   {tm with t = alpha_rename_smt_term renaming tm.t}
-  
+
 (** Removes all variable equalities *)
 let propagate_eqs (env : smt_env) =
   let updateUnionFind eqSets s =
@@ -1165,7 +1165,7 @@ let propagate_eqs (env : smt_env) =
           if repr = cdecl.cname then true else false
         with Not_found -> true) env.const_decls;
   renaming, env
-  
+
 (* let propagate_eqs (env : smt_env) = *)
 (*   (\* compute equality classes of variables and remove equalities between variables *\) *)
 (*   let (eqSets, new_ctx) = List.fold_left (fun (eqSets, acc) c -> *)
@@ -1203,7 +1203,7 @@ let propagate_eqs (env : smt_env) =
 
 type smt_result = Unsat | Unknown | Sat of Solution.t
 
-(** Emits the code that evaluates the model returned by Z3. *)  
+(** Emits the code that evaluates the model returned by Z3. *)
 let eval_model (symbolics: Syntax.ty_or_exp VarMap.t)
       (num_nodes: Integer.t)
       (eassert: Syntax.exp option)
@@ -1243,14 +1243,14 @@ let eval_model (symbolics: Syntax.ty_or_exp VarMap.t)
 
 let parse_val (s : string) : Syntax.value =
  let lexbuf = Lexing.from_string s
- in 
+ in
   try SMTParser.smtlib SMTLexer.token lexbuf
   with exn ->
       begin
         let tok = Lexing.lexeme lexbuf in
         failwith ("failed: " ^ tok)
       end
-      
+
 let translate_model (m : (string, string) BatMap.t) : Solution.t =
   BatMap.foldi (fun k v sol ->
       let nvval = parse_val v in
@@ -1273,9 +1273,9 @@ let translate_model (m : (string, string) BatMap.t) : Solution.t =
                {symbolics = StringMap.empty;
                 labels = AdjGraph.VertexMap.empty;
                 assertions= None}
-  
+
 (** ** Translate the environment to SMT-LIB2 *)
-  
+
 let env_to_smt ?(verbose=false) info (env : smt_env) =
   (* Emit context *)
   let context = List.rev_map (fun c -> command_to_smt verbose info c) env.ctx in
@@ -1290,7 +1290,7 @@ let env_to_smt ?(verbose=false) info (env : smt_env) =
   let decls = StringMap.bindings env.type_decls in
   let decls = String.concat "\n"
             (List.map (fun (_,typ) -> type_decl_to_smt typ) decls) in
-  Printf.sprintf "%s\n" (decls ^ constants ^ context)
+  Printf.sprintf "(set-option :model_evaluator.completion true) \n %s\n %s\n %s\n" decls constants context
 (* this new line is super important otherwise we don't get a reply
    from Z3.. not understanding why*)
 
@@ -1306,7 +1306,7 @@ let printQuery (chan: out_channel Lazy.t) (msg: string) =
 (* Classic encodes the SRP as an SMT expression, Functional encodes
    the problem as an NV term which is then translated to SMT *)
 type encoding_style = Classic | Functional
-                        
+
 type smt_options =
   { verbose : bool;
     optimize : bool;
@@ -1318,7 +1318,7 @@ let smt_config : smt_options =
     optimize = true;
     encoding = Classic
   }
-  
+
 let solve info query chan ?symbolic_vars ?(params=[]) ds =
   let sym_vars =
     match symbolic_vars with None -> [] | Some ls -> ls
@@ -1373,5 +1373,3 @@ let solve info query chan ?symbolic_vars ?(params=[]) ds =
   | UNKNOWN ->
      Unknown
   | _ -> failwith "unexpected answer from solver\n"
-  
-  
