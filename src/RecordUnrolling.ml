@@ -112,6 +112,94 @@ let rec unroll_decl
   | DEdges _ -> decl
 ;;
 
-let unroll decls : declarations =
+(* Conversion functions for translating tupleized types back into
+   record types *)
+let rec convert_value
+    (original_ty : ty)
+    (v : value)
+  : value
+  =
+  (* TODO: Potentially add on span and type info *)
+  match v.v, original_ty with
+  | VBool _, TBool
+  | VInt _, TInt _ ->
+    v
+  | VOption vo, TOption t ->
+    begin
+      match vo with
+      | None -> voption None
+      | Some v' -> voption (Some (convert_value t v'))
+    end
+  | VTuple vs, TTuple ts ->
+    vtuple (List.map2 convert_value ts vs)
+  | VTuple vs, TRecord tmap ->
+    (* We found a converted record; convert it back *)
+    let labels = get_record_labels tmap in
+    let vmap = List.fold_left2
+        (fun map k v ->  StringMap.add k v map)
+        StringMap.empty labels vs
+    in
+    vrecord vmap
+  | VMap m, TMap (kty, vty) ->
+    (* This could very well be wrong *)
+    let default = default_value vty in
+    let base = BddMap.create ~key_ty:kty default in
+    let bindings, _ = BddMap.bindings m in
+    let newbdd, _ =
+      List.fold_left
+        (fun acc (k, v) -> BddMap.update acc k (convert_value vty v))
+        base bindings
+    in
+    vmap (newbdd, kty)
+  | VRecord _, _ ->
+    failwith "convert_value: found record while converting back to records"
+  | VClosure _, TArrow _ ->
+    failwith "convert_value: Cannot convert function value"
+  | _ ->
+    failwith "convert_value: type and value do not match"
+;;
+
+let convert_symbolics
+    (decls : declarations)
+    (sol : Solution.t)
+  =
+  let symbolics = get_symbolics decls in
+  let convert_symbolic symb v =
+    let _, toe =
+      List.find
+        (* Maybe this should be Var.name s? *)
+        (fun (s, _) -> String.equal (Var.to_string s) symb)
+        symbolics
+    in
+    let oldty =
+      match toe with
+      | Ty ty -> ty
+      | Exp e -> oget e.ety
+    in
+    convert_value oldty v
+  in
+  let new_symbolics =
+    StringMap.mapi convert_symbolic sol.symbolics
+  in
+  new_symbolics
+;;
+
+let convert_attrs
+    (decls : declarations)
+    (sol : Solution.t)
+  =
+  let attr_ty = oget (get_attr_type decls) in
+  AdjGraph.VertexMap.map
+    (fun v -> convert_value attr_ty v)
+    sol.labels
+;;
+
+let unroll decls =
   let rtys = get_record_types decls in
-  List.map (unroll_decl rtys) decls
+  let unrolled = List.map (unroll_decl rtys) decls in
+  let map_back sol =
+    let new_symbolics = convert_symbolics decls sol in
+    let new_labels = convert_attrs decls sol in
+    {sol with symbolics = new_symbolics; labels = new_labels}
+  in
+  unrolled, map_back
