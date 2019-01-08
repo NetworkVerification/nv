@@ -155,7 +155,6 @@ let rec convert_value
     in
     vrecord vmap
   | VMap m, TMap (kty, vty) ->
-    (* This could very well be wrong *)
     let bindings, default = BddMap.bindings m in
     let default' = convert_value vty default in
     let bindings' =
