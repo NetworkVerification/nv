@@ -13,7 +13,7 @@ let unroll info decls =
       (fun (decls, f) (mty, keys) ->
          let keys = (Collections.ExpSet.elements keys) in
          let new_decls =
-           MapUnrolling2.unroll_one_map_type mty keys decls
+           MapUnrollingGuts.unroll_one_map_type mty keys decls
          in
          let f' =
            MapUnrollingConversion.convert_solution mty keys decls

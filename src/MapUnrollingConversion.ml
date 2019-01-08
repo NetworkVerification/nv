@@ -1,21 +1,7 @@
 open Syntax
 open Collections
-open MapUnrolling2
+open MapUnrollingGuts
 open Typing
-
-(* Infer type of a value; if we don't know, use TBool *)
-(* let rec infer_value_type (v : value) =
-   match v.v with
-   | VBool _ -> TBool
-   | VInt n -> TInt (Integer.size n)
-   | VTuple (vs) -> TTuple (List.map infer_value_type vs)
-   | VOption vo ->
-    begin
-      match vo with
-      | Some v' -> TOption (infer_value_type v')
-      | None -> TOption (TBool)
-    end
-   | VMap mtbdd *)
 
 (* e must be a literal *)
 let rec exp_to_value (e : exp) : value =
