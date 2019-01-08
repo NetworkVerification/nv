@@ -6,12 +6,13 @@ let rec unroll_type
     (ty : ty)
   : ty
   =
-  (* print_endline @@  "Unrolling type: " ^ Printing.ty_to_string ty; *)
+  print_endline @@  "Unrolling type: " ^ Printing.ty_to_string ty;
   let unroll_type = unroll_type rtys in
   (* let ty = canonicalize_type ty in *)
   match ty with
   | TBool
-  | TInt _ ->
+  | TInt _
+  | QVar _ ->
     ty
   | TArrow (t1, t2) ->
     TArrow (unroll_type t1, unroll_type t2)
@@ -23,8 +24,6 @@ let rec unroll_type
     TMap (unroll_type key_ty, unroll_type val_ty)
   | TRecord map ->
     TTuple (get_record_entries map)
-  | QVar tyname ->
-    failwith "Cannot unroll a type containing a QVar!";
   | TVar _ ->
     failwith "Encountered TVar after canonicalization"
 ;;

@@ -1292,7 +1292,7 @@ let env_to_smt ?(verbose=false) info (env : smt_env) =
   let decls = StringMap.bindings env.type_decls in
   let decls = String.concat "\n"
       (List.map (fun (_,typ) -> type_decl_to_smt typ) decls) in
-  Printf.sprintf "%s\n" (decls ^ constants ^ context)
+  Printf.sprintf "(set-option :model_evaluator.completion true) \n %s\n %s\n %s\n" decls constants context
 (* this new line is super important otherwise we don't get a reply
    from Z3.. not understanding why*)
 
