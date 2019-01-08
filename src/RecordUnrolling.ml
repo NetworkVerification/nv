@@ -28,6 +28,21 @@ let rec unroll_type
     failwith "Encountered TVar after canonicalization"
 ;;
 
+let rec unroll_pattern p =
+  match p with
+  | PWild
+  | PInt _
+  | PBool _
+  | PVar _
+  | POption None -> p
+  | PTuple ps ->
+    PTuple (List.map unroll_pattern ps)
+  | POption (Some p) ->
+    POption (Some (unroll_pattern p))
+  | PRecord map ->
+    PTuple (List.map unroll_pattern (get_record_entries map))
+;;
+
 let rec unroll_exp
     (rtys : ty StringMap.t list)
     (e : exp)
@@ -56,7 +71,7 @@ let rec unroll_exp
     | EMatch (e1, bs) ->
       ematch
         (unroll_exp e1)
-        (List.map (fun (p, e) -> (p, unroll_exp e)) bs)
+        (List.map (fun (p, e) -> (unroll_pattern p, unroll_exp e)) bs)
     | ETy (e1, _) -> unroll_exp e1
     | EOp (op, es) -> eop op (List.map unroll_exp es)
     | ERecord map ->
@@ -141,15 +156,13 @@ let rec convert_value
     vrecord vmap
   | VMap m, TMap (kty, vty) ->
     (* This could very well be wrong *)
-    let default = default_value vty in
-    let base = BddMap.create ~key_ty:kty default in
-    let bindings, _ = BddMap.bindings m in
-    let newbdd, _ =
-      List.fold_left
-        (fun acc (k, v) -> BddMap.update acc k (convert_value vty v))
-        base bindings
+    let bindings, default = BddMap.bindings m in
+    let default' = convert_value vty default in
+    let bindings' =
+      List.map (fun (k, v) -> k, convert_value vty v) bindings
     in
-    vmap (newbdd, kty)
+    let newbdd = BddMap.from_bindings ~key_ty:kty (bindings', default') in
+    vmap newbdd
   | VRecord _, _ ->
     failwith "convert_value: found record while converting back to records"
   | VClosure _, TArrow _ ->
@@ -196,7 +209,7 @@ let convert_attrs
 let unroll decls =
   let rtys = get_record_types decls in
   let unrolled = List.map (unroll_decl rtys) decls in
-  print_endline @@ Printing.declarations_to_string unrolled;
+  (* print_endline @@ Printing.declarations_to_string unrolled; *)
   let map_back sol =
     let new_symbolics = convert_symbolics decls sol in
     let new_labels = convert_attrs decls sol in

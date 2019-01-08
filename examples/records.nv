@@ -14,7 +14,7 @@ let edges = {
 let merge node x y = if x.dist < y.dist then x else y
 
 let trans edge x =
-  { dist : x.dist + 1; even : !x.even; }
+  { even : !x.even; dist : x.dist + 1; }
 
 (* The initial state of the network;
    A map from nodes to initial values with type A.

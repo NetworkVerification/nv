@@ -162,6 +162,7 @@
 %left PLUS SUB UNION INTER MINUS
 %right NOT
 %right SOME
+%nonassoc DOT
 %left LBRACKET      /* highest precedence */
 
 %%

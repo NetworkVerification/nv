@@ -334,6 +334,8 @@ and equal_vs ~cmp_meta v1 v2 =
     Env.equal equal_tys ty1 ty1
     && Env.equal (equal_values ~cmp_meta) value1 value2
     && equal_funcs ~cmp_meta f1 f2
+  | VRecord map1, VRecord map2 ->
+    StringMap.equal (equal_values ~cmp_meta) map1 map2
   | _, _ -> false
 
 and equal_lists ~cmp_meta vs1 vs2 =
@@ -1075,7 +1077,7 @@ module BddMap = struct
       | TBool -> VBool false
       | TInt size -> VInt (Integer.create ~value:0 ~size:size)
       | TTuple ts -> VTuple (List.map default_value ts)
-      | TRecord map -> VRecord (StringMap.map default_value map)
+      | TRecord map -> VTuple (List.map default_value @@ get_record_entries map)
       | TOption ty -> VOption None
       | TMap (ty1, ty2) ->
         VMap (create ~key_ty:ty1 (default_value ty2))
@@ -1159,6 +1161,11 @@ module BddMap = struct
           (v, i)
         | TArrow _ | TMap _ | TVar _ | QVar _ ->
           failwith "internal error (bdd_to_value)"
+      in
+      let ty =
+        match ty with
+        | TRecord map -> TTuple (get_record_entries map)
+        | _ -> ty
       in
       (annotv ty v, i)
     in
