@@ -27,5 +27,3 @@ let unroll info decls =
   in
   final_decls, [], map_back
 ;;
-
-exception Cannot_unroll of Syntax.exp

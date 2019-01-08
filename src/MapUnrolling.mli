@@ -1,7 +1,5 @@
 open Syntax
 
-exception Cannot_unroll of exp
-
 val unroll :
      Console.info
   -> declarations
