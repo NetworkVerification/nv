@@ -39,7 +39,7 @@ let rec tuplify_ty tymap ty =
       let t2 = tuplify_ty tymap ty2 in
       let count = tuple_count tymap ty in
       if count = 1 then t2 else TTuple (repeat t2 count)
-  | QVar _ | TVar _ -> failwith "internal error (tuplify_ty)"
+  | QVar _ | TVar _ | TRecord _ -> failwith "internal error (tuplify_ty)"
 
 let rec tuplify_exp tymap e : exp =
   match e.e with
@@ -164,6 +164,7 @@ let rec tuplify_exp tymap e : exp =
   | ETy (e, ty) -> tuplify_exp tymap e
   | EVal _ -> (* no way to construct a map value directly *) exp e.e
   | EVar _ -> exp e.e
+  | ERecord _ | EProject _ -> failwith "record found during map unrolling"
 
 and mk_map tymap e e1 e2 ~filter =
   let ty = oget e.ety in
@@ -226,6 +227,7 @@ let tuplify_decl tymap d =
   | DSymbolic (x, Exp e) -> DSymbolic (x, Exp (tuplify_exp tymap e))
   | DSymbolic (x, Ty ty) -> DSymbolic (x, Ty (tuplify_ty tymap ty))
   | DATy aty -> DATy (tuplify_ty tymap aty)
+  | DUserTy (s, ty) -> DUserTy (s, tuplify_ty tymap ty)
   | DNodes _ | DEdges _ -> d
 
 let tuplify tymap ds = List.map (tuplify_decl tymap) ds

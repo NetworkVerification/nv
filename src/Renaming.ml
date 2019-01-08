@@ -21,6 +21,7 @@ let rec update_pattern (env: Var.t Env.t) (p: pattern) :
   | POption (Some p) ->
       let p', env = update_pattern env p in
       (POption (Some p'), env)
+  | PRecord _ -> failwith "Found record during renaming"
 
 and add_pattern (env, ps) p =
   let p', env' = update_pattern env p in
@@ -67,6 +68,8 @@ let rec alpha_convert_exp (env: Var.t Env.t) (e: exp) =
       in
       ematch (alpha_convert_exp env e) bs' |> wrap e
   | ETy (e1, ty) -> ety (alpha_convert_exp env e1) ty |> wrap e
+  | ERecord _ | EProject _ -> failwith "Found record during renaming"
+
 
 let alpha_convert_declaration bmap (env: Var.t Env.t)
     (d: declaration) =
@@ -92,7 +95,7 @@ let alpha_convert_declaration bmap (env: Var.t Env.t)
   | DInit e -> (env, DInit (alpha_convert_exp env e))
   | DAssert e -> (env, DAssert (alpha_convert_exp env e))
   | DRequire e -> (env, DRequire (alpha_convert_exp env e))
-  | DATy _ | DNodes _ | DEdges _ -> (env, d)
+  | DATy _ | DUserTy _ | DNodes _ | DEdges _ -> (env, d)
 
 let rec alpha_convert_aux bmap env (ds: declarations) : declarations =
   match ds with
@@ -122,7 +125,7 @@ module Tests =
   struct
 
     exception Duplicate
-            
+
     let collect_unique_vars e =
       let vars = ref BatSet.empty in
       let checkCollect x =
@@ -148,14 +151,14 @@ module Tests =
           | ELet (x, _, _) -> vars := x :: !vars
           | _ -> ()) e;
       !vars
-                            
+
     let alpha_exp_no_duplicates_prop env e =
       let aexp = alpha_convert_exp env e in
       try
         let _ = collect_unique_vars aexp in
         true
       with | Duplicate -> false
-                        
+
     let alpha_exp_number_of_vars_prop env e =
       let aexp = alpha_convert_exp env e in
       try

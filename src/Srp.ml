@@ -57,7 +57,7 @@ type info =
   ; mutable syms: value StringMap.t }
 
 exception Require_false
-        
+
 let declarations_to_srp ds ~throw_requires =
   let info =
     { env= Interp.empty_env
@@ -134,7 +134,7 @@ let declarations_to_srp ds ~throw_requires =
           else
             Console.warning
               "requires condition not satisified by initial state" )
-    | DATy _ -> ()
+    | DATy _ | DUserTy _ -> ()
   in
   List.iter process_declaration ds ;
   match info with
@@ -162,7 +162,7 @@ let declarations_to_state ds ~throw_requires =
   let srp, init, syms = declarations_to_srp ds ~throw_requires in
   let state = create_state (AdjGraph.num_vertices srp.graph) init in
   (srp, state, syms)
-                  
+
 let solution_to_string s =
   AdjGraph.vertex_map_to_string Printing.value_to_string s
 
