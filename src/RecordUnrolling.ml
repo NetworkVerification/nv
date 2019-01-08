@@ -60,7 +60,7 @@ let rec unroll_exp
     | ETy (e1, _) -> unroll_exp e1
     | EOp (op, es) -> eop op (List.map unroll_exp es)
     | ERecord map ->
-      etuple (get_record_entries map)
+      etuple (List.map unroll_exp @@ get_record_entries map)
     | EProject (e1, l) ->
       let rty = get_type_with_label rtys failwith l in
       let labels = get_record_labels rty in
@@ -196,6 +196,7 @@ let convert_attrs
 let unroll decls =
   let rtys = get_record_types decls in
   let unrolled = List.map (unroll_decl rtys) decls in
+  print_endline @@ Printing.declarations_to_string unrolled;
   let map_back sol =
     let new_symbolics = convert_symbolics decls sol in
     let new_labels = convert_attrs decls sol in
