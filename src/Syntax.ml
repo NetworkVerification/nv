@@ -1022,7 +1022,8 @@ module BddUtils = struct
     | TOption tyo -> 1 + ty_to_size tyo
     | TTuple ts ->
       List.fold_left (fun acc t -> acc + ty_to_size t) 0 ts
-    | TArrow _ | TMap _ | TVar _ | QVar _ | TRecord _ ->
+    | TRecord tmap -> ty_to_size (TTuple (get_record_entries tmap))
+    | TArrow _ | TMap _ | TVar _ | QVar _ ->
       failwith ("internal error (ty_to_size): " ^ (show_ty ty))
 
   let tbl =
