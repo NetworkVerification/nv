@@ -110,12 +110,11 @@ let rec unroll_exp
               failwith "Encountered unrecognized key during map unrolling"
           in
           let x = Var.fresh "UnrollingGetVar" in
+          let plist =
+            List.mapi (fun i _ -> if i = index then PVar x else PWild) keys
+          in
           let pattern =
-            PTuple(
-              BatList.make index PWild @
-              PVar x ::
-              BatList.make (List.length keys - index - 1) PWild
-            )
+            PTuple(plist)
           in
           ematch (unroll_exp map) [(pattern, evar x)]
       | MSet, [map; k; setval] ->

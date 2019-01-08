@@ -47,8 +47,6 @@ type op =
   | MMap
   | MMapFilter
   | MMerge
-  | TGet of int
-  | TSet of int
 [@@deriving show, ord, eq]
 
 type pattern =
@@ -556,8 +554,6 @@ and hash_op op =
   | USub n -> 11  + n + 256 * 2
   | ULess n -> 11 + n + 256 * 3
   | ULeq n -> 11  + n + 256 * 4
-  | TGet n -> 11  + n + 256 * 5 (* Probably overkill *)
-  | TSet n -> 11  + n + 256 * 6
   | AtMost n -> 12 + n
 (* hashconsing information/tables *)
 
@@ -604,8 +600,6 @@ let arity op =
   | MMap -> 2
   | MMapFilter -> 3
   | MMerge -> 3
-  | TGet _ -> 2
-  | TSet _ -> 3
 
 (* Useful constructors *)
 
