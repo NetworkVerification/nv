@@ -2,6 +2,8 @@
 
 open Syntax
 
+val list_to_string : ('a -> string) -> 'a list -> string
+
 val op_to_string : op -> string
 
 val tyvar_to_string : tyvar -> string

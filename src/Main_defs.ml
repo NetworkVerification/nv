@@ -40,22 +40,12 @@ let run_smt file cfg info ds =
   let decls, f = Renaming.alpha_convert_declarations decls in
   let fs = f :: fs in
   let decls = Typing.infer_declarations info decls in
+  let decls, vars, f = MapUnrolling.unroll info decls in
+  let decls = Inline.inline_declarations info decls in
+  let fs = f :: fs in
+  (* Do we need to rename here? *)
   let res, fs =
-    if cfg.unroll_maps then (
-      try
-        let decls, vars, f = MapUnrolling.unroll info decls in
-        let decls = Inline.inline_declarations info decls in
-        let fs = f :: fs in
-        (Smt2.solve info cfg.query (smt_query_file file) decls ~symbolic_vars:vars, fs)
-      with MapUnrolling.Cannot_unroll e ->
-        let msg =
-          Printf.sprintf
-            "unable to unroll map due to non constant index: %s"
-            (Printing.exp_to_string e)
-        in
-        Console.warning msg ;
-        (Smt2.solve info cfg.query (smt_query_file file) decls ~symbolic_vars:[], fs))
-    else (Smt2.solve info cfg.query (smt_query_file file) decls ~symbolic_vars:[], fs)
+    (Smt2.solve info cfg.query (smt_query_file file) decls ~symbolic_vars:vars, fs)
   in
   match res with
   | Unsat -> (Success None, None)

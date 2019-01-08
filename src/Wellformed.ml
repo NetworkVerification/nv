@@ -138,7 +138,39 @@ let check_record_label_uniqueness info decls =
     in
     Console.error_position info Span.default msg
 
+let rec is_literal (exp : Syntax.exp) : bool =
+  match exp.e with
+  | EVar _
+  | EOp _
+  | EFun _
+  | EApp _
+  | EIf _
+  | ELet _
+  | EMatch _ ->
+    false
+  | ESome exp2 ->
+    is_literal exp2
+  | ETuple es ->
+    List.for_all is_literal es
+  | EVal _ -> true
+  | ETy (exp2, _) -> is_literal exp2
+  | ERecord map -> StringMap.for_all (fun _ -> is_literal) map
+  | EProject (exp2, _) -> is_literal exp2
+
+(* Verify that the only map keys used are literals *)
+let check_keys info _ (e : exp) =
+  match e.e with
+  | EOp (MGet, [_; k])
+  | EOp (MSet, [_; k; _]) ->
+    if not (is_literal k) then
+      let msg =
+        "Only literals may be used as keys into a map"
+      in
+      Console.error_position info k.espan msg
+  | _ -> ()
+
 let check info (ds: declarations) : unit =
   check_record_label_uniqueness info ds ;
   Visitors.iter_exp_decls (check_types info) ds ;
-  Visitors.iter_exp_decls (check_closures info) ds
+  Visitors.iter_exp_decls (check_closures info) ds ;
+  Visitors.iter_exp_decls (check_keys info) ds

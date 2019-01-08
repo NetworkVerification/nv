@@ -783,6 +783,78 @@ and valid_patterns env p =
   | [] -> env
   | p :: ps -> valid_patterns (valid_pattern env p) ps
 
+(* Convert ty into a canonical form for easy comparison.
+   * Unbound TVars are converted to TBool
+   * Linked TVars are converted to the linked type
+   * QVars are renamed deterministically *)
+let canonicalize_type (ty : ty) : ty =
+  let open Collections in
+  (* Keep a map to track which QVars have been renamed to what
+     Keep a counter for making fresh variable names manually *)
+  let rec aux ty map count =
+    match ty with
+    | TBool
+    | TInt _ ->
+      ty, map, count
+    | TArrow (t1, t2) ->
+      let t1', map, count = aux t1 map count in
+      let t2', map, count = aux t2 map count in
+      TArrow (t1', t2'), map, count
+    | TTuple (tys) ->
+      let tys', map, count =
+        List.fold_left
+          (fun (lst, map, count) t ->
+             let t', map, count = aux t map count in
+             lst @ [t'], map, count
+          )
+          ([], map, count) tys
+      in
+      TTuple (tys'), map, count
+    | TRecord (tmap) ->
+      let tlist =
+        List.combine (get_record_labels tmap) (get_record_entries tmap)
+      in
+      let tmap', map, count =
+        List.fold_left
+          (fun (tmap, map, count) (l,t) ->
+             let t', map, count = aux t map count in
+             StringMap.add l t' tmap, map, count
+          )
+          (StringMap.empty, map, count) tlist
+      in
+      TRecord (tmap'), map, count
+    | TOption t ->
+      let t', map, count = aux t map count in
+      TOption (t'), map, count
+    | TMap (t1, t2) ->
+      let t1', map, count = aux t1 map count in
+      let t2', map, count = aux t2 map count in
+      TMap (t1', t2'), map, count
+    | QVar tyname ->
+      begin
+        match VarMap.find_opt tyname map with
+        | None ->
+          let new_var = Var.to_var ("a", count) in
+          ( QVar (new_var),
+            (VarMap.add tyname new_var map),
+            count + 1)
+        | Some v -> QVar (v), map, count
+      end
+    | TVar r ->
+      begin
+        match !r with
+        | Link t -> aux t map count
+        | Unbound _ -> TBool, map, count
+      end
+  in
+  let (result, _, _) = aux ty (VarMap.empty) 0 in
+  result
+;;
+
+let rec equiv_tys ty1 ty2 =
+  equal_tys (canonicalize_type ty1) (canonicalize_type ty2)
+;;
+
 let infer_declarations info (ds: declarations) : declarations =
   match get_attr_type ds with
   | None ->

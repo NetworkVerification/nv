@@ -1,9 +1,9 @@
 open Main_defs
 open Solution
-  
+
 let main =
   let cfg, info, file, decls = parse_input Sys.argv in
-  let networkOp = 
+  let networkOp =
       if cfg.smt then run_smt file
       else if cfg.random_test then run_test
       else if cfg.simulate then run_simulator

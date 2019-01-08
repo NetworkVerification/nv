@@ -6,7 +6,7 @@ let rec unroll_type
     (ty : ty)
   : ty
   =
-  print_endline @@  "Unrolling type: " ^ Printing.ty_to_string ty;
+  (* print_endline @@  "Unrolling type: " ^ Printing.ty_to_string ty; *)
   let unroll_type = unroll_type rtys in
   (* let ty = canonicalize_type ty in *)
   match ty with

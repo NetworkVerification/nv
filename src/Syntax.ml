@@ -11,10 +11,13 @@ type bitwidth = int
 
 (* see:  http://okmij.org/ftp/ML/generalization.html *)
 type level = int
+[@@deriving ord, eq]
 
 type var = Var.t
+[@@deriving ord, eq]
 
 type tyname = Var.t
+[@@deriving ord, eq]
 
 type ty =
   | TVar of tyvar ref
@@ -26,6 +29,7 @@ type ty =
   | TOption of ty
   | TMap of ty * ty
   | TRecord of ty StringMap.t
+[@@deriving ord, eq]
 
 and tyvar = Unbound of tyname * level | Link of ty
 
@@ -55,6 +59,7 @@ type pattern =
   | PTuple of pattern list
   | POption of pattern option
   | PRecord of pattern StringMap.t
+[@@deriving ord, eq]
 
 type v =
   | VBool of bool
@@ -64,11 +69,20 @@ type v =
   | VOption of value option
   | VClosure of closure
   | VRecord of value StringMap.t
+[@@deriving ord]
 
 and value =
-  {v: v; vty: ty option; vspan: Span.t; vtag: int; vhkey: int}
+  {v: v;
+   vty: ty option [@compare fun _ _ -> 0];
+   vspan: Span.t [@compare fun _ _ -> 0];
+   vtag: int [@compare fun _ _ -> 0];
+   vhkey: int [@compare fun _ _ -> 0];
+  }
+[@@deriving ord]
 
 and mtbdd = (value Mtbdd.t * ty)
+    [@compare fun _ _ -> failwith "Map value comparison not supported"]
+[@@deriving ord]
 
 and e =
   | EVar of var
@@ -84,14 +98,24 @@ and e =
   | ETy of exp * ty
   | ERecord of exp StringMap.t
   | EProject of exp * string
+[@@deriving ord]
 
-and exp = {e: e; ety: ty option; espan: Span.t; etag: int; ehkey: int}
+and exp =
+  {e: e;
+   ety: ty option [@compare fun _ _ -> 0];
+   espan: Span.t [@compare fun _ _ -> 0];
+   etag: int [@compare fun _ _ -> 0];
+   ehkey: int [@compare fun _ _ -> 0];
+  }
+[@@deriving ord]
 
 and branches = (pattern * exp) list
 
 and func = {arg: var; argty: ty option; resty: ty option; body: exp}
 
 and closure = (env * func)
+    [@compare fun _ _ -> failwith "Map value comparison not supported"]
+[@@deriving ord]
 
 and env = {ty: ty Env.t; value: value Env.t}
 
@@ -255,6 +279,12 @@ let equal_opt e o1 o2 =
   | None, Some _ | Some _, None -> false
   | Some x, Some y -> e x y
 
+let rec equal_lists eq_elts lst1 lst2 =
+  match lst1, lst2 with
+  | [], [] -> true
+  | [], _ :: _ | _ :: _, [] -> false
+  | t1 :: ts1, t2 :: ts2 -> eq_elts t1 t2 && equal_lists eq_elts ts1 ts2
+
 let rec equal_tys ty1 ty2 =
   match (ty1, ty2) with
   | TVar t1, TVar t2 -> (
@@ -267,17 +297,11 @@ let rec equal_tys ty1 ty2 =
   | TBool, TBool | TInt _, TInt _ -> true
   | TArrow (t1, t2), TArrow (s1, s2) ->
     equal_tys t1 s1 && equal_tys t2 s2
-  | TTuple ts1, TTuple ts2 -> equal_tys_list ts1 ts2
+  | TTuple ts1, TTuple ts2 -> equal_lists equal_tys ts1 ts2
   | TOption t1, TOption t2 -> equal_tys t1 t2
   | TMap (t1, t2), TMap (s1, s2) ->
     equal_tys t1 s1 && equal_tys t2 s2
   | _ -> false
-
-and equal_tys_list ts1 ts2 =
-  match (ts1, ts2) with
-  | [], [] -> true
-  | [], _ :: _ | _ :: _, [] -> false
-  | t1 :: ts1, t2 :: ts2 -> equal_tys t1 t2 && equal_tys_list ts1 ts2
 
 let rec equal_values ~cmp_meta (v1: value) (v2: value) =
   let cfg = Cmdline.get_cfg () in
@@ -741,6 +765,11 @@ let oget (x: 'a option) : 'a =
   | None -> failwith "internal error (oget)"
   | Some y -> y
 
+let omap (f : 'a -> 'b) (x: 'a option): 'b option =
+  match x with
+  | None -> None
+  | Some y -> Some(f y)
+
 let rec lams params body =
   match params with
   | [] -> failwith "lams: no parameters"
@@ -957,6 +986,9 @@ end
 module MemoizeValue = Memoize (VKey)
 module MemoizeExp = Memoize (EKey)
 
+let compare_vs = compare_value
+let compare_es = compare_exp
+
 let compare_values v1 v2 =
   let cfg = Cmdline.get_cfg () in
   if cfg.hashcons then v1.vtag - v2.vtag
@@ -1023,7 +1055,6 @@ module BddMap = struct
   module B = BddUtils
 
   (* TODO: optimize variable ordering  *)
-
   type t = mtbdd
 
   (* let res = User.map_op2
@@ -1103,7 +1134,7 @@ module BddMap = struct
               let add = Integer.shift_left (Integer.create ~value:1 ~size:size) i in
               acc := Integer.add !acc add
           done ;
-          (value (VInt !acc), idx + 32)
+          (value (VInt !acc), idx + size)
         | TTuple ts ->
           let vs, i =
             List.fold_left
@@ -1507,7 +1538,7 @@ module BddFunc = struct
         | ULess _, [e1; e2] -> lt (eval env e1) (eval env e2)
         | ULeq _, [e1; e2] -> leq (eval env e1) (eval env e2)
         | USub _, [e1; e2] -> failwith "subtraction not implemented"
-        | _ -> failwith "internal error (eval)" )
+        | _ -> failwith "internal error 2 (eval)" )
     | EIf (e1, e2, e3) -> (
         let v1 = eval env e1 in
         let v2 = eval env e2 in

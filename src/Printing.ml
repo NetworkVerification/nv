@@ -5,7 +5,8 @@ open Syntax
 let is_keyword_op op =
   match op with
   | And | Or | Not | UAdd _ | USub _ | UEq | ULess _ | ULeq _ | MGet -> false
-  | MCreate | MSet | MMap | MMerge | MMapFilter | AtMost _ -> true
+  | MCreate | MSet | MMap | MMerge | MMapFilter -> true
+  | AtMost _ -> failwith "Not implemented"
 
 (* set to true if you want to print universal quanifiers explicitly *)
 let quantifiers = true
@@ -28,7 +29,7 @@ let prec_op op =
   | MMap -> 5
   | MMerge -> 5
   | MMapFilter -> 5
-  | AtMost _ -> failwith "No idea"
+  | AtMost _ -> failwith "Not implemented"
 
 let prec_exp e =
   match e.e with
@@ -90,6 +91,12 @@ let print_record
   in
   Printf.sprintf "{ %s }" entries
 
+let list_to_string f lst =
+  "[ " ^
+  List.fold_left (fun s1 elt -> s1 ^ f elt ^ "; ") "" lst ^
+  "] "
+;;
+
 let rec ty_to_string_p prec t =
   let p = ty_prec t in
   let s =
@@ -100,7 +107,7 @@ let rec ty_to_string_p prec t =
     | TInt i -> "int" ^ string_of_int i
     | TArrow (t1, t2) ->
       ty_to_string_p p t1 ^ " -> " ^ ty_to_string_p prec t2
-    | TTuple ts -> sep "*" (ty_to_string_p p) ts
+    | TTuple ts -> "(" ^ sep "*" (ty_to_string_p p) ts ^ ")"
     | TOption t -> "option[" ^ ty_to_string_p p t ^ "]"
     | TMap (t1, t2) ->
       "dict[" ^ ty_to_string_p p t1 ^ "," ^ ty_to_string_p p t2
@@ -134,7 +141,7 @@ let op_to_string op =
   | MMap -> "map"
   | MMapFilter -> "mapIf"
   | MMerge -> "combine"
-  | AtMost n -> "atMost" ^ (string_of_int n)
+  | AtMost _ -> failwith "Not implemented"
 
 let rec pattern_to_string pattern =
   match pattern with
