@@ -141,6 +141,10 @@ type array_info =
 let is_symbolic syms x =
   List.exists (fun (y, e) -> Var.equals x y) syms
 
+  (* take a descr str to ensure variables are unique
+   * take an env (symbolic var) with z3 context
+   * take an arr array_info to deal with maps
+   *)
 let rec encode_exp_z3 descr env arr (e: exp) =
   (* Printf.printf "expr: %s\n" (Printing.exp_to_string e) ; *)
   match e.e with
@@ -1030,7 +1034,8 @@ let solve ?symbolic_vars ds =
   let q = Solver.check env.solver [] in
   match q with
   | UNSATISFIABLE -> Unsat
-  | UNKNOWN -> Unknown
+  | UNKNOWN -> Unknown (* don't know case *)
   | SATISFIABLE ->
       let m = Solver.get_model env.solver in
+      (* convert z3 exprs back to nv exprs *)
       build_result m env aty num_nodes eassert
