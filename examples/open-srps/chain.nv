@@ -1,26 +1,31 @@
+(* vim: set syntax=ocaml: *)
 type attribute = option[int]
 
-(* Triangle of nodes
+(* Chain of nodes
    We want to see that when we consider a series of dummy disconnected trees, that the results still
    are the same between all the nodes given some hypothetical input values.
-   This example does not distinguish input from output nodes.
+ *)
+
+(*
+    Looking at nodes 0 and 1.
+    0 --- 1 --*    *-- 2 --- 3
  *)
 
 (* Node 0: original node.
-   Node 1: hypothetical node 1.
-   Node 2: hypothetical node 2.
-   We ignore possible interactions between 1 and 2 and come up with hypothetical values at those nodes.
+   Node 1: original node.
+   Node 2: input from original node 2.
+   Node 3: output from node 1 to original node 2.
 *)
-let nodes = 3
-(* Three open cases to consider, where we remove one of each edge and adjust the init method accordingly,
-   treating the remaining nodes as dummies *)
+
+(* Transfer equivalence function:
+   mapo (fun x -> x + 1) x
+*)
+let nodes = 4
 let edges = {
   0=1;
-  0=2;
+  2-1;
+  1-3;
 }
-
-symbolic inputA = Some 1
-symbolic inputB = Some 1
 
 let mapo f o =
   match o with
@@ -36,21 +41,21 @@ let mapbetter f o1 o2 =
 let min x y = if x < y then x else y
 
 let merge node x y =
-  match node with
-  | _ -> mapbetter min x y
+  mapbetter min x y
 
-let trans edge x =
+let trans edge x = 
   match edge with
+  | (2,1) -> x
+  | (1,3) -> x
   | _ -> mapo (fun x -> x + 1) x
 
 let init node =
   match node with
   | 0 -> Some 0
-  | 1 -> inputA
-  | 2 -> inputB
+  | 2 -> Some 3
+  | _ -> None
 
 let assert node x =
   match x with
   | None -> false
   | _ -> true
-
