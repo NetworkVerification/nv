@@ -15,6 +15,7 @@ let files_to_test : (string * bool * bool) list =
   [
     (* Re-enable when we switch to the alternate SMT encoding *)
     (* ("examples/debug-combine.nv", true, true); *)
+    ("examples/batfish.nv", false, false);
     ("examples/diamond.nv", true, true);
     ("examples/diamond-ospf.nv", true, true);
     ("examples/env.nv", true, true);
