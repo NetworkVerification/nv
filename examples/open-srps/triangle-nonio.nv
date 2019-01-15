@@ -1,0 +1,56 @@
+type attribute = option[int]
+
+(* Triangle of nodes
+   We want to see that when we consider a series of dummy disconnected trees, that the results still
+   are the same between all the nodes given some hypothetical input values.
+   This example does not distinguish input from output nodes.
+ *)
+
+(* Node 0: original node.
+   Node 1: hypothetical node 1.
+   Node 2: hypothetical node 2.
+   We ignore possible interactions between 1 and 2 and come up with hypothetical values at those nodes.
+*)
+let nodes = 3
+(* Three open cases to consider, where we remove one of each edge and adjust the init method accordingly,
+   treating the remaining nodes as dummies *)
+let edges = {
+  0=1;
+  0=2;
+}
+
+symbolic inputA = Some 1
+symbolic inputB = Some 1
+
+let mapo f o =
+  match o with
+  | None -> None
+  | Some x -> Some (f x)
+
+let mapbetter f o1 o2 =
+  match (o1, o2) with
+  | (None, x) -> x
+  | (x , None) -> x
+  | (Some x, Some y) -> Some (f x y)
+
+let min x y = if x < y then x else y
+
+let merge node x y =
+  match node with
+  | _ -> mapbetter min x y
+
+let trans edge x =
+  match edge with
+  | _ -> mapo (fun x -> x + 1) x
+
+let init node =
+  match node with
+  | 0 -> Some 0
+  | 1 -> inputA
+  | 2 -> inputB
+
+let assert node x =
+  match x with
+  | None -> false
+  | _ -> true
+
