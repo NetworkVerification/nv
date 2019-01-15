@@ -834,10 +834,10 @@ let encode_z3_assert str env node assertion =
 
 (** ** Naming convention of useful variables *)
 let label_var i =
-  Printf.sprintf "label-%d" (Integer.to_int i)
+  Printf.sprintf "label-%d-" (Integer.to_int i)
 
 let node_of_label_var s =
-  Integer.of_string (BatString.lchop ~n:6 s)
+  Integer.of_string (List.nth (BatString.split_on_char '-' s) 1)
 
 let assert_var i =
   Printf.sprintf "assert-%d" (Integer.to_int i)
@@ -845,7 +845,7 @@ let assert_var i =
 (* this is flaky, the variable name used by SMT will be
    assert-n-result, we need to chop both ends *)
 let node_of_assert_var s =
-  Integer.of_string (BatString.lchop ~n:7 s |> BatString.rchop ~n:7)
+  Integer.of_string (BatString.chop ~l:7 ~r:7 s)
 
 let symbolic_var (s: Var.t) =
   Var.to_string s
