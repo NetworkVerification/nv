@@ -696,7 +696,83 @@ module FailuresAbstraction =
         with | Not_found -> (cuts, new_todo)
       in loop todo [] VertexSet.empty
 
-    let countererexample_refinement_breadth = 10
+
+    module SearchElt =
+      struct
+        type t = abstractionMap * VertexSet.t
+        let compare (x1,y1) (x2,y2) =
+          let sz = Pervasives.compare (normalized_size x1) (normalized_size x2) in
+          if sz = 0 then
+            Pervasives.compare y1 y2
+          else
+            sz
+      end 
+
+    module FSet = BatSet.Make(SearchElt)
+
+    module type SearchStruct =
+      sig
+        type elt = SearchElt.t
+        type t
+
+        val create: unit -> t
+        val add: elt -> t -> t
+        val pop: t -> elt * t
+        val iter: (elt -> 'a -> 'a) -> t -> 'a -> 'a
+        val length: t -> int
+        val prune: t -> t
+      end
+
+    module SearchSet : SearchStruct =
+      struct
+        type elt = SearchElt.t
+        type t = FSet.t
+
+        let create () = FSet.empty
+        let add x s = FSet.add x s
+        let pop s = FSet.pop_min s
+        let iter f s v = FSet.fold f s v
+        let length s = FSet.cardinal s
+        let prune s =
+          let fmin,_ = FSet.min_elt s in
+          FSet.filter (fun (f,_) ->
+              if ((normalized_size fmin)*2 > normalized_size f) then
+                true
+              else
+                false) s
+      end
+
+    module QueueSet : SearchStruct =
+      struct
+        type elt = SearchElt.t
+        type t = elt Queue.t
+
+        let create () = Queue.create ()
+        let add x s = Queue.add x s; s
+        let pop s = try let x = Queue.pop s in
+                        (x, s)
+                    with Queue.Empty -> raise Not_found
+        let iter f s v = Queue.fold (fun acc x ->
+                             f x acc) v s
+        let length q = Queue.length q
+        let prune q = q (*not yet implemented for queues*)
+      end
+       
+    let countererexample_refinement_breadth = 20
+
+    let choose_random_splittable f (es:EdgeSet.t list) =
+      List.fold_left (fun acc es ->
+          EdgeSet.fold (fun (u,v) acc ->
+              let acc =
+                if AbstractNode.cardinal (getGroupById f u) > 1 then
+                  (u :: acc)
+                else
+                  acc
+              in
+              if AbstractNode.cardinal (getGroupById f v) > 1 then
+                (v :: acc)
+              else
+                acc) es []) [] es
 
     let counterexample_step (g: AdjGraph.t) forig (f: abstractionMap) (todo: VertexSet.t)
                             (unused: EdgeSet.t) ds k =
@@ -707,6 +783,7 @@ module FailuresAbstraction =
       let rag = EdgeSet.fold (fun e acc -> AdjGraph.remove_edge acc e) unused_new ag in
       let d = getId f (VertexSet.choose ds) in (*assume only one destination for now *)
       let cuts, todo = compute_cuts rag d k todo in
+      (* Printf.printf "cuts:%d\n" (List.length cuts); *)
       match cuts with
       | [] -> (* no min-cuts <= k, we are done. *)
          assert (VertexSet.is_empty todo);
@@ -720,19 +797,39 @@ module FailuresAbstraction =
                        AbstractNode.cardinal (getGroupById f u) > 1) cut_freq)]
            with Not_found -> []
          in
-         (* require all of them to be in cut-set? *)
-         let nodes_to_split =
+
+         let nodes_to_split_1 =
            try (findNPred (fun us ->
-                            List.for_all (fun u ->
+                    List.for_all (fun u ->
                                 AbstractNode.cardinal (getGroupById f u) > 1) us)
                           reachAbs 1)
-           with Not_found -> 
-                 try (findNPred (fun us ->
-                                   List.for_all (fun u ->
-                                       AbstractNode.cardinal (getGroupById f u) > 1) us)
-                                  unreachAbs 1)
-                 with Not_found ->
-                   failwith "choose_a_random_splittable_node_from_cutset_or_nothing"
+           with Not_found ->  []
+         in
+         let nodes_to_split_2 = 
+           try (findNPred (fun us ->
+                    List.for_all (fun u ->
+                        AbstractNode.cardinal (getGroupById f u) > 1) us)
+                          unreachAbs 1)
+           with Not_found ->
+             []
+         in
+         let nodes_to_split = nodes_to_split_1 @ nodes_to_split_2 in
+         let nodes_to_split =
+           match nodes_to_split with
+           | [] ->
+              (match choose_random_splittable f cuts with
+               | [] ->
+                  (* Printf.printf "cuts:\n"; *)
+                  (* List.iter (fun cut -> *)
+                  (*     Printf.printf "cut:\n"; *)
+                  (*     (EdgeSet.iter (fun e -> *)
+                  (*          Printf.printf "nodes:%s" (printEdge e)) cut)) cuts; *)
+                  []
+               | x ->
+                  (* Printf.printf "nodes to split:%d\n" (List.length x); *)
+                  (* List.iter (fun u -> Printf.printf "nodes:%s" (Vertex.printVertex u)) x; *)
+                  [x])
+           | _ -> nodes_to_split
          in
          match nodes_to_split with
          | [] -> (* cannot refine further, return an empty list.*)
@@ -756,6 +853,7 @@ module FailuresAbstraction =
             in
             (* add in the most_freq node *)
             let uhats = most_freq @ uhats in
+            (* Printf.printf "size of uhats: %d\n" (List.length uhats); *)
             (* for each node to split, compute a refinement with each of its neighbor *)
             let uhat_neighbors = BatList.map (fun uhat -> (uhat, neighbors ag uhat)) uhats in
             let refinements =
@@ -799,15 +897,15 @@ module FailuresAbstraction =
                        let backMap = buildForwardMap f fnew in
                        (fnew, update_vertex_set backMap todo)) best_refinements
 
-    let counterExampleBfs (g: AdjGraph.t) (forig: abstractionMap)
+    let counterExampleSearch (g: AdjGraph.t) (forig: abstractionMap)
                              (unused: EdgeSet.t)
                              (todo: VertexSet.t) ds k =
-      let q = Queue.create () in
-      Queue.add (forig, todo) q;
+      let q = SearchSet.create () in
+      let q = SearchSet.add (forig, todo) q in
       
-      let rec loop completed minimum =
+      let rec loop explored minimum q =
         try
-          let (f, todo) = Queue.pop q in
+          let ((f, todo), q) = SearchSet.pop q in
           let b = match minimum with
             | None -> false 
             | Some minimumf ->
@@ -817,37 +915,36 @@ module FailuresAbstraction =
                  false
           in
           if b then
-            loop completed minimum
+            loop (explored+1) minimum q
           else
             match counterexample_step g forig f todo unused ds k with
             | [] ->
                ( match minimum with
-                 | None -> loop (completed+1) (Some f)
+                 | None -> loop (explored+1) (Some f) q
                  | Some minimum ->
                     if (compare_refinements f minimum < 0) then
-                      loop (completed+1) (Some f)
+                      loop (explored+1) (Some f) q
                     else
-                      loop (completed+1) (Some minimum))
+                      loop (explored+1) (Some minimum) q)
             | fs ->
                (* If we have already find a refinement that is better
                    than the one we are exploring right now, then stop
                    exploring it *)
-               List.iter (fun (f,todo) ->
-                   (* Printf.printf "size of refinements:%d\n" (AbstractionMap.size f); *)
-                   match minimum with
-                   | None ->
-                      Queue.push (f,todo) q
-                   | Some minimum ->
-                      if compare_refinements f minimum = -1 then
-                        Queue.push (f,todo) q
-                      else ()) fs;
-               loop completed minimum
+               let q = List.fold_left (fun acc (f,todo) ->
+                           match minimum with
+                           | None ->
+                              SearchSet.add (f,todo) acc
+                           | Some minimum ->
+                              if compare_refinements f minimum = -1 then
+                                SearchSet.add (f,todo) acc
+                              else acc) q fs in
+               loop explored minimum q
         with
-          Queue.Empty -> completed, minimum
+          Not_found -> explored, minimum
       in
-      match loop 0 None with
-      | completed, Some f ->
-         Printf.printf "Completed refinements: %d\n" completed;
+      match loop 0 None q with
+      | explored, Some f ->
+         Printf.printf "Explored refinements: %d\n" explored;
          f
       | _, _ ->
          failwith "found no refinement"
@@ -930,12 +1027,12 @@ module FailuresAbstraction =
                 List.fold_left (fun acc u ->
                     VertexSet.add u acc) acc us) unreachable VertexSet.empty
           in
-          let f' = counterExampleBfs g f unused_edges_sym unreachable_sym dst k in
+          let f' = counterExampleSearch g f unused_edges_sym unreachable_sym dst k in
           Some f'
         end
 
 
-    let refinement_breadth = 17
+    let refinement_breadth = 18
                                             
     let refine_step (g: AdjGraph.t) forig (f: abstractionMap) (todo: VertexSet.t) ds k =
       let ag = BuildAbstractNetwork.buildAbstractAdjGraph g f in
@@ -944,7 +1041,6 @@ module FailuresAbstraction =
       (* AdjGraph.print ag; *)
       match cuts with
       | [] -> (* no min-cuts <= k, we are done. *)
-         (* Printf.printf "stopped because of no cuts\n"; *)
          assert (VertexSet.is_empty todo);
          []
       | _ ->
@@ -962,13 +1058,15 @@ module FailuresAbstraction =
                             List.for_all (fun u ->
                                 AbstractNode.cardinal (getGroupById f u) > 1) us)
                           reachAbs 1)
-           with Not_found -> 
+           with Not_found ->
                  try (findNPred (fun us ->
                                    List.for_all (fun u ->
                                        AbstractNode.cardinal (getGroupById f u) > 1) us)
                                   unreachAbs 1)
                  with Not_found ->
-                   failwith "choose_a_random_splittable_node_from_cutset_or_nothing"
+                   match choose_random_splittable f cuts with
+                   | [] -> []
+                   | x -> [x]
          in
          match nodes_to_split with
          | [] -> (* cannot refine further, return an empty list.*)
@@ -1037,25 +1135,30 @@ module FailuresAbstraction =
             | _ -> List.map (fun fnew ->
                        let backMap = buildForwardMap f fnew in
                        (fnew, update_vertex_set backMap todo)) best_refinements
-      
+                 
     (* computes a refinement of f, s.t. all sources (currently sources
        are not defined, all nodes are considered sources) have at
        least k+1 disjoint paths to the destination *)
     (* TODO: find source nodes, we only want to min-cut source nodes *)
     let refineK (g: AdjGraph.t) (forig: abstractionMap) (ds: VertexSet.t) (k: int) =
-      let q = Queue.create () in
+      let q = SearchSet.create () in
       let todo =
         AdjGraph.fold_vertices
           (fun uhat acc -> VertexSet.add uhat acc)
           (AbstractionMap.normalized_size forig |> Integer.of_int) VertexSet.empty in
-      Queue.add (forig, todo) q;
+      let q = SearchSet.add (forig, todo) q in
 
       (* making minimum a reference, as an optimization on the final step*)
-      let rec loop completed minimum =
+      let rec loop explored minimum q =
         try
-          let (f, todo) = Queue.pop q in
+          (* Printf.printf "queue size: %d\n" (SearchSet.length q); *)
+          (* if (SearchSet.length q > 2) then *)
+          (*   SearchSet.iter (fun (f, todo) () -> *)
+          (*       Printf.printf "f size: %d\n todo size:%d\n" (AbstractionMap.size f) *)
+          (*                     (VertexSet.cardinal todo)) q (); *)
+          let ((f, todo), q) = SearchSet.pop q in
           let b = match minimum with
-            | None -> false 
+            | None -> false
             | Some minimumf ->
                if (compare_refinements minimumf f <= 0) then
                  true
@@ -1063,37 +1166,36 @@ module FailuresAbstraction =
                false
           in
           if b then
-            loop completed minimum
+            loop (explored+1) minimum q
           else
             match refine_step g forig f todo ds k with
             | [] ->
                ( match minimum with
-                 | None -> loop (completed+1) (Some f)
+                 | None -> loop (explored+1) (Some f) q
                  | Some minimum ->
                     if (compare_refinements f minimum < 0) then
-                      loop (completed+1) (Some f)
+                      loop (explored+1) (Some f) q
                     else
-                      loop (completed+1) (Some minimum))
+                      loop (explored+1) (Some minimum) q)
             | fs ->
                (* If we have already find a refinement that is better
                    than the one we are exploring right now, then stop
                    exploring it *)
-               List.iter (fun (f,todo) ->
-                   (* Printf.printf "size of refinements:%d\n" (AbstractionMap.size f); *)
-                   match minimum with
-                   | None ->
-                      Queue.push (f,todo) q
-                   | Some minimum ->
-                      if compare_refinements f minimum = -1 then
-                        Queue.push (f,todo) q
-                      else ()) fs;
-               loop completed minimum
+               let q = List.fold_left (fun acc (f,todo) ->
+                           match minimum with
+                           | None ->
+                              SearchSet.add (f,todo) acc
+                           | Some minimum ->
+                              if compare_refinements f minimum = -1 then
+                                SearchSet.add (f,todo) acc
+                              else acc) q fs in
+               loop explored minimum q
         with
-          Queue.Empty -> completed, minimum
+          Not_found -> explored, minimum
       in
-      match loop 0 None with
-      | completed, Some f ->
-         Printf.printf "Completed refinements: %d\n" completed;
+      match loop 0 None q with
+      | explored, Some f ->
+         Printf.printf "Explored refinements: %d\n" explored;
          (* for statistics only *)
          (* let ag = BuildAbstractNetwork.buildAbstractAdjGraph g f in *)
          (* let d = getId f (VertexSet.choose ds) in *)

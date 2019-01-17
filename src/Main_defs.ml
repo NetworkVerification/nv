@@ -40,7 +40,8 @@ let run_smt file cfg info decls =
     if cfg.unbox then
       begin
         smt_config.unboxing <- true;
-        UnboxOptions.unbox decls |> TupleFlatten.flatten
+        time_profile "Unboxing" (
+                       fun () -> UnboxOptions.unbox decls |> TupleFlatten.flatten)
       end
     else decls
   in
@@ -153,7 +154,7 @@ let compress file info decls cfg networkOp =
        Console.error
          "missing definition of nodes, edges, merge, trans, init or assert"
   in
-
+  (* Printf.printf "Number of concrete edges:%d\n" (List.length (oget (get_edges decls))); *)
   let k = cfg.compress in
   if cfg.smt then
     smt_config.failures <- Some k;
@@ -180,7 +181,7 @@ let compress file info decls cfg networkOp =
   (* each set of prefixes represents an SRP *)
   let relevantSliceGroups = Slicing.groupPrefixesByVertices relevantSlices in
 
-  let fres = ref AbstractionMap.emptyAbstraction in
+  (* let fres = ref AbstractionMap.emptyAbstraction in *)
   let rec loop (finit: AbstractionMap.abstractionMap)
                (f: AbstractionMap.abstractionMap)
                (pre: Prefix.t)
@@ -197,7 +198,9 @@ let compress file info decls cfg networkOp =
     let groups = AbstractionMap.printAbstractGroups f "\n" in
     Console.show_message groups Console.T.Blue "Abstract groups";
     match networkOp cfg info decls with
-    | Success _, _ -> Printf.printf "No counterexamples found\n"
+    | Success _, _ ->
+       Printf.printf "Number of abstract edges:%d\n" (List.length (oget (get_edges decls)));
+       Printf.printf "No counterexamples found\n"
     | (CounterExample sol), fs ->
        let sol = apply_all sol (oget fs) in
        let aty = if cfg.unbox then
@@ -214,7 +217,7 @@ let compress file info decls cfg networkOp =
        match f' with
        | None -> print_solution sol;
        | Some f' ->
-          fres := f';
+          (* fres := f'; *)
           loop finit f' pre ds k (i+1)
   in
   PrefixSetSet.iter
@@ -227,7 +230,7 @@ let compress file info decls cfg networkOp =
       let ds = PrefixMap.find pre relevantSlices in
       (* compute the bonsai abstraction *)
       let fbonsai = Abstraction.findAbstraction network.graph transMap mergeMap ds in
-      fres := fbonsai;
+      (* fres := fbonsai; *)
       (* do abstraction for 0...k failures. Reusing previous abstraction *)
       (* for i=0 to k do *)
       (*   Console.show_message "" Console.T.Green *)
@@ -236,7 +239,7 @@ let compress file info decls cfg networkOp =
       let f = 
         time_profile "Computing Abstraction for K failures"
                      (fun () ->
-                       FailuresAbstraction.refineK network.graph !fres ds k)
+                       FailuresAbstraction.refineK network.graph fbonsai ds k)
       in
       loop fbonsai f pre ds k 1
     ) relevantSliceGroups
@@ -253,7 +256,8 @@ let parse_input (args : string array)
   Wellformed.check info decls ;
   let decls =
     if cfg.smt || cfg.inline then
-        Inline.inline_declarations info decls
+      time_profile "Inlining" (
+                       fun () -> Inline.inline_declarations info decls)
     else
       decls
   in

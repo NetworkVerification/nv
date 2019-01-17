@@ -46,38 +46,40 @@ and equal_vals vs1 vs2 =
 
 (* Expression and operator interpreters *)
 (* matches p b is Some env if v matches p and None otherwise; assumes no repeated variables in pattern *)
-let rec matches p (v: Syntax.value) : Syntax.value Env.t option =
+let rec matches p (v: Syntax.value) env : Syntax.value Env.t option =
   match (p, v.v) with
-  | PWild, v -> Some Env.empty
-  | PVar x, _ -> Some (Env.bind x v)
-  | PBool true, VBool true -> Some Env.empty
-  | PBool false, VBool false -> Some Env.empty
+  | PWild, v -> Some env
+  | PVar x, _ -> Some (Env.update env x v)
+  | PBool true, VBool true
+    | PBool false, VBool false -> Some env
   | PInt i1, VInt i2 ->
-      if Integer.equal i1 i2 then Some Env.empty else None
-  | PTuple ps, VTuple vs -> matches_list ps vs
-  | POption None, VOption None -> Some Env.empty
-  | POption (Some p), VOption (Some v) -> matches p v
+     if Integer.equal i1 i2 then Some env else None
+  | PTuple ps, VTuple vs -> (* matches_list ps vs *)
+     (match ps, vs with
+      | [], []-> Some env
+      | p :: ps, v :: vs ->
+         (match matches p v env with
+          | None -> None
+          | Some env -> matches (PTuple ps) (vtuple vs) env)
+      | _, _ -> None)
+  (* (try Some (List.fold_left2 (fun acc p v -> *)
+     (*                match matches p v acc with *)
+     (*                | None -> raise (invalid_arg "List.fold_left2") *)
+     (*                | Some env -> env) env ps vs) *)
+     (*  with *)
+     (*  | Invalid_argument _ -> None) *)
+  | POption None, VOption None -> Some env
+  | POption (Some p), VOption (Some v) -> matches p v env
   | (PBool _ | PInt _ | PTuple _ | POption _), _ -> None
 
-and matches_list ps vs =
-  match (ps, vs) with
-  | [], [] -> Some Env.empty
-  | p :: ps, v :: vs -> (
-    match matches p v with
-    | None -> None
-    | Some env1 ->
-      match matches_list ps vs with
-      | None -> None
-      | Some env2 -> Some (Env.updates env2 env1) )
-  | _, _ -> None
 
-let rec match_branches branches v =
+let rec match_branches branches v env =
   match branches with
   | [] -> None
   | (p, e) :: branches ->
-    match matches p v with
-    | Some env -> Some (env, e)
-    | None -> match_branches branches v
+    match matches p v env with
+    | Some env' -> Some (env', e)
+    | None -> match_branches branches v env
 
 module ExpMap = Map.Make (struct
   type t = exp
@@ -129,9 +131,9 @@ let rec interp_exp env e =
   | ETuple es -> vtuple (List.map (interp_exp env) es)
   | ESome e -> voption (Some (interp_exp env e))
   | EMatch (e1, branches) ->
-      let v = interp_exp env e1 in
-      match match_branches branches v with
-      | Some (env2, e) -> interp_exp (update_values env env2) e
+      let v = interp_exp env e1 in 
+      match match_branches branches v env.value with
+      | Some (env2, e) -> interp_exp {env with value=env2} e
       | None ->
           failwith
             ( "value " ^ value_to_string v
@@ -291,8 +293,8 @@ let rec interp_exp_partial isapp env e =
      (* Printf.printf "pe1: %s\n" ((\* Syntax.show_exp ~show_meta:false *\) Printing.exp_to_string pe1); *)
           
      if is_value pe1 then
-       (match match_branches branches (to_value pe1) with
-        | Some (env2, e) -> interp_exp_partial false (update_values env env2) e
+       (match match_branches branches (to_value pe1) env.value with
+        | Some (env2, e) -> interp_exp_partial false {env with value=env2} e
         | None ->
            failwith
              ( "value " ^ value_to_string (to_value pe1)

@@ -140,6 +140,25 @@ let remove_edge (m, i) (v, w) =
   in
   (update v f m, i)
 
+let remove_edges (m, i) (es: EdgeSet.t) =
+  let umap = EdgeSet.fold (fun (u,v) acc ->
+                 VertexMap.modify_def (VertexSet.empty) u
+                                      (fun vs -> VertexSet.add v vs) acc)
+                          es VertexMap.empty
+  in
+  let f vs adj =
+    match adj with
+    | None -> adj
+    | Some ns ->
+      match
+        List.filter (fun a -> not (VertexSet.mem a vs)) ns
+      with
+      | [] -> None
+      | ns' -> Some ns'
+  in
+  let m' = VertexMap.fold (fun u vs acc -> update u (f vs) acc) umap m in
+  (m', i)
+  
 (* neighbors of v in g *)
 let neighbors (m, i) v =
   good_vertex (m, i) v ;

@@ -286,7 +286,7 @@ module SmtLang =
          Printf.sprintf "(assert %s)" (term_to_smt false info tm)
       | CheckSat ->
          (* for now i am hardcoding the tactics here. *)
-         Printf.sprintf "(check-sat-using (then simplify \
+         Printf.sprintf "(check-sat-using (then propagate-values simplify \
                          solve-eqs psmt))"
       | GetModel ->
          Printf.sprintf "(get-model)"
@@ -1041,7 +1041,6 @@ module Unboxed : ExprEncoding =
       | ESome e1 ->
          failwith "Some should be unboxed"
       | EMatch (e1, bs) ->
-         (* Printf.printf "expr: %s\n" (Printing.exp_to_string e); *)
          let zes1 = encode_exp_z3 descr env e1 in
          (* intermediate variables no longer help here, probably
             because the expressions are pretty simple in this encoding *)
@@ -1827,7 +1826,7 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
       (* Printf.printf "communicating with solver"; *)
       (* start communication with solver process *)
       let solver = start_solver params in
-      ask_solver solver smt_encoding;
+      time_profile "Solving the query" (fun () -> ask_solver solver smt_encoding);
       let get_sat reply =
         match reply with
         | UNSAT -> Unsat
@@ -1882,6 +1881,9 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
                 printQuery chan q;
               ask_solver solver q;
               let reply = solver |> parse_reply in
+              (* check satisfiability and get model if required *)
+              let isSat = get_sat reply in
+              (* pop current context *)
               let pop =
                 Printf.sprintf "%s\n" ((Pop |> mk_command) |>
                                          command_to_smt smt_config.verbose info)
@@ -1889,14 +1891,14 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
               if query then
                 printQuery chan pop;
               ask_solver solver pop;
-              (match get_sat reply with
+              (match isSat with
               | Unsat ->
                  if i = k then Unsat
                  else
-                   loop (i+1)
+                   loop k
               | Sat m -> Sat m
               | Unknown -> Unknown)
            | _ -> failwith "expected failure clause of the form AtMost n"
          in
-         loop 0
+         loop k
            

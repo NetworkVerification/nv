@@ -68,6 +68,11 @@ val add_edges : t -> Edge.t list -> t
 
 val remove_edge : t -> Edge.t -> t
 
+(** Removes multiple edges from the graph. More efficient, than
+   multiple calls to remove_edge. Does not raise BadVertex if an edge
+   is invalid! *)
+val remove_edges : t -> EdgeSet.t -> t
+
 (* neighbors g v returns neighbors of v in g; raise BadVertex if v invalid *)
 
 val neighbors : t -> Vertex.t -> Vertex.t list
