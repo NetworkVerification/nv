@@ -28,7 +28,7 @@ profile: $(MLFILES)
 	$(BUILD) -tag profile -tag 'cc(gcc)' src/Main.native
 
 opt: $(MLFILES)
-	$(BUILD) -tag 'optimize(3)' src/Main.native
+	$(BUILD) -tag 'optimize(2)' src/Main.native
 
 byte: $(MLFILES)
 	$(BUILD) -tag byte -tag debug src/Main.byte
@@ -37,7 +37,7 @@ byte: $(MLFILES)
 	$(BUILD) $@.native
 
 test: $(MLFILES)
-	$(BUILD) test/Test.native
+	$(BUILD) src/Main.native test/Test.native
 	./Test.native
 
 run_tests: tests

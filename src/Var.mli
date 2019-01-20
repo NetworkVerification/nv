@@ -16,6 +16,9 @@ val from_var : t -> string * int
 
 val to_string : t -> string
 
+val equal : t -> t -> bool
+
+(* Alias for equal TODO: Refactor this out*)
 val equals : t -> t -> bool
 
 val equal_names : t -> t -> bool

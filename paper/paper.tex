@@ -1,0 +1,167 @@
+\documentclass[sigconf,10pt]{acmart}
+\usepackage{amsmath}           % basic math features
+\usepackage{amssymb}           % basic additional symbols
+\usepackage{accents}           % mathematicsl accents like hat, vector etc.
+\usepackage{xcolor}            % create and use custom colors (e.g., for highlighting)
+\usepackage{xspace}            % adds a space if needed at the end of a macro
+\usepackage{balance}           % \balance to the last page makes refs symmetric
+\usepackage{enumitem}          % allows customizing lists
+\usepackage[utf8]{inputenc}    % document encoding set to utf8
+\usepackage{graphicx}          % better includegraphics command
+\usepackage{etoolbox}          % enable patching commands, for below
+\patchcmd{\quote}{\rightmargin}{\leftmargin 1em \rightmargin}{}{}
+\usepackage{amsthm}            % basic theorems
+\usepackage{thmtools}          % more flexible theorems
+\usepackage{thm-restate}       % repeat theorems in appendix if needed
+\usepackage{hyperref}          % hyper-text links
+\usepackage{cleveref}          % smarter type-based cross-references
+\usepackage{apptools}          % customizable appendix
+\usepackage{local}             % user-defined commands stored in local.sty
+
+% break long urls in the bibliography
+\def\UrlBreaks{\do\/\do-}
+\hypersetup{breaklinks=true}
+%\hypersetup{draft}
+
+% reclaim the copyright space for the draft
+\settopmatter{printacmref=false}
+\renewcommand\footnotetextcopyrightpermission[1]{}
+\pagestyle{plain}
+
+\begin{document}
+\title{NV: An intermediate language for network verification}
+
+
+\maketitle
+
+%=====================================================
+%
+%
+%  **Abstract**
+%
+%
+%=====================================================
+
+\textbf{Abstract---}
+NV is great
+
+%=====================================================
+%
+%
+%  **Introduction**
+%
+%
+%=====================================================
+
+\section{Introduction} 
+\label{sec:introduction}
+
+Stuff
+
+%=====================================================
+%
+%
+%  **Overview of our approach**
+%
+%
+%=====================================================
+
+\section{Motivating Examples} 
+\label{sec:motivation}
+
+Key ideas
+
+%=====================================================
+%
+%
+%  **Language and Semantics**
+%
+%
+%=====================================================
+
+\section{Language} 
+\label{sec:language}
+
+\begin{enumerate}
+  \item Syntax and overview
+  \item Features, \EG, symbolic variables, requires, types, fixed point etc.
+  \item Semantics: (1) Asychronous semantics (simulation), and (2) Stable path semantics (SMT)
+\end{enumerate}
+
+%=====================================================
+%
+%
+%  **Tools**
+%
+%
+%=====================================================
+
+\section{Tools}
+\label{sec:tools}
+
+\begin{enumerate}
+  \item Simulator
+  \item SMT encoding (stable)
+  \item SMT encoding (bounded model checker)
+  \item Randomized testing / Fuzzing?
+  \item Symbolic execution 
+  \item Abstraction / symmetries
+  \item Abstraction refinement for failures
+  \item Compiler to P4
+  \item Convergence checking?
+\end{enumerate}
+
+%=====================================================
+%
+%
+%  **Evaluation**
+%
+%
+%=====================================================
+
+\section{Evaluation}
+\label{sec:evaluation}
+
+\begin{enumerate}
+  \item comparison to Batfish?
+  \item run the tool on real networks to find bugs?
+\end{enumerate}
+
+%=====================================================
+%
+%
+%  **Related work**
+%
+%
+%=====================================================
+
+\section{Related Work}
+\label{sec:related}
+
+
+%=====================================================
+%
+%
+%  **Conclusion**
+%
+%
+%=====================================================
+
+\section{Conclusion}
+\label{sec:conclusions}
+
+
+%=====================================================
+%
+%
+%  **Bibliography**
+%
+%
+%=====================================================
+
+%\balance
+ 
+\bibliographystyle{abbrv}
+\bibliography{references}
+
+\end{document}

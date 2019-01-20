@@ -19,7 +19,7 @@ type ty =
   | TMap of ty * ty
 
 and tyvar = Unbound of tyname * level | Link of ty
-                                              
+
 type var = Var.t
 
 type op =
@@ -176,6 +176,8 @@ val to_value : exp -> value
 
 val oget : 'a option -> 'a
 
+val omap : ('a -> 'b) -> 'a option -> 'b option
+
 val lams : var list -> exp -> exp
 
 val apps : exp -> exp list -> exp
@@ -206,9 +208,24 @@ val hash_value : hash_meta:bool -> value -> int
 
 val hash_exp : hash_meta:bool -> exp -> int
 
+(* Operates only on the 'v' element of the value records, ignoring
+   all other entries *)
+val compare_vs : value -> value -> int
+
+(* As above, but for exps *)
+val compare_es : exp -> exp -> int
+
+(* Operates on all entries in the value records *)
 val compare_values : value -> value -> int
 
+(* As above, but for exps *)
 val compare_exps : exp -> exp -> int
+
+(* Actual equality. For equivalence, consider using
+   Typing.equiv_tys instead *)
+val equal_tys : ty -> ty -> bool
+
+val show_exp : exp -> string
 
 val get_inner_type : ty -> ty
 
@@ -252,14 +269,14 @@ module BddMap : sig
     op_key:exp * value BatSet.PSet.t -> (value -> value) -> t -> t
 
   val map_when :
-       op_key:exp * value BatSet.PSet.t
+    op_key:exp * value BatSet.PSet.t
     -> bool Mtbdd.t
     -> (value -> value)
     -> t
     -> t
 
   val merge :
-       ?opt:value * value * value * value
+    ?opt:value * value * value * value
     -> op_key:exp * value BatSet.PSet.t
     -> (value -> value -> value)
     -> t

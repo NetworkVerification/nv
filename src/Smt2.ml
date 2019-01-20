@@ -7,9 +7,10 @@ open Solution
 open SmtUtil
 open Profile
 
-(* TODO: 
- * make everything an smt_command. i.e. assert, declarations, etc.?
- * Make smt_term wrap around terms, print out more helpful
+
+(* TODO:
+   * make everything an smt_command. i.e. assert, declarations, etc.?
+   * Make smt_term wrap around terms, print out more helpful
    comments, include location of ocaml source file
    * Have verbosity levels, we don't always need comments everywhere.
    * Don't hardcode tactics, try psmt (preliminary results were bad),
@@ -58,7 +59,7 @@ let printVerbose (msg: string) (descr: string) (span: Span.t) info =
     | _ -> -1
   in
   Printf.sprintf "; %s: %s on %d-%d\n" msg descr sl fl
-  
+
 module SmtLang =
   struct
 
@@ -247,6 +248,9 @@ module SmtLang =
          Printf.sprintf "(%s %s)" (smt_term_to_smt t) args
 
     let term_to_smt verbose info (tm : term) =
+        smt_term_to_smt tm.t
+
+    let term_to_smt_meta verbose info (tm : term) =
       (if verbose then
          printVerbose "Translating expression:" tm.tdescr tm.tloc info
        else "") ^
@@ -309,6 +313,9 @@ module SmtLang =
         
         
     let command_to_smt (verbose : bool) info (com : command) : string =
+        smt_command_to_smt info com.com
+
+    let command_to_smt_meta (verbose : bool) info (com : command) : string =
       (if verbose then
          command_of_term_meta info com
        else "") ^ 
@@ -356,23 +363,24 @@ module SmtLang =
        
   end
 
+
 open SmtLang
 
 module Constant =
-  struct
-    type t = constant
+struct
+  type t = constant
 
-    let compare x y = compare x.cname y.cname
-  end
+  let compare x y = compare x.cname y.cname
+end
 
 module ConstantSet = BatSet.Make(Constant)
-                   
+
 type smt_env =
   { mutable ctx: command list
   ; mutable const_decls: ConstantSet.t (** named constant and its sort *)
   ; mutable type_decls: datatype_decl StringMap.t
   ; mutable symbolics: Syntax.ty_or_exp VarMap.t }
-  
+
 let create_fresh descr s =
   Printf.sprintf "%s-%s" descr (Var.fresh s |> Var.to_string)
 
@@ -385,12 +393,11 @@ let rec datatype_name (ty : ty) : string option =
   match ty with
   | TVar {contents= Link t} -> datatype_name t
   | TTuple ts -> (
-    match ts with
-    | [] -> failwith "empty tuple"
-    | [t] -> datatype_name t
-    | ts ->
-       let len = List.length ts in
-       Some (Printf.sprintf "Pair%d" len))
+      match ts with
+      | [t] -> datatype_name t
+      | ts ->
+        let len = List.length ts in
+        Some (Printf.sprintf "Pair%d" len))
   | TOption ty -> Some "Option"
   | _ -> None
 
@@ -399,12 +406,11 @@ let rec type_name (ty : ty) : string =
   match ty with
   | TVar {contents= Link t} -> type_name t
   | TTuple ts -> (
-    match ts with
-    | [] -> failwith "empty tuple"
-    | [t] -> type_name t
-    | ts ->
-       let len = List.length ts in
-       Printf.sprintf "Pair%d" len)
+      match ts with
+      | [t] -> type_name t
+      | ts ->
+        let len = List.length ts in
+        Printf.sprintf "Pair%d" len)
   | TOption ty -> "Option"
   | TBool -> "Bool"
   | TInt _ -> "Int"
@@ -435,15 +441,14 @@ let rec ty_to_sort (ty: ty) : sort =
   | TBool -> BoolSort
   | TInt _ -> IntSort
   | TTuple ts -> (
-    match ts with
-    | [] -> failwith "empty tuple"
-    | [t] -> ty_to_sort t
-    | ts ->
-       let name = oget (datatype_name ty) in
-       DataTypeSort (name, List.map ty_to_sort ts))
+      match ts with
+      | [t] -> ty_to_sort t
+      | ts ->
+        let name = oget (datatype_name ty) in
+        DataTypeSort (name, List.map ty_to_sort ts))
   | TOption ty' ->
-     let name = oget (datatype_name ty) in
-     DataTypeSort (name, [ty_to_sort ty'])
+    let name = oget (datatype_name ty) in
+    DataTypeSort (name, [ty_to_sort ty'])
   | TMap _ -> failwith "unimplemented"
   (*       mk_array_sort ctx (ty_to_sort ctx ty1) (ty_to_sort ctx ty2)*)
   | TVar _ | QVar _ | TArrow _ ->
@@ -491,29 +496,64 @@ module Boxed: ExprEncoding =
       name
 
     let to_list x = [x]
-                  
-    (** Translates a [Syntax.ty] to an SMT datatype declaration *)
-    let rec ty_to_type_decl (ty: ty) : datatype_decl =
-      match ty with
-      | TVar {contents= Link t} -> ty_to_type_decl t
-      | TInt _ | TBool -> failwith "not a datatype"
-      | TOption _ ->
-         let name = datatype_name ty |> oget in
-         let param = VarSort "T1" in
-         let none = { constr_name = "mkNone"; constr_args = [] } in
-         let some = { constr_name = "mkSome"; constr_args = [("getSome", param)]} in
-         { name = name; params = [param]; constructors = [none; some]}        
-      | TTuple ts ->
-         let len = List.length ts in
-         let name = datatype_name ty |> oget in
-         let params = List.mapi (fun i _ -> VarSort (Printf.sprintf "T%d" i)) ts in
-         let mkpair = { constr_name = Printf.sprintf "mkPair%d" len;
-                        constr_args =
-                          List.mapi (fun i _ ->
-                              Printf.sprintf "proj%d" i, List.nth params i) ts} in
-         { name = name; params = params; constructors = [mkpair] }
-      | TVar _ | QVar _ | TArrow _ | TMap _ ->
-         failwith "not a datatype"
+
+(** Translates a [Syntax.ty] to an SMT datatype declaration *)
+let rec ty_to_type_decl (ty: ty) : datatype_decl =
+  match ty with
+  | TVar {contents= Link t} -> ty_to_type_decl t
+  | TInt _ | TBool -> failwith "not a datatype"
+  | TOption _ ->
+    let name = datatype_name ty |> oget in
+    let param = VarSort "T1" in
+    let none = { constr_name = "mkNone"; constr_args = [] } in
+    let some = { constr_name = "mkSome"; constr_args = [("getSome", param)]} in
+    { name = name; params = [param]; constructors = [none; some]}
+  | TTuple ts ->
+    let len = List.length ts in
+    let name = datatype_name ty |> oget in
+    let params = List.mapi (fun i _ -> VarSort (Printf.sprintf "T%d" i)) ts in
+    let mkpair = { constr_name = Printf.sprintf "mkPair%d" len;
+                   constr_args =
+                     List.mapi (fun i _ ->
+                         Printf.sprintf "proj%d" i, List.nth params i) ts} in
+    { name = name; params = params; constructors = [mkpair] }
+  | TVar _ | QVar _ | TArrow _ | TMap _ ->
+    failwith "not a datatype"
+
+(** Finds the declaration for the datatype of ty if it exists,
+    otherwise it creates it and adds it to the env *)
+let compute_decl (env : smt_env) ty =
+  let name = datatype_name ty in
+  match name with
+  | None -> None
+  | Some name ->
+    match StringMap.Exceptionless.find name env.type_decls  with
+    | None ->
+      let decl = ty_to_type_decl ty in
+      env.type_decls <- StringMap.add name decl env.type_decls;
+      Some decl
+    | Some decl -> Some decl
+
+let add_constant (env : smt_env) ?(cdescr = "") ?(cloc = Span.default) cname csort =
+  env.const_decls <- ConstantSet.add {cname; csort; cdescr; cloc} env.const_decls
+
+let mk_constant (env : smt_env) ?(cdescr = "") ?(cloc = Span.default) cname csort =
+  add_constant env ~cdescr:cdescr ~cloc:cloc cname csort;
+  (mk_var cname) |> (mk_term ~tdescr:cdescr ~tloc:cloc)
+
+let add_constraint (env : smt_env) (c : term) =
+  env.ctx <- (mk_assert c |> mk_command) :: env.ctx
+
+let add_symbolic (env : smt_env) (b: Var.t) (ty: Syntax.ty) =
+  env.symbolics <- VarMap.add b (Syntax.Ty ty) env.symbolics
+
+let is_symbolic syms x =
+  VarMap.mem x syms
+
+let is_var (tm: SmtLang.term) =
+  match tm.t with
+  | Var _ -> true
+  | _ -> false
 
     let ty_to_sorts = ty_to_sort
 
@@ -1143,11 +1183,12 @@ let proj_of_var s =
             (List.nth (BatString.split_on_char '-' s2) 1))
   with Not_found -> None
                   
+
 let assert_var i =
   Printf.sprintf "assert-%d" (Integer.to_int i)
 
 (* this is flaky, the variable name used by SMT will be
-     assert-n-result, we need to chop both ends *)
+   assert-n-result, we need to chop both ends *)
 let node_of_assert_var s =
   Integer.of_string (BatString.lchop ~n:7 s |> BatString.rchop ~n:7)
 
@@ -1162,7 +1203,6 @@ let init_solver ds =
     type_decls = StringMap.empty;
     symbolics =
       List.fold_left (fun acc (v,e) -> VarMap.add v e acc) VarMap.empty symbolics }
-
 
 module type Encoding =
   sig
@@ -1413,7 +1453,6 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
   struct
     open E
 
-
     let add_symbolic_constraints env requires sym_vars =
       (* Declare the symbolic variables: ignore the expression in case of SMT *)
       VarMap.iter
@@ -1491,11 +1530,9 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
                                nodes AdjGraph.VertexMap.empty
       in
 
-
       let init_exp u = eapp einit (node_exp u) in
       let trans_exp u v x = eapp (eapp etrans (edge_exp u v)) x in
       let merge_exp u x y = eapp (eapp (eapp emerge (node_exp u)) x) y in
-
 
       (* map from nodes to incoming messages*)
       let incoming_messages_map =
@@ -1757,31 +1794,40 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
     (** ** Translate the environment to SMT-LIB2 *)
       
     let env_to_smt ?(verbose=false) info (env : smt_env) =
+      let buf = Buffer.create 8000000 in
       (* Emit context *)
-      let context = List.rev_map (fun c -> command_to_smt verbose info c) env.ctx in
-      let context = BatString.concat "\n" context in
+      Buffer.add_string buf "(set-option :model_evaluator.completion true)";
+      List.iter (fun c -> Buffer.add_string buf (command_to_smt verbose info c)) env.ctx;
+      ConstantSet.iter (fun c ->
+          Buffer.add_string buf (const_decl_to_smt ~verbose:verbose info c)) env.const_decls;
+      Buffer.contents buf
+          
+      (* let context = time_profile "compute context" *)
+      (*                            (fun () -> List.rev_map (fun c -> command_to_smt verbose info c) env.ctx) in *)
+      (* let context = time_profile "concat context" (fun () -> BatString.concat "\n" context) in *)
 
-      (* Emit constants *)
-      let constants = ConstantSet.to_list env.const_decls in
-      let constants =
-        BatString.concat "\n"
-                         (List.map (fun c -> const_decl_to_smt ~verbose:verbose info c)
-                                   constants)
-      in
-      (*       let constants = ConstantSet.fold (fun c ls -> *)
-      (*                     (const_decl_to_smt ~verbose:verbose info c) :: ls) env.const_decls [] *)
-      (* in *)
+      (* (\* Emit constants *\) *)
+      (* let constants = ConstantSet.to_list env.const_decls in *)
       (* let constants = *)
-      (*   BatString.concat "\n" constants *)
+      (*   BatString.concat "\n" *)
+      (*                    (List.map (fun c -> const_decl_to_smt ~verbose:verbose info c) *)
+      (*                              constants) *)
       (* in *)
-      (* Emit type declarations *)
-      let decls = StringMap.bindings env.type_decls in
-      let decls = String.concat "\n"
-                                (List.map (fun (_,typ) -> type_decl_to_smt typ) decls) in
-      Printf.sprintf "(set-option :model_evaluator.completion true)
-                      \n %s\n %s\n %s\n" decls constants context
+      (* (\* let constants = ConstantSet.fold (fun c ls -> *\) *)
+      (* (\*                     (const_decl_to_smt ~verbose:verbose info c) :: ls) env.const_decls [] *\) *)
+      (* (\* in *\) *)
+      (* (\* let constants = *\) *)
+      (* (\*   BatString.concat "\n" constants *\) *)
+      (* (\* in *\) *)
+      (* (\* Emit type declarations *\) *)
+      (* let decls = StringMap.bindings env.type_decls in *)
+      (* let decls = String.concat "\n" *)
+      (*                           (List.map (fun (_,typ) -> type_decl_to_smt typ) decls) in *)
+      (* Printf.bprintf buf "(set-option :model_evaluator.completion true) *)
+      (*                     \n %s\n %s\n %s\n" decls constants context; *)
+      (* Buffer.contents buf *)
     (* this new line is super important otherwise we don't get a reply
-   from Z3.. not understanding why*)
+      from Z3.. not understanding why*)
 
     let check_sat info =
       Printf.sprintf "%s\n"
@@ -1826,7 +1872,7 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
       (* Printf.printf "communicating with solver"; *)
       (* start communication with solver process *)
       let solver = start_solver params in
-      time_profile "Solving the query" (fun () -> ask_solver solver smt_encoding);
+      ask_solver solver smt_encoding;
       let get_sat reply =
         match reply with
         | UNSAT -> Unsat
@@ -1859,8 +1905,11 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
         | _ -> failwith "unexpected answer from solver\n"
       in
       match smt_config.failures with
-      | None -> 
-         ask_solver solver (check_sat info);
+      | None ->
+         let q = check_sat info in
+         if query then
+           printQuery chan q;
+         ask_solver solver q;
          let reply = solver |> parse_reply in
          get_sat reply
       | Some k ->
@@ -1879,6 +1928,7 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
               in
               if query then
                 printQuery chan q;
+              Printf.printf "printed the query\n";
               ask_solver solver q;
               let reply = solver |> parse_reply in
               (* check satisfiability and get model if required *)

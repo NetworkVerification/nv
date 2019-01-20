@@ -11,13 +11,13 @@ module StringSet = BatSet.Make (struct
 
   let compare = String.compare
 end)
-                 
+
 module StringSetSet = BatSet.Make (struct
   type t = StringSet.t
 
   let compare = StringSet.compare
 end)
-                 
+
 module VarMap = Map.Make (struct
   type t = Var.t
 
@@ -29,7 +29,13 @@ module VarSet = BatSet.Make (struct
 
   let compare = Var.compare
 end)
-                            
+
+module ExpSet = Set.Make (struct
+    type t = exp
+
+    let compare = compare_es
+end)
+
 module TypeMap = Map.Make (struct
   type t = ty
 
@@ -54,10 +60,17 @@ end)
 
 let printList (printer: 'a -> string) (ls: 'a list) (first : string)
               (sep : string) (last : string) =
+  let buf = Buffer.create 500 in
   let rec loop ls =
     match ls with
-    | [] -> ""
-    | [l] -> printer l
-    | l :: ls -> (printer l) ^ sep ^ (loop ls)
+    | [] -> ()
+    | [l] -> Buffer.add_string buf (printer l)
+    | l :: ls ->
+       Buffer.add_string buf (printer l);
+       Buffer.add_string buf sep;
+       loop ls 
   in
-  first ^ (loop ls) ^ last
+  Buffer.add_string buf first;
+  loop ls;
+  Buffer.add_string buf last;
+  Buffer.contents buf
