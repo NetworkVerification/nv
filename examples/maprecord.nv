@@ -10,14 +10,14 @@ let edges = {
 
 let mapo f o =
   match o with
-  | { val : _; isNone : true } -> o
-  | { val : x; isNone : false } -> { val : f x; isNone : false }
+  | { val = _; isNone = true } -> o
+  | { val = x; isNone = false } -> { val = f x; isNone = false }
 
 let mapbetter f o1 o2 =
   if o1.isNone then o2 else
   if o2.isNone then o1 else
   let newval = f (o1.val) (o2.val) in
-  { isNone : false; val : newval }
+  { isNone = false; val = newval }
 
 let merge node x y =
   let f = mapbetter (fun x y -> if x < y then x else y) in
@@ -27,7 +27,7 @@ let trans edge x =
   map (fun x -> mapo (fun x -> x + 1) x) x
 
 let init node =
-  let m = createDict ({ val : 0; isNone : true }) in
+  let m = createDict ({ val = 0; isNone = true }) in
   match node with
-  | 0 -> m[3 := { val : 2; isNone : false }]
-  | 1 -> m[5 := { val : 7; isNone : false }]
+  | 0 -> m[3 := { val = 2; isNone = false }]
+  | 1 -> m[5 := { val = 7; isNone = false }]

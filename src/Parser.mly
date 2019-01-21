@@ -30,7 +30,6 @@
     | [p] -> p
     | ps -> PTuple ps
 
-  (* TODO: span not calculated correctly here? *)
   let rec make_fun params (body : exp) (body_span: Span.t) (span : Span.t) : exp =
     match params with
 	| [] -> body
@@ -229,7 +228,7 @@ components:
 ;
 
 record_entry_expr:
-  | ID COLON expr                       { snd $1, $3 }
+  | ID EQ expr                       { snd $1, $3 }
 ;
 
 record_entry_exprs:
@@ -251,7 +250,6 @@ expr:
                                           let span = Span.extend $1 $8.espan in
                                           exp e span }
     | IF expr THEN expr ELSE expr       { exp (eif $2 $4 $6) (Span.extend $1 $6.espan) }
-    (* TODO: span does not include the branches here *)
     | MATCH expr WITH branches          { exp (ematch $2 $4) (Span.extend $1 $3) }
     | FUN params ARROW expr             { make_fun $2 $4 $4.espan (Span.extend $1 $4.espan) }
     | MAP exprsspace                    { exp (eop MMap $2) $1 }
@@ -374,7 +372,7 @@ patterns:
 ;
 
 record_entry_p:
-  | ID COLON pattern                    { snd $1, $3 }
+  | ID EQ pattern                    { snd $1, $3 }
 ;
 
 record_entry_ps:
