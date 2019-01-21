@@ -30,6 +30,7 @@
     | [p] -> p
     | ps -> PTuple ps
 
+  (* TODO: span not calculated correctly here? *)
   let rec make_fun params (body : exp) (body_span: Span.t) (span : Span.t) : exp =
     match params with
 	| [] -> body
@@ -89,6 +90,8 @@
     : (Var.t * 'a) list
   =
     let record_type = find_record_type (List.hd lst |> fst |> Var.name) in
+    (* FIXME: Strictly speaking, we should make sure that the elements of keys
+       are a strict subset of the elements of record_type *)
     let keys = StringMap.keys record_type in
     BatEnum.fold
       (fun acc lab ->
@@ -277,6 +280,7 @@ expr:
                                           let span = Span.extend $1 $8.espan in
                                           exp e span }
     | IF expr THEN expr ELSE expr       { exp (eif $2 $4 $6) (Span.extend $1 $6.espan) }
+    (* TODO: span does not include the branches here *)
     | MATCH expr WITH branches          { exp (ematch $2 $4) (Span.extend $1 $3) }
     | FUN params ARROW expr             { make_fun $2 $4 $4.espan (Span.extend $1 $4.espan) }
     | MAP exprsspace                    { exp (eop MMap $2) $1 }
@@ -342,6 +346,12 @@ expr:
                                           exp (eop MMapFilter args) $1 }
     | expr DOT ID                       { exp (eproject $1 (Var.name (snd $3))) (Span.extend ($1.espan) (fst $3)) }
     | LBRACE record_entry_exprs RBRACE  { exp (erecord (make_record_map $2)) (Span.extend $1 $3) }
+    | LBRACE expr WITH record_entry_exprs RBRACE {
+                                          let mk_project v =
+                                          exp (eproject $2 (Var.name v)) (Span.extend $1 $3) in
+                                          let lst = fill_record $4 mk_project in
+                                          exp (erecord (make_record_map lst)) (Span.extend $1 $3)
+                                        }
     | LBRACE exprs RBRACE               { make_set $2 (Span.extend $1 $3) }
     | LBRACE RBRACE                     { make_set [] (Span.extend $1 $2) }
     | expr2                             { $1 }
