@@ -37,7 +37,7 @@ let smt_config : smt_options =
   }
 
 let get_requires_no_failures ds =
-  List.filter (fun e -> match e.e with
+  BatList.filter (fun e -> match e.e with
                         | EOp (AtMost _, _) -> false
                         | _ -> true) (get_requires ds)
   
@@ -542,7 +542,7 @@ module Unboxed : ExprEncoding =
         match ts with
         | [] -> failwith "empty tuple"
         | [t] -> ty_to_sorts t
-        | ts -> BatList.map ty_to_sorts ts |> List.concat)
+        | ts -> BatList.map ty_to_sorts ts |> BatList.concat)
       | TOption _ -> failwith "options should be unboxed"
       | TMap _ -> failwith "unimplemented"
       | TVar _ | QVar _ | TArrow _ ->
@@ -817,7 +817,7 @@ let init_solver ds =
     const_decls = ConstantSet.empty;
     type_decls = StringMap.empty;
     symbolics =
-      List.fold_left (fun acc (v,e) -> VarMap.add v e acc) VarMap.empty symbolics }
+      BatList.fold_left (fun acc (v,e) -> VarMap.add v e acc) VarMap.empty symbolics }
 
 module type Encoding =
   sig
@@ -1003,10 +1003,9 @@ module ClassicEncoding (E: ExprEncoding): Encoding =
               else
                 [avalue (vtuple [vint i; vint j],
                          Some Typing.edge_ty, Span.default)] in
-            let etrans_uv =
-              time_profile "interp edge" (fun () -> Interp.interp_partial_fun etrans edge) in
-            Printf.printf "%s: %s\n\n\n\n\n" (AdjGraph.printEdge (i,j))
-                          (Printing.exp_to_string etrans_uv);
+            let etrans_uv = Interp.interp_partial_fun etrans edge in
+            (* Printf.printf "%s: %s\n\n\n\n\n" (AdjGraph.printEdge (i,j)) *)
+            (*               (Printing.exp_to_string etrans_uv); *)
             let trans, x, env =
               encode_z3_trans
                 (Printf.sprintf "trans-%d-%d" (Integer.to_int i)
@@ -1464,13 +1463,8 @@ module ClassicEncoding (E: ExprEncoding): Encoding =
     (*   Buffer.contents buf *)
       
     let env_to_smt ?(verbose=false) info (env : smt_env) =
-      let context =
-        time_profile "compute context"
-                     (fun () -> BatList.rev_map (fun c -> command_to_smt verbose info c) env.ctx)
-      in
-      let context =
-        time_profile "concat context" (fun () -> BatString.concat "\n" context)
-      in
+      let context = BatList.rev_map (fun c -> command_to_smt verbose info c) env.ctx in
+      let context = BatString.concat "\n" context in
 
       (* Emit constants *)
       let constants = ConstantSet.to_list env.const_decls in
