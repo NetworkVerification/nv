@@ -11,7 +11,7 @@ let rec has_var p x =
   | PWild | PBool _ | PInt _ -> false
   | PVar y -> Var.equals x y
   | PTuple ps ->
-      List.fold_left (fun acc p -> acc || has_var p x) false ps
+      BatList.fold_left (fun acc p -> acc || has_var p x) false ps
   | POption None -> false
   | POption (Some p) -> has_var p x
 
@@ -20,7 +20,7 @@ let rec remove_all env p =
   | PWild | PBool _ | PInt _ -> env
   | PVar x -> Env.remove env x
   | PTuple ps ->
-      List.fold_left (fun acc p -> remove_all acc p) env ps
+      BatList.fold_left (fun acc p -> remove_all acc p) env ps
   | POption None -> env
   | POption (Some p) -> remove_all env p
 
@@ -43,13 +43,13 @@ let rec substitute x e1 e2 =
   | ETy (e1, ty) -> ety (substitute x e1 e2) ty |> wrap e1
   | EMatch (e, bs) ->
       ematch (substitute x e e2)
-        (List.map (substitute_pattern x e2) bs)
+        (BatList.map (substitute_pattern x e2) bs)
       |> wrap e1
   | ESome e -> esome (substitute x e e2) |> wrap e1
   | ETuple es ->
-      etuple (List.map (fun e -> substitute x e e2) es) |> wrap e1
+      etuple (BatList.map (fun e -> substitute x e e2) es) |> wrap e1
   | EOp (op, es) ->
-      eop op (List.map (fun e -> substitute x e e2) es) |> wrap e1
+      eop op (BatList.map (fun e -> substitute x e e2) es) |> wrap e1
   | EVal _ -> e1
 
 and substitute_pattern x e2 (p, e) =
@@ -75,7 +75,7 @@ let rec inline_app env e1 e2 : exp =
     | ETy (e1, ty) -> inline_app env e1 e2
     | EMatch (e, bs) ->
         let e = inline_exp env e in
-        let branches = List.map (inline_branch_app env e2) bs in
+        let branches = BatList.map (inline_branch_app env e2) bs in
         ematch e branches |> wrap e1
     | EApp _ -> eapp e1 e2 |> wrap e1
     | ESome _ | ETuple _ | EOp _ | EVal _ ->
@@ -97,7 +97,7 @@ and inline_exp (env: exp Env.t) (e: exp) : exp =
     | EVar x -> (
       match Env.lookup_opt env x with None -> e | Some e1 -> e1 )
     | EVal v -> e
-    | EOp (op, es) -> eop op (List.map (inline_exp env) es) |> wrap e
+    | EOp (op, es) -> eop op (BatList.map (inline_exp env) es) |> wrap e
     | EFun f ->
         let body = inline_exp env f.body in
         efun {f with body} |> wrap e
@@ -117,10 +117,10 @@ and inline_exp (env: exp Env.t) (e: exp) : exp =
         if is_function_ty e1 then
           inline_exp (Env.update env x e1') e2
         else elet x e1' (inline_exp env e2) |> wrap e
-    | ETuple es -> etuple (List.map (inline_exp env) es) |> wrap e
+    | ETuple es -> etuple (BatList.map (inline_exp env) es) |> wrap e
     | ESome e1 -> esome (inline_exp env e1) |> wrap e
     | EMatch (e1, bs) ->
-        ematch (inline_exp env e1) (List.map (inline_branch env) bs)
+        ematch (inline_exp env e1) (BatList.map (inline_branch env) bs)
         |> wrap e
     | ETy (e1, ty) -> ety (inline_exp env e1) ty |> wrap e
   in

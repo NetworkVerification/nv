@@ -59,7 +59,7 @@ let groupVerticesByAbsId (umap: (AbsIdSet.t) VertexMap.t) : VertexSetSet.t =
 let refineTopological (f: abstractionMap) (g: AdjGraph.t)
                       (us: AbstractNode.t) : abstractionMap =
   let refineOne (u : Vertex.t) (umap : AbsIdSet.t VertexMap.t) =
-    List.fold_left (fun acc v ->
+    BatList.fold_left (fun acc v ->
         let vhat = getId f v in
         VertexMap.modify_opt u (fun omapu ->
                             match omapu with
@@ -113,7 +113,7 @@ let refineAbstraction (f: abstractionMap) (g: AdjGraph.t)
                       (mergeMap: (Vertex.t, int * Syntax.exp) Hashtbl.t)
                       (us: AbstractNode.t) : abstractionMap =
   let refineOne (u : Vertex.t) (umap : PolicyAbsId.t VertexMap.t) =
-    List.fold_left (fun acc v ->
+    BatList.fold_left (fun acc v ->
         let vhat = getId f v in
         let (trans_pol, _) = Hashtbl.find transMap (u,v) in
         VertexMap.modify_opt u (fun omapu ->
@@ -148,8 +148,8 @@ let partialEvalTrans (graph : AdjGraph.t)
                      (trans : Syntax.exp) : (Edge.t, int * Syntax.exp) Hashtbl.t  =
   let edge_to_val e = vtuple [vint (fst e); vint (snd e)] in
   let es = AdjGraph.edges graph in
-  let tbl = Hashtbl.create (List.length es) in
-  List.iter (fun e ->
+  let tbl = Hashtbl.create (BatList.length es) in
+  BatList.iter (fun e ->
       let ptrans = Interp.interp_partial_fun trans [edge_to_val e] in
       Hashtbl.add tbl e ((Syntax.hash_exp ~hash_meta:false ptrans), ptrans)) es;
   tbl
@@ -169,7 +169,7 @@ let partialEvalMerge (graph : AdjGraph.t)
 let findAbstractEdges (g: AdjGraph.t) (f: abstractionMap) (uhat: abstrId) : EdgeSet.t =
   let repru = getGroupRepresentativeId f uhat in
   let ns = neighbors g repru in
-  List.fold_left (fun acc v -> EdgeSet.add (uhat, getId f v) acc) EdgeSet.empty ns
+  BatList.fold_left (fun acc v -> EdgeSet.add (uhat, getId f v) acc) EdgeSet.empty ns
 
 (* Given a concrete graph, transfer, merge functions a destinations
    computes an abstract network *)
@@ -195,8 +195,6 @@ module BuildAbstractNetwork =
     let buildAbstractAdjGraphDecls (g: AdjGraph.t) (f: abstractionMap)
         : Integer.t * (Edge.t list) =
       let n = Integer.create ~value:(size f) ~size:32 in
-      (* show_message (printAbstractGroups f "\n") T.Blue *)
-      (*              "Abstract groups before crash "; *)
       let rec edges uhat =
         if uhat = n then EdgeSet.empty
         else
@@ -224,7 +222,7 @@ module BuildAbstractNetwork =
               Some Typing.node_ty, Span.default)
       in
       let failuresSum =
-        List.fold_left (fun acc (uhat, vhat) ->
+        BatList.fold_left (fun acc (uhat, vhat) ->
             aexp (eop (UAdd 32)
                       [(bool2int_exp (evar (EdgeMap.find (uhat, vhat) failuresMap))); acc],
                   Some Typing.node_ty, Span.default))
@@ -237,7 +235,7 @@ module BuildAbstractNetwork =
       let failuresConstraint_pb (k: int) (failuresMap: Var.t EdgeMap.t) : Syntax.exp =
         let arg1 = aexp(etuple (EdgeMap.fold (fun _ fv acc ->
                                     (evar fv) :: acc) failuresMap []),
-                        Some (TTuple (List.init (EdgeMap.cardinal failuresMap)
+                        Some (TTuple (BatList.init (EdgeMap.cardinal failuresMap)
                                                 (fun _ -> TBool))),
                         Span.default
                        )
@@ -251,7 +249,7 @@ module BuildAbstractNetwork =
     let buildSymbolicFailures (aedges : Edge.t list) (k : int) =
       (* symbolic variables of failures, one for each abstract edge *)
       let failuresMap =
-        List.fold_left (fun acc (u,v) ->
+        BatList.fold_left (fun acc (u,v) ->
             let e = Vertex.printVertex u ^ Vertex.printVertex v in
             let failVar = Var.fresh ("failed-" ^ e) in
             EdgeMap.add (u,v) failVar acc) EdgeMap.empty aedges in
@@ -297,7 +295,7 @@ module BuildAbstractNetwork =
          transfer function and augment it with a check for whether it's
          failed *)
       let branches =
-        List.fold_left (fun acc (uhat, vhat) ->
+        BatList.fold_left (fun acc (uhat, vhat) ->
             let p = PTuple [PInt uhat; PInt vhat] in
             let u = getGroupRepresentativeId f uhat in
             match getNeighborsInVhat f g u vhat with
@@ -452,7 +450,7 @@ module BuildAbstractNetwork =
       let inithat = buildAbstractInit dst initMap attrTy f in
       (* build the abstract assert function *)
       let asserthat = buildAbstractAssert assertMap f in
-      let symbD = List.map (fun (x, tye) ->
+      let symbD = BatList.map (fun (x, tye) ->
                       if Var.name x = "d" then
                         DLet (x,Some (TTuple [TInt 32; TInt 32]),
                               e_val (vtuple [vint (fst pre); vint (snd pre)]))
@@ -506,7 +504,7 @@ module FailuresAbstraction =
       let addNeighbor u =
         let neighborsOfu = neighbors g u in
         let neighborsOfUinV =
-          List.filter (fun v -> AbstractNode.mem v vhat) neighborsOfu
+          BatList.filter (fun v -> AbstractNode.mem v vhat) neighborsOfu
         in
         VertexSet.of_list neighborsOfUinV
       in
@@ -609,7 +607,7 @@ module FailuresAbstraction =
     let cuts_choices forig f (cuts: EdgeSet.t list)
         : ((abstrId * int) list) * ((abstrId list) GroupMap.t) * ((abstrId list) GroupMap.t) =
       let accfreq, accReachAbs, accUnreachAbs =
-        List.fold_left (fun acc cutset ->
+        BatList.fold_left (fun acc cutset ->
             EdgeSet.fold (fun (u,v) (accfreq, accReachAbs, accUnreachAbs) ->
                 (updateList u (fun freq -> match freq with
                                            | None -> 1
@@ -622,7 +620,7 @@ module FailuresAbstraction =
                                       (fun vs -> v :: vs) accReachAbs))) cutset acc)
                        ([], GroupMap.empty, GroupMap.empty) cuts
       in
-      let accfreq = List.sort (fun (_,f) (_,f') -> Pervasives.compare f' f) accfreq in 
+      let accfreq = BatList.sort (fun (_,f) (_,f') -> Pervasives.compare f' f) accfreq in 
       (accfreq, accReachAbs, accUnreachAbs)
 
     (* finds the minimum entry of the map that satisfies p, raises Not_found. *)
@@ -663,7 +661,7 @@ module FailuresAbstraction =
     let update_vertex_set backMap (vs: VertexSet.t) =
       VertexSet.fold (fun uorig acc ->
           let us = GroupMap.find uorig backMap in
-          List.fold_left (fun acc u ->
+          BatList.fold_left (fun acc u ->
               VertexSet.add u acc) acc us) vs VertexSet.empty
 
     (* g is the graph that corresponds to the new abstraction *)
@@ -671,10 +669,10 @@ module FailuresAbstraction =
       EdgeSet.fold (fun (uorig,vorig) acc ->
           let us = GroupMap.find uorig backMap in
           let vs = GroupMap.find vorig backMap in
-          List.fold_left (fun acc u ->
+          BatList.fold_left (fun acc u ->
               let ns = neighbors g u in
-              List.fold_left (fun acc n ->
-                  if List.mem n vs then
+              BatList.fold_left (fun acc n ->
+                  if BatList.mem n vs then
                     EdgeSet.add (u,n) acc
                   else acc) acc ns) acc us) es EdgeSet.empty
 
@@ -761,7 +759,7 @@ module FailuresAbstraction =
     let countererexample_refinement_breadth = 20
 
     let choose_random_splittable f (es:EdgeSet.t list) =
-      List.fold_left (fun acc es ->
+      BatList.fold_left (fun acc es ->
           EdgeSet.fold (fun (u,v) acc ->
               let acc =
                 if AbstractNode.cardinal (getGroupById f u) > 1 then
@@ -800,14 +798,14 @@ module FailuresAbstraction =
 
          let nodes_to_split_1 =
            try (findNPred (fun us ->
-                    List.for_all (fun u ->
+                    BatList.for_all (fun u ->
                                 AbstractNode.cardinal (getGroupById f u) > 1) us)
                           reachAbs 1)
            with Not_found ->  []
          in
          let nodes_to_split_2 = 
            try (findNPred (fun us ->
-                    List.for_all (fun u ->
+                    BatList.for_all (fun u ->
                         AbstractNode.cardinal (getGroupById f u) > 1) us)
                           unreachAbs 1)
            with Not_found ->
@@ -886,14 +884,12 @@ module FailuresAbstraction =
                    AbstractionMap.getGroupById f |>
                    AbstractNode.randomSplit
                in
-               let uss = AbstractNodeSet.add us2
-                                             (AbstractNodeSet.singleton us1)
-               in
+               let uss = AbstractNodeSet.add us2 (AbstractNodeSet.singleton us1) in
                let f' = splitSet f uss in
                let f' = abstractionTopological f' g in
                let backMap = buildForwardMap f f' in
                [(f', update_vertex_set backMap todo)]
-            | _ -> List.map (fun fnew ->
+            | _ -> BatList.map (fun fnew ->
                        let backMap = buildForwardMap f fnew in
                        (fnew, update_vertex_set backMap todo)) best_refinements
 
@@ -930,7 +926,7 @@ module FailuresAbstraction =
                (* If we have already find a refinement that is better
                    than the one we are exploring right now, then stop
                    exploring it *)
-               let q = List.fold_left (fun acc (f,todo) ->
+               let q = BatList.fold_left (fun acc (f,todo) ->
                            match minimum with
                            | None ->
                               SearchSet.add (f,todo) acc
@@ -1016,7 +1012,7 @@ module FailuresAbstraction =
             EdgeSet.fold (fun (u,v) acc ->
                 let vorig = get_orig_group fbonsai f v in
                 let vs = GroupMap.find vorig fwdMap in
-                List.fold_left (fun acc v' ->
+                BatList.fold_left (fun acc v' ->
                     EdgeSet.add (u,v') acc) acc vs) unused_edges EdgeSet.empty
           in
           (* find all potentially unreachable nodes based on symmetries *)
@@ -1024,7 +1020,7 @@ module FailuresAbstraction =
             VertexSet.fold (fun u acc ->
                 let uorig = get_orig_group fbonsai f u in
                 let us = GroupMap.find uorig fwdMap in
-                List.fold_left (fun acc u ->
+                BatList.fold_left (fun acc u ->
                     VertexSet.add u acc) acc us) unreachable VertexSet.empty
           in
           let f' = counterExampleSearch g f unused_edges_sym unreachable_sym dst k in
@@ -1055,12 +1051,12 @@ module FailuresAbstraction =
          (* require all of them to be in cut-set? *)
          let nodes_to_split =
            try (findNPred (fun us ->
-                            List.for_all (fun u ->
+                            BatList.for_all (fun u ->
                                 AbstractNode.cardinal (getGroupById f u) > 1) us)
                           reachAbs 1)
            with Not_found ->
                  try (findNPred (fun us ->
-                                   List.for_all (fun u ->
+                                   BatList.for_all (fun u ->
                                        AbstractNode.cardinal (getGroupById f u) > 1) us)
                                   unreachAbs 1)
                  with Not_found ->
@@ -1132,7 +1128,7 @@ module FailuresAbstraction =
                let f' = abstractionTopological f' g in
                let backMap = buildForwardMap f f' in
                [(f', update_vertex_set backMap todo)]
-            | _ -> List.map (fun fnew ->
+            | _ -> BatList.map (fun fnew ->
                        let backMap = buildForwardMap f fnew in
                        (fnew, update_vertex_set backMap todo)) best_refinements
                  
@@ -1151,19 +1147,15 @@ module FailuresAbstraction =
       (* making minimum a reference, as an optimization on the final step*)
       let rec loop explored minimum q =
         try
-          (* Printf.printf "queue size: %d\n" (SearchSet.length q); *)
-          (* if (SearchSet.length q > 2) then *)
-          (*   SearchSet.iter (fun (f, todo) () -> *)
-          (*       Printf.printf "f size: %d\n todo size:%d\n" (AbstractionMap.size f) *)
-          (*                     (VertexSet.cardinal todo)) q (); *)
           let ((f, todo), q) = SearchSet.pop q in
-          let b = match minimum with
+          let b =
+            match minimum with
             | None -> false
             | Some minimumf ->
                if (compare_refinements minimumf f <= 0) then
                  true
-             else
-               false
+               else
+                 false
           in
           if b then
             loop (explored+1) minimum q
@@ -1181,7 +1173,7 @@ module FailuresAbstraction =
                (* If we have already find a refinement that is better
                    than the one we are exploring right now, then stop
                    exploring it *)
-               let q = List.fold_left (fun acc (f,todo) ->
+               let q = BatList.fold_left (fun acc (f,todo) ->
                            match minimum with
                            | None ->
                               SearchSet.add (f,todo) acc
