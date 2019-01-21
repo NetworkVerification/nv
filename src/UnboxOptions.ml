@@ -25,7 +25,7 @@ let rec unbox_ty ty =
   | TInt _ -> ty
   | TArrow (t1, t2) ->
      TArrow (unbox_ty t1, unbox_ty t2)
-  | TTuple ts -> TTuple (List.map unbox_ty ts)
+  | TTuple ts -> TTuple (BatList.map unbox_ty ts)
   | TOption t -> TTuple [TBool; (unbox_ty t)]
   | TMap (ty1, ty2) ->
      TMap (unbox_ty ty1, unbox_ty ty2)
@@ -43,7 +43,7 @@ let rec unbox_val v =
   | VOption (Some v1) ->
      avalue (vtuple [(vbool true); (unbox_val v1)], Some (unbox_ty (oget v.vty)), v.vspan)
   | VTuple vs ->
-     avalue (vtuple (List.map unbox_val vs), Some (unbox_ty (oget v.vty)), v.vspan)
+     avalue (vtuple (BatList.map unbox_val vs), Some (unbox_ty (oget v.vty)), v.vspan)
   | VClosure _ -> failwith "Closures not yet implemented"
   
 let rec unbox_exp e : exp =
@@ -80,7 +80,7 @@ let rec unbox_exp e : exp =
      aexp(elet x (unbox_exp e1) (unbox_exp e2),
           Some (unbox_ty (oget e.ety)), e.espan)
   | ETuple es ->
-     aexp (etuple (List.map unbox_exp es), Some (unbox_ty (oget e.ety)), e.espan)
+     aexp (etuple (BatList.map unbox_exp es), Some (unbox_ty (oget e.ety)), e.espan)
   | ESome e1 ->
      let p1 = aexp (e_val (vbool true), Some TBool, Span.default) in
      let p2 = aexp (unbox_exp e1, Some (unbox_ty (oget e1.ety)), Span.default) in
@@ -100,7 +100,7 @@ let rec unbox_exp e : exp =
     | ULess _, _
     | AtMost _, _
     | ULeq _, _ ->
-       aexp (eop op (List.map unbox_exp es),
+       aexp (eop op (BatList.map unbox_exp es),
              Some (unbox_ty (oget e.ety)), e.espan)
     | _ -> failwith "TODO: implement option unboxing for maps")
                   
@@ -124,7 +124,7 @@ and unbox_branches bs ty =
     | PTuple ps ->
        (match ty with
         | TTuple ts ->
-           PTuple (List.map2 unbox_pattern ps ts)
+           PTuple (BatList.map2 unbox_pattern ps ts)
         | _ ->
            failwith "must match on a tuple type")
     | PVar x ->
@@ -134,7 +134,7 @@ and unbox_branches bs ty =
         | _ -> p)
     | _ -> p
   in
-  List.map (fun (p, e) -> (unbox_pattern p ty, unbox_exp e)) bs
+  BatList.map (fun (p, e) -> (unbox_pattern p ty, unbox_exp e)) bs
 
 let unbox_decl d =
   match d with
@@ -149,4 +149,4 @@ let unbox_decl d =
   | DATy aty -> DATy (unbox_ty aty)
   | DNodes _ | DEdges _ -> d
 
-let unbox ds = List.map unbox_decl ds
+let unbox ds = BatList.map unbox_decl ds

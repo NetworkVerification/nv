@@ -142,7 +142,8 @@ let inline_declaration (env: exp Env.t) (d: declaration) =
      (Env.update env x e, None)
       (* if is_function_ty e then (Env.update env x e, None) *)
       (* else (env, Some (DLet (x, tyo, e))) *)
-  | DSymbolic (x, e) -> (env, Some (DSymbolic (x, e)))
+  | DSymbolic (x, e) ->
+     (env, Some (DSymbolic (x, e)))
   | DMerge e -> (env, Some (DMerge (inline_exp env e)))
   | DTrans e -> (env, Some (DTrans (inline_exp env e)))
   | DInit e -> (env, Some (DInit (inline_exp env e)))

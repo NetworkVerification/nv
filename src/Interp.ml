@@ -229,7 +229,58 @@ let interp = MemoizeExp.memoize ~size:1000 interp
 let interp_closure cl (args: value list) =
   interp (Syntax.apply_closure cl args)
 
-  
+
+(** * Simplifications *)
+let simplify_and v1 e2 =
+  match v1.v with
+  | VBool true -> e2
+  | VBool false -> exp_of_value (vbool false)
+  | _ -> failwith "illegal value to boolean"
+
+let simplify_or v1 e2 =
+  match v1.v with
+  | VBool true -> exp_of_value (vbool true)
+  | VBool false -> e2
+  | _ -> failwith "illegal value to boolean"
+                 
+let simplify_logic op pes =
+  match op with
+  | And ->
+     (match pes with
+      | [e1; e2] when (is_value e1) ->
+         simplify_and (to_value e1) e2
+      | [e1; e2] when (is_value e2) ->
+         simplify_and (to_value e2) e1
+      | _ -> eop op pes)
+  | Or ->
+     (match pes with
+      | [e1; e2] when (is_value e1) ->
+         simplify_or (to_value e1) e2
+      | [e1; e2] when (is_value e2) ->
+         simplify_or (to_value e2) e1
+      | [e1; e2] when (equal_exps ~cmp_meta:false e1 e2) ->
+         e1
+      | [e1; e2] ->
+        (match e1.e with
+         | EOp (Not, [e1']) when equal_exps ~cmp_meta:false e1' e2 ->
+            exp_of_value (vbool true)
+         | _ ->
+            (match e2.e with
+               | EOp (Not, [e2']) when equal_exps ~cmp_meta:false e1 e2' ->
+                  exp_of_value (vbool true)
+               | _ -> eop op pes))
+      | _ -> eop op pes)
+  | _ -> eop op pes
+
+let simplify_match e =
+  match e.e with
+  | EMatch (_, [(_,e1);(_,e2)]) when (is_value e1) && (is_value e2) ->
+     if equal_exps ~cmp_meta:false e1 e2 then
+       e1
+     else
+       e
+  | _ -> e
+        
 (** * Partial Interpreter *)
 
 let rec interp_exp_partial isapp env e =
@@ -284,7 +335,7 @@ let rec interp_exp_partial isapp env e =
      (* if List.for_all is_value es then *)
      (*   aexp (e_val (etuple (List.map to_value es)), e.ety, e.espan) *)
      (* else *)
-       aexp (etuple (List.map (interp_exp_partial false env) es),
+       aexp (etuple (BatList.map (interp_exp_partial false env) es),
              e.ety, e.espan)
   | ESome e' -> aexp (esome (interp_exp_partial false env e'), e.ety, e.espan)
   | EMatch (e1, branches) ->
@@ -300,18 +351,18 @@ let rec interp_exp_partial isapp env e =
              ( "value " ^ value_to_string (to_value pe1)
                ^ " did not match any pattern in match statement"))
      else
-       aexp (ematch pe1 (List.map (fun (p,eb) ->
+       aexp (ematch pe1 (BatList.map (fun (p,eb) ->
                              (p, interp_exp_partial false env eb)) branches),
-             e.ety, e.espan)
-
+             e.ety, e.espan) |> simplify_match
+     
 and interp_op_partial env ty op es =
-  let pes = List.map (interp_exp_partial false env) es in
-  if List.exists (fun pe -> not (is_value pe)) pes then
-    eop op pes
+  let pes = BatList.map (interp_exp_partial false env) es in
+  if BatList.exists (fun pe -> not (is_value pe)) pes then
+    simplify_logic op pes
   else
     begin
       exp_of_value @@ 
-      match (op, List.map to_value pes) with
+      match (op, BatList.map to_value pes) with
       | And, [{v= VBool b1}; {v= VBool b2}] -> vbool (b1 && b2)
       | Or, [{v= VBool b1}; {v= VBool b2}] -> vbool (b1 || b2)
       | Not, [{v= VBool b1}] -> vbool (not b1)

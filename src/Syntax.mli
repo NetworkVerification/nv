@@ -204,6 +204,8 @@ val get_requires : declarations -> exp list
 
 val equal_values : cmp_meta:bool -> value -> value -> bool
 
+val equal_exps : cmp_meta:bool -> exp -> exp -> bool
+
 val hash_value : hash_meta:bool -> value -> int
 
 val hash_exp : hash_meta:bool -> exp -> int

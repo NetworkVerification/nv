@@ -277,27 +277,27 @@ module SmtLang =
          printVerbose "Constant declared about:" const.cdescr const.cloc info
        else
          "") ^
-        Printf.sprintf "(declare-const %s %s)\n" const.cname
+        Printf.sprintf "(declare-const %s %s)" const.cname
                        (sort_to_smt const.csort)
 
     let smt_command_to_smt info (comm : smt_command) : string =
       match comm with
       | Echo s ->
-         Printf.sprintf "(echo %s)\n" s
+         Printf.sprintf "(echo %s)" s
       | Eval tm ->
-         Printf.sprintf "(eval %s)\n" (term_to_smt false info tm)
+         Printf.sprintf "(eval %s)" (term_to_smt false info tm)
       | Assert tm ->
-         Printf.sprintf "(assert %s)\n" (term_to_smt false info tm)
+         Printf.sprintf "(assert %s)" (term_to_smt false info tm)
       | CheckSat ->
          (* for now i am hardcoding the tactics here. *)
          Printf.sprintf "(check-sat-using (then propagate-values simplify \
-                         solve-eqs psmt))\n"
+                         solve-eqs psmt))"
       | GetModel ->
-         Printf.sprintf "(get-model)\n"
+         Printf.sprintf "(get-model)"
       | Push ->
-         Printf.sprintf "(push)\n"
+         Printf.sprintf "(push)"
       | Pop ->
-         Printf.sprintf "(pop)\n"
+         Printf.sprintf "(pop)"
 
     (* NOTE: this currently ignores the comment/loc of the term inside
        the command. Perhaps we would like to combine them in some way
@@ -396,7 +396,7 @@ let rec datatype_name (ty : ty) : string option =
       match ts with
       | [t] -> datatype_name t
       | ts ->
-        let len = List.length ts in
+        let len = BatList.length ts in
         Some (Printf.sprintf "Pair%d" len))
   | TOption ty -> Some "Option"
   | _ -> None
@@ -409,7 +409,7 @@ let rec type_name (ty : ty) : string =
       match ts with
       | [t] -> type_name t
       | ts ->
-        let len = List.length ts in
+        let len = BatList.length ts in
         Printf.sprintf "Pair%d" len)
   | TOption ty -> "Option"
   | TBool -> "Bool"
@@ -445,7 +445,7 @@ let rec ty_to_sort (ty: ty) : sort =
       | [t] -> ty_to_sort t
       | ts ->
         let name = oget (datatype_name ty) in
-        DataTypeSort (name, List.map ty_to_sort ts))
+        DataTypeSort (name, BatList.map ty_to_sort ts))
   | TOption ty' ->
     let name = oget (datatype_name ty) in
     DataTypeSort (name, [ty_to_sort ty'])
@@ -635,7 +635,7 @@ module Unboxed : ExprEncoding =
            (match e1.e with
             | ETuple es ->
                let zes, env1 =
-                 List.fold_right
+                 BatList.fold_right
                    (fun e (zes, env) ->
                      let e1, env1 = encode_exp_z3_single descr env e in
                      (e1.t :: zes, env1)) es ([], env) in
@@ -708,7 +708,7 @@ module Unboxed : ExprEncoding =
          [ze], env
         
     and encode_branches_z3 descr env names bs (t: ty) =
-      match List.rev bs with
+      match BatList.rev bs with
       | [] -> failwith "internal error (encode_branches)"
       | (p, e) :: _ ->
          let zes, env1 = encode_exp_z3 descr env e in
@@ -765,7 +765,7 @@ module Unboxed : ExprEncoding =
     and encode_value_z3 descr env (v: Syntax.value) : term list =
       match v.v with
       | VTuple vs ->
-         List.map (fun v -> encode_value_z3_single descr env v) vs
+         BatList.map (fun v -> encode_value_z3_single descr env v) vs
       | _ -> [encode_value_z3_single descr env v]
            
     and encode_value_z3_single descr env (v: Syntax.value) : term =
@@ -789,7 +789,7 @@ let label_var i =
 
 let node_of_label_var s =
   Integer.of_string
-    (List.nth (BatString.split_on_char '-' s) 1)
+    (BatList.nth (BatString.split_on_char '-' s) 1)
 
 let proj_of_var s =
   try
@@ -852,12 +852,14 @@ module ClassicEncoding (E: ExprEncoding): Encoding =
             | EFun _ ->
                loop exp ((x,xty) :: acc)
             | _ ->
+               (* xstr arguments are in reverse order due to loop, use
+                fold_left instead of fold_right *)
                let xstr, env1 =
-                 BatList.fold_right (fun (x,xty) (xstrs, env) ->
+                 BatList.fold_left (fun  (xstrs, env) (x,xty) ->
                      let xstr, env1 = mk_constant env (create_vars env str x) (ty_to_sort xty)
                                                   ~cdescr:"" ~cloc:merge.espan
                      in
-                   (xstr :: xstrs, env1)) ((x,xty) :: acc) ([], env) in
+                   (xstr :: xstrs, env1)) ([], env) ((x,xty) :: acc) in
                let names = create_strings (Printf.sprintf "%s-result" str) (oget exp.ety) in
                let results, env =
                  reduce2 (fun name sort (results, env) ->
@@ -882,12 +884,14 @@ module ClassicEncoding (E: ExprEncoding): Encoding =
           | EFun _ ->
              loop exp ((x,xty) :: acc)
           | _ ->
+             (* xstr arguments are in reverse order due to loop, use
+                fold_left instead of fold_right *)
              let xstr, env1 =
-               BatList.fold_right (fun (x,xty) (xstrs, env) ->
+               BatList.fold_left (fun (xstrs, env) (x,xty) ->
                    let xstr, env = mk_constant env (create_vars env str x) (ty_to_sort xty)
                                                ~cdescr:"transfer x argument" ~cloc:trans.espan
                    in
-                   (xstr :: xstrs, env)) ((x,xty) :: acc) ([], env) in
+                   (xstr :: xstrs, env)) ([], env) ((x,xty) :: acc) in
              let names = create_strings (Printf.sprintf "%s-result" str) (oget exp.ety) in
              let results, env =
                reduce2 (fun name sort (results, env) ->
@@ -927,11 +931,11 @@ module ClassicEncoding (E: ExprEncoding): Encoding =
              loop exp ((x,xty) :: acc)
           | _ ->
              let xstr, env1 =
-               BatList.fold_right (fun (x,xty) (xstrs, env) ->
+               BatList.fold_left (fun (xstrs, env) (x,xty) ->
                    let xstr, env = mk_constant env (create_vars env str x) (ty_to_sort xty)
                                                ~cdescr:"assert x argument" ~cloc:assertion.espan
                    in
-                   (xstr :: xstrs, env)) ((x,xty) :: acc) ([], env) in
+                   (xstr :: xstrs, env)) ([], env) ((x,xty) :: acc)  in
              let names = create_strings (Printf.sprintf "%s-result" str) (oget exp.ety) in
              let results, env =
                reduce2 (fun name sort (results, env) ->
@@ -983,8 +987,8 @@ module ClassicEncoding (E: ExprEncoding): Encoding =
       let trans_map = AdjGraph.EdgeMap.empty in
       (* trans_input_map maps each edge to the incoming message variable *)
       let trans_input_map = AdjGraph.EdgeMap.empty in
-      let (incoming_map, trans_map, trans_input_map) =
-        BatList.fold_left (fun (incoming_map, trans_map, trans_input_map) (i,j) ->
+      let (incoming_map, trans_map, trans_input_map, env) =
+        BatList.fold_left (fun (incoming_map, trans_map, trans_input_map, env) (i,j) -> 
             let incoming_map = 
               match AdjGraph.VertexMap.Exceptionless.find j incoming_map with
               | None ->
@@ -999,17 +1003,21 @@ module ClassicEncoding (E: ExprEncoding): Encoding =
               else
                 [avalue (vtuple [vint i; vint j],
                          Some Typing.edge_ty, Span.default)] in
-            let etrans_uv = Interp.interp_partial_fun etrans edge in
+            let etrans_uv =
+              time_profile "interp edge" (fun () -> Interp.interp_partial_fun etrans edge) in
+            Printf.printf "%s: %s\n\n\n\n\n" (AdjGraph.printEdge (i,j))
+                          (Printing.exp_to_string etrans_uv);
             let trans, x, env =
               encode_z3_trans
                 (Printf.sprintf "trans-%d-%d" (Integer.to_int i)
                                 (Integer.to_int j)) 
                 env etrans_uv
             in
+            (* List.iter (fun tm -> Printf.printf "%s\n" ( term_to_smt 0 0 tm)) x; *)
             let trans_input_map = AdjGraph.EdgeMap.add (i, j) x trans_input_map in
             let trans_map = AdjGraph.EdgeMap.add (i, j) trans trans_map in
-            (incoming_map, trans_input_map, trans_map))
-                          (incoming_map, trans_map, trans_input_map) edges
+            (incoming_map, trans_input_map, trans_map, env))
+                          (incoming_map, trans_map, trans_input_map, env) edges
       in
       (* Compute the labelling as the merge of all inputs *)
       let labelling, env =
@@ -1440,43 +1448,43 @@ module ClassicEncoding (E: ExprEncoding): Encoding =
         assertions = assertions }
       
     (** ** Translate the environment to SMT-LIB2 *)
+
+    (* TODO: For some reason this version of env_to_smt does not work correctly..
+         maybe investigate at some point *)
+    (* let env_to_smt ?(verbose=false) info (env : smt_env) = *)
+    (*   let buf = Buffer.create 8000000 in *)
+    (*   (\* Emit context *\) *)
+    (*   Buffer.add_string buf "(set-option :model_evaluator.completion true)\n"; *)
+    (*   (\* Emit constant declarations *\) *)
+    (*   ConstantSet.iter (fun c -> *)
+    (*       Buffer.add_string buf (const_decl_to_smt ~verbose:verbose info c)) env.const_decls; *)
+    (*   (\* Emit assertions *\) *)
+    (*   BatList.iter (fun c -> Buffer.add_string buf (command_to_smt verbose info c)) env.ctx; *)
+    (*   Buffer.add_char buf '\n'; *)
+    (*   Buffer.contents buf *)
       
     let env_to_smt ?(verbose=false) info (env : smt_env) =
-      let buf = Buffer.create 8000000 in
-      (* Emit context *)
-      Buffer.add_string buf "(set-option :model_evaluator.completion true)\n";
-      (* Emit constant declarations *)
-      ConstantSet.iter (fun c ->
-          Buffer.add_string buf (const_decl_to_smt ~verbose:verbose info c)) env.const_decls;
-      (* Emit assertions *)
-      BatList.iter (fun c -> Buffer.add_string buf (command_to_smt verbose info c)) env.ctx;
-      Buffer.add_char buf '\n';
-      Buffer.contents buf
-          
-      (* let context = time_profile "compute context" *)
-      (*                            (fun () -> List.rev_map (fun c -> command_to_smt verbose info c) env.ctx) in *)
-      (* let context = time_profile "concat context" (fun () -> BatString.concat "\n" context) in *)
+      let context =
+        time_profile "compute context"
+                     (fun () -> BatList.rev_map (fun c -> command_to_smt verbose info c) env.ctx)
+      in
+      let context =
+        time_profile "concat context" (fun () -> BatString.concat "\n" context)
+      in
 
-      (* (\* Emit constants *\) *)
-      (* let constants = ConstantSet.to_list env.const_decls in *)
-      (* let constants = *)
-      (*   BatString.concat "\n" *)
-      (*                    (List.map (fun c -> const_decl_to_smt ~verbose:verbose info c) *)
-      (*                              constants) *)
-      (* in *)
-      (* (\* let constants = ConstantSet.fold (fun c ls -> *\) *)
-      (* (\*                     (const_decl_to_smt ~verbose:verbose info c) :: ls) env.const_decls [] *\) *)
-      (* (\* in *\) *)
-      (* (\* let constants = *\) *)
-      (* (\*   BatString.concat "\n" constants *\) *)
-      (* (\* in *\) *)
-      (* (\* Emit type declarations *\) *)
-      (* let decls = StringMap.bindings env.type_decls in *)
-      (* let decls = String.concat "\n" *)
-      (*                           (List.map (fun (_,typ) -> type_decl_to_smt typ) decls) in *)
-      (* Printf.bprintf buf "(set-option :model_evaluator.completion true) *)
-      (*                     \n %s\n %s\n %s\n" decls constants context; *)
-      (* Buffer.contents buf *)
+      (* Emit constants *)
+      let constants = ConstantSet.to_list env.const_decls in
+      let constants =
+        BatString.concat "\n"
+                         (BatList.map (fun c -> const_decl_to_smt ~verbose:verbose info c)
+                                   constants)
+      in
+      (* Emit type declarations *)
+      let decls = StringMap.bindings env.type_decls in
+      let decls = String.concat "\n"
+                                (BatList.map (fun (_,typ) -> type_decl_to_smt typ) decls) in
+      Printf.sprintf "(set-option :model_evaluator.completion true)
+                          \n %s\n %s\n %s\n" decls constants context
     (* this new line is super important otherwise we don't get a reply
       from Z3.. not understanding why*)
 
@@ -1580,7 +1588,7 @@ module ClassicEncoding (E: ExprEncoding): Encoding =
               in
               if query then
                 printQuery chan q;
-              Printf.printf "printed the query\n";
+              (* Printf.printf "printed the query\n"; *)
               ask_solver solver q;
               let reply = solver |> parse_reply in
               (* check satisfiability and get model if required *)

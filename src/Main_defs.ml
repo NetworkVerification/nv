@@ -6,7 +6,7 @@ open Hashcons
 open Printing
 open Quickcheck
 open Renaming
-open Smt2
+open Smt
 open Solution
 open Slicing
 open Syntax
@@ -44,7 +44,7 @@ let run_smt file cfg info decls =
   let decls, f = Renaming.alpha_convert_declarations decls in
   let fs = f :: fs in
   let res, fs =
-    (Smt2.solve info cfg.query (smt_query_file file) decls ~symbolic_vars:[], fs)
+    (Smt.solve info cfg.query (smt_query_file file) decls ~symbolic_vars:[], fs)
   in
   match res with
   | Unsat -> (Success None, None)
@@ -153,7 +153,7 @@ let compress file info decls cfg networkOp =
   let mergeMap = Abstraction.partialEvalMerge network.graph network.merge in
   let initMap = Slicing.partialEvalInit network in
   let assertMap = Slicing.partialEvalAssert network in
-
+  
   (*printing concrete graph *)
   if cfg.draw then
     begin
@@ -245,17 +245,15 @@ let parse_input (args : string array)
   Typing.check_annot_decls decls ;
   Wellformed.check info decls ;
   let decls =
-    if cfg.inline then
+    if cfg.inline || cfg.smt then
       time_profile "Inlining" (
                        fun () -> Inline.inline_declarations info decls)
     else
       decls
   in
   let decls = if cfg.smt then
-                let decls = time_profile "Inlining" (
-                               fun () -> Inline.inline_declarations info decls) in
-                (* time_profile "unroll maps" (fun () -> MapUnrolling.unroll info decls) |> *)
-                  Typing.infer_declarations info decls
+                time_profile "unroll maps" (fun () -> MapUnrolling.unroll info decls) |>
+                  Typing.infer_declarations info 
               else decls
   in
   (cfg, info, file, decls)

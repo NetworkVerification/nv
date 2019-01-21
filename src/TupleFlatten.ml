@@ -10,15 +10,15 @@ let rec flatten_ty ty =
      let ty1 = flatten_ty t1 in
      (match ty1 with
      | TTuple ts ->
-        List.fold_right (fun t acc ->
+        BatList.fold_right (fun t acc ->
             TArrow (t, acc)) ts (flatten_ty t2)
      | _ ->
         TArrow (ty1, flatten_ty t2))
   | TTuple ts ->
-     let ts = List.map flatten_ty ts in
-     let ts' = List.fold_right (fun ty acc ->
+     let ts = BatList.map flatten_ty ts in
+     let ts' = BatList.fold_right (fun ty acc ->
                    match ty with
-                   | TTuple ts -> ts @ acc
+                   | TTuple ts -> BatList.append ts acc
                    | _ -> ty :: acc) ts []
      in
      TTuple ts'
@@ -33,10 +33,10 @@ let rec flatten_val v =
   | VOption (Some v) ->
      avalue (voption (Some (flatten_val v)), Some (flatten_ty (oget v.vty)), v.vspan)
   | VTuple vs ->
-     let vs = List.map flatten_val vs in
-     let vs' = List.fold_right (fun v acc ->
+     let vs = BatList.map flatten_val vs in
+     let vs' = BatList.fold_right (fun v acc ->
                    match v.v with
-                   | VTuple vs -> vs @ acc
+                   | VTuple vs -> BatList.append vs acc
                    | _ -> v :: acc) vs []
      in
      avalue (vtuple vs', Some (flatten_ty (oget v.vty)), v.vspan)
@@ -95,13 +95,13 @@ let rec flatten_exp e : exp =
      let ty = flatten_ty (oget e.ety) in
      (match e1.e with
       | ETuple es ->
-         let es = List.mapi (fun i e -> (proj_var i x, e)) es in
-         List.fold_right (fun (xi, ei) acc ->
+         let es = BatList.mapi (fun i e -> (proj_var i x, e)) es in
+         BatList.fold_right (fun (xi, ei) acc ->
              aexp (elet xi ei acc, Some ty, ei.espan)) es (flatten_exp e2)
       | _ ->
          (match (oget e1.ety) with
           | TTuple ts ->
-             let ps = List.mapi (fun i _ -> PVar (proj_var i x)) ts in
+             let ps = BatList.mapi (fun i _ -> PVar (proj_var i x)) ts in
              aexp (ematch e1 [(PTuple ps, flatten_exp e2)],
                    Some ty, e.espan)
           | _ ->
@@ -113,7 +113,7 @@ let rec flatten_exp e : exp =
                    | ETuple es -> es @ acc
                    | EVal v ->
                       (match v.v with
-                       | VTuple vs -> (List.map e_val vs) @ acc
+                       | VTuple vs -> (BatList.map e_val vs) @ acc
                        | _ -> e :: acc)
                    | _ -> e :: acc) es []
      in
@@ -135,7 +135,7 @@ let rec flatten_exp e : exp =
     | ULess _
     | AtMost _
     | ULeq _ ->
-       aexp (eop op (List.map flatten_exp es),
+       aexp (eop op (BatList.map flatten_exp es),
              Some (flatten_ty (oget e.ety)), e.espan)
     | _ -> failwith "TODO: implement tupple flattening for maps")
         
@@ -151,8 +151,8 @@ and flatten_branches bs ty =
     | PTuple ps ->
        (match ty with
         | TTuple ts ->
-           let ps = List.map2 flatten_pattern ps ts in
-           let ps' = List.fold_right (fun p acc ->
+           let ps = BatList.map2 flatten_pattern ps ts in
+           let ps' = BatList.fold_right (fun p acc ->
                          match p with
                          | PTuple ps -> ps @ acc
                          | _ -> p :: acc) ps []
@@ -164,7 +164,7 @@ and flatten_branches bs ty =
         | TTuple ts ->
            (match flatten_ty (TTuple ts) with
             | TTuple ts ->
-              let ps = List.mapi (fun i _ -> PVar (proj_var i x)) ts in
+              let ps = BatList.mapi (fun i _ -> PVar (proj_var i x)) ts in
               PTuple ps
             | _ -> failwith "must be ttuple")
         | _ -> p)
@@ -173,13 +173,13 @@ and flatten_branches bs ty =
         | TTuple ts ->
            (match flatten_ty (TTuple ts) with
             | TTuple ts ->
-               let ps = List.map (fun _ -> PWild) ts in
+               let ps = BatList.map (fun _ -> PWild) ts in
                PTuple ps
             | _ -> failwith "must be ttuple")
         | _ -> p)
     | PBool _ | PInt _ | POption None  -> p
   in
-  List.map (fun (p, e) -> (flatten_pattern p ty, flatten_exp e)) bs
+  BatList.map (fun (p, e) -> (flatten_pattern p ty, flatten_exp e)) bs
              
 let flatten_decl_single d =
   match d with
@@ -207,9 +207,9 @@ let flatten_decl d =
   | DSymbolic (x, Ty ty) ->
      (match flatten_ty ty with
      | TTuple ts ->
-        List.mapi (fun i ty -> DSymbolic (proj_var i x, Ty ty)) ts
+        BatList.mapi (fun i ty -> DSymbolic (proj_var i x, Ty ty)) ts
      | ty -> [DSymbolic (x, Ty ty)])
   | _ -> [flatten_decl_single d]
 
 let flatten ds =
-  List.map flatten_decl ds |> List.concat
+  BatList.map flatten_decl ds |> BatList.concat
