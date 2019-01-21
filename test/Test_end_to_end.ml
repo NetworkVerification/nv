@@ -30,6 +30,7 @@ let files_to_test : (string * bool * bool) list =
     ("examples/symbolic.nv", true, false);
     ("examples/symbolic2.nv", true, false);
     ("examples/maprecord.nv", true, true);
+    ("examples/maprecordpattern.nv", true, true);
     ("examples/maprecord2.nv", true, true);
     ("examples/record.nv", true, true);
   ]

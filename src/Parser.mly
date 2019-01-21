@@ -71,6 +71,33 @@
     let e = exp (eop MCreate [e]) span in
     updates e exprs
 
+  let find_record_type (lab : string) : 'a StringMap.t =
+    let rec aux lst =
+      match lst with
+      | [] -> failwith @@ "No record type using label " ^ lab
+      | (_, t) :: tl ->
+        match t with
+        | TRecord tmap ->
+          if StringMap.mem lab tmap then tmap else aux tl
+        | _ -> aux tl
+    in
+    aux !user_types
+
+  (* Fill in a partial record specification, using the default provided for
+     labels which do not already appear in the list *)
+  let fill_record (lst : (Var.t * 'a) list) (default : Var.t -> 'a)
+    : (Var.t * 'a) list
+  =
+    let record_type = find_record_type (List.hd lst |> fst |> Var.name) in
+    let keys = StringMap.keys record_type in
+    BatEnum.fold
+      (fun acc lab ->
+        let lab = Var.create lab in
+        match List.find_opt (fun (l,_) -> Var.equals l lab) lst with
+        | None -> (lab, default lab) :: acc
+        | Some elt -> elt :: acc
+      ) [] keys
+
   let make_record_map (lst : (Var.t * 'a) list) : 'a StringMap.t =
     (* Ensure that no labels were used more than once *)
     let sorted =
@@ -363,7 +390,11 @@ pattern:
     | LPAREN patterns RPAREN            { tuple_pattern $2 }
     | NONE                              { POption None }
     | SOME pattern                      { POption (Some $2) }
-    | LBRACE record_entry_ps RBRACE     { PRecord (make_record_map $2) }
+    | LBRACE record_entry_ps RBRACE     { PRecord (make_record_map
+                                          (if snd $2
+                                           then fill_record (fst $2) (fun _ -> PWild)
+                                           else fst $2)) }
+
 ;
 
 patterns:
@@ -376,9 +407,10 @@ record_entry_p:
 ;
 
 record_entry_ps:
-  | record_entry_p                      { [$1] }
-  | record_entry_p SEMI                 { [$1] }
-  | record_entry_p SEMI record_entry_ps { $1::$3 }
+  | record_entry_p                      { ([$1], false) }
+  | record_entry_p SEMI                 { ([$1], false) }
+  | record_entry_p SEMI UNDERSCORE      { ([$1], true) }
+  | record_entry_p SEMI record_entry_ps { ($1::(fst $3), snd $3) }
 
 branch:
     | BAR pattern ARROW expr            { ($2, $4) }
