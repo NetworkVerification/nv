@@ -283,6 +283,12 @@ let simplify_match e =
         
 (** * Partial Interpreter *)
 
+let isMapOp op =
+  match op with
+  | MCreate | MGet | MSet | MMap | MMerge | MMapFilter -> true
+  | _ -> false
+       
+
 let rec interp_exp_partial isapp env e =
   match e.e with
   | ETy (e, _) -> interp_exp_partial isapp env e
@@ -360,83 +366,86 @@ and interp_op_partial env ty op es =
   if BatList.exists (fun pe -> not (is_value pe)) pes then
     simplify_logic op pes
   else
-    begin
-      exp_of_value @@ 
-      match (op, BatList.map to_value pes) with
-      | And, [{v= VBool b1}; {v= VBool b2}] -> vbool (b1 && b2)
-      | Or, [{v= VBool b1}; {v= VBool b2}] -> vbool (b1 || b2)
-      | Not, [{v= VBool b1}] -> vbool (not b1)
-      | UAdd _, [{v= VInt i1}; {v= VInt i2}] ->
-         vint (Integer.add i1 i2)
-      | UEq, [v1; v2] ->
-         if equal_values ~cmp_meta:false v1 v2 then vbool true
-         else vbool false
-      | ULess _, [{v= VInt i1}; {v= VInt i2}] ->
-         if Integer.lt i1 i2 then vbool true else vbool false
-      | ULeq _, [{v= VInt i1}; {v= VInt i2}] ->
-         if Integer.leq i1 i2 then vbool true else vbool false
-      | MCreate, [v] -> (
-        match get_inner_type ty with
-        | TMap (kty, _) -> vmap (BddMap.create ~key_ty:kty v)
-        | _ -> failwith "runtime error: missing map key type" )
-      | MGet, [{v= VMap m}; v] -> BddMap.find m v
-      | MSet, [{v= VMap m}; vkey; vval] ->
-         vmap (BddMap.update m vkey vval)
-      | MMap, [{v= VClosure (c_env, f)}; {v= VMap m}] ->
-         let seen = BatSet.PSet.singleton ~cmp:Var.compare f.arg in
-         let free = Syntax.free seen f.body in
-         let env = build_env c_env free in
-         vmap
-           (BddMap.map ~op_key:(f.body, env)
-                       (fun v -> apply c_env f v)
-                       m)
-      | ( MMerge
-        , {v= VClosure (c_env, f)}
-          :: {v= VMap m1} :: {v= VMap m2} :: rest )
-        -> (
-        let seen = BatSet.PSet.singleton ~cmp:Var.compare f.arg in
-        let env = build_env c_env (Syntax.free seen f.body) in
-        (* TO DO:  Need to preserve types in VOptions here ? *)
-        let f_lifted v1 v2 =
-          match apply c_env f v1 with
-          | {v= VClosure (c_env, f)} -> apply c_env f v2
-          | _ -> failwith "internal error (interp_op)"
-        in
-        match rest with
-        | [el0; el1; er0; er1] ->
-           let opt = (el0, el1, er0, er1) in
-           vmap
-             (BddMap.merge ~opt ~op_key:(f.body, env) f_lifted m1 m2)
-        | _ -> vmap (BddMap.merge ~op_key:(f.body, env) f_lifted m1 m2)
-      )
-      | ( MMapFilter
-        , [ {v= VClosure (c_env1, f1)}
-          ; {v= VClosure (c_env2, f2)}
-          ; {v= VMap m} ] ) ->
-         let seen = BatSet.PSet.singleton ~cmp:Var.compare f2.arg in
-         let env = build_env c_env2 (Syntax.free seen f2.body) in
-         let mtbdd =
-           match ExpMap.find_opt f1.body !bddfunc_cache with
-           | None -> (
-             let bddf = BddFunc.create_value (oget f1.argty) in
-             let env = Env.update Env.empty f1.arg bddf in
-             let bddf = BddFunc.eval env f1.body in
-             match bddf with
-             | BBool bdd ->
-                let mtbdd = BddFunc.wrap_mtbdd bdd in
-                bddfunc_cache :=
-                  ExpMap.add f1.body mtbdd !bddfunc_cache ;
-                mtbdd
-             | _ -> failwith "impossible" )
-           | Some bddf -> bddf
-         in
-         let f v = apply c_env2 f2 v in
-         vmap (BddMap.map_when ~op_key:(f2.body, env) mtbdd f m)
-      | _, _ ->
-         failwith
-           (Printf.sprintf "bad operator application: %s"
-                           (Printing.op_to_string op))
-    end
+    if isMapOp op then
+      eop op pes
+    else
+      begin
+        exp_of_value @@ 
+          match (op, BatList.map to_value pes) with
+          | And, [{v= VBool b1}; {v= VBool b2}] -> vbool (b1 && b2)
+          | Or, [{v= VBool b1}; {v= VBool b2}] -> vbool (b1 || b2)
+          | Not, [{v= VBool b1}] -> vbool (not b1)
+          | UAdd _, [{v= VInt i1}; {v= VInt i2}] ->
+             vint (Integer.add i1 i2)
+          | UEq, [v1; v2] ->
+             if equal_values ~cmp_meta:false v1 v2 then vbool true
+             else vbool false
+          | ULess _, [{v= VInt i1}; {v= VInt i2}] ->
+             if Integer.lt i1 i2 then vbool true else vbool false
+          | ULeq _, [{v= VInt i1}; {v= VInt i2}] ->
+             if Integer.leq i1 i2 then vbool true else vbool false
+          (* | MCreate, [v] -> ( *)
+          (*   match get_inner_type ty with *)
+          (*   | TMap (kty, _) -> vmap (BddMap.create ~key_ty:kty v) *)
+          (*   | _ -> failwith "runtime error: missing map key type" ) *)
+          (* | MGet, [{v= VMap m}; v] -> BddMap.find m v *)
+          (* | MSet, [{v= VMap m}; vkey; vval] -> *)
+          (*    vmap (BddMap.update m vkey vval) *)
+          (* | MMap, [{v= VClosure (c_env, f)}; {v= VMap m}] -> *)
+          (*    let seen = BatSet.PSet.singleton ~cmp:Var.compare f.arg in *)
+          (*    let free = Syntax.free seen f.body in *)
+          (*    let env = build_env c_env free in *)
+          (*    vmap *)
+          (*      (BddMap.map ~op_key:(f.body, env) *)
+          (*                  (fun v -> apply c_env f v) *)
+          (*                  m) *)
+          (* | ( MMerge *)
+          (*   , {v= VClosure (c_env, f)} *)
+          (*     :: {v= VMap m1} :: {v= VMap m2} :: rest ) *)
+          (*   -> ( *)
+          (*   let seen = BatSet.PSet.singleton ~cmp:Var.compare f.arg in *)
+          (*   let env = build_env c_env (Syntax.free seen f.body) in *)
+          (*   (\* TO DO:  Need to preserve types in VOptions here ? *\) *)
+          (*   let f_lifted v1 v2 = *)
+          (*     match apply c_env f v1 with *)
+          (*     | {v= VClosure (c_env, f)} -> apply c_env f v2 *)
+          (*     | _ -> failwith "internal error (interp_op)" *)
+          (*   in *)
+          (*   match rest with *)
+          (*   | [el0; el1; er0; er1] -> *)
+          (*      let opt = (el0, el1, er0, er1) in *)
+          (*      vmap *)
+          (*        (BddMap.merge ~opt ~op_key:(f.body, env) f_lifted m1 m2) *)
+          (*   | _ -> vmap (BddMap.merge ~op_key:(f.body, env) f_lifted m1 m2) *)
+          (* ) *)
+          (* | ( MMapFilter *)
+          (*   , [ {v= VClosure (c_env1, f1)} *)
+          (*     ; {v= VClosure (c_env2, f2)} *)
+          (*     ; {v= VMap m} ] ) -> *)
+          (*    let seen = BatSet.PSet.singleton ~cmp:Var.compare f2.arg in *)
+          (*    let env = build_env c_env2 (Syntax.free seen f2.body) in *)
+          (*    let mtbdd = *)
+          (*      match ExpMap.find_opt f1.body !bddfunc_cache with *)
+          (*      | None -> ( *)
+          (*        let bddf = BddFunc.create_value (oget f1.argty) in *)
+          (*        let env = Env.update Env.empty f1.arg bddf in *)
+          (*        let bddf = BddFunc.eval env f1.body in *)
+          (*        match bddf with *)
+          (*        | BBool bdd -> *)
+          (*           let mtbdd = BddFunc.wrap_mtbdd bdd in *)
+          (*           bddfunc_cache := *)
+          (*             ExpMap.add f1.body mtbdd !bddfunc_cache ; *)
+          (*           mtbdd *)
+          (*        | _ -> failwith "impossible" ) *)
+          (*      | Some bddf -> bddf *)
+          (*    in *)
+          (*    let f v = apply c_env2 f2 v in *)
+          (*    vmap (BddMap.map_when ~op_key:(f2.body, env) mtbdd f m) *)
+          | _, _ ->
+             failwith
+               (Printf.sprintf "bad operator application: %s"
+                               (Printing.op_to_string op))
+      end
     
 let interp_partial = fun e -> interp_exp_partial false empty_env e
 

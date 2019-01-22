@@ -64,7 +64,7 @@ let run_test cfg info ds =
     if cfg.smart_gen then
       let ds, f = Renaming.alpha_convert_declarations ds in
       let fs = f :: fs in
-      let ds = Inline.inline_declarations info ds in
+      let ds = Inline.inline_declarations ds in
       (Quickcheck.check_random ds ~iterations:cfg.ntests, fs) (*used to be check_smart *)
     else (Quickcheck.check_random ds ~iterations:cfg.ntests, fs)
   in
@@ -83,7 +83,7 @@ let run_simulator cfg info decls =
     if cfg.inline then
       (* why are we renaming here?*)
       let decls, f = Renaming.alpha_convert_declarations decls in
-      let decls = Inline.inline_declarations info decls in
+      let decls = Inline.inline_declarations decls in
       ([f], decls)
     else ([], decls)
   in
@@ -124,115 +124,81 @@ let run_simulator cfg info decls =
     Console.error "required conditions not satisfied"
 
 let compress file info decls cfg networkOp =
-  let network, symb =
-    match
-      ( get_merge decls
-      , get_trans decls
-      , get_init decls
-      , get_nodes decls
-      , get_edges decls
-      , get_attr_type decls
-      , get_assert decls
-      , get_symbolics decls )
-    with
-    | Some emerge, Some etrans, Some einit, Some n, Some es,
-      Some aty, Some eassert, symb ->
-      let graph = AdjGraph.add_edges (AdjGraph.create n) es in
-      { attr_type = aty; init = einit; trans = etrans;
-        merge = emerge; assertion = eassert; graph = graph }, symb
-    | _ ->
-      Console.error
-        "missing definition of nodes, edges, merge, trans, init or assert"
-  in
   (* Printf.printf "Number of concrete edges:%d\n" (List.length (oget (get_edges decls))); *)
   let k = cfg.compress in
   if cfg.smt then
     smt_config.failures <- Some k;
-  (* partially evaluate the functions of the network *)
-  let transMap = Abstraction.partialEvalTrans network.graph network.trans in
-  let mergeMap = Abstraction.partialEvalMerge network.graph network.merge in
-  let initMap = Slicing.partialEvalInit network in
-  let assertMap = Slicing.partialEvalAssert network in
-  
+ 
   (*printing concrete graph *)
-  if cfg.draw then
-    begin
-      let fname = AdjGraph.DrawableGraph.graph_dot_file k file in
-      AdjGraph.DrawableGraph.drawGraph network.graph fname
-    end;
+  (* if cfg.draw then *)
+  (*   begin *)
+  (*     let fname = AdjGraph.DrawableGraph.graph_dot_file k file in *)
+  (*     AdjGraph.DrawableGraph.drawGraph network.graph fname *)
+  (*   end; *)
 
-  (* find the prefixes that are relevant to the assertions *)
-  let assertionPrefixes = Slicing.relevantPrefixes assertMap in
-  (* find where each prefix is announced from *)
-  let slices = Slicing.findInitialSlices initMap in
-  (* keep only the relevant slices, i.e. prefixes that are used by the assertion *)
-  let relevantSlices =
-    PrefixMap.filter (fun pre _ -> PrefixSet.mem pre assertionPrefixes) slices in
-  (* each set of prefixes represents an SRP *)
-  let relevantSliceGroups = Slicing.groupPrefixesByVertices relevantSlices in
-
-  (* let fres = ref AbstractionMap.emptyAbstraction in *)
   let rec loop (finit: AbstractionMap.abstractionMap)
                (f: AbstractionMap.abstractionMap)
-               (pre: Prefix.t)
-               (ds: AdjGraph.VertexSet.t)
+               (slice : Slicing.network)
+               (mergeMap: (AdjGraph.Vertex.t, int * Syntax.exp) Hashtbl.t)
+               (transMap: (AdjGraph.Edge.t, int * Syntax.exp) Hashtbl.t)
                (k: int)
                (i: int) =
     (* build abstract network *)
     let failVars, decls =
       time_profile "Build abstract network"
-                   (fun () -> buildAbstractNetwork f network.graph mergeMap transMap
-                                                   initMap assertMap ds
-                                                   network.attr_type pre symb k) in
-    let decls = Inline.inline_declarations info decls in
+                   (fun () -> buildAbstractNetwork f mergeMap transMap slice k) in
+    let decls = Typing.infer_declarations info decls in
+    (* let decls = Inline.inline_declarations info decls in *)
     let groups = AbstractionMap.printAbstractGroups f "\n" in
     Console.show_message groups Console.T.Blue "Abstract groups";
     match networkOp cfg info decls with
     | Success _, _ ->
-       Printf.printf "Number of abstract edges:%d\n" (List.length (oget (get_edges decls)));
+       Printf.printf "Number of abstract edges:%d\n"
+                     (BatList.length (oget (get_edges decls)));
        Printf.printf "No counterexamples found\n"
     | (CounterExample sol), fs ->
        let sol = apply_all sol (oget fs) in
        let aty = if cfg.unbox then
-                   TupleFlatten.flatten_ty (UnboxOptions.unbox_ty network.attr_type)
+                   TupleFlatten.flatten_ty (UnboxOptions.unbox_ty slice.attr_type)
                  else
-                   network.attr_type
+                   slice.attr_type
        in
        let f' =
          time_profile "Refining abstraction after failures"
                       (fun () ->
                         FailuresAbstraction.refineCounterExample
-                          cfg.draw file network.graph finit f failVars sol k ds aty i)
+                          cfg.draw file slice.graph finit f failVars sol
+                          k slice.destinations aty i)
        in
        match f' with
        | None -> print_solution sol;
        | Some f' ->
-          (* fres := f'; *)
-          loop finit f' pre ds k (i+1)
+          loop finit f' slice mergeMap transMap k (i+1)
   in
-  PrefixSetSet.iter
-    (fun prefixes ->
-      Console.show_message (Slicing.printPrefixes prefixes)
+  (* Iterate over each network slice *)
+  BatList.iter
+    (fun slice ->
+      Console.show_message (Slicing.printPrefixes slice.prefixes)
                            Console.T.Green "Checking SRP for prefixes";
-      (* get a prefix from this class of prefixes *)
-      let pre = PrefixSet.min_elt prefixes in
-      (* find the nodes this class is announced from *)
-      let ds = PrefixMap.find pre relevantSlices in
+      (* partially evaluate the functions of the network *)
+      let transMap = Abstraction.partialEvalTrans slice.graph slice.trans in
+      let mergeMap = Abstraction.partialEvalMerge slice.graph slice.merge in
       (* compute the bonsai abstraction *)
-      let fbonsai = Abstraction.findAbstraction network.graph transMap mergeMap ds in
-      (* fres := fbonsai; *)
+      let fbonsai =
+        Abstraction.findAbstraction slice.graph transMap mergeMap slice.destinations
+      in
       (* do abstraction for 0...k failures. Reusing previous abstraction *)
       (* for i=0 to k do *)
       (*   Console.show_message "" Console.T.Green *)
       (*                        (Printf.sprintf "Checking for %d failures" i); *)
         (* find the initial abstraction function for these destinations *)
       let f = 
-        time_profile "Computing Abstraction for K failures"
+        time_profile "Computing Refinement for K failures"
                      (fun () ->
-                       FailuresAbstraction.refineK network.graph fbonsai ds k)
+                       FailuresAbstraction.refineK slice.graph fbonsai slice.destinations k)
       in
-      loop fbonsai f pre ds k 1
-    ) relevantSliceGroups
+      loop fbonsai f slice mergeMap transMap k 1
+    ) (Slicing.createSlices decls)
 
 let parse_input (args : string array)
   : Cmdline.t * Console.info * string * Syntax.declarations =
@@ -247,11 +213,12 @@ let parse_input (args : string array)
   let decls =
     if cfg.inline || cfg.smt then
       time_profile "Inlining" (
-                       fun () -> Inline.inline_declarations info decls)
+                     fun () -> Inline.inline_declarations decls |>
+                                 Typing.infer_declarations info)
     else
       decls
   in
-  let decls = if cfg.smt then
+  let decls = if cfg.unroll then
                 time_profile "unroll maps" (fun () -> MapUnrolling.unroll info decls) |>
                   Typing.infer_declarations info 
               else decls

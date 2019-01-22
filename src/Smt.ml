@@ -62,25 +62,12 @@ let printVerbose (msg: string) (descr: string) (span: Span.t) info =
 
 module SmtLang =
   struct
-
-    type datatype_decl =
-      { name         : string;
-        params       : sort list;
-        constructors : (constructor_decl) list
-      }
       
-    and constructor_decl =
-      { constr_name : string; (** name of constructor *)
-        constr_args : (string * sort) list (** projection functions
-                                              and their type *)
-      }
-      
-    and sort =
+    type sort =
       | BoolSort
       | IntSort
       | MapSort of sort * sort
-      | DataTypeSort of string * (sort list)
-      | VarSort of string
+      (* | VarSort of string *)
                  
     type smt_term =
       | Int of string (** unbounded integers *)
@@ -96,7 +83,6 @@ module SmtLang =
       | Ite of smt_term * smt_term * smt_term
       | Var of string
       | AtMost of (smt_term list) * smt_term
-      | Constructor of string * sort (** constructor name, instantiated sort*)
       | App of smt_term * (smt_term list)
              
     type term =
@@ -139,8 +125,6 @@ module SmtLang =
     let mk_bool b = Bool b
 
     let mk_var s = Var s
-
-    let mk_constructor f ts = Constructor (f, ts)
                             
     let mk_app f args =
       App (f, args)
@@ -187,17 +171,6 @@ module SmtLang =
     let mk_command ?(comdescr ="") ?(comloc=Span.default) (com : smt_command) =
       {com; comdescr; comloc}
       
-    (** ** Functions related to datatype constructors *)
-      
-    let get_constructors decl =
-      decl.constructors
-
-    let get_projections (constr: constructor_decl) =
-      constr.constr_args
-
-    let get_recognizer (constr : constructor_decl) =
-      "is-" ^ constr.constr_name
-
     (** ** Compilation to SMT-LIB2 *)
 
     let rec sort_to_smt (s : sort) : string =
@@ -206,10 +179,7 @@ module SmtLang =
       | IntSort -> "Int"
       | MapSort (s1, s2) ->
          Printf.sprintf "((%s) %s)" (sort_to_smt s1) (sort_to_smt s2)
-      | DataTypeSort (name, ls) ->
-         let args = printList sort_to_smt ls "" " " "" in
-         Printf.sprintf "(%s %s)" name args
-      | VarSort s -> s
+      (* | VarSort s -> s *)
                    
     let rec smt_term_to_smt (tm : smt_term) : string =
       match tm with
@@ -240,46 +210,25 @@ module SmtLang =
                         (smt_term_to_smt t1)
                         (printList (fun _ -> "1") ts "" " " "")
                         (printList (fun x -> smt_term_to_smt x) ts "" " " "")
-      | Constructor (name, sort) -> name
-      | App (Constructor (name, sort), ts) when ts = [] ->
-         Printf.sprintf "(as %s %s)" name (sort_to_smt sort) 
       | App (t, ts) ->
          let args = printList smt_term_to_smt ts "" " " "" in 
          Printf.sprintf "(%s %s)" (smt_term_to_smt t) args
 
     let term_to_smt verbose info (tm : term) =
         smt_term_to_smt tm.t
-
-    let term_to_smt_meta verbose info (tm : term) =
-      (if verbose then
-         printVerbose "Translating expression:" tm.tdescr tm.tloc info
-       else "") ^
-        smt_term_to_smt tm.t
-
-    let constructor_to_smt (c: constructor_decl) : string =
-      match c.constr_args with
-      | [] -> c.constr_name
-      | (p :: ps) ->
-         let constrArgs =
-           printList (fun (p,s) ->
-               Printf.sprintf "(%s %s)" p (sort_to_smt s)) (p :: ps) "" " " ""
-         in
-         Printf.sprintf "(%s %s)" c.constr_name constrArgs
-         
-    let rec type_decl_to_smt (dt: datatype_decl) : string =
-      Printf.sprintf "(declare-datatypes %s ((%s %s)))"
-                     (printList sort_to_smt dt.params "(" " " ")")
-                     dt.name
-                     (printList constructor_to_smt dt.constructors "" " " "")
       
-    let const_decl_to_smt ?(verbose=false) info const : string =
-      (if verbose then
-         printVerbose "Constant declared about:" const.cdescr const.cloc info
-       else
-         "") ^
-        Printf.sprintf "(declare-const %s %s)" const.cname
-                       (sort_to_smt const.csort)
+    (* let const_decl_to_smt ?(verbose=false) info const : string = *)
+    (*   (if verbose then *)
+    (*      printVerbose "Constant declared about:" const.cdescr const.cloc info *)
+    (*    else *)
+    (*      "") ^ *)
+    (*     Printf.sprintf "(declare-const %s %s)" const.cname *)
+    (*                    (sort_to_smt const.csort) *)
 
+    let const_decl_to_smt const : string =
+      Printf.sprintf "(declare-const %s %s)" const.cname
+                     (sort_to_smt const.csort)
+      
     let smt_command_to_smt info (comm : smt_command) : string =
       match comm with
       | Echo s ->
@@ -325,7 +274,7 @@ module SmtLang =
       printList (fun c -> command_to_smt verbose info c) coms "\n" "\n" "\n"
 
     type smt_answer =
-      UNSAT | SAT | UNKNOWN
+      | UNSAT | SAT | UNKNOWN
       | MODEL of (string, string) BatMap.t
       | OTHER of string
 
@@ -378,7 +327,6 @@ module ConstantSet = BatSet.Make(Constant)
 type smt_env =
   { ctx: command list
   ; const_decls: ConstantSet.t (** named constant and its sort *)
-  ; type_decls: datatype_decl StringMap.t
   ; symbolics: Syntax.ty_or_exp VarMap.t }
 
 let create_fresh descr s =
@@ -387,19 +335,6 @@ let create_fresh descr s =
 let create_name descr n =
   if descr = "" then Var.to_string n
   else Printf.sprintf "%s-%s" descr (Var.to_string n)
-
-(** * Returns the SMT name of a datatype *)
-let rec datatype_name (ty : ty) : string option =
-  match ty with
-  | TVar {contents= Link t} -> datatype_name t
-  | TTuple ts -> (
-      match ts with
-      | [t] -> datatype_name t
-      | ts ->
-        let len = BatList.length ts in
-        Some (Printf.sprintf "Pair%d" len))
-  | TOption ty -> Some "Option"
-  | _ -> None
 
 (** Returns the SMT name of any type *)
 let rec type_name (ty : ty) : string =
@@ -440,18 +375,10 @@ let rec ty_to_sort (ty: ty) : sort =
   | TVar {contents= Link t} -> ty_to_sort t
   | TBool -> BoolSort
   | TInt _ -> IntSort
-  | TTuple ts -> (
-      match ts with
-      | [t] -> ty_to_sort t
-      | ts ->
-        let name = oget (datatype_name ty) in
-        DataTypeSort (name, BatList.map ty_to_sort ts))
-  | TOption ty' ->
-    let name = oget (datatype_name ty) in
-    DataTypeSort (name, [ty_to_sort ty'])
-  | TMap _ -> failwith "unimplemented"
+  | TMap (ty1,ty2) ->
+     MapSort (ty_to_sort ty1, ty_to_sort ty2)
   (*       mk_array_sort ctx (ty_to_sort ctx ty1) (ty_to_sort ctx ty2)*)
-  | TVar _ | QVar _ | TArrow _ ->
+  | TVar _ | QVar _ | TArrow _ | _ ->
      failwith
        (Printf.sprintf "internal error (ty_to_sort): %s"
                        (Printing.ty_to_string ty))
@@ -544,7 +471,11 @@ module Unboxed : ExprEncoding =
         | [t] -> ty_to_sorts t
         | ts -> BatList.map ty_to_sorts ts |> BatList.concat)
       | TOption _ -> failwith "options should be unboxed"
-      | TMap _ -> failwith "unimplemented"
+      | TMap (ty1,ty2) ->
+         (* for now does not work with pairs *)
+         let s1 = ty_to_sorts ty1 in
+         let s2 = ty_to_sorts ty2 in
+         [MapSort (List.hd s1, List.hd s2)]
       | TVar _ | QVar _ | TArrow _ ->
          failwith
            (Printf.sprintf "internal error (ty_to_sort): %s"
@@ -643,12 +574,50 @@ module Unboxed : ExprEncoding =
                mk_atMost zes ze2.t |>
                mk_term ~tloc:e.espan, env1
             | _ -> failwith "AtMost operator requires a list of boolean variables")
-        | MCreate, _  ->
-           failwith "not implemented"
-        | MGet, _ ->
-           failwith "not implemented"
-        | MSet, _ ->
-           failwith "not implemented"
+        | MCreate, [e1]  ->
+           let mty = get_inner_type (oget e.ety) in
+           (match mty with
+            | TMap (kty, _) ->
+               let ze1, env = encode_exp_z3_single descr env e1 in
+               let ksort = ty_to_sort kty in
+               let msort = ty_to_sort mty in
+               let kvar = create_vars env descr (Var.fresh "k") in
+               let mvar = create_vars env descr (Var.fresh "fmap") in
+               let zk, env = mk_constant env kvar ksort ~cloc:e.espan ~cdescr:descr in
+               let zm, env = mk_constant env mvar msort ~cloc:e.espan ~cdescr:descr in
+               let env =
+                 add_constraint env (mk_term (mk_eq (mk_app zm.t [zk.t]) ze1.t))
+               in
+               zm, env
+            | _ -> failwith "runtime error: missing map key type")
+        | MGet, [emap;ekey] ->
+           let ze1, env = encode_exp_z3_single descr env emap in
+           let ze2, env = encode_exp_z3_single descr env ekey in
+           mk_app ze1.t [ze2.t] |>
+             mk_term ~tloc:e.espan, env
+        | MSet, [emap; ekey; eval] ->
+           let mty = get_inner_type (oget e.ety) in
+           (match mty with
+            | TMap (kty, _) ->
+               let ze1, env = encode_exp_z3_single descr env emap in
+               let ze2, env = encode_exp_z3_single descr env ekey in
+               let ze3, env = encode_exp_z3_single descr env eval in
+               let mty = get_inner_type (oget e.ety) in
+               let msort = ty_to_sort mty in
+               let ksort = ty_to_sort kty in
+               let kvar = create_vars env descr (Var.fresh "k") in
+               let mvar = create_vars env descr (Var.fresh "fmap") in
+               let zk, env = mk_constant env kvar ksort ~cloc:e.espan ~cdescr:descr in
+               let zm, env = mk_constant env mvar msort ~cloc:e.espan ~cdescr:descr in
+               (* if the key is equal to ekey then the new map returns the new value.
+                  for all other keys, else the new map returns the previous value *)
+               let env =
+                 add_constraint env (mk_term (mk_ite (mk_eq zk.t ze2.t)
+                                                     (mk_eq (mk_app zm.t [zk.t]) ze3.t)
+                                                     (mk_eq (mk_app zm.t [zk.t]) ze1.t)))
+               in
+               zm, env
+            | _ -> failwith "runtime error: missing map key type")
         | MMap, _ ->
            failwith "not implemented yet"
         | MMapFilter, _ 
@@ -815,7 +784,6 @@ let init_solver ds =
   let symbolics = get_symbolics ds in
   { ctx = [];
     const_decls = ConstantSet.empty;
-    type_decls = StringMap.empty;
     symbolics =
       BatList.fold_left (fun acc (v,e) -> VarMap.add v e acc) VarMap.empty symbolics }
 
@@ -1246,7 +1214,7 @@ module ClassicEncoding (E: ExprEncoding): Encoding =
     (** ** SMT query optimization *)
     let rec alpha_rename_smt_term (renaming: string StringMap.t) (tm: smt_term) =
       match tm with
-      | Int _ | Bool _ | Constructor _ -> tm
+      | Int _ | Bool _ -> tm
       | And (tm1, tm2) ->
          And (alpha_rename_smt_term renaming tm1, alpha_rename_smt_term renaming tm2)
       | Or (tm1, tm2) ->
@@ -1470,15 +1438,11 @@ module ClassicEncoding (E: ExprEncoding): Encoding =
       let constants = ConstantSet.to_list env.const_decls in
       let constants =
         BatString.concat "\n"
-                         (BatList.map (fun c -> const_decl_to_smt ~verbose:verbose info c)
+                         (BatList.map (fun c -> const_decl_to_smt c)
                                    constants)
       in
-      (* Emit type declarations *)
-      let decls = StringMap.bindings env.type_decls in
-      let decls = String.concat "\n"
-                                (BatList.map (fun (_,typ) -> type_decl_to_smt typ) decls) in
       Printf.sprintf "(set-option :model_evaluator.completion true)
-                          \n %s\n %s\n %s\n" decls constants context
+                          \n %s\n %s\n" constants context
     (* this new line is super important otherwise we don't get a reply
       from Z3.. not understanding why*)
 

@@ -186,7 +186,7 @@ and value_to_string_p prec v =
   | VMap m -> map_to_string ":=" "," m
   | VTuple vs ->
     "(" ^ comma_sep (value_to_string_p max_prec) vs ^ ")"
-  | VOption None -> "None"
+  | VOption None -> Printf.sprintf "None:%s" (ty_to_string (oget v.vty))
   | VOption (Some v) ->
     let s = "Some(" ^ value_to_string_p max_prec v ^ ")" in
     if max_prec > prec then "(" ^ s ^ ")" else s

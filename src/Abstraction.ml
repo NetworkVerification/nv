@@ -428,40 +428,37 @@ module BuildAbstractNetwork =
     (* Given an abstraction function, a concrete graph, transfer and merge
    function, and the number of maximum link failures builds an
    abstract network *)
-    let buildAbstractNetwork (f: abstractionMap) (graph: AdjGraph.t)
+    let buildAbstractNetwork (f: abstractionMap)
                              (mergeMap: (Vertex.t, int * Syntax.exp) Hashtbl.t)
                              (transMap: (Edge.t, int * Syntax.exp) Hashtbl.t)
-                             (initMap: (Vertex.t, Syntax.exp) Hashtbl.t)
-                             (assertMap: (Vertex.t, Syntax.exp) Hashtbl.t)
-                             (dst : VertexSet.t)
-                             (attrTy: Syntax.ty)
-                             (pre : Slicing.Prefix.t)
-                             (symb: (Syntax.var * Syntax.ty_or_exp) list)
+                             (slice: Slicing.network)
                              (k: int) =
       (* build the abstract graph based on the abstraction function *)
-      let (n, edgeshat) = buildAbstractAdjGraphDecls graph f in
-      (* build the symbolic representation of failures *) 
+      let (n, edgeshat) = buildAbstractAdjGraphDecls slice.graph f in
+      (* build the symbolic representation of failures *)
+      (*TODO: make this a separate transformation?*)
       let (failuresMap, symbolics) = buildSymbolicFailures edgeshat k in
       (* build the abstract merge function *)
       let mergehat = buildAbstractMerge n mergeMap f in
       (* build the abstract transfer function *)
-      let transhat = buildAbstractTrans graph edgeshat transMap attrTy failuresMap f in
+      let transhat =
+        buildAbstractTrans slice.graph edgeshat transMap slice.attr_type failuresMap f
+      in
       (* build the abstract init function *)
-      let inithat = buildAbstractInit dst initMap attrTy f in
+      let initMap = Slicing.partialEvalOverNodes (num_vertices slice.graph) slice.init in
+      let inithat = buildAbstractInit slice.destinations initMap slice.attr_type f in
       (* build the abstract assert function *)
+      let assertMap =
+        Slicing.partialEvalOverNodes (num_vertices slice.graph) slice.assertion
+      in
       let asserthat = buildAbstractAssert assertMap f in
-      let symbD = BatList.map (fun (x, tye) ->
-                      if Var.name x = "d" then
-                        DLet (x,Some (TTuple [TInt 32; TInt 32]),
-                              e_val (vtuple [vint (fst pre); vint (snd pre)]))
-                      else
-                        DSymbolic (x, tye)) symb in
       if !debugAbstraction then
         begin
           let agraph = AdjGraph.add_edges (AdjGraph.create n) edgeshat in
           AdjGraph.print agraph
         end;
-      (failuresMap, (DATy attrTy) :: (DNodes n) :: (DEdges edgeshat) :: symbolics @ symbD
+      (failuresMap, (DATy slice.attr_type) :: (DNodes n) :: (DEdges edgeshat) :: symbolics
+                    @ slice.symbolics
                     @ ((DMerge mergehat) :: (DTrans transhat) :: (DInit inithat)
                        :: [DAssert asserthat]))
 

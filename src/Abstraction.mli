@@ -44,18 +44,26 @@ module FailuresAbstraction :
      
 module BuildAbstractNetwork :
 sig
-  (** [buildAbstractNetwork f g mergeMap transMap initMap assertMap dst attrTy k] builds the
+  (** [buildAbstractNetwork f mergeMap transMap slice k] builds the
    declarations of the abstract network *)
-  val buildAbstractNetwork : AbstractionMap.abstractionMap -> AdjGraph.t ->
+  val buildAbstractNetwork : AbstractionMap.abstractionMap ->
                              (AdjGraph.Vertex.t, int * Syntax.exp) Hashtbl.t ->
                              (AdjGraph.Edge.t, int * Syntax.exp) Hashtbl.t ->
-                             (AdjGraph.Vertex.t, Syntax.exp) Hashtbl.t ->
-                             (AdjGraph.Vertex.t, Syntax.exp) Hashtbl.t ->
-                             AdjGraph.VertexSet.t ->
-                             Syntax.ty ->
-                             Slicing.Prefix.t ->
-                             (Syntax.var * Syntax.ty_or_exp) list ->
+                             Slicing.network ->
                              int -> (Var.t AdjGraph.EdgeMap.t) * Syntax.declarations
+
+  (** [buildAbstractNetwork f g mergeMap transMap initMap assertMap dst attrTy k] builds the
+   declarations of the abstract network *)
+  (* val buildAbstractNetwork : AbstractionMap.abstractionMap -> AdjGraph.t -> *)
+  (*                            (AdjGraph.Vertex.t, int * Syntax.exp) Hashtbl.t -> *)
+  (*                            (AdjGraph.Edge.t, int * Syntax.exp) Hashtbl.t -> *)
+  (*                            (AdjGraph.Vertex.t, Syntax.exp) Hashtbl.t -> *)
+  (*                            (AdjGraph.Vertex.t, Syntax.exp) Hashtbl.t -> *)
+  (*                            AdjGraph.VertexSet.t -> *)
+  (*                            Syntax.ty -> *)
+  (*                            Slicing.Prefix.t -> *)
+  (*                            (Syntax.var * Syntax.ty_or_exp) list -> *)
+  (*                            int -> (Var.t AdjGraph.EdgeMap.t) * Syntax.declarations *)
 
   (** [abstractToConcreteEdge g f ehat] returns the set of concrete
    edges that map to the abstract edge [ehat] *)

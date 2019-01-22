@@ -151,14 +151,11 @@ let inline_declaration (env: exp Env.t) (d: declaration) =
   | DRequire e -> (env, Some (DRequire (inline_exp env e)))
   | DATy _ | DNodes _ | DEdges _ -> (env, Some d)
 
-let rec inline_declarations info (ds: declarations) =
-  let ds =
-    match get_attr_type ds with
-    | None ->
-        failwith "attribute type not declared: type attribute = ..."
-    | Some ty -> inline_declarations_aux Env.empty ds
-  in
-  Typing.infer_declarations info ds
+let rec inline_declarations (ds: declarations) =
+  match get_attr_type ds with
+  | None ->
+     failwith "attribute type not declared: type attribute = ..."
+  | Some ty -> inline_declarations_aux Env.empty ds
 
 and inline_declarations_aux env (ds: declarations) : declarations =
   match ds with

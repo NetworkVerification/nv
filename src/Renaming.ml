@@ -15,8 +15,8 @@ let rec update_pattern (env: Var.t Env.t) (p: pattern) :
       let y = fresh x in
       (PVar y, Env.update env x y)
   | PTuple ps ->
-      let env, ps = List.fold_left add_pattern (env, []) ps in
-      (PTuple (List.rev ps), env)
+      let env, ps = BatList.fold_left add_pattern (env, []) ps in
+      (PTuple (BatList.rev ps), env)
   | POption None -> (p, env)
   | POption (Some p) ->
       let p', env = update_pattern env p in
@@ -33,7 +33,7 @@ let rec alpha_convert_exp (env: Var.t Env.t) (e: exp) =
   | EVar x -> evar (Env.lookup env x) |> wrap e
   | EVal v -> e
   | EOp (op, es) ->
-      eop op (List.map (fun e -> alpha_convert_exp env e) es)
+      eop op (BatList.map (fun e -> alpha_convert_exp env e) es)
       |> wrap e
   | EFun f ->
       let x = fresh f.arg in
@@ -54,12 +54,12 @@ let rec alpha_convert_exp (env: Var.t Env.t) (e: exp) =
       let e2' = alpha_convert_exp (Env.update env x y) e2 in
       elet y e1' e2' |> wrap e
   | ETuple es ->
-      etuple (List.map (fun e -> alpha_convert_exp env e) es)
+      etuple (BatList.map (fun e -> alpha_convert_exp env e) es)
       |> wrap e
   | ESome e1 -> esome (alpha_convert_exp env e1) |> wrap e
   | EMatch (e1, bs) ->
       let bs' =
-        List.map
+        BatList.map
           (fun (p, ep) ->
             let p, env = update_pattern env p in
             (p, alpha_convert_exp env ep) )
@@ -162,7 +162,7 @@ module Tests =
         begin
           let avars = collect_unique_vars aexp in
           let vars = collect_vars e in
-          List.length vars = BatSet.cardinal avars
+          BatList.length vars = BatSet.cardinal avars
         end
       with | Duplicate -> false
 

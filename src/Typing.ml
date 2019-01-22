@@ -56,10 +56,10 @@ let rec check_annot_val (v: value) =
     | Some _ -> () ) ;
   match v.v with
   | VOption (Some v) -> check_annot_val v
-  | VTuple vs -> List.iter check_annot_val vs
+  | VTuple vs -> BatList.iter check_annot_val vs
   | VMap map ->
     let bs, _ = BddMap.bindings map in
-    List.iter
+    BatList.iter
       (fun (v1, v2) -> check_annot_val v1 ; check_annot_val v2)
       bs
   | _ -> ()
@@ -76,17 +76,17 @@ let rec check_annot (e: exp) =
   match e.e with
   | EVar _ -> ()
   | EVal v -> check_annot_val v
-  | EOp (op, es) -> List.iter check_annot es
+  | EOp (op, es) -> BatList.iter check_annot es
   | EFun f -> check_annot f.body
   | EApp (e1, e2) -> check_annot e1 ; check_annot e2
   | EIf (e1, e2, e3) ->
     check_annot e1 ; check_annot e2 ; check_annot e3
   | ELet (_, e1, e2) -> check_annot e1 ; check_annot e2
-  | ETuple es -> List.iter check_annot es
+  | ETuple es -> BatList.iter check_annot es
   | ESome e -> check_annot e
   | EMatch (e, bs) ->
     check_annot e ;
-    List.iter (fun (_, e) -> check_annot e) bs
+    BatList.iter (fun (_, e) -> check_annot e) bs
   | ETy (e, ty) -> check_annot e
 
 let check_annot_decl (d: declaration) =
@@ -113,7 +113,7 @@ let rec strip_ty ty =
   | TVar {contents= Link t} -> strip_ty t
   | TBool | TInt _ -> ty
   | TArrow (t1, t2) -> TArrow (strip_ty t1, strip_ty t2)
-  | TTuple ts -> TTuple (List.map strip_ty ts)
+  | TTuple ts -> TTuple (BatList.map strip_ty ts)
   | TOption t -> TOption (strip_ty t)
   | TMap (ty1, ty2) -> TMap (strip_ty ty1, strip_ty ty2)
   | QVar _ | TVar _ -> raise Invalid_type
@@ -138,7 +138,7 @@ let occurs tvr ty =
       ()
     | TArrow (t1, t2) -> occ tvr t1 ; occ tvr t2
     | TBool | TInt _ -> ()
-    | TTuple ts -> List.iter (occ tvr) ts
+    | TTuple ts -> BatList.iter (occ tvr) ts
     | TOption t -> occ tvr t
     | TMap (t1, t2) -> occ tvr t1 ; occ tvr t2
   in
@@ -212,7 +212,7 @@ let generalize ty =
       let ty1 = gen ty1 in
       let ty2 = gen ty2 in
       TArrow (ty1, ty2)
-    | TTuple ts -> TTuple (List.map gen ts)
+    | TTuple ts -> TTuple (BatList.map gen ts)
     | TOption t ->
       let ty = gen t in
       TOption ty
@@ -266,8 +266,8 @@ let inst_schema (names, ty) =
     let tv = fresh_tyvar () in
     Env.update env name tv
   in
-  let subst = List.fold_left add_name Env.empty names in
-  let tys = List.map (fun name -> Env.lookup subst name) names in
+  let subst = BatList.fold_left add_name Env.empty names in
+  let tys = BatList.map (fun name -> Env.lookup subst name) names in
   (inst subst ty, tys)
 
 let substitute (ty: ty) : ty =
@@ -284,7 +284,7 @@ let substitute (ty: ty) : ty =
     | TVar _ | TBool | TInt _ -> ty
     | TArrow (ty1, ty2) ->
       TArrow (substitute_aux ty1, substitute_aux ty2)
-    | TTuple ts -> TTuple (List.map substitute_aux ts)
+    | TTuple ts -> TTuple (BatList.map substitute_aux ts)
     | TOption t -> TOption (substitute_aux t)
     | TMap (ty1, ty2) -> TMap (substitute_aux ty1, substitute_aux ty2)
   in
@@ -300,7 +300,7 @@ let op_typ op =
   | USub size -> ([tint_of_size size; tint_of_size size], tint_of_size size)
   | ULess size-> ([tint_of_size size; tint_of_size size], TBool)
   | ULeq size -> ([tint_of_size size; tint_of_size size], TBool)
-  | AtMost n -> ([TTuple (List.init n (fun _ -> TBool)); (TInt 32)], TBool)
+  | AtMost n -> ([TTuple (BatList.init n (fun _ -> TBool)); (TInt 32)], TBool)
   (* Map operations *)
   | MCreate | MGet | MSet | MMap | MMerge | MMapFilter | UEq ->
     failwith "internal error (op_typ)"
@@ -538,7 +538,7 @@ and infer_value info env (v: Syntax.value) : Syntax.value =
           let vv, vvty = infer_value info env vv |> textractv in
           unify info (exp_of_value v) vvty dty ;
           let vs =
-            List.map
+            BatList.map
               (fun (kv2, vv2) ->
                  let kv2, kvty2 =
                    infer_value info env kv2 |> textractv
@@ -607,7 +607,7 @@ and infer_pattern i info env e tmatch p =
     unify info e tmatch (tint_of_value i);
     env
   | PTuple ps ->
-    let ts = List.map (fun p -> fresh_tyvar ()) ps in
+    let ts = BatList.map (fun p -> fresh_tyvar ()) ps in
     let ty = TTuple ts in
     unify info e tmatch ty ;
     infer_patterns (i + 1) info env e ts ps
@@ -713,7 +713,7 @@ and valid_patterns env p =
 let rec strip_val (v: value) : value =
   match v.v with
   | VTuple vs ->
-     avalue (vtuple (List.map strip_val vs), Some (strip_ty (oget v.vty)), v.vspan)
+     avalue (vtuple (BatList.map strip_val vs), Some (strip_ty (oget v.vty)), v.vspan)
   | VOption (Some v1) ->
      avalue (voption (Some (strip_val v1)), Some (strip_ty (oget v.vty)), v.vspan)
   | VBool _ | VInt _ | VMap _ | VClosure _ | VOption None ->
@@ -726,7 +726,7 @@ let rec strip_exp (e: exp) : exp =
      aexp(e_val (avalue(strip_val v, Some (strip_ty (oget v.vty)), v.vspan)),
           Some (strip_ty (oget e.ety)), e.espan)
   | EOp (op, es) ->
-     aexp (eop op (List.map strip_exp es), Some (strip_ty (oget e.ety)), e.espan)
+     aexp (eop op (BatList.map strip_exp es), Some (strip_ty (oget e.ety)), e.espan)
   | EFun {arg=x; body= body; argty = Some argty; resty = Some resty} ->
      aexp (efun (funcFull x (Some (strip_ty argty)) (Some (strip_ty resty)) (strip_exp body)),
            Some (strip_ty (oget e.ety)), e.espan)
@@ -738,12 +738,12 @@ let rec strip_exp (e: exp) : exp =
   | ELet (x, e1, e2) ->
      aexp (elet x (strip_exp e1) (strip_exp e2), Some (strip_ty (oget e.ety)), e.espan)
   | ETuple es ->
-     aexp (etuple (List.map strip_exp es), Some (strip_ty (oget e.ety)), e.espan)
+     aexp (etuple (BatList.map strip_exp es), Some (strip_ty (oget e.ety)), e.espan)
   | ESome e1 ->
      aexp (esome (strip_exp e1), Some (strip_ty (oget e.ety)), e.espan)
   | EMatch (e, bs) ->
      aexp (ematch (strip_exp e)
-                  (List.map (fun (p,e) -> (p, strip_exp e)) bs),
+                  (BatList.map (fun (p,e) -> (p, strip_exp e)) bs),
            Some (strip_ty (oget e.ety)), e.espan)
   | ETy (e, _) -> strip_exp e
   | EFun _ -> failwith "no types to strip on EFun"
@@ -765,7 +765,7 @@ let strip_decl d =
   | DEdges _ -> d
 
 let strip_decls ds =
-  List.map strip_decl ds
+  BatList.map strip_decl ds
             
 
 (* Convert ty into a canonical form for easy comparison.
@@ -787,7 +787,7 @@ let canonicalize_type (ty : ty) : ty =
       TArrow (t1', t2'), map, count
     | TTuple (tys) ->
       let tys', map, count =
-        List.fold_left
+        BatList.fold_left
           (fun (lst, map, count) t ->
              let t', map, count = aux t map count in
              lst @ [t'], map, count
