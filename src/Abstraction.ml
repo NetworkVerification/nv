@@ -778,7 +778,6 @@ module FailuresAbstraction =
       let rag = EdgeSet.fold (fun e acc -> AdjGraph.remove_edge acc e) unused_new ag in
       let d = getId f (VertexSet.choose ds) in (*assume only one destination for now *)
       let cuts, todo = compute_cuts rag d k todo in
-      (* Printf.printf "cuts:%d\n" (List.length cuts); *)
       match cuts with
       | [] -> (* no min-cuts <= k, we are done. *)
          assert (VertexSet.is_empty todo);
@@ -812,6 +811,11 @@ module FailuresAbstraction =
          let nodes_to_split =
            match nodes_to_split with
            | [] ->
+              (* Printf.printf "cuts:\n"; *)
+              (* List.iter (fun cut -> *)
+              (*     Printf.printf "cut:\n"; *)
+              (*     (EdgeSet.iter (fun e -> *)
+              (*          Printf.printf "nodes:%s" (printEdge e)) cut)) cuts; *)
               (match choose_random_splittable f cuts with
                | [] ->
                   (* Printf.printf "cuts:\n"; *)

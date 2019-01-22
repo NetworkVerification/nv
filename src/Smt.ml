@@ -21,11 +21,12 @@ open Profile
 type encoding_style = Classic | Functional
                               
 type smt_options =
-  { mutable verbose  : bool;
-    mutable optimize : bool;
-    mutable encoding : encoding_style;
-    mutable unboxing : bool;
-    mutable failures : int option
+  { mutable verbose        : bool;
+    mutable optimize       : bool;
+    mutable encoding       : encoding_style;
+    mutable unboxing       : bool;
+    mutable failures       : int option;
+    mutable multiplicities : int AdjGraph.EdgeMap.t
   }
 
 let smt_config : smt_options =
@@ -33,7 +34,8 @@ let smt_config : smt_options =
     optimize = true;
     encoding = Classic;
     unboxing = false;
-    failures = None
+    failures = None;
+    multiplicites = AdjGraph.EdgeMap.empty
   }
 
 let get_requires_no_failures ds =
@@ -575,49 +577,50 @@ module Unboxed : ExprEncoding =
                mk_term ~tloc:e.espan, env1
             | _ -> failwith "AtMost operator requires a list of boolean variables")
         | MCreate, [e1]  ->
-           let mty = get_inner_type (oget e.ety) in
-           (match mty with
-            | TMap (kty, _) ->
-               let ze1, env = encode_exp_z3_single descr env e1 in
-               let ksort = ty_to_sort kty in
-               let msort = ty_to_sort mty in
-               let kvar = create_vars env descr (Var.fresh "k") in
-               let mvar = create_vars env descr (Var.fresh "fmap") in
-               let zk, env = mk_constant env kvar ksort ~cloc:e.espan ~cdescr:descr in
-               let zm, env = mk_constant env mvar msort ~cloc:e.espan ~cdescr:descr in
-               let env =
-                 add_constraint env (mk_term (mk_eq (mk_app zm.t [zk.t]) ze1.t))
-               in
-               zm, env
-            | _ -> failwith "runtime error: missing map key type")
-        | MGet, [emap;ekey] ->
-           let ze1, env = encode_exp_z3_single descr env emap in
-           let ze2, env = encode_exp_z3_single descr env ekey in
-           mk_app ze1.t [ze2.t] |>
-             mk_term ~tloc:e.espan, env
-        | MSet, [emap; ekey; eval] ->
-           let mty = get_inner_type (oget e.ety) in
-           (match mty with
-            | TMap (kty, _) ->
-               let ze1, env = encode_exp_z3_single descr env emap in
-               let ze2, env = encode_exp_z3_single descr env ekey in
-               let ze3, env = encode_exp_z3_single descr env eval in
-               let mty = get_inner_type (oget e.ety) in
-               let msort = ty_to_sort mty in
-               let ksort = ty_to_sort kty in
-               let kvar = create_vars env descr (Var.fresh "k") in
-               let mvar = create_vars env descr (Var.fresh "fmap") in
-               let zk, env = mk_constant env kvar ksort ~cloc:e.espan ~cdescr:descr in
-               let zm, env = mk_constant env mvar msort ~cloc:e.espan ~cdescr:descr in
-               (* if the key is equal to ekey then the new map returns the new value.
-                  for all other keys, else the new map returns the previous value *)
-               let env =
-                 add_constraint env (mk_term (mk_ite (mk_eq zk.t ze2.t)
-                                                     (mk_eq (mk_app zm.t [zk.t]) ze3.t)
-                                                     (mk_eq (mk_app zm.t [zk.t]) ze1.t)))
-               in
-               zm, env
-            | _ -> failwith "runtime error: missing map key type")
+           (* let mty = get_inner_type (oget e.ety) in *)
+           (*    (match mty with *)
+        (*     | TMap (kty, _) -> *)
+        (*        let ze1, env = encode_exp_z3_single descr env e1 in *)
+        (*        let ksort = ty_to_sort kty in *)
+        (*        let msort = ty_to_sort mty in *)
+        (*        let kvar = create_vars env descr (Var.fresh "k") in *)
+        (*        let mvar = create_vars env descr (Var.fresh "fmap") in *)
+        (*        let zk, env = mk_constant env kvar ksort ~cloc:e.espan ~cdescr:descr in *)
+        (*        let zm, env = mk_constant env mvar msort ~cloc:e.espan ~cdescr:descr in *)
+        (*        let env = *)
+        (*          add_constraint env (mk_term (mk_eq (mk_app zm.t [zk.t]) ze1.t)) *)
+        (*        in *)
+        (*        zm, env *)
+        (*     | _ -> failwith "runtime error: missing map key type") *)
+        (* | MGet, [emap;ekey] -> *)
+        (*    let ze1, env = encode_exp_z3_single descr env emap in *)
+        (*    let ze2, env = encode_exp_z3_single descr env ekey in *)
+        (*    mk_app ze1.t [ze2.t] |> *)
+        (*      mk_term ~tloc:e.espan, env *)
+        (* | MSet, [emap; ekey; eval] -> *)
+        (*    let mty = get_inner_type (oget e.ety) in *)
+        (*    (match mty with *)
+        (*     | TMap (kty, _) -> *)
+        (*        let ze1, env = encode_exp_z3_single descr env emap in *)
+        (*        let ze2, env = encode_exp_z3_single descr env ekey in *)
+        (*        let ze3, env = encode_exp_z3_single descr env eval in *)
+        (*        let mty = get_inner_type (oget e.ety) in *)
+        (*        let msort = ty_to_sort mty in *)
+        (*        let ksort = ty_to_sort kty in *)
+        (*        let kvar = create_vars env descr (Var.fresh "k") in *)
+        (*        let mvar = create_vars env descr (Var.fresh "fmap") in *)
+        (*        let zk, env = mk_constant env kvar ksort ~cloc:e.espan ~cdescr:descr in *)
+        (*        let zm, env = mk_constant env mvar msort ~cloc:e.espan ~cdescr:descr in *)
+        (*        (\* if the key is equal to ekey then the new map returns the new value. *)
+        (*           for all other keys, else the new map returns the previous value *\) *)
+        (*        let env = *)
+        (*          add_constraint env (mk_term (mk_ite (mk_eq zk.t ze2.t) *)
+        (*                                              (mk_eq (mk_app zm.t [zk.t]) ze3.t) *)
+        (*                                              (mk_eq (mk_app zm.t [zk.t]) *)
+        (*                                                     (mk_app ze1.t [zk.t])))) *)
+        (*        in *)
+        (*        zm, env *)
+           failwith "runtime error: missing map key type"
         | MMap, _ ->
            failwith "not implemented yet"
         | MMapFilter, _ 
@@ -956,8 +959,8 @@ module ClassicEncoding (E: ExprEncoding): Encoding =
       (* trans_input_map maps each edge to the incoming message variable *)
       let trans_input_map = AdjGraph.EdgeMap.empty in
       let (incoming_map, trans_map, trans_input_map, env) =
-        BatList.fold_left (fun (incoming_map, trans_map, trans_input_map, env) (i,j) -> 
-            let incoming_map = 
+        BatList.fold_left (fun (incoming_map, trans_map, trans_input_map, env) (i,j) ->
+            let incoming_map =
               match AdjGraph.VertexMap.Exceptionless.find j incoming_map with
               | None ->
                  AdjGraph.VertexMap.add j [(i, j)] incoming_map
@@ -977,14 +980,45 @@ module ClassicEncoding (E: ExprEncoding): Encoding =
             let trans, x, env =
               encode_z3_trans
                 (Printf.sprintf "trans-%d-%d" (Integer.to_int i)
-                                (Integer.to_int j)) 
+                                (Integer.to_int j))
                 env etrans_uv
             in
             (* List.iter (fun tm -> Printf.printf "%s\n" ( term_to_smt 0 0 tm)) x; *)
             let trans_input_map = AdjGraph.EdgeMap.add (i, j) x trans_input_map in
             let trans_map = AdjGraph.EdgeMap.add (i, j) trans trans_map in
-            (incoming_map, trans_input_map, trans_map, env))
+            (incoming_map, trans_map, trans_input_map, env))
                           (incoming_map, trans_map, trans_input_map, env) edges
+
+        (* BatList.fold_right (fun (i,j) (incoming_map, trans_map, trans_input_map, env)->  *)
+        (*     let incoming_map =  *)
+        (*       match AdjGraph.VertexMap.Exceptionless.find j incoming_map with *)
+        (*       | None -> *)
+        (*          AdjGraph.VertexMap.add j [(i, j)] incoming_map *)
+        (*       | Some idxs -> *)
+        (*          AdjGraph.VertexMap.add j ((i, j) :: idxs) incoming_map *)
+        (*     in *)
+        (*     let edge = *)
+        (*       if smt_config.unboxing then *)
+        (*         [avalue ((vint i), Some Typing.node_ty, Span.default); *)
+        (*          avalue ((vint j), Some Typing.node_ty, Span.default)] *)
+        (*       else *)
+        (*         [avalue (vtuple [vint i; vint j], *)
+        (*                  Some Typing.edge_ty, Span.default)] in *)
+        (*     let etrans_uv = Interp.interp_partial_fun etrans edge in *)
+        (*     (\* Printf.printf "%s: %s\n\n\n\n\n" (AdjGraph.printEdge (i,j)) *\) *)
+        (*     (\*               (Printing.exp_to_string etrans_uv); *\) *)
+        (*     let trans, x, env = *)
+        (*       encode_z3_trans *)
+        (*         (Printf.sprintf "trans-%d-%d" (Integer.to_int i) *)
+        (*                         (Integer.to_int j))  *)
+        (*         env etrans_uv *)
+        (*     in *)
+        (*     (\* List.iter (fun tm -> Printf.printf "%s\n" ( term_to_smt 0 0 tm)) x; *\) *)
+        (*     let trans_input_map = AdjGraph.EdgeMap.add (i, j) x trans_input_map in *)
+        (*     let trans_map = AdjGraph.EdgeMap.add (i, j) trans trans_map in *)
+        (*     (incoming_map, trans_map, trans_input_map, env)) *)
+                          (*                           edges (incoming_map, trans_map, trans_input_map, env) *)
+        
       in
       (* Compute the labelling as the merge of all inputs *)
       let labelling, env =
@@ -999,17 +1033,21 @@ module ClassicEncoding (E: ExprEncoding): Encoding =
             let emerge_i = Interp.interp_partial_fun emerge [node] in
             let idx = ref 0 in
             let merged, env =
+              (* BatList.fold_right *)
               BatList.fold_left
-                (fun (acc, env) (x, y) ->
+                (fun (acc, env) (x, y)  ->
                   incr idx ;
                   let trans = AdjGraph.EdgeMap.find (x, y) trans_map in
                   let str = Printf.sprintf "merge-%d-%d" (Integer.to_int i) !idx in
                   let merge_result, x, env = encode_z3_merge str env emerge_i in
-                  let env = BatList.fold_left2 (fun env y x -> 
-                                add_constraint env (mk_term (mk_eq y.t x.t)))
+                  let env = BatList.fold_left2 (fun env y x ->
+                    (* BatList.fold_right2 (fun y x env -> *)
+                        add_constraint env (mk_term (mk_eq y.t x.t)))
                                                env (trans @ acc) x
+                                               (* (trans @ acc) x env *)
                   in
                   merge_result, env) (init, env) in_edges
+                (* merge_result, env) in_edges (init, env) *)
             in
             let lbl_i_name = label_var i in
             let lbl_i = create_strings lbl_i_name aty in
@@ -1035,7 +1073,10 @@ module ClassicEncoding (E: ExprEncoding): Encoding =
                     let label = AdjGraph.VertexMap.find i labelling in
                     BatList.fold_left2 (fun env label x ->
                         add_constraint env (mk_term (mk_eq label.t x.t))) env label x)
-                  trans_input_map env
+                    trans_input_map env
+                  (*   BatList.fold_right2 (fun label x env -> *)
+                  (*       add_constraint env (mk_term (mk_eq label.t x.t))) label x env) *)
+                  (* trans_input_map env                     *)
       in
       (* add assertions at the end *)
       let env = 
