@@ -213,8 +213,8 @@ let parse_input (args : string array)
   let decls =
     if cfg.inline || cfg.smt then
       time_profile "Inlining" (
-                     fun () -> Inline.inline_declarations decls |>
-                                 Typing.infer_declarations info)
+                     fun () -> Inline.inline_declarations decls)
+                                 (* Typing.infer_declarations info) *)
     else
       decls
   in
