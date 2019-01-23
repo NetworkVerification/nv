@@ -134,10 +134,13 @@ let rec flatten_exp e : exp =
     | UEq
     | ULess _
     | AtMost _
+    | MCreate
+    | MGet
+    | MSet
     | ULeq _ ->
        aexp (eop op (BatList.map flatten_exp es),
              Some (flatten_ty (oget e.ety)), e.espan)
-    | _ -> failwith "TODO: implement tupple flattening for maps")
+    | _ -> failwith "TODO: implement tupple flattening for more map operations")
         
 and flatten_branches bs ty =
   let rec flatten_pattern p ty =

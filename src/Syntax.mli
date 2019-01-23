@@ -251,6 +251,8 @@ val get_ty_from_tyexp: ty_or_exp -> ty
 val bool_of_val: value -> bool option
 
 val proj_var: int -> var -> var
+
+val default_exp_value: ty -> exp
   
 module type MEMOIZER = sig
   type t

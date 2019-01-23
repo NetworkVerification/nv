@@ -33,17 +33,19 @@ let rec unbox_ty ty =
 
 let rec unbox_val v =
   match v.v with
-  | VBool _ | VInt _ -> v
+  | VBool _ | VInt _ ->
+     exp_of_value v
   | VOption None ->
      (match v.vty with
       | Some (TOption t) ->
-         avalue (vtuple [(vbool false); (default_value (get_inner_type t))],
-                 Some (unbox_ty (oget v.vty)), v.vspan)
+         aexp (etuple [(vbool false |> exp_of_value); (default_exp_value (get_inner_type t))],
+                 Some (unbox_ty (TOption t)), v.vspan)
      | _ -> failwith "expected option type")
   | VOption (Some v1) ->
-     avalue (vtuple [(vbool true); (unbox_val v1)], Some (unbox_ty (oget v.vty)), v.vspan)
+     aexp (etuple [(vbool true |> exp_of_value); (unbox_val v1)],
+           Some (unbox_ty (oget v.vty)), v.vspan)
   | VTuple vs ->
-     avalue (vtuple (BatList.map unbox_val vs), Some (unbox_ty (oget v.vty)), v.vspan)
+     aexp (etuple (BatList.map unbox_val vs), Some (unbox_ty (oget v.vty)), v.vspan)
   | VClosure _ -> failwith "Closures not yet implemented"
   | VMap _ -> failwith "no map values"
     
@@ -51,8 +53,7 @@ let rec unbox_exp e : exp =
   match e.e with
   | ETy (e, ty) -> unbox_exp e
   | EVal v ->
-     let v = unbox_val v in
-     aexp (e_val v, v.vty, v.vspan)
+     unbox_val v
   | EVar _ -> aexp(e, Some (unbox_ty (oget e.ety)), e.espan)
   | EFun f ->
       aexp (efun
@@ -145,7 +146,8 @@ let unbox_decl d =
   match d with
   | DLet (x, oty, e) -> DLet (x, Some (unbox_ty (oget oty)), unbox_exp e)
   | DMerge e -> DMerge (unbox_exp e)
-  | DTrans e -> DTrans (unbox_exp e)
+  | DTrans e ->
+     DTrans (unbox_exp e)
   | DInit e ->
      (* Printf.printf "init ty:%s\n" (Syntax.show_exp ~show_meta:true e); *)
      DInit (unbox_exp e)

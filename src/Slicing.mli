@@ -40,4 +40,4 @@ val findInitialSlices: (Integer.t, Syntax.exp) Hashtbl.t ->
 
 val groupPrefixesByVertices: AdjGraph.VertexSet.t PrefixMap.t -> PrefixSetSet.t
 
-val createSlices: Syntax.declarations -> network list
+val createSlices: Console.info -> Syntax.declarations -> network list

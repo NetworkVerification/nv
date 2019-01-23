@@ -131,8 +131,8 @@ let sliceDestination symb (pre: Prefix.t) =
              e_val (vtuple [vint (fst pre); vint (snd pre)]))),
    BatList.map (fun (s,v) -> DSymbolic (s,v)) ls2)
 
-(* May need to have inlined definitions before calling this *)
-let createSlices decls =
+(* Need to have inlined definitions before calling this *)
+let createSlices info decls =
     match
       ( get_merge decls
       , get_trans decls
@@ -168,7 +168,8 @@ let createSlices decls =
                                          :: (DEdges es) :: symb @
                                            [(DInit einit);
                                             (DMerge emerge); (DTrans etrans);
-                                            (DAssert eassert)]) in
+                                            (DAssert eassert)]) |>
+               Typing.infer_declarations info in
            { attr_type = aty;
              init = oget (get_init decls);
              trans = oget (get_trans decls);

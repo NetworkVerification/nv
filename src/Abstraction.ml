@@ -7,6 +7,17 @@ open Hashtbl
 open Syntax
 open BatSet
 
+   let rec hasTvar ty =
+  match ty with
+  | TVar {contents= Link t} -> hasTvar t
+  | TVar {contents= Unbound _} -> true
+  | TArrow (t1, t2) -> hasTvar t1 || hasTvar t2
+  | TTuple ts -> BatList.exists hasTvar ts
+  | TOption t -> hasTvar t
+  | TMap (ty1, ty2) -> hasTvar ty1 || hasTvar ty2
+  | QVar _ -> false
+  | _ -> false
+
 let debugAbstraction = ref false
 
 let zero = Integer.create ~value:0 ~size:32
@@ -232,18 +243,19 @@ module BuildAbstractNetwork =
                 e_val (vint (Integer.create ~value:k ~size:32))],
            Some TBool, Span.default)
       
-      let failuresConstraint_pb (k: int) (failuresMap: Var.t EdgeMap.t) : Syntax.exp =
-        let arg1 = aexp(etuple (EdgeMap.fold (fun _ fv acc ->
-                                    (evar fv) :: acc) failuresMap []),
-                        Some (TTuple (BatList.init (EdgeMap.cardinal failuresMap)
-                                                (fun _ -> TBool))),
-                        Span.default
-                       )
-        in
-        let arg2 = aexp (e_val (vint (Integer.of_int k)), Some (TInt 32), Span.default) in
-        aexp (eop (AtMost (EdgeMap.cardinal failuresMap)) [arg1; arg2],
-              Some TBool,
-              Span.default)
+    let failuresConstraint_pb (k: int) (failuresMap: Var.t EdgeMap.t) : Syntax.exp =
+      let arg1 = aexp(etuple (EdgeMap.fold (fun _ fv acc ->
+                                  (aexp (evar fv, Some TBool, Span.default)) :: acc)
+                                           failuresMap []),
+                      Some (TTuple (BatList.init (EdgeMap.cardinal failuresMap)
+                                                 (fun _ -> TBool))),
+                      Span.default
+                     )
+      in
+      let arg2 = exp_of_value (avalue (vint (Integer.of_int k), Some (TInt 32), Span.default)) in
+      aexp (eop (AtMost (EdgeMap.cardinal failuresMap)) [arg1; arg2],
+            Some TBool,
+            Span.default)
 
       
     let buildSymbolicFailures (aedges : Edge.t list) (k : int) =
@@ -284,9 +296,10 @@ module BuildAbstractNetwork =
       let aedge_var = Var.create "edge" in
       
       (* code that implements check for a failed edge *)
-      let failCheck fvar body = eif (evar fvar)
-                                   (exp_of_value (Syntax.default_value attrTy))
-                                   body in
+      let failCheck fvar body =
+        aexp(eif (aexp(evar fvar, Some TBool, Span.default))
+                 (Syntax.default_exp_value attrTy)
+                 body, Some attrTy, Span.default)in
       
       (* inserting that code in the body of the transfer function *)
       let addFailureCheck fvar exp = (deconstructFun exp).body |> (failCheck fvar) in
@@ -309,7 +322,8 @@ module BuildAbstractNetwork =
       in
       
       (* partial evaluted trans functions are of the form fun m -> ..., grab m *)
-      let messageArg =
+
+      let transuv =
         match aedges with
         | [] -> failwith "No edges found"
         | (uhat, vhat) :: _ ->
@@ -319,14 +333,19 @@ module BuildAbstractNetwork =
                              corresponding to the abstract edge"
            | uv :: _ -> 
               let (_, transuv) = Hashtbl.find trans uv in
-              let transf = deconstructFun transuv in
-              transf.arg
+              transuv
       in
-      let match_exp = ematch (evar aedge_var) branches in
+      let transf = deconstructFun transuv in
+      let messageArg = transf.arg in
+      let match_exp =
+        aexp(ematch (aexp (evar aedge_var, Some Typing.edge_ty, Span.default)) branches,
+             transf.resty, Span.default) in
       (* create fun m -> trans_hat_body *)
-      let trans_hat_msg = Syntax.lam messageArg match_exp in
+      let trans_hat_msg = efunc {arg=messageArg; argty=transf.argty; resty=transf.resty;
+                                 body=match_exp} in
       (*return fun e_hat m -> trans_hat_body *)  
-      Syntax.lam aedge_var trans_hat_msg
+      efunc {arg=aedge_var; argty=Some Typing.edge_ty; resty= transuv.ety;
+             body=trans_hat_msg}
 
     (* Given the number of abstract nodes and a concrete merge function, 
    synthesizes an abstract merge function. *)
@@ -353,12 +372,19 @@ module BuildAbstractNetwork =
           let (_, mergeu) = Hashtbl.find merge u in
           let mergeu0 = deconstructFun mergeu in
           let mergeu1 = deconstructFun mergeu0.body in
-          (p, mergeu1.body) :: (branches (Integer.succ uhat))
+          (p, aexp(mergeu1.body, mergeu1.resty, Span.default)) :: (branches (Integer.succ uhat))
       in
       (* create a match on the node expression *)
-      let match_exp = ematch (evar avertex_var) (branches zero) in
+      let match_exp =
+        aexp(ematch (aexp (evar avertex_var, Some Typing.node_ty, Span.default)) (branches zero),
+                     merge0y.resty, Span.default)
+      in
       (* create a function from attributes *)
-      Syntax.lam avertex_var (Syntax.lam xvar (Syntax.lam yvar match_exp))
+      efunc {arg=avertex_var; argty= Some Typing.node_ty; resty = merge0.ety;
+             body= efunc {arg=xvar; argty = merge0x.argty; resty = merge0x.resty;
+                          body = efunc {arg=yvar; argty=merge0y.argty; resty = merge0y.resty;
+                                        body = match_exp}}}
+      (* Syntax.lam avertex_var (Syntax.lam xvar (Syntax.lam yvar match_exp)) *)
 
     (* Constructs the init function for the abstract network. Nodes in
        the set dst have the invariant that they announce the same
@@ -377,7 +403,7 @@ module BuildAbstractNetwork =
       let b = (PInt (getId f d), vinit) in
       (* This is the default initial value for all other nodes.
      Assuming default_value computes the value we want..*)
-      let default_attr = e_val (default_value attrTy) in
+      let default_attr = default_exp_value attrTy in
       let default_branch = (PWild, default_attr) in
       (* compute the branches of the initial expression *)
       let branches = VertexSet.fold (fun u acc ->
@@ -385,9 +411,12 @@ module BuildAbstractNetwork =
                          let p = PInt uhat in
                          (p, vinit) :: acc) dst' ([b; default_branch]) in
       (*build the match expression *)
-      let match_exp = ematch (evar avertex_var) branches in
+      let match_exp =
+        aexp (ematch (aexp (evar avertex_var, Some Typing.node_ty, Span.default)) branches,
+              vinit.ety, Span.default) in
       (*return the function "init node = ..." *)
-      Syntax.lam avertex_var match_exp
+      efunc {arg=avertex_var; argty=Some Typing.node_ty; resty=Some attrTy;
+             body=match_exp}
 
     (* Constructs the assertion function for the abstract network.*)
     (* TODO: we also need to slice the assertion function to only refer to
@@ -403,8 +432,9 @@ module BuildAbstractNetwork =
       let n = Integer.of_int (AbstractionMap.size f) in
 
       (* get the argument name of the attribute *)
-      let mineu = Hashtbl.find assertionMap zero in 
-      let messageArg = (deconstructFun mineu).arg in
+      let mineu = Hashtbl.find assertionMap zero in
+      let mineufun = deconstructFun mineu in
+      let messageArg = mineufun.arg in
       
       (* for each abstract node, find it's corresponding concrete
       assertion function. *)
@@ -419,11 +449,14 @@ module BuildAbstractNetwork =
       in
       
       (* create a match on the node expression *)
-      let match_exp = ematch (evar avertex_var) (branches zero) in
-      let assert_msg = Syntax.lam messageArg match_exp in
-      
+      let match_exp =
+        aexp (ematch (aexp (evar avertex_var, Some Typing.node_ty, Span.default)) (branches zero),
+              mineu.ety, Span.default) in
+      let assert_msg = efunc {arg=messageArg; argty=mineufun.argty;
+                              resty=mineufun.resty; body=match_exp} in
       (*return fun uhat m -> assert_hat_body *)  
-      Syntax.lam avertex_var assert_msg
+      efunc {arg=avertex_var; argty=Some Typing.node_ty; resty=mineu.ety; body=assert_msg}
+      
       
     (* Given an abstraction function, a concrete graph, transfer and merge
    function, and the number of maximum link failures builds an
@@ -447,6 +480,7 @@ module BuildAbstractNetwork =
       (* build the abstract init function *)
       let initMap = Slicing.partialEvalOverNodes (num_vertices slice.graph) slice.init in
       let inithat = buildAbstractInit slice.destinations initMap slice.attr_type f in
+      Printf.printf "init:%s\n" (Printing.exp_to_string inithat);
       (* build the abstract assert function *)
       let assertMap =
         Slicing.partialEvalOverNodes (num_vertices slice.graph) slice.assertion
@@ -471,6 +505,10 @@ module BuildAbstractNetwork =
       
     let getEdgeMultiplicity (g: AdjGraph.t) (f: abstractionMap) (ehat: Edge.t) : int =
       EdgeSet.cardinal (abstractToConcreteEdge g f ehat)
+
+    let getEdgeMultiplicities (g: AdjGraph.t) (f: abstractionMap) (ehats: EdgeSet.t) =
+      EdgeSet.fold (fun ehat acc ->
+          EdgeMap.add ehat (getEdgeMultiplicity g f ehat) acc) ehats EdgeMap.empty
 
   end
       

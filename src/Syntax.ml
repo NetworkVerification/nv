@@ -874,6 +874,25 @@ let rec free_dead_vars (e : exp) =
      let e1 = free_dead_vars e1 in
      ematch e1 (List.map (fun (ps, e) -> (ps, free_dead_vars e)) branches)
 
+(* This is used because for SMT we represent maps as map expression
+   and not values, and we want some type of default value for them as
+   well *)
+let rec default_exp_value ty =
+    match ty with
+    | TBool -> exp_of_value (avalue (vbool false, Some ty, Span.default))
+    | TInt size ->
+       exp_of_value (avalue (vint (Integer.create ~value:0 ~size:size), Some ty, Span.default))
+    | TTuple ts ->
+       aexp (etuple (BatList.map default_exp_value ts), Some ty, Span.default)
+    | TOption _ ->
+       exp_of_value (avalue (voption None, Some ty, Span.default))
+    | TMap (ty1, ty2) ->
+       aexp(eop MCreate [default_exp_value ty2], Some ty, Span.default)
+    | TVar {contents= Link t} ->
+       default_exp_value t
+    | TVar _ | QVar _ | TArrow _ ->
+       failwith "internal error (default_value)"
+     
 (* Memoization *)
 
 module type MEMOIZER = sig

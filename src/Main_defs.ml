@@ -16,6 +16,17 @@ open BuildAbstractNetwork
 open Lazy
 open Profile
 
+let rec hasTvar ty =
+  match ty with
+  | TVar {contents= Link t} -> hasTvar t
+  | TVar {contents= Unbound _} -> true
+  | TArrow (t1, t2) -> hasTvar t1 || hasTvar t2
+  | TTuple ts -> BatList.exists hasTvar ts
+  | TOption t -> hasTvar t
+  | TMap (ty1, ty2) -> hasTvar ty1 || hasTvar ty2
+  | QVar _ -> false
+  | _ -> false
+   
 type answer =
   | Success of (Solution.t option)
   | CounterExample of Solution.t
@@ -147,8 +158,28 @@ let compress file info decls cfg networkOp =
     let failVars, decls =
       time_profile "Build abstract network"
                    (fun () -> buildAbstractNetwork f mergeMap transMap slice k) in
-    let decls = Typing.infer_declarations info decls in
-    (* let decls = Inline.inline_declarations info decls in *)
+    (* let decls = Inline.inline_declarations decls in *)
+    (* let decls = Typing.infer_declarations info decls in *)
+    (* Printf.printf "init:%s\n" (Printing.exp_to_string einit); *)
+    (* Printf.printf "%s\n" (Printing.declarations_to_string decls); *)
+    (* Visitors.iter_exp_decls (fun d e -> *)
+    (*                  match e.ety with *)
+    (*   | Some ty -> *)
+    (*      (\* Printf.printf "typ:%s\n" (Printing.ty_to_string ty); *\) *)
+    (*      (match hasTvar (get_inner_type ty) with *)
+    (*      | true -> failwith ("has tvar" ^ (declaration_to_string d)) *)
+    (*      | _ -> ()) *)
+    (*   | None -> *)
+    (*      (match e.e with *)
+    (*      | EVal v -> *)
+    (*         (match v.vty with *)
+    (*          | Some ty -> *)
+    (*             (match hasTvar (get_inner_type ty) with *)
+    (*              | true -> failwith ("has tvar" ^ ( declaration_to_string d)) *)
+    (*              | _ -> ()) *)
+    (*          | None -> ()) *)
+    (*      | _ -> ())) decls; *)
+    (* failwith "end"; *)
     let groups = AbstractionMap.printAbstractGroups f "\n" in
     Console.show_message groups Console.T.Blue "Abstract groups";
     match networkOp cfg info decls with
@@ -198,7 +229,7 @@ let compress file info decls cfg networkOp =
                        FailuresAbstraction.refineK slice.graph fbonsai slice.destinations k)
       in
       loop fbonsai f slice mergeMap transMap k 1
-    ) (Slicing.createSlices decls)
+    ) (Slicing.createSlices info decls)
 
 let parse_input (args : string array)
   : Cmdline.t * Console.info * string * Syntax.declarations =
@@ -210,17 +241,20 @@ let parse_input (args : string array)
   let decls = Typing.infer_declarations info ds in
   Typing.check_annot_decls decls ;
   Wellformed.check info decls ;
-  let decls =
+    let decls =
     if cfg.inline || cfg.smt then
       time_profile "Inlining" (
-                     fun () -> Inline.inline_declarations decls)
-                                 (* Typing.infer_declarations info) *)
+                     fun () -> Inline.inline_declarations decls |>
+                                 Typing.infer_declarations info)
     else
       decls
-  in
+    in
   let decls = if cfg.unroll then
                 time_profile "unroll maps" (fun () -> MapUnrolling.unroll info decls) |>
                   Typing.infer_declarations info 
               else decls
   in
   (cfg, info, file, decls)
+
+
+

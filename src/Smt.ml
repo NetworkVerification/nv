@@ -35,7 +35,7 @@ let smt_config : smt_options =
     encoding = Classic;
     unboxing = false;
     failures = None;
-    multiplicites = AdjGraph.EdgeMap.empty
+    multiplicities = AdjGraph.EdgeMap.empty
   }
 
 let get_requires_no_failures ds =

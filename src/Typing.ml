@@ -481,12 +481,12 @@ let rec infer_exp i info env (e: exp) : exp =
     | ESome e ->
       let e, t = infer_exp (i + 1) info env e |> textract in
       texp (esome e, TOption t, e.espan)
-    | EMatch (e, branches) ->
-      let e, tmatch = infer_exp (i + 1) info env e |> textract in
+    | EMatch (e1, branches) ->
+      let e1, tmatch = infer_exp (i + 1) info env e1 |> textract in
       let branches, t =
-        infer_branches (i + 1) info env e tmatch branches
+        infer_branches (i + 1) info env e1 tmatch branches
       in
-      texp (ematch e branches, t, e.espan)
+      texp (ematch e1 branches, t, e1.espan)
     | ETy (e, t) ->
       let e, t1 = infer_exp (i + 1) info env e |> textract in
       unify info e t t1 ;
