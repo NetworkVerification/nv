@@ -730,7 +730,7 @@ module FailuresAbstraction =
         let compare (x1,y1) (x2,y2) =
           let sz = Pervasives.compare (normalized_size x1) (normalized_size x2) in
           if sz = 0 then
-            Pervasives.compare y1 y2
+            VertexSet.compare y1 y2
           else
             sz
       end 
