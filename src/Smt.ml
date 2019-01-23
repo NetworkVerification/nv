@@ -68,8 +68,7 @@ module SmtLang =
     type sort =
       | BoolSort
       | IntSort
-      | MapSort of sort * sort
-      (* | VarSort of string *)
+      | BitVecSort of int
                  
     type smt_term =
       | Int of string (** unbounded integers *)
@@ -179,9 +178,8 @@ module SmtLang =
       match s with
       | BoolSort -> "Bool"
       | IntSort -> "Int"
-      | MapSort (s1, s2) ->
-         Printf.sprintf "((%s) %s)" (sort_to_smt s1) (sort_to_smt s2)
-      (* | VarSort s -> s *)
+      | BitVecSort n ->
+         Printf.sprintf "(_ BitVec %d)" n
                    
     let rec smt_term_to_smt (tm : smt_term) : string =
       match tm with
@@ -377,8 +375,8 @@ let rec ty_to_sort (ty: ty) : sort =
   | TVar {contents= Link t} -> ty_to_sort t
   | TBool -> BoolSort
   | TInt _ -> IntSort
-  | TMap (ty1,ty2) ->
-     MapSort (ty_to_sort ty1, ty_to_sort ty2)
+  | TMap (ty1,ty2) -> failwith "mapsrt"
+     (* MapSort (ty_to_sort ty1, ty_to_sort ty2) *)
   (*       mk_array_sort ctx (ty_to_sort ctx ty1) (ty_to_sort ctx ty2)*)
   | TVar _ | QVar _ | TArrow _ | _ ->
      failwith
@@ -460,6 +458,11 @@ module Unboxed : ExprEncoding =
       | _ ->
          {env with symbolics=VarMap.add (List.hd b) (Syntax.Ty ty) env.symbolics}
 
+    (* type map_info = *)
+    (*   { mapKeys : maplist; *)
+    (*     mapCardinal : (Syntax.ty * int) list; *)
+    (*     key *)
+
     (** Translates a [Syntax.ty] to a list of SMT sorts *)
     let rec ty_to_sorts (ty: ty) : sort list =
       match ty with
@@ -473,11 +476,15 @@ module Unboxed : ExprEncoding =
         | [t] -> ty_to_sorts t
         | ts -> BatList.map ty_to_sorts ts |> BatList.concat)
       | TOption _ -> failwith "options should be unboxed"
-      | TMap (ty1,ty2) ->
-         (* for now does not work with pairs *)
-         let s1 = ty_to_sorts ty1 in
-         let s2 = ty_to_sorts ty2 in
-         [MapSort (List.hd s1, List.hd s2)]
+      | TMap (ty1,ty2) -> failwith "maps"
+         (* match ty2 with *)
+         (* | TBool -> *)
+         (*    let num_keys = lookup_map_type ty map_keys *)
+         (*    [BitVecSort  *)
+         (* (\* for now does not work with pairs *\) *)
+         (* let s1 = ty_to_sorts ty1 in *)
+         (* let s2 = ty_to_sorts ty2 in *)
+         (* [MapSort (List.hd s1, List.hd s2)] *)
       | TVar _ | QVar _ | TArrow _ ->
          failwith
            (Printf.sprintf "internal error (ty_to_sort): %s"
@@ -585,11 +592,13 @@ module Unboxed : ExprEncoding =
                 | _ -> failwith "AtMost requires a list of integers as second arg"
                )
             | _ -> failwith "AtMost operator requires a list of boolean variables")
-        | MCreate, [e1]  ->
+        | MCreate, [e1]  -> failwith "map"
            (* let mty = get_inner_type (oget e.ety) in *)
-           (*    (match mty with *)
-        (*     | TMap (kty, _) -> *)
-        (*        let ze1, env = encode_exp_z3_single descr env e1 in *)
+           (* (match mty with *)
+           (*  | TMap (kty, _) -> *)
+               
+               
+               (*        let ze1, env = encode_exp_z3_single descr env e1 in *)
         (*        let ksort = ty_to_sort kty in *)
         (*        let msort = ty_to_sort mty in *)
         (*        let kvar = create_vars env descr (Var.fresh "k") in *)
@@ -629,7 +638,6 @@ module Unboxed : ExprEncoding =
         (*                                                     (mk_app ze1.t [zk.t])))) *)
         (*        in *)
         (*        zm, env *)
-           failwith "runtime error: missing map key type"
         | MMap, _ ->
            failwith "not implemented yet"
         | MMapFilter, _ 
@@ -1511,33 +1519,38 @@ module ClassicEncoding (E: ExprEncoding): Encoding =
       | true -> (module Unboxed : ExprEncoding)
       | false -> failwith "boxed not implemented yet" (*(module Boxed : ExprEncoding)*)
 
+    (* Asks the SMT solver to return a model and translates it to NV lang *)
+    let ask_for_model query chan info env solver renaming ds =
+      (* build a counterexample based on the model provided by Z3 *)
+      let num_nodes =
+        match get_nodes ds with
+        | Some n -> n
+        | _ -> failwith "internal error (encode)"
+      in
+      let eassert = get_assert ds in
+      let model = eval_model env.symbolics num_nodes eassert renaming in
+      let model_question = commands_to_smt smt_config.verbose info model in
+      if query then
+        printQuery chan model_question;
+      ask_solver solver model_question;
+      let model = solver |> parse_model in
+      (match model with
+       | MODEL m ->
+          if smt_config.unboxing then
+            Sat (translate_model_unboxed m)
+          else
+            Sat (translate_model m)
+       | OTHER s ->
+          Printf.printf "%s\n" s;
+          failwith "failed to parse a model"
+       | _ -> failwith "failed to parse a model")
+
+    (* Ask the smt solver whether the query was unsat or not *)
     let get_sat query chan info env solver renaming ds reply =
       match reply with
       | UNSAT -> Unsat
       | SAT ->
-         (* build a counterexample based on the model provided by Z3 *)
-         let num_nodes =
-           match get_nodes ds with
-           | Some n -> n
-           | _ -> failwith "internal error (encode)"
-         in
-         let eassert = get_assert ds in
-         let model = eval_model env.symbolics num_nodes eassert renaming in
-         let model_question = commands_to_smt smt_config.verbose info model in
-         if query then
-           printQuery chan model_question;
-         ask_solver solver model_question;
-         let model = solver |> parse_model in
-         (match model with
-          | MODEL m ->
-             if smt_config.unboxing then
-               Sat (translate_model_unboxed m)
-             else
-               Sat (translate_model m)
-          | OTHER s ->
-             Printf.printf "%s\n" s;
-             failwith "failed to parse a model"
-          | _ -> failwith "failed to parse a model")
+         ask_for_model query chan info env solver renaming ds
       | UNKNOWN ->
          Unknown
       | _ -> failwith "unexpected answer from solver\n"
@@ -1588,10 +1601,11 @@ module ClassicEncoding (E: ExprEncoding): Encoding =
            printQuery chan q;
          ask_solver solver q;
          let reply = solver |> parse_reply in
-         match reply with
-         | UNSAT -> Unsat
-         | UNKNOWN -> Unknown
-         | SAT ->
+         let isSat = get_sat query chan info env solver renaming ds reply in
+         match isSat with
+         | Unsat -> Unsat
+         | Unknown -> Unknown
+         | Sat model1 ->
             (match (get_requires_failures ds).e with
              | EOp(AtMost n, [e1;e2;e3]) ->
                 (match e1.e with
@@ -1601,10 +1615,6 @@ module ClassicEncoding (E: ExprEncoding): Encoding =
                       aexp(etuple (BatList.map (fun evar ->
                                        match evar.e with
                                        | EVar fvar ->
-                                          (* Printf.printf "name:%s\n" ((Var.name fvar)); *)
-                                          (* Collections.StringMap.iter (fun k _ -> *)
-                                          (*     Printf.printf "map:%s\n" k) mult; *)
-                                              
                                           let n = Collections.StringMap.find (Var.name fvar)
                                                                              mult in
                                           (exp_of_value
@@ -1629,7 +1639,7 @@ module ClassicEncoding (E: ExprEncoding): Encoding =
                       printQuery chan q;
                     ask_solver solver q;
                     let reply = solver |> parse_reply in
-                    (* check satisfiability and get model if required *)
+                    (* check satisfiability of 2nd query and get model if required *)
                     let isSat = get_sat query chan info env solver renaming ds reply in
                     (* pop current context *)
                     let pop =
@@ -1639,10 +1649,12 @@ module ClassicEncoding (E: ExprEncoding): Encoding =
                     if query then
                       printQuery chan pop;
                     ask_solver solver pop;
-                    isSat
+                    (* if the second query was unsat, return the first counterexample *)
+                    (match isSat with
+                     | Unsat -> Sat model1
+                     | _ -> isSat)
                  | _ -> failwith " expected  a tuple")
              | _ -> failwith "expected AtMost")
-         | _ -> failwith "unexpected answer from solver"
                               
 
             

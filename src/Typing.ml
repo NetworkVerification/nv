@@ -793,11 +793,11 @@ let canonicalize_type (ty : ty) : ty =
         BatList.fold_left
           (fun (lst, map, count) t ->
              let t', map, count = aux t map count in
-             lst @ [t'], map, count
+             t' :: lst, map, count
           )
           ([], map, count) tys
       in
-      TTuple (tys'), map, count
+      TTuple (BatList.rev tys'), map, count
     | TOption t ->
       let t', map, count = aux t map count in
       TOption (t'), map, count
