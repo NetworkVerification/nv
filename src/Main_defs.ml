@@ -41,8 +41,12 @@ let run_smt file cfg info ds =
   let fs = f :: fs in
   let decls = Typing.infer_declarations info decls in
   let decls, vars, f = MapUnrolling.unroll info decls in
-  let decls = Inline.inline_declarations info decls in
   let fs = f :: fs in
+  let decls = Typing.infer_declarations info decls in
+  let decls = Inline.inline_declarations info decls in
+  let decls, f = Renaming.alpha_convert_declarations decls in
+  let fs = f :: fs in
+  let decls = Typing.infer_declarations info decls in
   (* Do we need to rename here? *)
   let res, fs =
     (Smt2.solve info cfg.query (smt_query_file file) decls ~symbolic_vars:vars, fs)

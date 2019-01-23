@@ -341,7 +341,6 @@ let rec datatype_name (ty : ty) : string option =
   | TVar {contents= Link t} -> datatype_name t
   | TTuple ts -> (
       match ts with
-      | [] -> failwith "empty tuple"
       | [t] -> datatype_name t
       | ts ->
         let len = List.length ts in
@@ -355,7 +354,6 @@ let rec type_name (ty : ty) : string =
   | TVar {contents= Link t} -> type_name t
   | TTuple ts -> (
       match ts with
-      | [] -> failwith "empty tuple"
       | [t] -> type_name t
       | ts ->
         let len = List.length ts in
@@ -374,7 +372,6 @@ let rec ty_to_sort (ty: ty) : sort =
   | TInt _ -> IntSort
   | TTuple ts -> (
       match ts with
-      | [] -> failwith "empty tuple"
       | [t] -> ty_to_sort t
       | ts ->
         let name = oget (datatype_name ty) in
@@ -839,10 +836,10 @@ let encode_z3_assert str env node assertion =
 
 (** ** Naming convention of useful variables *)
 let label_var i =
-  Printf.sprintf "label-%d" (Integer.to_int i)
+  Printf.sprintf "label-%d-" (Integer.to_int i)
 
 let node_of_label_var s =
-  Integer.of_string (BatString.lchop ~n:6 s)
+  Integer.of_string (List.nth (BatString.split_on_char '-' s) 1)
 
 let assert_var i =
   Printf.sprintf "assert-%d" (Integer.to_int i)
@@ -850,7 +847,7 @@ let assert_var i =
 (* this is flaky, the variable name used by SMT will be
    assert-n-result, we need to chop both ends *)
 let node_of_assert_var s =
-  Integer.of_string (BatString.lchop ~n:7 s |> BatString.rchop ~n:7)
+  Integer.of_string (BatString.chop ~l:7 ~r:7 s)
 
 let symbolic_var (s: Var.t) =
   Var.to_string s

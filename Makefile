@@ -36,7 +36,7 @@ byte: $(MLFILES)
 	$(BUILD) $@.native
 
 test: $(MLFILES)
-	$(BUILD) test/Test.native
+	$(BUILD) src/Main.native test/Test.native
 	./Test.native
 
 run_tests: tests
