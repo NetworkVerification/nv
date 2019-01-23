@@ -62,6 +62,7 @@ let rec convert_value
       vmap newmap
   | VClosure _, TArrow _ ->
     failwith "convert_value: Cannot convert function value"
+  | VRecord _, TRecord _ -> failwith "convert_value: encountered record value"
   | _ ->
     failwith "convert_value: type and value do not match"
 ;;
