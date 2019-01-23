@@ -7,17 +7,6 @@ open Hashtbl
 open Syntax
 open BatSet
 
-   let rec hasTvar ty =
-  match ty with
-  | TVar {contents= Link t} -> hasTvar t
-  | TVar {contents= Unbound _} -> true
-  | TArrow (t1, t2) -> hasTvar t1 || hasTvar t2
-  | TTuple ts -> BatList.exists hasTvar ts
-  | TOption t -> hasTvar t
-  | TMap (ty1, ty2) -> hasTvar ty1 || hasTvar ty2
-  | QVar _ -> false
-  | _ -> false
-
 let debugAbstraction = ref false
 
 let zero = Integer.create ~value:0 ~size:32
@@ -37,7 +26,13 @@ module TransAbsId =
   struct
     type t = int * abstrId
 
-    let compare = Pervasives.compare
+    let compare (x1,x2) (y1,y2) =
+      let cmp = Pervasives.compare x1 y1 in
+      if cmp = 0 then
+        Integer.compare x2 y2
+      else
+        cmp
+      
   end
 module TransAbsIdSet = BatSet.Make(TransAbsId)
 
@@ -57,13 +52,10 @@ module PolicyAbsIdMap = BatMap.Make(PolicyAbsId)
 let groupVerticesByAbsId (umap: (AbsIdSet.t) VertexMap.t) : VertexSetSet.t =
   let reverseMap : VertexSet.t AbsIdSetMap.t =
     VertexMap.fold (fun u vhat acc ->
-        (* Printf.printf "For node %d: {" (Unsigned.Integer.to_int u); *)
-        (* BatSet.iter (fun v -> Printf.printf "%d," (Unsigned.Integer.to_int v)) vhat; *)
-        (* Printf.printf "}\n"; *)
         AbsIdSetMap.modify_def (VertexSet.singleton u) vhat (fun us -> VertexSet.add u us) acc)
-                 umap AbsIdSetMap.empty in
+                   umap AbsIdSetMap.empty in
   AbsIdSetMap.fold (fun _ v acc -> VertexSetSet.add v acc)
-              reverseMap VertexSetSet.empty
+                   reverseMap VertexSetSet.empty
                  
 (** ** Topological only abstraction *)
 (* This does not handle a forall-forall abstraction. *)  
@@ -79,26 +71,12 @@ let refineTopological (f: abstractionMap) (g: AdjGraph.t)
                    (neighbors g u)
   in
   let vmap = AbstractNode.fold (fun u acc -> refineOne u acc) us VertexMap.empty in
-  (* Printf.printf "The map:\n"; *)
-  (* VertexMap.iter (fun u vs -> Printf.printf "%d: {" (Integer.to_int u); *)
-  (*                          (AbsIdSet.iter (fun v -> Printf.printf "%d," (Integer.to_int v)) *)
-  (*                                       vs); *)
-  (*                          Printf.printf "}\n" *)
-  (*             ) vmap; *)
-  (* Printf.printf "The groups: \n"; *)
-  (* let groups = (groupVerticesByAbsId vmap) in *)
-  (* AdjGraph.VertexSetSet.iter (fun us -> Printf.printf "{"; *)
-  (*                        VertexSet.iter (fun u -> Printf.printf "%d," (Integer.to_int u)) us; *)
-  (*                        Printf.printf "}\n") groups; *)
-  (* Printf.printf "cardinal: %d\n" (VertexSetSet.cardinal groups); *)
-  (* Printf.printf "end of iter\n%!"; *)
   VertexSetSet.fold (fun us f' -> AbstractionMap.split f' (AbstractNode.fromSet us))
                     (groupVerticesByAbsId vmap) f
 
 let abstractionTopological (f: abstractionMap) (g: AdjGraph.t) : abstractionMap =
   let rec loop fi =
     let f' = AbstractionMap.fold (fun us facc ->
-                 (* Printf.printf "refining %s\n" (AbstractNode.printAbstractNode us); *)
                  if (AbstractNode.cardinal us > 1) then
                    refineTopological facc g us 
                  else
@@ -277,7 +255,7 @@ module BuildAbstractNetwork =
       (* symbolic variables of failures, one for each abstract edge *)
       let failuresMap =
         BatList.fold_left (fun acc (u,v) ->
-            let e = Vertex.printVertex u ^ Vertex.printVertex v in
+            let e = Printf.sprintf "%s-%s" (Vertex.printVertex u) (Vertex.printVertex v) in
             let failVar = Var.fresh ("failed-" ^ e) in
             EdgeMap.add (u,v) failVar acc) EdgeMap.empty aedges in
 
