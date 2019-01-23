@@ -593,7 +593,7 @@ let arity op =
   | UEq -> 2
   | ULess _ -> 2
   | ULeq _ -> 2
-  | AtMost _ -> 2
+  | AtMost _ -> 3
   | MCreate -> 1
   | MGet -> 2
   | MSet -> 3

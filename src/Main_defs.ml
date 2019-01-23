@@ -162,24 +162,7 @@ let compress file info decls cfg networkOp =
     (* let decls = Typing.infer_declarations info decls in *)
     (* Printf.printf "init:%s\n" (Printing.exp_to_string einit); *)
     (* Printf.printf "%s\n" (Printing.declarations_to_string decls); *)
-    (* Visitors.iter_exp_decls (fun d e -> *)
-    (*                  match e.ety with *)
-    (*   | Some ty -> *)
-    (*      (\* Printf.printf "typ:%s\n" (Printing.ty_to_string ty); *\) *)
-    (*      (match hasTvar (get_inner_type ty) with *)
-    (*      | true -> failwith ("has tvar" ^ (declaration_to_string d)) *)
-    (*      | _ -> ()) *)
-    (*   | None -> *)
-    (*      (match e.e with *)
-    (*      | EVal v -> *)
-    (*         (match v.vty with *)
-    (*          | Some ty -> *)
-    (*             (match hasTvar (get_inner_type ty) with *)
-    (*              | true -> failwith ("has tvar" ^ ( declaration_to_string d)) *)
-    (*              | _ -> ()) *)
-    (*          | None -> ()) *)
-    (*      | _ -> ())) decls; *)
-    (* failwith "end"; *)
+    smt_config.multiplicities <- (fun () -> getEdgeMultiplicities slice.graph f failVars);
     let groups = AbstractionMap.printAbstractGroups f "\n" in
     Console.show_message groups Console.T.Blue "Abstract groups";
     match networkOp cfg info decls with
@@ -258,3 +241,22 @@ let parse_input (args : string array)
 
 
 
+
+      (* Visitors.iter_exp_decls (fun d e -> *)
+    (*                  match e.ety with *)
+    (*   | Some ty -> *)
+    (*      (\* Printf.printf "typ:%s\n" (Printing.ty_to_string ty); *\) *)
+    (*      (match hasTvar (get_inner_type ty) with *)
+    (*      | true -> failwith ("has tvar" ^ (declaration_to_string d)) *)
+    (*      | _ -> ()) *)
+    (*   | None -> *)
+    (*      (match e.e with *)
+    (*      | EVal v -> *)
+    (*         (match v.vty with *)
+    (*          | Some ty -> *)
+    (*             (match hasTvar (get_inner_type ty) with *)
+    (*              | true -> failwith ("has tvar" ^ ( declaration_to_string d)) *)
+    (*              | _ -> ()) *)
+    (*          | None -> ()) *)
+    (*      | _ -> ())) decls; *)
+    (* failwith "end"; *)

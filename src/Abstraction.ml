@@ -252,8 +252,23 @@ module BuildAbstractNetwork =
                       Span.default
                      )
       in
-      let arg2 = exp_of_value (avalue (vint (Integer.of_int k), Some (TInt 32), Span.default)) in
-      aexp (eop (AtMost (EdgeMap.cardinal failuresMap)) [arg1; arg2],
+      let arg2 =
+        aexp(etuple (EdgeMap.fold (fun _ _ acc ->
+                         (exp_of_value
+                            (avalue (vint (Integer.of_int 1),
+                                     Some (TInt 32),
+                                     Span.default))) :: acc)
+                                  failuresMap []),
+             Some (TTuple (BatList.init (EdgeMap.cardinal failuresMap)
+                                        (fun _ -> TInt 32))),
+             Span.default
+            )
+      in
+      let arg3 = exp_of_value (avalue (vint (Integer.of_int k),
+                                       Some (TInt 32),
+                                       Span.default))
+      in
+      aexp (eop (AtMost (EdgeMap.cardinal failuresMap)) [arg1; arg2; arg3],
             Some TBool,
             Span.default)
 
@@ -480,7 +495,6 @@ module BuildAbstractNetwork =
       (* build the abstract init function *)
       let initMap = Slicing.partialEvalOverNodes (num_vertices slice.graph) slice.init in
       let inithat = buildAbstractInit slice.destinations initMap slice.attr_type f in
-      Printf.printf "init:%s\n" (Printing.exp_to_string inithat);
       (* build the abstract assert function *)
       let assertMap =
         Slicing.partialEvalOverNodes (num_vertices slice.graph) slice.assertion
@@ -506,9 +520,11 @@ module BuildAbstractNetwork =
     let getEdgeMultiplicity (g: AdjGraph.t) (f: abstractionMap) (ehat: Edge.t) : int =
       EdgeSet.cardinal (abstractToConcreteEdge g f ehat)
 
-    let getEdgeMultiplicities (g: AdjGraph.t) (f: abstractionMap) (ehats: EdgeSet.t) =
-      EdgeSet.fold (fun ehat acc ->
-          EdgeMap.add ehat (getEdgeMultiplicity g f ehat) acc) ehats EdgeMap.empty
+    let getEdgeMultiplicities (g: AdjGraph.t) (f: abstractionMap)
+                              (fvars: Var.t AdjGraph.EdgeMap.t) =
+      EdgeMap.fold (fun ehat var acc ->
+          Collections.StringMap.add (Var.name var) (getEdgeMultiplicity g f ehat) acc)
+                   fvars Collections.StringMap.empty
 
   end
       
@@ -995,7 +1011,7 @@ module FailuresAbstraction =
          splitting. Note that this code works if all edges can fail. *)
       let failures, agraph =
         EdgeMap.fold (fun edge fvar (acc, ag) ->
-            let bv = Collections.StringMap.find (Var.to_string fvar) sol.symbolics in
+            let bv = Collections.StringMap.find (Var.name fvar) sol.symbolics in
             match bv.v with
             | VBool b ->
                if b then

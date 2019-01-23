@@ -74,4 +74,10 @@ sig
    edges that map to the abstract edge [ehat] *)  
   val getEdgeMultiplicity: AdjGraph.t -> AbstractionMap.abstractionMap ->
                            AdjGraph.Edge.t -> int
+
+  (** [getEdgeMultiplicities g f ehat] returns the number of concrete
+   edges that map to the abstract edge [ehat] *)  
+  val getEdgeMultiplicities: AdjGraph.t -> AbstractionMap.abstractionMap ->
+                           Var.t AdjGraph.EdgeMap.t -> int Collections.StringMap.t
+    
 end

@@ -300,7 +300,10 @@ let op_typ op =
   | USub size -> ([tint_of_size size; tint_of_size size], tint_of_size size)
   | ULess size-> ([tint_of_size size; tint_of_size size], TBool)
   | ULeq size -> ([tint_of_size size; tint_of_size size], TBool)
-  | AtMost n -> ([TTuple (BatList.init n (fun _ -> TBool)); (TInt 32)], TBool)
+  | AtMost n ->
+     ([TTuple (BatList.init n (fun _ -> TBool));
+       TTuple (BatList.init n (fun _ -> TInt 32));
+        (TInt 32)], TBool)
   (* Map operations *)
   | MCreate | MGet | MSet | MMap | MMerge | MMapFilter | UEq ->
     failwith "internal error (op_typ)"

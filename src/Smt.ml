@@ -26,7 +26,7 @@ type smt_options =
     mutable encoding       : encoding_style;
     mutable unboxing       : bool;
     mutable failures       : int option;
-    mutable multiplicities : int AdjGraph.EdgeMap.t
+    mutable multiplicities : unit -> int Collections.StringMap.t
   }
 
 let smt_config : smt_options =
@@ -35,7 +35,7 @@ let smt_config : smt_options =
     encoding = Classic;
     unboxing = false;
     failures = None;
-    multiplicities = AdjGraph.EdgeMap.empty
+    multiplicities = fun () -> Collections.StringMap.empty
   }
 
 let get_requires_no_failures ds =
@@ -84,7 +84,7 @@ module SmtLang =
       | Leq of smt_term * smt_term
       | Ite of smt_term * smt_term * smt_term
       | Var of string
-      | AtMost of (smt_term list) * smt_term
+      | AtMost of (smt_term list) * (smt_term list) * smt_term
       | App of smt_term * (smt_term list)
              
     type term =
@@ -157,7 +157,7 @@ module SmtLang =
       | Bool false, Bool false -> Bool false
       | _, _ -> mk_ite t1 t2 t3
 
-    let mk_atMost t1 t2 = AtMost (t1, t2)
+    let mk_atMost t1 t2 t3 = AtMost (t1, t2, t3)
 
     let mk_term ?(tdescr="") ?(tloc= Span.default) (t: smt_term) =
       {t; tdescr; tloc}
@@ -207,11 +207,11 @@ module SmtLang =
          Printf.sprintf "(ite %s %s %s)" (smt_term_to_smt t1) (smt_term_to_smt t2)
                         (smt_term_to_smt t3)
       | Var s -> s
-      | AtMost (ts, t1) ->
+      | AtMost (ts1, ts2, t1) ->
          Printf.sprintf "((_ pble %s %s) %s)"
                         (smt_term_to_smt t1)
-                        (printList (fun _ -> "1") ts "" " " "")
-                        (printList (fun x -> smt_term_to_smt x) ts "" " " "")
+                        (printList (fun x -> smt_term_to_smt x) ts2 "" " " "")
+                        (printList (fun x -> smt_term_to_smt x) ts1 "" " " "")
       | App (t, ts) ->
          let args = printList smt_term_to_smt ts "" " " "" in 
          Printf.sprintf "(%s %s)" (smt_term_to_smt t) args
@@ -564,7 +564,7 @@ module Unboxed : ExprEncoding =
            let ze1, env1 = encode_exp_z3_single descr env e1 in
            let ze2, env2 = encode_exp_z3_single descr env1 e2 in
            mk_leq ze1.t ze2.t |> mk_term ~tloc:e.espan, env2
-        | AtMost _, [e1;e2] ->
+        | AtMost _, [e1;e2;e3] ->
            (match e1.e with
             | ETuple es ->
                let zes, env1 =
@@ -572,9 +572,18 @@ module Unboxed : ExprEncoding =
                    (fun e (zes, env) ->
                      let e1, env1 = encode_exp_z3_single descr env e in
                      (e1.t :: zes, env1)) es ([], env) in
-               let ze2 = encode_value_z3_single descr env1 (Syntax.to_value e2) in
-               mk_atMost zes ze2.t |>
-               mk_term ~tloc:e.espan, env1
+               (match e2.e with
+                | ETuple es ->
+                   let zes2, env1 =
+                     BatList.fold_right
+                       (fun e (zes, env) ->
+                         let e1, env1 = encode_exp_z3_single descr env e in
+                         (e1.t :: zes, env1)) es ([], env1) in
+                   let ze3 = encode_value_z3_single descr env1 (Syntax.to_value e3) in
+                  mk_atMost zes zes2 ze3.t |>
+                    mk_term ~tloc:e.espan, env1
+                | _ -> failwith "AtMost requires a list of integers as second arg"
+               )
             | _ -> failwith "AtMost operator requires a list of boolean variables")
         | MCreate, [e1]  ->
            (* let mty = get_inner_type (oget e.ety) in *)
@@ -1105,7 +1114,7 @@ module ClassicEncoding (E: ExprEncoding): Encoding =
            add_constraint env (mk_term (mk_not all_good))
       in
       (* add the symbolic variable constraints *)
-      add_symbolic_constraints env (get_requires_no_failures ds) (env.symbolics (*@ sym_vars*))
+      add_symbolic_constraints env (get_requires ds) (env.symbolics (*@ sym_vars*))
   end
 
 (* (\** * Alternative SMT encoding *\) *)
@@ -1276,9 +1285,10 @@ module ClassicEncoding (E: ExprEncoding): Encoding =
          Ite (alpha_rename_smt_term renaming tm1,
               alpha_rename_smt_term renaming tm2,
               alpha_rename_smt_term renaming tm3)
-      | AtMost (tm1, tm2) ->
-         AtMost (List.map (alpha_rename_smt_term renaming) tm1,
-                 alpha_rename_smt_term renaming tm2)
+      | AtMost (tm1, tm2, tm3) ->
+         AtMost (BatList.map (alpha_rename_smt_term renaming) tm1,
+                 tm2,
+                 alpha_rename_smt_term renaming tm3)
       | Var s ->
          (match StringMap.Exceptionless.find s renaming with
           | None -> tm
@@ -1501,6 +1511,38 @@ module ClassicEncoding (E: ExprEncoding): Encoding =
       | true -> (module Unboxed : ExprEncoding)
       | false -> failwith "boxed not implemented yet" (*(module Boxed : ExprEncoding)*)
 
+    let get_sat query chan info env solver renaming ds reply =
+      match reply with
+      | UNSAT -> Unsat
+      | SAT ->
+         (* build a counterexample based on the model provided by Z3 *)
+         let num_nodes =
+           match get_nodes ds with
+           | Some n -> n
+           | _ -> failwith "internal error (encode)"
+         in
+         let eassert = get_assert ds in
+         let model = eval_model env.symbolics num_nodes eassert renaming in
+         let model_question = commands_to_smt smt_config.verbose info model in
+         if query then
+           printQuery chan model_question;
+         ask_solver solver model_question;
+         let model = solver |> parse_model in
+         (match model with
+          | MODEL m ->
+             if smt_config.unboxing then
+               Sat (translate_model_unboxed m)
+             else
+               Sat (translate_model m)
+          | OTHER s ->
+             Printf.printf "%s\n" s;
+             failwith "failed to parse a model"
+          | _ -> failwith "failed to parse a model")
+      | UNKNOWN ->
+         Unknown
+      | _ -> failwith "unexpected answer from solver\n"
+
+               
     let solve info query chan ?symbolic_vars ?(params=[]) ds =
       let sym_vars =
         match symbolic_vars with None -> [] | Some ls -> ls
@@ -1532,37 +1574,6 @@ module ClassicEncoding (E: ExprEncoding): Encoding =
       (* start communication with solver process *)
       let solver = start_solver params in
       ask_solver solver smt_encoding;
-      let get_sat reply =
-        match reply with
-        | UNSAT -> Unsat
-        | SAT ->
-           (* build a counterexample based on the model provided by Z3 *)
-           let num_nodes =
-             match get_nodes ds with
-             | Some n -> n
-             | _ -> failwith "internal error (encode)"
-           in
-           let eassert = get_assert ds in
-           let model = eval_model env.symbolics num_nodes eassert renaming in
-           let model_question = commands_to_smt smt_config.verbose info model in
-           if query then
-             printQuery chan model_question;
-           ask_solver solver model_question;
-           let model = solver |> parse_model in
-           (match model with
-            | MODEL m ->
-               if smt_config.unboxing then
-                 Sat (translate_model_unboxed m)
-               else
-                 Sat (translate_model m)
-            | OTHER s ->
-               Printf.printf "%s\n" s;
-               failwith "failed to parse a model"
-            | _ -> failwith "failed to parse a model")
-        | UNKNOWN ->
-           Unknown
-        | _ -> failwith "unexpected answer from solver\n"
-      in
       match smt_config.failures with
       | None ->
          let q = check_sat info in
@@ -1570,44 +1581,114 @@ module ClassicEncoding (E: ExprEncoding): Encoding =
            printQuery chan q;
          ask_solver solver q;
          let reply = solver |> parse_reply in
-         get_sat reply
+         get_sat query chan info env solver renaming ds reply
       | Some k ->
-         let rec loop i =
-           match (get_requires_failures ds).e with
-           | EOp(AtMost n, [e1;_]) ->
-              let arg2 = aexp (e_val (vint (Integer.of_int i)), Some (TInt 32), Span.default) in
-              let new_req = aexp (eop (AtMost n) [e1; arg2], Some TBool, Span.default) in
-              let zes, env = ExprEnc.encode_exp_z3 "" env new_req in
-              let zes_smt =
-                ExprEnc.(to_list (lift1 (fun ze -> mk_assert ze |> mk_command) zes))
-              in
-              let q =
-                ((Push |> mk_command) :: (zes_smt @ [CheckSat |> mk_command])) |>
-                  commands_to_smt smt_config.verbose info
-              in
-              if query then
-                printQuery chan q;
-              (* Printf.printf "printed the query\n"; *)
-              ask_solver solver q;
-              let reply = solver |> parse_reply in
-              (* check satisfiability and get model if required *)
-              let isSat = get_sat reply in
-              (* pop current context *)
-              let pop =
-                Printf.sprintf "%s\n" ((Pop |> mk_command) |>
-                                         command_to_smt smt_config.verbose info)
-              in
-              if query then
-                printQuery chan pop;
-              ask_solver solver pop;
-              (match isSat with
-              | Unsat ->
-                 if i = k then Unsat
-                 else
-                   loop k
-              | Sat m -> Sat m
-              | Unknown -> Unknown)
-           | _ -> failwith "expected failure clause of the form AtMost n"
-         in
-         loop k
+         let q = check_sat info in
+         if query then
+           printQuery chan q;
+         ask_solver solver q;
+         let reply = solver |> parse_reply in
+         match reply with
+         | UNSAT -> Unsat
+         | UNKNOWN -> Unknown
+         | SAT ->
+            (match (get_requires_failures ds).e with
+             | EOp(AtMost n, [e1;e2;e3]) ->
+                (match e1.e with
+                 | ETuple es ->
+                    let mult = smt_config.multiplicities () in
+                    let arg2 =
+                      aexp(etuple (BatList.map (fun evar ->
+                                       match evar.e with
+                                       | EVar fvar ->
+                                          (* Printf.printf "name:%s\n" ((Var.name fvar)); *)
+                                          (* Collections.StringMap.iter (fun k _ -> *)
+                                          (*     Printf.printf "map:%s\n" k) mult; *)
+                                              
+                                          let n = Collections.StringMap.find (Var.name fvar)
+                                                                             mult in
+                                          (exp_of_value
+                                             (avalue (vint (Integer.of_int n),
+                                                      Some (TInt 32),
+                                                      Span.default)))
+                                       | _ -> failwith "expected a variable") es),
+                           e2.ety,
+                           Span.default)
+                    in
+                    let new_req =
+                      aexp (eop (AtMost n) [e1; arg2;e3], Some TBool, Span.default) in
+                    let zes, env = ExprEnc.encode_exp_z3 "" env new_req in
+                    let zes_smt =
+                      ExprEnc.(to_list (lift1 (fun ze -> mk_assert ze |> mk_command) zes))
+                    in
+                    let q =
+                      ((Push |> mk_command) :: (zes_smt @ [CheckSat |> mk_command])) |>
+                        commands_to_smt smt_config.verbose info
+                    in
+                    if query then
+                      printQuery chan q;
+                    ask_solver solver q;
+                    let reply = solver |> parse_reply in
+                    (* check satisfiability and get model if required *)
+                    let isSat = get_sat query chan info env solver renaming ds reply in
+                    (* pop current context *)
+                    let pop =
+                      Printf.sprintf "%s\n" ((Pop |> mk_command) |>
+                                               command_to_smt smt_config.verbose info)
+                    in
+                    if query then
+                      printQuery chan pop;
+                    ask_solver solver pop;
+                    isSat
+                 | _ -> failwith " expected  a tuple")
+             | _ -> failwith "expected AtMost")
+         | _ -> failwith "unexpected answer from solver"
+                              
+
+            
+            
+         (* let isSat = get_sat reply in *)
+         (* match isSat with *)
+         (* | Unsat -> Unsat *)
+         (* | Unknown -> Unknown *)
+         (* | Sat m -> *)
+         
+         (* let rec loop i = *)
+         (*   match (get_requires_failures ds).e with *)
+         (*   | EOp(AtMost n, [e1;_]) -> *)
+         (*      let arg2 = aexp (e_val (vint (Integer.of_int i)), Some (TInt 32), Span.default) in *)
+         (*      let new_req = aexp (eop (AtMost n) [e1; arg2], Some TBool, Span.default) in *)
+         (*      let zes, env = ExprEnc.encode_exp_z3 "" env new_req in *)
+         (*      let zes_smt = *)
+         (*        ExprEnc.(to_list (lift1 (fun ze -> mk_assert ze |> mk_command) zes)) *)
+         (*      in *)
+         (*      let q = *)
+         (*        ((Push |> mk_command) :: (zes_smt @ [CheckSat |> mk_command])) |> *)
+         (*          commands_to_smt smt_config.verbose info *)
+         (*      in *)
+         (*      if query then *)
+         (*        printQuery chan q; *)
+         (*      (\* Printf.printf "printed the query\n"; *\) *)
+         (*      ask_solver solver q; *)
+         (*      let reply = solver |> parse_reply in *)
+         (*      (\* check satisfiability and get model if required *\) *)
+         (*      let isSat = get_sat reply in *)
+         (*      (\* pop current context *\) *)
+         (*      let pop = *)
+         (*        Printf.sprintf "%s\n" ((Pop |> mk_command) |> *)
+         (*                                 command_to_smt smt_config.verbose info) *)
+         (*      in *)
+         (*      if query then *)
+         (*        printQuery chan pop; *)
+         (*      ask_solver solver pop; *)
+         (*      (match isSat with *)
+         (*      | Unsat -> *)
+         (*         if i = k then Unsat *)
+         (*         else *)
+         (*           loop k *)
+         (*      | Sat m -> Sat m *)
+         (*      | Unknown -> Unknown) *)
+         (*   | _ -> failwith "expected failure clause of the form AtMost n" *)
+         (* in *)
+         (* loop k *)
            
