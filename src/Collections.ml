@@ -6,6 +6,12 @@ module StringMap = BatMap.Make (struct
   let compare = String.compare
 end)
 
+module IntMap = BatMap.Make (struct
+  type t = int
+
+  let compare = compare
+end)
+                 
 module StringSet = BatSet.Make (struct
   type t = String.t
 
@@ -56,7 +62,16 @@ module ValueMap = Map.Make (struct
   let compare v1 v2 =
     let cfg = Cmdline.get_cfg () in
     if cfg.hashcons then v1.vtag - v2.vtag else compare v1 v2
-end)
+                           end)
+
+module ExpMap = Map.Make (struct
+                           type t = exp
+                                  
+                           let compare e1 e2 =
+                             let cfg = Cmdline.get_cfg () in
+                             if cfg.hashcons then e1.etag - e2.etag else
+                               compare e1 e2
+                         end)
 
 let printList (printer: 'a -> string) (ls: 'a list) (first : string)
               (sep : string) (last : string) =

@@ -21,6 +21,7 @@ rule token = parse
   | id as n      { ID n }
   | "("          { LPAREN }
   | ")"          { RPAREN }
+  | "-"          { NEG    }
   | [' ' '\t']   { token lexbuf }
   | '\n'         { token lexbuf}          
   | _ as c       { printf "[Parse Error] Unrecognized character: %c\n" c; token lexbuf }

@@ -31,7 +31,7 @@ type smt_options =
 
 let smt_config : smt_options =
   { verbose = false;
-    optimize = true;
+    optimize = false;
     encoding = Classic;
     unboxing = false;
     failures = None;
@@ -83,6 +83,7 @@ module SmtLang =
       | Leq of smt_term * smt_term
       | Ite of smt_term * smt_term * smt_term
       | Var of string
+      | Bv of Integer.t
       | AtMost of (smt_term list) * (smt_term list) * smt_term
       | App of smt_term * (smt_term list)
              
@@ -126,7 +127,10 @@ module SmtLang =
     let mk_bool b = Bool b
 
     let mk_var s = Var s
-                            
+
+    let mk_bv i =
+      Bv i
+                 
     let mk_app f args =
       App (f, args)
 
@@ -204,6 +208,8 @@ module SmtLang =
       | Ite (t1, t2, t3) ->
          Printf.sprintf "(ite %s %s %s)" (smt_term_to_smt t1) (smt_term_to_smt t2)
                         (smt_term_to_smt t3)
+      | Bv i ->
+         Printf.sprintf "(_ bv%s %s)" (Integer.value_string i) (Integer.size_string i)
       | Var s -> s
       | AtMost (ts1, ts2, t1) ->
          Printf.sprintf "((_ pble %s %s) %s)"
@@ -370,14 +376,36 @@ let is_var (tm: SmtLang.term) =
   | Var _ -> true
   | _ -> false
 
+(** Used to encode maps (sets) as bitvectors *)
+type map_info_t =
+  { mapCardinal : (Syntax.ty * int) list;
+    keyToBit: int Collections.ExpMap.t;
+    bitToKey: Syntax.exp Collections.IntMap.t
+  }
+
+let map_info = ref { mapCardinal=[];
+                     keyToBit=Collections.ExpMap.empty;
+                     bitToKey=Collections.IntMap.empty
+                   }
+
+let getMapCardinality ty =
+  BatList.assoc ty !map_info.mapCardinal
+
+let getBit key =
+  ExpMap.find key !map_info.keyToBit
+       
 let rec ty_to_sort (ty: ty) : sort =
   match ty with
   | TVar {contents= Link t} -> ty_to_sort t
   | TBool -> BoolSort
   | TInt _ -> IntSort
-  | TMap (ty1,ty2) -> failwith "mapsrt"
-     (* MapSort (ty_to_sort ty1, ty_to_sort ty2) *)
-  (*       mk_array_sort ctx (ty_to_sort ctx ty1) (ty_to_sort ctx ty2)*)
+  | TMap (ty1,ty2) ->
+     (* what happens if the map is empty? *)
+     (match ty1, ty2 with
+      | TInt _, TBool ->
+         let num_keys = getMapCardinality ty in
+         BitVecSort num_keys
+      | _ -> failwith "Generic maps are not supported")
   | TVar _ | QVar _ | TArrow _ | _ ->
      failwith
        (Printf.sprintf "internal error (ty_to_sort): %s"
@@ -458,11 +486,6 @@ module Unboxed : ExprEncoding =
       | _ ->
          {env with symbolics=VarMap.add (List.hd b) (Syntax.Ty ty) env.symbolics}
 
-    (* type map_info = *)
-    (*   { mapKeys : maplist; *)
-    (*     mapCardinal : (Syntax.ty * int) list; *)
-    (*     key *)
-
     (** Translates a [Syntax.ty] to a list of SMT sorts *)
     let rec ty_to_sorts (ty: ty) : sort list =
       match ty with
@@ -470,21 +493,19 @@ module Unboxed : ExprEncoding =
          ty_to_sorts t
       | TBool -> [BoolSort]
       | TInt _ -> [IntSort]
+      | TMap (ty1,ty2) ->
+         (* what happens if the map is empty? *)
+         (match ty1, ty2 with
+          | TInt _, TBool ->
+             let num_keys = getMapCardinality ty in
+             [BitVecSort num_keys]
+          | _ -> failwith "Generic maps are not supported")
       | TTuple ts -> (
         match ts with
         | [] -> failwith "empty tuple"
         | [t] -> ty_to_sorts t
         | ts -> BatList.map ty_to_sorts ts |> BatList.concat)
       | TOption _ -> failwith "options should be unboxed"
-      | TMap (ty1,ty2) -> failwith "maps"
-         (* match ty2 with *)
-         (* | TBool -> *)
-         (*    let num_keys = lookup_map_type ty map_keys *)
-         (*    [BitVecSort  *)
-         (* (\* for now does not work with pairs *\) *)
-         (* let s1 = ty_to_sorts ty1 in *)
-         (* let s2 = ty_to_sorts ty2 in *)
-         (* [MapSort (List.hd s1, List.hd s2)] *)
       | TVar _ | QVar _ | TArrow _ ->
          failwith
            (Printf.sprintf "internal error (ty_to_sort): %s"
@@ -499,11 +520,6 @@ module Unboxed : ExprEncoding =
         else create_name descr x
       in
       name
-      (* match ty with *)
-      (* | TTuple ts -> *)
-      (*    List.mapi (fun i _ -> proj i name) ts *)
-      (* | _ -> *)
-      (*    [name] *)
 
     let rec map3 f l1 l2 l3 =
       match (l1, l2, l3) with
@@ -516,6 +532,13 @@ module Unboxed : ExprEncoding =
         ([], [], []) -> accu
       | (a1::l1, a2::l2, a3::l3) -> f a1 a2 a3 (fold_right3 f l1 l2 l3 accu)
       | (_, _, _) -> invalid_arg "fold_right3"
+
+    let default_bv sz b =
+      match b with
+      | true ->
+         Integer.max_int sz
+      | false ->
+         Integer.create ~value:0 ~size:sz
                    
    let rec encode_exp_z3_single descr env (e: exp) : term * smt_env =
       match e.e with
@@ -592,29 +615,22 @@ module Unboxed : ExprEncoding =
                 | _ -> failwith "AtMost requires a list of integers as second arg"
                )
             | _ -> failwith "AtMost operator requires a list of boolean variables")
-        | MCreate, [e1]  -> failwith "map"
-           (* let mty = get_inner_type (oget e.ety) in *)
-           (* (match mty with *)
-           (*  | TMap (kty, _) -> *)
-               
-               
-               (*        let ze1, env = encode_exp_z3_single descr env e1 in *)
-        (*        let ksort = ty_to_sort kty in *)
-        (*        let msort = ty_to_sort mty in *)
-        (*        let kvar = create_vars env descr (Var.fresh "k") in *)
-        (*        let mvar = create_vars env descr (Var.fresh "fmap") in *)
-        (*        let zk, env = mk_constant env kvar ksort ~cloc:e.espan ~cdescr:descr in *)
-        (*        let zm, env = mk_constant env mvar msort ~cloc:e.espan ~cdescr:descr in *)
-        (*        let env = *)
-        (*          add_constraint env (mk_term (mk_eq (mk_app zm.t [zk.t]) ze1.t)) *)
-        (*        in *)
-        (*        zm, env *)
-        (*     | _ -> failwith "runtime error: missing map key type") *)
-        (* | MGet, [emap;ekey] -> *)
-        (*    let ze1, env = encode_exp_z3_single descr env emap in *)
-        (*    let ze2, env = encode_exp_z3_single descr env ekey in *)
-        (*    mk_app ze1.t [ze2.t] |> *)
-        (*      mk_term ~tloc:e.espan, env *)
+        | MCreate, [e1]  ->
+           let mty = get_inner_type (oget e.ety) in
+           (* let sort = ty_to_sort mty in *)
+           let num_keys = getMapCardinality mty in
+           (match (to_value e1).v with
+            | VBool b ->
+               (mk_bv (default_bv num_keys b)) |> mk_term, env
+            | _ ->
+               failwith "can only model constant booleans right now")
+        | MGet, [emap; ekey] ->
+           (* let ze1, env = encode_exp_z3_single descr env emap in *)
+           (* let mty = get_inner_type (oget emap.ety) in *)
+           (* let bit = getBit ekey in *)
+           (* let getBit = mk_extract bit bit ze1 in *)
+           (* let toBool = mk_ite (mk_eq getBit *) 
+           failwith "not yet"
         (* | MSet, [emap; ekey; eval] -> *)
         (*    let mty = get_inner_type (oget e.ety) in *)
         (*    (match mty with *)
@@ -1272,7 +1288,7 @@ module ClassicEncoding (E: ExprEncoding): Encoding =
     (** ** SMT query optimization *)
     let rec alpha_rename_smt_term (renaming: string StringMap.t) (tm: smt_term) =
       match tm with
-      | Int _ | Bool _ -> tm
+      | Int _ | Bool _ | Bv _ -> tm
       | And (tm1, tm2) ->
          And (alpha_rename_smt_term renaming tm1, alpha_rename_smt_term renaming tm2)
       | Or (tm1, tm2) ->
@@ -1403,7 +1419,7 @@ module ClassicEncoding (E: ExprEncoding): Encoding =
       with exn ->
         begin
           let tok = Lexing.lexeme lexbuf in
-          failwith ("failed: " ^ tok)
+          failwith (Printf.sprintf "failed to parse string %s on %s" s tok)
         end
            
     let translate_model (m : (string, string) BatMap.t) : Solution.t =
@@ -1440,6 +1456,7 @@ module ClassicEncoding (E: ExprEncoding): Encoding =
     let translate_model_unboxed (m : (string, string) BatMap.t) : Solution.t =
       let (symbolics, labels, assertions) =
         BatMap.foldi (fun k v (symbolics, labels, assertions) ->
+            Printf.printf "key: %s, val:%s\n" k v;
             let nvval = parse_val v in
             match k with
             | k when BatString.starts_with k "label" ->
@@ -1555,7 +1572,6 @@ module ClassicEncoding (E: ExprEncoding): Encoding =
          Unknown
       | _ -> failwith "unexpected answer from solver\n"
 
-               
     let solve info query chan ?symbolic_vars ?(params=[]) ds =
       let sym_vars =
         match symbolic_vars with None -> [] | Some ls -> ls
@@ -1655,52 +1671,4 @@ module ClassicEncoding (E: ExprEncoding): Encoding =
                      | _ -> isSat)
                  | _ -> failwith " expected  a tuple")
              | _ -> failwith "expected AtMost")
-                              
-
-            
-            
-         (* let isSat = get_sat reply in *)
-         (* match isSat with *)
-         (* | Unsat -> Unsat *)
-         (* | Unknown -> Unknown *)
-         (* | Sat m -> *)
-         
-         (* let rec loop i = *)
-         (*   match (get_requires_failures ds).e with *)
-         (*   | EOp(AtMost n, [e1;_]) -> *)
-         (*      let arg2 = aexp (e_val (vint (Integer.of_int i)), Some (TInt 32), Span.default) in *)
-         (*      let new_req = aexp (eop (AtMost n) [e1; arg2], Some TBool, Span.default) in *)
-         (*      let zes, env = ExprEnc.encode_exp_z3 "" env new_req in *)
-         (*      let zes_smt = *)
-         (*        ExprEnc.(to_list (lift1 (fun ze -> mk_assert ze |> mk_command) zes)) *)
-         (*      in *)
-         (*      let q = *)
-         (*        ((Push |> mk_command) :: (zes_smt @ [CheckSat |> mk_command])) |> *)
-         (*          commands_to_smt smt_config.verbose info *)
-         (*      in *)
-         (*      if query then *)
-         (*        printQuery chan q; *)
-         (*      (\* Printf.printf "printed the query\n"; *\) *)
-         (*      ask_solver solver q; *)
-         (*      let reply = solver |> parse_reply in *)
-         (*      (\* check satisfiability and get model if required *\) *)
-         (*      let isSat = get_sat reply in *)
-         (*      (\* pop current context *\) *)
-         (*      let pop = *)
-         (*        Printf.sprintf "%s\n" ((Pop |> mk_command) |> *)
-         (*                                 command_to_smt smt_config.verbose info) *)
-         (*      in *)
-         (*      if query then *)
-         (*        printQuery chan pop; *)
-         (*      ask_solver solver pop; *)
-         (*      (match isSat with *)
-         (*      | Unsat -> *)
-         (*         if i = k then Unsat *)
-         (*         else *)
-         (*           loop k *)
-         (*      | Sat m -> Sat m *)
-         (*      | Unknown -> Unknown) *)
-         (*   | _ -> failwith "expected failure clause of the form AtMost n" *)
-         (* in *)
-         (* loop k *)
-           
+      
