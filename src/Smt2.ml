@@ -21,19 +21,21 @@ open Profile
 type encoding_style = Classic | Functional
                               
 type smt_options =
-  { mutable verbose  : bool;
-    mutable optimize : bool;
-    mutable encoding : encoding_style;
-    mutable unboxing : bool;
-    mutable failures : int option
+  { mutable verbose        : bool;
+    mutable optimize       : bool;
+    mutable encoding       : encoding_style;
+    mutable unboxing       : bool;
+    mutable failures       : int option;
+    mutable multiplicities : int Collections.StringMap.t
   }
 
 let smt_config : smt_options =
   { verbose = false;
-    optimize = false;
+    optimize = true;
     encoding = Classic;
     unboxing = false;
-    failures = None
+    failures = None;
+    multiplicities = Collections.StringMap.empty
   }
 
 let get_requires_no_failures ds =
@@ -80,6 +82,7 @@ module SmtLang =
       | IntSort
       | MapSort of sort * sort
       | DataTypeSort of string * (sort list)
+      | BitVecSort of int
       | VarSort of string
                  
     type smt_term =
@@ -95,7 +98,8 @@ module SmtLang =
       | Leq of smt_term * smt_term
       | Ite of smt_term * smt_term * smt_term
       | Var of string
-      | AtMost of (smt_term list) * smt_term
+      | Bv of Integer.t
+      | AtMost of (smt_term list) * (smt_term list) * smt_term
       | Constructor of string * sort (** constructor name, instantiated sort*)
       | App of smt_term * (smt_term list)
              
@@ -140,6 +144,8 @@ module SmtLang =
 
     let mk_var s = Var s
 
+    let mk_bv i = Bv i
+
     let mk_constructor f ts = Constructor (f, ts)
                             
     let mk_app f args =
@@ -171,7 +177,7 @@ module SmtLang =
       | Bool false, Bool false -> Bool false
       | _, _ -> mk_ite t1 t2 t3
 
-    let mk_atMost t1 t2 = AtMost (t1, t2)
+    let mk_atMost t1 t2 t3 = AtMost (t1, t2, t3)
 
     let mk_term ?(tdescr="") ?(tloc= Span.default) (t: smt_term) =
       {t; tdescr; tloc}
@@ -209,6 +215,7 @@ module SmtLang =
       | DataTypeSort (name, ls) ->
          let args = printList sort_to_smt ls "" " " "" in
          Printf.sprintf "(%s %s)" name args
+      | BitVecSort _ -> failwith "not yet"
       | VarSort s -> s
                    
     let rec smt_term_to_smt (tm : smt_term) : string =
@@ -235,11 +242,12 @@ module SmtLang =
          Printf.sprintf "(ite %s %s %s)" (smt_term_to_smt t1) (smt_term_to_smt t2)
                         (smt_term_to_smt t3)
       | Var s -> s
-      | AtMost (ts, t1) ->
+      | Bv _ -> failwith "not yet"
+      | AtMost (ts1, ts2, t1) ->
          Printf.sprintf "((_ pble %s %s) %s)"
                         (smt_term_to_smt t1)
-                        (printList (fun _ -> "1") ts "" " " "")
-                        (printList (fun x -> smt_term_to_smt x) ts "" " " "")
+                        (printList (fun x -> smt_term_to_smt x) ts2 "" " " "")
+                        (printList (fun x -> smt_term_to_smt x) ts1 "" " " "")
       | Constructor (name, sort) -> name
       | App (Constructor (name, sort), ts) when ts = [] ->
          Printf.sprintf "(as %s %s)" name (sort_to_smt sort) 
@@ -396,7 +404,7 @@ let rec datatype_name (ty : ty) : string option =
       match ts with
       | [t] -> datatype_name t
       | ts ->
-        let len = List.length ts in
+        let len = BatList.length ts in
         Some (Printf.sprintf "Pair%d" len))
   | TOption ty -> Some "Option"
   | _ -> None
@@ -409,7 +417,7 @@ let rec type_name (ty : ty) : string =
       match ts with
       | [t] -> type_name t
       | ts ->
-        let len = List.length ts in
+        let len = BatList.length ts in
         Printf.sprintf "Pair%d" len)
   | TOption ty -> "Option"
   | TBool -> "Bool"
@@ -445,7 +453,7 @@ let rec ty_to_sort (ty: ty) : sort =
       | [t] -> ty_to_sort t
       | ts ->
         let name = oget (datatype_name ty) in
-        DataTypeSort (name, List.map ty_to_sort ts))
+        DataTypeSort (name, BatList.map ty_to_sort ts))
   | TOption ty' ->
     let name = oget (datatype_name ty) in
     DataTypeSort (name, [ty_to_sort ty'])
@@ -509,13 +517,13 @@ let rec ty_to_type_decl (ty: ty) : datatype_decl =
     let some = { constr_name = "mkSome"; constr_args = [("getSome", param)]} in
     { name = name; params = [param]; constructors = [none; some]}
   | TTuple ts ->
-    let len = List.length ts in
+    let len = BatList.length ts in
     let name = datatype_name ty |> oget in
-    let params = List.mapi (fun i _ -> VarSort (Printf.sprintf "T%d" i)) ts in
+    let params = BatList.mapi (fun i _ -> VarSort (Printf.sprintf "T%d" i)) ts in
     let mkpair = { constr_name = Printf.sprintf "mkPair%d" len;
                    constr_args =
-                     List.mapi (fun i _ ->
-                         Printf.sprintf "proj%d" i, List.nth params i) ts} in
+                     BatList.mapi (fun i _ ->
+                         Printf.sprintf "proj%d" i, BatList.nth params i) ts} in
     { name = name; params = params; constructors = [mkpair] }
   | TVar _ | QVar _ | TArrow _ | TMap _ ->
     failwith "not a datatype"
@@ -603,7 +611,7 @@ let is_var (tm: SmtLang.term) =
            mk_or ze1.t ze2.t |>
              mk_term ~tloc:e.espan
         | Not, _ ->
-           let ze = List.hd es |> encode_exp_z3 descr env in
+           let ze = BatList.hd es |> encode_exp_z3 descr env in
            mk_not ze.t |>
              mk_term ~tloc:e.espan
         | Syntax.UAdd _, [e1;e2] ->
@@ -631,18 +639,7 @@ let is_var (tm: SmtLang.term) =
            let ze2 = encode_exp_z3 descr env e2 in
            mk_leq ze1.t ze2.t |>
              mk_term ~tloc:e.espan
-        | AtMost _, [e1;e2] when is_value e2 ->
-           (match e1.e with
-            | ETuple es when (List.for_all (fun e ->
-                                  match e.e with
-                                  | EVar _ -> true
-                                  | _ -> false) es) ->
-               let zes = List.map (fun e -> (encode_exp_z3 descr env e).t) es in
-               let ze2 = encode_value_z3 descr env (Syntax.to_value e2) in
-               mk_atMost zes ze2.t |>
-                 mk_term ~tloc:e.espan
-            | _ -> failwith "AtMost operator requires a list of boolean variables")
-        | AtMost _,_ -> failwith "Wrong arguments for AtMost"
+        | AtMost _, [e1;e2;e3] -> failwith "not bothering with boxed version for now"
         | MCreate, [e1] ->
            failwith "not implemented"
         | MGet, [e1; e2] ->
@@ -674,8 +671,8 @@ let is_var (tm: SmtLang.term) =
         | TTuple ts ->
            let pair_decl = compute_decl env ty |> oget in
            let pair_sort = ty_to_sort ty in
-           let zes = List.map (fun e -> (encode_exp_z3 descr env e).t) es in
-           let f = get_constructors pair_decl |> List.hd in
+           let zes = BatList.map (fun e -> (encode_exp_z3 descr env e).t) es in
+           let f = get_constructors pair_decl |> BatList.hd in
            mk_app (mk_constructor f.constr_name pair_sort) zes |>
              mk_term ~tloc:e.espan
         | _ -> failwith "internal error (encode_exp_z3)" )
@@ -683,7 +680,7 @@ let is_var (tm: SmtLang.term) =
          let ty = oget e.ety in
          let decl = compute_decl env ty |> oget in
          let sort = ty_to_sort ty in
-         let f = List.nth (get_constructors decl) 1 in
+         let f = BatList.nth (get_constructors decl) 1 in
          let ze = encode_exp_z3 descr env e1 in
          mk_app (mk_constructor f.constr_name sort) [ze.t] |>
            mk_term ~tloc:e.espan
@@ -704,13 +701,13 @@ let is_var (tm: SmtLang.term) =
       | EFun _ | EApp _ -> failwith "function in smt encoding"
 
     and encode_branches_z3 descr env name bs (t: ty) =
-      match List.rev bs with
+      match BatList.rev bs with
       | [] -> failwith "internal error (encode_branches)"
       | (p, e) :: bs ->
          let ze = encode_exp_z3 descr env e in
          (* we make the last branch fire no matter what *)
          let _ = encode_pattern_z3 descr env name p t in
-         encode_branches_aux_z3 descr env name (List.rev bs) ze t
+         encode_branches_aux_z3 descr env name (BatList.rev bs) ze t
 
     (* I'm assuming here that the cases are exhaustive *)
     and encode_branches_aux_z3 descr env name bs accze (t: ty) =
@@ -777,21 +774,21 @@ let is_var (tm: SmtLang.term) =
                    ts ps
                in
                let tup_decl = compute_decl env ty |> oget in
-               let fs = tup_decl |> get_constructors |> List.hd |> get_projections in
-               List.combine znames fs
-               |> List.iter (fun ((elem, _, _), (f, _)) ->
+               let fs = tup_decl |> get_constructors |> BatList.hd |> get_projections in
+               BatList.combine znames fs
+               |> BatList.iter (fun ((elem, _, _), (f, _)) ->
                       let e = mk_term (mk_app (mk_var f) [zname.t]) in
                       add_constraint env ((mk_eq elem.t e.t) |> mk_term));
                (* let apps = List.map (fun (f, _) -> *)
                (*                let e = mk_term (mk_app (mk_var f) [zname.t]) in *)
                (*                e) fs *)
                (* in *)
-               List.map
+               BatList.map
                  (fun (p, (zname, _, ty)) ->
                    match p with
                    | PVar x -> mk_bool true |> mk_term
                    | _ -> encode_pattern_z3 descr env zname p ty )
-                 (List.combine ps znames)
+                 (BatList.combine ps znames)
                  (* let matches = *)
                  (*   List.mapi *)
                  (*     (fun i (p, app) -> *)
@@ -803,28 +800,28 @@ let is_var (tm: SmtLang.term) =
                    (fun i t p ->  p, t ) ts ps
                in
                let tup_decl = compute_decl env ty |> oget in
-               let fs = tup_decl |> get_constructors |> List.hd |> get_projections in
-               List.combine znames fs
-               |> List.map (fun ((p, ty) , (f, _)) ->
+               let fs = tup_decl |> get_constructors |> BatList.hd |> get_projections in
+               BatList.combine znames fs
+               |> BatList.map (fun ((p, ty) , (f, _)) ->
                       let e = mk_term (mk_app (mk_var f) [zname.t]) in
                       encode_pattern_z3 descr env e p ty)
            in
            let f acc e = mk_and acc e.t in
            let b = mk_bool true in
            let base = b in
-           (List.fold_left f base matches) |> mk_term
+           (BatList.fold_left f base matches) |> mk_term
       )
       | POption None, TOption _ ->
          let opt_decl = compute_decl env ty |> oget in
-         let f = opt_decl |> get_constructors |> List.hd |> get_recognizer in
+         let f = opt_decl |> get_constructors |> BatList.hd |> get_recognizer in
          mk_app (mk_var f) [zname.t] |>
            mk_term
       | POption (Some p), TOption t ->
          let new_name = create_fresh descr "option" in
          let za = mk_constant env new_name (ty_to_sort t) in
          let opt_decl = compute_decl env ty |> oget in
-         let some_cons = List.nth (opt_decl |> get_constructors) 1 in
-         let get_some, _ = some_cons |> get_projections |> List.hd in
+         let some_cons = BatList.nth (opt_decl |> get_constructors) 1 in
+         let get_some, _ = some_cons |> get_projections |> BatList.hd in
          let is_some = some_cons |> get_recognizer in
          let e = mk_app (mk_var get_some) [zname.t]in
          add_constraint env (mk_term (mk_eq za.t e));
@@ -850,19 +847,19 @@ let is_var (tm: SmtLang.term) =
         match oget v.vty with
         | TTuple ts ->
            let pair_decl = compute_decl env (oget v.vty) in
-           let zes = List.map (fun v -> (encode_value_z3 descr env v).t) vs in
-           let f = (pair_decl |> oget |> get_constructors |> List.hd).constr_name in
+           let zes = BatList.map (fun v -> (encode_value_z3 descr env v).t) vs in
+           let f = (pair_decl |> oget |> get_constructors |> BatList.hd).constr_name in
            mk_app (mk_constructor f (ty_to_sort (oget v.vty))) zes |>
              mk_term ~tloc:v.vspan
         | _ -> failwith "internal error (encode_value)" )
       | VOption None ->
          let opt_decl = compute_decl env (oget v.vty) in
-         let f = (opt_decl |> oget |> get_constructors |> List.hd).constr_name in
+         let f = (opt_decl |> oget |> get_constructors |> BatList.hd).constr_name in
          let e = mk_app (mk_constructor f (ty_to_sort (oget v.vty))) [] in
          mk_term ~tloc:v.vspan e
       | VOption (Some v1) ->
          let opt_decl = compute_decl env (oget v.vty) in
-         let f = (List.nth (opt_decl |> oget |> get_constructors) 1).constr_name in
+         let f = (BatList.nth (opt_decl |> oget |> get_constructors) 1).constr_name in
          let zv = encode_value_z3 descr env v1 in
          mk_app (mk_constructor f (ty_to_sort (oget v.vty))) [zv.t] |>
            mk_term ~tloc:v.vspan
@@ -880,10 +877,10 @@ module Unboxed : ExprEncoding =
       Printf.sprintf "%s-proj-%d" name i
 
     let lift1 (f: 'a -> 'b) (zes1 : 'a list) : 'b list =
-      List.map (fun ze1 -> f ze1) zes1
+      BatList.map (fun ze1 -> f ze1) zes1
       
     let lift2 (f: 'a -> 'b -> 'c) (zes1 : 'a list) (zes2: 'b list) =
-      List.map2 (fun ze1 ze2 -> f ze1 ze2) zes1 zes2
+      BatList.map2 (fun ze1 ze2 -> f ze1 ze2) zes1 zes2
 
     exception False
             
@@ -891,7 +888,7 @@ module Unboxed : ExprEncoding =
       match l with
       | [] -> failwith "empty term"
       | e1 :: l -> 
-         let e = try List.fold_left
+         let e = try BatList.fold_left
                        (fun acc ze1 ->
                          match ze1.t with
                          | Bool true -> acc
@@ -904,7 +901,7 @@ module Unboxed : ExprEncoding =
     let create_strings (str: string) (ty: Syntax.ty) =
       match ty with
       | TTuple ts ->
-         List.mapi (fun i _ -> proj i str) ts
+         BatList.mapi (fun i _ -> proj i str) ts
       | _ -> [str]
 
     let to_list x = x
@@ -912,10 +909,10 @@ module Unboxed : ExprEncoding =
     let add_symbolic (env : smt_env) (b: Var.t list) (ty: Syntax.ty) =
       match ty with
       | TTuple ts ->
-         List.iter2 (fun b ty ->
+         BatList.iter2 (fun b ty ->
              env.symbolics <- VarMap.add b (Syntax.Ty ty) env.symbolics) b ts
       | _ ->
-         env.symbolics <- VarMap.add (List.hd b) (Syntax.Ty ty) env.symbolics
+         env.symbolics <- VarMap.add (BatList.hd b) (Syntax.Ty ty) env.symbolics
 
     (** Translates a [Syntax.ty] to a list of SMT sorts *)
     let rec ty_to_sorts (ty: ty) : sort list =
@@ -928,7 +925,7 @@ module Unboxed : ExprEncoding =
         match ts with
         | [] -> failwith "empty tuple"
         | [t] -> ty_to_sorts t
-        | ts -> BatList.map ty_to_sorts ts |> List.concat)
+        | ts -> BatList.map ty_to_sorts ts |> BatList.concat)
       | TOption _ -> failwith "options should be unboxed"
       | TMap _ -> failwith "unimplemented"
       | TVar _ | QVar _ | TArrow _ ->
@@ -1015,19 +1012,22 @@ module Unboxed : ExprEncoding =
            let ze1 = encode_exp_z3_single descr env e1 in
            let ze2 = encode_exp_z3_single descr env e2 in
            mk_leq ze1.t ze2.t |> mk_term ~tloc:e.espan
-        | AtMost _, [e1;e2] when is_value e2 ->
+        | AtMost _, [e1;e2;e3] ->
            (match e1.e with
-            | ETuple es when (List.for_all (fun e ->
-                                  match e.e with
-                                  | EVar _ -> true
-                                  | _ -> false) es) ->
+            | ETuple es ->
                let zes =
-                 List.map (fun e -> (encode_exp_z3_single descr env e).t) es in
-               let ze2 = encode_value_z3_single descr env (Syntax.to_value e2) in
-               mk_atMost zes ze2.t |>
-                 mk_term ~tloc:e.espan
+                 BatList.map (fun e -> (encode_exp_z3_single descr env e).t) es in
+               (match e2.e with
+                | ETuple es ->
+                   let zes2 =
+                     BatList.map (fun e -> (encode_exp_z3_single descr env e).t) es
+                   in
+                   let ze3 = encode_value_z3_single descr env (Syntax.to_value e3) in
+                   mk_atMost zes zes2 ze3.t |>
+                     mk_term ~tloc:e.espan
+                | _ -> failwith "AtMost requires a list of integers as second arg"
+               )
             | _ -> failwith "AtMost operator requires a list of boolean variables")
-        | AtMost _,_ -> failwith "Wrong arguments for AtMost"
         | MCreate, [e1] ->
            failwith "not implemented"
         | MGet, [e1; e2] ->
@@ -1043,7 +1043,7 @@ module Unboxed : ExprEncoding =
       | _ ->
          (* we always know this is going to be a singleton list *)
          let es = encode_exp_z3 descr env e in
-         List.hd es
+         BatList.hd es
 
     and encode_exp_z3 descr env (e: exp) : term list =
       match e.e with
@@ -1077,7 +1077,7 @@ module Unboxed : ExprEncoding =
          (* List.fold_left (fun acc e -> *)
          (*     (encode_exp_z3 descr env e) @ acc) [] es *)
          lift1 (fun e -> encode_exp_z3 descr env e) es |>
-           List.concat
+           BatList.concat
       | ESome e1 ->
          failwith "Some should be unboxed"
       | EMatch (e1, bs) ->
@@ -1092,7 +1092,7 @@ module Unboxed : ExprEncoding =
          [encode_exp_z3_single descr env e]
         
     and encode_branches_z3 descr env names bs (t: ty) =
-      match List.rev bs with
+      match BatList.rev bs with
       | [] -> failwith "internal error (encode_branches)"
       | (p, e) :: _ ->
          let zes = encode_exp_z3 descr env e in
@@ -1124,18 +1124,18 @@ module Unboxed : ExprEncoding =
          let local_name = create_vars env descr x in
          let sort = ty_to_sort t in
          let zas = mk_constant env local_name sort in
-         add_constraint env (mk_term (mk_eq zas.t (List.hd znames).t));
+         add_constraint env (mk_term (mk_eq zas.t (BatList.hd znames).t));
          [mk_bool true |> mk_term]
       | PBool b, TBool ->
-         [mk_eq (List.hd znames).t (mk_bool b) |> mk_term]
+         [mk_eq (BatList.hd znames).t (mk_bool b) |> mk_term]
       | PInt i, TInt _ ->
          let const = mk_int_u32 i in
-         [mk_eq (List.hd znames).t const |> mk_term]
+         [mk_eq (BatList.hd znames).t const |> mk_term]
       | PTuple ps, TTuple ts -> (
         match (ps, ts) with
         | [p], [t] -> encode_pattern_z3 descr env znames p t
         | ps, ts ->
-           (* let psts = (List.combine ps ts) in *)
+           (* let psts = (BatList.combine ps ts) in *)
            map3 
              (fun p ty zname ->
                match encode_pattern_z3 descr env [zname] p ty with
@@ -1150,7 +1150,7 @@ module Unboxed : ExprEncoding =
     and encode_value_z3 descr env (v: Syntax.value) : term list =
       match v.v with
       | VTuple vs ->
-         List.map (fun v -> encode_value_z3_single descr env v) vs
+         BatList.map (fun v -> encode_value_z3_single descr env v) vs
       | _ -> [encode_value_z3_single descr env v]
            
     and encode_value_z3_single descr env (v: Syntax.value) : term =
@@ -1174,13 +1174,13 @@ let label_var i =
 
 let node_of_label_var s =
   Integer.of_string
-    (List.nth (BatString.split_on_char '-' s) 1)
+    (BatList.nth (BatString.split_on_char '-' s) 1)
 
 let proj_of_var s =
   try
     let _, s2 = BatString.split s "proj" in
     Some (int_of_string
-            (List.nth (BatString.split_on_char '-' s2) 1))
+            (BatList.nth (BatString.split_on_char '-' s2) 1))
   with Not_found -> None
                   
 
@@ -1202,7 +1202,7 @@ let init_solver ds =
     const_decls = ConstantSet.empty;
     type_decls = StringMap.empty;
     symbolics =
-      List.fold_left (fun acc (v,e) -> VarMap.add v e acc) VarMap.empty symbolics }
+      BatList.fold_left (fun acc (v,e) -> VarMap.add v e acc) VarMap.empty symbolics }
 
 module type Encoding =
   sig
@@ -1222,7 +1222,7 @@ module ClassicEncoding (E: ExprEncoding): Encoding =
                       ~cdescr:"Symbolic variable decl"
           |> ignore ) sym_vars ;
       (* add the require clauses *)
-      List.iter
+      BatList.iter
         (fun e ->
           let es = encode_exp_z3 "" env e in
           ignore (lift1 (fun e -> add_constraint env e) es)) requires
@@ -1346,7 +1346,7 @@ module ClassicEncoding (E: ExprEncoding): Encoding =
       let trans_map = ref AdjGraph.EdgeMap.empty in
       (* trans_input_map maps each edge to the incoming message variable *)
       let trans_input_map = ref AdjGraph.EdgeMap.empty in
-      List.iter
+      BatList.iter
         (fun (i, j) ->
           ( try
               let idxs = AdjGraph.VertexMap.find j !incoming_map in
@@ -1386,7 +1386,7 @@ module ClassicEncoding (E: ExprEncoding): Encoding =
         let emerge_i = Interp.interp_partial_fun emerge [node] in
         let idx = ref 0 in
         let merged =
-          List.fold_left
+          BatList.fold_left
             (fun acc (x, y) ->
               incr idx ;
               let trans = AdjGraph.EdgeMap.find (x, y) !trans_map in
@@ -1396,7 +1396,7 @@ module ClassicEncoding (E: ExprEncoding): Encoding =
               in
               let trans_list = to_list trans in
               let acc_list = to_list acc in
-              List.iter2 (fun y x -> 
+              BatList.iter2 (fun y x -> 
                   add_constraint env (mk_term (mk_eq y.t x.t))) (trans_list @ acc_list) x;
               merge_result )
             init in_edges
@@ -1417,7 +1417,7 @@ module ClassicEncoding (E: ExprEncoding): Encoding =
       AdjGraph.EdgeMap.iter
         (fun (i, j) x ->
           let label = AdjGraph.VertexMap.find i !labelling in
-          List.iter2 (fun label x ->
+          BatList.iter2 (fun label x ->
               add_constraint env (mk_term (mk_eq label.t x.t))) (to_list label) x)
         !trans_input_map ;
       (* add assertions at the end *)
@@ -1434,7 +1434,7 @@ module ClassicEncoding (E: ExprEncoding): Encoding =
              let result, x =
                encode_z3_assert (assert_var (Integer.of_int i)) env (Integer.of_int i) eassert_i
              in
-             List.iter2 (fun x label ->
+             BatList.iter2 (fun x label ->
                  add_constraint env (mk_term (mk_eq x.t label.t))) x (to_list label);
              let assertion_holds =
                lift1 (fun result -> mk_eq result.t (mk_bool true) |> mk_term) result
@@ -1444,7 +1444,7 @@ module ClassicEncoding (E: ExprEncoding): Encoding =
            done ;
            add_constraint env (mk_term (mk_not !all_good))) ;
       (* add the symbolic variable constraints *)
-      add_symbolic_constraints env (get_requires_no_failures ds) (env.symbolics (*@ sym_vars*));
+      add_symbolic_constraints env (get_requires ds) (env.symbolics (*@ sym_vars*));
       env
   end
 
@@ -1462,7 +1462,7 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
                       ~cdescr:"Symbolic variable decl"
           |> ignore ) sym_vars ;
       (* add the require clauses *)
-      List.iter
+      BatList.iter
         (fun e ->
           let es = encode_exp_z3 "" env e in
           ignore (lift1 (fun e -> add_constraint env e) es)) requires
@@ -1475,9 +1475,9 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
           | EFun _ ->
              loop exp ((x,xty) :: acc)
           | _ ->
-             let acc = List.rev acc in
-             let xs = List.map (fun (x,xty) -> create_vars env str x) acc in
-             let xstr = List.map (fun x -> mk_constant env x (ty_to_sort xty)
+             let acc = BatList.rev acc in
+             let xs = BatList.map (fun (x,xty) -> create_vars env str x) acc in
+             let xstr = BatList.map (fun x -> mk_constant env x (ty_to_sort xty)
                                     ~cdescr:"assert x argument" ~cloc:assertion.espan ) xs
              in
              let names = create_strings (Printf.sprintf "%s-result" str) (oget exp.ety) in
@@ -1536,7 +1536,7 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
 
       (* map from nodes to incoming messages*)
       let incoming_messages_map =
-        List.fold_left (fun acc (u,v) -> 
+        BatList.fold_left (fun acc (u,v) -> 
             let lblu = aexp (evar (label_var u |> Var.create), Some aty, Span.default) in
             let transuv = trans_exp u v lblu in
             AdjGraph.VertexMap.modify_def [] v (fun us -> transuv :: us) acc)
@@ -1547,7 +1547,7 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
       let merged_messages_map =
         AdjGraph.fold_vertices (fun u acc ->
             let messages = AdjGraph.VertexMap.find_default [] u incoming_messages_map in
-            let best = List.fold_left (fun accm m -> merge_exp u m accm)
+            let best = BatList.fold_left (fun accm m -> merge_exp u m accm)
                                       (init_exp u) messages
             in
             let str = Printf.sprintf "merge-%d" (Integer.to_int u) in
@@ -1578,7 +1578,7 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
              let result, x =
                encode_z3_assert (assert_var (Integer.of_int i)) env (Integer.of_int i) eassert
              in
-             List.iter2 (fun x label ->
+             BatList.iter2 (fun x label ->
                  add_constraint env (mk_term (mk_eq x.t label.t))) x (to_list label);
              let assertion_holds =
                lift1 (fun result -> mk_eq result.t (mk_bool true) |> mk_term) result
@@ -1588,7 +1588,7 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
            done ;
            add_constraint env (mk_term (mk_not !all_good))) ;
       (* add the symbolic variable constraints *)
-      add_symbolic_constraints env (get_requires_no_failures ds) (env.symbolics (*@ sym_vars*));
+      add_symbolic_constraints env (get_requires ds) (env.symbolics (*@ sym_vars*));
       env
   end
       
@@ -1616,16 +1616,18 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
          Ite (alpha_rename_smt_term renaming tm1,
               alpha_rename_smt_term renaming tm2,
               alpha_rename_smt_term renaming tm3)
-      | AtMost (tm1, tm2) ->
-         AtMost (List.map (alpha_rename_smt_term renaming) tm1,
-                 alpha_rename_smt_term renaming tm2)
+      | AtMost (tm1, tm2, tm3) ->
+         AtMost (BatList.map (alpha_rename_smt_term renaming) tm1,
+                 tm2,
+                 alpha_rename_smt_term renaming tm3)
       | Var s ->
          (match StringMap.Exceptionless.find s renaming with
           | None -> tm
           | Some x -> Var x)
+      | Bv _ -> failwith "not yet"
       | App (tm1, tms) ->
          App (alpha_rename_smt_term renaming tm1,
-              List.map (alpha_rename_smt_term renaming) tms)
+              BatList.map (alpha_rename_smt_term renaming) tms)
         
     let alpha_rename_term (renaming: string StringMap.t) (tm: term) =
       {tm with t = alpha_rename_smt_term renaming tm.t}
@@ -1640,7 +1642,7 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
           r, StringMap.add s r eqSets
       in
       (* compute equality classes of variables and remove equalities between variables *)
-      let (eqSets, new_ctx) = List.fold_left (fun (eqSets, acc) c ->
+      let (eqSets, new_ctx) = BatList.fold_left (fun (eqSets, acc) c ->
                                   match c.com with
                                   | Assert tm ->
                                      (match tm.t with
@@ -1721,7 +1723,7 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
       with exn ->
         begin
           let tok = Lexing.lexeme lexbuf in
-          failwith ("failed: " ^ tok)
+          failwith (Printf.sprintf "failed to parse string %s on %s" s tok)
         end
            
     let translate_model (m : (string, string) BatMap.t) : Solution.t =
@@ -1751,8 +1753,8 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
       match xs with
       | [(_,v)] -> v
       | _ ->
-         vtuple (List.sort (fun (x1,x2) (y1,y2) -> compare x1 y1) xs
-                 |> List.map (fun (x,y) -> y))
+         vtuple (BatList.sort (fun (x1,x2) (y1,y2) -> compare x1 y1) xs
+                 |> BatList.map (fun (x,y) -> y))
 
     (* TODO: boxing for symbolic variables as well *)
     let translate_model_unboxed (m : (string, string) BatMap.t) : Solution.t =
@@ -1805,13 +1807,8 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
       (* Buffer.contents buf *)
       
     let env_to_smt ?(verbose=false) info (env : smt_env) =
-      let context =
-        time_profile "compute context"
-                     (fun () -> BatList.rev_map (fun c -> command_to_smt verbose info c) env.ctx)
-      in
-      let context =
-        time_profile "concat context" (fun () -> BatString.concat "\n" context)
-      in
+      let context = BatList.rev_map (fun c -> command_to_smt verbose info c) env.ctx in
+      let context = BatString.concat "\n" context in
 
       (* Emit constants *)
       let constants = ConstantSet.to_list env.const_decls in
@@ -1843,6 +1840,97 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
       | true -> (module Unboxed : ExprEncoding)
       | false -> (module Boxed : ExprEncoding)
 
+    (* Asks the SMT solver to return a model and translates it to NV lang *)
+    let ask_for_model query chan info env solver renaming ds =
+      (* build a counterexample based on the model provided by Z3 *)
+      let num_nodes =
+        match get_nodes ds with
+        | Some n -> n
+        | _ -> failwith "internal error (encode)"
+      in
+      let eassert = get_assert ds in
+      let model = eval_model env.symbolics num_nodes eassert renaming in
+      let model_question = commands_to_smt smt_config.verbose info model in
+      if query then
+        printQuery chan model_question;
+      ask_solver solver model_question;
+      let model = solver |> parse_model in
+      (match model with
+       | MODEL m ->
+          if smt_config.unboxing then
+            Sat (translate_model_unboxed m)
+          else
+            Sat (translate_model m)
+       | OTHER s ->
+          Printf.printf "%s\n" s;
+          failwith "failed to parse a model"
+       | _ -> failwith "failed to parse a model")
+
+    (** Asks the smt solver whether the query was unsat or not
+     and returns a model if it was sat.*)
+    let get_sat query chan info env solver renaming ds reply =
+      match reply with
+      | UNSAT -> Unsat
+      | SAT ->
+         ask_for_model query chan info env solver renaming ds
+      | UNKNOWN ->
+         Unknown
+      | _ -> failwith "unexpected answer from solver\n"
+
+    (** Refines the first model returned by the solver *)
+    let refineModelWithSingles (model : Solution.t) info query chan solve renaming ds =
+      (* Find and separate the single link failures from the rest *)
+      let (failed, notFailed) =
+        Collections.StringMap.fold (fun fvar fval (accFailed, accNotFailed) ->
+            match fval.v with
+            | VBool b ->
+               if b then
+                 begin
+                   let fmult = Collections.StringMap.find fvar smt_config.multiplicities in
+                   if fmult > 1 then
+                     (accFailed, fvar :: accNotFailed)
+                   else
+                     (fvar :: accFailed, accNotFailed)
+                 end
+               else (accFailed, fvar :: accNotFailed)
+            | _ -> failwith "This should be a boolean variable") model.symbolics ([], [])
+      in
+      match failed with
+      | [] -> None
+      | _ ->
+         let failed =
+           BatList.map (fun fvar -> (mk_eq (mk_var fvar) (mk_bool true))
+                                    |> mk_term |> mk_assert |> mk_command) failed
+           |> commands_to_smt smt_config.verbose info
+         in
+         let notFailed =
+           BatList.map (fun fvar -> (mk_eq (mk_var fvar) (mk_bool false))
+                                    |> mk_term |> mk_assert |> mk_command) notFailed
+           |> commands_to_smt smt_config.verbose info
+         in
+         Some (failed ^ notFailed)
+         
+      let refineModel (model : Solution.t) info query chan env solver renaming ds =
+        let refiner = refineModelWithSingles in
+        match refiner model info query chan solver renaming ds with
+        | None -> Sat model (* no refinement can occur *)
+        | Some q ->
+           let checkSat = CheckSat |> mk_command |> command_to_smt smt_config.verbose info in
+           let q = Printf.sprintf "%s%s" q checkSat in
+           if query then
+             (printQuery chan q);
+           Printf.printf "just befor easking the second time\n";
+           flush stdout;
+           ask_solver solver q;
+           let reply = solver |> parse_reply in
+           Printf.printf "getting the answer\n";
+           flush stdout;
+           let isSat = get_sat query chan info env solver renaming ds reply in
+           (* if the second query was unsat, return the first counterexample *)
+           match isSat with
+           | Sat newModel -> isSat
+           | _ -> Sat model
+
     let solve info query chan ?symbolic_vars ?(params=[]) ds =
       let sym_vars =
         match symbolic_vars with None -> [] | Some ls -> ls
@@ -1858,14 +1946,14 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
       (* compute the encoding of the network *)
       let renaming, env =
         time_profile "Encoding network"
-                     (fun () -> let env = Enc.encode_z3 ds sym_vars in
-                                if smt_config.optimize then propagate_eqs env
-                                else StringMap.empty, env)
+          (fun () -> let env = Enc.encode_z3 ds sym_vars in
+                     if smt_config.optimize then propagate_eqs env
+                     else StringMap.empty, env)
       in
       (* compile the encoding to SMT-LIB *)
       let smt_encoding =
         time_profile "Compiling query"
-                     (fun () -> env_to_smt ~verbose:smt_config.verbose info env) in
+          (fun () -> env_to_smt ~verbose:smt_config.verbose info env) in
       (* print query to a file if asked to *)
       if query then
         printQuery chan smt_encoding;
@@ -1873,37 +1961,6 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
       (* start communication with solver process *)
       let solver = start_solver params in
       ask_solver solver smt_encoding;
-      let get_sat reply =
-        match reply with
-        | UNSAT -> Unsat
-        | SAT ->
-           (* build a counterexample based on the model provided by Z3 *)
-           let num_nodes =
-             match get_nodes ds with
-             | Some n -> n
-             | _ -> failwith "internal error (encode)"
-           in
-           let eassert = get_assert ds in
-           let model = eval_model env.symbolics num_nodes eassert renaming in
-           let model_question = commands_to_smt smt_config.verbose info model in
-           if query then
-             printQuery chan model_question;
-           ask_solver solver model_question;
-           let model = solver |> parse_model in
-           (match model with
-            | MODEL m ->
-               if smt_config.unboxing then
-                 Sat (translate_model_unboxed m)
-               else
-                 Sat (translate_model m)
-            | OTHER s ->
-               Printf.printf "%s\n" s;
-               failwith "failed to parse a model"
-            | _ -> failwith "failed to parse a model")
-        | UNKNOWN ->
-           Unknown
-        | _ -> failwith "unexpected answer from solver\n"
-      in
       match smt_config.failures with
       | None ->
          let q = check_sat info in
@@ -1911,44 +1968,25 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
            printQuery chan q;
          ask_solver solver q;
          let reply = solver |> parse_reply in
-         get_sat reply
+         get_sat query chan info env solver renaming ds reply
       | Some k ->
-         let rec loop i =
-           match (get_requires_failures ds).e with
-           | EOp(AtMost n, [e1;_]) ->
-              let arg2 = aexp (e_val (vint (Integer.of_int i)), Some (TInt 32), Span.default) in
-              let new_req = aexp (eop (AtMost n) [e1; arg2], Some TBool, Span.default) in
-              let zes = ExprEnc.encode_exp_z3 "" env new_req in
-              let zes_smt =
-                ExprEnc.(to_list (lift1 (fun ze -> mk_assert ze |> mk_command) zes))
-              in
-              let q =
-                ((Push |> mk_command) :: (zes_smt @ [CheckSat |> mk_command])) |>
-                  commands_to_smt smt_config.verbose info
-              in
-              if query then
-                printQuery chan q;
-              Printf.printf "printed the query\n";
-              ask_solver solver q;
-              let reply = solver |> parse_reply in
-              (* check satisfiability and get model if required *)
-              let isSat = get_sat reply in
-              (* pop current context *)
-              let pop =
-                Printf.sprintf "%s\n" ((Pop |> mk_command) |>
-                                         command_to_smt smt_config.verbose info)
-              in
-              if query then
-                printQuery chan pop;
-              ask_solver solver pop;
-              (match isSat with
-              | Unsat ->
-                 if i = k then Unsat
-                 else
-                   loop k
-              | Sat m -> Sat m
-              | Unknown -> Unknown)
-           | _ -> failwith "expected failure clause of the form AtMost n"
-         in
-         loop k
-           
+         let q = check_sat info in
+         if query then
+           printQuery chan q;
+         (* ask if it is satisfiable *)
+         ask_solver solver q;
+         let reply = solver |> parse_reply in
+         (* check the reply *)
+         let isSat = get_sat query chan info env solver renaming ds reply in
+         (* In order to minimize refinement iterations, once we get a
+            counter-example we try to minimize it by only keeping failures
+            on single links. If it works then we found an actual
+            counterexample, otherwise we refine using the first
+            counterexample. *)         
+         match isSat with
+         | Unsat -> Unsat
+         | Unknown -> Unknown
+         | Sat model1 ->
+            refineModel model1 info query chan env solver renaming ds
+          
+      

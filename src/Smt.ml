@@ -31,7 +31,7 @@ type smt_options =
 
 let smt_config : smt_options =
   { verbose = false;
-    optimize = false;
+    optimize = true;
     encoding = Classic;
     unboxing = false;
     failures = None;
@@ -1457,6 +1457,7 @@ module ClassicEncoding (E: ExprEncoding): Encoding =
       let (symbolics, labels, assertions) =
         BatMap.foldi (fun k v (symbolics, labels, assertions) ->
             Printf.printf "key: %s, val:%s\n" k v;
+            flush stdout;
             let nvval = parse_val v in
             match k with
             | k when BatString.starts_with k "label" ->

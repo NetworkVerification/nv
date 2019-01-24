@@ -6,7 +6,7 @@ open Hashcons
 open Printing
 open Quickcheck
 open Renaming
-open Smt
+open Smt2
 open Solution
 open Slicing
 open Syntax
@@ -55,7 +55,7 @@ let run_smt file cfg info decls =
   let decls, f = Renaming.alpha_convert_declarations decls in
   let fs = f :: fs in
   let res, fs =
-    (Smt.solve info cfg.query (smt_query_file file) decls ~symbolic_vars:[], fs)
+    (Smt2.solve info cfg.query (smt_query_file file) decls ~symbolic_vars:[], fs)
   in
   match res with
   | Unsat -> (Success None, None)
@@ -162,7 +162,7 @@ let compress file info decls cfg networkOp =
     (* let decls = Typing.infer_declarations info decls in *)
     (* Printf.printf "init:%s\n" (Printing.exp_to_string einit); *)
     (* Printf.printf "%s\n" (Printing.declarations_to_string decls); *)
-    smt_config.multiplicities <- (fun () -> getEdgeMultiplicities slice.graph f failVars);
+    smt_config.multiplicities <- getEdgeMultiplicities slice.graph f failVars;
     let groups = AbstractionMap.printAbstractGroups f "\n" in
     Console.show_message groups Console.T.Blue "Abstract groups";
     match networkOp cfg info decls with
