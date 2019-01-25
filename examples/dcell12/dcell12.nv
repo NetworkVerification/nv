@@ -1,0 +1,6784 @@
+type attribute = (option[int],option[int],option[(int, int, int, int)],option[(int,int,int,int,set[int])],option[int])
+
+symbolic d : (int, int)
+
+let edges = {
+  80-54;
+  25-90;
+  98-138;
+  119-127;
+  120-36;
+  22-38;
+  92-162;
+  95-129;
+  137-5;
+  25-166;
+  66-19;
+  109-94;
+  40-69;
+  49-93;
+  22-143;
+  85-97;
+  51-39;
+  115-94;
+  14-167;
+  93-48;
+  114-17;
+  168-90;
+  153-98;
+  38-11;
+  129-95;
+  92-128;
+  92-135;
+  121-36;
+  10-16;
+  138-56;
+  0-39;
+  37-21;
+  23-90;
+  88-97;
+  46-93;
+  134-36;
+  157-86;
+  7-32;
+  57-122;
+  94-113;
+  142-164;
+  5-137;
+  91-106;
+  161-98;
+  132-36;
+  62-160;
+  117-134;
+  35-136;
+  93-40;
+  143-95;
+  37-4;
+  55-39;
+  84-120;
+  116-91;
+  3-37;
+  36-136;
+  152-90;
+  141-15;
+  18-64;
+  164-142;
+  163-121;
+  167-14;
+  98-163;
+  68-39;
+  90-15;
+  167-97;
+  36-134;
+  11-88;
+  127-119;
+  39-67;
+  37-32;
+  37-35;
+  141-98;
+  125-8;
+  38-8;
+  38-24;
+  11-38;
+  96-89;
+  119-36;
+  150-90;
+  96-79;
+  114-91;
+  92-166;
+  92-148;
+  86-94;
+  96-71;
+  57-39;
+  96-77;
+  104-91;
+  44-93;
+  90-14;
+  20-82;
+  64-18;
+  94-83;
+  21-37;
+  118-91;
+  66-96;
+  100-91;
+  144-23;
+  67-39;
+  38-16;
+  39-57;
+  97-84;
+  95-69;
+  166-25;
+  102-91;
+  17-38;
+  30-36;
+  37-27;
+  96-75;
+  95-60;
+  82-20;
+  39-5;
+  97-70;
+  50-96;
+  166-92;
+  95-56;
+  54-95;
+  4-87;
+  47-0;
+  26-37;
+  94-103;
+  93-42;
+  37-9;
+  37-26;
+  44-156;
+  80-97;
+  111-104;
+  65-39;
+  95-54;
+  73-109;
+  91-108;
+  34-6;
+  40-93;
+  51-89;
+  125-36;
+  99-151;
+  98-151;
+  151-99;
+  95-62;
+  128-46;
+  28-36;
+  134-117;
+  32-37;
+  95-127;
+  91-102;
+  154-90;
+  113-94;
+  45-93;
+  156-90;
+  71-41;
+  124-38;
+  59-93;
+  17-114;
+  27-85;
+  83-94;
+  157-90;
+  36-120;
+  16-10;
+  92-133;
+  29-36;
+  137-36;
+  76-97;
+  104-111;
+  14-90;
+  165-97;
+  91-114;
+  2-123;
+  81-96;
+  90-156;
+  120-84;
+  93-61;
+  42-93;
+  149-98;
+  24-161;
+  147-98;
+  61-93;
+  101-52;
+  36-119;
+  7-39;
+  50-30;
+  69-95;
+  132-61;
+  138-98;
+  4-37;
+  52-101;
+  64-95;
+  39-0;
+  136-36;
+  5-39;
+  100-53;
+  63-126;
+  37-1;
+  91-142;
+  10-39;
+  43-149;
+  102-45;
+  2-37;
+  94-99;
+  94-115;
+  94-112;
+  121-163;
+  145-107;
+  93-44;
+  164-92;
+  74-68;
+  135-147;
+  136-35;
+  15-90;
+  23-144;
+  90-152;
+  140-98;
+  58-78;
+  82-96;
+  3-129;
+  58-95;
+  68-74;
+  131-146;
+  18-90;
+  45-102;
+  94-109;
+  47-93;
+  77-139;
+  122-57;
+  86-157;
+  118-1;
+  20-90;
+  37-3;
+  159-106;
+  99-94;
+  70-105;
+  8-125;
+  97-80;
+  38-12;
+  41-71;
+  106-91;
+  36-30;
+  148-28;
+  60-108;
+  103-48;
+  96-78;
+  126-63;
+  133-165;
+  105-70;
+  112-94;
+  33-37;
+  12-115;
+  73-96;
+  16-38;
+  79-110;
+  90-168;
+  36-132;
+  112-26;
+  128-92;
+  43-93;
+  96-87;
+  72-97;
+  90-18;
+  89-51;
+  75-158;
+  98-139;
+  116-31;
+  95-122;
+  108-60;
+  130-92;
+  54-80;
+  65-154;
+  91-118;
+  70-97;
+  92-164;
+  95-58;
+  133-92;
+  93-45;
+  71-96;
+  39-55;
+  56-95;
+  155-55;
+  9-152;
+  53-100;
+  97-88;
+  96-66;
+  107-145;
+  130-83;
+  151-98;
+  63-39;
+  95-52;
+  142-91;
+  98-141;
+  91-107;
+  94-111;
+  123-2;
+  145-98;
+  29-150;
+  37-34;
+  1-118;
+  97-165;
+  159-97;
+  52-95;
+  36-121;
+  75-96;
+  124-168;
+  162-81;
+  92-130;
+  107-91;
+  113-67;
+  149-43;
+  31-116;
+  158-75;
+  39-10;
+  87-4;
+  56-138;
+  109-73;
+  77-96;
+  97-72;
+  97-158;
+  55-155;
+  110-79;
+  98-155;
+  139-77;
+  91-104;
+  39-68;
+  72-140;
+  36-28;
+  123-92;
+  155-98;
+  106-159;
+  38-22;
+  90-23;
+  96-81;
+  97-167;
+  135-92;
+  91-110;
+  98-147;
+  93-41;
+  122-95;
+  85-27;
+  154-65;
+  87-96;
+  92-123;
+  39-65;
+  97-74;
+  48-103;
+  8-38;
+  89-96;
+  98-145;
+  37-33;
+  61-132;
+  93-47;
+  38-17;
+  49-33;
+  0-47;
+  140-72;
+  146-131;
+  24-38;
+  126-92;
+  38-131;
+  39-53;
+  33-49;
+  117-94;
+  53-39;
+  36-125;
+  146-92;
+  96-73;
+  12-38;
+  92-146;
+  93-43;
+  98-140;
+  148-92;
+  97-159;
+  93-46;
+  31-36;
+  9-37;
+  81-162;
+  94-101;
+  19-66;
+  93-49;
+  84-97;
+  144-91;
+  160-92;
+  160-62;
+  95-64;
+  150-29;
+  163-98;
+  91-116;
+  115-12;
+  36-29;
+  162-92;
+  19-38;
+  37-2;
+  92-126;
+  36-137;
+  32-7;
+  127-95;
+  97-76;
+  92-160;
+  38-13;
+  90-25;
+  143-22;
+  90-20;
+  62-95;
+  36-31;
+  79-96;
+  101-94;
+  13-38;
+  153-21;
+  6-38;
+  96-82;
+  111-94;
+  152-9;
+  1-37;
+  38-19;
+  94-117;
+  38-124;
+  39-51;
+  30-50;
+  156-44;
+  74-97;
+  91-100;
+  78-58;
+  78-96;
+  94-86;
+  48-93;
+  90-150;
+  98-161;
+  38-6;
+  39-63;
+  97-85;
+  42-76;
+  26-112;
+  94-105;
+  60-95;
+  28-148;
+  88-11;
+  131-38;
+  27-37;
+  39-7;
+  96-50;
+  105-94;
+  59-13;
+  69-40;
+  161-24;
+  95-143;
+  103-94;
+  83-130;
+  98-153;
+  90-157;
+  91-144;
+  165-133;
+  98-149;
+  129-3;
+  6-34;
+  93-59;
+  168-124;
+  15-141;
+  90-154;
+  110-91;
+  139-98;
+  34-37;
+  76-42;
+  13-59;
+  41-93;
+  35-37;
+  21-153;
+  67-113;
+  46-128;
+  158-97;
+  108-91;
+  147-135;
+}
+
+let nodes = 169
+
+let ospfIntraArea = 0
+let ospfInterArea = 1
+let ospfE1 = 2
+let ospfE2 = 3
+
+let protoConn = 0
+let protoStatic = 1
+let protoOspf = 2
+let protoBgp = 3
+
+let isProtocol fib x =
+  match fib with
+  | None -> false
+  | Some y -> x = y
+
+let min x y = if x < y then x else y
+
+let max x y = if x < y then y else x
+
+let pickOption f x y =
+  match (x,y) with
+  | (None, None) -> None
+  | (None, Some _) -> y  | (Some _, None) -> x
+  | (Some a, Some b) -> Some (f a b)
+
+let betterOspf o1 o2 =
+  let (_,cost1,areaType1,_) = o1 in
+  let (_,cost2,areaType2,_) = o2 in
+  if areaType1 > areaType2 then o1
+  else if areaType2 > areaType1 then o2
+  else if cost1 <= cost2 then o1 else o2
+
+let betterBgp o1 o2 =
+  let (_,lp1,cost1,med1,_) = o1 in
+  let (_,lp2,cost2,med2,_) = o2 in
+  if lp1 > lp2 then o1
+  else if lp2 > lp1 then o2
+  else if cost1 < cost2 then o1
+  else if cost2 < cost1 then o2  else if med1 >= med2 then o1 else o2
+
+let betterEqOption o1 o2 =
+  match (o1,o2) with
+  | (None, None) -> true
+  | (Some _, None) -> true
+  | (None, Some _) -> false
+  | (Some a, Some b) -> a <= b
+
+let best c s o b =
+  match (c,s,o,b) with
+  | (None,None,None,None) -> None
+  | _ -> 
+      let o = match o with | None -> None | Some (ad,_,_,_) -> Some ad in
+      let b = match b with | None -> None | Some (ad,_,_,_,_) -> Some ad in
+      let (x,p1) = if betterEqOption c s then (c,0) else (s,1) in
+      let (y,p2) = if betterEqOption o b then (o,2) else (b,3) in
+      Some (if betterEqOption x y then p1 else p2)
+
+let mergeValues x y =
+  let (cx,sx,ox,bx,_) = x in
+  let (cy,sy,oy,by,_) = y in
+  let c = pickOption min cx cy in
+  let s = pickOption min sx sy in
+  let o = pickOption betterOspf ox oy in
+  let b = pickOption betterBgp bx by in
+  (c,s,o,b, best c s o b)
+
+let merge node x y = mergeValues x y
+
+let init node =
+  match node with
+  | 0 -> 
+     if (d = (167780608, 31)) || (d = (1174415104, 32)) || (d = (167802112, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 1 -> 
+     if (d = (167779840, 31)) || (d = (1174413568, 32)) || (d = (167800576, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 2 -> 
+     if (d = (167780096, 31)) || (d = (1174413824, 32)) || (d = (167800832, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 3 -> 
+     if (d = (1174413056, 32)) || (d = (167779328, 31)) || (d = (167800064, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 4 -> 
+     if (d = (1174413312, 32)) || (d = (167779584, 31)) || (d = (167800320, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 5 -> 
+     if (d = (167775488, 31)) || (d = (1174414592, 32)) || (d = (167801600, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 6 -> 
+     if (d = (167772416, 31)) || (d = (1174405376, 32)) || (d = (167792384, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 7 -> 
+     if (d = (167778048, 31)) || (d = (1174414848, 32)) || (d = (167801856, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 8 -> 
+     if (d = (167772160, 31)) || (d = (1174405120, 32)) || (d = (167792128, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 9 -> 
+     if (d = (167780352, 31)) || (d = (1174414080, 32)) || (d = (167801088, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 10 -> 
+     if (d = (167772672, 31)) || (d = (1174414336, 32)) || (d = (167801344, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 11 -> 
+     if (d = (167773440, 31)) || (d = (1174406400, 32)) || (d = (167793408, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 12 -> 
+     if (d = (167773184, 31)) || (d = (1174406144, 32)) || (d = (167793152, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 13 -> 
+     if (d = (167772928, 31)) || (d = (1174405888, 32)) || (d = (167792896, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 14 -> 
+     if (d = (1174443520, 32)) || (d = (167788032, 31)) || (d = (167830528, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 15 -> 
+     if (d = (1174443776, 32)) || (d = (167789312, 31)) || (d = (167830784, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 16 -> 
+     if (d = (167772672, 31)) || (d = (1174405632, 32)) || (d = (167792640, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 17 -> 
+     if (d = (1174407424, 32)) || (d = (167774464, 31)) || (d = (167794432, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 18 -> 
+     if (d = (1174444032, 32)) || (d = (167790336, 31)) || (d = (167831040, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 19 -> 
+     if (d = (167774208, 31)) || (d = (1174407168, 32)) || (d = (167794176, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 20 -> 
+     if (d = (1174444288, 32)) || (d = (167791104, 31)) || (d = (167831296, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 21 -> 
+     if (d = (1174412800, 32)) || (d = (167779072, 31)) || (d = (167799808, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 22 -> 
+     if (d = (167773952, 31)) || (d = (1174406912, 32)) || (d = (167793920, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 23 -> 
+     if (d = (1174444544, 32)) || (d = (167791616, 31)) || (d = (167831552, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 24 -> 
+     if (d = (167773696, 31)) || (d = (1174406656, 32)) || (d = (167793664, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 25 -> 
+     if (d = (1174444800, 32)) || (d = (167791872, 31)) || (d = (167831808, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 26 -> 
+     if (d = (1174412288, 32)) || (d = (167778560, 31)) || (d = (167799296, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 27 -> 
+     if (d = (1174412544, 32)) || (d = (167778816, 31)) || (d = (167799552, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 28 -> 
+     if (d = (167777536, 31)) || (d = (1174410752, 32)) || (d = (167797760, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 29 -> 
+     if (d = (167777792, 31)) || (d = (1174411008, 32)) || (d = (167798016, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 30 -> 
+     if (d = (167777024, 31)) || (d = (1174410240, 32)) || (d = (167797248, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 31 -> 
+     if (d = (167777280, 31)) || (d = (1174410496, 32)) || (d = (167797504, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 32 -> 
+     if (d = (167778048, 31)) || (d = (1174411776, 32)) || (d = (167798784, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 33 -> 
+     if (d = (167778304, 31)) || (d = (1174412032, 32)) || (d = (167799040, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 34 -> 
+     if (d = (167772416, 31)) || (d = (1174411264, 32)) || (d = (167798272, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 35 -> 
+     if (d = (167775232, 31)) || (d = (1174411520, 32)) || (d = (167798528, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 36 -> 
+     if (d = (167795200, 31)) || (d = (167797248, 31)) || (d = (167796992, 31)) || (d = (167796736, 31)) || (d = (167796480, 31)) || (d = (167796224, 31)) || (d = (167795968, 31)) || (d = (167795712, 31)) || (d = (167795456, 31)) || (d = (167797504, 31)) || (d = (167798016, 31)) || (d = (167797760, 31)) || (d = (1174445312, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 37 -> 
+     if (d = (167799552, 31)) || (d = (167799296, 31)) || (d = (167799040, 31)) || (d = (167798784, 31)) || (d = (167798528, 31)) || (d = (167798272, 31)) || (d = (167801088, 31)) || (d = (167800832, 31)) || (d = (167800064, 31)) || (d = (167799808, 31)) || (d = (167800576, 31)) || (d = (167800320, 31)) || (d = (1174445568, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 38 -> 
+     if (d = (167793152, 31)) || (d = (167792896, 31)) || (d = (167792640, 31)) || (d = (167792384, 31)) || (d = (167792128, 31)) || (d = (167794432, 31)) || (d = (167794176, 31)) || (d = (167793920, 31)) || (d = (167793664, 31)) || (d = (167793408, 31)) || (d = (167794944, 31)) || (d = (167794688, 31)) || (d = (1174445056, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 39 -> 
+     if (d = (167801600, 31)) || (d = (167801344, 31)) || (d = (167803648, 31)) || (d = (167803392, 31)) || (d = (167803136, 31)) || (d = (167802880, 31)) || (d = (167802624, 31)) || (d = (167802368, 31)) || (d = (167802112, 31)) || (d = (167801856, 31)) || (d = (167804160, 31)) || (d = (167803904, 31)) || (d = (1174445824, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 40 -> 
+     if (d = (167806208, 31)) || (d = (167783680, 31)) || (d = (1174419200, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 41 -> 
+     if (d = (167806464, 31)) || (d = (167783936, 31)) || (d = (1174419456, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 42 -> 
+     if (d = (167783168, 31)) || (d = (1174418688, 32)) || (d = (167805696, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 43 -> 
+     if (d = (167783424, 31)) || (d = (1174418944, 32)) || (d = (167805952, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 44 -> 
+     if (d = (167807232, 31)) || (d = (167784704, 31)) || (d = (1174420224, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 45 -> 
+     if (d = (167806720, 31)) || (d = (167784192, 31)) || (d = (1174419712, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 46 -> 
+     if (d = (167806976, 31)) || (d = (167784448, 31)) || (d = (1174419968, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 47 -> 
+     if (d = (167780608, 31)) || (d = (1174418176, 32)) || (d = (167805184, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 48 -> 
+     if (d = (167782912, 31)) || (d = (1174418432, 32)) || (d = (167805440, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 49 -> 
+     if (d = (167778304, 31)) || (d = (1174417920, 32)) || (d = (167804928, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 50 -> 
+     if (d = (167777024, 31)) || (d = (167820032, 31)) || (d = (1174433024, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 51 -> 
+     if (d = (167781888, 31)) || (d = (1174416384, 32)) || (d = (167803392, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 52 -> 
+     if (d = (167817984, 31)) || (d = (167785472, 31)) || (d = (1174430976, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 53 -> 
+     if (d = (167782144, 31)) || (d = (1174416640, 32)) || (d = (167803648, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 54 -> 
+     if (d = (167818240, 31)) || (d = (167787008, 31)) || (d = (1174431232, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 55 -> 
+     if (d = (167781376, 31)) || (d = (1174415872, 32)) || (d = (167802880, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 56 -> 
+     if (d = (167818496, 31)) || (d = (167788288, 31)) || (d = (1174431488, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 57 -> 
+     if (d = (167781632, 31)) || (d = (1174416128, 32)) || (d = (167803136, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 58 -> 
+     if (d = (167818752, 31)) || (d = (167789568, 31)) || (d = (1174431744, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 59 -> 
+     if (d = (167772928, 31)) || (d = (1174417408, 32)) || (d = (167804416, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 60 -> 
+     if (d = (167819008, 31)) || (d = (167789824, 31)) || (d = (1174432000, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 61 -> 
+     if (d = (167775744, 31)) || (d = (1174417664, 32)) || (d = (167804672, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 62 -> 
+     if (d = (167819264, 31)) || (d = (167790080, 31)) || (d = (1174432256, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 63 -> 
+     if (d = (167782400, 31)) || (d = (1174416896, 32)) || (d = (167803904, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 64 -> 
+     if (d = (167819520, 31)) || (d = (167790336, 31)) || (d = (1174432512, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 65 -> 
+     if (d = (167782656, 31)) || (d = (1174417152, 32)) || (d = (167804160, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 66 -> 
+     if (d = (167774208, 31)) || (d = (167819776, 31)) || (d = (1174432768, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 67 -> 
+     if (d = (167780864, 31)) || (d = (1174415360, 32)) || (d = (167802368, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 68 -> 
+     if (d = (167781120, 31)) || (d = (1174415616, 32)) || (d = (167802624, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 69 -> 
+     if (d = (167783680, 31)) || (d = (167817728, 31)) || (d = (1174430720, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 70 -> 
+     if (d = (167811840, 31)) || (d = (167784960, 31)) || (d = (1174424832, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 71 -> 
+     if (d = (167783936, 31)) || (d = (167820800, 31)) || (d = (1174433792, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 72 -> 
+     if (d = (167812096, 31)) || (d = (167786752, 31)) || (d = (1174425088, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 73 -> 
+     if (d = (167785728, 31)) || (d = (167821056, 31)) || (d = (1174434048, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 74 -> 
+     if (d = (167811328, 31)) || (d = (167781120, 31)) || (d = (1174424320, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 75 -> 
+     if (d = (167821312, 31)) || (d = (167787264, 31)) || (d = (1174434304, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 76 -> 
+     if (d = (167811584, 31)) || (d = (167783168, 31)) || (d = (1174424576, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 77 -> 
+     if (d = (167821568, 31)) || (d = (167788544, 31)) || (d = (1174434560, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 78 -> 
+     if (d = (167821824, 31)) || (d = (167789568, 31)) || (d = (1174434816, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 79 -> 
+     if (d = (167822080, 31)) || (d = (167790592, 31)) || (d = (1174435072, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 80 -> 
+     if (d = (167812352, 31)) || (d = (167787008, 31)) || (d = (1174425344, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 81 -> 
+     if (d = (167822336, 31)) || (d = (167790848, 31)) || (d = (1174435328, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 82 -> 
+     if (d = (167822592, 31)) || (d = (167791104, 31)) || (d = (1174435584, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 83 -> 
+     if (d = (167810048, 31)) || (d = (167786240, 31)) || (d = (1174423040, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 84 -> 
+     if (d = (167776256, 31)) || (d = (167810816, 31)) || (d = (1174423808, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 85 -> 
+     if (d = (167811072, 31)) || (d = (167778816, 31)) || (d = (1174424064, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 86 -> 
+     if (d = (167810304, 31)) || (d = (167786496, 31)) || (d = (1174423296, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 87 -> 
+     if (d = (167779584, 31)) || (d = (167820288, 31)) || (d = (1174433280, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 88 -> 
+     if (d = (167773440, 31)) || (d = (167810560, 31)) || (d = (1174423552, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 89 -> 
+     if (d = (167781888, 31)) || (d = (167820544, 31)) || (d = (1174433536, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 90 -> 
+     if (d = (1174448128, 32)) || (d = (167828992, 31)) || (d = (167831296, 31)) || (d = (167831040, 31)) || (d = (167830784, 31)) || (d = (167830528, 31)) || (d = (167830272, 31)) || (d = (167830016, 31)) || (d = (167829760, 31)) || (d = (167829504, 31)) || (d = (167829248, 31)) || (d = (167831808, 31)) || (d = (167831552, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 91 -> 
+     if (d = (1174447616, 32)) || (d = (167822848, 31)) || (d = (167824128, 31)) || (d = (167823872, 31)) || (d = (167823616, 31)) || (d = (167823360, 31)) || (d = (167823104, 31)) || (d = (167824640, 31)) || (d = (167824384, 31)) || (d = (167824896, 31)) || (d = (167825664, 31)) || (d = (167825408, 31)) || (d = (167825152, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 92 -> 
+     if (d = (1174447872, 32)) || (d = (167826944, 31)) || (d = (167826688, 31)) || (d = (167826432, 31)) || (d = (167826176, 31)) || (d = (167825920, 31)) || (d = (167828224, 31)) || (d = (167827968, 31)) || (d = (167827712, 31)) || (d = (167827456, 31)) || (d = (167827200, 31)) || (d = (167828736, 31)) || (d = (167828480, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 93 -> 
+     if (d = (167805952, 31)) || (d = (167805696, 31)) || (d = (167805440, 31)) || (d = (167805184, 31)) || (d = (167804928, 31)) || (d = (167804672, 31)) || (d = (167804416, 31)) || (d = (167806720, 31)) || (d = (167806464, 31)) || (d = (167806208, 31)) || (d = (167807232, 31)) || (d = (167806976, 31)) || (d = (1174446080, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 94 -> 
+     if (d = (167807744, 31)) || (d = (167807488, 31)) || (d = (167808000, 31)) || (d = (167810048, 31)) || (d = (167809792, 31)) || (d = (167809536, 31)) || (d = (167809280, 31)) || (d = (167809024, 31)) || (d = (167808256, 31)) || (d = (167808768, 31)) || (d = (167808512, 31)) || (d = (167810304, 31)) || (d = (1174446336, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 95 -> 
+     if (d = (1174447104, 32)) || (d = (167818496, 31)) || (d = (167818240, 31)) || (d = (167817984, 31)) || (d = (167817728, 31)) || (d = (167817472, 31)) || (d = (167817216, 31)) || (d = (167816960, 31)) || (d = (167816704, 31)) || (d = (167819008, 31)) || (d = (167818752, 31)) || (d = (167819520, 31)) || (d = (167819264, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 96 -> 
+     if (d = (1174447360, 32)) || (d = (167820544, 31)) || (d = (167820288, 31)) || (d = (167820032, 31)) || (d = (167819776, 31)) || (d = (167822080, 31)) || (d = (167821824, 31)) || (d = (167821568, 31)) || (d = (167821312, 31)) || (d = (167821056, 31)) || (d = (167820800, 31)) || (d = (167822592, 31)) || (d = (167822336, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 97 -> 
+     if (d = (167812096, 31)) || (d = (167811840, 31)) || (d = (167811584, 31)) || (d = (167811328, 31)) || (d = (167811072, 31)) || (d = (167810816, 31)) || (d = (167810560, 31)) || (d = (1174446592, 32)) || (d = (167812864, 31)) || (d = (167812608, 31)) || (d = (167812352, 31)) || (d = (167813376, 31)) || (d = (167813120, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 98 -> 
+     if (d = (1174446848, 32)) || (d = (167814400, 31)) || (d = (167814144, 31)) || (d = (167813888, 31)) || (d = (167813632, 31)) || (d = (167815936, 31)) || (d = (167815680, 31)) || (d = (167815424, 31)) || (d = (167815168, 31)) || (d = (167814912, 31)) || (d = (167814656, 31)) || (d = (167816448, 31)) || (d = (167816192, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 99 -> 
+     if (d = (167809024, 31)) || (d = (167785216, 31)) || (d = (1174422016, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 100 -> 
+     if (d = (167782144, 31)) || (d = (167823616, 31)) || (d = (1174436608, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 101 -> 
+     if (d = (167809280, 31)) || (d = (167785472, 31)) || (d = (1174422272, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 102 -> 
+     if (d = (167784192, 31)) || (d = (167823872, 31)) || (d = (1174436864, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 103 -> 
+     if (d = (167808512, 31)) || (d = (167782912, 31)) || (d = (1174421504, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 104 -> 
+     if (d = (167785984, 31)) || (d = (167824128, 31)) || (d = (1174437120, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 105 -> 
+     if (d = (167808768, 31)) || (d = (167784960, 31)) || (d = (1174421760, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 106 -> 
+     if (d = (167787520, 31)) || (d = (167824384, 31)) || (d = (1174437376, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 107 -> 
+     if (d = (167788800, 31)) || (d = (167824640, 31)) || (d = (1174437632, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 108 -> 
+     if (d = (167824896, 31)) || (d = (167789824, 31)) || (d = (1174437888, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 109 -> 
+     if (d = (167809536, 31)) || (d = (167785728, 31)) || (d = (1174422528, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 110 -> 
+     if (d = (167790592, 31)) || (d = (167825152, 31)) || (d = (1174438144, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 111 -> 
+     if (d = (167809792, 31)) || (d = (167785984, 31)) || (d = (1174422784, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 112 -> 
+     if (d = (167808000, 31)) || (d = (167778560, 31)) || (d = (1174420992, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 113 -> 
+     if (d = (167808256, 31)) || (d = (167780864, 31)) || (d = (1174421248, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 114 -> 
+     if (d = (167774464, 31)) || (d = (167822848, 31)) || (d = (1174435840, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 115 -> 
+     if (d = (167773184, 31)) || (d = (167807488, 31)) || (d = (1174420480, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 116 -> 
+     if (d = (167777280, 31)) || (d = (167823104, 31)) || (d = (1174436096, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 117 -> 
+     if (d = (167807744, 31)) || (d = (167776000, 31)) || (d = (1174420736, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 118 -> 
+     if (d = (167779840, 31)) || (d = (167823360, 31)) || (d = (1174436352, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 119 -> 
+     if (d = (167776768, 31)) || (d = (1174409984, 32)) || (d = (167796992, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 120 -> 
+     if (d = (167776256, 31)) || (d = (1174409472, 32)) || (d = (167796480, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 121 -> 
+     if (d = (167776512, 31)) || (d = (1174409728, 32)) || (d = (167796736, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 122 -> 
+     if (d = (167781632, 31)) || (d = (167817472, 31)) || (d = (1174430464, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 123 -> 
+     if (d = (1174439424, 32)) || (d = (167780096, 31)) || (d = (167826432, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 124 -> 
+     if (d = (1174407936, 32)) || (d = (167774976, 31)) || (d = (167794944, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 125 -> 
+     if (d = (167772160, 31)) || (d = (1174408192, 32)) || (d = (167795200, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 126 -> 
+     if (d = (1174439680, 32)) || (d = (167782400, 31)) || (d = (167826688, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 127 -> 
+     if (d = (167776768, 31)) || (d = (167816960, 31)) || (d = (1174429952, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 128 -> 
+     if (d = (1174439936, 32)) || (d = (167784448, 31)) || (d = (167826944, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 129 -> 
+     if (d = (167779328, 31)) || (d = (167817216, 31)) || (d = (1174430208, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 130 -> 
+     if (d = (1174440192, 32)) || (d = (167786240, 31)) || (d = (167827200, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 131 -> 
+     if (d = (1174407680, 32)) || (d = (167774720, 31)) || (d = (167794688, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 132 -> 
+     if (d = (1174408960, 32)) || (d = (167775744, 31)) || (d = (167795968, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 133 -> 
+     if (d = (1174440448, 32)) || (d = (167787776, 31)) || (d = (167827456, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 134 -> 
+     if (d = (1174409216, 32)) || (d = (167776000, 31)) || (d = (167796224, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 135 -> 
+     if (d = (1174440704, 32)) || (d = (167789056, 31)) || (d = (167827712, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 136 -> 
+     if (d = (1174408448, 32)) || (d = (167775232, 31)) || (d = (167795456, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 137 -> 
+     if (d = (1174408704, 32)) || (d = (167775488, 31)) || (d = (167795712, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 138 -> 
+     if (d = (167815424, 31)) || (d = (167788288, 31)) || (d = (1174428416, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 139 -> 
+     if (d = (167815680, 31)) || (d = (167788544, 31)) || (d = (1174428672, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 140 -> 
+     if (d = (167815168, 31)) || (d = (167786752, 31)) || (d = (1174428160, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 141 -> 
+     if (d = (167816448, 31)) || (d = (167789312, 31)) || (d = (1174429440, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 142 -> 
+     if (d = (167791360, 31)) || (d = (167825408, 31)) || (d = (1174438400, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 143 -> 
+     if (d = (167773952, 31)) || (d = (167816704, 31)) || (d = (1174429696, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 144 -> 
+     if (d = (167825664, 31)) || (d = (167791616, 31)) || (d = (1174438656, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 145 -> 
+     if (d = (167815936, 31)) || (d = (167788800, 31)) || (d = (1174428928, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 146 -> 
+     if (d = (167774720, 31)) || (d = (167825920, 31)) || (d = (1174438912, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 147 -> 
+     if (d = (167816192, 31)) || (d = (167789056, 31)) || (d = (1174429184, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 148 -> 
+     if (d = (1174439168, 32)) || (d = (167777536, 31)) || (d = (167826176, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 149 -> 
+     if (d = (167814656, 31)) || (d = (167783424, 31)) || (d = (1174427648, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 150 -> 
+     if (d = (1174442240, 32)) || (d = (167777792, 31)) || (d = (167829248, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 151 -> 
+     if (d = (167814912, 31)) || (d = (167785216, 31)) || (d = (1174427904, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 152 -> 
+     if (d = (1174442496, 32)) || (d = (167780352, 31)) || (d = (167829504, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 153 -> 
+     if (d = (167779072, 31)) || (d = (167814144, 31)) || (d = (1174427136, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 154 -> 
+     if (d = (1174442752, 32)) || (d = (167782656, 31)) || (d = (167829760, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 155 -> 
+     if (d = (167814400, 31)) || (d = (167781376, 31)) || (d = (1174427392, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 156 -> 
+     if (d = (1174443008, 32)) || (d = (167784704, 31)) || (d = (167830016, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 157 -> 
+     if (d = (1174443264, 32)) || (d = (167786496, 31)) || (d = (167830272, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 158 -> 
+     if (d = (167812608, 31)) || (d = (167787264, 31)) || (d = (1174425600, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 159 -> 
+     if (d = (167812864, 31)) || (d = (167787520, 31)) || (d = (1174425856, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 160 -> 
+     if (d = (1174440960, 32)) || (d = (167790080, 31)) || (d = (167827968, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 161 -> 
+     if (d = (167773696, 31)) || (d = (167813632, 31)) || (d = (1174426624, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 162 -> 
+     if (d = (1174441216, 32)) || (d = (167790848, 31)) || (d = (167828224, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 163 -> 
+     if (d = (167776512, 31)) || (d = (167813888, 31)) || (d = (1174426880, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 164 -> 
+     if (d = (1174441472, 32)) || (d = (167791360, 31)) || (d = (167828480, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 165 -> 
+     if (d = (167813120, 31)) || (d = (167787776, 31)) || (d = (1174426112, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 166 -> 
+     if (d = (1174441728, 32)) || (d = (167791872, 31)) || (d = (167828736, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 167 -> 
+     if (d = (167813376, 31)) || (d = (167788032, 31)) || (d = (1174426368, 32)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | 168 -> 
+     if (d = (1174441984, 32)) || (d = (167774976, 31)) || (d = (167828992, 31)) then
+       let c = Some 0 in
+       let s = None in
+       let o = None in
+       let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else (None,None,None,None,None)
+  | _ -> (None,None,None,None,None)
+
+ let transferOspf edge o =
+   match o with
+   | None -> None
+   | Some (ad,cost,areaType,areaId) -> (
+   match edge with
+   | _ -> None
+)
+ let transferBgp edge x =
+  let (_,_,_,b,fib) = x in
+  let (prefix, prefixLen) = d in
+  let b = match fib with
+           | None -> None
+           | Some 0 -> Some (0,100,0,80,{})
+           | Some 1 -> Some (1,100,0,80,{})
+           | Some 2 -> Some (110,100,0,80,{})
+           | Some 3 -> b
+  in
+  match b with
+  | None -> None
+  | Some (ad,lp,cost,med,comms) -> (
+   match edge with
+   | (0,47) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (0,39) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (1,37) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (1,118) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (2,37) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (2,123) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (3,129) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (3,37) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (4,87) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (4,37) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (5,39) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (5,137) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (6,34) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (6,38) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (7,32) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (7,39) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (8,38) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (8,125) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (9,37) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (9,152) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (10,39) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (10,16) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (11,88) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (11,38) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (12,38) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (12,115) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (13,59) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (13,38) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (14,90) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (14,167) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (15,141) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (15,90) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (16,10) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (16,38) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (17,38) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (17,114) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (18,90) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (18,64) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (19,38) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (19,66) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (20,90) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (20,82) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (21,153) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (21,37) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (22,143) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (22,38) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (23,144) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (23,90) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (24,161) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (24,38) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (25,166) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (25,90) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (26,112) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (26,37) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (27,37) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (27,85) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (28,148) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (28,36) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (29,150) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (29,36) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (30,36) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (30,50) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (31,36) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (31,116) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (32,37) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (32,7) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (33,49) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (33,37) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (34,37) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (34,6) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (35,37) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (35,136) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (36,136) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (36,30) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (36,132) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (36,125) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (36,121) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (36,28) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (36,31) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (36,29) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (36,120) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (36,137) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (36,134) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (36,119) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (37,4) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (37,33) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (37,32) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (37,35) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (37,9) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (37,2) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (37,27) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (37,26) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (37,3) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (37,21) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (37,1) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (37,34) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (38,12) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (38,13) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (38,16) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (38,17) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (38,19) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (38,124) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (38,8) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (38,6) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (38,22) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (38,24) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (38,11) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (38,131) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (39,5) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (39,68) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (39,67) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (39,57) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (39,55) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (39,0) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (39,10) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (39,51) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (39,63) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (39,7) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (39,65) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (39,53) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (40,93) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (40,69) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (41,71) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (41,93) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (42,93) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (42,76) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (43,149) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (43,93) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (44,93) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (44,156) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (45,102) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (45,93) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (46,93) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (46,128) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (47,93) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (47,0) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (48,103) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (48,93) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (49,33) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (49,93) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (50,96) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (50,30) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (51,39) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (51,89) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (52,95) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (52,101) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (53,39) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (53,100) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (54,95) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (54,80) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (55,39) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (55,155) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (56,138) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (56,95) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (57,122) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (57,39) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (58,95) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (58,78) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (59,13) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (59,93) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (60,95) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (60,108) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (61,132) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (61,93) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (62,160) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (62,95) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (63,39) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (63,126) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (64,18) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (64,95) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (65,154) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (65,39) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (66,19) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (66,96) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (67,39) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (67,113) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (68,74) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (68,39) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (69,95) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (69,40) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (70,97) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (70,105) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (71,96) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (71,41) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (72,97) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (72,140) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (73,96) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (73,109) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (74,68) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (74,97) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (75,158) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (75,96) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (76,97) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (76,42) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (77,139) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (77,96) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (78,58) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (78,96) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (79,96) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (79,110) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (80,54) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (80,97) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (81,162) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (81,96) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (82,96) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (82,20) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (83,130) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (83,94) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (84,120) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (84,97) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (85,97) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (85,27) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (86,94) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (86,157) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (87,4) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (87,96) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (88,11) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (88,97) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (89,51) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (89,96) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (90,168) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (90,154) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (90,14) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (90,25) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (90,20) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (90,150) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (90,156) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (90,18) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (90,23) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (90,157) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (90,152) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (90,15) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (91,100) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (91,114) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (91,116) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (91,108) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (91,106) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (91,102) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (91,107) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (91,110) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (91,144) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (91,142) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (91,104) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (91,118) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (92,148) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (92,164) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (92,128) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (92,160) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (92,135) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (92,130) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (92,123) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (92,126) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (92,162) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (92,146) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (92,133) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (92,166) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (93,59) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (93,46) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (93,45) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (93,47) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (93,48) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (93,44) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (93,61) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (93,42) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (93,49) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (93,43) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (93,40) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (93,41) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (94,113) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (94,105) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (94,99) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (94,86) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (94,115) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (94,112) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (94,109) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (94,101) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (94,83) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (94,103) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (94,117) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (94,111) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (95,58) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (95,62) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (95,56) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (95,64) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (95,54) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (95,143) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (95,69) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (95,52) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (95,127) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (95,129) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (95,122) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (95,60) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (96,71) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (96,82) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (96,77) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (96,66) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (96,73) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (96,87) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (96,78) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (96,81) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (96,50) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (96,89) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (96,75) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (96,79) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (97,70) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (97,84) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (97,88) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (97,85) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (97,167) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (97,72) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (97,158) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (97,74) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (97,76) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (97,159) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (97,165) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (97,80) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (98,149) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (98,151) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (98,138) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (98,161) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (98,163) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (98,141) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (98,139) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (98,153) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (98,155) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (98,140) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (98,147) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (98,145) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (99,151) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (99,94) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (100,91) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (100,53) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (101,94) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (101,52) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (102,45) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (102,91) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (103,48) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (103,94) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (104,111) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (104,91) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (105,70) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (105,94) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (106,159) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (106,91) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (107,145) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (107,91) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (108,60) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (108,91) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (109,73) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (109,94) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (110,79) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (110,91) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (111,94) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (111,104) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (112,94) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (112,26) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (113,94) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (113,67) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (114,17) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (114,91) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (115,94) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (115,12) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (116,91) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (116,31) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (117,94) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (117,134) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (118,91) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (118,1) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (119,36) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (119,127) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (120,36) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (120,84) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (121,36) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (121,163) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (122,57) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (122,95) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (123,2) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (123,92) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (124,38) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (124,168) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (125,8) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (125,36) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (126,63) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (126,92) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (127,119) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (127,95) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (128,46) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (128,92) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (129,3) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (129,95) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (130,83) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (130,92) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (131,146) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (131,38) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (132,36) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (132,61) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (133,165) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (133,92) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (134,36) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (134,117) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (135,147) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (135,92) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (136,35) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (136,36) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (137,36) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (137,5) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (138,98) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (138,56) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (139,98) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (139,77) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (140,72) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (140,98) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (141,15) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (141,98) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (142,91) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (142,164) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (143,22) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (143,95) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (144,23) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (144,91) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (145,98) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (145,107) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (146,131) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (146,92) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (147,98) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (147,135) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (148,28) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (148,92) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (149,98) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (149,43) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (150,29) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (150,90) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (151,98) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (151,99) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (152,90) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (152,9) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (153,21) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (153,98) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (154,90) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (154,65) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (155,55) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (155,98) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (156,90) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (156,44) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (157,90) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (157,86) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (158,97) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (158,75) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (159,97) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (159,106) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (160,92) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (160,62) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (161,24) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (161,98) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (162,92) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (162,81) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (163,121) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (163,98) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (164,92) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (164,142) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (165,133) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (165,97) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (166,25) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (166,92) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (167,14) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (167,97) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (168,124) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+   | (168,90) -> 
+    let b = (if ((isProtocol fib 3)) then
+(Some (ad,lp,cost + 1,med,comms))
+else
+None)
+    in
+    (match b with
+     | None -> None
+     | Some (ad,lp,cost,med,comms) -> 
+      b)
+  | _ -> None)
+
+let transferRoute edge x = 
+  let (_,_,o,b,fib) = x in
+  let o = transferOspf edge o in
+  let b = transferBgp edge x in
+  (None, None, o, b, fib)
+
+let trans edge x =
+   transferRoute edge x
+
+(*
+{server-39=0, server-33=1, server-34=2, server-31=3, server-32=4, server-37=5, server-1=6, server-38=7, server-0=8, server-35=9, server-36=10, server-5=11, server-4=12, server-3=13, server-150=14, server-151=15, server-2=16, server-9=17, server-152=18, server-8=19, server-153=20, server-30=21, server-7=22, server-154=23, server-6=24, server-155=25, server-28=26, server-29=27, server-22=28, server-23=29, server-20=30, server-21=31, server-26=32, server-27=33, server-24=34, server-25=35, switch-157=36, switch-158=37, switch-156=38, switch-159=39, server-55=40, server-56=41, server-53=42, server-54=43, server-59=44, server-57=45, server-58=46, server-51=47, server-52=48, server-50=49, server-109=50, server-44=51, server-101=52, server-45=53, server-102=54, server-42=55, server-103=56, server-43=57, server-104=58, server-48=59, server-105=60, server-49=61, server-106=62, server-46=63, server-107=64, server-47=65, server-108=66, server-40=67, server-41=68, server-100=69, server-77=70, server-112=71, server-78=72, server-113=73, server-75=74, server-114=75, server-76=76, server-115=77, server-116=78, server-117=79, server-79=80, server-118=81, server-119=82, server-70=83, server-73=84, server-74=85, server-71=86, server-110=87, server-72=88, server-111=89, switch-168=90, switch-166=91, switch-167=92, switch-160=93, switch-161=94, switch-164=95, switch-165=96, switch-162=97, switch-163=98, server-66=99, server-123=100, server-67=101, server-124=102, server-64=103, server-125=104, server-65=105, server-126=106, server-127=107, server-128=108, server-68=109, server-129=110, server-69=111, server-62=112, server-63=113, server-120=114, server-60=115, server-121=116, server-61=117, server-122=118, server-19=119, server-17=120, server-18=121, server-99=122, server-134=123, server-11=124, server-12=125, server-135=126, server-97=127, server-136=128, server-98=129, server-137=130, server-10=131, server-15=132, server-138=133, server-16=134, server-139=135, server-13=136, server-14=137, server-91=138, server-92=139, server-90=140, server-95=141, server-130=142, server-96=143, server-131=144, server-93=145, server-132=146, server-94=147, server-133=148, server-88=149, server-145=150, server-89=151, server-146=152, server-86=153, server-147=154, server-87=155, server-148=156, server-149=157, server-80=158, server-81=159, server-140=160, server-84=161, server-141=162, server-85=163, server-142=164, server-82=165, server-143=166, server-83=167, server-144=168}*)
