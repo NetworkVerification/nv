@@ -1,3 +1,5 @@
+exception Cutoff
+
 (** [partialEvalTrans g trans] partially evaluates the transfer
    function for each edge on the graph g and returns a table from
    edges to expressions and their hash *)

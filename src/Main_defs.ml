@@ -158,10 +158,6 @@ let compress file info decls cfg networkOp =
     let failVars, decls =
       time_profile "Build abstract network"
                    (fun () -> buildAbstractNetwork f mergeMap transMap slice k) in
-    (* let decls = Inline.inline_declarations decls in *)
-    (* let decls = Typing.infer_declarations info decls in *)
-    (* Printf.printf "init:%s\n" (Printing.exp_to_string einit); *)
-    (* Printf.printf "%s\n" (Printing.declarations_to_string decls); *)
     smt_config.multiplicities <- getEdgeMultiplicities slice.graph f failVars;
     let groups = AbstractionMap.printAbstractGroups f "\n" in
     Console.show_message groups Console.T.Blue "Abstract groups";
@@ -206,12 +202,14 @@ let compress file info decls cfg networkOp =
       (*   Console.show_message "" Console.T.Green *)
       (*                        (Printf.sprintf "Checking for %d failures" i); *)
         (* find the initial abstraction function for these destinations *)
-      let f = 
-        time_profile "Computing Refinement for K failures"
-                     (fun () ->
-                       FailuresAbstraction.refineK slice.graph fbonsai slice.destinations k)
-      in
-      loop fbonsai f slice mergeMap transMap k 1
+      try let f = 
+            time_profile "Computing Refinement for K failures"
+                         (fun () ->
+                           FailuresAbstraction.refineK slice.graph fbonsai slice.destinations k)
+          in
+          loop fbonsai f slice mergeMap transMap k 1
+      with
+      | Cutoff -> ()
     ) (Slicing.createSlices info decls)
 
 let parse_input (args : string array)

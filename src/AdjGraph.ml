@@ -23,7 +23,7 @@ module Edge = struct
 end
 
 let printEdge (e : Edge.t) =
-  Printf.sprintf "<%d,%d>\n" (Integer.to_int (fst e)) (Integer.to_int (snd e)); 
+  Printf.sprintf "<%d,%d>" (Integer.to_int (fst e)) (Integer.to_int (snd e)); 
             
 module EdgeSet = BatSet.Make(Edge)
 module EdgeMap = BatMap.Make(Edge)
@@ -39,7 +39,7 @@ let update v f m =
 
 let vertex_map_to_string elem_to_string m =
   let kvs = VertexMap.fold (fun k v l -> (k, v) :: l) m [] in
-  List.fold_left
+  BatList.fold_left
     (fun s (k, v) -> Integer.to_string k ^ ":" ^ elem_to_string v ^ s)
     "" kvs
 
@@ -81,16 +81,16 @@ let get_vertices (m, i) =
 
 let edges (m, i) =
   let my_edges v neighbors acc =
-    List.fold_left (fun a w -> (v, w) :: a) acc neighbors
+    BatList.fold_left (fun a w -> (v, w) :: a) acc neighbors
   in
-  List.rev
+  BatList.rev
     (VertexMap.fold
        (fun v neighbors a -> my_edges v neighbors a)
        m [])
 
 let edges_map (m, i) (f: Edge.t -> 'a) =
   let my_edges v neighbors a =
-    List.fold_left (fun a w -> EdgeMap.add (v, w) (f (v,w)) a) a neighbors
+    BatList.fold_left (fun a w -> EdgeMap.add (v, w) (f (v,w)) a) a neighbors
   in
   VertexMap.fold
     (fun v neighbors a -> my_edges v neighbors a)
@@ -104,7 +104,7 @@ let good_vertex (m, i) v =
   then (Printf.printf "bad: %s" (Vertex.printVertex v); raise (BadVertex v))
 
 let good_graph g =
-  List.iter
+  BatList.iter
     (fun (v, w) -> good_vertex g v ; good_vertex g w)
     (edges g)
 
@@ -115,7 +115,7 @@ let add_edge (m, i) (v, w) =
   let f adj =
     match adj with
     | None -> Some [w]
-    | Some ns -> if List.mem w ns then adj else Some (w :: ns)
+    | Some ns -> if BatList.mem w ns then adj else Some (w :: ns)
   in
   (update v f m, i)
 
@@ -133,7 +133,7 @@ let remove_edge (m, i) (v, w) =
     | None -> adj
     | Some ns ->
       match
-        List.filter (fun a -> not (Integer.compare a w = 0)) ns
+        BatList.filter (fun a -> not (Integer.compare a w = 0)) ns
       with
       | [] -> None
       | ns' -> Some ns'
@@ -151,7 +151,7 @@ let remove_edges (m, i) (es: EdgeSet.t) =
     | None -> adj
     | Some ns ->
       match
-        List.filter (fun a -> not (VertexSet.mem a vs)) ns
+        BatList.filter (fun a -> not (VertexSet.mem a vs)) ns
       with
       | [] -> None
       | ns' -> Some ns'
@@ -166,7 +166,7 @@ let neighbors (m, i) v =
 
 let print g =
   Printf.printf "%d\n" (Integer.to_int (num_vertices g)) ;
-  List.iter
+  BatList.iter
     (fun (v, w) ->
       Printf.printf "%d -> %d\n" (Integer.to_int v) (Integer.to_int w)
       )
@@ -198,7 +198,7 @@ let bfs (g: t) (rg : int EdgeMap.t) (s: Vertex.t) (t: Vertex.t) =
         let u = Queue.pop q in
         let vs = neighbors g u in
         let visited, path =
-          List.fold_left (fun (accvs, accpath) (v: Vertex.t) ->
+          BatList.fold_left (fun (accvs, accpath) (v: Vertex.t) ->
               if ((not (VertexSet.mem v accvs)) && (EdgeMap.find (u,v) rg > 0)) then
                 begin
                   Queue.push v q;
@@ -218,7 +218,7 @@ let dfs (g: t) (rg : int EdgeMap.t) (s: Vertex.t) =
   let rec loop u visited =
     let visited = VertexSet.add u visited in
     let vs = neighbors g u in
-    List.fold_left (fun accvs v ->
+    BatList.fold_left (fun accvs v ->
         if ((EdgeMap.find (u,v) rg > 0) && (not (VertexSet.mem v accvs))) then
           loop v accvs
         else accvs) visited vs
@@ -280,7 +280,7 @@ module DrawableGraph = struct
            
   let createGraph ((m,i): t)  =
     VertexMap.fold (fun u es acc ->
-        List.fold_left (fun acc v ->
+        BatList.fold_left (fun acc v ->
             G.add_edge_e acc (G.E.create u () v)) acc es) m G.empty
 
   module Dot = Graph.Graphviz.Dot(struct

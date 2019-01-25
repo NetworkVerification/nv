@@ -1877,7 +1877,9 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
          Unknown
       | _ -> failwith "unexpected answer from solver\n"
 
-    (** Refines the first model returned by the solver *)
+    (** Refines the first model returned by the solver by asking if
+       the counter example still holds when failing only the single
+       links *)
     let refineModelWithSingles (model : Solution.t) info query chan solve renaming ds =
       (* Find and separate the single link failures from the rest *)
       let (failed, notFailed) =
@@ -1913,22 +1915,23 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
       let refineModel (model : Solution.t) info query chan env solver renaming ds =
         let refiner = refineModelWithSingles in
         match refiner model info query chan solver renaming ds with
-        | None -> Sat model (* no refinement can occur *)
+        | None ->
+           Printf.printf "no refinement\n";
+           Sat model (* no refinement can occur *)
         | Some q ->
+           Printf.printf "refining model\n";
            let checkSat = CheckSat |> mk_command |> command_to_smt smt_config.verbose info in
-           let q = Printf.sprintf "%s%s" q checkSat in
+           let q = Printf.sprintf "%s%s\n" q checkSat in
            if query then
              (printQuery chan q);
-           Printf.printf "just befor easking the second time\n";
-           flush stdout;
            ask_solver solver q;
            let reply = solver |> parse_reply in
-           Printf.printf "getting the answer\n";
-           flush stdout;
            let isSat = get_sat query chan info env solver renaming ds reply in
            (* if the second query was unsat, return the first counterexample *)
            match isSat with
-           | Sat newModel -> isSat
+           | Sat newModel ->
+              Console.warning "Refined the model";
+              isSat
            | _ -> Sat model
 
     let solve info query chan ?symbolic_vars ?(params=[]) ds =

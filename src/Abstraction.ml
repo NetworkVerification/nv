@@ -9,6 +9,8 @@ open BatSet
 
 let debugAbstraction = ref false
 
+exception Cutoff
+
 let zero = Integer.create ~value:0 ~size:32
 let one = Integer.create ~value:1 ~size:32
                                        
@@ -843,18 +845,8 @@ module FailuresAbstraction =
          let nodes_to_split =
            match nodes_to_split with
            | [] ->
-              (* Printf.printf "cuts:\n"; *)
-              (* List.iter (fun cut -> *)
-              (*     Printf.printf "cut:\n"; *)
-              (*     (EdgeSet.iter (fun e -> *)
-              (*          Printf.printf "nodes:%s" (printEdge e)) cut)) cuts; *)
               (match choose_random_splittable f cuts with
                | [] ->
-                  (* Printf.printf "cuts:\n"; *)
-                  (* List.iter (fun cut -> *)
-                  (*     Printf.printf "cut:\n"; *)
-                  (*     (EdgeSet.iter (fun e -> *)
-                  (*          Printf.printf "nodes:%s" (printEdge e)) cut)) cuts; *)
                   []
                | x ->
                   (* Printf.printf "nodes to split:%d\n" (List.length x); *)
@@ -1098,10 +1090,19 @@ module FailuresAbstraction =
                    | x -> [x]
          in
          match nodes_to_split with
-         | [] -> (* cannot refine further, return an empty list.*)
-            (* what happens in this case with todo?*)
-            (* assert (VertexSet.is_empty todo); *)
-            []
+         | [] -> (* cannot refine further.*)
+            Printf.printf "Nodes can be cut-off, and no further \
+                           refinements can be made. Verification will fail.\n";
+            BatList.iter (fun es ->
+                Printf.printf "min-cut: ";
+                EdgeSet.iter (fun ehat ->
+                    EdgeSet.iter (fun e ->
+                        Printf.printf "%s," (printEdge e))
+                                 (BuildAbstractNetwork.abstractToConcreteEdge g f ehat))
+                             es;
+                Printf.printf "\n")
+                         cuts;
+            raise Cutoff
          | uhatss ->
             (* for each element of the list, note that they all belong the same original group:
                  2. Get all their neighbors.
