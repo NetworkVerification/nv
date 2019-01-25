@@ -1053,7 +1053,7 @@ module FailuresAbstraction =
         end
 
 
-    let refinement_breadth = 18
+    let refinement_breadth = 10
                                             
     let refine_step (g: AdjGraph.t) forig (f: abstractionMap) (todo: VertexSet.t) ds k =
       let ag = BuildAbstractNetwork.buildAbstractAdjGraph g f in
@@ -1091,18 +1091,22 @@ module FailuresAbstraction =
          in
          match nodes_to_split with
          | [] -> (* cannot refine further.*)
-            Printf.printf "Nodes can be cut-off, and no further \
-                           refinements can be made. Verification will fail.\n";
-            BatList.iter (fun es ->
-                Printf.printf "min-cut: ";
-                EdgeSet.iter (fun ehat ->
-                    EdgeSet.iter (fun e ->
-                        Printf.printf "%s," (printEdge e))
-                                 (BuildAbstractNetwork.abstractToConcreteEdge g f ehat))
-                             es;
-                Printf.printf "\n")
-                         cuts;
-            raise Cutoff
+
+            (*TODO: Don't automatically stop here, until we do this only for source nodes.
+              Otherwise, we may be stopping if a non-source node can be cut-off *)
+            (* Printf.printf "Nodes can be cut-off, and no further \
+             *                refinements can be made. Verification will fail.\n";
+             * BatList.iter (fun es ->
+             *     Printf.printf "min-cut: ";
+             *     EdgeSet.iter (fun ehat ->
+             *         EdgeSet.iter (fun e ->
+             *             Printf.printf "%s," (printEdge e))
+             *                      (BuildAbstractNetwork.abstractToConcreteEdge g f ehat))
+             *                  es;
+             *     Printf.printf "\n")
+             *              cuts;
+             * raise Cutoff *)
+            []
          | uhatss ->
             (* for each element of the list, note that they all belong the same original group:
                  2. Get all their neighbors.

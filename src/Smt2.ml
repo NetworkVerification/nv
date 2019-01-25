@@ -299,7 +299,7 @@ module SmtLang =
       | CheckSat ->
          (* for now i am hardcoding the tactics here. *)
          Printf.sprintf "(check-sat-using (then propagate-values simplify \
-                         solve-eqs psmt))"
+                         solve-eqs smt))"
       | GetModel ->
          Printf.sprintf "(get-model)"
       | Push ->
@@ -1877,10 +1877,41 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
          Unknown
       | _ -> failwith "unexpected answer from solver\n"
 
+    let refineModelMinimizeFailures model info query chan solve renaming env ds =
+      match (get_requires_failures ds).e with
+      | EOp(AtMost n, [e1;e2;e3]) ->
+         (match e1.e with
+          | ETuple es ->
+             let mult = smt_config.multiplicities in
+             let arg2 =
+               aexp(etuple (BatList.map (fun evar ->
+                                match evar.e with
+                                | EVar fvar ->
+                                   let n = Collections.StringMap.find (Var.name fvar)
+                                             mult in
+                                   (exp_of_value
+                                      (avalue (vint (Integer.of_int n),
+                                               Some (TInt 32),
+                                               Span.default)))
+                                | _ -> failwith "expected a variable") es),
+                    e2.ety,
+                    Span.default)
+             in
+             let new_req =
+               aexp (eop (AtMost n) [e1; arg2;e3], Some TBool, Span.default) in
+             let zes = Unboxed.encode_exp_z3 "" env new_req in
+             let zes_smt =
+               Unboxed.(to_list (lift1 (fun ze -> mk_assert ze |> mk_command) zes))
+             in
+             Some (commands_to_smt smt_config.verbose info zes_smt)
+          | _ -> failwith "expected a tuple")
+      | _ -> failwith "expected at most"
+           
     (** Refines the first model returned by the solver by asking if
        the counter example still holds when failing only the single
        links *)
-    let refineModelWithSingles (model : Solution.t) info query chan solve renaming ds =
+    (* TODO: Avoid using this until we have support for source nodes in min-cut *)
+    let refineModelWithSingles (model : Solution.t) info query chan solve renaming _ ds =
       (* Find and separate the single link failures from the rest *)
       let (failed, notFailed) =
         Collections.StringMap.fold (fun fvar fval (accFailed, accNotFailed) ->
@@ -1913,8 +1944,8 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
          Some (failed ^ notFailed)
          
       let refineModel (model : Solution.t) info query chan env solver renaming ds =
-        let refiner = refineModelWithSingles in
-        match refiner model info query chan solver renaming ds with
+        let refiner = refineModelMinimizeFailures in
+        match refiner model info query chan solver renaming env ds with
         | None ->
            Printf.printf "no refinement\n";
            Sat model (* no refinement can occur *)
