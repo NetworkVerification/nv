@@ -148,8 +148,6 @@ let compress file info decls cfg networkOp =
     let failVars, decls =
       time_profile "Build abstract network"
         (fun () -> buildAbstractNetwork f mergeMap transMap slice k) in
-    let absTrans = oget (get_trans decls) in
-    Printf.printf "%s" (Printing.exp_to_string absTrans);
     smt_config.multiplicities <- getEdgeMultiplicities slice.graph f failVars;
     let groups = AbstractionMap.printAbstractGroups f "\n" in
     Console.show_message groups Console.T.Blue "Abstract groups";

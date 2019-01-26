@@ -298,7 +298,7 @@ module SmtLang =
          Printf.sprintf "(assert %s)" (term_to_smt false info tm)
       | CheckSat ->
          (* for now i am hardcoding the tactics here. *)
-         Printf.sprintf "(check-sat-using (then propagate-values simplify \
+         Printf.sprintf "(check-sat-using (then simplify propagate-values simplify \
                          solve-eqs smt))"
       | GetModel ->
          Printf.sprintf "(get-model)"
@@ -1851,9 +1851,9 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
       let eassert = get_assert ds in
       let model = eval_model env.symbolics num_nodes eassert renaming in
       let model_question = commands_to_smt smt_config.verbose info model in
+      ask_solver solver model_question;
       if query then
         printQuery chan model_question;
-      ask_solver solver model_question;
       let model = solver |> parse_model in
       (match model with
        | MODEL m ->
@@ -1872,6 +1872,7 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
       match reply with
       | UNSAT -> Unsat
       | SAT ->
+         (* Printf.printf "asking for model\n"; *)
          ask_for_model query chan info env solver renaming ds
       | UNKNOWN ->
          Unknown
@@ -1947,7 +1948,7 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
         let refiner = refineModelMinimizeFailures in
         match refiner model info query chan solver renaming env ds with
         | None ->
-           Printf.printf "no refinement\n";
+           Console.warning "Model was not refined\n";
            Sat model (* no refinement can occur *)
         | Some q ->
            Printf.printf "refining model\n";
@@ -2011,16 +2012,19 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
          ask_solver solver q;
          let reply = solver |> parse_reply in
          (* check the reply *)
+         (* Printf.printf "before first get_sat\n"; flush stdout; *)
          let isSat = get_sat query chan info env solver renaming ds reply in
          (* In order to minimize refinement iterations, once we get a
             counter-example we try to minimize it by only keeping failures
             on single links. If it works then we found an actual
             counterexample, otherwise we refine using the first
-            counterexample. *)         
+            counterexample. *)
+         (* Printf.printf "after first get_sat\n"; flush stdout; *)         
          match isSat with
          | Unsat -> Unsat
          | Unknown -> Unknown
          | Sat model1 ->
+            (* Printf.printf "about to call refine model\n"; flush stdout; *)
             refineModel model1 info query chan env solver renaming ds
           
       
