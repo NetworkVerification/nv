@@ -1,4 +1,5 @@
-(* FB FatTree, 12 pods, 8 spine switches, 2 edge pods, 48 servers per pod *)
+(* FB FatTree, 12 pods, 8 spine switches, 2 edge pods, 48 servers per pod, 4 spine planes.
+   Expected connectivity for ToRs is 4.*)
 type attribute = (option[int],option[int],option[(int, int, int, int)],option[(int,int,int,int,set[int])],option[int])
 
 symbolic d : (int, int)
