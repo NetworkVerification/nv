@@ -974,6 +974,7 @@ module FailuresAbstraction =
                           (fbonsai: abstractionMap) (f: abstractionMap)
                           (failVars: Var.t EdgeMap.t) (sol: Solution.t) (k: int)
                           (* (unused_edges: EdgeSet.t) *)
+                          (todo: VertexSet.t)
                           (dst: VertexSet.t) (attrTy : Syntax.ty)
                           (iteration: int): abstractionMap option =
       
@@ -1048,7 +1049,10 @@ module FailuresAbstraction =
                 BatList.fold_left (fun acc u ->
                     VertexSet.add u acc) acc us) unreachable VertexSet.empty
           in
-          let f' = counterExampleSearch g f unused_edges_sym unreachable_sym dst k in
+          (* find which source nodes don't have enough paths *)
+          let todo_hat = VertexSet.map (fun u -> getId f u) todo in
+          let todo_hat = VertexSet.inter unreachable_sym todo_hat in
+          let f' = counterExampleSearch g f unused_edges_sym todo_hat dst k in
           Some f'
         end
 
@@ -1056,7 +1060,7 @@ module FailuresAbstraction =
     let refinement_breadth = 18
                                             
     let refine_step (g: AdjGraph.t) forig (f: abstractionMap) (todo: VertexSet.t) ds k =
-      let ag = BuildAbstractNetwork.buildAbstractAdjGraph g f in
+      let ag = BuildAbstractNetwork.buildAbstractAdjGraph g f in 
       let d = getId f (VertexSet.choose ds) in (*assume only one destination for now *)
       let cuts, todo = compute_cuts ag d k todo in
       (* AdjGraph.print ag; *)
@@ -1091,20 +1095,27 @@ module FailuresAbstraction =
          in
          match nodes_to_split with
          | [] -> (* cannot refine further.*)
-
-            (*TODO: Don't automatically stop here, until we do this only for source nodes.
-              Otherwise, we may be stopping if a non-source node can be cut-off *)
-            (* Printf.printf "Nodes can be cut-off, and no further \
+            (* Printf.printf "Nodes can be disconnected, and no further \
              *                refinements can be made. Verification will fail.\n";
-             * BatList.iter (fun es ->
+             * let concrete_cuts =
+             *   BatList.fold_left (fun acc es ->
+             *       let ces =
+             *         EdgeSet.fold (fun ehat acc ->
+             *             EdgeSet.fold (fun e acc ->
+             *                 e :: acc) (BuildAbstractNetwork.abstractToConcreteEdge g f ehat)
+             *               []) es []
+             *       in
+             *       if (BatList.length ces) <= k then
+             *         ces :: acc
+             *       else
+             *         acc) [] cuts
+             * in
+             * BatList.iter (fun cut ->
              *     Printf.printf "min-cut: ";
-             *     EdgeSet.iter (fun ehat ->
-             *         EdgeSet.iter (fun e ->
-             *             Printf.printf "%s," (printEdge e))
-             *                      (BuildAbstractNetwork.abstractToConcreteEdge g f ehat))
-             *                  es;
-             *     Printf.printf "\n")
-             *              cuts;
+             *     BatList.iter (fun e ->
+             *         Printf.printf "%s," (printEdge e))
+             *       cut;
+             *     Printf.printf "\n") concrete_cuts;
              * raise Cutoff *)
             []
          | uhatss ->
@@ -1170,19 +1181,19 @@ module FailuresAbstraction =
                        let backMap = buildForwardMap f fnew in
                        (fnew, update_vertex_set backMap todo)) best_refinements
                  
-    (* computes a refinement of f, s.t. all sources (currently sources
-       are not defined, all nodes are considered sources) have at
+    (* computes a refinement of f, s.t. all sources have at
        least k+1 disjoint paths to the destination *)
     (* TODO: find source nodes, we only want to min-cut source nodes *)
-    let refineK (g: AdjGraph.t) (forig: abstractionMap) (ds: VertexSet.t) (k: int) =
+    let refineK (g: AdjGraph.t) (forig: abstractionMap)
+          (sources: VertexSet.t) (ds: VertexSet.t) (k: int) =
       let q = SearchSet.create () in
-      let todo =
-        AdjGraph.fold_vertices
-          (fun uhat acc -> VertexSet.add uhat acc)
-          (AbstractionMap.normalized_size forig |> Integer.of_int) VertexSet.empty in
+      (* let todo =
+       *   AdjGraph.fold_vertices
+       *     (fun uhat acc -> VertexSet.add uhat acc)
+       *     (AbstractionMap.normalized_size forig |> Integer.of_int) VertexSet.empty in *)
+      let todo = sources in
       let q = SearchSet.add (forig, todo) q in
 
-      (* making minimum a reference, as an optimization on the final step*)
       let rec loop explored minimum q =
         try
           let ((f, todo), q) = SearchSet.pop q in

@@ -38,6 +38,8 @@ val partialEvalOverNodes: Integer.t -> Syntax.exp -> (Integer.t, Syntax.exp) Has
 val findInitialSlices: (Integer.t, Syntax.exp) Hashtbl.t ->
                        (AdjGraph.VertexSet.t) PrefixMap.t
 
+val findRelevantNodes: (Integer.t, Syntax.exp) Hashtbl.t -> AdjGraph.VertexSet.t
+  
 val groupPrefixesByVertices: AdjGraph.VertexSet.t PrefixMap.t -> PrefixSetSet.t
 
 val createSlices: Console.info -> Syntax.declarations -> network list

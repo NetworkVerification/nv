@@ -20,7 +20,7 @@ val findAbstraction :
 module FailuresAbstraction :
   sig  
     (** [refineCounterExample draw file g finit f failVars sol k 
-                              unused_edges dst attr iteration]
+                              unused_edges sources dst attr iteration]
        decides whether there is need to further refine the
        abstraction. *)
     val refineCounterExample :
@@ -32,7 +32,7 @@ module FailuresAbstraction :
       Var.t AdjGraph.EdgeMap.t ->
       Solution.t ->
       int ->
-      (* AdjGraph.EdgeSet.t -> *)
+      AdjGraph.VertexSet.t ->
       AdjGraph.VertexSet.t ->
       Syntax.ty ->
       int ->
@@ -40,7 +40,8 @@ module FailuresAbstraction :
       AbstractionMap.abstractionMap option
 
     val refineK : AdjGraph.t -> AbstractionMap.abstractionMap ->
-                  AdjGraph.VertexSet.t -> int -> AbstractionMap.abstractionMap
+                  AdjGraph.VertexSet.t -> AdjGraph.VertexSet.t ->
+                  int -> AbstractionMap.abstractionMap
   end
 
      

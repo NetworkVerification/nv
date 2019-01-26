@@ -15,17 +15,6 @@ open Abstraction
 open BuildAbstractNetwork
 open Lazy
 open Profile
-
-let rec hasTvar ty =
-  match ty with
-  | TVar {contents= Link t} -> hasTvar t
-  | TVar {contents= Unbound _} -> true
-  | TArrow (t1, t2) -> hasTvar t1 || hasTvar t2
-  | TTuple ts -> BatList.exists hasTvar ts
-  | TOption t -> hasTvar t
-  | TMap (ty1, ty2) -> hasTvar ty1 || hasTvar ty2
-  | QVar _ -> false
-  | _ -> false
    
 type answer =
   | Success of (Solution.t option)
@@ -150,6 +139,7 @@ let compress file info decls cfg networkOp =
   let rec loop (finit: AbstractionMap.abstractionMap)
                (f: AbstractionMap.abstractionMap)
                (slice : Slicing.network)
+               (sources: AdjGraph.VertexSet.t)
                (mergeMap: (AdjGraph.Vertex.t, int * Syntax.exp) Hashtbl.t)
                (transMap: (AdjGraph.Edge.t, int * Syntax.exp) Hashtbl.t)
                (k: int)
@@ -157,7 +147,9 @@ let compress file info decls cfg networkOp =
     (* build abstract network *)
     let failVars, decls =
       time_profile "Build abstract network"
-                   (fun () -> buildAbstractNetwork f mergeMap transMap slice k) in
+        (fun () -> buildAbstractNetwork f mergeMap transMap slice k) in
+    let absTrans = oget (get_trans decls) in
+    Printf.printf "%s" (Printing.exp_to_string absTrans);
     smt_config.multiplicities <- getEdgeMultiplicities slice.graph f failVars;
     let groups = AbstractionMap.printAbstractGroups f "\n" in
     Console.show_message groups Console.T.Blue "Abstract groups";
@@ -178,18 +170,22 @@ let compress file info decls cfg networkOp =
                       (fun () ->
                         FailuresAbstraction.refineCounterExample
                           cfg.draw file slice.graph finit f failVars sol
-                          k slice.destinations aty i)
+                          k sources slice.destinations aty i)
        in
        match f' with
        | None -> print_solution sol;
        | Some f' ->
-          loop finit f' slice mergeMap transMap k (i+1)
+          loop finit f' slice sources mergeMap transMap k (i+1)
   in
   (* Iterate over each network slice *)
   BatList.iter
     (fun slice ->
       Console.show_message (Slicing.printPrefixes slice.prefixes)
-                           Console.T.Green "Checking SRP for prefixes";
+        Console.T.Green "Checking SRP for prefixes";
+      (* find source nodes *)
+      let n = AdjGraph.num_vertices slice.graph in
+      let sources =
+        Slicing.findRelevantNodes (partialEvalOverNodes n slice.assertion) in
       (* partially evaluate the functions of the network *)
       let transMap = Abstraction.partialEvalTrans slice.graph slice.trans in
       let mergeMap = Abstraction.partialEvalMerge slice.graph slice.merge in
@@ -197,17 +193,14 @@ let compress file info decls cfg networkOp =
       let fbonsai =
         Abstraction.findAbstraction slice.graph transMap mergeMap slice.destinations
       in
-      (* do abstraction for 0...k failures. Reusing previous abstraction *)
-      (* for i=0 to k do *)
-      (*   Console.show_message "" Console.T.Green *)
-      (*                        (Printf.sprintf "Checking for %d failures" i); *)
-        (* find the initial abstraction function for these destinations *)
+      (* find the initial abstraction function for these destinations *)
       try let f = 
             time_profile "Computing Refinement for K failures"
                          (fun () ->
-                           FailuresAbstraction.refineK slice.graph fbonsai slice.destinations k)
+                           FailuresAbstraction.refineK slice.graph fbonsai sources
+                             slice.destinations k)
           in
-          loop fbonsai f slice mergeMap transMap k 1
+          loop fbonsai f slice sources mergeMap transMap k 1
       with
       | Cutoff -> ()
     ) (Slicing.createSlices info decls)
