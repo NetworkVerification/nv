@@ -1,3 +1,4 @@
+(* DCell(1,12) *)
 type attribute = (option[int],option[int],option[(int, int, int, int)],option[(int,int,int,int,set[int])],option[int])
 
 symbolic d : (int, int)
@@ -870,38 +871,66 @@ let init node =
         (c,s,o,b,fib)
      else (None,None,None,None,None)
   | 36 -> 
-     if (d = (167795200, 31)) || (d = (167797248, 31)) || (d = (167796992, 31)) || (d = (167796736, 31)) || (d = (167796480, 31)) || (d = (167796224, 31)) || (d = (167795968, 31)) || (d = (167795712, 31)) || (d = (167795456, 31)) || (d = (167797504, 31)) || (d = (167798016, 31)) || (d = (167797760, 31)) || (d = (1174445312, 32)) then
+     if (d = (167795200, 31)) || (d = (167797248, 31)) || (d = (167796992, 31)) || (d = (167796736, 31)) || (d = (167796480, 31)) || (d = (167796224, 31)) || (d = (167795968, 31)) || (d = (167795712, 31)) || (d = (167795456, 31)) || (d = (167797504, 31)) || (d = (167798016, 31)) || (d = (167797760, 31)) || (d = (1174445314, 31)) || (d = (1174445312, 32)) || (d = (1174445312, 31)) then
        let c = Some 0 in
        let s = None in
        let o = None in
        let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else if (d = (1174445312, 24)) then
+       let c = None in
+       let s = Some 1 in
+       let o = None in
+       let b = Some (20, 100, 0, 80, {}) in
        let fib = best c s o b in
         (c,s,o,b,fib)
      else (None,None,None,None,None)
   | 37 -> 
-     if (d = (167799552, 31)) || (d = (167799296, 31)) || (d = (167799040, 31)) || (d = (167798784, 31)) || (d = (167798528, 31)) || (d = (167798272, 31)) || (d = (167801088, 31)) || (d = (167800832, 31)) || (d = (167800064, 31)) || (d = (167799808, 31)) || (d = (167800576, 31)) || (d = (167800320, 31)) || (d = (1174445568, 32)) then
+     if (d = (167799552, 31)) || (d = (167799296, 31)) || (d = (167799040, 31)) || (d = (167798784, 31)) || (d = (167798528, 31)) || (d = (167798272, 31)) || (d = (167801088, 31)) || (d = (167800832, 31)) || (d = (167800064, 31)) || (d = (167799808, 31)) || (d = (167800576, 31)) || (d = (167800320, 31)) || (d = (1174445570, 31)) || (d = (1174445568, 32)) || (d = (1174445568, 31)) then
        let c = Some 0 in
        let s = None in
        let o = None in
        let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else if (d = (1174445568, 24)) then
+       let c = None in
+       let s = Some 1 in
+       let o = None in
+       let b = Some (20, 100, 0, 80, {}) in
        let fib = best c s o b in
         (c,s,o,b,fib)
      else (None,None,None,None,None)
   | 38 -> 
-     if (d = (167793152, 31)) || (d = (167792896, 31)) || (d = (167792640, 31)) || (d = (167792384, 31)) || (d = (167792128, 31)) || (d = (167794432, 31)) || (d = (167794176, 31)) || (d = (167793920, 31)) || (d = (167793664, 31)) || (d = (167793408, 31)) || (d = (167794944, 31)) || (d = (167794688, 31)) || (d = (1174445056, 32)) then
+     if (d = (167793152, 31)) || (d = (167792896, 31)) || (d = (167792640, 31)) || (d = (167792384, 31)) || (d = (167792128, 31)) || (d = (167794432, 31)) || (d = (167794176, 31)) || (d = (167793920, 31)) || (d = (167793664, 31)) || (d = (167793408, 31)) || (d = (167794944, 31)) || (d = (167794688, 31)) || (d = (1174445058, 31)) || (d = (1174445056, 31)) || (d = (1174445056, 32)) then
        let c = Some 0 in
        let s = None in
        let o = None in
        let b = None in
        let fib = best c s o b in
         (c,s,o,b,fib)
+     else if (d = (1174445056, 24)) then
+       let c = None in
+       let s = Some 1 in
+       let o = None in
+       let b = Some (20, 100, 0, 80, {}) in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
      else (None,None,None,None,None)
   | 39 -> 
-     if (d = (167801600, 31)) || (d = (167801344, 31)) || (d = (167803648, 31)) || (d = (167803392, 31)) || (d = (167803136, 31)) || (d = (167802880, 31)) || (d = (167802624, 31)) || (d = (167802368, 31)) || (d = (167802112, 31)) || (d = (167801856, 31)) || (d = (167804160, 31)) || (d = (167803904, 31)) || (d = (1174445824, 32)) then
+     if (d = (167801600, 31)) || (d = (167801344, 31)) || (d = (1174445826, 31)) || (d = (167803648, 31)) || (d = (167803392, 31)) || (d = (167803136, 31)) || (d = (167802880, 31)) || (d = (167802624, 31)) || (d = (167802368, 31)) || (d = (167802112, 31)) || (d = (167801856, 31)) || (d = (167804160, 31)) || (d = (167803904, 31)) || (d = (1174445824, 32)) || (d = (1174445824, 31)) then
        let c = Some 0 in
        let s = None in
        let o = None in
        let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else if (d = (1174445824, 24)) then
+       let c = None in
+       let s = Some 1 in
+       let o = None in
+       let b = Some (20, 100, 0, 80, {}) in
        let fib = best c s o b in
         (c,s,o,b,fib)
      else (None,None,None,None,None)
@@ -1356,83 +1385,146 @@ let init node =
         (c,s,o,b,fib)
      else (None,None,None,None,None)
   | 90 -> 
-     if (d = (1174448128, 32)) || (d = (167828992, 31)) || (d = (167831296, 31)) || (d = (167831040, 31)) || (d = (167830784, 31)) || (d = (167830528, 31)) || (d = (167830272, 31)) || (d = (167830016, 31)) || (d = (167829760, 31)) || (d = (167829504, 31)) || (d = (167829248, 31)) || (d = (167831808, 31)) || (d = (167831552, 31)) then
+     if (d = (1174448130, 31)) || (d = (1174448128, 31)) || (d = (1174448128, 32)) || (d = (167828992, 31)) || (d = (167831296, 31)) || (d = (167831040, 31)) || (d = (167830784, 31)) || (d = (167830528, 31)) || (d = (167830272, 31)) || (d = (167830016, 31)) || (d = (167829760, 31)) || (d = (167829504, 31)) || (d = (167829248, 31)) || (d = (167831808, 31)) || (d = (167831552, 31)) then
        let c = Some 0 in
        let s = None in
        let o = None in
        let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else if (d = (1174448128, 24)) then
+       let c = None in
+       let s = Some 1 in
+       let o = None in
+       let b = Some (20, 100, 0, 80, {}) in
        let fib = best c s o b in
         (c,s,o,b,fib)
      else (None,None,None,None,None)
   | 91 -> 
-     if (d = (1174447616, 32)) || (d = (167822848, 31)) || (d = (167824128, 31)) || (d = (167823872, 31)) || (d = (167823616, 31)) || (d = (167823360, 31)) || (d = (167823104, 31)) || (d = (167824640, 31)) || (d = (167824384, 31)) || (d = (167824896, 31)) || (d = (167825664, 31)) || (d = (167825408, 31)) || (d = (167825152, 31)) then
+     if (d = (1174447618, 31)) || (d = (1174447616, 31)) || (d = (1174447616, 32)) || (d = (167822848, 31)) || (d = (167824128, 31)) || (d = (167823872, 31)) || (d = (167823616, 31)) || (d = (167823360, 31)) || (d = (167823104, 31)) || (d = (167824640, 31)) || (d = (167824384, 31)) || (d = (167824896, 31)) || (d = (167825664, 31)) || (d = (167825408, 31)) || (d = (167825152, 31)) then
        let c = Some 0 in
        let s = None in
        let o = None in
        let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else if (d = (1174447616, 24)) then
+       let c = None in
+       let s = Some 1 in
+       let o = None in
+       let b = Some (20, 100, 0, 80, {}) in
        let fib = best c s o b in
         (c,s,o,b,fib)
      else (None,None,None,None,None)
   | 92 -> 
-     if (d = (1174447872, 32)) || (d = (167826944, 31)) || (d = (167826688, 31)) || (d = (167826432, 31)) || (d = (167826176, 31)) || (d = (167825920, 31)) || (d = (167828224, 31)) || (d = (167827968, 31)) || (d = (167827712, 31)) || (d = (167827456, 31)) || (d = (167827200, 31)) || (d = (167828736, 31)) || (d = (167828480, 31)) then
+     if (d = (1174447874, 31)) || (d = (1174447872, 31)) || (d = (1174447872, 32)) || (d = (167826944, 31)) || (d = (167826688, 31)) || (d = (167826432, 31)) || (d = (167826176, 31)) || (d = (167825920, 31)) || (d = (167828224, 31)) || (d = (167827968, 31)) || (d = (167827712, 31)) || (d = (167827456, 31)) || (d = (167827200, 31)) || (d = (167828736, 31)) || (d = (167828480, 31)) then
        let c = Some 0 in
        let s = None in
        let o = None in
        let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else if (d = (1174447872, 24)) then
+       let c = None in
+       let s = Some 1 in
+       let o = None in
+       let b = Some (20, 100, 0, 80, {}) in
        let fib = best c s o b in
         (c,s,o,b,fib)
      else (None,None,None,None,None)
   | 93 -> 
-     if (d = (167805952, 31)) || (d = (167805696, 31)) || (d = (167805440, 31)) || (d = (167805184, 31)) || (d = (167804928, 31)) || (d = (167804672, 31)) || (d = (167804416, 31)) || (d = (167806720, 31)) || (d = (167806464, 31)) || (d = (167806208, 31)) || (d = (167807232, 31)) || (d = (167806976, 31)) || (d = (1174446080, 32)) then
+     if (d = (1174446082, 31)) || (d = (167805952, 31)) || (d = (167805696, 31)) || (d = (167805440, 31)) || (d = (167805184, 31)) || (d = (167804928, 31)) || (d = (167804672, 31)) || (d = (167804416, 31)) || (d = (167806720, 31)) || (d = (167806464, 31)) || (d = (167806208, 31)) || (d = (167807232, 31)) || (d = (167806976, 31)) || (d = (1174446080, 32)) || (d = (1174446080, 31)) then
        let c = Some 0 in
        let s = None in
        let o = None in
        let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else if (d = (1174446080, 24)) then
+       let c = None in
+       let s = Some 1 in
+       let o = None in
+       let b = Some (20, 100, 0, 80, {}) in
        let fib = best c s o b in
         (c,s,o,b,fib)
      else (None,None,None,None,None)
   | 94 -> 
-     if (d = (167807744, 31)) || (d = (167807488, 31)) || (d = (167808000, 31)) || (d = (167810048, 31)) || (d = (167809792, 31)) || (d = (167809536, 31)) || (d = (167809280, 31)) || (d = (167809024, 31)) || (d = (167808256, 31)) || (d = (167808768, 31)) || (d = (167808512, 31)) || (d = (167810304, 31)) || (d = (1174446336, 32)) then
+     if (d = (1174446338, 31)) || (d = (167807744, 31)) || (d = (167807488, 31)) || (d = (167808000, 31)) || (d = (167810048, 31)) || (d = (167809792, 31)) || (d = (167809536, 31)) || (d = (167809280, 31)) || (d = (167809024, 31)) || (d = (167808256, 31)) || (d = (167808768, 31)) || (d = (167808512, 31)) || (d = (167810304, 31)) || (d = (1174446336, 32)) || (d = (1174446336, 31)) then
        let c = Some 0 in
        let s = None in
        let o = None in
        let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else if (d = (1174446336, 24)) then
+       let c = None in
+       let s = Some 1 in
+       let o = None in
+       let b = Some (20, 100, 0, 80, {}) in
        let fib = best c s o b in
         (c,s,o,b,fib)
      else (None,None,None,None,None)
   | 95 -> 
-     if (d = (1174447104, 32)) || (d = (167818496, 31)) || (d = (167818240, 31)) || (d = (167817984, 31)) || (d = (167817728, 31)) || (d = (167817472, 31)) || (d = (167817216, 31)) || (d = (167816960, 31)) || (d = (167816704, 31)) || (d = (167819008, 31)) || (d = (167818752, 31)) || (d = (167819520, 31)) || (d = (167819264, 31)) then
+     if (d = (1174447106, 31)) || (d = (1174447104, 32)) || (d = (1174447104, 31)) || (d = (167818496, 31)) || (d = (167818240, 31)) || (d = (167817984, 31)) || (d = (167817728, 31)) || (d = (167817472, 31)) || (d = (167817216, 31)) || (d = (167816960, 31)) || (d = (167816704, 31)) || (d = (167819008, 31)) || (d = (167818752, 31)) || (d = (167819520, 31)) || (d = (167819264, 31)) then
        let c = Some 0 in
        let s = None in
        let o = None in
        let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else if (d = (1174447104, 24)) then
+       let c = None in
+       let s = Some 1 in
+       let o = None in
+       let b = Some (20, 100, 0, 80, {}) in
        let fib = best c s o b in
         (c,s,o,b,fib)
      else (None,None,None,None,None)
   | 96 -> 
-     if (d = (1174447360, 32)) || (d = (167820544, 31)) || (d = (167820288, 31)) || (d = (167820032, 31)) || (d = (167819776, 31)) || (d = (167822080, 31)) || (d = (167821824, 31)) || (d = (167821568, 31)) || (d = (167821312, 31)) || (d = (167821056, 31)) || (d = (167820800, 31)) || (d = (167822592, 31)) || (d = (167822336, 31)) then
+     if (d = (1174447362, 31)) || (d = (1174447360, 32)) || (d = (1174447360, 31)) || (d = (167820544, 31)) || (d = (167820288, 31)) || (d = (167820032, 31)) || (d = (167819776, 31)) || (d = (167822080, 31)) || (d = (167821824, 31)) || (d = (167821568, 31)) || (d = (167821312, 31)) || (d = (167821056, 31)) || (d = (167820800, 31)) || (d = (167822592, 31)) || (d = (167822336, 31)) then
        let c = Some 0 in
        let s = None in
        let o = None in
        let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else if (d = (1174447360, 24)) then
+       let c = None in
+       let s = Some 1 in
+       let o = None in
+       let b = Some (20, 100, 0, 80, {}) in
        let fib = best c s o b in
         (c,s,o,b,fib)
      else (None,None,None,None,None)
   | 97 -> 
-     if (d = (167812096, 31)) || (d = (167811840, 31)) || (d = (167811584, 31)) || (d = (167811328, 31)) || (d = (167811072, 31)) || (d = (167810816, 31)) || (d = (167810560, 31)) || (d = (1174446592, 32)) || (d = (167812864, 31)) || (d = (167812608, 31)) || (d = (167812352, 31)) || (d = (167813376, 31)) || (d = (167813120, 31)) then
+     if (d = (1174446594, 31)) || (d = (167812096, 31)) || (d = (167811840, 31)) || (d = (167811584, 31)) || (d = (167811328, 31)) || (d = (167811072, 31)) || (d = (167810816, 31)) || (d = (167810560, 31)) || (d = (1174446592, 32)) || (d = (167812864, 31)) || (d = (167812608, 31)) || (d = (167812352, 31)) || (d = (167813376, 31)) || (d = (167813120, 31)) || (d = (1174446592, 31)) then
        let c = Some 0 in
        let s = None in
        let o = None in
        let b = None in
        let fib = best c s o b in
         (c,s,o,b,fib)
+     else if (d = (1174446592, 24)) then
+       let c = None in
+       let s = Some 1 in
+       let o = None in
+       let b = Some (20, 100, 0, 80, {}) in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
      else (None,None,None,None,None)
   | 98 -> 
-     if (d = (1174446848, 32)) || (d = (167814400, 31)) || (d = (167814144, 31)) || (d = (167813888, 31)) || (d = (167813632, 31)) || (d = (167815936, 31)) || (d = (167815680, 31)) || (d = (167815424, 31)) || (d = (167815168, 31)) || (d = (167814912, 31)) || (d = (167814656, 31)) || (d = (167816448, 31)) || (d = (167816192, 31)) then
+     if (d = (1174446850, 31)) || (d = (1174446848, 32)) || (d = (167814400, 31)) || (d = (167814144, 31)) || (d = (167813888, 31)) || (d = (167813632, 31)) || (d = (1174446848, 31)) || (d = (167815936, 31)) || (d = (167815680, 31)) || (d = (167815424, 31)) || (d = (167815168, 31)) || (d = (167814912, 31)) || (d = (167814656, 31)) || (d = (167816448, 31)) || (d = (167816192, 31)) then
        let c = Some 0 in
        let s = None in
        let o = None in
        let b = None in
+       let fib = best c s o b in
+        (c,s,o,b,fib)
+     else if (d = (1174446848, 24)) then
+       let c = None in
+       let s = Some 1 in
+       let o = None in
+       let b = Some (20, 100, 0, 80, {}) in
        let fib = best c s o b in
         (c,s,o,b,fib)
      else (None,None,None,None,None)
@@ -2810,7 +2902,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (36,136) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174445312) && (prefix < 1174445312256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -2820,7 +2912,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (36,30) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174445312) && (prefix < 1174445312256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -2830,7 +2922,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (36,132) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174445312) && (prefix < 1174445312256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -2840,7 +2932,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (36,125) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174445312) && (prefix < 1174445312256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -2850,7 +2942,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (36,121) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174445312) && (prefix < 1174445312256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -2860,7 +2952,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (36,28) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174445312) && (prefix < 1174445312256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -2870,7 +2962,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (36,31) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174445312) && (prefix < 1174445312256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -2880,7 +2972,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (36,29) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174445312) && (prefix < 1174445312256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -2890,7 +2982,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (36,120) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174445312) && (prefix < 1174445312256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -2900,7 +2992,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (36,137) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174445312) && (prefix < 1174445312256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -2910,7 +3002,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (36,134) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174445312) && (prefix < 1174445312256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -2920,7 +3012,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (36,119) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174445312) && (prefix < 1174445312256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -2930,7 +3022,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (37,4) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174445568) && (prefix < 1174445568256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -2940,7 +3032,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (37,33) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174445568) && (prefix < 1174445568256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -2950,7 +3042,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (37,32) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174445568) && (prefix < 1174445568256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -2960,7 +3052,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (37,35) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174445568) && (prefix < 1174445568256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -2970,7 +3062,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (37,9) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174445568) && (prefix < 1174445568256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -2980,7 +3072,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (37,2) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174445568) && (prefix < 1174445568256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -2990,7 +3082,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (37,27) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174445568) && (prefix < 1174445568256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -3000,7 +3092,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (37,26) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174445568) && (prefix < 1174445568256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -3010,7 +3102,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (37,3) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174445568) && (prefix < 1174445568256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -3020,7 +3112,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (37,21) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174445568) && (prefix < 1174445568256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -3030,7 +3122,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (37,1) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174445568) && (prefix < 1174445568256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -3040,7 +3132,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (37,34) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174445568) && (prefix < 1174445568256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -3050,7 +3142,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (38,12) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174445056) && (prefix < 1174445056256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -3060,7 +3152,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (38,13) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174445056) && (prefix < 1174445056256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -3070,7 +3162,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (38,16) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174445056) && (prefix < 1174445056256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -3080,7 +3172,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (38,17) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174445056) && (prefix < 1174445056256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -3090,7 +3182,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (38,19) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174445056) && (prefix < 1174445056256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -3100,7 +3192,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (38,124) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174445056) && (prefix < 1174445056256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -3110,7 +3202,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (38,8) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174445056) && (prefix < 1174445056256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -3120,7 +3212,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (38,6) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174445056) && (prefix < 1174445056256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -3130,7 +3222,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (38,22) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174445056) && (prefix < 1174445056256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -3140,7 +3232,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (38,24) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174445056) && (prefix < 1174445056256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -3150,7 +3242,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (38,11) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174445056) && (prefix < 1174445056256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -3160,7 +3252,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (38,131) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174445056) && (prefix < 1174445056256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -3170,7 +3262,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (39,5) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174445824) && (prefix < 1174445824256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -3180,7 +3272,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (39,68) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174445824) && (prefix < 1174445824256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -3190,7 +3282,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (39,67) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174445824) && (prefix < 1174445824256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -3200,7 +3292,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (39,57) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174445824) && (prefix < 1174445824256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -3210,7 +3302,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (39,55) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174445824) && (prefix < 1174445824256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -3220,7 +3312,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (39,0) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174445824) && (prefix < 1174445824256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -3230,7 +3322,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (39,10) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174445824) && (prefix < 1174445824256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -3240,7 +3332,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (39,51) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174445824) && (prefix < 1174445824256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -3250,7 +3342,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (39,63) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174445824) && (prefix < 1174445824256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -3260,7 +3352,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (39,7) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174445824) && (prefix < 1174445824256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -3270,7 +3362,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (39,65) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174445824) && (prefix < 1174445824256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -3280,7 +3372,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (39,53) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174445824) && (prefix < 1174445824256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4290,7 +4382,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (90,168) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174448128) && (prefix < 1174448128256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4300,7 +4392,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (90,154) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174448128) && (prefix < 1174448128256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4310,7 +4402,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (90,14) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174448128) && (prefix < 1174448128256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4320,7 +4412,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (90,25) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174448128) && (prefix < 1174448128256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4330,7 +4422,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (90,20) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174448128) && (prefix < 1174448128256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4340,7 +4432,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (90,150) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174448128) && (prefix < 1174448128256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4350,7 +4442,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (90,156) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174448128) && (prefix < 1174448128256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4360,7 +4452,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (90,18) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174448128) && (prefix < 1174448128256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4370,7 +4462,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (90,23) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174448128) && (prefix < 1174448128256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4380,7 +4472,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (90,157) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174448128) && (prefix < 1174448128256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4390,7 +4482,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (90,152) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174448128) && (prefix < 1174448128256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4400,7 +4492,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (90,15) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174448128) && (prefix < 1174448128256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4410,7 +4502,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (91,100) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174447616) && (prefix < 1174447616256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4420,7 +4512,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (91,114) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174447616) && (prefix < 1174447616256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4430,7 +4522,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (91,116) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174447616) && (prefix < 1174447616256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4440,7 +4532,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (91,108) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174447616) && (prefix < 1174447616256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4450,7 +4542,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (91,106) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174447616) && (prefix < 1174447616256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4460,7 +4552,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (91,102) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174447616) && (prefix < 1174447616256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4470,7 +4562,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (91,107) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174447616) && (prefix < 1174447616256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4480,7 +4572,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (91,110) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174447616) && (prefix < 1174447616256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4490,7 +4582,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (91,144) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174447616) && (prefix < 1174447616256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4500,7 +4592,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (91,142) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174447616) && (prefix < 1174447616256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4510,7 +4602,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (91,104) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174447616) && (prefix < 1174447616256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4520,7 +4612,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (91,118) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174447616) && (prefix < 1174447616256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4530,7 +4622,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (92,148) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174447872) && (prefix < 1174447872256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4540,7 +4632,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (92,164) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174447872) && (prefix < 1174447872256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4550,7 +4642,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (92,128) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174447872) && (prefix < 1174447872256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4560,7 +4652,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (92,160) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174447872) && (prefix < 1174447872256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4570,7 +4662,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (92,135) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174447872) && (prefix < 1174447872256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4580,7 +4672,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (92,130) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174447872) && (prefix < 1174447872256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4590,7 +4682,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (92,123) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174447872) && (prefix < 1174447872256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4600,7 +4692,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (92,126) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174447872) && (prefix < 1174447872256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4610,7 +4702,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (92,162) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174447872) && (prefix < 1174447872256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4620,7 +4712,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (92,146) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174447872) && (prefix < 1174447872256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4630,7 +4722,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (92,133) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174447872) && (prefix < 1174447872256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4640,7 +4732,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (92,166) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174447872) && (prefix < 1174447872256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4650,7 +4742,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (93,59) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174446080) && (prefix < 1174446080256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4660,7 +4752,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (93,46) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174446080) && (prefix < 1174446080256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4670,7 +4762,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (93,45) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174446080) && (prefix < 1174446080256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4680,7 +4772,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (93,47) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174446080) && (prefix < 1174446080256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4690,7 +4782,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (93,48) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174446080) && (prefix < 1174446080256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4700,7 +4792,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (93,44) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174446080) && (prefix < 1174446080256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4710,7 +4802,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (93,61) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174446080) && (prefix < 1174446080256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4720,7 +4812,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (93,42) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174446080) && (prefix < 1174446080256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4730,7 +4822,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (93,49) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174446080) && (prefix < 1174446080256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4740,7 +4832,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (93,43) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174446080) && (prefix < 1174446080256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4750,7 +4842,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (93,40) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174446080) && (prefix < 1174446080256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4760,7 +4852,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (93,41) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174446080) && (prefix < 1174446080256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4770,7 +4862,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (94,113) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174446336) && (prefix < 1174446336256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4780,7 +4872,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (94,105) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174446336) && (prefix < 1174446336256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4790,7 +4882,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (94,99) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174446336) && (prefix < 1174446336256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4800,7 +4892,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (94,86) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174446336) && (prefix < 1174446336256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4810,7 +4902,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (94,115) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174446336) && (prefix < 1174446336256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4820,7 +4912,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (94,112) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174446336) && (prefix < 1174446336256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4830,7 +4922,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (94,109) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174446336) && (prefix < 1174446336256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4840,7 +4932,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (94,101) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174446336) && (prefix < 1174446336256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4850,7 +4942,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (94,83) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174446336) && (prefix < 1174446336256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4860,7 +4952,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (94,103) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174446336) && (prefix < 1174446336256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4870,7 +4962,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (94,117) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174446336) && (prefix < 1174446336256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4880,7 +4972,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (94,111) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174446336) && (prefix < 1174446336256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4890,7 +4982,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (95,58) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174447104) && (prefix < 1174447104256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4900,7 +4992,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (95,62) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174447104) && (prefix < 1174447104256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4910,7 +5002,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (95,56) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174447104) && (prefix < 1174447104256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4920,7 +5012,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (95,64) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174447104) && (prefix < 1174447104256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4930,7 +5022,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (95,54) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174447104) && (prefix < 1174447104256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4940,7 +5032,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (95,143) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174447104) && (prefix < 1174447104256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4950,7 +5042,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (95,69) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174447104) && (prefix < 1174447104256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4960,7 +5052,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (95,52) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174447104) && (prefix < 1174447104256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4970,7 +5062,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (95,127) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174447104) && (prefix < 1174447104256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4980,7 +5072,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (95,129) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174447104) && (prefix < 1174447104256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -4990,7 +5082,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (95,122) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174447104) && (prefix < 1174447104256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -5000,7 +5092,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (95,60) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174447104) && (prefix < 1174447104256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -5010,7 +5102,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (96,71) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174447360) && (prefix < 1174447360256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -5020,7 +5112,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (96,82) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174447360) && (prefix < 1174447360256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -5030,7 +5122,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (96,77) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174447360) && (prefix < 1174447360256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -5040,7 +5132,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (96,66) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174447360) && (prefix < 1174447360256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -5050,7 +5142,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (96,73) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174447360) && (prefix < 1174447360256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -5060,7 +5152,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (96,87) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174447360) && (prefix < 1174447360256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -5070,7 +5162,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (96,78) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174447360) && (prefix < 1174447360256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -5080,7 +5172,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (96,81) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174447360) && (prefix < 1174447360256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -5090,7 +5182,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (96,50) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174447360) && (prefix < 1174447360256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -5100,7 +5192,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (96,89) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174447360) && (prefix < 1174447360256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -5110,7 +5202,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (96,75) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174447360) && (prefix < 1174447360256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -5120,7 +5212,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (96,79) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174447360) && (prefix < 1174447360256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -5130,7 +5222,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (97,70) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174446592) && (prefix < 1174446592256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -5140,7 +5232,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (97,84) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174446592) && (prefix < 1174446592256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -5150,7 +5242,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (97,88) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174446592) && (prefix < 1174446592256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -5160,7 +5252,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (97,85) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174446592) && (prefix < 1174446592256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -5170,7 +5262,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (97,167) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174446592) && (prefix < 1174446592256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -5180,7 +5272,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (97,72) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174446592) && (prefix < 1174446592256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -5190,7 +5282,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (97,158) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174446592) && (prefix < 1174446592256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -5200,7 +5292,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (97,74) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174446592) && (prefix < 1174446592256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -5210,7 +5302,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (97,76) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174446592) && (prefix < 1174446592256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -5220,7 +5312,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (97,159) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174446592) && (prefix < 1174446592256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -5230,7 +5322,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (97,165) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174446592) && (prefix < 1174446592256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -5240,7 +5332,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (97,80) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174446592) && (prefix < 1174446592256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -5250,7 +5342,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (98,149) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174446848) && (prefix < 1174446848256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -5260,7 +5352,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (98,151) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174446848) && (prefix < 1174446848256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -5270,7 +5362,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (98,138) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174446848) && (prefix < 1174446848256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -5280,7 +5372,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (98,161) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174446848) && (prefix < 1174446848256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -5290,7 +5382,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (98,163) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174446848) && (prefix < 1174446848256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -5300,7 +5392,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (98,141) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174446848) && (prefix < 1174446848256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -5310,7 +5402,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (98,139) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174446848) && (prefix < 1174446848256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -5320,7 +5412,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (98,153) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174446848) && (prefix < 1174446848256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -5330,7 +5422,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (98,155) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174446848) && (prefix < 1174446848256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -5340,7 +5432,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (98,140) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174446848) && (prefix < 1174446848256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -5350,7 +5442,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (98,147) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174446848) && (prefix < 1174446848256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -5360,7 +5452,7 @@ None)
      | Some (ad,lp,cost,med,comms) -> 
       b)
    | (98,145) -> 
-    let b = (if ((isProtocol fib 3)) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174446848) && (prefix < 1174446848256)))) && (!(isProtocol fib 3)))) || (isProtocol fib 3))) then
 (Some (ad,lp,cost + 1,med,comms))
 else
 None)
@@ -6779,6 +6871,13 @@ let transferRoute edge x =
 
 let trans edge x =
    transferRoute edge x
+
+let assert node x =
+    if (d = (1174445312, 24)) then
+      match x with
+      | (None, None, None, None, None) -> false
+      | _ -> true
+    else true
 
 (*
 {server-39=0, server-33=1, server-34=2, server-31=3, server-32=4, server-37=5, server-1=6, server-38=7, server-0=8, server-35=9, server-36=10, server-5=11, server-4=12, server-3=13, server-150=14, server-151=15, server-2=16, server-9=17, server-152=18, server-8=19, server-153=20, server-30=21, server-7=22, server-154=23, server-6=24, server-155=25, server-28=26, server-29=27, server-22=28, server-23=29, server-20=30, server-21=31, server-26=32, server-27=33, server-24=34, server-25=35, switch-157=36, switch-158=37, switch-156=38, switch-159=39, server-55=40, server-56=41, server-53=42, server-54=43, server-59=44, server-57=45, server-58=46, server-51=47, server-52=48, server-50=49, server-109=50, server-44=51, server-101=52, server-45=53, server-102=54, server-42=55, server-103=56, server-43=57, server-104=58, server-48=59, server-105=60, server-49=61, server-106=62, server-46=63, server-107=64, server-47=65, server-108=66, server-40=67, server-41=68, server-100=69, server-77=70, server-112=71, server-78=72, server-113=73, server-75=74, server-114=75, server-76=76, server-115=77, server-116=78, server-117=79, server-79=80, server-118=81, server-119=82, server-70=83, server-73=84, server-74=85, server-71=86, server-110=87, server-72=88, server-111=89, switch-168=90, switch-166=91, switch-167=92, switch-160=93, switch-161=94, switch-164=95, switch-165=96, switch-162=97, switch-163=98, server-66=99, server-123=100, server-67=101, server-124=102, server-64=103, server-125=104, server-65=105, server-126=106, server-127=107, server-128=108, server-68=109, server-129=110, server-69=111, server-62=112, server-63=113, server-120=114, server-60=115, server-121=116, server-61=117, server-122=118, server-19=119, server-17=120, server-18=121, server-99=122, server-134=123, server-11=124, server-12=125, server-135=126, server-97=127, server-136=128, server-98=129, server-137=130, server-10=131, server-15=132, server-138=133, server-16=134, server-139=135, server-13=136, server-14=137, server-91=138, server-92=139, server-90=140, server-95=141, server-130=142, server-96=143, server-131=144, server-93=145, server-132=146, server-94=147, server-133=148, server-88=149, server-145=150, server-89=151, server-146=152, server-86=153, server-147=154, server-87=155, server-148=156, server-149=157, server-80=158, server-81=159, server-140=160, server-84=161, server-141=162, server-85=163, server-142=164, server-82=165, server-143=166, server-83=167, server-144=168}*)
