@@ -1053,7 +1053,7 @@ module FailuresAbstraction =
         end
 
 
-    let refinement_breadth = 10
+    let refinement_breadth = 18
                                             
     let refine_step (g: AdjGraph.t) forig (f: abstractionMap) (todo: VertexSet.t) ds k =
       let ag = BuildAbstractNetwork.buildAbstractAdjGraph g f in
