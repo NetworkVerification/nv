@@ -90,9 +90,9 @@ let gt x y = check x y ; Z.gt x.value y.value
 
 let geq x y = check x y ; Z.geq x.value y.value
 
-let equal x y = (x.size = y.size) && (x.value = y.value)
+let equal x y = (x.value = y.value) && (x.size = y.size) 
 
 let compare x y =
-  let cmp = Z.compare x.size y.size in
+  let cmp = Z.compare x.value y.value in
   if cmp <> 0 then cmp
-  else Z.compare x.value y.value
+  else Z.compare x.size y.size
