@@ -728,11 +728,11 @@ module FailuresAbstraction =
 
     module SearchElt =
       struct
-        type t = abstractionMap * VertexSet.t
+        type t = abstractionMap * (VertexSet.t Lazy.t)
         let compare (x1,y1) (x2,y2) =
           let sz = Pervasives.compare (normalized_size x1) (normalized_size x2) in
           if sz = 0 then
-            VertexSet.compare y1 y2
+            VertexSet.compare (Lazy.force y1) (Lazy.force y2)
           else
             sz
       end 
@@ -912,17 +912,20 @@ module FailuresAbstraction =
                let uss = AbstractNodeSet.add us2 (AbstractNodeSet.singleton us1) in
                let f' = splitSet f uss in
                let f' = abstractionTopological f' g in
-               let backMap = buildForwardMap f f' in
-               [(f', update_vertex_set backMap todo)]
+               let new_todo =
+                 lazy (update_vertex_set (buildForwardMap f f') todo) in
+               [(f', new_todo)]
             | _ -> BatList.map (fun fnew ->
-                       let backMap = buildForwardMap f fnew in
-                       (fnew, update_vertex_set backMap todo)) best_refinements
+                       let new_todo =
+                         lazy (update_vertex_set (buildForwardMap f fnew) todo)
+                       in
+                       (fnew, new_todo)) best_refinements
 
     let counterExampleSearch (g: AdjGraph.t) (forig: abstractionMap)
                              (unused: EdgeSet.t)
                              (todo: VertexSet.t) ds k =
       let q = SearchSet.create () in
-      let q = SearchSet.add (forig, todo) q in
+      let q = SearchSet.add (forig, lazy todo) q in
       
       let rec loop explored minimum q =
         try
@@ -938,7 +941,7 @@ module FailuresAbstraction =
           if b then
             loop (explored+1) minimum q
           else
-            match counterexample_step g forig f todo unused ds k with
+            match counterexample_step g forig f (Lazy.force todo) unused ds k with
             | [] ->
                ( match minimum with
                  | None -> loop (explored+1) (Some f) q
@@ -1060,7 +1063,7 @@ module FailuresAbstraction =
     let refinement_breadth = 20
                                             
     let refine_step (g: AdjGraph.t) forig (f: abstractionMap) (todo: VertexSet.t) ds k =
-      let ag = BuildAbstractNetwork.buildAbstractAdjGraph g f in 
+      let ag = BuildAbstractNetwork.buildAbstractAdjGraph g f in
       let d = getId f (VertexSet.choose ds) in (*assume only one destination for now *)
       let cuts, todo = compute_cuts ag d k todo in
       (* AdjGraph.print ag; *)
@@ -1080,18 +1083,18 @@ module FailuresAbstraction =
          (* require all of them to be in cut-set? *)
          let nodes_to_split =
            try (findNPred (fun us ->
-                            BatList.for_all (fun u ->
-                                AbstractNode.cardinal (getGroupById f u) > 1) us)
+                    BatList.for_all (fun u ->
+                        AbstractNode.cardinal (getGroupById f u) > 1) us)
                           reachAbs 1)
            with Not_found ->
                  try (findNPred (fun us ->
-                                   BatList.for_all (fun u ->
-                                       AbstractNode.cardinal (getGroupById f u) > 1) us)
-                                  unreachAbs 1)
+                          BatList.for_all (fun u ->
+                              AbstractNode.cardinal (getGroupById f u) > 1) us)
+                                unreachAbs 1)
                  with Not_found ->
-                   match choose_random_splittable f cuts with
-                   | [] -> []
-                   | x -> [x]
+                       match choose_random_splittable f cuts with
+                       | [] -> []
+                       | x -> [x]
          in
          match nodes_to_split with
          | [] -> (* cannot refine further.*)
@@ -1175,11 +1178,14 @@ module FailuresAbstraction =
                in
                let f' = splitSet f uss in
                let f' = abstractionTopological f' g in
-               let backMap = buildForwardMap f f' in
-               [(f', update_vertex_set backMap todo)]
+               let new_todo =
+                 lazy (update_vertex_set (buildForwardMap f f') todo) in
+               [(f', new_todo)]
             | _ -> BatList.map (fun fnew ->
-                       let backMap = buildForwardMap f fnew in
-                       (fnew, update_vertex_set backMap todo)) best_refinements
+                       let new_todo =
+                         lazy (update_vertex_set (buildForwardMap f fnew) todo)
+                       in
+                       (fnew, new_todo)) best_refinements
                  
     (* computes a refinement of f, s.t. all sources have at
        least k+1 disjoint paths to the destination *)
@@ -1192,7 +1198,7 @@ module FailuresAbstraction =
        *     (fun uhat acc -> VertexSet.add uhat acc)
        *     (AbstractionMap.normalized_size forig |> Integer.of_int) VertexSet.empty in *)
       let todo = sources in
-      let q = SearchSet.add (forig, todo) q in
+      let q = SearchSet.add (forig, lazy todo) q in
 
       let rec loop explored minimum q =
         try
@@ -1209,7 +1215,7 @@ module FailuresAbstraction =
           if b then
             loop (explored+1) minimum q
           else
-            match refine_step g forig f todo ds k with
+            match refine_step g forig f (Lazy.force todo) ds k with
             | [] ->
                ( match minimum with
                  | None -> loop (explored+1) (Some f) q
