@@ -164,7 +164,7 @@ let compress file info decls cfg networkOp =
                  else
                    slice.attr_type
        in
-       Console.show_message (Printf.sprintf "%d" (i+1)) Console.T.Green "Refinement Iteration";
+       Console.show_message (Printf.sprintf "%d" i) Console.T.Green "Refinement Iteration";
        let f' =
          time_profile "Refining abstraction after failures"
                       (fun () ->
