@@ -1866,9 +1866,19 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
           failwith "failed to parse a model"
        | _ -> failwith "failed to parse a model")
 
+                
     (** Asks the smt solver whether the query was unsat or not
      and returns a model if it was sat.*)
     let get_sat query chan info env solver renaming ds reply =
+      ask_solver solver "(get-info :all-statistics)\n
+                         (echo \"end stats\")\n";
+      let rs = get_reply_until "end stats" solver in
+      let rs =
+        BatList.filter (fun s -> BatString.starts_with s " :time" ||
+                                   BatString.starts_with s " :memory") rs
+        |> String.concat "\n"
+      in
+      Printf.printf "Z3 stats:\n %s\n" rs;
       match reply with
       | UNSAT -> Unsat
       | SAT ->
