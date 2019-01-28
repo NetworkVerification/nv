@@ -150,8 +150,9 @@ let compress file info decls cfg networkOp =
       time_profile "Build abstract network"
         (fun () -> buildAbstractNetwork f mergeMap transMap slice k) in
     smt_config.multiplicities <- getEdgeMultiplicities slice.graph f failVars;
-    let groups = AbstractionMap.printAbstractGroups f "\n" in
-    Console.show_message groups Console.T.Blue "Abstract groups";
+    (* let groups = AbstractionMap.printAbstractGroups f "\n" in *)
+    let groups = Printf.sprintf "%d" (AbstractionMap.normalized_size f) in
+    Console.show_message groups Console.T.Blue "Number of abstract nodes";
     match networkOp cfg info decls with
     | Success _, _ ->
        Printf.printf "Number of abstract edges:%d\n"
@@ -189,19 +190,22 @@ let compress file info decls cfg networkOp =
       let transMap = Abstraction.partialEvalTrans slice.graph slice.trans in
       let mergeMap = Abstraction.partialEvalMerge slice.graph slice.merge in
       (* compute the bonsai abstraction *)
-      let fbonsai =
-        Abstraction.findAbstraction slice.graph transMap mergeMap slice.destinations
+
+      let fbonsai, f =
+        time_profile "Computing Abstraction"
+                     (fun () ->
+                       let fbonsai =
+                         Abstraction.findAbstraction slice.graph transMap
+                                                     mergeMap slice.destinations
+                       in
+                       (* find the initial abstraction function for these destinations *)
+                       let f = 
+                         FailuresAbstraction.refineK slice.graph fbonsai sources
+                                                     slice.destinations k
+                       in
+                       fbonsai, f)
       in
-      (* find the initial abstraction function for these destinations *)
-      try let f = 
-            time_profile "Computing Refinement for K failures"
-                         (fun () ->
-                           FailuresAbstraction.refineK slice.graph fbonsai sources
-                             slice.destinations k)
-          in
-          loop fbonsai f slice sources mergeMap transMap k 1
-      with
-      | Cutoff -> ()
+      loop fbonsai f slice sources mergeMap transMap k 1
     ) (Slicing.createSlices info decls)
 
 let parse_input (args : string array)
