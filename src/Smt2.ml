@@ -1887,11 +1887,17 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
          Unknown
       | _ -> failwith "unexpected answer from solver\n"
 
-    let refineModelMinimizeFailures model info query chan solve renaming env ds =
+    let refineModelMinimizeFailures (model: Solution.t) info query chan solve renaming env ds =
       match (get_requires_failures ds).e with
       | EOp(AtMost n, [e1;e2;e3]) ->
          (match e1.e with
           | ETuple es ->
+             Collections.StringMap.iter (fun fvar fval ->
+                 match fval.v with
+                 | VBool b ->
+                    if b then
+                      Printf.printf "Initial model failed: %s\n" fvar;
+                 | _ -> failwith "This should be a boolean variable") model.symbolics;
              let mult = smt_config.multiplicities in
              let arg2 =
                aexp(etuple (BatList.map (fun evar ->
@@ -1957,9 +1963,10 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
         let refiner = refineModelMinimizeFailures in
         match refiner model info query chan solver renaming env ds with
         | None ->
-           Console.warning "Model was not refined\n";
+           (* Console.warning "Model was not refined\n"; *)
            Sat model (* no refinement can occur *)
         | Some q ->
+           Console.warning "Refining the model...\n";
            let checkSat = CheckSat |> mk_command |> command_to_smt smt_config.verbose info in
            let q = Printf.sprintf "%s%s\n" q checkSat in
            if query then
