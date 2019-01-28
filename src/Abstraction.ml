@@ -1398,7 +1398,7 @@ module FailuresAbstraction =
           if b then
             loop (explored+1) minimum q
           else
-            match refine_step_heuristics g forig f (Lazy.force todo) ds k with
+            match refine_step g forig f (Lazy.force todo) ds k with
             | [] ->
                ( match minimum with
                  | None -> loop (explored+1) (Some f) q
