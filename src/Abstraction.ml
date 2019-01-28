@@ -975,7 +975,7 @@ module FailuresAbstraction =
       in
       match loop 0 None q with
       | explored, Some f ->
-         Printf.printf "Explored refinements: %d\n" explored;
+         (* Printf.printf "Explored refinements: %d\n" explored; *)
          f
       | _, _ ->
          failwith "found no refinement"
@@ -997,7 +997,7 @@ module FailuresAbstraction =
             | VBool b ->
                if b then
                  begin
-                   Printf.printf "Failed edge: %s\n" (AdjGraph.printEdge edge); 
+                   Printf.printf "Failed Edge: %s\n" (AdjGraph.printEdge edge); 
                    (EdgeSet.add edge acc, AdjGraph.add_edge ag edge)
                  end
                else (acc, AdjGraph.add_edge ag edge)
@@ -1425,7 +1425,7 @@ module FailuresAbstraction =
       in
       match loop 0 None q with
       | explored, Some f ->
-         Printf.printf "Explored refinements: %d\n" explored;
+         (* Printf.printf "Explored refinements: %d\n" explored; *)
          (* for statistics only *)
          (* let ag = BuildAbstractNetwork.buildAbstractAdjGraph g f in *)
          (* let d = getId f (VertexSet.choose ds) in *)

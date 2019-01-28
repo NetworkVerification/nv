@@ -151,12 +151,11 @@ let compress file info decls cfg networkOp =
         (fun () -> buildAbstractNetwork f mergeMap transMap slice k) in
     smt_config.multiplicities <- getEdgeMultiplicities slice.graph f failVars;
     (* let groups = AbstractionMap.printAbstractGroups f "\n" in *)
-    let groups = Printf.sprintf "%d" (AbstractionMap.normalized_size f) in
-    Console.show_message groups Console.T.Blue "Number of abstract nodes";
+    let aedges = BatList.length (oget (get_edges decls)) in
+    let groups = Printf.sprintf "%d/%d" (AbstractionMap.normalized_size f) aedges in
+    Console.show_message groups Console.T.Blue "Number of abstract nodes/edges";
     match networkOp cfg info decls with
     | Success _, _ ->
-       Printf.printf "Number of abstract edges:%d\n"
-                     (BatList.length (oget (get_edges decls)));
        Printf.printf "No counterexamples found\n"
     | (CounterExample sol), fs ->
        let sol = apply_all sol (oget fs) in
@@ -165,6 +164,7 @@ let compress file info decls cfg networkOp =
                  else
                    slice.attr_type
        in
+       Console.show_message (Printf.sprintf "%d" (i+1)) Console.T.Green "Refinement Iteration";
        let f' =
          time_profile "Refining abstraction after failures"
                       (fun () ->
@@ -227,7 +227,7 @@ let parse_input (args : string array)
       decls
     in
   let decls = if cfg.unroll then
-                time_profile "unroll maps" (fun () -> MapUnrolling.unroll info decls) |>
+                time_profile "Map unrolling" (fun () -> MapUnrolling.unroll info decls) |>
                   Typing.infer_declarations info 
               else decls
   in
