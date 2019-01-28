@@ -1872,7 +1872,6 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
       match reply with
       | UNSAT -> Unsat
       | SAT ->
-         (* Printf.printf "asking for model\n"; *)
          ask_for_model query chan info env solver renaming ds
       | UNKNOWN ->
          Unknown
@@ -1951,7 +1950,6 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
            Console.warning "Model was not refined\n";
            Sat model (* no refinement can occur *)
         | Some q ->
-           Printf.printf "refining model\n";
            let checkSat = CheckSat |> mk_command |> command_to_smt smt_config.verbose info in
            let q = Printf.sprintf "%s%s\n" q checkSat in
            if query then
@@ -1995,7 +1993,7 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
       (* Printf.printf "communicating with solver"; *)
       (* start communication with solver process *)
       let solver = start_solver params in
-      ask_solver solver smt_encoding;
+      ask_solver_blocking solver smt_encoding;
       match smt_config.failures with
       | None ->
          let q = check_sat info in
@@ -2012,19 +2010,16 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
          ask_solver solver q;
          let reply = solver |> parse_reply in
          (* check the reply *)
-         (* Printf.printf "before first get_sat\n"; flush stdout; *)
          let isSat = get_sat query chan info env solver renaming ds reply in
          (* In order to minimize refinement iterations, once we get a
             counter-example we try to minimize it by only keeping failures
             on single links. If it works then we found an actual
             counterexample, otherwise we refine using the first
-            counterexample. *)
-         (* Printf.printf "after first get_sat\n"; flush stdout; *)         
+            counterexample. *)       
          match isSat with
          | Unsat -> Unsat
          | Unknown -> Unknown
          | Sat model1 ->
-            (* Printf.printf "about to call refine model\n"; flush stdout; *)
             refineModel model1 info query chan env solver renaming ds
           
       

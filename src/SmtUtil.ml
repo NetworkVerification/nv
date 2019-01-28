@@ -46,6 +46,11 @@ let ask_solver (solver: solver_proc) (question: string) : unit =
              output_string solver.nvout s;
              flush solver.nvout) question)
 
+let ask_solver_blocking (solver: solver_proc) (question: string) : unit =
+  (* BatIO.write_string solver.nvout question *)
+  output_string solver.nvout question;
+  flush solver.nvout
+
 let get_reply (solver: solver_proc) : string option =
   try Some (input_line solver.nvin) with End_of_file -> None
 

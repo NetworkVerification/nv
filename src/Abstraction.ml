@@ -535,9 +535,12 @@ module FailuresAbstraction =
       let addNeighbor u =
         let neighborsOfu = neighbors g u in
         let neighborsOfUinV =
-          BatList.filter (fun v -> AbstractNode.mem v vhat) neighborsOfu
+          BatList.fold_left (fun acc v ->
+              if AbstractNode.mem v vhat then
+                VertexSet.add v acc
+              else acc) VertexSet.empty neighborsOfu
         in
-        VertexSet.of_list neighborsOfUinV
+        neighborsOfUinV
       in
       let connectivityMap = AbstractNode.fold (fun u acc ->
                                 VertexMap.add u (addNeighbor u) acc)
@@ -858,27 +861,30 @@ module FailuresAbstraction =
          | [] -> (* cannot refine further, return an empty list.*)
             []
          | uhatss ->
-            (* for each element of the list, note that they all belong the same original group:
-                 2. Get all their neighbors.
-                 3. Try all refinements on them and pick the best.
-                 2. if one of them is in the unreachable set, then try to refine based on that.
-                 3. otherwise pick one randomly for now *)
+            (* for each element of the list, note that they all belong
+               the same original group: 2. Get all their neighbors.
+               3. Try all refinements on them and pick the best.
+               2. if one of them is in the unreachable set, then try
+               to refine based on that.  3. otherwise pick one
+               randomly for now *)
 
             (* Remove duplicates based on cardinality, because they
                are likely to lead to similar refinements.*)
             let uhats =
               BatList.map (fun uhats ->
-                  BatList.sort_unique (fun x y -> Pervasives.compare
-                                                    (AbstractNode.cardinal (getGroupById f x))
-                                                    (AbstractNode.cardinal (getGroupById f y)))
-                                      uhats) uhatss
+                  BatList.sort_unique
+                    (fun x y -> Pervasives.compare
+                                  (AbstractNode.cardinal (getGroupById f x))
+                                  (AbstractNode.cardinal (getGroupById f y)))
+                    uhats) uhatss
               |> BatList.flatten
             in
             (* add in the most_freq node *)
             let uhats = most_freq @ uhats in
             (* Printf.printf "size of uhats: %d\n" (List.length uhats); *)
             (* for each node to split, compute a refinement with each of its neighbor *)
-            let uhat_neighbors = BatList.map (fun uhat -> (uhat, neighbors ag uhat)) uhats in
+            let uhat_neighbors =
+              BatList.map (fun uhat -> (uhat, neighbors ag uhat)) uhats in
             let refinements =
               BatList.fold_left (fun acc (uhat, vhats) ->
                   let uhatGroup = getGroupById f uhat in
@@ -890,7 +896,8 @@ module FailuresAbstraction =
                        | Groups uss ->
                           let uss = createFreshAbstractNodes uss in
                           let f' = splitSet f uss in
-                          Some (abstractionTopological f' g)) vhats) @ acc) [] uhat_neighbors
+                          Some (abstractionTopological f' g)) vhats) @ acc)
+                                [] uhat_neighbors
               |> BatList.sort (compare_refinements)
             in
             (* Printf.printf "size of refinements:%d\n" (List.length refinements); *)
@@ -1060,7 +1067,7 @@ module FailuresAbstraction =
         end
 
 
-    let refinement_breadth = 20
+    let refinement_breadth = ref 20
                                             
     let refine_step (g: AdjGraph.t) forig (f: abstractionMap) (todo: VertexSet.t) ds k =
       let ag = BuildAbstractNetwork.buildAbstractAdjGraph g f in
@@ -1085,12 +1092,12 @@ module FailuresAbstraction =
            try (findNPred (fun us ->
                     BatList.for_all (fun u ->
                         AbstractNode.cardinal (getGroupById f u) > 1) us)
-                          reachAbs 1)
+                          reachAbs 2)
            with Not_found ->
                  try (findNPred (fun us ->
                           BatList.for_all (fun u ->
                               AbstractNode.cardinal (getGroupById f u) > 1) us)
-                                unreachAbs 1)
+                                unreachAbs 2)
                  with Not_found ->
                        match choose_random_splittable f cuts with
                        | [] -> []
@@ -1133,10 +1140,11 @@ module FailuresAbstraction =
                are likely to lead to similar refinements.*)
             let uhats =
               BatList.map (fun uhats ->
-                  BatList.sort_unique (fun x y -> Pervasives.compare
-                                                    (AbstractNode.cardinal (getGroupById f x))
-                                                    (AbstractNode.cardinal (getGroupById f y)))
-                                      uhats) uhatss
+                  BatList.sort_unique
+                    (fun x y -> Pervasives.compare
+                                  (AbstractNode.cardinal (getGroupById f x))
+                                  (AbstractNode.cardinal (getGroupById f y)))
+                    uhats) uhatss
               |> BatList.flatten
             in
             (* add in the most_freq node *)
@@ -1154,7 +1162,8 @@ module FailuresAbstraction =
                        | Groups uss ->
                           let uss = createFreshAbstractNodes uss in
                           let f' = splitSet f uss in
-                          Some (abstractionTopological f' g)) vhats) @ acc) [] uhat_neighbors
+                          Some (abstractionTopological f' g)) vhats) @ acc)
+                                [] uhat_neighbors
               |> BatList.sort (compare_refinements)
             in
             (* Printf.printf "size of refinements:%d\n" (List.length refinements); *)
@@ -1163,7 +1172,181 @@ module FailuresAbstraction =
                all of them are full mesh, so just split the node
                randomly. *)
             let best_refinements =
-              BatList.take refinement_breadth refinements |>
+              BatList.take !refinement_breadth refinements |>
+                BatList.sort_unique (fun x y -> compare_refinements x y)
+            in
+            match best_refinements with
+            | [] -> (* if everything was a full mesh, take a random split *)
+               let us1, us2 =
+                 BatList.hd uhats |>
+                   AbstractionMap.getGroupById f |>
+                   AbstractNode.randomSplit
+               in
+               let uss = AbstractNodeSet.add us2
+                                             (AbstractNodeSet.singleton us1)
+               in
+               let f' = splitSet f uss in
+               let f' = abstractionTopological f' g in
+               let new_todo =
+                 lazy (update_vertex_set (buildForwardMap f f') todo) in
+               [(f', new_todo)]
+            | _ -> BatList.map (fun fnew ->
+                       let new_todo =
+                         lazy (update_vertex_set (buildForwardMap f fnew) todo)
+                       in
+                       (fnew, new_todo)) best_refinements
+
+    (* Refine step with less heuristics *)
+    let noFreq = true
+    let noReach = false
+    let noGroups = false
+                
+    let refine_step_heuristics (g: AdjGraph.t) forig
+                                  (f: abstractionMap) (todo: VertexSet.t) ds k =
+      let ag = BuildAbstractNetwork.buildAbstractAdjGraph g f in
+      let d = getId f (VertexSet.choose ds) in (*assume only one destination for now *)
+      let cuts, todo = compute_cuts ag d k todo in
+      (* AdjGraph.print ag; *)
+      match cuts with
+      | [] -> (* no min-cuts <= k, we are done. *)
+         assert (VertexSet.is_empty todo);
+         []
+      | _ ->
+         (* sort (reachable) vertices by frequency of appereance in cut-sets. *)
+         let (cut_freq, reachAbs, unreachAbs) = cuts_choices forig f cuts in
+         let most_freq = if noFreq then [] else
+           try
+             [fst (BatList.find (fun (u,_) ->
+                       AbstractNode.cardinal (getGroupById f u) > 1) cut_freq)]
+           with Not_found -> []
+         in
+         (* require all of them to be in cut-set? *)
+         let nodes_to_split_1 =
+           if noGroups then
+             try (findNPred (fun us ->
+                      BatList.exists (fun u ->
+                          AbstractNode.cardinal (getGroupById f u) > 1) us)
+                            reachAbs 2)
+                 |> BatList.map (fun us ->
+                        BatList.filter (fun u ->
+                            if (AbstractNode.cardinal (getGroupById f u) >1) then
+                              true
+                            else
+                              false) us)
+             with Not_found ->  []
+           else
+           try (findNPred (fun us ->
+                      BatList.for_all (fun u ->
+                            AbstractNode.cardinal (getGroupById f u) > 1) us)
+                          reachAbs 2)
+           with Not_found ->  []
+         in
+         let nodes_to_split_2 =
+           if noGroups then
+             try (findNPred (fun us ->
+                      BatList.exists (fun u ->
+                          AbstractNode.cardinal (getGroupById f u) > 1) us)
+                            unreachAbs 2)
+                 |> BatList.map (fun us ->
+                        BatList.filter (fun u ->
+                            if (AbstractNode.cardinal (getGroupById f u) >1) then
+                              true
+                            else
+                              false) us)
+             with Not_found ->  []
+           else
+             try (findNPred (fun us ->
+                      BatList.for_all (fun u ->
+                          AbstractNode.cardinal (getGroupById f u) > 1) us)
+                            unreachAbs 2)
+             with Not_found ->
+               []
+         in
+         let nodes_to_split =
+           if noReach then
+             nodes_to_split_1 @ nodes_to_split_2
+           else if nodes_to_split_1 = [] then nodes_to_split_2
+           else nodes_to_split_1
+         in
+         let nodes_to_split =
+           match nodes_to_split with
+           | [] -> (match choose_random_splittable f cuts with
+                       | [] -> []
+                       | x -> [x])
+           | _ -> nodes_to_split
+                            
+         in
+         match nodes_to_split with
+         | [] -> (* cannot refine further.*)
+            (* Printf.printf "Nodes can be disconnected, and no further \
+             *                refinements can be made. Verification will fail.\n";
+             * let concrete_cuts =
+             *   BatList.fold_left (fun acc es ->
+             *       let ces =
+             *         EdgeSet.fold (fun ehat acc ->
+             *             EdgeSet.fold (fun e acc ->
+             *                 e :: acc) (BuildAbstractNetwork.abstractToConcreteEdge g f ehat)
+             *               []) es []
+             *       in
+             *       if (BatList.length ces) <= k then
+             *         ces :: acc
+             *       else
+             *         acc) [] cuts
+             * in
+             * BatList.iter (fun cut ->
+             *     Printf.printf "min-cut: ";
+             *     BatList.iter (fun e ->
+             *         Printf.printf "%s," (printEdge e))
+             *       cut;
+             *     Printf.printf "\n") concrete_cuts;
+             * raise Cutoff *)
+            []
+         | uhatss ->
+            (* for each element of the list, note that they all belong
+               the same original group: 2. Get all their neighbors.
+               3. Try all refinements on them and pick the best.
+               2. if one of them is in the unreachable set, then try
+               to refine based on that.  3. otherwise pick one
+               randomly for now, TODO: pick the one that is the most
+               common among them *)
+
+            (* Remove duplicates based on cardinality, because they
+               are likely to lead to similar refinements.*)
+            let uhats =
+              BatList.map (fun uhats ->
+                  BatList.sort_unique
+                    (fun x y -> Pervasives.compare
+                                  (AbstractNode.cardinal (getGroupById f x))
+                                  (AbstractNode.cardinal (getGroupById f y)))
+                    uhats) uhatss
+              |> BatList.flatten
+            in
+            (* add in the most_freq node *)
+            let uhats = most_freq @ uhats in
+            (* for each node to split, compute a refinement with each of its neighbor *)
+            let uhat_neighbors = BatList.map (fun uhat -> (uhat, neighbors ag uhat)) uhats in
+            let refinements =
+              BatList.fold_left (fun acc (uhat, vhats) ->
+                  let uhatGroup = getGroupById f uhat in
+                  (BatList.filter_map
+                     (fun vhat ->
+                       let vhatGroup = getGroupById f vhat in
+                       match findSplittingByConnectivity uhatGroup vhatGroup g with
+                       | Mesh -> None
+                       | Groups uss ->
+                          let uss = createFreshAbstractNodes uss in
+                          let f' = splitSet f uss in
+                          Some (abstractionTopological f' g)) vhats) @ acc)
+                                [] uhat_neighbors
+              |> BatList.sort (compare_refinements)
+            in
+            (* Printf.printf "size of refinements:%d\n" (List.length refinements); *)
+            (*get k-best refinements (defined by
+               refinement_breadth). If none are available, it means
+               all of them are full mesh, so just split the node
+               randomly. *)
+            let best_refinements =
+              BatList.take !refinement_breadth refinements |>
                 BatList.sort_unique (fun x y -> compare_refinements x y)
             in
             match best_refinements with
@@ -1215,7 +1398,7 @@ module FailuresAbstraction =
           if b then
             loop (explored+1) minimum q
           else
-            match refine_step g forig f (Lazy.force todo) ds k with
+            match refine_step_heuristics g forig f (Lazy.force todo) ds k with
             | [] ->
                ( match minimum with
                  | None -> loop (explored+1) (Some f) q
