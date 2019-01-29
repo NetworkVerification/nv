@@ -188,7 +188,9 @@ let compress file info decls cfg networkOp =
       let sources =
         Slicing.findRelevantNodes (partialEvalOverNodes n slice.assertion) in
       (* partially evaluate the functions of the network *)
-      let transMap = Abstraction.partialEvalTrans slice.graph slice.trans in
+      let transMap =
+        Profile.time_profile "partial eval trans"
+                             (fun () -> Abstraction.partialEvalTrans slice.graph slice.trans) in
       let mergeMap = Abstraction.partialEvalMerge slice.graph slice.merge in
       (* compute the bonsai abstraction *)
 
