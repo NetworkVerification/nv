@@ -790,21 +790,41 @@ module FailuresAbstraction =
         let prune q = q (*not yet implemented for queues*)
       end
        
-    let countererexample_refinement_breadth = 20
+    let counterexample_refinement_breadth = ref 20
 
     let choose_random_splittable f (es:EdgeSet.t list) =
-      BatList.fold_left (fun acc es ->
-          EdgeSet.fold (fun (u,v) acc ->
-              let acc =
-                if AbstractNode.cardinal (getGroupById f u) > 1 then
-                  (u :: acc)
-                else
-                  acc
-              in
-              if AbstractNode.cardinal (getGroupById f v) > 1 then
-                (v :: acc)
-              else
-                acc) es []) [] es
+      let rec loop cuts =
+        match cuts with
+        | [] -> []
+        | c :: cuts ->
+           let acc = EdgeSet.fold (fun (u,v) acc ->
+                         let acc =
+                           if AbstractNode.cardinal (getGroupById f u) > 1 then
+                             (u :: acc)
+                           else
+                             acc
+                         in
+                         if AbstractNode.cardinal (getGroupById f v) > 1 then
+                           (v :: acc)
+                         else
+                           acc) c []
+           in
+           if acc = [] then loop cuts
+           else acc
+      in
+      loop es
+    (* BatList.fold_left (fun acc es ->
+       *     EdgeSet.fold (fun (u,v) acc ->
+       *         let acc =
+       *           if AbstractNode.cardinal (getGroupById f u) > 1 then
+       *             (u :: acc)
+       *           else
+       *             acc
+       *         in
+       *         if AbstractNode.cardinal (getGroupById f v) > 1 then
+       *           (v :: acc)
+       *         else
+       *           acc) es []) [] es *)
 
     let counterexample_step (g: AdjGraph.t) forig (f: abstractionMap) (todo: VertexSet.t)
                             (unused: EdgeSet.t) ds k =
@@ -906,7 +926,7 @@ module FailuresAbstraction =
                all of them are full mesh, so just split the node
                randomly. *)
             let best_refinements =
-              BatList.take countererexample_refinement_breadth refinements |>
+              BatList.take !counterexample_refinement_breadth refinements |>
                 BatList.sort_unique (fun x y -> compare_refinements x y)
             in
             match best_refinements with
@@ -1044,21 +1064,23 @@ module FailuresAbstraction =
           in
           let fwdMap = buildForwardMap fbonsai f in
           (* find all the unused edges exploiting symmetry between transfer functions *)
-          let unused_edges_sym =
-            EdgeSet.fold (fun (u,v) acc ->
-                let vorig = get_orig_group fbonsai f v in
-                let vs = GroupMap.find vorig fwdMap in
-                BatList.fold_left (fun acc v' ->
-                    EdgeSet.add (u,v') acc) acc vs) unused_edges EdgeSet.empty
-          in
+          (* let unused_edges_sym =
+           *   EdgeSet.fold (fun (u,v) acc ->
+           *       let vorig = get_orig_group fbonsai f v in
+           *       let vs = GroupMap.find vorig fwdMap in
+           *       BatList.fold_left (fun acc v' ->
+           *           EdgeSet.add (u,v') acc) acc vs) unused_edges EdgeSet.empty
+           * in *)
           (* find all potentially unreachable nodes based on symmetries *)
-          let unreachable_sym =
-            VertexSet.fold (fun u acc ->
-                let uorig = get_orig_group fbonsai f u in
-                let us = GroupMap.find uorig fwdMap in
-                BatList.fold_left (fun acc u ->
-                    VertexSet.add u acc) acc us) unreachable VertexSet.empty
-          in
+          (* let unreachable_sym =
+           *   VertexSet.fold (fun u acc ->
+           *       let uorig = get_orig_group fbonsai f u in
+           *       let us = GroupMap.find uorig fwdMap in
+           *       BatList.fold_left (fun acc u ->
+           *           VertexSet.add u acc) acc us) unreachable VertexSet.empty
+           * in *)
+          let unused_edges_sym = unused_edges in
+          let unreachable_sym = unreachable in
           (* find which source nodes don't have enough paths *)
           let todo_hat = VertexSet.map (fun u -> getId f u) todo in
           let todo_hat = VertexSet.inter unreachable_sym todo_hat in
@@ -1198,7 +1220,7 @@ module FailuresAbstraction =
 
     (* Refine step with less heuristics *)
     let noFreq = true
-    let noReach = false
+    let noReach = true
     let noGroups = false
                 
     let refine_step_heuristics (g: AdjGraph.t) forig
@@ -1264,7 +1286,7 @@ module FailuresAbstraction =
          in
          let nodes_to_split =
            if noReach then
-             nodes_to_split_1 @ nodes_to_split_2
+             BatList.shuffle (nodes_to_split_1 @ nodes_to_split_2)
            else if nodes_to_split_1 = [] then nodes_to_split_2
            else nodes_to_split_1
          in

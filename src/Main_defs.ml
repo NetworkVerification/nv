@@ -130,6 +130,7 @@ let compress file info decls cfg networkOp =
     smt_config.failures <- Some k;
 
   FailuresAbstraction.refinement_breadth := cfg.depth;
+  FailuresAbstraction.counterexample_refinement_breadth := cfg.depth;
   (*printing concrete graph *)
   (* if cfg.draw then *)
   (*   begin *)

@@ -38,7 +38,8 @@ module FailuresAbstraction :
       int ->
     (* (AbstractionMap.abstractionMap * AdjGraph.EdgeSet.t) option *)
       AbstractionMap.abstractionMap option
-
+      
+    val counterexample_refinement_breadth : int ref
     val refinement_breadth : int ref
 
     val refineK : AdjGraph.t -> AbstractionMap.abstractionMap ->
