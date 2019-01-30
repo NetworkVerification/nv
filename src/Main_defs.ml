@@ -149,7 +149,7 @@ let compress file info decls cfg networkOp =
     (* build abstract network *)
     let failVars, decls =
       time_profile "Build abstract network"
-        (fun () -> buildAbstractNetwork f mergeMap transMap slice k) in
+                   (fun () -> buildAbstractNetwork f mergeMap transMap slice k) in
     smt_config.multiplicities <- getEdgeMultiplicities slice.graph f failVars;
     (* let groups = AbstractionMap.printAbstractGroups f "\n" in *)
     let aedges = BatList.length (oget (get_edges decls)) in
@@ -182,15 +182,18 @@ let compress file info decls cfg networkOp =
   BatList.iter
     (fun slice ->
       Console.show_message (Slicing.printPrefixes slice.prefixes)
-        Console.T.Green "Checking SRP for prefixes";
+                           Console.T.Green "Checking SRP for prefixes";
       (* find source nodes *)
       let n = AdjGraph.num_vertices slice.graph in
       let sources =
         Slicing.findRelevantNodes (partialEvalOverNodes n slice.assertion) in
-      (* partially evaluate the functions of the network *)
+      (* partially evaluate the functions of the network. *)
+      (* TODO, this should be done outside of this loop, maybe just redone here *)
       let transMap =
         Profile.time_profile "partial eval trans"
-                             (fun () -> Abstraction.partialEvalTrans slice.graph slice.trans) in
+                             (fun () -> Abstraction.partialEvalTrans
+                                          slice.graph slice.trans)
+      in
       let mergeMap = Abstraction.partialEvalMerge slice.graph slice.merge in
       (* compute the bonsai abstraction *)
 

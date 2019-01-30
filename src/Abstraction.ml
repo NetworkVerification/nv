@@ -1040,7 +1040,7 @@ module FailuresAbstraction =
                      failures 0
       in
       if (total_failures <= k) then
-        None
+          None
       else
         begin
           (* Find the set of unreachable nodes *)
@@ -1064,23 +1064,23 @@ module FailuresAbstraction =
           in
           let fwdMap = buildForwardMap fbonsai f in
           (* find all the unused edges exploiting symmetry between transfer functions *)
-          (* let unused_edges_sym =
-           *   EdgeSet.fold (fun (u,v) acc ->
-           *       let vorig = get_orig_group fbonsai f v in
-           *       let vs = GroupMap.find vorig fwdMap in
-           *       BatList.fold_left (fun acc v' ->
-           *           EdgeSet.add (u,v') acc) acc vs) unused_edges EdgeSet.empty
-           * in *)
+          let unused_edges_sym =
+            EdgeSet.fold (fun (u,v) acc ->
+                let vorig = get_orig_group fbonsai f v in
+                let vs = GroupMap.find vorig fwdMap in
+                BatList.fold_left (fun acc v' ->
+                    EdgeSet.add (u,v') acc) acc vs) unused_edges EdgeSet.empty
+          in
           (* find all potentially unreachable nodes based on symmetries *)
-          (* let unreachable_sym =
-           *   VertexSet.fold (fun u acc ->
-           *       let uorig = get_orig_group fbonsai f u in
-           *       let us = GroupMap.find uorig fwdMap in
-           *       BatList.fold_left (fun acc u ->
-           *           VertexSet.add u acc) acc us) unreachable VertexSet.empty
-           * in *)
-          let unused_edges_sym = unused_edges in
-          let unreachable_sym = unreachable in
+          let unreachable_sym =
+            VertexSet.fold (fun u acc ->
+                let uorig = get_orig_group fbonsai f u in
+                let us = GroupMap.find uorig fwdMap in
+                BatList.fold_left (fun acc u ->
+                    VertexSet.add u acc) acc us) unreachable VertexSet.empty
+          in
+          (* let unused_edges_sym = unused_edges in *)
+          (* let unreachable_sym = unreachable in *)
           (* find which source nodes don't have enough paths *)
           let todo_hat = VertexSet.map (fun u -> getId f u) todo in
           let todo_hat = VertexSet.inter unreachable_sym todo_hat in
