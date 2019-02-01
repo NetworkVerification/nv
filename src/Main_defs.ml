@@ -151,9 +151,9 @@ let compress file info decls cfg networkOp =
       time_profile "Build abstract network"
                    (fun () -> buildAbstractNetwork f mergeMap transMap slice k) in
     smt_config.multiplicities <- getEdgeMultiplicities slice.graph f failVars;
-    let groups = AbstractionMap.printAbstractGroups f "\n" in
+    (* let groups = AbstractionMap.printAbstractGroups f "\n" in *)
     let aedges = BatList.length (oget (get_edges decls)) in
-    (* let groups = Printf.sprintf "%d/%d" (AbstractionMap.normalized_size f) aedges in *)
+    let groups = Printf.sprintf "%d/%d" (AbstractionMap.normalized_size f) aedges in
     Console.show_message groups Console.T.Blue "Number of abstract nodes/edges";
     match networkOp cfg info decls with
     | Success _, _ ->
