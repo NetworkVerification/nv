@@ -214,6 +214,20 @@ let compress file info decls cfg networkOp =
       loop fbonsai f slice sources mergeMap transMap k 1
     ) (Slicing.createSlices info decls)
 
+let checkPolicy info cfg file ds =
+  let ds, f = Renaming.alpha_convert_declarations ds in
+  let fs = [f] in
+  let symbolics = get_symbolics ds in
+  let trans = get_trans ds |> oget in
+  let merge = get_merge ds |> oget in
+  let aty = get_attr_type ds |> oget in
+  let nodes = get_nodes ds |> oget in
+  let edges = get_edges ds |> oget in
+  CheckProps.checkMonotonicity info cfg.query (smt_query_file file) symbolics
+                               trans merge aty nodes edges
+  
+  
+
 let parse_input (args : string array)
   : Cmdline.t * Console.info * string * Syntax.declarations =
   let cfg, rest = argparse default "nv" args in
@@ -224,39 +238,17 @@ let parse_input (args : string array)
   let decls = Typing.infer_declarations info ds in
   Typing.check_annot_decls decls ;
   Wellformed.check info decls ;
-    let decls =
-    if cfg.inline || cfg.smt then
+  let decls =
+    if cfg.inline || cfg.smt || cfg.check_monotonicity then
       time_profile "Inlining" (
                      fun () -> Inline.inline_declarations decls |>
                                  Typing.infer_declarations info)
     else
       decls
-    in
+  in
   let decls = if cfg.unroll then
                 time_profile "Map unrolling" (fun () -> MapUnrolling.unroll info decls) |>
                   Typing.infer_declarations info 
               else decls
   in
   (cfg, info, file, decls)
-
-
-
-
-      (* Visitors.iter_exp_decls (fun d e -> *)
-    (*                  match e.ety with *)
-    (*   | Some ty -> *)
-    (*      (\* Printf.printf "typ:%s\n" (Printing.ty_to_string ty); *\) *)
-    (*      (match hasTvar (get_inner_type ty) with *)
-    (*      | true -> failwith ("has tvar" ^ (declaration_to_string d)) *)
-    (*      | _ -> ()) *)
-    (*   | None -> *)
-    (*      (match e.e with *)
-    (*      | EVal v -> *)
-    (*         (match v.vty with *)
-    (*          | Some ty -> *)
-    (*             (match hasTvar (get_inner_type ty) with *)
-    (*              | true -> failwith ("has tvar" ^ ( declaration_to_string d)) *)
-    (*              | _ -> ()) *)
-    (*          | None -> ()) *)
-    (*      | _ -> ())) decls; *)
-    (* failwith "end"; *)

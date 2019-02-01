@@ -382,7 +382,7 @@ let init node =
    | None -> None
    | Some (ad,lp,cost,med) -> (
    match edge with
-   | (4,8) -> Some (ad, lp, cost + 1, med)
+   | (4,8) -> Some (ad, lp+100, cost + 1, med)
    | (6,3) -> Some (ad, lp, cost + 1, med)
    | (5,15) -> Some (ad, lp, cost + 1, med)
    | (4,13) -> Some (ad, lp, cost + 1, med)

@@ -19,6 +19,7 @@ type t =
   ; unbox: bool                        (** unboxes options and flattens tuples     *)
   ; draw: bool                         (** emits a .jpg file of the graph          *)
   ; depth: int                         (** search depth for refinement procedure   *)
+  ; check_monotonicity: bool           (** checks monotonicity of trans function   *)
   }
 [@@deriving
   show
@@ -45,7 +46,9 @@ let default =
   ; unroll= false
   ; unbox = false
   ; draw=false
-  ; depth=20}
+  ; depth=20
+  ; check_monotonicity=false
+  }
 
 let cfg = ref default
 

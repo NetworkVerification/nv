@@ -31,6 +31,11 @@ val relevantPrefixes: (Integer.t, Syntax.exp) Hashtbl.t -> PrefixSet.t
 (** [partialEvalOverNodes n e] returns a table that maps each node to
    its respective expression *)
 val partialEvalOverNodes: Integer.t -> Syntax.exp -> (Integer.t, Syntax.exp) Hashtbl.t
+
+(** [partialEvalOverNodes edges e] returns a table that maps each edge to
+   its respective expression *)
+val partialEvalOverEdges: AdjGraph.Edge.t list -> Syntax.exp ->
+                          (AdjGraph.Edge.t, Syntax.exp) Hashtbl.t
   
 (** [findInitialSlices n] returns a map from prefix to set of nodes,
    with the property that each node in the set announces this

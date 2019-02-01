@@ -43,6 +43,14 @@ let partialEvalOverNodes (n : Integer.t) (e: Syntax.exp) =
       Hashtbl.add tbl u initu) n ();
   tbl
 
+let partialEvalOverEdges (edges : AdjGraph.Edge.t list) (e: Syntax.exp) = 
+  let edge_to_val edge = vtuple [vint (fst edge); vint (snd edge)] in
+  let tbl = Hashtbl.create (BatList.length edges) in
+  BatList.iter (fun edge ->
+      let ptrans = Interp.interp_partial_fun e [edge_to_val edge] in
+      Hashtbl.add tbl edge ptrans) edges;
+  tbl
+
 let build_prefix_map (u : Integer.t)
                      (prefixes: PrefixSet.t)
                      (acc : AdjGraph.VertexSet.t PrefixMap.t):
