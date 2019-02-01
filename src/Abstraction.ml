@@ -1114,12 +1114,12 @@ module FailuresAbstraction =
            try (findNPred (fun us ->
                     BatList.for_all (fun u ->
                         AbstractNode.cardinal (getGroupById f u) > 1) us)
-                          reachAbs 2)
+                          reachAbs 1)
            with Not_found ->
                  try (findNPred (fun us ->
                           BatList.for_all (fun u ->
                               AbstractNode.cardinal (getGroupById f u) > 1) us)
-                                unreachAbs 2)
+                                unreachAbs 1)
                  with Not_found ->
                        match choose_random_splittable f cuts with
                        | [] -> []
