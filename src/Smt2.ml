@@ -4,6 +4,7 @@ open Collections
 open Unsigned
 open Syntax
 open Solution
+open Slicing
 open SmtUtil
 open Profile
 
@@ -38,15 +39,15 @@ let smt_config : smt_options =
     multiplicities = Collections.StringMap.empty
   }
 
-let get_requires_no_failures ds =
-  List.filter (fun e -> match e.e with
+let get_requires_no_failures req =
+  BatList.filter (fun e -> match e.e with
                         | EOp (AtMost _, _) -> false
-                        | _ -> true) (get_requires ds)
+                        | _ -> true) req
   
-let get_requires_failures ds =
-  List.filter (fun e -> match e.e with
+let get_requires_failures req =
+  BatList.filter (fun e -> match e.e with
                         | EOp (AtMost _, _) -> true
-                        | _ -> false) (get_requires ds)
+                        | _ -> false) req
   |> List.hd
   
 let printVerbose (msg: string) (descr: string) (span: Span.t) info =
@@ -1205,7 +1206,7 @@ let init_solver symbolics =
 
 module type Encoding =
   sig
-    val encode_z3: declarations -> 'a list -> smt_env
+    val encode_z3: Syntax.network -> 'a list -> smt_env
   end
   
 module ClassicEncoding (E: ExprEncoding): Encoding =
@@ -1307,24 +1308,15 @@ module ClassicEncoding (E: ExprEncoding): Encoding =
       in
       loop assertion []
 
-    let encode_z3 (ds: declarations) sym_vars : smt_env =
-      let env = init_solver (get_symbolics ds) in
-      let eassert = get_assert ds in
-      let emerge, etrans, einit, nodes, edges, aty =
-        match
-          ( get_merge ds
-          , get_trans ds
-          , get_init ds
-          , get_nodes ds
-          , get_edges ds
-          , get_attr_type ds )
-        with
-        | Some emerge, Some etrans, Some einit, Some n, Some es, Some aty ->
-           (emerge, etrans, einit, n, es, aty)
-        | _ ->
-           Console.error
-             "missing definition of nodes, edges, merge, trans or init"
-      in
+    let encode_z3 (net: Syntax.network) sym_vars : smt_env =
+      let env = init_solver net.symbolics in
+      let einit = net.init in
+      let eassert = net.assertion in
+      let emerge = net.merge in
+      let etrans = net.trans in
+      let nodes = (AdjGraph.num_vertices net.graph) in
+      let edges = (AdjGraph.edges net.graph) in
+      let aty = net.attr_type in
       (* map each node to the init result variable *)
       let init_map = ref AdjGraph.VertexMap.empty in
       for i = 0 to Integer.to_int nodes - 1 do
@@ -1441,9 +1433,9 @@ module ClassicEncoding (E: ExprEncoding): Encoding =
              all_good :=
                mk_and !all_good assertion_holds.t
            done ;
-           add_constraint env (mk_term (mk_not !all_good))) ;
+           add_constraint env (mk_term (mk_not !all_good)));
       (* add the symbolic variable constraints *)
-      add_symbolic_constraints env (get_requires ds) (env.symbolics (*@ sym_vars*));
+      add_symbolic_constraints env net.requires (env.symbolics (*@ sym_vars*));
       env
   end
 
@@ -1499,24 +1491,15 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
       
     (** An alternative SMT encoding, where we build an NV expression for
    each label, partially evaluate it and then encode it *)
-    let encode_z3 (ds: declarations) sym_vars : smt_env =
-      let env = init_solver (get_symbolics ds) in
-      let eassert = get_assert ds in
-      let emerge, etrans, einit, nodes, edges, aty =
-        match
-          ( get_merge ds
-          , get_trans ds
-          , get_init ds
-          , get_nodes ds
-          , get_edges ds
-          , get_attr_type ds )
-        with
-        | Some emerge, Some etrans, Some einit, Some n, Some es, Some aty ->
-           (emerge, etrans, einit, n, es, aty)
-        | _ ->
-           Console.error
-             "missing definition of nodes, edges, merge, trans or init"
-      in
+    let encode_z3 (net: Syntax.network) sym_vars : smt_env =
+      let env = init_solver net.symbolics in
+      let einit = net.init in
+      let eassert = net.assertion in
+      let emerge = net.merge in
+      let etrans = net.trans in
+      let nodes = (AdjGraph.num_vertices net.graph) in
+      let edges = (AdjGraph.edges net.graph) in
+      let aty = net.attr_type in
       (* Create a map from nodes to smt variables denoting the label of the node*)
       let labelling =
         AdjGraph.fold_vertices (fun u acc ->
@@ -1569,25 +1552,25 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
       ( match eassert with
         | None -> ()
         | Some eassert ->
-           let all_good = ref (mk_bool true) in
-           for i = 0 to Integer.to_int nodes - 1 do
-             let label =
-               AdjGraph.VertexMap.find (Integer.of_int i) labelling
-             in
-             let result, x =
-               encode_z3_assert (assert_var (Integer.of_int i)) env (Integer.of_int i) eassert
-             in
-             BatList.iter2 (fun x label ->
-                 add_constraint env (mk_term (mk_eq x.t label.t))) x (to_list label);
-             let assertion_holds =
-               lift1 (fun result -> mk_eq result.t (mk_bool true) |> mk_term) result
-               |> combine_term in
-             all_good :=
-               mk_and !all_good assertion_holds.t
-           done ;
-           add_constraint env (mk_term (mk_not !all_good))) ;
+      let all_good = ref (mk_bool true) in
+      for i = 0 to Integer.to_int nodes - 1 do
+        let label =
+          AdjGraph.VertexMap.find (Integer.of_int i) labelling
+        in
+        let result, x =
+          encode_z3_assert (assert_var (Integer.of_int i)) env (Integer.of_int i) eassert
+        in
+        BatList.iter2 (fun x label ->
+            add_constraint env (mk_term (mk_eq x.t label.t))) x (to_list label);
+        let assertion_holds =
+          lift1 (fun result -> mk_eq result.t (mk_bool true) |> mk_term) result
+          |> combine_term in
+        all_good :=
+          mk_and !all_good assertion_holds.t
+      done ;
+      add_constraint env (mk_term (mk_not !all_good)));
       (* add the symbolic variable constraints *)
-      add_symbolic_constraints env (get_requires ds) (env.symbolics (*@ sym_vars*));
+      add_symbolic_constraints env net.requires (env.symbolics (*@ sym_vars*));
       env
   end
       
@@ -1840,14 +1823,10 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
       | false -> (module Boxed : ExprEncoding)
 
     (* Asks the SMT solver to return a model and translates it to NV lang *)
-    let ask_for_model query chan info env solver renaming ds =
+    let ask_for_model query chan info env solver renaming net =
       (* build a counterexample based on the model provided by Z3 *)
-      let num_nodes =
-        match get_nodes ds with
-        | Some n -> n
-        | _ -> failwith "internal error (encode)"
-      in
-      let eassert = get_assert ds in
+      let num_nodes = AdjGraph.num_vertices net.graph in
+      let eassert = net.assertion in
       let model = eval_model env.symbolics num_nodes eassert renaming in
       let model_question = commands_to_smt smt_config.verbose info model in
       ask_solver solver model_question;
@@ -1868,7 +1847,7 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
                 
     (** Asks the smt solver whether the query was unsat or not
      and returns a model if it was sat.*)
-    let get_sat query chan info env solver renaming ds reply =
+    let get_sat query chan info env solver renaming net reply =
       ask_solver solver "(get-info :all-statistics)\n
                          (echo \"end stats\")\n";
       let rs = get_reply_until "end stats" solver in
@@ -1881,13 +1860,14 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
       match reply with
       | UNSAT -> Unsat
       | SAT ->
-         ask_for_model query chan info env solver renaming ds
+         ask_for_model query chan info env solver renaming net
       | UNKNOWN ->
          Unknown
       | _ -> failwith "unexpected answer from solver\n"
 
-    let refineModelMinimizeFailures (model: Solution.t) info query chan solve renaming env ds =
-      match (get_requires_failures ds).e with
+    let refineModelMinimizeFailures (model: Solution.t) info query chan
+                                    solve renaming env net =
+      match (get_requires_failures net.requires).e with
       | EOp(AtMost n, [e1;e2;e3]) ->
          (match e1.e with
           | ETuple es ->
@@ -1958,9 +1938,10 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
          in
          Some (failed ^ notFailed)
          
-      let refineModel (model : Solution.t) info query chan env solver renaming ds =
+    let refineModel (model : Solution.t) info query chan env solver renaming
+                    (net : Syntax.network) =
         let refiner = refineModelMinimizeFailures in
-        match refiner model info query chan solver renaming env ds with
+        match refiner model info query chan solver renaming env net with
         | None ->
            (* Console.warning "Model was not refined\n"; *)
            Sat model (* no refinement can occur *)
@@ -1972,7 +1953,7 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
              (printQuery chan q);
            ask_solver solver q;
            let reply = solver |> parse_reply in
-           let isSat = get_sat query chan info env solver renaming ds reply in
+           let isSat = get_sat query chan info env solver renaming net reply in
            (* if the second query was unsat, return the first counterexample *)
            match isSat with
            | Sat newModel ->
@@ -1980,7 +1961,7 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
               isSat
            | _ -> Sat model
 
-    let solve info query chan ?symbolic_vars ?(params=[]) ds =
+    let solve info query chan ?symbolic_vars ?(params=[]) net =
       let sym_vars =
         match symbolic_vars with None -> [] | Some ls -> ls
       in
@@ -1995,7 +1976,7 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
       (* compute the encoding of the network *)
       let renaming, env =
         time_profile "Encoding network"
-          (fun () -> let env = Enc.encode_z3 ds sym_vars in
+          (fun () -> let env = Enc.encode_z3 net sym_vars in
                      if smt_config.optimize then propagate_eqs env
                      else StringMap.empty, env)
       in
@@ -2017,7 +1998,7 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
            printQuery chan q;
          ask_solver solver q;
          let reply = solver |> parse_reply in
-         get_sat query chan info env solver renaming ds reply
+         get_sat query chan info env solver renaming net reply
       | Some k ->
          let q = check_sat info in
          if query then
@@ -2026,7 +2007,7 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
          ask_solver solver q;
          let reply = solver |> parse_reply in
          (* check the reply *)
-         let isSat = get_sat query chan info env solver renaming ds reply in
+         let isSat = get_sat query chan info env solver renaming net reply in
          (* In order to minimize refinement iterations, once we get a
             counter-example we try to minimize it by only keeping failures
             on single links. If it works then we found an actual
@@ -2036,7 +2017,7 @@ module FunctionalEncoding (E: ExprEncoding) : Encoding =
          | Unsat -> Unsat
          | Unknown -> Unknown
          | Sat model1 ->
-            refineModel model1 info query chan env solver renaming ds
+            refineModel model1 info query chan env solver renaming net
            
    
 module CheckProps =
@@ -2085,19 +2066,19 @@ module CheckProps =
          (result, xstr)
       | _ -> failwith "internal error"
            
-    let checkMonotonicity info query chan symbolics trans merge aty nodes edges =
-      let checka = Boxed.create_strings "checka" aty in
+    let checkMonotonicity info query chan net =
+      let checka = Boxed.create_strings "checka" net.attr_type in
       let checka_var = Boxed.lift1 Var.create checka in
-      let transTable = partialEvalOverEdges edges trans in
-      let mergeTable = partialEvalOverNodes nodes merge in
+      let transTable = partialEvalOverEdges (AdjGraph.edges net.graph) net.trans in
+      let mergeTable = partialEvalOverNodes (AdjGraph.num_vertices net.graph) net.merge in
       let solver = start_solver [] in
       let unbox x = Boxed.to_list x |> List.hd in
       Hashtbl.iter (fun edge trans ->
-          let env = init_solver symbolics in
-          Boxed.add_symbolic env checka_var aty;
+          let env = init_solver net.symbolics in
+          Boxed.add_symbolic env checka_var net.attr_type;
           let checka =
             Boxed.lift2 (fun checka s -> mk_constant env (Boxed.create_vars env "" checka) s)
-              checka_var (Boxed.ty_to_sorts aty)
+              checka_var (Boxed.ty_to_sorts net.attr_type)
             |> unbox
           in
           let mergeExpr = Hashtbl.find mergeTable (snd edge) in
@@ -2115,14 +2096,14 @@ module CheckProps =
           (* add merge constraints *)
           add_constraint env (mk_term (mk_eq x.t checka.t));
           add_constraint env (mk_term (mk_eq y.t trans.t));     
-          let merge_nv = Boxed.create_strings "merge" aty in
+          let merge_nv = Boxed.create_strings "merge" net.attr_type in
           let merge_var = Boxed.lift1 Var.create merge_nv in
           let merge_smt =
             Boxed.lift2 (fun merge s -> mk_constant env (Boxed.create_vars env "" merge) s)
-              merge_var (Boxed.ty_to_sorts aty)
+              merge_var (Boxed.ty_to_sorts net.attr_type)
             |> unbox
           in
-          Boxed.add_symbolic env merge_var aty;
+          Boxed.add_symbolic env merge_var net.attr_type;
           (* merge result is equal to some nv variable *)
           add_constraint env (mk_term (mk_eq merge_smt.t merge_result.t)); 
           let old_ospf_var = Var.create "o" in
@@ -2131,7 +2112,7 @@ module CheckProps =
           let bgp_var = Var.create "bnew" in
           (* encode the property in NV *)
           let property_exp =
-            aexp(ematch (aexp(evar (unbox merge_var), Some aty, Span.default))
+            aexp(ematch (aexp(evar (unbox merge_var), Some net.attr_type, Span.default))
                    [(PTuple [PWild; PWild; PVar ospf_var; PVar bgp_var; PWild],
                      aexp(eop And
                             [aexp(eop UEq [evar ospf_var; evar old_ospf_var],
@@ -2144,7 +2125,7 @@ module CheckProps =
                  Some TBool, Span.default)
           in
           let property =
-            aexp(ematch (aexp (evar (unbox checka_var), Some aty, Span.default))
+            aexp(ematch (aexp (evar (unbox checka_var), Some net.attr_type, Span.default))
                    [PTuple [PWild; PWild; PVar old_ospf_var; PVar old_bgp_var; PWild],
                     property_exp],
                  Some TBool, Span.default)

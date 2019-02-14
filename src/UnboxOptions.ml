@@ -1,6 +1,6 @@
 open Collections
 open Syntax
-
+open Slicing
 
 let rec empty_pattern ty =
   match ty with
@@ -159,3 +159,24 @@ let unbox_decl d =
   | DNodes _ | DEdges _ -> d
 
 let unbox ds = BatList.map unbox_decl ds
+
+let unbox_net net =
+  { attr_type = unbox_ty net.attr_type;
+    init = unbox_exp net.init;
+    trans = unbox_exp net.trans;
+    merge = unbox_exp net.merge;
+    assertion = (match net.assertion with
+                 | None -> None
+                 | Some e -> Some (unbox_exp e));
+    symbolics = BatList.map (fun (x,e) ->
+                    match e with
+                    | Ty ty -> (x, Ty (unbox_ty ty))
+                    | Exp e -> (x, Exp (unbox_exp e))) net.symbolics;
+    defs = BatList.map (fun (x, oty, e) -> (x, Some (unbox_ty (oget oty)), unbox_exp e))
+                       net.defs;
+    requires = BatList.map unbox_exp net.requires;
+    graph = net.graph
+  }
+                                          
+                            
+                          

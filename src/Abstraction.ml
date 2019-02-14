@@ -4,15 +4,14 @@ open Unsigned
 open Console
 open Srp
 open Hashtbl
+open Failures
 open Syntax
+open Slicing
 open BatSet
 
 let debugAbstraction = ref false
 
 exception Cutoff
-
-let zero = Integer.create ~value:0 ~size:32
-let one = Integer.create ~value:1 ~size:32
                                        
 (** Sets of Abstract Nodes *)
 module AbstractNodeSet : BatSet.S with type elt = AbstractNode.t = BatSet.Make(AbstractNode)
@@ -189,7 +188,7 @@ module BuildAbstractNetwork =
       let rec edges uhat =
         if uhat = n then EdgeSet.empty
         else
-          EdgeSet.union (findAbstractEdges g f uhat) (edges (Integer.succ uhat))        
+          EdgeSet.union (findAbstractEdges g f uhat) (edges (Integer.succ uhat))
       in
       (n, EdgeSet.to_list (edges zero))
 
@@ -199,79 +198,6 @@ module BuildAbstractNetwork =
       fold_vertices (fun uhat ag ->
           let es = findAbstractEdges g f uhat in
           EdgeSet.fold (fun e ag -> add_edge ag e) es ag) n ag
-      
-    (* Helper function that constructs an MGet expression *)
-    let mget (m : exp) (i : exp) : exp =
-      eop MGet [m; i]
-
-    let failuresConstraint_arith (k: int) (aedges : Edge.t list)
-                                 (failuresMap: Var.t EdgeMap.t) : Syntax.exp =
-      (*building the requires clause that requires
-        fail1 + fail2 + .. <= k *)
-      let bool2int_exp arg =
-        aexp (eif arg (e_val (vint one)) (e_val (vint zero)),
-              Some Typing.node_ty, Span.default)
-      in
-      let failuresSum =
-        BatList.fold_left (fun acc (uhat, vhat) ->
-            aexp (eop (UAdd 32)
-                      [(bool2int_exp (evar (EdgeMap.find (uhat, vhat) failuresMap))); acc],
-                  Some Typing.node_ty, Span.default))
-                       (e_val (vint zero)) aedges in
-      aexp(eop (ULeq 32)
-               [failuresSum;
-                e_val (vint (Integer.create ~value:k ~size:32))],
-           Some TBool, Span.default)
-      
-    let failuresConstraint_pb (k: int) (failuresMap: Var.t EdgeMap.t) : Syntax.exp =
-      let arg1 = aexp(etuple (EdgeMap.fold (fun _ fv acc ->
-                                  (aexp (evar fv, Some TBool, Span.default)) :: acc)
-                                           failuresMap []),
-                      Some (TTuple (BatList.init (EdgeMap.cardinal failuresMap)
-                                                 (fun _ -> TBool))),
-                      Span.default
-                     )
-      in
-      let arg2 =
-        aexp(etuple (EdgeMap.fold (fun _ _ acc ->
-                         (exp_of_value
-                            (avalue (vint (Integer.of_int 1),
-                                     Some (TInt 32),
-                                     Span.default))) :: acc)
-                                  failuresMap []),
-             Some (TTuple (BatList.init (EdgeMap.cardinal failuresMap)
-                                        (fun _ -> TInt 32))),
-             Span.default
-            )
-      in
-      let arg3 = exp_of_value (avalue (vint (Integer.of_int k),
-                                       Some (TInt 32),
-                                       Span.default))
-      in
-      aexp (eop (AtMost (EdgeMap.cardinal failuresMap)) [arg1; arg2; arg3],
-            Some TBool,
-            Span.default)
-
-      
-    let buildSymbolicFailures (aedges : Edge.t list) (k : int) =
-      (* symbolic variables of failures, one for each abstract edge *)
-      let failuresMap =
-        BatList.fold_left (fun acc (u,v) ->
-            let e = Printf.sprintf "%s-%s" (Vertex.printVertex u) (Vertex.printVertex v) in
-            let failVar = Var.fresh ("failed-" ^ e) in
-            EdgeMap.add (u,v) failVar acc) EdgeMap.empty aedges in
-
-      let failures_leq_k = failuresConstraint_pb k failuresMap in
-      (*build and returning the declarations *)
-      (failuresMap, (EdgeMap.fold (fun _ fvar acc ->
-                         (DSymbolic (fvar, Ty TBool) :: acc)) failuresMap
-                                 [DRequire failures_leq_k]))
-
-    let deconstructFun exp =
-      match exp.e with
-      | EFun f ->
-         f
-      | _ -> failwith "expected a function"
            
     (* get all the concrete neighbors v of u s.t. f(v) = vhat *)
     let getNeighborsInVhat f g u vhat =
@@ -459,25 +385,30 @@ module BuildAbstractNetwork =
     let buildAbstractNetwork (f: abstractionMap)
                              (mergeMap: (Vertex.t, int * Syntax.exp) Hashtbl.t)
                              (transMap: (Edge.t, int * Syntax.exp) Hashtbl.t)
-                             (slice: Slicing.network)
+                             (slice: Slicing.network_slice)
                              (k: int) =
       (* build the abstract graph based on the abstraction function *)
-      let (n, edgeshat) = buildAbstractAdjGraphDecls slice.graph f in
+      let absGraph= buildAbstractAdjGraph slice.net.graph f in
+      let edgeshat = AdjGraph.edges absGraph in
+      let n = AdjGraph.num_vertices absGraph in
       (* build the symbolic representation of failures *)
       (*TODO: make this a separate transformation?*)
-      let (failuresMap, symbolics) = buildSymbolicFailures edgeshat k in
+      let (failuresMap, symbolics, requires) = buildSymbolicFailures edgeshat k in
       (* build the abstract merge function *)
       let mergehat = buildAbstractMerge n mergeMap f in
       (* build the abstract transfer function *)
       let transhat =
-        buildAbstractTrans slice.graph edgeshat transMap slice.attr_type failuresMap f
+        buildAbstractTrans slice.net.graph edgeshat
+                           transMap slice.net.attr_type failuresMap f
       in
       (* build the abstract init function *)
-      let initMap = Slicing.partialEvalOverNodes (num_vertices slice.graph) slice.init in
-      let inithat = buildAbstractInit slice.destinations initMap slice.attr_type f in
+      let initMap =
+        Slicing.partialEvalOverNodes (num_vertices slice.net.graph) slice.net.init
+      in
+      let inithat = buildAbstractInit slice.destinations initMap slice.net.attr_type f in
       (* build the abstract assert function *)
       let assertMap =
-        Slicing.partialEvalOverNodes (num_vertices slice.graph) slice.assertion
+        Slicing.partialEvalOverNodes (num_vertices slice.net.graph) (oget slice.net.assertion)
       in
       let asserthat = buildAbstractAssert assertMap f in
       if !debugAbstraction then
@@ -485,10 +416,17 @@ module BuildAbstractNetwork =
           let agraph = AdjGraph.add_edges (AdjGraph.create n) edgeshat in
           AdjGraph.print agraph
         end;
-      (failuresMap, (DATy slice.attr_type) :: (DNodes n) :: (DEdges edgeshat) :: symbolics
-                    @ slice.symbolics
-                    @ ((DMerge mergehat) :: (DTrans transhat) :: (DInit inithat)
-                       :: [DAssert asserthat]))
+      (failuresMap,
+       { attr_type = slice.net.attr_type;
+         init = inithat;
+         trans = transhat;
+         merge = mergehat;
+         assertion = Some asserthat;
+         symbolics = symbolics @ slice.net.symbolics;
+         defs = [];
+         requires = requires :: slice.net.requires;
+         graph = absGraph
+       })
 
     let abstractToConcreteEdge (g: AdjGraph.t) (f: abstractionMap) (ehat: Edge.t) : EdgeSet.t =
       let (uhat, vhat) = ehat in

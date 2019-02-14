@@ -8,14 +8,8 @@ module PrefixMap : BatMap.S with type key = Prefix.t
 module PrefixSetSet : BatSet.S with type elt = PrefixSet.t
 
 (** The type of network slices *)
-type network =
-  { attr_type    : Syntax.ty;
-    init         : Syntax.exp;
-    trans        : Syntax.exp;
-    merge        : Syntax.exp;
-    assertion    : Syntax.exp;
-    symbolics    : Syntax.declarations;
-    graph        : AdjGraph.t;
+type network_slice =
+  { net          : Syntax.network;
     prefixes     : PrefixSet.t;
     destinations : AdjGraph.VertexSet.t
   }
@@ -47,4 +41,6 @@ val findRelevantNodes: (Integer.t, Syntax.exp) Hashtbl.t -> AdjGraph.VertexSet.t
   
 val groupPrefixesByVertices: AdjGraph.VertexSet.t PrefixMap.t -> PrefixSetSet.t
 
-val createSlices: Console.info -> Syntax.declarations -> network list
+val createNetwork: Syntax.declarations -> Syntax.network
+  
+val createSlices: Console.info -> Syntax.network -> network_slice list

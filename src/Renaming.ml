@@ -1,5 +1,6 @@
 open Collections
 open Syntax
+open Slicing
 
 (* Maps fresh names back to the original names *)
 let map_back bmap new_name old_name =
@@ -98,7 +99,7 @@ let alpha_convert_declaration bmap (env: Var.t Env.t)
   | DAssert e -> (env, DAssert (alpha_convert_exp env e))
   | DRequire e -> (env, DRequire (alpha_convert_exp env e))
   | DATy _ | DNodes _ | DEdges _ -> (env, d)
-
+                                  
 let rec alpha_convert_aux bmap env (ds: declarations) : declarations =
   match ds with
   | [] -> []
@@ -122,6 +123,47 @@ let rec alpha_convert_declarations (ds: declarations) =
   let bmap = ref StringMap.empty in
   let prog = alpha_convert_aux bmap Env.empty ds in
   (prog, adjust_solution !bmap)
+
+let alpha_convert_net net =
+  Var.reset () ;
+  let bmap = ref StringMap.empty in
+  let env = Env.empty in
+  let env, symbolics =
+    BatList.fold_right (fun (x, ty_exp) (env, acc) ->
+        match ty_exp with
+        |  Exp e ->
+            let y = fresh x in
+            map_back bmap y x ;
+            let env = Env.update env x y in
+            let e = alpha_convert_exp env e in
+            (env, (y, Exp e) :: acc)
+        | Ty ty ->
+           let env = Env.update env x x in
+           (env, (x, Ty ty) :: acc)) net.symbolics (env, [])
+  in
+  let env, defs =
+    BatList.fold_right (fun (x, tyo, exp) (env, acc) ->
+        let y = fresh x in
+        let env = Env.update env x y in
+        let e = alpha_convert_exp env exp in
+        (env, (y, tyo, e) :: acc)) net.defs (env, [])
+  in
+  let net' =
+    { attr_type = net.attr_type;
+      init = alpha_convert_exp env net.init;
+      trans = alpha_convert_exp env net.trans;
+      merge = alpha_convert_exp env net.merge;
+      assertion = (match net.assertion with
+                   | None -> None
+                   | Some e -> Some (alpha_convert_exp env e));
+      symbolics = symbolics;
+      defs = defs;
+      requires = BatList.map (alpha_convert_exp env) net.requires;
+      graph = net.graph
+    }
+  in
+  (net', adjust_solution !bmap)
+  
 
 module Tests =
   struct
