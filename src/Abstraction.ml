@@ -1079,8 +1079,8 @@ module FailuresAbstraction =
                 BatList.fold_left (fun acc u ->
                     VertexSet.add u acc) acc us) unreachable VertexSet.empty
           in
-          (* let unused_edges_sym = unused_edges in *)
-          (* let unreachable_sym = unreachable in *)
+          (* let unused_edges_sym = unused_edges in
+           * let unreachable_sym = unreachable in *)
           (* find which source nodes don't have enough paths *)
           let todo_hat = VertexSet.map (fun u -> getId f u) todo in
           let todo_hat = VertexSet.inter unreachable_sym todo_hat in
