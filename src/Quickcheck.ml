@@ -1,14 +1,15 @@
 open Collections
 open Generators
 open Syntax
-
+open Slicing
+   
 let default_max_map_size = 4
 
 type check_info =
-  { decls: declarations
+  { net: network
   ; iterations: int
   ; num_rejected: int ref
-  ; generator: declarations -> declarations * declarations option }
+  ; generator: network -> network * network option }
 
 let update_value map v =
   try
@@ -21,15 +22,15 @@ let update_value map v =
     map := TypeMap.add ty (ValueSet.add v vs) !map
   with _ -> ()
 
-let collect_all_values ds : ValueSet.t TypeMap.t =
+let collect_all_values net : ValueSet.t TypeMap.t =
   let map = ref TypeMap.empty in
-  Visitors.iter_exp_decls
-    (fun _ e ->
+  Visitors.iter_exp_net
+    (fun e ->
       if Syntax.is_value e then
         let v = Syntax.to_value e in
         update_value map v
       else () )
-    ds ;
+    net ;
   !map
 
 let check_assertions (sol: Solution.t) =
@@ -41,13 +42,13 @@ let rec check_aux info iters acc =
   match (info.iterations, acc) with
   | 0, _ | _, Some _ -> acc
   | _ ->
-      let ds, ds' = info.generator info.decls in
-      let info = {info with decls= ds} in
-      match ds' with
+      let net, net' = info.generator info.net in
+      let info = {info with net= net} in
+      match net' with
       | None -> None
-      | Some ds' ->
+      | Some net' ->
         try
-          let sol = Srp.simulate_declarations ds' in
+          let sol = Srp.simulate_net net' in
           if check_assertions sol then
             check_aux
               {info with iterations= info.iterations - 1}
@@ -121,17 +122,17 @@ let check info iterations num_rejected =
   | None -> (None, info)
   | Some (sol, iters) -> (Some sol, {info with iterations= iters})
 
-let check_random ds ~iterations =
-  let prog_constants = collect_all_values ds in
+let check_random net ~iterations =
+  let prog_constants = collect_all_values net in
   let num_rejected = ref 0 in
-  let generator ds =
-    let ds' =
+  let generator net =
+    let net' =
       random_symbolics ~max_map_size:default_max_map_size
-        ~hints:prog_constants ds
+        ~hints:prog_constants net
     in
-    (ds, Some ds')
+    (net, Some net')
   in
-  let info = {decls= ds; iterations; num_rejected; generator} in
+  let info = {net= net; iterations; num_rejected; generator} in
   check info iterations num_rejected
 
 (* let check_smart info ds ~iterations = *)

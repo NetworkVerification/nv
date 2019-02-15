@@ -19,12 +19,11 @@ val findAbstraction :
 
 module FailuresAbstraction :
   sig  
-    (** [refineCounterExample draw file g finit f failVars sol k 
+    (** [refineCounterExample file g finit f failVars sol k 
                               unused_edges sources dst attr iteration]
        decides whether there is need to further refine the
        abstraction. *)
     val refineCounterExample :
-      bool ->
       string ->
       AdjGraph.t ->
       AbstractionMap.abstractionMap ->
@@ -55,8 +54,8 @@ sig
   val buildAbstractNetwork : AbstractionMap.abstractionMap ->
                              (AdjGraph.Vertex.t, int * Syntax.exp) Hashtbl.t ->
                              (AdjGraph.Edge.t, int * Syntax.exp) Hashtbl.t ->
-                             Slicing.network ->
-                             int -> (Var.t AdjGraph.EdgeMap.t) * Syntax.declarations
+                             Slicing.network_slice ->
+                             int -> (Var.t AdjGraph.EdgeMap.t) * Syntax.network
 
   (** [buildAbstractNetwork f g mergeMap transMap initMap assertMap dst attrTy k] builds the
    declarations of the abstract network *)

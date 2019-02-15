@@ -7,3 +7,5 @@ val iter_exp_decl :
 
 val iter_exp_decls :
   (declaration -> exp -> unit) -> declarations -> unit
+
+val iter_exp_net : (exp -> unit) -> network -> unit

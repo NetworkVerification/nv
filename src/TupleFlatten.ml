@@ -1,5 +1,6 @@
 open Collections
 open Syntax
+open Slicing
 
 let rec flatten_ty ty =
   match ty with
@@ -216,3 +217,33 @@ let flatten_decl d =
 
 let flatten ds =
   BatList.map flatten_decl ds |> BatList.concat
+
+let flatten_net net =
+  { attr_type = flatten_ty net.attr_type;
+    init = flatten_exp net.init;
+    trans = flatten_exp net.trans;
+    merge = flatten_exp net.merge;
+    assertion = (match net.assertion with
+                 | None -> None
+                 | Some e -> Some (flatten_exp e));
+    symbolics =
+      BatList.map (fun (x, exp_ty) ->
+          match exp_ty with
+          | Exp e ->
+             let e = flatten_exp e in
+             (match e.e with
+              | ETuple es ->
+                 BatList.mapi (fun i ei -> (proj_var i x, Exp ei)) es
+              | _ -> [(x, Exp e)])
+          | Ty ty ->
+             (match flatten_ty ty with
+              | TTuple ts ->
+                 BatList.mapi (fun i ty -> (proj_var i x, Ty ty)) ts
+              | ty -> [(x, Ty ty)])
+        ) net.symbolics |> BatList.concat;
+    defs =
+      BatList.map (fun (x, oty, e) ->
+          (x, Some (flatten_ty (oget oty)), flatten_exp e)) net.defs;
+    requires = BatList.map (flatten_exp) net.requires;
+    graph = net.graph
+  }

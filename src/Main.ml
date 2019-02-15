@@ -2,22 +2,22 @@ open Main_defs
 open Solution
 
 let main =
-  let cfg, info, file, decls = parse_input Sys.argv in
-  if cfg.check_monotonicity then
-    checkPolicy info cfg file decls;
+  let cfg, info, file, net = parse_input Sys.argv in
+  (* if cfg.check_monotonicity then *)
+  (*   checkPolicy info cfg file decls; *)
   let networkOp =
       if cfg.smt then run_smt file
-      else if cfg.random_test then run_test
+      (* else if cfg.random_test then run_test *)
       else if cfg.simulate then run_simulator
       else exit 0
   in
   if cfg.compress >= 0 then
     begin
-      compress file info decls cfg networkOp
+      compress file info net cfg (run_smt file)
     end
   else
     begin
-      match networkOp cfg info decls with
+      match networkOp cfg info net with
       | CounterExample sol, Some fs -> print_solution (apply_all sol fs)
       | CounterExample sol, None -> print_solution sol
       | Success _, _ -> Printf.printf "No counterexamples found\n"

@@ -100,6 +100,18 @@ type declaration =
 
 type declarations = declaration list
 
+type network =
+  { attr_type    : ty;
+    init         : exp;
+    trans        : exp;
+    merge        : exp;
+    assertion    : exp option;
+    symbolics    : (var * ty_or_exp) list;
+    defs         : (var * ty option * exp) list; 
+    requires     : exp list;
+    graph        : AdjGraph.t;
+  }
+                  
 (* Constructors *)
 
 val vbool : bool -> value
@@ -135,6 +147,8 @@ val esome : exp -> exp
 val ematch : exp -> branches -> exp
 
 val ety : exp -> ty -> exp
+
+val deconstructFun: exp -> func
 
 (* Utilities *)
 
@@ -184,6 +198,8 @@ val apps : exp -> exp list -> exp
 
 val apply_closure : closure -> value list -> exp
 
+val get_lets : declarations ->  (var * ty option * exp) list
+  
 val get_attr_type : declarations -> ty option
 
 val get_merge : declarations -> exp option

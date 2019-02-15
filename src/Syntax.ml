@@ -129,6 +129,19 @@ type declaration =
 
 type declarations = declaration list
 
+type network =
+  { attr_type    : ty;
+    init         : exp;
+    trans        : exp;
+    merge        : exp;
+    assertion    : exp option;
+    symbolics    : (var * ty_or_exp) list;
+    defs         : (var * ty option * exp) list; 
+    requires     : exp list;
+    graph        : AdjGraph.t;
+  }
+
+
 (* structural printing *)
 (* TODO: This should probably be its own file *)
 
@@ -659,6 +672,12 @@ let ematch e bs = exp (EMatch (e, bs))
 
 let ety e ty = exp (ETy (e, ty))
 
+let deconstructFun exp =
+  match exp.e with
+  | EFun f ->
+     f
+  | _ -> failwith "expected a function"
+
 let rec is_value e =
   match e.e with
   | EVal _ -> true
@@ -741,6 +760,9 @@ let get_decl ds f =
     f daty
   with _ -> None
 
+let get_lets ds =
+  BatList.filter_map (fun d -> match d with DLet (x,ty,e) -> Some (x,ty,e) | _ -> None) ds
+          
 let get_attr_type ds =
   get_decl ds (fun d -> match d with DATy ty -> Some ty | _ -> None)
 
