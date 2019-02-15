@@ -938,7 +938,7 @@ module FailuresAbstraction =
       | _, _ ->
          failwith "found no refinement"
 
-    let refineCounterExample (draw: bool) (file: string) (g: AdjGraph.t)
+    let refineCounterExample (file: string) (g: AdjGraph.t)
                           (fbonsai: abstractionMap) (f: abstractionMap)
                           (failVars: Var.t EdgeMap.t) (sol: Solution.t) (k: int)
                           (* (unused_edges: EdgeSet.t) *)
@@ -963,13 +963,6 @@ module FailuresAbstraction =
                      (EdgeSet.empty,
                       AdjGraph.create (AbstractionMap.size f |> Integer.of_int))
       in
-
-      (* Draw the abstract graph if asked *)
-      if draw then
-        begin
-          let dotfile = AdjGraph.DrawableGraph.graph_dot_file k file in
-          AdjGraph.DrawableGraph.drawGraph agraph dotfile
-        end;
 
       (* number of concrete links failed in the network *)
       let total_failures =

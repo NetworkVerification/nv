@@ -154,7 +154,7 @@ let compress file info net cfg networkOp =
          time_profile "Refining abstraction after failures"
                       (fun () ->
                         FailuresAbstraction.refineCounterExample
-                          cfg.draw file slice.net.graph finit f failVars sol
+                          file slice.net.graph finit f failVars sol
                           k sources slice.destinations aty i)
        in
        match f' with
@@ -227,4 +227,8 @@ let parse_input (args : string array)
               else decls
   in
   let net = Slicing.createNetwork decls in
+  let net = if cfg.link_failures > 0 then
+              Failures.buildFailuresNet net cfg.link_failures
+            else net
+  in
   (cfg, info, file, net)

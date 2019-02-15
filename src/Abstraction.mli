@@ -19,12 +19,11 @@ val findAbstraction :
 
 module FailuresAbstraction :
   sig  
-    (** [refineCounterExample draw file g finit f failVars sol k 
+    (** [refineCounterExample file g finit f failVars sol k 
                               unused_edges sources dst attr iteration]
        decides whether there is need to further refine the
        abstraction. *)
     val refineCounterExample :
-      bool ->
       string ->
       AdjGraph.t ->
       AbstractionMap.abstractionMap ->
