@@ -814,7 +814,7 @@ let bool_of_val (v : value) : bool option =
 
 let proj_var (n: int) (x: var) =
   let (s,i) = Var.from_var x in
-  Var.to_var (Printf.sprintf "proj-%d-%s" n s,i)
+  Var.to_var (Printf.sprintf "%s-proj-%d" s n,i)
 
 open BatSet
 

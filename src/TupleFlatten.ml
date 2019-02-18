@@ -218,6 +218,40 @@ let flatten_decl d =
 let flatten ds =
   BatList.map flatten_decl ds |> BatList.concat
 
+let rec unflatten_list (vs : Syntax.value list) (ty : Syntax.ty) =
+  match ty with
+  | TTuple ts ->
+     let vs, vleft = BatList.fold_left (fun (vacc, vleft)  ty ->
+                         let v, vs' = unflatten_list vleft ty in
+                         (v :: vacc, vs')) ([], vs) ts 
+     in
+     (vtuple (BatList.rev vs)), vleft
+  | _ -> BatList.hd vs, BatList.tl vs
+       
+let unflatten_val (v : Syntax.value) (ty : Syntax.ty) =
+  match v.v with
+  | VTuple vs ->
+     (match unflatten_list vs ty with
+      | v, [] -> v
+      | _, vleft ->
+         Printf.printf "%s" (printList (Printing.value_to_string) vleft "" "\n" "\n"); 
+         failwith "incorrect unflattening, leftover list should be empty")
+  | _ -> v
+
+(* TODO: This needs to be done for symbolic variables too, in the SMT encoding as well *)
+let unflatten_sol
+      (orig_attr: Syntax.ty)
+      (sol : Solution.t) =
+  {sol with
+    labels = AdjGraph.VertexMap.map (fun v ->
+                 Printf.printf "%s\n" (Printing.value_to_string v);
+                 Printf.printf "%s\n" (Printing.ty_to_string orig_attr);
+                 let v' = unflatten_val v orig_attr in
+                 Printf.printf "%s\n" (Printing.value_to_string v');
+                 v'
+               ) sol.labels
+  }
+
 let flatten_net net =
   { attr_type = flatten_ty net.attr_type;
     init = flatten_exp net.init;
@@ -246,4 +280,6 @@ let flatten_net net =
           (x, Some (flatten_ty (oget oty)), flatten_exp e)) net.defs;
     requires = BatList.map (flatten_exp) net.requires;
     graph = net.graph
-  }
+  }, unflatten_sol net.attr_type
+
+

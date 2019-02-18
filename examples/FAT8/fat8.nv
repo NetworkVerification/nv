@@ -1,8 +1,8 @@
 type attribute = (option[int],option[int],option[(int, int, int, int)],option[(int,int,int,int,set[int])],option[int])
 
-(*symbolic d : (int, int) *)
+symbolic d : (int, int)
 (*require d = (1174418688, 24)*)
-let d = (1174418688, 24)
+(*let d = (1174418688, 24)*)
 (*let d = (1174418688, 31)*)
 
 let edges = {
@@ -6695,6 +6695,11 @@ let assert node x =
     (*if (d = (1174418688, 31)) then *)
       match x with
       | (None, None, None, None, None) -> false
+      | (_, _, _, bgp, Some 3) ->
+      (match bgp with
+       |Some (_,_,len,_,_) ->
+      	len < 5
+       | _ -> true)
       | _ -> true
     else true
 

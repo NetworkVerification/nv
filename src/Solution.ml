@@ -17,8 +17,8 @@ let print_solution solution =
       solution.symbolics ;
     AdjGraph.VertexMap.iter
       (fun k v ->
-        Printf.printf "%s:%s\n"
-          (Integer.to_string k)
+        Printf.printf "Label(%d):%s\n"
+          (Integer.to_int k)
           (Printing.value_to_string v) )
       solution.labels ) ;
   ( match solution.assertions with

@@ -1,6 +1,7 @@
 open Collections
 open Syntax
 open Slicing
+open Solution
 
 let rec empty_pattern ty =
   match ty with
@@ -160,6 +161,52 @@ let unbox_decl d =
 
 let unbox ds = BatList.map unbox_decl ds
 
+let rec unbox_val v =
+  match v.v with
+  | VBool _ | VInt _ ->
+     exp_of_value v
+  | VOption None ->
+     (match v.vty with
+      | Some (TOption t) ->
+         aexp (etuple [(vbool false |> exp_of_value); (default_exp_value (get_inner_type t))],
+                 Some (unbox_ty (TOption t)), v.vspan)
+     | _ -> failwith "expected option type")
+  | VOption (Some v1) ->
+     aexp (etuple [(vbool true |> exp_of_value); (unbox_val v1)],
+           Some (unbox_ty (oget v.vty)), v.vspan)
+  | VTuple vs ->
+     aexp (etuple (BatList.map unbox_val vs), Some (unbox_ty (oget v.vty)), v.vspan)
+  | VClosure _ -> failwith "Closures not yet implemented"
+  | VMap _ -> failwith "no map values"
+             
+let rec box_val v ty =
+  match v.v, ty with
+  | VTuple [vflag; vval], TOption ty ->
+     (match vflag.v with
+      | VBool false -> voption None
+      | VBool true -> voption (Some (box_val vval ty))
+      | _ ->
+         Printf.printf "%s\n" (Printing.value_to_string vflag);
+         failwith "mistyped optional value") 
+  | VTuple vs, TTuple ts ->
+     vtuple (BatList.map2 (box_val) vs ts)
+  | VTuple vs, _ ->
+     (* Printf.printf "%s\n" (printList (Printing.ty_to_string) ts "" "," ""); *)
+     Printf.printf "%s\n" (printList (Printing.value_to_string) vs "" "," "");
+     Printf.printf "%s\n" (Printing.ty_to_string ty);
+     failwith "mistyped value"
+  | VBool _, _ | VInt _, _ -> v
+  
+  | VOption _, _ | VClosure _, _ | VMap _, _ -> failwith "no such values"
+
+let box_sol ty sol =
+  {sol with
+    labels = AdjGraph.VertexMap.map (fun v ->
+                 Printf.printf "%s\n" (Printing.value_to_string v);
+                 Printf.printf "%s\n" (Printing.ty_to_string ty);
+                 box_val v ty) sol.labels
+  }
+    
 let unbox_net net =
   { attr_type = unbox_ty net.attr_type;
     init = unbox_exp net.init;
@@ -176,7 +223,7 @@ let unbox_net net =
                        net.defs;
     requires = BatList.map unbox_exp net.requires;
     graph = net.graph
-  }
+  }, box_sol net.attr_type
                                           
                             
                           

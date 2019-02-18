@@ -31,15 +31,17 @@ let smt_query_file =
                     (string_of_int !counter) ^ "-query"))
                        
 let run_smt file cfg info (net : Syntax.network) =
-  let fs = [] in
-  let net =
+  let net, fs =
     if cfg.unbox then
       begin
         smt_config.unboxing <- true;
-        time_profile "Unboxing" (
-                       fun () -> UnboxOptions.unbox_net net |> TupleFlatten.flatten_net)
+        let net, f1 = time_profile "Unbox options" (fun () -> UnboxOptions.unbox_net net) in 
+        let net, f2 =
+          time_profile "Flattening Tuples" (fun () -> TupleFlatten.flatten_net net)
+        in
+        net, [f2;f1]
       end
-    else net
+    else net, []
   in
   let net, f = Renaming.alpha_convert_net net in
   let fs = f :: fs in
