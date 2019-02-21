@@ -45,7 +45,8 @@ and equal_vals vs1 vs2 =
   | _, _ -> false
 
 (* Expression and operator interpreters *)
-(* matches p b is Some env if v matches p and None otherwise; assumes no repeated variables in pattern *)
+(* matches p b is Some env if v matches p and None otherwise; assumes
+   no repeated variables in pattern *)
 let rec matches p (v: Syntax.value) env : Syntax.value Env.t option =
   match (p, v.v) with
   | PWild, v -> Some env
@@ -73,13 +74,32 @@ let rec matches p (v: Syntax.value) env : Syntax.value Env.t option =
   | (PBool _ | PInt _ | PTuple _ | POption _), _ -> None
 
 
-let rec match_branches branches v env =
+let rec match_branches_lst branches v env =
   match branches with
   | [] -> None
   | (p, e) :: branches ->
     match matches p v env with
     | Some env' -> Some (env', e)
-    | None -> match_branches branches v env
+    | None -> match_branches_lst branches v env
+
+let rec val_to_pat v =
+  match v.v with
+  | VInt i -> PInt i
+  | VBool b -> PBool b
+  | VOption (Some v) -> POption (Some (val_to_pat v))
+  | VOption None -> POption None
+  | VTuple vs ->
+     PTuple (BatList.map val_to_pat vs)
+  | _ -> PWild
+  
+let rec match_branches branches v env =
+  match val_to_pat v with
+  | PWild ->
+     match_branches_lst (snd branches) v env
+  | vp ->
+     match PatMap.Exceptionless.find vp (fst branches) with
+     | Some e -> Some (env, e)
+     | _ -> match_branches_lst (snd branches) v env
 
 module ExpMap = Map.Make (struct
   type t = exp
@@ -274,7 +294,8 @@ let simplify_logic op pes =
 
 let simplify_match e =
   match e.e with
-  | EMatch (_, [(_,e1);(_,e2)]) when (is_value e1) && (is_value e2) ->
+  | EMatch (_, (bmap, [(_,e1);(_,e2)])) when (PatMap.is_empty bmap) && (is_value e1)
+                                             && (is_value e2) ->
      if equal_exps ~cmp_meta:false e1 e2 then
        e1
      else
@@ -357,8 +378,10 @@ let rec interp_exp_partial isapp env e =
              ( "value " ^ value_to_string (to_value pe1)
                ^ " did not match any pattern in match statement"))
      else
-       aexp (ematch pe1 (BatList.map (fun (p,eb) ->
-                             (p, interp_exp_partial false env eb)) branches),
+       aexp (ematch pe1 (PatMap.map (fun eb ->
+                             interp_exp_partial false env eb) (fst branches),
+                         BatList.map (fun (p,eb) ->
+                                 (p, interp_exp_partial false env eb)) (snd branches)),
              e.ety, e.espan) |> simplify_match
      
 and interp_op_partial env ty op es =
@@ -478,15 +501,28 @@ module Full =
            matches_list ps es (Env.updates env env1))
       | _, _ -> NoMatch
 
-    let rec match_branches branches v =
+    let rec match_branches_lst branches v =
       match branches with
       | [] -> NoMatch
       | (p, e) :: branches ->
          match matches p v with
          | Match env -> Match (env, e)
-         | NoMatch -> match_branches branches v
+         | NoMatch -> match_branches_lst branches v
          | Delayed ->  Delayed
 
+    (*TODO: this is most likely broken after adding maps to branches *)
+    let rec match_branches branches v =
+      if is_value v then
+        match val_to_pat (to_value v) with
+        | PWild ->
+           match_branches_lst (snd branches) v
+        | vp ->
+           (match PatMap.Exceptionless.find vp (fst branches) with
+            | Some e -> Match (Env.empty, e)
+            | _ -> match_branches_lst (snd branches) v)
+      else
+        Delayed
+      
     (** Assumes that inlining has been performed.  Not CBN in the
        strict sense. It will just do function applications over
        expressions, not just values.*)
@@ -539,8 +575,10 @@ module Full =
                ( "exp " ^ (exp_to_string pe1)
                  ^ " did not match any pattern in match statement")
           | Delayed ->
-             aexp (ematch pe1 (List.map (fun (p,eb) ->
-                                   (p, interp_exp_partial env eb)) branches),
+             aexp (ematch pe1 (PatMap.map (fun eb ->
+                                   interp_exp_partial env eb) (fst branches),
+                               BatList.map (fun (p,eb) ->
+                                   (p, interp_exp_partial env eb)) (snd branches)),
                    e.ety, e.espan))
 
     (* this is same as above, minus the app boolean. see again if we can get rid of that? *)

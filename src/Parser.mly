@@ -194,12 +194,12 @@ expr:
                                           exp (elet id e $6) span }
     | LET LPAREN patterns RPAREN EQ expr IN expr
                                         { let p = tuple_pattern $3 in
-                                          let e = ematch $6 [(p,$8)] in
+                                          let e = ematch $6 (PatMap.empty, [(p,$8)]) in
                                           let span = Span.extend $1 $8.espan in
                                           exp e span }
     | IF expr THEN expr ELSE expr       { exp (eif $2 $4 $6) (Span.extend $1 $6.espan) }
     (* TODO: span does not include the branches here *)
-    | MATCH expr WITH branches          { exp (ematch $2 $4) (Span.extend $1 $3) }
+    | MATCH expr WITH branches          { exp (ematch $2 (PatMap.empty, $4)) (Span.extend $1 $3) }
     | FUN params ARROW expr             { make_fun $2 $4 $4.espan (Span.extend $1 $4.espan) }
     | MAP exprsspace                    { exp (eop MMap $2) $1 }
     | MAPIF exprsspace                  { exp (eop MMapFilter $2) $1 }

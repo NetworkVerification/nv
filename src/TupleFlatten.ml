@@ -103,7 +103,7 @@ let rec flatten_exp e : exp =
          (match (oget e1.ety) with
           | TTuple ts ->
              let ps = BatList.mapi (fun i _ -> PVar (proj_var i x)) ts in
-             aexp (ematch e1 [(PTuple ps, flatten_exp e2)],
+             aexp (ematch e1 (PatMap.empty, [(PTuple ps, flatten_exp e2)]),
                    Some ty, e.espan)
           | _ ->
              aexp (elet x e1 (flatten_exp e2), Some ty, e.espan)))
@@ -183,7 +183,9 @@ and flatten_branches bs ty =
         | _ -> p)
     | PBool _ | PInt _ | POption None  -> p
   in
-  BatList.map (fun (p, e) -> (flatten_pattern p ty, flatten_exp e)) bs
+  (PatMap.fold (fun p e pmap ->
+       PatMap.add (flatten_pattern p ty) (flatten_exp e) pmap) (fst bs) PatMap.empty,
+   BatList.map (fun (p, e) -> (flatten_pattern p ty, flatten_exp e)) (snd bs))
              
 let flatten_decl_single d =
   match d with

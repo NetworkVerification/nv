@@ -60,11 +60,16 @@ let rec alpha_convert_exp (env: Var.t Env.t) (e: exp) =
   | ESome e1 -> esome (alpha_convert_exp env e1) |> wrap e
   | EMatch (e1, bs) ->
       let bs' =
-        BatList.map
-          (fun (p, ep) ->
-            let p, env = update_pattern env p in
-            (p, alpha_convert_exp env ep) )
-          bs
+        (PatMap.fold
+           (fun p ep pmap ->
+             let p, env = update_pattern env p in
+             PatMap.add p (alpha_convert_exp env ep) pmap)
+           (fst  bs) PatMap.empty,
+         BatList.map
+           (fun (p, ep) ->
+             let p, env = update_pattern env p in
+             (p, alpha_convert_exp env ep) )
+           (snd bs))
       in
       ematch (alpha_convert_exp env e1) bs' |> wrap e
   | ETy (e1, ty) -> ety (alpha_convert_exp env e1) ty |> wrap e

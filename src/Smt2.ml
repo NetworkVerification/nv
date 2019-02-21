@@ -701,24 +701,25 @@ let is_var (tm: SmtLang.term) =
       | ETy (e, ty) -> encode_exp_z3 descr env e
       | EFun _ | EApp _ -> failwith "function in smt encoding"
 
-    and encode_branches_z3 descr env name bs (t: ty) =
-      match BatList.rev bs with
-      | [] -> failwith "internal error (encode_branches)"
-      | (p, e) :: bs ->
-         let ze = encode_exp_z3 descr env e in
-         (* we make the last branch fire no matter what *)
-         let _ = encode_pattern_z3 descr env name p t in
-         encode_branches_aux_z3 descr env name (BatList.rev bs) ze t
+    and encode_branches_z3 descr env names bs (t: ty) =
+      match Branch.isEmpty bs with
+      | true -> failwith "internal error (encode_branches)"
+      | false ->
+         encode_branches_aux_z3 descr env names bs t
 
     (* I'm assuming here that the cases are exhaustive *)
-    and encode_branches_aux_z3 descr env name bs accze (t: ty) =
-      match bs with
-      | [] -> accze
-      | (p, e) :: bs ->
+    and encode_branches_aux_z3 descr env name bs (t: ty) =
+      match Branch.popBranch bs with
+      | None -> failwith "empty list of branches"
+      | Some ((p,e), bs) when Branch.isEmpty bs ->
+         let _ = encode_pattern_z3 descr env name p t in
+         let ze = encode_exp_z3 descr env e in
+         ze
+      | Some ((p,e), bs) ->
          let ze = encode_exp_z3 descr env e in
          let zp = encode_pattern_z3 descr env name p t in
-         let ze = mk_ite_fast zp.t ze.t accze.t |> mk_term in
-         encode_branches_aux_z3 descr env name bs ze t
+         mk_ite_fast zp.t ze.t (encode_branches_aux_z3 descr env name bs t).t |> mk_term
+
 
     and encode_pattern_z3 descr env zname p (t: ty) =
       let ty = get_inner_type t in
@@ -1093,28 +1094,28 @@ module Unboxed : ExprEncoding =
          [encode_exp_z3_single descr env e]
         
     and encode_branches_z3 descr env names bs (t: ty) =
-      match BatList.rev bs with
-      | [] -> failwith "internal error (encode_branches)"
-      | (p, e) :: _ ->
-         let zes = encode_exp_z3 descr env e in
-         (* we make the last branch fire no matter what *)
-         let _ = encode_pattern_z3 descr env names p t in
-         encode_branches_aux_z3 descr env names bs zes t
+      match Branch.isEmpty bs with
+      | true -> failwith "internal error (encode_branches)"
+      | false ->
+         encode_branches_aux_z3 descr env names bs t
 
     (* I'm assuming here that the cases are exhaustive *)
-    and encode_branches_aux_z3 descr env names bs acczes (t: ty) =
-      match bs with
-      | [] -> failwith "empty branch list"
-      | [(p,e)] -> acczes (* already included*)
-      | (p, e) :: bs ->
+    and encode_branches_aux_z3 descr env names bs (t: ty) =
+      match Branch.popBranch bs with
+      | None -> failwith "empty list of branches"
+      | Some ((p,e), bs) when Branch.isEmpty bs ->
+         let _ = encode_pattern_z3 descr env names p t in
+         let zes = encode_exp_z3 descr env e in
+         zes
+      | Some ((p,e), bs) ->
          let zes = encode_exp_z3 descr env e in
          let zps = encode_pattern_z3 descr env names p t in
          let guard = combine_term zps in
-         let acczes = lift2 (fun ze accze ->
-                          mk_ite_fast guard.t ze.t accze.t |>
-                                               mk_term ~tloc:e.espan) zes acczes
-         in
-         encode_branches_aux_z3 descr env names bs acczes t
+         lift2 (fun ze accze ->
+             mk_ite_fast guard.t ze.t accze.t |>
+               mk_term ~tloc:e.espan) zes
+           (encode_branches_aux_z3 descr env names bs t)
+         
 
     and encode_pattern_z3 descr env znames p (t: ty) =
       let ty = get_inner_type t in
@@ -1136,7 +1137,6 @@ module Unboxed : ExprEncoding =
         match (ps, ts) with
         | [p], [t] -> encode_pattern_z3 descr env znames p t
         | ps, ts ->
-           (* let psts = (BatList.combine ps ts) in *)
            map3 
              (fun p ty zname ->
                match encode_pattern_z3 descr env [zname] p ty with
@@ -2113,22 +2113,23 @@ module CheckProps =
           (* encode the property in NV *)
           let property_exp =
             aexp(ematch (aexp(evar (unbox merge_var), Some net.attr_type, Span.default))
-                   [(PTuple [PWild; PWild; PVar ospf_var; PVar bgp_var; PWild],
-                     aexp(eop And
-                            [aexp(eop UEq [evar ospf_var; evar old_ospf_var],
-                                  Some TBool,
-                                  Span.default);
-                             aexp(eop UEq [evar bgp_var; evar old_bgp_var],
-                                  Some TBool,
-                                  Span.default)],
-                          Some TBool, Span.default))],
-                 Some TBool, Span.default)
+                   (Branch.addBranch (PTuple [PWild; PWild; PVar ospf_var; PVar bgp_var; PWild])
+                      (aexp (eop And
+                               [aexp(eop UEq [evar ospf_var; evar old_ospf_var],
+                                     Some TBool,
+                                     Span.default);
+                               aexp(eop UEq [evar bgp_var; evar old_bgp_var],
+                                    Some TBool,
+                                    Span.default)],
+                             Some TBool, Span.default)) Branch.empty),
+                    Some TBool, Span.default)
           in
           let property =
             aexp(ematch (aexp (evar (unbox checka_var), Some net.attr_type, Span.default))
-                   [PTuple [PWild; PWild; PVar old_ospf_var; PVar old_bgp_var; PWild],
-                    property_exp],
-                 Some TBool, Span.default)
+                   (Branch.addBranch
+                      (PTuple [PWild; PWild; PVar old_ospf_var; PVar old_bgp_var; PWild])
+                         property_exp Branch.empty),
+                    Some TBool, Span.default)
           in
           let check = Boxed.encode_exp_z3 "" env property
           in

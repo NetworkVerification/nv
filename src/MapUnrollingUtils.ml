@@ -74,11 +74,16 @@ let rec collect_in_exp (exp : Syntax.exp) (acc : maplist) : maplist =
   | ESome e ->
     collect_in_exp e acc
   | EMatch (e, branches) ->
-    let acc = collect_in_exp e acc in
+     let acc = collect_in_exp e acc in
+     let acc1 =
+       PatMap.fold (fun _ exp acc ->
+           collect_in_exp exp acc)
+       (fst branches) acc
+     in
     BatList.fold_left
       (fun acc (_, exp) ->
          collect_in_exp exp acc)
-      acc branches
+      acc1 (snd branches)
   | ETy (e, _) ->
     collect_in_exp e acc
 ;;

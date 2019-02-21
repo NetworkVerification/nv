@@ -47,6 +47,26 @@ type pattern =
   | PTuple of pattern list
   | POption of pattern option
 
+module Pat : Map.OrderedType with type t = pattern
+
+module PatMap : BatMap.S with type key = Pat.t
+
+module Branch :
+  sig
+  
+    type 'a t
+
+    val compare: 'a t -> 'a t -> int
+    val addBranch: Pat.t -> 'a -> 'a t -> 'a t
+    val mapBranches: (Pat.t * 'a -> Pat.t * 'a) -> 'a t -> 'a t
+    val iterBranches: (Pat.t * 'a -> unit) -> 'a t -> unit
+    val lookUpPat: Pat.t -> 'a t -> 'a
+    val popBranch: 'a t -> ((Pat.t * 'a) * 'a t) option
+    val empty : 'a t
+    val isEmpty: 'a t -> bool
+    val optimize: 'a t -> 'a t
+  end
+
 type v = private
   | VBool of bool
   | VInt of Integer.t
@@ -76,7 +96,7 @@ and e = private
 and exp = private
   {e: e; ety: ty option; espan: Span.t; etag: int; ehkey: int}
 
-and branches = (pattern * exp) list
+and branches = exp Branch.t
 
 and func = {arg: var; argty: ty option; resty: ty option; body: exp}
 
@@ -111,7 +131,8 @@ type network =
     requires     : exp list;
     graph        : AdjGraph.t;
   }
-                  
+
+  
 (* Constructors *)
 
 val vbool : bool -> value

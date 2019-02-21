@@ -92,7 +92,8 @@ let buildFailTrans
   let branches =
     Hashtbl.fold (fun (u,v) transuv acc ->
         let p = PTuple [PInt u; PInt v] in
-        (p, addFailureCheck (EdgeMap.find (u, v) failuresMap) transuv) :: acc) trans []
+        Branch.addBranch p (addFailureCheck (EdgeMap.find (u, v) failuresMap) transuv) acc)
+      trans Branch.empty
   in
   
   (* partial evaluted trans functions are of the form fun m -> ..., grab m *)
@@ -102,7 +103,8 @@ let buildFailTrans
   let transf = deconstructFun transuv in
   let messageArg = transf.arg in
   let match_exp =
-    aexp(ematch (aexp (evar aedge_var, Some Typing.edge_ty, Span.default)) branches,
+    aexp(ematch (aexp (evar aedge_var, Some Typing.edge_ty, Span.default))
+           (Branch.optimize branches),
          transf.resty, Span.default) in
   (* create fun m -> trans_hat_body *)
   let trans_hat_msg = efunc {arg=messageArg; argty=transf.argty; resty=transf.resty;

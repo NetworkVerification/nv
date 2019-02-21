@@ -12,8 +12,9 @@ let rec iter_exp f (e: exp) =
   | ETuple es -> BatList.iter (iter_exp f) es
   | ESome e -> iter_exp f e
   | EMatch (e, bs) ->
-      iter_exp f e ;
-      BatList.iter (fun (_, e) -> iter_exp f e) bs
+     iter_exp f e ;
+     PatMap.iter (fun _ e -> iter_exp f e) (fst bs);
+      BatList.iter (fun (_, e) -> iter_exp f e) (snd bs)
   | ETy (e, _) -> iter_exp f e
 
 let iter_exp_decl f d =

@@ -85,8 +85,8 @@ let rec check_annot (e: exp) =
   | ETuple es -> BatList.iter check_annot es
   | ESome e -> check_annot e
   | EMatch (e, bs) ->
-    check_annot e ;
-    BatList.iter (fun (_, e) -> check_annot e) bs
+     check_annot e ;
+     Branch.iterBranches (fun (_, e) -> check_annot e) bs
   | ETy (e, ty) -> check_annot e
 
 let check_annot_decl (d: declaration) =
@@ -583,20 +583,20 @@ and infer_values info env vs =
     (v :: vs, t :: ts)
 
 and infer_branches i info env exp tmatch bs =
-  match bs with
-  | [] -> failwith "internal error (infer branches)"
-  | [(p, e)] ->
-    let env2 = infer_pattern (i + 1) info env exp tmatch p in
-    let e, t = infer_exp (i + 1) info env2 e |> textract in
-    ([(p, e)], t)
-  | (p, e) :: bs ->
+  match Branch.popBranch bs with
+  | None -> failwith "internal error (infer branches)"
+  | Some ((p, e), bs) when Branch.isEmpty bs ->
+     let env2 = infer_pattern (i + 1) info env exp tmatch p in
+     let e, t = infer_exp (i + 1) info env2 e |> textract in
+     (Branch.addBranch p e Branch.empty, t)
+  | Some ((p, e), bs) ->
     let bs, tbranch =
       infer_branches (i + 1) info env exp tmatch bs
     in
     let env2 = infer_pattern (i + 1) info env exp tmatch p in
     let e, t = infer_exp (i + 1) info env2 e |> textract in
     unify info e t tbranch ;
-    ((p, e) :: bs, t)
+    (Branch.addBranch p e bs, t)
 
 and infer_pattern i info env e tmatch p =
   valid_pat p ;
@@ -746,7 +746,7 @@ let rec strip_exp (e: exp) : exp =
      aexp (esome (strip_exp e1), Some (strip_ty (oget e.ety)), e.espan)
   | EMatch (e, bs) ->
      aexp (ematch (strip_exp e)
-                  (BatList.map (fun (p,e) -> (p, strip_exp e)) bs),
+             (Branch.mapBranches (fun (p,e) -> (p, strip_exp e)) bs),
            Some (strip_ty (oget e.ety)), e.espan)
   | ETy (e, _) -> strip_exp e
   | EFun _ -> failwith "no types to strip on EFun"

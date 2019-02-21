@@ -220,7 +220,7 @@ and exp_to_string_p prec e =
       "(match "
       ^ exp_to_string_p max_prec e1
       ^ " with " ^ "\n"
-      ^ branches_to_string prec bs
+      ^ branches_to_string prec (branchBindings bs)
       ^ ")"
     | ETy (e, t) -> exp_to_string_p prec e ^ ty_to_string t
   in
