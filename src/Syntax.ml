@@ -147,6 +147,13 @@ module Branch =
            (map, lst)
       in
       loop b.pmap b.plist
+
+    let toList b =
+      (PatMap.fold (fun p e acc -> (p,e) :: acc) b.pmap []) @
+        b.plist
+
+    let equal b1 b2 =
+      PatMap.equal (fun b1.pmap b2.pmap
   end
            
 type v =
@@ -194,7 +201,7 @@ and exp =
   }
 [@@deriving ord]
 
-and branches = exp Branch.t [Branch.compare ]
+and branches = exp Branch.t [@compare Branch.compare ]
                  [@@deriving ord]
              
 and func = {arg: var; argty: ty option; resty: ty option; body: exp}
@@ -296,7 +303,7 @@ and show_e ~show_meta e =
   | ESome e -> Printf.sprintf "ESome (%s)" (show_exp ~show_meta e)
   | EMatch (e, bs) ->
       Printf.sprintf "EMatch (%s,%s)" (show_exp ~show_meta e)
-        (show_list (show_branch ~show_meta) bs)
+        (show_list (show_branch ~show_meta) (Branch.toList bs))
   | ETy (e, ty) ->
       Printf.sprintf "ETy (%s,%s)" (show_exp ~show_meta e) (show_ty ty)
 
@@ -492,7 +499,7 @@ and equal_branches ~cmp_meta bs1 bs2 =
          && equal_branches_map bs1 bs2
   in
   (equal_branches_map (fst bs1) (fst bs2)) && (equal_branches_lst (snd bs1) (snd bs2))
-    
+    PatMap
 and equal_patterns p1 p2 =
   match (p1, p2) with
   | PWild, PWild -> true
