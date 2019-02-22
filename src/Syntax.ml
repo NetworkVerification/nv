@@ -92,69 +92,6 @@ module Pat =
   end
 
 module PatMap = BatMap.Make(Pat)
-
-module Branch =
-  struct
-    type 'a t = { pmap  : 'a PatMap.t;
-                  plist : (pattern * 'a) list;
-                }
-    [@@deriving ord]
-
-    let compare = Pervasives.compare 
-    (* adding to the right place won't really work.. *)
-    let addBranch p e b =
-        {b with plist = (p,e) :: b.plist}
-
-    (* f should preserve concrete patterns *)
-    let mapBranches f b =
-      {pmap = PatMap.fold (fun p e pmap ->
-                  let p, e = f (p, e) in
-                  PatMap.add p e pmap) b.pmap PatMap.empty;
-       plist = BatList.map f b.plist}
-
-    let iterBranches f b =
-      PatMap.iter (fun p e -> f (p,e)) b.pmap;
-      BatList.iter f b.plist
-
-    let lookUpPat p b =
-      PatMap.Exceptionless.find p b.pmap
-      
-    let popBranch b =
-      if PatMap.is_empty b.pmap then
-        match b.plist with
-        | [] -> None
-        | (p,e) :: bs ->
-           Some ((p,e), {b with plist = bs})
-      else
-        let (pe, pmap) = PatMap.pop b.pmap in
-        Some (pe, {b with pmap = pmap})
-
-    let empty =
-      { pmap = PatMap.empty;
-        plist = [];
-      }
-      
-    let isEmpty b =
-      PatMap.is_empty b.pmap && BatList.is_empty b.plist
-
-    let optimize b =
-      let rec loop map lst =
-        match lst with
-        | [] -> (map, [])
-        | (p,e) :: lst when Pat.isConcretePat p = true ->
-           loop (PatMap.add p e map) lst
-        | (p,e) :: lst' when Pat.isConcretePat p = false ->
-           (map, lst)
-      in
-      loop b.pmap b.plist
-
-    let toList b =
-      (PatMap.fold (fun p e acc -> (p,e) :: acc) b.pmap []) @
-        b.plist
-
-    let equal b1 b2 =
-      PatMap.equal (fun b1.pmap b2.pmap
-  end
            
 type v =
   | VBool of bool
@@ -201,8 +138,10 @@ and exp =
   }
 [@@deriving ord]
 
-and branches = exp Branch.t [@compare Branch.compare ]
-                 [@@deriving ord]
+and branches = { pmap      : exp PatMap.t;
+                 plist     : (pattern * exp) list;
+                 optimized : bool
+                }
              
 and func = {arg: var; argty: ty option; resty: ty option; body: exp}
 
@@ -240,7 +179,70 @@ type network =
     graph        : AdjGraph.t;
   }
 
+(** * Handling branches *)
 
+type branchLookup = Found of exp | Rest of (pattern * exp) list 
+(* adding to the right place won't really work.. *)
+let addBranch p e b =
+  {b with plist = (p,e) :: b.plist}
+
+(* f should preserve concrete patterns *)
+let mapBranches f b =
+  {b with pmap = PatMap.fold (fun p e pmap ->
+                     let p, e = f (p, e) in
+                     PatMap.add p e pmap) b.pmap PatMap.empty;
+          plist = BatList.map f b.plist}
+
+let iterBranches f b =
+  PatMap.iter (fun p e -> f (p,e)) b.pmap;
+  BatList.iter f b.plist
+
+let foldBranches f acc b =
+  BatList.fold_left (fun acc x -> f x acc)
+    (PatMap.fold (fun p e acc -> f (p,e) acc) b.pmap acc) b.plist
+
+let lookUpPat p b =
+  match PatMap.Exceptionless.find p b.pmap with
+  | Some e -> Found e
+  | None -> Rest b.plist
+  
+let popBranch b =
+  if PatMap.is_empty b.pmap then
+    match b.plist with
+    | [] -> raise Not_found
+    | (p,e) :: bs ->
+       (p,e), {b with plist = bs}
+  else
+    let (pe, pmap) = PatMap.pop b.pmap in
+    (pe, {b with pmap = pmap})
+
+let emptyBranch =
+  { pmap = PatMap.empty;
+    plist = [];
+    optimized = false
+  }
+  
+let isEmptyBranch b =
+  PatMap.is_empty b.pmap && BatList.is_empty b.plist
+
+let optimizeBranches b =
+  let rec loop map lst =
+    match lst with
+    | [] -> {pmap = map; plist = []; optimized = true}
+    | (p,e) :: lst when Pat.isConcretePat p = true ->
+       loop (PatMap.add p e map) lst
+    | (p,e) :: lst' when Pat.isConcretePat p = false ->
+       {pmap = map; plist = lst; optimized = true}
+  in
+  if b.optimized then
+    b
+  else
+    loop b.pmap b.plist
+
+let branchToList b =
+  (PatMap.fold (fun p e acc -> (p,e) :: acc) b.pmap b.plist)
+
+  
 (* structural printing *)
 (* TODO: This should probably be its own file *)
 
@@ -303,7 +305,7 @@ and show_e ~show_meta e =
   | ESome e -> Printf.sprintf "ESome (%s)" (show_exp ~show_meta e)
   | EMatch (e, bs) ->
       Printf.sprintf "EMatch (%s,%s)" (show_exp ~show_meta e)
-        (show_list (show_branch ~show_meta) (Branch.toList bs))
+        (show_list (show_branch ~show_meta) (branchToList bs))
   | ETy (e, ty) ->
       Printf.sprintf "ETy (%s,%s)" (show_exp ~show_meta e) (show_ty ty)
 
@@ -486,20 +488,14 @@ and equal_branches ~cmp_meta bs1 bs2 =
        && equal_exps ~cmp_meta e1 e2
        && equal_branches_lst bs1 bs2
   in
-  let rec equal_branches_map bs1 bs2 =
-    let empty1 = PatMap.is_empty bs1 in
-    let empty2 = PatMap.is_empty bs2 in
-    if (empty1 || empty2) then
-      empty1 = empty2
-    else
-      let (p1,e1), bs1 = PatMap.pop_min_binding bs1 in
-      let (p2,e2), bs2 = PatMap.pop_min_binding bs2 in
-      equal_patterns p1 p2
-      && equal_exps ~cmp_meta e1 e2
-         && equal_branches_map bs1 bs2
+  let equal_branches_map bs1 bs2 =
+    PatMap.cardinal bs1.pmap = PatMap.cardinal bs2.pmap &&
+      PatMap.for_all (fun p e -> match PatMap.Exceptionless.find p bs2.pmap with
+                                 | None -> false
+                                 | Some e' -> equal_exps ~cmp_meta e e') bs1.pmap
   in
-  (equal_branches_map (fst bs1) (fst bs2)) && (equal_branches_lst (snd bs1) (snd bs2))
-    PatMap
+  (equal_branches_map bs1 bs2) && (equal_branches_lst bs1.plist bs2.plist)
+
 and equal_patterns p1 p2 =
   match (p1, p2) with
   | PWild, PWild -> true
@@ -651,10 +647,10 @@ and hash_es ~hash_meta es =
 and hash_branches ~hash_meta bs =
   let acc1 = BatList.fold_left
                (fun acc (p, e) -> acc + hash_pattern p + hash_exp ~hash_meta e)
-               0 (snd bs)
+               0 bs.plist
   in
   PatMap.fold
-    (fun p e acc -> acc + hash_pattern p + hash_exp ~hash_meta e) (fst bs) acc1
+    (fun p e acc -> acc + hash_pattern p + hash_exp ~hash_meta e) bs.pmap acc1
   
 and hash_pattern p =
   match p with
@@ -961,7 +957,7 @@ let rec free (seen: Var.t PSet.t) (e: exp) : Var.t PSet.t =
          (fun p e set ->
            let seen = PSet.union seen (pattern_vars p) in
            PSet.union set (free seen e) )
-         (fst bs)
+         bs.pmap
          (PSet.create Var.compare)
      in
      let bs =
@@ -970,7 +966,7 @@ let rec free (seen: Var.t PSet.t) (e: exp) : Var.t PSet.t =
            let seen = PSet.union seen (pattern_vars p) in
            PSet.union set (free seen e) )
          bs1
-         (snd bs)
+       bs.plist
     in
     PSet.union (free seen e) bs
 
@@ -1020,8 +1016,7 @@ let rec free_dead_vars (e : exp) =
   | EMatch (e1, branches) ->
      let e1 = free_dead_vars e1 in
      ematch e1
-       (PatMap.map (fun e -> free_dead_vars e) (fst branches),
-        BatList.map (fun (ps, e) -> (ps, free_dead_vars e)) (snd branches))
+       (mapBranches (fun (ps, e) -> (ps, free_dead_vars e)) branches)
 
 (* This is used because for SMT we represent maps as map expression
    and not values, and we want some type of default value for them as
@@ -1641,26 +1636,13 @@ module BddFunc = struct
     | ESome e -> BOption (Bdd.dtrue B.mgr, eval env e)
     | EMatch (e1, branches) -> (
       let bddf = eval env e1 in
-      let (p,e), bs = try let (p,e), bs = PatMap.pop_min_binding (fst branches)
-                          in ((p,e), (bs, snd branches)) with
-                      | Not_found ->
-                         (match (snd branches) with
-                          | [] -> failwith "impossible"
-                          | (p,e) :: bs -> (p,e), (PatMap.empty, bs))
-      in
+      let ((p,e), bs) = popBranch branches in
       let x = eval env e in
       let env, x =
-        PatMap.fold (fun p e (env,x) ->
+        foldBranches (fun (p,e) (env, x) ->
             let env, cond = eval_branch env bddf p in
-            (env, ite cond (eval env e) x))
-          (fst bs) (env, x)
-      in
-      let _, x =
-        BatList.fold_left
-          (fun (env, x) (p, e) ->
-            let env, cond = eval_branch env bddf p in
-            (env, ite cond (eval env e) x) )
-          (env, x) (snd bs)
+            (env, ite cond (eval env e) x))                       
+        (env, x) bs
       in
       x )
     | EFun _ | EApp _ -> failwith "internal error (eval)"

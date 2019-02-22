@@ -12,8 +12,8 @@ let maplist_to_string (lst : maplist) =
     ^ "] )"
   in
   "[ " ^
-  (List.fold_left (fun s1 s2 -> s1 ^ s2 ^ "; ") "" @@
-   List.map entry_to_string lst)
+  (BatList.fold_left (fun s1 s2 -> s1 ^ s2 ^ "; ") "" @@
+   BatList.map entry_to_string lst)
   ^ " ]"
 ;;
 
@@ -75,15 +75,8 @@ let rec collect_in_exp (exp : Syntax.exp) (acc : maplist) : maplist =
     collect_in_exp e acc
   | EMatch (e, branches) ->
      let acc = collect_in_exp e acc in
-     let acc1 =
-       PatMap.fold (fun _ exp acc ->
-           collect_in_exp exp acc)
-       (fst branches) acc
-     in
-    BatList.fold_left
-      (fun acc (_, exp) ->
-         collect_in_exp exp acc)
-      acc1 (snd branches)
+     foldBranches (fun (_,e) acc -> collect_in_exp exp acc)
+       acc branches
   | ETy (e, _) ->
     collect_in_exp e acc
 ;;

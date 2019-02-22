@@ -81,8 +81,7 @@ let rec unroll_exp
     | EMatch (e1, bs) ->
       ematch
         (unroll_exp e1)
-        (PatMap.map (fun e -> unroll_exp e) (fst bs),
-         BatList.map (fun (p, e) -> (p, unroll_exp e)) (snd bs))
+        (mapBranches (fun (p,e) -> (p, unroll_exp e)) bs)
     | ETy (e1, _) -> unroll_exp e1
     | EOp (op, es) ->
       match op, es with
@@ -117,7 +116,7 @@ let rec unroll_exp
           let pattern =
             PTuple(plist)
           in
-          ematch (unroll_exp map) (PatMap.empty, [(pattern, evar x)])
+          ematch (unroll_exp map) (addBranch pattern (evar x) emptyBranch)
       | MSet, [map; k; setval] ->
         if not (has_target_type map) then
           eop MSet [unroll_exp map; unroll_exp k; unroll_exp setval]
@@ -139,7 +138,7 @@ let rec unroll_exp
                      else unroll_exp setval)
                   freshvars
               in
-              ematch (unroll_exp map) (PatMap.empty, [(pattern, etuple result)])
+              ematch (unroll_exp map) (addBranch pattern (etuple result) emptyBranch)
           end
       | MMap, [f; map] ->
         if not (has_target_type map) then
@@ -157,7 +156,7 @@ let rec unroll_exp
               (fun var -> eapp f' (evar var))
               freshvars
           in
-          ematch (unroll_exp map) (PatMap.empty, [(pattern, etuple result)])
+          ematch (unroll_exp map) (addBranch pattern (etuple result) emptyBranch)
       | MMapFilter, [p; f; map] ->
         if not (has_target_type map) then
           eop MMapFilter [unroll_exp p; unroll_exp f; unroll_exp map]
@@ -176,7 +175,7 @@ let rec unroll_exp
           let result =
             BatList.map2 make_result keys freshvars
           in
-          ematch (unroll_exp map) (PatMap.empty, [(pattern, etuple result)])
+          ematch (unroll_exp map) (addBranch pattern (etuple result) emptyBranch)
       | MMerge, f :: map1 :: map2 :: _ ->
         if not ((has_target_type map1) && (has_target_type map2)) then
           eop MMerge [unroll_exp f; unroll_exp map1; unroll_exp map2]
@@ -199,7 +198,7 @@ let rec unroll_exp
           in
           ematch
             (etuple [unroll_exp map1; unroll_exp map2])
-            (PatMap.empty, [(pattern, etuple result)])
+            (addBranch pattern (etuple result) emptyBranch)
       | _ ->
         failwith @@ "Failed to unroll map: Incorrect number of arguments to map operation : "
                     ^ Printing.exp_to_string e

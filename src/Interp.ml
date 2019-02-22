@@ -63,12 +63,6 @@ let rec matches p (v: Syntax.value) env : Syntax.value Env.t option =
           | None -> None
           | Some env -> matches (PTuple ps) (vtuple vs) env)
       | _, _ -> None)
-  (* (try Some (List.fold_left2 (fun acc p v -> *)
-     (*                match matches p v acc with *)
-     (*                | None -> raise (invalid_arg "List.fold_left2") *)
-     (*                | Some env -> env) env ps vs) *)
-     (*  with *)
-     (*  | Invalid_argument _ -> None) *)
   | POption None, VOption None -> Some env
   | POption (Some p), VOption (Some v) -> matches p v env
   | (PBool _ | PInt _ | PTuple _ | POption _), _ -> None
@@ -90,16 +84,14 @@ let rec val_to_pat v =
   | VOption None -> POption None
   | VTuple vs ->
      PTuple (BatList.map val_to_pat vs)
-  | _ -> PWild
+  | _ -> failwith "cannot match those values"
   
 let rec match_branches branches v env =
-  match val_to_pat v with
-  | PWild ->
-     match_branches_lst (snd branches) v env
-  | vp ->
-     match PatMap.Exceptionless.find vp (fst branches) with
-     | Some e -> Some (env, e)
-     | _ -> match_branches_lst (snd branches) v env
+  (* iterBranches (fun (p,e) ->  Printf.printf "%s\n" (Printing.pattern_to_string p)) branches;
+   * Printf.printf "val: %s\n" (Printing.value_to_string v); *)
+  match lookUpPat (val_to_pat v) branches with
+  | Found e -> Some (env, e)
+  | Rest ls -> match_branches_lst ls v env
 
 module ExpMap = Map.Make (struct
   type t = exp
@@ -119,6 +111,8 @@ let build_env (env: env) (free_vars: Var.t BatSet.PSet.t) :
 
 let bddfunc_cache = ref ExpMap.empty
 
+let optimizeBranches b = b
+                  
 let rec interp_exp env e =
   match e.e with
   | ETy (e, _) -> interp_exp env e
@@ -152,7 +146,7 @@ let rec interp_exp env e =
   | ESome e -> voption (Some (interp_exp env e))
   | EMatch (e1, branches) ->
       let v = interp_exp env e1 in 
-      match match_branches branches v env.value with
+      match match_branches (optimizeBranches branches) v env.value with
       | Some (env2, e) -> interp_exp {env with value=env2} e
       | None ->
           failwith
@@ -294,12 +288,15 @@ let simplify_logic op pes =
 
 let simplify_match e =
   match e.e with
-  | EMatch (_, (bmap, [(_,e1);(_,e2)])) when (PatMap.is_empty bmap) && (is_value e1)
-                                             && (is_value e2) ->
-     if equal_exps ~cmp_meta:false e1 e2 then
-       e1
-     else
-       e
+  | EMatch (_, branches) ->
+     let blist = branchToList branches in
+     (match blist with
+      | [(_, e1); (_, e2)] when (is_value e1) && (is_value e2) ->
+         if equal_exps ~cmp_meta:false e1 e2 then
+           e1
+         else
+           e
+      | _ -> e)
   | _ -> e
         
 (** * Partial Interpreter *)
@@ -367,22 +364,17 @@ let rec interp_exp_partial isapp env e =
   | ESome e' -> aexp (esome (interp_exp_partial false env e'), e.ety, e.espan)
   | EMatch (e1, branches) ->
      let pe1 = interp_exp_partial false env e1 in
-     (* Printf.printf "Match: %s\n" (Printing.exp_to_string e); *)
-     (* Printf.printf "pe1: %s\n" ((\* Syntax.show_exp ~show_meta:false *\) Printing.exp_to_string pe1); *)
-          
      if is_value pe1 then
-       (match match_branches branches (to_value pe1) env.value with
+       (match match_branches (optimizeBranches branches) (to_value pe1) env.value with
         | Some (env2, e) -> interp_exp_partial false {env with value=env2} e
         | None ->
            failwith
              ( "value " ^ value_to_string (to_value pe1)
                ^ " did not match any pattern in match statement"))
      else
-       aexp (ematch pe1 (PatMap.map (fun eb ->
-                             interp_exp_partial false env eb) (fst branches),
-                         BatList.map (fun (p,eb) ->
-                                 (p, interp_exp_partial false env eb)) (snd branches)),
-             e.ety, e.espan) |> simplify_match
+       aexp (ematch pe1 (mapBranches (fun (p,e) ->
+                             (p, interp_exp_partial false env e)) branches),
+               e.ety, e.espan) (* |> simplify_match *)
      
 and interp_op_partial env ty op es =
   let pes = BatList.map (interp_exp_partial false env) es in
@@ -513,16 +505,12 @@ module Full =
     (*TODO: this is most likely broken after adding maps to branches *)
     let rec match_branches branches v =
       if is_value v then
-        match val_to_pat (to_value v) with
-        | PWild ->
-           match_branches_lst (snd branches) v
-        | vp ->
-           (match PatMap.Exceptionless.find vp (fst branches) with
-            | Some e -> Match (Env.empty, e)
-            | _ -> match_branches_lst (snd branches) v)
+        match lookUpPat (val_to_pat (to_value v)) branches with
+        | Found e -> Match (Env.empty, e)
+        | Rest ls -> match_branches_lst ls v          
       else
         Delayed
-      
+
     (** Assumes that inlining has been performed.  Not CBN in the
        strict sense. It will just do function applications over
        expressions, not just values.*)
@@ -568,17 +556,15 @@ module Full =
       | ESome e' -> aexp (esome (interp_exp_partial env e'), e.ety, e.espan)
       | EMatch (e1, branches) ->
          let pe1 = interp_exp_partial env e1 in
-         (match match_branches branches pe1 with
+         (match match_branches (optimizeBranches branches) pe1 with
           | Match (env2, e) -> interp_exp_partial (Env.updates env env2) e
           | NoMatch ->
              failwith
                ( "exp " ^ (exp_to_string pe1)
                  ^ " did not match any pattern in match statement")
           | Delayed ->
-             aexp (ematch pe1 (PatMap.map (fun eb ->
-                                   interp_exp_partial env eb) (fst branches),
-                               BatList.map (fun (p,eb) ->
-                                   (p, interp_exp_partial env eb)) (snd branches)),
+             aexp (ematch pe1 (mapBranches (fun (p,e) ->
+                                   (p,interp_exp_partial env e)) branches),
                    e.ety, e.espan))
 
     (* this is same as above, minus the app boolean. see again if we can get rid of that? *)

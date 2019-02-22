@@ -43,8 +43,7 @@ let rec substitute x e1 e2 =
   | ETy (e1, ty) -> ety (substitute x e1 e2) ty |> wrap e1
   | EMatch (e, bs) ->
       ematch (substitute x e e2)
-        (PatMap.mapi (fun p e -> snd (substitute_pattern x e2 (p,e))) (fst bs),
-         BatList.map (substitute_pattern x e2) (snd bs))
+        (mapBranches (fun (p,e) -> substitute_pattern x e2 (p,e)) bs)
       |> wrap e1
   | ESome e -> esome (substitute x e e2) |> wrap e1
   | ETuple es ->
@@ -77,8 +76,8 @@ let rec inline_app env e1 e2 : exp =
     | EMatch (e, bs) ->
         let e = inline_exp env e in
         let branches =
-          (PatMap.mapi (fun p e -> snd (inline_branch_app env e2 (p,e))) (fst bs),
-           BatList.map (inline_branch_app env e2) (snd bs)) in
+          mapBranches (fun (p,e) -> inline_branch_app env e2 (p,e)) bs
+        in
         ematch e branches |> wrap e1
     | EApp _ -> eapp e1 e2 |> wrap e1
     | ESome _ | ETuple _ | EOp _ | EVal _ ->
@@ -124,8 +123,7 @@ and inline_exp (env: exp Env.t) (e: exp) : exp =
     | ESome e1 -> esome (inline_exp env e1) |> wrap e
     | EMatch (e1, bs) ->
        ematch (inline_exp env e1)
-         (PatMap.mapi (fun p e -> snd (inline_branch env (p,e))) (fst bs),
-          BatList.map (inline_branch env) (snd bs))
+         (mapBranches (fun (p,e) -> inline_branch env (p,e)) bs)
         |> wrap e
     | ETy (e1, ty) -> ety (inline_exp env e1) ty |> wrap e
   in

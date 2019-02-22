@@ -2,6 +2,7 @@ open Main_defs
 open Solution
 
 let main =
+  Printexc.record_backtrace true;
   let cfg, info, file, net = parse_input Sys.argv in
   (* if cfg.check_monotonicity then *)
   (*   checkPolicy info cfg file decls; *)

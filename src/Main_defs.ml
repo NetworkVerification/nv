@@ -30,7 +30,7 @@ let smt_query_file =
     lazy (open_out (file ^ "-" ^
                     (string_of_int !counter) ^ "-query"))
                        
-let run_smt file cfg info (net : Syntax.network) =
+let run_smt file cfg info (net : Syntax.network) = 
   let net, fs =
     if cfg.unbox then
       begin
@@ -212,6 +212,7 @@ let parse_input (args : string array)
   if cfg.debug then Printexc.record_backtrace true ;
   let file = rest.(0) in
   let ds, info = Input.parse file in
+  (* Printf.printf "decls:\n %s\n" (Printing.declarations_to_string ds); *)
   let decls = Typing.infer_declarations info ds in
   Typing.check_annot_decls decls ;
   Wellformed.check info decls ;
@@ -224,8 +225,9 @@ let parse_input (args : string array)
       decls
   in
   let decls = if cfg.unroll then
+                (Printf.printf "doing the unrolling..\n";
                 time_profile "Map unrolling" (fun () -> MapUnrolling.unroll info decls) |>
-                  Typing.infer_declarations info 
+                  Typing.infer_declarations info) 
               else decls
   in
   let net = Slicing.createNetwork decls in

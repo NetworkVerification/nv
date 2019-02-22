@@ -237,9 +237,8 @@ module BuildAbstractNetwork =
                               corresponding to the abstract edge"
             | uv :: _ -> 
                let (_, transuv) = Hashtbl.find trans uv in
-               (* Printf.printf "transuv: %s\n" (Syntax.show_exp ~show_meta:true transuv); *)
-               PatMap.add p (addFailureCheck (EdgeMap.find (uhat, vhat) failuresMap) transuv) acc)
-                       PatMap.empty aedges
+               addBranch p (addFailureCheck (EdgeMap.find (uhat, vhat) failuresMap) transuv) acc)
+          emptyBranch aedges
       in
       
       (* partial evaluted trans functions are of the form fun m -> ..., grab m *)
@@ -259,7 +258,7 @@ module BuildAbstractNetwork =
       let transf = deconstructFun transuv in
       let messageArg = transf.arg in
       let match_exp =
-        aexp(ematch (aexp (evar aedge_var, Some Typing.edge_ty, Span.default)) (branches, []),
+        aexp(ematch (aexp (evar aedge_var, Some Typing.edge_ty, Span.default)) branches,
              transf.resty, Span.default) in
       (* create fun m -> trans_hat_body *)
       let trans_hat_msg = efunc {arg=messageArg; argty=transf.argty; resty=transf.resty;
@@ -286,19 +285,20 @@ module BuildAbstractNetwork =
       (* for each abstract node, find it's corresponding concrete
       merge function. *)
       let rec branches uhat =
-        if uhat = n then PatMap.empty
+        if uhat = n then emptyBranch
         else
           let p = PInt uhat in
           let u = getGroupRepresentativeId f uhat in
           let (_, mergeu) = Hashtbl.find merge u in
           let mergeu0 = deconstructFun mergeu in
           let mergeu1 = deconstructFun mergeu0.body in
-          PatMap.add p (aexp(mergeu1.body, mergeu1.resty, Span.default)) (branches (Integer.succ uhat))
+          addBranch p (aexp(mergeu1.body, mergeu1.resty, Span.default))
+            (branches (Integer.succ uhat))
       in
       (* create a match on the node expression *)
       let match_exp =
         aexp(ematch (aexp (evar avertex_var, Some Typing.node_ty, Span.default))
-               (branches zero, []), merge0y.resty, Span.default)
+               (branches zero), merge0y.resty, Span.default)
       in
       (* create a function from attributes *)
       efunc {arg=avertex_var; argty= Some Typing.node_ty; resty = merge0.ety;
@@ -324,16 +324,17 @@ module BuildAbstractNetwork =
       (* This is the default initial value for all other nodes.
      Assuming default_value computes the value we want..*)
       let default_attr = default_exp_value attrTy in
-      let default_branch = (PWild, default_attr) in
       (* compute the branches of the initial expression *)
-      let branches = VertexSet.fold (fun u acc ->
-                         let uhat = getId f u in
-                         let p = PInt uhat in
-                         PatMap.add p vinit acc) dst PatMap.empty in
+      let branches =
+        VertexSet.fold (fun u acc ->
+            let uhat = getId f u in
+            let p = PInt uhat in
+            addBranch p vinit acc) dst (addBranch PWild default_attr emptyBranch)
+      in
       (*build the match expression *)
       let match_exp =
         aexp (ematch (aexp (evar avertex_var, Some Typing.node_ty, Span.default))
-                (branches, [default_branch]), vinit.ety, Span.default) in
+                branches, vinit.ety, Span.default) in
       (*return the function "init node = ..." *)
       efunc {arg=avertex_var; argty=Some Typing.node_ty; resty=Some attrTy;
              body=match_exp}
@@ -359,19 +360,19 @@ module BuildAbstractNetwork =
       (* for each abstract node, find it's corresponding concrete
       assertion function. *)
       let rec branches uhat =
-        if uhat = n then PatMap.empty
+        if uhat = n then emptyBranch
         else
           let p = PInt uhat in
           let u = getGroupRepresentativeId f uhat in
           let assertu = Hashtbl.find assertionMap u in
           let assertubody = (deconstructFun assertu).body in
-          PatMap.add p assertubody (branches (Integer.succ uhat))
+          addBranch p assertubody (branches (Integer.succ uhat))
       in
       
       (* create a match on the node expression *)
       let match_exp =
-        aexp (ematch (aexp (evar avertex_var, Some Typing.node_ty, Span.default)) (branches zero, []),
-              mineu.ety, Span.default) in
+        aexp (ematch (aexp (evar avertex_var, Some Typing.node_ty, Span.default))
+                (branches zero), mineu.ety, Span.default) in
       let assert_msg = efunc {arg=messageArg; argty=mineufun.argty;
                               resty=mineufun.resty; body=match_exp} in
       (*return fun uhat m -> assert_hat_body *)  

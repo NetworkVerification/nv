@@ -141,7 +141,7 @@ and unbox_branches bs ty =
         | _ -> p)
     | _ -> p
   in
-  BatList.map (fun (p, e) -> (unbox_pattern p ty, unbox_exp e)) bs
+  mapBranches (fun (p, e) -> (unbox_pattern p ty, unbox_exp e)) bs
 
 let unbox_decl d =
   match d with
