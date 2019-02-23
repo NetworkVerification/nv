@@ -80,7 +80,7 @@ let relevantPrefixes (assertionTable : (Integer.t, Syntax.exp) Hashtbl.t) =
   Hashtbl.fold (fun _ eu acc ->
       let prefixes = get_prefixes_from_expr eu in
       PrefixSet.union prefixes acc) assertionTable PrefixSet.empty
-
+  
 (* Inspects the assertion function to find which nodes are of interest
    in the given query. Over-approximates, this should also be per prefix as well.*)
 let findRelevantNodes (assertionTable : (Integer.t, Syntax.exp) Hashtbl.t) =
@@ -157,6 +157,8 @@ let createNetwork decls =
 let createSlices info net =
   let n = AdjGraph.num_vertices net.graph in
   let initMap = partialEvalOverNodes n net.init in
+  (* Printf.printf "init: %s\n" (Printing.exp_to_string net.init); *)
+  Hashtbl.iter (fun _ e -> Printf.printf "init: %s\n" (Printing.exp_to_string e)) initMap;
   let assertMap = partialEvalOverNodes n (oget net.assertion) in
   (* find the prefixes that are relevant to the assertions *)
   let assertionPrefixes = relevantPrefixes assertMap in

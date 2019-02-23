@@ -35,13 +35,13 @@ let rec unroll_type
   | TArrow (t1, t2) ->
     TArrow (unroll_type t1, unroll_type t2)
   | TTuple tys ->
-    TTuple (List.map unroll_type tys)
+    TTuple (BatList.map unroll_type tys)
   | TOption ty ->
     TOption (unroll_type ty)
   | TMap (key_ty, val_ty) ->
     if equiv_tys ty ty2 then
       (* Don't need to recurse since types cannot contain themselves *)
-      TTuple (BatList.make (List.length keys) (canonicalize_type val_ty))
+      TTuple (BatList.make (BatList.length keys) (canonicalize_type val_ty))
     else
       TMap (unroll_type key_ty, unroll_type val_ty)
   | QVar tyname -> QVar tyname
@@ -75,7 +75,7 @@ let rec unroll_exp
     | ELet (x, e1, e2) ->
       elet x (unroll_exp e1) (unroll_exp e2)
     | ETuple es ->
-      etuple (List.map unroll_exp es)
+      etuple (BatList.map unroll_exp es)
     | ESome e1 ->
       esome (unroll_exp e1)
     | EMatch (e1, bs) ->
@@ -93,12 +93,12 @@ let rec unroll_exp
       | ULess _, _
       | ULeq _, _
       | UEq, _ ->
-        eop op (List.map unroll_exp es)
+        eop op (BatList.map unroll_exp es)
       | MCreate, [e1] ->
         if not (has_target_type e) then
           eop MCreate [unroll_exp e1]
         else
-          etuple (BatList.make (List.length keys) (unroll_exp e1))
+          etuple (BatList.make (BatList.length keys) (unroll_exp e1))
       | MGet, [map; k] ->
         if not (has_target_type map) then
           eop MGet [unroll_exp map; unroll_exp k]
@@ -126,7 +126,7 @@ let rec unroll_exp
             | None -> unroll_exp map
             | Some index ->
               let freshvars =
-                List.map (fun _ -> Var.fresh "UnrollingSetVar") keys
+                BatList.map (fun _ -> Var.fresh "UnrollingSetVar") keys
               in
               let pattern =
                 PTuple (BatList.map (fun var -> PVar var) freshvars)
@@ -146,7 +146,7 @@ let rec unroll_exp
         else
           let f' = unroll_exp f in
           let freshvars =
-            List.map (fun _ -> Var.fresh "UnrollingMapVar") keys
+            BatList.map (fun _ -> Var.fresh "UnrollingMapVar") keys
           in
           let pattern =
             PTuple (BatList.map (fun var -> PVar var) freshvars)
@@ -249,5 +249,5 @@ let unroll_one_map_type
   (* According to the docs, ExpSet.elements returns a sorted list.
      This is important because we need a consistent numbering for
      our keys *)
-  List.map (unroll_decl ty keys) decls
+  BatList.map (unroll_decl ty keys) decls
 ;;

@@ -75,7 +75,7 @@ let rec collect_in_exp (exp : Syntax.exp) (acc : maplist) : maplist =
     collect_in_exp e acc
   | EMatch (e, branches) ->
      let acc = collect_in_exp e acc in
-     foldBranches (fun (_,e) acc -> collect_in_exp exp acc)
+     foldBranches (fun (_,e) acc -> collect_in_exp e acc)
        acc branches
   | ETy (e, _) ->
     collect_in_exp e acc

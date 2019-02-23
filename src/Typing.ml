@@ -790,99 +790,99 @@ let strip_decls ds =
    * Unbound TVars are converted to TBool
    * Linked TVars are converted to the linked type
    * QVars are renamed deterministically *)
-let canonicalize_type_rec (ty : ty) : ty =
-  let open Collections in
-  (* Keep a map to track which QVars have been renamed to what
-     Keep a counter for making fresh variable names manually *)
-  let map = ref VarMap.empty in
-  let count = ref 0 in
-  let rec aux ty k =
-    match ty with
-    | TBool | TInt _ ->
-       k ty
-    | TArrow (t1, t2) ->
-       aux t1 (fun t1' -> aux t2
-                            (fun t2' -> k (TArrow (t1', t2'))))     
-    | TTuple tys ->
-       let tys' =                    
-         BatList.map (fun t -> aux t (fun x -> x)) tys
-       in
-       k (TTuple tys')
-    | TOption t ->
-       aux t (fun t' -> k (TOption t'))
-    | TMap (t1, t2) ->
-       aux t1 (fun t1' -> aux t2
-                            (fun t2' -> k (TMap (t1', t2'))))
-    | QVar tyname ->
-       begin
-         match VarMap.find_opt tyname !map with
-         | None ->
-            let c = !count in
-            let new_var = Var.to_var ("a", c) in
-            map := VarMap.add tyname new_var !map;
-            incr count;
-            k (QVar new_var)
-         | Some v -> k (QVar v)
-       end
-    | TVar r ->
-       begin
-         match !r with
-         | Link t -> aux t k
-         | Unbound _ -> k TBool
-       end
+(* let canonicalize_type (ty : ty) : ty = *)
+(*   let open Collections in *)
+(*   (\* Keep a map to track which QVars have been renamed to what *)
+(*      Keep a counter for making fresh variable names manually *\) *)
+(*   let map = ref VarMap.empty in *)
+(*   let count = ref 0 in *)
+(*   let rec aux ty k = *)
+(*     match ty with *)
+(*     | TBool | TInt _ -> *)
+(*        k ty *)
+(*     | TArrow (t1, t2) -> *)
+(*        aux t1 (fun t1' -> aux t2 *)
+(*                             (fun t2' -> k (TArrow (t1', t2'))))      *)
+(*     | TTuple tys -> *)
+(*        let tys' =                     *)
+(*          BatList.map (fun t -> aux t (fun x -> x)) tys *)
+(*        in *)
+(*        k (TTuple tys') *)
+(*     | TOption t -> *)
+(*        aux t (fun t' -> k (TOption t')) *)
+(*     | TMap (t1, t2) -> *)
+(*        aux t1 (fun t1' -> aux t2 *)
+(*                             (fun t2' -> k (TMap (t1', t2')))) *)
+(*     | QVar tyname -> *)
+(*        begin *)
+(*          match VarMap.find_opt tyname !map with *)
+(*          | None -> *)
+(*             let c = !count in *)
+(*             let new_var = Var.to_var ("a", c) in *)
+(*             map := VarMap.add tyname new_var !map; *)
+(*             incr count; *)
+(*             k (QVar new_var) *)
+(*          | Some v -> k (QVar v) *)
+(*        end *)
+(*     | TVar r -> *)
+(*        begin *)
+(*          match !r with *)
+(*          | Link t -> aux t k *)
+(*          | Unbound _ -> k TBool *)
+(*        end *)
        
-  in
-  let result = aux ty (fun x -> x) in
-  result
+(*   in *)
+(*   let result = aux ty (fun x -> x) in *)
+(*   result *)
    
-let canonicalize_type =
-  Memo.memo_rec canonicalize_type
-      
-  (* let rec aux ty map count =
-   *   match ty with
-   *   | TBool
-   *   | TInt _ ->
-   *     ty, map, count
-   *   | TArrow (t1, t2) ->
-   *     let t1', map, count = aux t1 map count in
-   *     let t2', map, count = aux t2 map count in
-   *     TArrow (t1', t2'), map, count
-   *   | TTuple (tys) ->
-   *     let tys', map, count =
-   *       BatList.fold_left
-   *         (fun (lst, map, count) t ->
-   *            let t', map, count = aux t map count in
-   *            t' :: lst, map, count
-   *         )
-   *         ([], map, count) tys
-   *     in
-   *     TTuple (BatList.rev tys'), map, count
-   *   | TOption t ->
-   *     let t', map, count = aux t map count in
-   *     TOption (t'), map, count
-   *   | TMap (t1, t2) ->
-   *     let t1', map, count = aux t1 map count in
-   *     let t2', map, count = aux t2 map count in
-   *     TMap (t1', t2'), map, count
-   *   | QVar tyname ->
-   *     begin
-   *       match VarMap.find_opt tyname map with
-   *       | None ->
-   * 
-   *         ( QVar (new_var),
-   *           (VarMap.add tyname new_var map),
-   *           count + 1)
-   *       | Some v -> QVar (v), map, count
-   *     end
-   *   | TVar r ->
-   *     begin
-   *       match !r with
-   *       | Link t -> aux t map count
-   *       | Unbound _ -> TBool, map, count
-   *     end
-   * in
-   * let (result, _, _) = aux ty (VarMap.empty) 0 in
-   * result *)
+let canonicalize_type (ty : ty) : ty =
+  let open Collections in      
+  let rec aux ty map count =
+    match ty with
+    | TBool
+    | TInt _ ->
+      ty, map, count
+    | TArrow (t1, t2) ->
+      let t1', map, count = aux t1 map count in
+      let t2', map, count = aux t2 map count in
+      TArrow (t1', t2'), map, count
+    | TTuple (tys) ->
+      let tys', map, count =
+        BatList.fold_left
+          (fun (lst, map, count) t ->
+             let t', map, count = aux t map count in
+             t' :: lst, map, count
+          )
+          ([], map, count) tys
+      in
+      TTuple (BatList.rev tys'), map, count
+    | TOption t ->
+      let t', map, count = aux t map count in
+      TOption (t'), map, count
+    | TMap (t1, t2) ->
+      let t1', map, count = aux t1 map count in
+      let t2', map, count = aux t2 map count in
+      TMap (t1', t2'), map, count
+    | QVar tyname ->
+      begin
+        match VarMap.find_opt tyname map with
+        | None ->
+           let new_var = Var.to_var ("a", count) in
+          ( QVar (new_var),
+            (VarMap.add tyname new_var map),
+            count + 1)
+        | Some v -> QVar (v), map, count
+      end
+    | TVar r ->
+      begin
+        match !r with
+        | Link t -> aux t map count
+        | Unbound _ -> (* TBool, map, count *)
+           failwith "unbound"
+      end
+  in
+  let (result, _, _) = aux ty (VarMap.empty) 0 in
+  result
 
 let rec equiv_tys ty1 ty2 =
   equal_tys (canonicalize_type ty1) (canonicalize_type ty2)

@@ -164,6 +164,8 @@ let compress file info net cfg networkOp =
        | Some f' ->
           loop finit f' slice sources mergeMap transMap k (i+1)
   in
+  let slices = (Slicing.createSlices info net) in
+  Printf.printf "slices %d\n" (BatList.length slices);
   (* Iterate over each network slice *)
   BatList.iter
     (fun slice ->
@@ -225,9 +227,8 @@ let parse_input (args : string array)
       decls
   in
   let decls = if cfg.unroll then
-                (Printf.printf "doing the unrolling..\n";
                 time_profile "Map unrolling" (fun () -> MapUnrolling.unroll info decls) |>
-                  Typing.infer_declarations info) 
+                  Typing.infer_declarations info
               else decls
   in
   let net = Slicing.createNetwork decls in
