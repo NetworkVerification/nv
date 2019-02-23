@@ -32,7 +32,8 @@ let partialEvalOverNodes (n : Integer.t) (e: Syntax.exp) =
   let tbl = Hashtbl.create (Integer.to_int n) in
   AdjGraph.fold_vertices
     (fun u _ ->
-      let initu = Interp.interp_partial (Syntax.apps e [e_val (vint u)]) in
+        let initu = Interp.interp_partial (Syntax.apps e [e_val (vint u)]) in
+        (* Printf.printf "exp1: %s\n" (Printing.exp_to_string initu); *)
       Hashtbl.add tbl u initu) n ();
   tbl
 

@@ -4,12 +4,14 @@
    Returns an equivalent set of decls where all map types have been
    replaced with tuple types, and a function which converts a Solution
    to the new decls into a solution for the old decls. *)
+open Syntax
 let unroll info decls =
   let maplist =
     MapUnrollingUtils.collect_map_types_and_keys decls
   in
+  Printf.printf "maplist: %d\n" (List.length maplist);
   let final_decls =
-    List.fold_left
+    BatList.fold_left
       (fun decls (mty, keys) ->
          let keys = (Collections.ExpSet.elements keys) in
          let new_decls =
@@ -27,6 +29,6 @@ let unroll info decls =
    decls
       maplist
   in
-(* final_decls, [], map_back *)
+  (* final_decls, [], map_back *)
   final_decls
 ;;

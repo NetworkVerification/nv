@@ -582,37 +582,36 @@ and infer_values info env vs =
     let vs, ts = infer_values info env vs in
     (v :: vs, t :: ts)
 
-(* and infer_branches i info env exp tmatch bs =      
- *   match popBranch bs with
- *   | None -> failwith "internal error (infer branches)"
- *   | Some ((p, e), bs) when isEmptyBranch bs ->
- *      let env2 = infer_pattern (i + 1) info env exp tmatch p in
- *      let e, t = infer_exp (i + 1) info env2 e |> textract in
- *      (addBranch p e emptyBranch, t)
- *   | Some ((p, e), bs) ->
- *     let bs, tbranch =
- *       infer_branches (i + 1) info env exp tmatch bs
- *     in
- *     let env2 = infer_pattern (i + 1) info env exp tmatch p in
- *     let e, t = infer_exp (i + 1) info env2 e |> textract in
- *     unify info e t tbranch ;
- *     (addBranch p e bs, t) *)
+and infer_branches i info env exp tmatch bs =      
+  match popBranch bs with
+  | ((p, e), bs) when isEmptyBranch bs ->
+     let env2 = infer_pattern (i + 1) info env exp tmatch p in
+     let e, t = infer_exp (i + 1) info env2 e |> textract in
+     (addBranch p e emptyBranch, t)
+  | ((p, e), bs) ->
+    let bs, tbranch =
+      infer_branches (i + 1) info env exp tmatch bs
+    in
+    let env2 = infer_pattern (i + 1) info env exp tmatch p in
+    let e, t = infer_exp (i + 1) info env2 e |> textract in
+    unify info e t tbranch ;
+    (addBranch p e bs, t)
 
-and infer_branches i info env exp tmatch bs =
-  let rec infer_branches_aux i info env exp tmatch bs accbs accty =
-    try let ((p,e), bs) = popBranch bs in
-        let env2 = infer_pattern (i + 1) info env exp tmatch p in
-        let e, t = infer_exp (i + 1) info env2 e |> textract in
-        unify info e t accty ;
-        infer_branches_aux (i+1) info env exp tmatch bs (addBranch p e accbs) t
-    with
-    | Not_found -> (accbs, accty)
-  in
-  try let ((p, e), bs) = popBranch bs in
-      let env2 = infer_pattern (i + 1) info env exp tmatch p in
-      let e, t = infer_exp (i + 1) info env2 e |> textract in
-      infer_branches_aux (i+1) info env exp tmatch bs (addBranch p e emptyBranch) t
-  with | Not_found -> failwith "internal error (infer branches)"
+(* and infer_branches i info env exp tmatch bs = *)
+(*   let rec infer_branches_aux i info env exp tmatch bs accbs accty = *)
+(*     try let ((p,e), bs) = popBranch bs in *)
+(*         let env2 = infer_pattern (i + 1) info env exp tmatch p in *)
+(*         let e, t = infer_exp (i + 1) info env2 e |> textract in *)
+(*         unify info e t accty ; *)
+(*         infer_branches_aux (i+1) info env exp tmatch bs (addBranch p e accbs) t *)
+(*     with *)
+(*     | Not_found -> (accbs, accty) *)
+(*   in *)
+(*   try let ((p, e), bs) = popBranch bs in *)
+(*       let env2 = infer_pattern (i + 1) info env exp tmatch p in *)
+(*       let e, t = infer_exp (i + 1) info env2 e |> textract in *)
+(*       infer_branches_aux (i+1) info env exp tmatch bs (addBranch p e emptyBranch) t *)
+(*   with | Not_found -> failwith "internal error (infer branches)" *)
          
 and infer_pattern i info env e tmatch p =
   valid_pat p ;
