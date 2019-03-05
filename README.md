@@ -31,6 +31,7 @@ Then clone the repo and run `make`.
 ### Ubuntu (16.04+)
 
 ```
+sudo apt update
 sudo apt install gcc g++ make m4 libgmp-dev python2.7 libz3-dev z3
 ```
 
