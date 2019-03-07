@@ -104,7 +104,7 @@ val emptyBranch : branches
 val isEmptyBranch: branches -> bool
 val optimizeBranches: branches -> branches
 val branchToList: branches -> (PatMap.key * exp) list
-
+val branchSize: branches -> unit
 
 type declaration =
   | DLet of var * ty option * exp

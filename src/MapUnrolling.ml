@@ -9,7 +9,6 @@ let unroll info decls =
   let maplist =
     MapUnrollingUtils.collect_map_types_and_keys decls
   in
-  Printf.printf "maplist: %d\n" (List.length maplist);
   let final_decls =
     BatList.fold_left
       (fun decls (mty, keys) ->

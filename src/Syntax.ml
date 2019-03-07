@@ -138,9 +138,8 @@ and exp =
   }
 [@@deriving ord]
 
-and branches = { pmap      : exp PatMap.t;
-                 plist     : (pattern * exp) list;
-                 optimized : bool
+and branches = { pmap              : exp PatMap.t;
+                 plist             : (pattern * exp) list
                 }
              
 and func = {arg: var; argty: ty option; resty: ty option; body: exp}
@@ -179,6 +178,7 @@ type network =
     graph        : AdjGraph.t;
   }
 
+
 (** * Handling branches *)
 
 type branchLookup = Found of exp | Rest of (pattern * exp) list 
@@ -188,11 +188,11 @@ let addBranch p e b =
 
 (* f should preserve concrete patterns *)
 let mapBranches f b =
-  {b with pmap = PatMap.fold (fun p e pmap ->
-                     let p, e = f (p, e) in
-                     PatMap.add p e pmap) b.pmap PatMap.empty;
-          plist = BatList.map f b.plist}
-
+  {pmap = PatMap.fold (fun p e pmap ->
+              let p, e = f (p, e) in
+              PatMap.add p e pmap) b.pmap PatMap.empty;
+   plist = BatList.map f b.plist}
+  
 let iterBranches f b =
   PatMap.iter (fun p e -> f (p,e)) b.pmap;
   BatList.iter f b.plist
@@ -203,9 +203,11 @@ let foldBranches f acc b =
 
 let lookUpPat p b =
   match PatMap.Exceptionless.find p b.pmap with
-  | Some e -> Found e
-  | None -> Rest b.plist
-  
+  | Some e ->
+     Found e
+  | None ->
+     Rest b.plist
+         
 let popBranch b =
   if PatMap.is_empty b.pmap then
     match b.plist with
@@ -218,8 +220,7 @@ let popBranch b =
 
 let emptyBranch =
   { pmap = PatMap.empty;
-    plist = [];
-    optimized = false
+    plist = []
   }
   
 let isEmptyBranch b =
@@ -228,21 +229,20 @@ let isEmptyBranch b =
 let optimizeBranches b =
   let rec loop map lst =
     match lst with
-    | [] -> {pmap = map; plist = []; optimized = true}
-    | (p,e) :: lst when Pat.isConcretePat p = true ->
-       loop (PatMap.add p e map) lst
-    | (p,e) :: lst' when Pat.isConcretePat p = false ->
-       {pmap = map; plist = lst; optimized = true}
+    | [] -> {pmap = map; plist = []}
+    | (p,e) :: lst' when Pat.isConcretePat p = true ->
+       loop (PatMap.add p e map) lst'
+    | (p,e) :: _ when Pat.isConcretePat p = false ->
+       {pmap = map; plist = lst}
   in
-  if b.optimized then
-    b
-  else
-    loop b.pmap b.plist
+  loop b.pmap b.plist
 
 let branchToList b =
   (PatMap.fold (fun p e acc -> (p,e) :: acc) b.pmap b.plist)
 
-  
+let branchSize b =
+  Printf.printf "%d\n" (PatMap.cardinal b.pmap)
+
 (* structural printing *)
 (* TODO: This should probably be its own file *)
 
@@ -358,7 +358,7 @@ and show_env ~show_meta e =
   Printf.sprintf "{ty=%s; value=%s}"
     (Env.to_string show_ty e.ty)
     (Env.to_string (show_value ~show_meta) e.value)
-
+  
 (* equality / hashing *)
 
 let equal_spans (s1: Span.t) (s2: Span.t) =
@@ -1716,3 +1716,4 @@ module BddFunc = struct
 end
 
 let default_value = BddMap.default_value
+

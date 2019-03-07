@@ -158,8 +158,6 @@ let createNetwork decls =
 let createSlices info net =
   let n = AdjGraph.num_vertices net.graph in
   let initMap = partialEvalOverNodes n net.init in
-  (* Printf.printf "init: %s\n" (Printing.exp_to_string net.init); *)
-  Hashtbl.iter (fun _ e -> Printf.printf "init: %s\n" (Printing.exp_to_string e)) initMap;
   let assertMap = partialEvalOverNodes n (oget net.assertion) in
   (* find the prefixes that are relevant to the assertions *)
   let assertionPrefixes = relevantPrefixes assertMap in
@@ -181,8 +179,8 @@ let createSlices info net =
                                     :: (DEdges (AdjGraph.edges (net.graph))) :: symb @
                                       [(DInit net.init);
                                        (DMerge net.merge); (DTrans net.trans);
-                                       (DAssert (oget net.assertion))]) |>
-          Typing.infer_declarations info in
+                                       (DAssert (oget net.assertion))]) (* |> *)
+          (* Typing.infer_declarations info *) in
       { net =
           { attr_type = net.attr_type;
             init = oget (get_init decls);

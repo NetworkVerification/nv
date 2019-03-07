@@ -117,6 +117,7 @@ let compress file info net cfg networkOp =
 
   FailuresAbstraction.refinement_breadth := cfg.depth;
   FailuresAbstraction.counterexample_refinement_breadth := cfg.depth;
+  let net = OptimizeBranches.optimizeNet net in
   (*printing concrete graph *)
   (* if cfg.draw then *)
   (*   begin *)
@@ -164,8 +165,6 @@ let compress file info net cfg networkOp =
        | Some f' ->
           loop finit f' slice sources mergeMap transMap k (i+1)
   in
-  let slices = (Slicing.createSlices info net) in
-  Printf.printf "slices %d\n" (BatList.length slices);
   (* Iterate over each network slice *)
   BatList.iter
     (fun slice ->
@@ -177,9 +176,21 @@ let compress file info net cfg networkOp =
         Slicing.findRelevantNodes (partialEvalOverNodes n (oget slice.net.assertion)) in
       (* partially evaluate the functions of the network. *)
       (* TODO, this should be done outside of this loop, maybe just redone here *)
+      (* Printf.printf "Just before opt\n"; *)
+      (* let optTrans = OptimizeBranches.optimizeExp slice.net.trans in *)
+      (* Printf.printf "trans:%s\n" (Printing.exp_to_string slice.net.trans); *)
+      (* Printf.printf "trans\n"; *)
+      (* (Visitors.iter_exp (fun e -> *)
+      (*      match e.e with *)
+      (*      | EMatch (e, bs) -> *)
+      (*         branchSize bs *)
+      (*      | _ -> ()) optTrans); *)
+      (* flush stdout; *)
+      (* failwith "stop"; *)
       let transMap =
         Profile.time_profile "partial eval trans"
-                             (fun () -> Abstraction.partialEvalTrans
+                             (fun () ->
+                               Abstraction.partialEvalTrans
                                           slice.net.graph slice.net.trans)
       in
       let mergeMap = Abstraction.partialEvalMerge slice.net.graph slice.net.merge in

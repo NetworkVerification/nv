@@ -110,8 +110,6 @@ let build_env (env: env) (free_vars: Var.t BatSet.PSet.t) :
     free_vars base
 
 let bddfunc_cache = ref ExpMap.empty
-
-let optimizeBranches b = b
                   
 let rec interp_exp env e =
   match e.e with
@@ -146,7 +144,7 @@ let rec interp_exp env e =
   | ESome e -> voption (Some (interp_exp env e))
   | EMatch (e1, branches) ->
       let v = interp_exp env e1 in 
-      match match_branches (optimizeBranches branches) v env.value with
+      match match_branches branches v env.value with
       | Some (env2, e) -> interp_exp {env with value=env2} e
       | None ->
           failwith
@@ -366,7 +364,7 @@ let rec interp_exp_partial isapp env e =
      (* Printf.printf "match: %s\n" (Printing.exp_to_string e); *)
      let pe1 = interp_exp_partial false env e1 in
      if is_value pe1 then
-       (match match_branches branches (to_value pe1) env.value with
+       (match match_branches (branches) (to_value pe1) env.value with
         | Some (env2, e) -> interp_exp_partial false {env with value=env2} e
         | None ->
            failwith
@@ -557,7 +555,7 @@ module Full =
       | ESome e' -> aexp (esome (interp_exp_partial env e'), e.ety, e.espan)
       | EMatch (e1, branches) ->
          let pe1 = interp_exp_partial env e1 in
-         (match match_branches (optimizeBranches branches) pe1 with
+         (match match_branches branches pe1 with
           | Match (env2, e) -> interp_exp_partial (Env.updates env env2) e
           | NoMatch ->
              failwith
