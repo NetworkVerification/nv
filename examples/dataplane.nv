@@ -1,0 +1,34 @@
+type prefix = (int,int)
+type edgeTy = (int,int)
+
+type bgp = { bgpad : int; lp : int; cost : int; }
+type rib = option[{ fwd : edgeTy; bgpLabel : bgp; }]
+
+type packet = { srcIp: int; dstIp: int; }
+type packets = set[packet]
+
+type attribute = {data : packets; control : dict[prefix,rib]}
+
+let nodes = 4
+
+let edges = {
+  0=1;
+  0=2;
+  1=3;
+  2=3;
+ }
+
+let mergeData node x y = x UNION y
+
+let transPacket edge p rib =
+  if longestMatchingPrefix edge p rib then
+     {p}
+  else {}
+
+let transBgp edge ps b =
+    match b with
+    | None -> None
+    | Some b ->
+       
+      
+  
