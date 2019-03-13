@@ -1,0 +1,223 @@
+\documentclass{article}
+
+\usepackage{fancyhdr}
+\usepackage{extramarks}
+\usepackage{amsfonts}
+\usepackage{syntax}
+\usepackage{stmaryrd}
+\usepackage{mathpartir}
+
+%
+% Basic Document Settings
+%
+
+\topmargin=-0.45in
+\evensidemargin=0in
+\oddsidemargin=0in
+\textwidth=6.5in
+\textheight=9.0in
+\headsep=0.25in
+
+\linespread{1.1}
+
+\pagestyle{fancy}
+\chead{Option Unboxing}
+\lfoot{\lastxmark}
+\cfoot{\thepage}
+
+\renewcommand\headrulewidth{0.4pt}
+\renewcommand\footrulewidth{0.4pt}
+
+\setlength\parindent{30pt}
+
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\Zt}{$\Z$}
+
+% Create a relational rule
+% [#1] - Additional mathpartir arguments
+% {#2} - Name of the rule
+% {#3} - Premises for the rule
+% {#4} - Conclusions for the rule
+\newcommand{\relationRule}[4][]{\inferrule*[lab={\sc #2},#1]{#3}{#4}}
+
+\newcommand{\rel}[1]{\ensuremath{\llbracket {#1} \rrbracket}}
+\newcommand{\ttt}{\texttt}
+\newcommand{\transform}{\rightsquigarrow}
+\newcommand{\proj}{\pi}
+\newcommand{\ttuple}{\tau_1 * \ldots * \tau_n}
+\newcommand{\etuple}{(e_1,\ldots,e_n)}
+\newcommand{\bool}{\mathrm{bool}}
+\newcommand{\integer}{\mathrm{int}}
+\newcommand{\option}{\mathrm{option}}
+\newcommand{\uoption}[1]{(\bool,#1)}
+\newcommand{\opt}[1]{\texttt{opt-#1}}
+\newcommand{\varOf}[1]{\texttt{varOf}(#1)}
+
+
+
+\begin{document}
+This document defines a transformation $\transform$ that unboxes options as a tuple between a boolean and the value it (may) hold. 
+
+
+\section*{Types}
+
+\begin{mathpar}
+	\relationRule{basic type}{
+          \tau \in \{\bool,\integer\}
+	}{
+          \tau \transform \tau
+	}
+
+	\relationRule{option type}{
+          \tau \transform \tau'
+	}{
+          \option~ \tau \transform \uoption{\tau'}
+	}
+
+	\relationRule{tuple type}{
+          \tau_1 \transform \tau_1' \\ \ldots \\ \tau_n \transform \tau_n'
+	}{
+          \ttuple \transform \tau_1 * \ldots * \tau_n
+	}
+
+	\relationRule{arrow type}{
+          \tau_1 \transform \tau_1' \\ \tau_2 \transform \tau_2'
+	}{
+          \tau_1 \to \tau_2 \transform \tau_1' \to \tau_2'
+	}
+\end{mathpar}
+
+\section*{Values}
+
+\begin{mathpar}
+	\relationRule{literal}{
+		\tau \in \{\texttt{bool}, \texttt{int}\}
+	}{
+           n : \tau \transform n
+	}
+\end{mathpar}
+
+\begin{mathpar}
+	\relationRule{None}{
+	}{
+           \texttt{None} : \option~ \tau \transform (\texttt{false},\texttt{default_value } \tau)
+	}
+\end{mathpar}
+
+\begin{mathpar}
+  \relationRule{Function}{
+    \tau_1 \transform \tau_1' e : \tau_2 \transform e' : \tau_2'
+  }{\texttt{fun}\ x \to e : \tau_1 \to \tau_2 \transform \texttt{fun}\ x \to e' : \tau_1' \to \tau_2'
+	}
+\end{mathpar}
+
+\section*{Expressions}
+
+\begin{mathpar}
+	\relationRule{identifer }{
+          \tau \transform \tau'
+	}{
+          x : \tau \transform x : \tau'
+	}
+\end{mathpar}
+
+\begin{mathpar}
+	\relationRule{Tuple}{
+		e_1 : \tau_1 \transform e_1' : \tau_1' \\ \ldots \\ 
+                e_n : \tau_n \transform e_n' : \tau_1'
+	}{
+          \etuple : \ttuple \transform (e_1,\ldots,e_n) : \tau_1' * \ldots * \tau_n'
+	}
+\end{mathpar}
+
+\begin{mathpar}
+	\relationRule{Not}{
+          e : \tau \transform e' : \tau'
+	}{
+		!e : \tau \transform !e' : \tau'	
+	}
+\end{mathpar}
+	
+\begin{mathpar}
+\relationRule{Binop}{
+	 \oplus \mbox{ is a binary operator} \\ 
+         e_1 : \tau_1 \transform e_1' : \tau_1' \\ e_2 : \tau_2 \transform e_2' : \tau_2'
+         \tau \transform \tau'
+   }{
+   	e_1 \oplus e_2 : \tau \transform e_1' \oplus e_2' : \tau'
+   }
+\end{mathpar}
+
+\begin{mathpar}
+	\relationRule{Function application}{
+		e_1 : \tau_1 \to \tau_2 \transform e_1' : \tau_1' \to \tau_2' \\ 
+                e_2 : \tau_2 \transform e_2' : \tau_2'
+	}{
+                e_1 e_2 : \tau \transform e_1' e_2' : \tau2'	
+	}
+\end{mathpar}
+
+
+\begin{mathpar}
+	\relationRule{Let-binding}{
+          e_1 : \tau_1 \transform e_1' : \tau_1' \\ e_2 : \tau_2 \transform e_2' : \tau_2'
+	}{
+          \texttt{let}\ p = e_1\ \texttt{in}\ e_2 : \tau_2 \transform \texttt{let}\ p = \ e_1' \texttt{in}\ e_2' : \tau_2'	
+	}
+\end{mathpar}
+
+\begin{mathpar}
+	\relationRule{Match}{
+          e \transform e' \\ e_1 \transform e_1' \\ \ldots \\ e_2 \transform e_2' \\
+          p_1 \transform p_1' \\ \ldots \\ p_k \transform p_k'
+	}{
+		\texttt{match}\ e\ \texttt{with}\ |\ p_1 \to e_1 \dots |\ p_k \to e_k : \ttuple \transform 
+		\texttt{match}\ e'\ \texttt{with}\ |\ p_1' \to e_1' \dots |\ p_k' \to e_k' 
+	}
+\end{mathpar}
+
+\begin{mathpar}
+	\relationRule{If-else}{
+		e_1 \transform e_1' \\ e_2 \transform e_2' \\ e_3 \transform e_3'
+	}{
+		\texttt{if}\ e_1\ \texttt{then}\ e_2\ \texttt{else}\ e_3 = 
+		\texttt{if}\ e_1'\ \texttt{then}\ e_2'\ \texttt{else}\ e_3'
+	}
+\end{mathpar}
+
+
+\section*{Patterns}
+
+\begin{mathpar}
+	\relationRule{PNone}{
+          \null
+	}{
+		\texttt{None} \transform (\texttt{false}, \_)	
+	}
+\end{mathpar}
+
+\begin{mathpar}
+	\relationRule{PSome}{
+          p \transform p'
+	}{
+		\texttt{Some}~p \transform (\texttt{true}, p')	
+	}
+\end{mathpar}
+
+\begin{mathpar}
+	\relationRule{PTuple}{
+          p_1 \transform p_1' \\ p_n \transform p_n'
+	}{
+		(p_1,\ldots,p_n) \transform (p_1',\ldots,p_n')
+	}
+\end{mathpar}
+
+\begin{mathpar}
+	\relationRule{Pother}{
+          p = \_ \vee p = x \vee p = b : bool \vee p = n : int
+	}{
+          p \transform p
+	}
+\end{mathpar}
+
+\end{document}

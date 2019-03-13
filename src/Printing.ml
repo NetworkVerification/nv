@@ -5,8 +5,7 @@ open Syntax
 let is_keyword_op op =
   match op with
   | And | Or | Not | UAdd _ | USub _ | UEq | ULess _ | ULeq _ | MGet -> false
-  | MCreate | MSet | MMap | MMerge | MMapFilter -> true
-  | AtMost _ -> failwith "Not implemented"
+  | MCreate | MSet | MMap | MMerge | MMapFilter | AtMost _ -> true
 
 (* set to true if you want to print universal quanifiers explicitly *)
 let quantifiers = true
@@ -29,7 +28,8 @@ let prec_op op =
   | MMap -> 5
   | MMerge -> 5
   | MMapFilter -> 5
-  | AtMost _ -> failwith "Not implemented"
+  | AtMost _ -> 6
+
 
 let prec_exp e =
   match e.e with
@@ -142,7 +142,7 @@ let op_to_string op =
   | MMap -> "map"
   | MMapFilter -> "mapIf"
   | MMerge -> "combine"
-  | AtMost _ -> failwith "Not implemented"
+  | AtMost _ -> "atMost"
 
 let rec pattern_to_string pattern =
   match pattern with
@@ -208,7 +208,8 @@ and value_to_string_p prec v =
   | VMap m -> map_to_string ":=" "," m
   | VTuple vs ->
     "(" ^ comma_sep (value_to_string_p max_prec) vs ^ ")"
-  | VOption None -> "None"
+  | VOption None -> (* Printf.sprintf "None:%s" (ty_to_string (oget v.vty)) *)
+     "None"
   | VOption (Some v) ->
     let s = "Some(" ^ value_to_string_p max_prec v ^ ")" in
     if max_prec > prec then "(" ^ s ^ ")" else s
@@ -242,7 +243,7 @@ and exp_to_string_p prec e =
       "(match "
       ^ exp_to_string_p max_prec e1
       ^ " with " ^ "\n"
-      ^ branches_to_string prec bs
+      ^ branches_to_string prec (branchToList bs)
       ^ ")"
     | ETy (e, t) -> exp_to_string_p prec e ^ ty_to_string t
     | ERecord map -> print_record "=" (exp_to_string_p prec) map

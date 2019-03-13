@@ -13,7 +13,8 @@
 %token AS
 %token PAIR 
 %token LPAREN 
-%token RPAREN 
+%token RPAREN
+%token NEG
 
 %token EOF
 
@@ -29,6 +30,7 @@ junk:
 
 value:
     | NUM                               { vint $1 }
+    | LPAREN NEG NUM RPAREN             { vint $3 } 
     | TRUE				{ vbool true }
     | FALSE				{ vbool false }
     | NONE				{ voption None }

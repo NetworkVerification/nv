@@ -1,6 +1,7 @@
-PKGS = -package integers -package oUnit -package z3
+PKGS = -package integers -package oUnit
 DIRS = src,test
-BUILD = ocamlbuild -use-ocamlfind -use-menhir -r -Is $(DIRS) $(PKGS)
+# BUILD = ocamlbuild -use-ocamlfind -use-menhir -r -Is $(DIRS) $(PKGS)
+BUILD = ocamlbuild -tag thread -use-ocamlfind -use-menhir -r -Is $(DIRS) $(PKGS)
 MLFILES= src/*.ml src/*.mli test/*.ml
 FORMATFILES=$(shell find src/ -name "*.ml" | grep -v Cmdline.ml)
 FORMATFILES+=$(shell find src/ -name "*.mli")
@@ -20,17 +21,17 @@ install:
 build: $(MLFILES)
 	$(BUILD) src/Main.native
 
-# optimize: $(MLFILES)
-# 	$(BUILD) -tag native src/Main.native
-
 debug: $(MLFILES)
 	$(BUILD) -tag debug src/Main.native
 
 profile: $(MLFILES)
-	$(BUILD) -tag profile src/Main.native
+	$(BUILD) -tag profile -tag 'cc(gcc)' src/Main.native
+
+opt: $(MLFILES)
+	$(BUILD) -tag 'optimize(2)' src/Main.native
 
 byte: $(MLFILES)
-	$(BUILD) -tag byte src/Main.byte
+	$(BUILD) -tag byte -tag debug src/Main.byte
 
 %: %.ml
 	$(BUILD) $@.native

@@ -12,8 +12,8 @@ let maplist_to_string (lst : maplist) =
     ^ "] )"
   in
   "[ " ^
-  (List.fold_left (fun s1 s2 -> s1 ^ s2 ^ "; ") "" @@
-   List.map entry_to_string lst)
+  (BatList.fold_left (fun s1 s2 -> s1 ^ s2 ^ "; ") "" @@
+   BatList.map entry_to_string lst)
   ^ " ]"
 ;;
 
@@ -21,7 +21,10 @@ let rec add_to_maplist (ty, keys) lst : maplist =
   match lst with
   | [] -> [(ty, keys)]
   | (ty2, keys2) :: tl ->
-    if Typing.equiv_tys ty ty2 then
+     (* why use equiv_tys here which uses canonicalize_type,
+        we are already only adding canonical types *)
+     (* if Typing.equiv_tys ty ty2 then *)
+     if Syntax.equal_tys ty ty2 then
       (ty, ExpSet.union keys keys2) :: tl
     else
       (ty2, keys2) :: add_to_maplist (ty, keys) tl
@@ -52,7 +55,7 @@ let rec collect_in_exp (exp : Syntax.exp) (acc : maplist) : maplist =
           add_if_map_type ((oget m.ety), ExpSet.singleton key) acc
         | _ -> acc
       in
-      List.fold_left (BatPervasives.flip collect_in_exp) acc es
+      BatList.fold_left (BatPervasives.flip collect_in_exp) acc es
     end
   | EFun f ->
     collect_in_exp f.body acc
@@ -67,18 +70,16 @@ let rec collect_in_exp (exp : Syntax.exp) (acc : maplist) : maplist =
     |> collect_in_exp e2
     |> collect_in_exp e3
   | ETuple es ->
-    List.fold_left (BatPervasives.flip collect_in_exp) acc es
+    BatList.fold_left (BatPervasives.flip collect_in_exp) acc es
   | ERecord map ->
     StringMap.fold (fun _ -> collect_in_exp) map acc
   | EProject _ -> failwith ""
   | ESome e ->
     collect_in_exp e acc
   | EMatch (e, branches) ->
-    let acc = collect_in_exp e acc in
-    List.fold_left
-      (fun acc (_, exp) ->
-         collect_in_exp exp acc)
-      acc branches
+     let acc = collect_in_exp e acc in
+     foldBranches (fun (_,e) acc -> collect_in_exp e acc)
+       acc branches
   | ETy (e, _) ->
     collect_in_exp e acc
 ;;
@@ -111,8 +112,11 @@ let collect_in_decl (d : declaration) (acc : maplist): maplist =
     acc
 ;;
 
+let lookup_map_type ty lst =
+  BatList.assoc ty lst
+
 (* Given a program on which type inference has been run, goes through
    it and returns a list of each map type which appears in that program,
    combined with the set of keys used for that map type. *)
 let collect_map_types_and_keys (decls : declarations) : maplist =
-  List.fold_left (BatPervasives.flip collect_in_decl) [] decls
+  BatList.fold_left (BatPervasives.flip collect_in_decl) [] decls

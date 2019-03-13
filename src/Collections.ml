@@ -2,6 +2,12 @@ open Syntax
 
 module StringMap = RecordUtils.StringMap
 
+module IntMap = BatMap.Make (struct
+  type t = int
+
+  let compare = compare
+end)
+                 
 module StringSet = BatSet.Make (struct
   type t = String.t
 
@@ -52,14 +58,30 @@ module ValueMap = Map.Make (struct
   let compare v1 v2 =
     let cfg = Cmdline.get_cfg () in
     if cfg.hashcons then v1.vtag - v2.vtag else compare v1 v2
-end)
+                           end)
+
+module ExpMap = Map.Make (struct
+                           type t = exp
+                                  
+                           let compare e1 e2 =
+                             let cfg = Cmdline.get_cfg () in
+                             if cfg.hashcons then e1.etag - e2.etag else
+                               compare e1 e2
+                         end)
 
 let printList (printer: 'a -> string) (ls: 'a list) (first : string)
               (sep : string) (last : string) =
+  let buf = Buffer.create 500 in
   let rec loop ls =
     match ls with
-    | [] -> ""
-    | [l] -> printer l
-    | l :: ls -> (printer l) ^ sep ^ (loop ls)
+    | [] -> ()
+    | [l] -> Buffer.add_string buf (printer l)
+    | l :: ls ->
+       Buffer.add_string buf (printer l);
+       Buffer.add_string buf sep;
+       loop ls 
   in
-  first ^ (loop ls) ^ last
+  Buffer.add_string buf first;
+  loop ls;
+  Buffer.add_string buf last;
+  Buffer.contents buf

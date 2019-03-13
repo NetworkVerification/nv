@@ -51,6 +51,10 @@ type pattern =
   | POption of pattern option
   | PRecord of pattern StringMap.t
 
+module Pat : Map.OrderedType with type t = pattern
+
+module PatMap : BatMap.S with type key = Pat.t
+
 type v = private
   | VBool of bool
   | VInt of Integer.t
@@ -83,7 +87,7 @@ and e = private
 and exp = private
   {e: e; ety: ty option; espan: Span.t; etag: int; ehkey: int}
 
-and branches = (pattern * exp) list
+and branches 
 
 and func = {arg: var; argty: ty option; resty: ty option; body: exp}
 
@@ -92,6 +96,22 @@ and closure = env * func
 and env = {ty: ty Env.t; value: value Env.t}
 
 and ty_or_exp = Ty of ty | Exp of exp
+
+type branchLookup = Found of exp | Rest of (pattern * exp) list 
+                                
+val addBranch: Pat.t -> exp -> branches -> branches
+val mapBranches: (Pat.t * exp -> Pat.t * exp) -> branches -> branches
+val iterBranches: (Pat.t * exp -> unit) -> branches -> unit
+val foldBranches: (PatMap.key * exp -> 'a -> 'a) -> 'a -> branches -> 'a
+val lookUpPat: PatMap.key -> branches -> branchLookup
+
+(** Raises not found *)
+val popBranch: branches -> ((Pat.t * exp) * branches)
+val emptyBranch : branches
+val isEmptyBranch: branches -> bool
+val optimizeBranches: branches -> branches
+val branchToList: branches -> (PatMap.key * exp) list
+val branchSize: branches -> unit
 
 type declaration =
   | DLet of var * ty option * exp
@@ -108,6 +128,20 @@ type declaration =
 
 type declarations = declaration list
 
+type network =
+  { attr_type    : ty;
+    init         : exp;
+    trans        : exp;
+    merge        : exp;
+    assertion    : exp option;
+    symbolics    : (var * ty_or_exp) list;
+    defs         : (var * ty option * exp) list;
+    utys         : (ty StringMap.t) list;
+    requires     : exp list;
+    graph        : AdjGraph.t;
+  }
+
+  
 (* Constructors *)
 
 val vbool : bool -> value
@@ -149,6 +183,8 @@ val esome : exp -> exp
 val ematch : exp -> branches -> exp
 
 val ety : exp -> ty -> exp
+
+val deconstructFun: exp -> func
 
 (* Utilities *)
 
@@ -198,6 +234,8 @@ val apps : exp -> exp list -> exp
 
 val apply_closure : closure -> value list -> exp
 
+val get_lets : declarations ->  (var * ty option * exp) list
+  
 val get_attr_type : declarations -> ty option
 
 val get_merge : declarations -> exp option
@@ -219,6 +257,8 @@ val get_requires : declarations -> exp list
 val get_record_types : declarations -> (ty StringMap.t) list
 
 val equal_values : cmp_meta:bool -> value -> value -> bool
+
+val equal_exps : cmp_meta:bool -> exp -> exp -> bool
 
 val hash_value : hash_meta:bool -> value -> int
 
@@ -255,6 +295,8 @@ val show_value : show_meta:bool -> value -> string
 
 val show_span: Span.t -> string
 
+val show_ty: ty -> string
+
 (** [get_ty_from_tyexp t] @return the type wrapped by [Ty] or the type
    of the expression wrapped by [Exp]. Fails if the expression has no
    type. *)
@@ -262,6 +304,10 @@ val get_ty_from_tyexp: ty_or_exp -> ty
 
 val bool_of_val: value -> bool option
 
+val proj_var: int -> var -> var
+
+val default_exp_value: ty -> exp
+  
 module type MEMOIZER = sig
   type t
 

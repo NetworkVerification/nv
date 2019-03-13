@@ -75,7 +75,7 @@ let rec check_closure info (x: VarSet.t) (e: exp) =
   | ESome e -> check_closure info x e
   | EMatch (e, bs) ->
     check_closure info x e ;
-    List.iter
+    iterBranches
       (fun (p, e) ->
          let set = pattern_vars p in
          check_closure info (VarSet.union set x) e )
