@@ -93,8 +93,9 @@ let net_to_srp net ~throw_requires =
       let env = info.env in
       let v = Interp.interp_exp env e in
       info.env <- Interp.update_value env x v) net.defs;
+  info.init <- get_func net.init;
   info.m <- get_func net.merge;
-  info.m <- get_func net.trans;
+  info.t <- get_func net.trans;
   info.a <- (match net.assertion with
              | Some a -> get_func a
              | None -> None);

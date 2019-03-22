@@ -847,7 +847,7 @@ let deconstructFun exp =
 let rec is_value e =
   match e.e with
   | EVal _ -> true
-  | ETuple es -> List.for_all is_value es
+  | ETuple es -> BatList.for_all is_value es
   | ESome e -> is_value e
   | _ -> false
 
@@ -855,7 +855,7 @@ let rec to_value e =
   match e.e with
   | EVal v -> v
   | ETuple es ->
-    avalue (vtuple (List.map to_value es), e.ety, e.espan)
+    avalue (vtuple (BatList.map to_value es), e.ety, e.espan)
   | ESome e1 -> avalue (voption (Some (to_value e1)), e.ety, e.espan)
   | _ -> failwith "internal error (to_value)"
 
@@ -868,7 +868,7 @@ let rec exp_of_value v =
     let e = e_val v in
     {e with ety= v.vty; espan=v.vspan}
   | VTuple vs ->
-    let e = etuple (List.map exp_of_value vs) in
+    let e = etuple (BatList.map exp_of_value vs) in
     {e with ety= v.vty; espan=v.vspan}
   | VRecord map ->
     let e = erecord (StringMap.map exp_of_value map) in

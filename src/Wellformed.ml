@@ -57,10 +57,12 @@ let rec check_closure info (x: VarSet.t) (e: exp) =
     List.iter (check_closure info x) es
   | EFun _ ->
     Console.error_position info e.espan
-      "function not allowed in mapIf closure"
+    "function not allowed in mapIf closure"
+     (* () *)
   | EApp (e1, e2) ->
     Console.error_position info e.espan
-      "function application allowed in mapIf closure"
+    "function application allowed in mapIf closure"
+     (* () *)
   | EIf (e1, e2, e3) ->
     check_closure info x e1 ;
     check_closure info x e2 ;
@@ -160,7 +162,7 @@ let rec is_literal (exp : Syntax.exp) : bool =
 (* Verify that the only map keys used are literals *)
 let check_keys info _ (e : exp) =
   match e.e with
-  | EOp (MGet, [_; k])
+  (* | EOp (MGet, [_; k]) *)
   | EOp (MSet, [_; k; _]) ->
     if not (is_literal k) then
       let msg =

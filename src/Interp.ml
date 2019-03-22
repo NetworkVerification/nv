@@ -85,7 +85,7 @@ let rec val_to_pat v =
   | VOption None -> POption None
   | VTuple vs ->
      PTuple (BatList.map val_to_pat vs)
-  | _ -> failwith "cannot match those values"
+  | _ -> PWild
   
 let rec match_branches branches v env =
   (* iterBranches (fun (p,e) ->  Printf.printf "%s\n" (Printing.pattern_to_string p)) branches;
@@ -358,8 +358,8 @@ let rec interp_exp_partial isapp env e =
      (* if List.for_all is_value es then *)
      (*   aexp (e_val (etuple (List.map to_value es)), e.ety, e.espan) *)
      (* else *)
-       aexp (etuple (BatList.map (interp_exp_partial false env) es),
-             e.ety, e.espan)
+     aexp (etuple (BatList.map (interp_exp_partial false env) es),
+           e.ety, e.espan)
   | ESome e' -> aexp (esome (interp_exp_partial false env e'), e.ety, e.espan)
   | EMatch (e1, branches) ->
      (* Printf.printf "match: %s\n" (Printing.exp_to_string e); *)

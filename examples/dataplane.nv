@@ -21,6 +21,13 @@ let edges = {
 (* Data Plane functions *)
 let mergePackets node x y = x union y
 
+let longestMatchingPrefix edge p rib =
+  let dst = p.dstIp in
+  match rib[(dst,32)] with
+  | None -> false
+  | Some (fwd, _) ->
+     fwd = edge
+
 (* longestMatchingPrefix, should check whether p's headers match an
    entry in the rib and whether edge is the forwarding edge on that
    rib *)
@@ -30,8 +37,8 @@ let transPacket edge rib p =
   else false
 
 (* is that how you would filter a set? *)
-let transPackets edge rib ps =
-  map (transPacket edge rib) ps
+let transPackets edge rib ps = 
+  mapIf (fun p -> !(transPacket edge rib p)) (fun b -> false) ps
 
 let initPackets node =
   match node with
@@ -60,10 +67,13 @@ let pickOption f x y =
   match (x,y) with
   | (None, None) -> None
   | (None, Some _) -> y  | (Some _, None) -> x
-  | (Some a, Some b) -> Some (if f a b then a else b)
+  | (Some a, Some b) ->
+    let (_,x) = a in
+    let (_,y) = b in
+    Some (if f x y then a else b)
   
-let mergeRoute node lab1 lab2 =
-  pickOption (fun x y -> betterBgp b1 b2) x y
+let mergeRoute lab1 lab2 =
+  pickOption (fun x y -> betterBgp x y) lab1 lab2
 
 let initRoute node =
   let d = createDict None in
@@ -74,14 +84,14 @@ let initRoute node =
   | _ -> d
 
 (* Combined functions *)
-  
+
 let merge node x y =
   let (psx, labx) = x in
   let (psy, laby) = y in
   (mergePackets node psx psy, combine mergeRoute labx laby)
     
 let trans edge x =
-  let (ps, rib) = x in
+ let (ps, rib) = x in
   (transPackets edge rib ps, map (transRoute edge ps) rib)
 
 let init node =

@@ -344,8 +344,8 @@ let rec infer_exp i info env (e: exp) : exp =
     | EVar x -> (
         match Env.lookup_opt env x with
         | None ->
-          (* Console.error_position info e.espan *)
-          failwith ("unbound variable " ^ Var.to_string x)
+          Console.error_position info e.espan
+          (* failwith *) ("unbound variable " ^ Var.to_string x)
         | Some t -> texp (e, substitute t, e.espan) )
     | EVal v ->
       let v, t = infer_value info env v |> textractv in
@@ -853,8 +853,7 @@ let canonicalize_type (ty : ty) : ty =
       begin
         match !r with
         | Link t -> aux t map count
-        | Unbound _ -> (* TBool, map, count *)
-           failwith "unbound"
+        | Unbound _ -> TBool, map, count
       end
   in
   let (result, _, _) = aux ty (VarMap.empty) 0 in

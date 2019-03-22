@@ -960,6 +960,15 @@ module Unboxed : ExprEncoding =
     let rec map3 f l1 l2 l3 =
       match (l1, l2, l3) with
         ([], [], []) -> []
+      | (a1:: b1 :: c1 :: d1 :: e1 :: l1,
+         a2:: b2 :: c2 :: d2 :: e2 :: l2,
+         a3::b3:: c3 :: d3 :: e3 :: l3) ->
+         let r1 = f a1 a2 a3 in
+         let r2 = f b1 b2 b3 in
+         let r3 = f c1 c2 c3 in
+         let r4 = f d1 d2 d3 in
+         let r5 = f e1 e2 e3 in
+         r1 :: r2 :: r3 :: r4 :: r5 :: map3 f l1 l2 l3
       | (a1::l1, a2::l2, a3::l3) -> let r = f a1 a2 a3 in r :: map3 f l1 l2 l3
       | (_, _, _) -> invalid_arg "map3"
                    
@@ -1059,7 +1068,7 @@ module Unboxed : ExprEncoding =
              let ze2 = encode_exp_z3 descr env e2 in
              lift2 (fun ze1 ze2 -> mk_eq ze1.t ze2.t |> mk_term ~tloc:e.espan) ze1 ze2
           | _ -> [encode_exp_z3_single descr env e])
-      | EVal v when match v.vty with | Some (TTuple _) -> true | _ -> false ->
+      | EVal v when (match v.vty with | Some (TTuple _) -> true | _ -> false) ->
          encode_value_z3 descr env v
       | EIf (e1, e2, e3) ->
          let zes1 = encode_exp_z3 descr env e1 in
