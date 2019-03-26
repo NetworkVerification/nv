@@ -849,11 +849,20 @@ let rec is_value e =
   | EVal _ -> true
   | ETuple es -> BatList.for_all is_value es
   | ESome e -> is_value e
-  | _ -> false
+  | ETy (e, _) -> is_value e
+  | EVar _
+  | EOp _
+  | EFun _
+  | EApp _
+  | EIf _
+  | ELet _
+  | EMatch _ ->
+    false
 
 let rec to_value e =
   match e.e with
   | EVal v -> v
+  | ETy (e, _) -> to_value e                  
   | ETuple es ->
     avalue (vtuple (BatList.map to_value es), e.ety, e.espan)
   | ESome e1 -> avalue (voption (Some (to_value e1)), e.ety, e.espan)

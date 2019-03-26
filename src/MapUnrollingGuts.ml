@@ -107,20 +107,50 @@ let rec unroll_exp
         if not (has_target_type map) then
           eop MGet [unroll_exp map; unroll_exp k]
         else
-          let index =
-            match get_index k with
-            | Some n -> n
-            | None ->
-              failwith "Encountered unrecognized key during map unrolling"
-          in
-          let x = Var.fresh "UnrollingGetVar" in
-          let plist =
-            BatList.mapi (fun i _ -> if i = index then PVar x else PWild) keys
-          in
-          let pattern =
-            PTuple(plist)
-          in
-          ematch (unroll_exp map) (addBranch pattern (evar x) emptyBranch)
+          begin
+            (* Distinguish between constant and variable keys *)
+            if is_value k then
+              begin
+                let index =
+                  match get_index k with
+                  | Some n -> n
+                  | None ->
+                     failwith "Encountered unrecognized key during map unrolling"
+                in
+                let x = Var.fresh "UnrollingGetVar" in
+                let plist =
+                  BatList.mapi (fun i _ -> if i = index then PVar x else PWild) keys
+                in
+                let pattern = PTuple plist in
+                ematch (unroll_exp map) (addBranch pattern (evar x) emptyBranch)
+              end
+            else
+              begin
+                let pvars = BatList.mapi (fun i _ ->
+                                PVar (Var.fresh (Printf.sprintf "MapGet-%d" i)))
+                          keys
+                in
+                let tyv = match e.ety with
+                  | Some (TMap (_, tyv)) -> Some tyv
+                  | _ -> None
+                in
+                let branches = BatList.mapi (fun i pv ->
+                                   match pv with
+                                   | PVar x ->
+                                      (PInt (Integer.of_int i),
+                                       aexp (evar x, tyv, e.espan))
+                                   | _ -> failwith "impossible") pvars
+                in
+                let inner_match =
+                  aexp(ematch k (BatList.fold_left (fun acc (p,x) ->
+                                     addBranch p x acc) emptyBranch branches),
+                       tyv, e.espan)
+                in
+                let m = unroll_exp map in
+                aexp(ematch m (addBranch (PTuple pvars) inner_match emptyBranch),
+                     tyv, e.espan)
+              end
+          end
       | MSet, [map; k; setval] ->
         if not (has_target_type map) then
           eop MSet [unroll_exp map; unroll_exp k; unroll_exp setval]
