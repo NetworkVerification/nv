@@ -134,12 +134,15 @@ let rec unroll_exp
                   | Some (TMap (_, tyv)) -> Some tyv
                   | _ -> None
                 in
-                let branches = BatList.mapi (fun i pv ->
-                                   match pv with
+                (* need expression to pattern function
+                   s.t. k1 -> p1, etc. 
+                 *)
+                let branches = BatList.map2i (fun i pvi ki ->
+                                   match pvi with
                                    | PVar x ->
-                                      (PInt (Integer.of_int i),
+                                      (exp_to_pattern ki,
                                        aexp (evar x, tyv, e.espan))
-                                   | _ -> failwith "impossible") pvars
+                                   | _ -> failwith "impossible") pvars keys
                 in
                 let inner_match =
                   aexp(ematch k (BatList.fold_left (fun acc (p,x) ->
@@ -198,7 +201,7 @@ let rec unroll_exp
           let f' = unroll_exp f in
           let p' = unroll_exp p in
           let freshvars =
-            List.map (fun _ -> Var.fresh "UnrollingMapFilterVar") keys
+            BatList.map (fun _ -> Var.fresh "UnrollingMapFilterVar") keys
           in
           let pattern =
             PTuple (BatList.map (fun var -> PVar var) freshvars)

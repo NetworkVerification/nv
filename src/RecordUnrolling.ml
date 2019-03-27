@@ -17,7 +17,7 @@ let rec unroll_type
   | TArrow (t1, t2) ->
     TArrow (unroll_type t1, unroll_type t2)
   | TTuple tys ->
-    TTuple (List.map unroll_type tys)
+    TTuple (BatList.map unroll_type tys)
   | TOption ty ->
     TOption (unroll_type ty)
   | TMap (key_ty, val_ty) ->
@@ -36,11 +36,11 @@ let rec unroll_pattern p =
   | PVar _
   | POption None -> p
   | PTuple ps ->
-    PTuple (List.map unroll_pattern ps)
+    PTuple (BatList.map unroll_pattern ps)
   | POption (Some p) ->
     POption (Some (unroll_pattern p))
   | PRecord map ->
-    PTuple (List.map unroll_pattern (get_record_entries map))
+    PTuple (BatList.map unroll_pattern (get_record_entries map))
 ;;
 
 let rec unroll_exp
@@ -94,7 +94,7 @@ let rec unroll_exp
      (* Extract tuple element at index idx *)
      let var = Var.fresh "recordUnrolling" in
      let ps =
-       List.mapi
+       BatList.mapi
          (fun i _ -> if i = idx then PVar var else PWild)
          labels
      in
@@ -156,11 +156,11 @@ let rec convert_value
       | Some v' -> voption (Some (convert_value t v'))
     end
   | VTuple vs, TTuple ts ->
-    vtuple (List.map2 convert_value ts vs)
+    vtuple (BatList.map2 convert_value ts vs)
   | VTuple vs, TRecord tmap ->
     (* We found a converted record; convert it back *)
     let labels = get_record_labels tmap in
-    let vmap = List.fold_left2
+    let vmap = BatList.fold_left2
         (fun map k v ->  StringMap.add k v map)
         StringMap.empty labels vs
     in
@@ -169,7 +169,7 @@ let rec convert_value
     let bindings, default = BddMap.bindings m in
     let default' = convert_value vty default in
     let bindings' =
-      List.map (fun (k, v) -> k, convert_value vty v) bindings
+      BatList.map (fun (k, v) -> k, convert_value vty v) bindings
     in
     let newbdd = BddMap.from_bindings ~key_ty:kty (bindings', default') in
     vmap newbdd
@@ -178,7 +178,9 @@ let rec convert_value
   | VClosure _, TArrow _ ->
     failwith "convert_value: Cannot convert function value"
   | _ ->
-    failwith "convert_value: type and value do not match"
+     failwith
+       (Printf.sprintf "convert_value: type (%s) and value (%s) do not match"
+                       (Printing.value_to_string v) (Printing.ty_to_string original_ty))
 ;;
 
 let convert_symbolics
@@ -187,7 +189,7 @@ let convert_symbolics
   =
   let convert_symbolic symb v =
     let _, toe =
-      List.find
+      BatList.find
         (* Maybe this should be Var.name s? *)
         (fun (s, _) -> String.equal (Var.to_string s) symb)
         symbolics
@@ -216,7 +218,7 @@ let convert_attrs
 
 let unroll decls =
   let rtys = get_record_types decls in
-  let unrolled = List.map (unroll_decl rtys) decls in
+  let unrolled = BatList.map (unroll_decl rtys) decls in
   (* print_endline @@ Printing.declarations_to_string unrolled; *)
   let map_back sol =
     let new_symbolics = convert_symbolics (get_symbolics decls) sol in

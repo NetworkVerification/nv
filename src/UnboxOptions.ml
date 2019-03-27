@@ -209,8 +209,8 @@ let rec box_val v ty =
 let box_sol ty sol =
   {sol with
     labels = AdjGraph.VertexMap.map (fun v ->
-                 Printf.printf "%s\n" (Printing.value_to_string v);
-                 Printf.printf "%s\n" (Printing.ty_to_string ty);
+                 (* Printf.printf "%s\n" (Printing.value_to_string v); *)
+                 (* Printf.printf "%s\n" (Printing.ty_to_string ty); *)
                  box_val v ty) sol.labels
   }
     

@@ -30,8 +30,7 @@ let smt_query_file =
     lazy (open_out (file ^ "-" ^
                     (string_of_int !counter) ^ "-query"))
                        
-  let run_smt file cfg info (net : Syntax.network) =
-    let net, f = RecordUnrolling.unroll_net net in
+  let run_smt file cfg info (net : Syntax.network) fs =
     let net, fs =
       if cfg.unbox then
         begin
@@ -40,9 +39,9 @@ let smt_query_file =
           let net, f2 =
             time_profile "Flattening Tuples" (fun () -> TupleFlatten.flatten_net net)
           in
-          net, (f2 :: f1 :: f :: [])
+          net, (f2 :: f1 :: fs)
       end
-    else net, [f]
+    else net, fs
   in
   let net, f = Renaming.alpha_convert_net net in
   let fs = f :: fs in
@@ -61,10 +60,7 @@ let smt_query_file =
         else
           Success (Some solution), Some fs
 
-let run_test cfg info net =
-  let fs = [] in
-  let net, f = RecordUnrolling.unroll_net net in
-  let fs = f :: fs in
+let run_test cfg info net fs =
   let (sol, stats), fs =
     if cfg.smart_gen then
       let net, f = Renaming.alpha_convert_net net in
@@ -82,9 +78,7 @@ let run_test cfg info net =
     Printf.printf "%d\n" stats.num_rejected ;
     (CounterExample sol, Some fs)
 
-  let run_simulator cfg _ net =
-    let net, f = RecordUnrolling.unroll_net net in
-    let fs = [f] in
+let run_simulator cfg _ net fs =
   try
     let solution, q =
       match cfg.bound with
@@ -114,7 +108,7 @@ let run_test cfg info net =
   with Srp.Require_false ->
     Console.error "required conditions not satisfied"
 
-let compress file info net cfg networkOp =
+let compress file info net cfg fs networkOp =
   (* Printf.printf "Number of concrete edges:%d\n" (List.length (oget (get_edges decls))); *)
   let k = cfg.compress in
   if cfg.smt then
@@ -147,7 +141,7 @@ let compress file info net cfg networkOp =
         let aedges = BatList.length (AdjGraph.edges absNet.graph) in
     let groups = Printf.sprintf "%d/%d" (AbstractionMap.normalized_size f) aedges in
     Console.show_message groups Console.T.Blue "Number of abstract nodes/edges";
-    match networkOp cfg info absNet with
+    match networkOp cfg info absNet fs with
     | Success _, _ ->
        Printf.printf "No counterexamples found\n"
     | (CounterExample sol), fs ->
@@ -224,7 +218,7 @@ let checkPolicy info cfg file ds =
   CheckProps.checkMonotonicity info cfg.query (smt_query_file file) net 
 
 let parse_input (args : string array)
-  : Cmdline.t * Console.info * string * Syntax.network =
+  : Cmdline.t * Console.info * string * Syntax.network * ((Solution.t -> Solution.t) list) =
   let cfg, rest = argparse default "nv" args in
   Cmdline.set_cfg cfg ;
   if cfg.debug then Printexc.record_backtrace true ;
@@ -234,6 +228,11 @@ let parse_input (args : string array)
   let decls = Typing.infer_declarations info ds in
   Typing.check_annot_decls decls ;
   Wellformed.check info decls ;
+  let decls, f = RecordUnrolling.unroll decls in
+  let fs = [f] in
+  (* Printf.printf "%s\n" (Printing.declarations_to_string decls); *)
+  (* let decls = Typing.infer_declarations info decls in *)
+  (* failwith "bla"; *)
   let decls =
     if cfg.inline || cfg.smt || cfg.check_monotonicity || cfg.smart_gen then
       time_profile "Inlining" (
@@ -242,14 +241,24 @@ let parse_input (args : string array)
     else
       decls
   in
-  let decls = if cfg.unroll then
-                time_profile "Map unrolling" (fun () -> MapUnrolling.unroll info decls) |>
-                  Typing.infer_declarations info
-              else decls
+  let decls, fs = if cfg.unroll then
+                   let decls, f =
+                     time_profile "Map unrolling" (fun () -> MapUnrolling.unroll info decls)
+                   in
+                   (Typing.infer_declarations info decls, f :: fs)
+                 else decls, fs
+  in
+  let decls =
+    if cfg.inline || cfg.smt || cfg.check_monotonicity || cfg.smart_gen then
+      time_profile "Inlining" (
+                     fun () -> Inline.inline_declarations decls |>
+                                 Typing.infer_declarations info)
+    else
+      decls
   in
   let net = Slicing.createNetwork decls in
   let net = if cfg.link_failures > 0 then
               Failures.buildFailuresNet net cfg.link_failures
             else net
   in
-  (cfg, info, file, net)
+  (cfg, info, file, net, fs)

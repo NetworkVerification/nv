@@ -886,6 +886,35 @@ let rec exp_of_value v =
     let e = esome (exp_of_value v1) in
     {e with ety= v.vty; espan=v.vspan}
 
+let rec val_to_pattern v =
+  match v.v with
+  | VBool b -> PBool b
+  | VInt i -> PInt i
+  | VTuple vs -> PTuple (BatList.map val_to_pattern vs)
+  | VOption None -> POption None
+  | VOption (Some v) -> POption (Some (val_to_pattern v))
+  | VRecord rs -> PRecord (StringMap.map val_to_pattern rs)
+  | VClosure _ | VMap _ -> failwith "can't use these type of values as patterns"
+    
+let rec exp_to_pattern e =
+  match e.e with
+  | EVal v ->
+     val_to_pattern v
+  | ETuple es -> PTuple (BatList.map exp_to_pattern es)
+  | ESome e -> POption (Some (exp_to_pattern e))
+  | ETy (e, _) -> exp_to_pattern e
+  | EVar x -> PVar x
+  | ERecord rs -> PRecord (StringMap.map exp_to_pattern rs)
+  | EProject _ 
+  | EOp _
+  | EFun _
+  | EApp _
+  | EIf _
+  | ELet _
+  | EMatch _ ->
+    failwith "can't use these expressions as patterns"
+  
+    
 let func x body = {arg= x; argty= None; resty= None; body}
 
 let funcFull x argty resty body = {arg= x; argty= argty; resty= resty; body}

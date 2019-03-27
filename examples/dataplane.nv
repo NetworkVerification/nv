@@ -26,7 +26,9 @@ let longestMatchingPrefix edge p rib =
   match rib[(dst,32)] with
   | None -> false
   | Some (fwd, _) ->
-     fwd = edge
+     true
+     (* if (fwd = edge) then true else false *)
+(* just fwd = edge crashes in SMT... *)
 
 (* longestMatchingPrefix, should check whether p's headers match an
    entry in the rib and whether edge is the forwarding edge on that
@@ -71,9 +73,9 @@ let pickOption f x y =
     let (_,x) = a in
     let (_,y) = b in
     Some (if f x y then a else b)
-  
-let mergeRoute lab1 lab2 =
-  pickOption (fun x y -> betterBgp x y) lab1 lab2
+    
+let mergeRoute lab1 lab2 = lab1
+  (* pickOption (fun x y -> betterBgp x y) lab1 lab2 *)
 
 let initRoute node =
   let d = createDict None in
@@ -91,8 +93,9 @@ let merge node x y =
   (mergePackets node psx psy, combine mergeRoute labx laby)
     
 let trans edge x =
- let (ps, rib) = x in
-  (transPackets edge rib ps, map (transRoute edge ps) rib)
+  (* let (ps, rib) = x in *)
+  x
+  (* (transPackets edge rib ps, rib (\* map (transRoute edge ps) rib *\)) *)
 
 let init node =
   (initPackets node, initRoute node)

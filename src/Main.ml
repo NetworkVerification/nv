@@ -3,7 +3,7 @@ open Solution
 
 let main =
   Printexc.record_backtrace true;
-  let cfg, info, file, net = parse_input Sys.argv in
+  let cfg, info, file, net, fs = parse_input Sys.argv in
   (* if cfg.check_monotonicity then *)
   (*   checkPolicy info cfg file decls; *)
   let networkOp =
@@ -14,11 +14,11 @@ let main =
   in
   if cfg.compress >= 0 then
     begin
-      compress file info net cfg (run_smt file)
+      compress file info net cfg fs (run_smt file)
     end
   else
     begin
-      match networkOp cfg info net with
+      match networkOp cfg info net fs with
       | CounterExample sol, Some fs -> print_solution (apply_all sol fs)
       | CounterExample sol, None -> print_solution sol
       | Success (Some sol), fs ->

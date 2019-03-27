@@ -1100,7 +1100,8 @@ module Unboxed : ExprEncoding =
             because the expressions are pretty simple in this encoding *)
          encode_branches_z3 descr env zes1 bs (oget e1.ety)
       | ETy (e, ty) -> encode_exp_z3 descr env e
-      | EFun _ | EApp _ -> failwith "function in smt encoding"
+      | EFun _ | EApp _ ->
+         failwith "function in smt encoding"
       | ERecord _ | EProject _ -> failwith "record in smt encoding"
       | _ ->
          (* Printf.printf "expr: %s\n" (Syntax.show_exp ~show_meta:false e); *)

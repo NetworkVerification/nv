@@ -56,13 +56,13 @@ let rec check_closure info (x: VarSet.t) (e: exp) =
         Console.error_position info e.espan msg ) ;
     List.iter (check_closure info x) es
   | EFun _ ->
-    Console.error_position info e.espan
-    "function not allowed in mapIf closure"
-     (* () *)
+    (* Console.error_position info e.espan *)
+    (* "function not allowed in mapIf closure" *)
+     ()
   | EApp (e1, e2) ->
-    Console.error_position info e.espan
-    "function application allowed in mapIf closure"
-     (* () *)
+    (* Console.error_position info e.espan *)
+    (* "function application allowed in mapIf closure" *)
+     ()
   | EIf (e1, e2, e3) ->
     check_closure info x e1 ;
     check_closure info x e2 ;

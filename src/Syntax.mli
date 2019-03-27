@@ -186,6 +186,8 @@ val ety : exp -> ty -> exp
 
 val deconstructFun: exp -> func
 
+val exp_to_pattern: exp -> pattern
+
 (* Utilities *)
 
 val arity : op -> int

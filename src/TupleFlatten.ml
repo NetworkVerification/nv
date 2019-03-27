@@ -249,10 +249,10 @@ let unflatten_sol
       (sol : Solution.t) =
   {sol with
     labels = AdjGraph.VertexMap.map (fun v ->
-                 Printf.printf "%s\n" (Printing.value_to_string v);
-                 Printf.printf "%s\n" (Printing.ty_to_string orig_attr);
+                 (* Printf.printf "%s\n" (Printing.value_to_string v); *)
+                 (* Printf.printf "%s\n" (Printing.ty_to_string orig_attr); *)
                  let v' = unflatten_val v orig_attr in
-                 Printf.printf "%s\n" (Printing.value_to_string v');
+                 (* Printf.printf "%s\n" (Printing.value_to_string v'); *)
                  v'
                ) sol.labels
   }

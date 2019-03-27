@@ -14,7 +14,9 @@ let rec exp_to_value (e : exp) : value =
   | ELet _
   | EMatch _
   | EProject _ ->
-    failwith "MapUnrollingConversions internal error"
+     failwith
+       (Printf.sprintf "MapUnrollingConversions internal error on: %s"
+                       (Printing.exp_to_string e))
   | ESome exp2 ->
     voption (Some (exp_to_value exp2))
   | ETuple es ->
