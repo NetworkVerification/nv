@@ -21,13 +21,14 @@ let edges = {
 (* Data Plane functions *)
 let mergePackets node x y = x union y
 
+(* for this to work, rib must be a partial map *)
 let longestMatchingPrefix edge p rib =
   let dst = p.dstIp in
   match rib[(dst,32)] with
   | None -> false
   | Some (fwd, _) ->
-     true
-     (* if (fwd = edge) then true else false *)
+     (* fwd = edge *)
+     if (fwd = edge) then true else false
 (* just fwd = edge crashes in SMT... *)
 
 (* longestMatchingPrefix, should check whether p's headers match an
@@ -74,15 +75,15 @@ let pickOption f x y =
     let (_,y) = b in
     Some (if f x y then a else b)
     
-let mergeRoute lab1 lab2 = lab1
-  (* pickOption (fun x y -> betterBgp x y) lab1 lab2 *)
+let mergeRoute lab1 lab2 =
+  pickOption (fun x y -> betterBgp x y) lab1 lab2
 
 let initRoute node =
   let d = createDict None in
   match node with
   | 0 ->
      let b0 = {bgpad=20; lp=100; cost=0;} in
-     d[(0,0) := Some ((0,0), b0)]
+     d[(0,32) := Some ((0,0), b0)]
   | _ -> d
 
 (* Combined functions *)
@@ -93,14 +94,20 @@ let merge node x y =
   (mergePackets node psx psy, combine mergeRoute labx laby)
     
 let trans edge x =
-  (* let (ps, rib) = x in *)
-  x
-  (* (transPackets edge rib ps, rib (\* map (transRoute edge ps) rib *\)) *)
+  let (ps, rib) = x in
+  (transPackets edge rib ps, map (transRoute edge ps) rib)
 
 let init node =
   (initPackets node, initRoute node)
   
-
-  
-      
-  
+let assert node x =
+  match node with
+  | 1 ->
+     (
+       let (ps, rib) = x in
+       match ps[{ srcIp = 1; dstIp=0; volume=100;}] with
+       | true ->
+          true
+       | false -> false)
+  | _ -> true
+              

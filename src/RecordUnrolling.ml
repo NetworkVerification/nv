@@ -1,6 +1,69 @@
 open Syntax
 open RecordUtils
 
+
+(* Re-copying that here, to turn Unbound tvars into unbound tvars instead of TBool.
+   We do the TBool thing, such that the SMT can handle those values (e.g. unused None).
+   In general, I think we shouldn't have unbound Tvars... they should have been generalized
+   to qvars *)
+let canonicalize_type (ty : ty) : ty =
+  let open Collections in      
+  let rec aux ty map count =
+    match ty with
+    | TBool
+    | TInt _ ->
+      ty, map, count
+    | TArrow (t1, t2) ->
+      let t1', map, count = aux t1 map count in
+      let t2', map, count = aux t2 map count in
+      TArrow (t1', t2'), map, count
+    | TTuple (tys) ->
+      let tys', map, count =
+        BatList.fold_left
+          (fun (lst, map, count) t ->
+             let t', map, count = aux t map count in
+             t' :: lst, map, count
+          )
+          ([], map, count) tys
+      in
+      TTuple (BatList.rev tys'), map, count
+    | TRecord (tmap) ->
+      let tmap', map, count =
+        List.fold_left2
+          (fun (tmap, map, count) l t ->
+             let t', map, count = aux t map count in
+             StringMap.add l t' tmap, map, count
+          )
+          (StringMap.empty, map, count) (get_record_labels tmap) (get_record_entries tmap)
+      in
+      TRecord tmap', map, count
+    | TOption t ->
+      let t', map, count = aux t map count in
+      TOption (t'), map, count
+    | TMap (t1, t2) ->
+      let t1', map, count = aux t1 map count in
+      let t2', map, count = aux t2 map count in
+      TMap (t1', t2'), map, count
+    | QVar tyname ->
+      begin
+        match VarMap.find_opt tyname map with
+        | None ->
+           let new_var = Var.to_var ("a", count) in
+          ( QVar (new_var),
+            (VarMap.add tyname new_var map),
+            count + 1)
+        | Some v -> QVar (v), map, count
+      end
+    | TVar r ->
+      begin
+        match !r with
+        | Link t -> aux t map count
+        | Unbound _ -> ty, map, count
+      end
+  in
+  let (result, _, _) = aux ty (VarMap.empty) 0 in
+  result
+   
 let rec unroll_type
     (rtys : ty StringMap.t list)
     (ty : ty)
@@ -8,7 +71,7 @@ let rec unroll_type
   =
   (* print_endline @@  "Unrolling type: " ^ Printing.ty_to_string ty; *)
   let unroll_type = unroll_type rtys in
-  let ty = Typing.canonicalize_type ty in
+  let ty = canonicalize_type ty in
   match ty with
   | TBool
   | TInt _
@@ -25,7 +88,7 @@ let rec unroll_type
   | TRecord map ->
     TTuple (get_record_entries map)
   | TVar _ ->
-    failwith "Encountered TVar after canonicalization"
+     ty
 ;;
 
 let rec unroll_pattern p =
