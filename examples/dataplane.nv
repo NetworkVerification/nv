@@ -2,12 +2,12 @@ type prefix = (int,int)
 type edgeTy = (int,int)
 
 type bgp = { bgpad : int; lp : int; cost : int; }
-type rib = option[(edgeTy,bgp)] (*edgeTy should maybe be an option for initial value*)
+type ribEntry = option[(edgeTy,bgp)] (*edgeTy should maybe be an option for initial value*)
 
 type packet = { srcIp: int; dstIp: int; volume: int; }
 type packets = set[packet]
 
-type attribute = (packets, dict[prefix,rib])
+type attribute = (packets, dict[prefix,ribEntry])
 
 let nodes = 4
 
@@ -22,6 +22,9 @@ let edges = {
 let mergePackets node x y = x union y
 
 (* for this to work, rib must be a partial map *)
+(* longestMatchingPrefix, should check whether p's headers match an
+   entry in the rib and whether edge is the forwarding edge on that
+   rib *)
 let longestMatchingPrefix edge p rib =
   let dst = p.dstIp in
   match rib[(dst,32)] with
@@ -31,17 +34,10 @@ let longestMatchingPrefix edge p rib =
      if (fwd = edge) then true else false
 (* just fwd = edge crashes in SMT... *)
 
-(* longestMatchingPrefix, should check whether p's headers match an
-   entry in the rib and whether edge is the forwarding edge on that
-   rib *)
-let transPacket edge rib p =
-  if longestMatchingPrefix edge p rib then
-     true
-  else false
 
 (* is that how you would filter a set? *)
 let transPackets edge rib ps = 
-  mapIf (fun p -> !(transPacket edge rib p)) (fun b -> false) ps
+  mapIf (fun p -> !(longestMatchingPrefix edge p rib)) (fun b -> false) ps
 
 let initPackets node =
   match node with

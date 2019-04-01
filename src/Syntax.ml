@@ -1758,7 +1758,7 @@ module BddFunc = struct
         | ULess _, [e1; e2] -> lt (eval env e1) (eval env e2)
         | ULeq _, [e1; e2] -> leq (eval env e1) (eval env e2)
         | USub _, [e1; e2] -> failwith "subtraction not implemented"
-        | _ -> failwith "internal error 2 (eval)" )
+        | _ -> failwith "unimplemented" )
     | EIf (e1, e2, e3) -> (
         let v1 = eval env e1 in
         let v2 = eval env e2 in
@@ -1767,6 +1767,7 @@ module BddFunc = struct
         | BBool b -> ite b v2 v3
         | _ -> failwith "internal error (eval)" )
     | ELet (x, e1, e2) ->
+       (* Printf.printf "ELet e1: %s\n" (show_exp ~show_meta:false e1); *)
       let v1 = eval env e1 in
       eval (Env.update env x v1) e2
     | ETuple es ->
@@ -1774,8 +1775,10 @@ module BddFunc = struct
       BTuple vs
     | ESome e -> BOption (Bdd.dtrue B.mgr, eval env e)
     | EMatch (e1, branches) -> (
+      Printf.printf "Ematch e1: %s\n" (show_exp ~show_meta:false e1);
       let bddf = eval env e1 in
       let ((p,e), bs) = popBranch branches in
+      let env, _ = eval_branch env bddf p in
       let x = eval env e in
       let env, x =
         foldBranches (fun (p,e) (env, x) ->
