@@ -1,0 +1,797 @@
+@String{ jan = "January" }
+@String{ feb = "February" }
+@String{ mar = "March" }
+@String{ apr = "April" }
+@String{ may = "May" }
+@String{ jun = "June" }
+@String{ jul = "July" }
+@String{ aug = "August" }
+@String{ sep = "September" }
+@String{ oct = "October" }
+@String{ nov = "November" }
+@String{ dec = "December" }
+
+@String{ sigcomm = "SIGCOMM" }
+
+
+@InProceedings{netkat,
+  author = 	 {Carolyn Jane Anderson and Nate Foster and Arjun Guha and Jean-Baptiste Jeannin and Dexter Kozen and Cole Schlesinger and David Walker},
+  title = 	 {{NetKAT}: Semantic Foundations for Networks},
+  booktitle = {POPL},
+  year = 	 {2014},
+  @pages = {113--126},
+  @month = 	"January",
+}
+
+@article{atomic,
+ author = {Yang, Hongkun and Lam, Simon S.},
+ title = {Real-time Verification of Network Properties Using Atomic Predicates},
+ journal = {IEEE/ACM Trans. Netw.},
+ volume = {24},
+ number = {2},
+ month = apr,
+ year = {2016},
+ pages = {887--900},
+} 
+
+@inproceedings{plankton,
+ author = {Prabhu, Santhosh and Kheradmand, Ali and Godfrey, Brighten and Caesar, Matthew},
+ title = {Predicting Network Futures with Plankton},
+ booktitle = {Proceedings of the First Asia-Pacific Workshop on Networking},
+ series = {APNet'17},
+ year = {2017},
+ pages = {92--98},
+ month = aug
+} 
+
+@PhdThesis{feamster:thesis,
+  author = 	 {Nick Feamster},
+  title = 	 {Proactive Techniques for Correct and Predictable Internet Routing},
+  school = 	 {Massachusetts Institute of Technology},
+  year = 	 {2005},
+}
+
+@InProceedings{rcc,
+  author = 	 {Nick Feamster and Hari Balakrishnan},
+  title = 	 {Detecting {BGP} Configuration Faults with Static Analysis},
+  booktitle = {NSDI},
+  year = 	 {2005},
+  @month = may,
+  @pages = {43--56},
+}
+
+@inproceedings {delta-net,
+  author = {Alex Horn and Ali Kheradmand and Mukul Prasad},
+  title = {Delta-net: Real-time Network Verification Using Atoms},
+  booktitle = {NSDI},
+  year = {2017},
+  @month = mar,
+  @pages = {735--749},
+}
+
+
+@article{minerals,
+ author = {Bauer, Lujo and Garriss, Scott and Reiter, Michael K.},
+ title = {Detecting and Resolving Policy Misconfigurations in Access-control Systems},
+ journal = {ACM Trans. Information and System Security},
+ @month = jun,
+ volume=14,
+ number=1,
+ year = {2011},
+ @pages = {2:1--2:28},
+} 
+
+@inproceedings{bagpipe,
+  author = {Konstantin Weitz and
+               Doug Woos and
+               Emina Torlak and
+               Michael D. Ernst and
+               Arvind Krishnamurthy and
+               Zachary Tatlock},
+  title = {Formal Semantics and Automated Verification for the Border Gateway Protocol},
+  booktitle = {NetPL},
+  year = {2016},
+  @month = mar,
+}
+
+@article{cbgp,
+ author = {Quoitin, B. and Uhlig, S.},
+ title = {Modeling the Routing of an Autonomous System with C-BGP},
+ journal = {Netwrk. Mag. of Global Internetwkg.},
+ volume = {19},
+ number = {6},
+ month = nov,
+ year = {2005},
+ pages = {12--19},
+} 
+
+@inproceedings{crystalnet,
+ author = {Liu, Hongqiang Harry and Zhu, Yibo and Padhye, Jitu and Cao, Jiaxin and Tallapragada, Sri and Lopes, Nuno P. and Rybalchenko, Andrey and Lu, Guohan and Yuan, Lihua},
+ title = {CrystalNet: Faithfully Emulating Large Production Networks},
+ booktitle = {SOSP},
+ year = {2017},
+ pages = {599--613},
+ month = mar
+} 
+
+
+@InProceedings{batfish,
+  author = 	 {Ari Fogel and Stanley Fung and Luis Pedrosa and Meg Walraed-Sullivan and Ramesh Govindan and Ratul Mahajan and Todd Millstein},
+  title = 	 {A General Approach to Network Configuration Analysis },
+  booktitle = {NSDI},
+  year = 	 {2015},
+  @month = oct,
+  @pages = {469--483},
+}
+
+@InProceedings{arc,
+  author = 	 {Aaron Gember-Jacobson and Raajay Viswanathan and Aditya Akella and Ratul Mahajan},
+  title = 	 {Fast Control Plane Analysis Using an Abstract Representation},
+  booktitle = {SIGCOMM},
+  @month = aug,
+  year = 	 {2016},
+}
+
+@inproceedings{fattree,
+ author = {Al-Fares, Mohammad and Loukissas, Alexander and Vahdat, Amin},
+ title = {A Scalable, Commodity Data Center Network Architecture},
+ booktitle = {SIGCOMM},
+ year = {2008},
+ @pages = {63--74},
+ @month = "August"
+} 
+
+@inproceedings {f10-fattree,
+  author = {Vincent Liu and Daniel Halperin and Arvind Krishnamurthy and Thomas Anderson},
+  title = {F10: A Fault-Tolerant Engineered Network},
+  booktitle = {NSDI},
+  year = {2013},
+  @pages = {399--412},
+  @month = apr
+}
+
+@inproceedings{vl2-fattree,
+ author = {Greenberg, Albert and Hamilton, James R. and Jain, Navendu and Kandula, Srikanth and Kim, Changhoon and Lahiri, Parantap and Maltz, David A. and Patel, Parveen and Sengupta, Sudipta},
+ title = {{VL2}: A Scalable and Flexible Data Center Network},
+ booktitle = {SIGCOMM},
+ year = {2009},
+ @pages = {51--62},
+ @month = oct
+} 
+
+@inproceedings{jellyfish,
+ author = {Singla, Ankit and Hong, Chi-Yao and Popa, Lucian and Godfrey, P. Brighten},
+ title = {Jellyfish: Networking Data Centers Randomly},
+ booktitle = {NSDI},
+ year = {2012},
+ location = {San Jose, CA},
+ pages = {17--17},
+ month = mar
+} 
+
+@inproceedings{bcube,
+ author = {Guo, Chuanxiong and Lu, Guohan and Li, Dan and Wu, Haitao and Zhang, Xuan and Shi, Yunfeng and Tian, Chen and Zhang, Yongguang and Lu, Songwu},
+ title = {{BCube}: A High Performance, Server-centric Network Architecture for Modular Data Centers},
+ booktitle = {SIGCOMM},
+ year = {2009},
+ @pages = {63--74},
+ @month = oct
+} 
+
+@inproceedings{dcell,
+ author = {Guo, Chuanxiong and Wu, Haitao and Tan, Kun and Shi, Lei and Zhang, Yongguang and Lu, Songwu},
+ title = {Dcell: A Scalable and Fault-tolerant Network Structure for Data Centers},
+ booktitle = {SIGCOMM},
+ year = {2008},
+ @pages = {75--86},
+ @month = oct
+} 
+
+@inproceedings{butterfly,
+ author = {Kim, John and Dally, William J. and Abts, Dennis},
+ title = {Flattened Butterfly: A Cost-efficient Topology for High-radix Networks},
+ booktitle = {ISCA},
+ year = {2007},
+ @pages = {126--137},
+ @month = may
+} 
+
+@inproceedings{hyperx,
+ author = {Ahn, Jung Ho and Binkert, Nathan and Davis, Al and McLaren, Moray and Schreiber, Robert S.},
+ title = {HyperX: Topology, Routing, and Packaging of Efficient Large-scale Networks},
+ booktitle = {Conference on High Performance Computing Networking, Storage and Analysis},
+ year = {2009},
+ @pages = {41:1--41:11},
+ @month = nov
+} 
+
+@inproceedings{hsa,
+ author = {Kazemian, Peyman and Varghese, George and McKeown, Nick},
+ title = {Header Space Analysis: Static Checking for Networks},
+ booktitle = {NSDI},
+ year = {2012},
+ @pages = {113--126}, 
+ @month = apr
+} 
+
+@inproceedings{netplumber,
+ author = {Kazemian, Peyman and Chang, Michael and Zeng, Hongyi and Varghese, George and McKeown, Nick and Whyte, Scott},
+ title = {Real Time Network Policy Checking Using Header Space Analysis},
+ booktitle = {NSDI},
+ year = {2013},
+ pages = {99--112},
+ month = apr
+} 
+
+@Inbook{ddnf,
+  author="Bj{\o}rner, Nikolaj
+    and Juniwal, Garvit
+    and Mahajan, Ratul
+    and Seshia, Sanjit A.
+    and Varghese, George",
+  editor="Bloem, Roderick
+    and Arbel, Eli",
+  title="ddNF: An Efficient Data Structure for Header Spaces",
+  booktitle = {HVC},
+  bookTitle="Hardware and Software: Verification and Testing: 12th International Haifa Verification Conference, HVC 2016, Haifa, Israel, November 14-17, 2016, Proceedings",
+  year="2016",
+  pages="49--64",
+  month= nov
+}
+
+@inproceedings{coalgebraic,
+ author = {Foster, Nate and Kozen, Dexter and Milano, Matthew and Silva, Alexandra and Thompson, Laure},
+ title = {A Coalgebraic Decision Procedure for NetKAT},
+ booktitle = {POPL},
+ year = {2015},
+ @pages = {343--355},
+ @month = jan
+} 
+
+@inproceedings{anteater,
+ author = {Mai, Haohui and Khurshid, Ahmed and Agarwal, Rachit and Caesar, Matthew and Godfrey, P. Brighten and King, Samuel Talmadge},
+ title = {Debugging the Data Plane with Anteater},
+ booktitle = {SIGCOMM},
+ year = {2011},
+ @pages = {290--301},
+ @month = aug
+} 
+
+@inproceedings {veriflow,
+  author = {Ahmed Khurshid and Xuan Zou and Wenxuan Zhou and Matthew Caesar and P. Brighten Godfrey},
+  title = {VeriFlow: Verifying Network-Wide Invariants in Real Time},
+  booktitle = {NSDI},
+  year = {2013},
+  @pages = {15--27},
+  @month = apr
+}
+
+@inproceedings{z3,
+ author = {De Moura, Leonardo and Bj{\o}rner, Nikolaj},
+ title = {{Z3}: An Efficient {SMT} Solver},
+ booktitle = {TACAS},
+ year = {2008},
+ @month = mar
+} 
+
+@inproceedings {nod,
+author = {Nuno P. Lopes and Nikolaj Bj{\o}rner and Patrice Godefroid and Karthick Jayaraman and George Varghese},
+title = {Checking Beliefs in Dynamic Networks},
+booktitle = {NSDI},
+year = {2015},
+@address = {Oakland, CA},
+@pages = {499--512},
+@publisher = {USENIX Association},
+}
+
+@Inbook{z3opt,
+  author="Bj{\o}rner, Nikolaj
+  and Phan, Anh-Dung
+  and Fleckenstein, Lars",
+  editor="Baier, Christel
+  and Tinelli, Cesare",
+  title="$\nu$Z - An Optimizing SMT Solver",
+  bookTitle={TACAS},
+  year="2015",
+  @pages="194--199", 
+}
+
+@inproceedings {panda,
+  author = {Aurojit Panda and Ori Lahav and Katerina Argyraki and Mooly Sagiv and Scott Shenker},
+  title = {Verifying Reachability in Networks with Mutable Datapaths},
+  booktitle = {NSDI},
+  year = {2017},
+  month = mar
+}
+
+@misc{bgp-in-dc,
+ title = {Use of {BGP} for routing in large-scale data centers},
+ author = {P. Lapukhov and A. Premji and J. Mitchell},
+ howpublished = "Internet draft",
+ @month = aug,
+ year = 2015,
+}
+
+@inproceedings{bgp-misconfiguration,
+ author = {Mahajan, Ratul and Wetherall, David and Anderson, Tom},
+ title = {Understanding {BGP} Misconfiguration},
+ booktitle = {SIGCOMM},
+ year = {2002},
+ @month = aug,
+ @pages = {3--16},
+}
+
+@misc{time-warner,
+  author = 	 {M Anderson},
+  title = 	 {Time Warner Cable Says Outages Largely Resolved},
+  year = 	 2014,
+  @month = 	 aug,
+  address = 	 {NY, NY},
+  publisher = {Associated Press},
+  howpublished = "\url{http://www.seattletimes.com/business/time-warner-cable-says-outages-largely-resolved}",
+}
+
+@Misc{routing-instability,
+  author = 	 {J Farrar},
+  title = 	 {C \& W Routing Instability},
+  howpublished = {Nanog mail archives. \url{http://www.merit.edu/mail.archives/nanog/2001-04/msg002-9.html}},
+  year = 	 {2001},
+}
+
+@TECHREPORT{oscillation,
+    author = {Kannan Varadhan and Ramesh Govindan and Deborah Estrin},
+    title = {Persistent route oscillations in inter-domain routing},
+    institution = {Computer Networks},
+    year = {1996}
+}
+
+@misc{bgpmon,
+ key = "bgpmon",
+ title = {News and Press | {BGPM}on},
+ howpublished = {\url{http://www.bgpmon.net/news-and-events/}},
+ @note = "Retrieved 2016-01-26"
+}
+
+@misc{hatch,
+ key = "hatch",
+ title = {Hatch -- Create and share configurations},
+ howpublished = "\url{http://www.hatchconfigs.com/}",
+ @note = "Retrieved 2016-01-26"
+}
+
+@misc{quagga,
+ key = "Quagga",
+ title = {Quagga Routing Suite},
+ howpublished = "\url{http://www.nongnu.org/quagga/}",
+ @note = "Retrieved 2016-11-12"
+}
+
+@inproceedings{route-aggregation,
+ author = {Le, Franck and Xie, Geoffrey G. and Zhang, Hui},
+ title = {On Route Aggregation},
+ booktitle = {CoNEXT},
+ year = {2011},
+ @month = dec,
+ @pages = {6:1--6:12},
+}
+
+@inproceedings{igp-correctness1,
+ author = {Griffin, Timothy G. and Wilfong, Gordon},
+ title = {On the Correctness of {IBGP} Configuration},
+ booktitle = {SIGCOMM},
+ year = {2002},
+ @month = aug,
+ @pages = {17--29},
+}
+
+@inproceedings{igp-correctness2,
+    author = {Nick Feamster and Jared Winick and Jennifer Rexford},
+    title = {A Model of {BGP} Routing for Network Engineering},
+    booktitle = {SIGMETRICS},
+    year = {2004},
+    @month = jun,
+    @pages = {331--342},
+}
+
+@inproceedings{metarouting,
+ author = {Griffin, Timothy G. and Sobrinho, Jo\"{a}o Lu\'{\i}s},
+ title = {Metarouting},
+ booktitle = {Proceedings of the 2005 Conference on Applications, Technologies, Architectures, and Protocols for Computer Communications},
+ series = {SIGCOMM '05},
+ year = {2005},
+ pages = {1--12},
+ month = aug
+} 
+
+@inproceedings{propane,
+ author = {Beckett, Ryan and Mahajan, Ratul and Millstein, Todd and Padhye, Jitendra and Walker, David},
+ title = {Don'T Mind the Gap: Bridging Network-wide Objectives and Device-level Configurations},
+ booktitle = {SIGCOMM},
+ year = {2016},
+ @pages = {328--341},
+} 
+
+@inproceedings{propane-at,
+  title = 	 {Network Configuration Synthesis with Abstract Topologies},
+  author =       {Ryan Beckett and Ratul Mahajan and Todd Millstein and Jitu Padhye and David Walker},
+  year = 	 {2017},
+  booktitle = pldi,
+  month = 	 {June},
+}
+
+@Misc{cisco-route-redistribution,
+  key = 	 {Redistributing Routing Protocols},
+  title = 	 {Redistributing Routing Protocols},
+  howpublished = {\url{https://www.cisco.com/c/en/us/support/docs/ip/enhanced-interior-gateway-routing-protocol-eigrp/8606-redist.html}},
+  year = 	 2012,
+}
+
+@inproceedings{synet-synthesis,
+  author = {El-Hassany, Ahmed and Tsankov, Petar and Vanbever, Laurent and Vechev, Martin},
+  title =    {Network-wide Configuration Synthesis},
+  booktitle = {CAV},
+  year = {2017},
+  @month = jan,
+}
+
+@Misc{bgp-wedgie,
+  key = 	 {BGP Wedgies},
+  author = 	 {Tim Griffin},
+  title = 	 {{BGP} Wedgies},
+  howpublished = {\url{https://www.ietf.org/rfc/rfc4264.txt}},
+  @month = 	 nov,
+  year = 	 2005,
+}
+
+@Misc{juniper-study,
+  key = 	 {As the Value of Enterprise Networks Escalates, So Does the Need for Configuration Management},
+  author = 	 {Juniper Networks},
+  title = 	 {As the Value of Enterprise Networks Escalates, So Does the Need for Configuration Management},
+  howpublished = {\url{https://www-935.ibm.com/services/au/gts/pdf/200249.pdf}},
+  @month = 	 may,
+  year = 	 2008,
+}
+
+@Misc{yankee-study,
+  key =    {What is Behind Network Downtime},
+  author =   {Zeus Kerravala},
+  title =    {What is Behind Network Downtime?  Proactive Steps to Reduce Human Error and Improve
+Availability of Networks},
+  howpublished = {\url{https://www.cs.princeton.edu/courses/archive/fall10/cos561/papers/Yankee04.pdf}},
+  @month =    jan,
+  year =   2004,
+}
+
+@Misc{network-downtime,
+  author = 	 {Deb Kline},
+  title = 	 {Network Downtime Results in Job, Revenue Loss},
+  howpublished = {\url{http://www.avaya.com/en/about-avaya/newsroom/news-releases/2014/pr-140305/}},
+  @month = 	 mar,
+  year = 	 2014,
+
+}
+
+@InProceedings{era,
+  author = 	 {Seyed K. Fayaz and Tushar Sharma and Ari Fogel and Ratul Mahajan and Todd Millstein and Vyas Sekar and George Varghese},
+  title = 	 {Efficient Network Reachability Analysis using a Succinct Control Plane Representation},
+  booktitle = {OSDI},
+  year = 	 {2016},
+}
+
+@Article{dadc,
+  author = 	 {Sanjay Narain and Dana Chee and Brian Coan and
+Ben Falchuk and
+Samuel Gordon and
+Jaewon Kang and
+Jonathan Kirsch and
+Aditya Naidu and
+Kaustubh Sinkar and
+Simon Tsang},
+  title = 	 {A Science of Network Configuration},
+  journal = 	 {Journal of Cyber Security and Information Systems},
+  year = 	 {2016},
+  volume = 	 {1},
+  number = 	 {4},
+}
+
+
+@Misc{facebook-fattree,
+  key =    {Introducing data center fabric, the next-generation Facebook data center network},
+  author =   {Alexey Andreyev},
+  title =    {Introducing data center fabric, the next-generation Facebook data center network},
+  howpublished = {\url{https://code.facebook.com/posts/360346274145943/}},
+  @month =    nov,
+  year =   2014,
+}
+
+@Misc{summer-of-misconfiguration,
+  author = 	 {Joanne Godfrey},
+  title = 	 {The Summer of Network Misconfigurations},
+  howpublished = {\url{https://blog.algosec.com/2016/08/business-outages-caused-misconfigurations-headline-news-summer.html}},
+  @month = 	 aug,
+  year = 	 {2016},
+}
+
+@article{stable-paths,
+ author = {Griffin, Timothy G. and Shepherd, F. Bruce and Wilfong, Gordon},
+ title = {The Stable Paths Problem and Interdomain Routing},
+ journal = {IEEE/ACM Trans. Networking},
+ issue_date = {April 2002},
+ volume = {10},
+ number = {2},
+ @month = apr,
+ year = {2002},
+ @pages = {232--243},
+} 
+
+@article{routingalgebra,
+ author = {Sobrinho, Jo\~{a}o Lu\'{\i}s},
+ title = {An Algebraic Theory of Dynamic Network Routing},
+ journal = {IEEE/ACM Trans. Netw.},
+ issue_date = {October 2005},
+ volume = {13},
+ number = {5},
+ month = oct,
+ year = {2005},
+ pages = {1160--1173},
+} 
+
+@inproceedings{biereBmc99,
+  title={Symbolic model checking without {BDDs}},
+  author={Biere, Armin and Cimatti, Alessandro and Clarke, Edmund and Zhu, Yunshan},
+  booktitle={TACAS},
+  @pages={193--207},
+  year={1999}
+}
+
+@article{jhalaAcs09,
+  author    = {Ranjit Jhala and
+               Rupak Majumdar},
+  title     = {Software model checking},
+  journal   = {{ACM} Comput. Surv.},
+  volume    = {41},
+  number    = {4},
+  @pages     = {21:1--21:54},
+  year      = {2009}
+}
+
+@article{malikCacm09,
+  author    = {Sharad Malik and
+               Lintao Zhang},
+  title     = {Boolean satisfiability from theoretical hardness to practical success},
+  journal   = {Commun. {ACM}},
+  volume    = {52},
+  number    = {8},
+  @pages     = {76--82},
+  year      = {2009}
+}
+
+@article{z3Cacm11,
+ author = {De Moura, Leonardo and Bj{\o}rner, Nikolaj},
+ title = {Satisfiability Modulo Theories: Introduction and Applications},
+ journal = {Commun. ACM},
+ issue_date = {September 2011},
+ volume = {54},
+ number = {9},
+ @month = sep,
+ year = {2011},
+ @pages = {69--77}
+}
+
+@inproceedings{zhangAtva13,
+  author    = {Shuyuan Zhang and
+               Sharad Malik},
+  title     = {{SAT} Based Verification of Network Data Planes},
+  booktitle = {Automated Technology for Verification and Analysis (ATVA)},
+  @pages     = {496--505},
+  year      = {2013}
+}
+
+@article{fsr,
+   title={{FSR}: Formal Analysis and Implementation Toolkit for Safe Inter-domain Routing},
+   author={Anduo Wang and Limin Jia and Wenchao Zhou and Yiqing Ren and Boon Thau Loo and Jennifer Rexford and Vivek Nigam and Andre Scedrov and Carolyn L. Talcott}, 
+  journal={IEEE/ACM Trans. Networking},
+  volume=20,
+  number=6,
+    year = {2012}
+}
+
+@Misc{google-outage,
+  author = 	 {Simon Sharwood},
+  title = 	 {Google cloud wobbles as workers patch wrong routers},
+  howpublished = {\url{http://www.theregister.co.uk/2016/03/01/google_cloud_wobbles_as_workers_patch_wrong_routers/}},
+  @month = 	 mar,
+  year = 	 2016,
+}
+
+@Misc{azure-outage,
+  author = 	 {Yevgenly Sverdlik},
+  title = 	 {Microsoft: misconfigured network device led to Azure outage},
+  howpublished = {\url{http://www.datacenterdynamics.com/content-tracks/servers-storage/microsoft-misconfigured-network-device-led-to-azure-outage/68312.fullarticle}},
+  @month = 	 jul,
+  year = 	 2012,
+}
+
+@inproceedings{symnet,
+ author = {Stoenescu, Radu and Popovici, Matei and Negreanu, Lorina and Raiciu, Costin},
+ title = {SymNet: Scalable Symbolic Execution for Modern Networks},
+ booktitle = {SIGCOMM},
+ year = {2016},
+ @pages = {314--327},
+}
+
+@InProceedings{minesweeper,
+  author = 	 {Ryan Beckett and Aarti Gupta and Ratul Mahajan and David Walker},
+  title = 	 {A General Approach to Network Configuration Verification},
+  booktitle = sigcomm,
+  year = 	 2017,
+  month = 	 aug,
+}
+
+@inproceedings{slam,
+author    = {Thomas Ball and
+               Rupak Majumdar and
+               Todd D. Millstein and
+               Sriram K. Rajamani},
+  title     = {Automatic Predicate Abstraction of {C} Programs},
+  booktitle = {Proceedings of the 2001 {ACM} {SIGPLAN} Conference on Programming
+               Language Design and Implementation (PLDI)},
+  pages     = {203--213},
+  year      = {2001}
+}
+
+@article{satabs,
+  author    = {Edmund M. Clarke and
+               Daniel Kroening and
+               Natasha Sharygina and
+               Karen Yorav},
+  title     = {Predicate Abstraction of {ANSI-C} Programs Using {SAT}},
+  journal   = {Formal Methods in System Design},
+  volume    = {25},
+  number    = {2-3},
+  pages     = {105--127},
+  year      = {2004}
+}
+
+@article{BryantBdd,
+  author    = {Randal E. Bryant},
+  title     = {Graph-Based Algorithms for Boolean Function Manipulation},
+  journal   = {{IEEE} Trans. Computers},
+  volume    = {35},
+  number    = {8},
+  pages     = {677--691},
+  year      = {1986}
+}
+
+@inproceedings{ClarkeCegar00,
+  author    = {Edmund M. Clarke and
+               Orna Grumberg and
+               Somesh Jha and
+               Yuan Lu and
+               Helmut Veith},
+  title     = {Counterexample-Guided Abstraction Refinement},
+  booktitle = {Computer Aided Verification, 12th International Conference, {CAV}, Proceedings},
+  pages     = {154--169},
+  year      = {2000}
+}
+
+@inproceedings{Floyd67,
+  author = {Floyd, Robert W.},
+  title = {Assigning Meanings to Programs},
+  booktitle = {Mathematical Aspects of Computer Science},
+  series = {Proceedings of Symposia in Applied Mathematics},
+  volume = {19},
+  pages = {19--32},
+  year = {1967}
+}
+
+@article{Hoare69,
+  author    = {C. A. R. Hoare},
+  title     = {An Axiomatic Basis for Computer Programming},
+  journal   = {Commun. {ACM}},
+  volume    = {12},
+  number    = {10},
+  pages     = {576--580},
+  year      = {1969}
+}
+
+@inproceedings{cousot77,
+  author    = {Patrick Cousot and
+               Radhia Cousot},
+  title     = {Abstract Interpretation: {A} Unified Lattice Model for Static Analysis
+               of Programs by Construction or Approximation of Fixpoints},
+  booktitle = {Conference Record of the Fourth {ACM} Symposium on Principles of Programming
+               Languages},
+  pages     = {238--252},
+  year      = {1977}
+}
+
+@inproceedings{EmersonSymm93,
+  author    = {E. Allen Emerson and
+               A. Prasad Sistla},
+  title     = {Symmetry and Model Checking},
+  booktitle = {Computer Aided Verification, 5th International Conference, {CAV}, Proceedings},
+  pages     = {463--478},
+  year      = {1993}
+}
+
+@inproceedings{ClarkeSymm93,
+  author    = {Edmund M. Clarke and
+               Thomas Filkorn and
+               Somesh Jha},
+  title     = {Exploiting Symmetry In Temporal Logic Model Checking},
+  booktitle = {Computer Aided Verification, 5th International Conference, {CAV}, Proceedings},
+  pages     = {450--462},
+  year      = {1993}
+}
+
+@inproceedings{daggitt+:convergence,
+ author = {Daggitt, Matthew L. and Gurney, Alexander J. T. and Griffin, Timothy G.},
+ title = {Asynchronous Convergence of Policy-rich Distributed Bellman-ford Routing Protocols},
+ booktitle = {Proceedings of the 2018 Conference of the ACM Special Interest Group on Data Communication},
+ year = {2018},
+ pages = {103--116},
+}
+
+@inproceedings{bgp-timers-exponential, 
+  author    = {A. Fabrikant and U. Syed and J. Rexford}, 
+  title     = {There's something about MRAI: Timing diversity can exponentially worsen BGP convergence}, 
+  year      = {2011}, 
+  pages     = {2975-2983}, 
+  month     = {April},
+}
+
+@inproceedings{convergence-time,
+  author = {L. Daggitt, Matthew and Griffin, Timothy},
+  year = {2018},
+  month = {09},
+  pages = {335-345},
+  title = {Rate of Convergence of Increasing Path-Vector Routing Protocols},
+}
+
+@inproceedings{policy-rich-convergence,
+ author = {Daggitt, Matthew L. and Gurney, Alexander J. T. and Griffin, Timothy G.},
+ title = {Asynchronous Convergence of Policy-rich Distributed Bellman-ford Routing Protocols},
+ series = {SIGCOMM '18},
+ year = {2018},
+ pages = {103--116},
+ numpages = {14},
+} 
+
+@inproceedings{bonsai,
+ author = {Beckett, Ryan and Gupta, Aarti and Mahajan, Ratul and Walker, David},
+ title = {Control Plane Compression},
+ series = {SIGCOMM '18},
+ year = {2018},
+ pages = {476--489},
+ numpages = {14},
+} 
+
+@article{large-scale-bgp,
+ author = {Dimitropoulos, Xenofontas A. and Riley, George F.},
+ title = {Efficient Large-scale BGP Simulations},
+ journal = {Comput. Netw.},
+ volume = {50},
+ number = {12},
+ month = aug,
+ year = {2006},
+ pages = {2013--2027},
+}
+
+@insubmission{origami,
+ author = {Giannarakis, Nick and Beckett, Ryan and Mahajan, Ratul and Walker, David},
+ title = {Efficient verification of network fault tolerance via
+                  counterexample-guided refinement},
+ year = {2019},
+}
+
+@article{milner1978theory,
+  title={A theory of type polymorphism in programming},
+  author={Milner, Robin},
+  journal={Journal of computer and system sciences},
+  volume={17},
+  number={3},
+  pages={348--375},
+  year={1978},
+  publisher={Elsevier}
+}
