@@ -1,0 +1,34 @@
+\begin{thebibliography}{1}
+
+\bibitem{minesweeper}
+R.~Beckett, A.~Gupta, R.~Mahajan, and D.~Walker.
+\newblock A general approach to network configuration verification.
+\newblock In {\em SIGCOMM}, August 2017.
+
+\bibitem{bonsai}
+R.~Beckett, A.~Gupta, R.~Mahajan, and D.~Walker.
+\newblock Control plane compression.
+\newblock SIGCOMM '18, pages 476--489, 2018.
+
+\bibitem{batfish}
+A.~Fogel, S.~Fung, L.~Pedrosa, M.~Walraed-Sullivan, R.~Govindan, R.~Mahajan,
+  and T.~Millstein.
+\newblock A general approach to network configuration analysis.
+\newblock In {\em NSDI}, 2015.
+
+\bibitem{arc}
+A.~Gember-Jacobson, R.~Viswanathan, A.~Akella, and R.~Mahajan.
+\newblock Fast control plane analysis using an abstract representation.
+\newblock In {\em SIGCOMM}, 2016.
+
+\bibitem{origami}
+N.~Giannarakis, R.~Beckett, R.~Mahajan, and D.~Walker.
+\newblock Efficient verification of network fault tolerance via
+  counterexample-guided refinement, 2019.
+
+\bibitem{milner1978theory}
+R.~Milner.
+\newblock A theory of type polymorphism in programming.
+\newblock {\em Journal of computer and system sciences}, 17(3):348--375, 1978.
+
+\end{thebibliography}
