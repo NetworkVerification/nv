@@ -77,7 +77,5 @@
     "convergence-time"
     "policy-rich-convergence"
     "bonsai"
-    "large-scale-bgp"
-    "origami"
-    "milner1978theory")))
+    "large-scale-bgp")))
 

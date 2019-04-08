@@ -3,48 +3,47 @@ Capacity: max_strings=35307, hash_size=35307, hash_prime=30011
 The top-level auxiliary file: paper.aux
 The style file: abbrv.bst
 Database file #1: references.bib
-Warning--entry type for "origami" isn't style-file defined
---line 781 of file references.bib
+Warning--I didn't find a database entry for "origami"
 Warning--empty booktitle in bonsai
-You've used 6 entries,
+You've used 4 entries,
             2118 wiz_defined-function locations,
-            539 strings with 4683 characters,
-and the built_in function-call counts, 2224 in all, are:
-= -- 194
-> -- 137
+            528 strings with 4387 characters,
+and the built_in function-call counts, 1630 in all, are:
+= -- 138
+> -- 107
 < -- 1
-+ -- 57
-- -- 48
-* -- 156
-:= -- 370
-add.period$ -- 17
-call.type$ -- 6
-change.case$ -- 42
++ -- 44
+- -- 38
+* -- 115
+:= -- 271
+add.period$ -- 12
+call.type$ -- 4
+change.case$ -- 31
 chr.to.int$ -- 0
-cite$ -- 7
-duplicate$ -- 82
-empty$ -- 173
-format.name$ -- 48
-if$ -- 458
+cite$ -- 5
+duplicate$ -- 64
+empty$ -- 124
+format.name$ -- 38
+if$ -- 337
 int.to.chr$ -- 0
-int.to.str$ -- 6
-missing$ -- 5
-newline$ -- 32
-num.names$ -- 12
-pop$ -- 59
+int.to.str$ -- 4
+missing$ -- 4
+newline$ -- 23
+num.names$ -- 8
+pop$ -- 45
 preamble$ -- 1
-purify$ -- 36
+purify$ -- 27
 quote$ -- 0
-skip$ -- 57
+skip$ -- 42
 stack$ -- 0
-substring$ -- 90
-swap$ -- 18
+substring$ -- 54
+swap$ -- 16
 text.length$ -- 1
 text.prefix$ -- 0
 top$ -- 0
-type$ -- 24
+type$ -- 16
 warning$ -- 1
-while$ -- 17
-width$ -- 7
-write$ -- 62
+while$ -- 11
+width$ -- 5
+write$ -- 43
 (There were 2 warnings)

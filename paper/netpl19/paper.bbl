@@ -21,14 +21,4 @@ A.~Gember-Jacobson, R.~Viswanathan, A.~Akella, and R.~Mahajan.
 \newblock Fast control plane analysis using an abstract representation.
 \newblock In {\em SIGCOMM}, 2016.
 
-\bibitem{origami}
-N.~Giannarakis, R.~Beckett, R.~Mahajan, and D.~Walker.
-\newblock Efficient verification of network fault tolerance via
-  counterexample-guided refinement, 2019.
-
-\bibitem{milner1978theory}
-R.~Milner.
-\newblock A theory of type polymorphism in programming.
-\newblock {\em Journal of computer and system sciences}, 17(3):348--375, 1978.
-
 \end{thebibliography}
