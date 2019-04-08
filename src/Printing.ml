@@ -44,6 +44,8 @@ let prec_exp e =
   | ESome _ -> max_prec
   | EMatch _ -> 8
   | ETy (_, _) -> max_prec
+  | ERecord _ -> 0
+  | EProject _ -> 0
 
 let rec sep s f xs =
   match xs with
@@ -72,6 +74,23 @@ let ty_prec t =
   | TTuple _ -> 6
   | TOption _ -> 4
   | TMap _ -> 4
+  | TRecord _ -> 6
+
+let print_record
+    (sep : string)
+    (f : 'a -> string)
+    (map : 'a RecordUtils.StringMap.t)
+  : string
+  =
+  let open RecordUtils in
+  let entries =
+    StringMap.fold
+      (fun l e acc ->
+         Printf.sprintf "%s %s%s %s;" acc l sep (f e)
+      )
+      map ""
+  in
+  Printf.sprintf "{ %s }" entries
 
 let list_to_string f lst =
   "[ " ^
@@ -94,6 +113,8 @@ let rec ty_to_string_p prec t =
     | TMap (t1, t2) ->
       "dict[" ^ ty_to_string_p p t1 ^ "," ^ ty_to_string_p p t2
       ^ "]"
+    | TRecord map -> print_record ":" (ty_to_string_p prec) map
+
   in
   if p < prec then s else "(" ^ s ^ ")"
 
@@ -133,6 +154,7 @@ let rec pattern_to_string pattern =
   | PTuple ps -> "(" ^ comma_sep pattern_to_string ps ^ ")"
   | POption None -> "None"
   | POption (Some p) -> "Some " ^ pattern_to_string p
+  | PRecord map -> print_record "=" pattern_to_string map
 
 let ty_env_to_string env = Env.to_string ty_to_string env.ty
 
@@ -191,6 +213,7 @@ and value_to_string_p prec v =
     let s = "Some(" ^ value_to_string_p max_prec v ^ ")" in
     if max_prec > prec then "(" ^ s ^ ")" else s
   | VClosure cl -> closure_to_string_p prec cl
+  | VRecord map -> print_record "=" (value_to_string_p prec) map
 
 and exp_to_string_p prec e =
   let p = prec_exp e in
@@ -222,6 +245,8 @@ and exp_to_string_p prec e =
       ^ branches_to_string prec bs
       ^ ")"
     | ETy (e, t) -> exp_to_string_p prec e ^ ty_to_string t
+    | ERecord map -> print_record "=" (exp_to_string_p prec) map
+    | EProject (e, l) -> exp_to_string_p prec e ^ "." ^ l
   in
   if p > prec then "(" ^ s ^ ")" else s
 
@@ -286,6 +311,8 @@ let rec declaration_to_string d =
     ^ "}"
   | DInit e -> "let init = " ^ exp_to_string e
   | DATy t -> "type attribute = " ^ ty_to_string t
+  | DUserTy (name, ty) ->
+    Printf.sprintf "type %s = %s" (Var.to_string name) (ty_to_string ty)
 
 let rec declarations_to_string ds =
   match ds with

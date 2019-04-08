@@ -1,0 +1,26 @@
+type rec = { dist : int; even : bool; }
+
+type attribute = rec
+
+let nodes = 5
+
+let edges = {
+ 0=1;
+ 1=2;
+ 2=3;
+ 3=4;
+}
+
+let merge node x y = if x.dist < y.dist then x else y
+
+let trans edge x =
+  { even = !x.even; dist = x.dist + 1; }
+
+(* The initial state of the network;
+   A map from nodes to initial values with type A.
+ *)
+let init node =
+  let base = {dist = 0; even = false} in
+  match node with
+  | 0 -> { base with even = true; }
+  | _ -> { base with dist = 10; }

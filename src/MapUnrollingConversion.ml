@@ -12,7 +12,8 @@ let rec exp_to_value (e : exp) : value =
   | EApp _
   | EIf _
   | ELet _
-  | EMatch _ ->
+  | EMatch _
+  | EProject _ ->
     failwith "MapUnrollingConversions internal error"
   | ESome exp2 ->
     voption (Some (exp_to_value exp2))
@@ -20,6 +21,7 @@ let rec exp_to_value (e : exp) : value =
     vtuple (List.map exp_to_value es)
   | EVal v -> v
   | ETy (exp2, _) -> exp_to_value exp2
+  | ERecord map -> vrecord (StringMap.map exp_to_value map)
 
 let rec convert_value
     (ty : ty)
@@ -44,36 +46,23 @@ let rec convert_value
     vtuple (List.map2 convert_value vs ts)
   | VTuple vs, TMap (kty, vty) ->
     (* We found a converted map; convert it back *)
-    (* I'm kind of guessing at the BddMap API here *)
     let default = default_value vty in
-    let base = BddMap.create ~key_ty:kty default in
-    let zip = List.combine (List.map exp_to_value keys) vs in
-    let newmap =
-      List.fold_left
-        (fun acc (k, v) -> BddMap.update acc k v)
-        base zip
-    in
+    let bindings = List.combine (List.map exp_to_value keys) vs in
+    let newmap = BddMap.from_bindings ~key_ty:kty (bindings, default) in
     vmap newmap
   | VMap m, TMap (kty, vty) ->
-    (* Non-converted map; recurse on its elements *)
-    (* I'm kind of guessing at the BddMap API here *)
-    (* Don't have to look at key type since we can't have
-       key types involving maps *)
+    (* Non-converted map; recurse on its values. Don't have to look at
+       key type since we can't have key types involving maps *)
     let unrolled_vty = unroll_type ty keys vty in
     if Typing.equiv_tys vty unrolled_vty
     then v (* No change to value type *)
     else (* value type contains our map type *)
-      let default = default_value vty in
-      let base = BddMap.create ~key_ty:kty default in
-      let bindings, _ = BddMap.bindings m in
-      let newmap =
-        List.fold_left
-          (fun acc (k, v) -> BddMap.update acc k (convert_value v vty))
-          base bindings
-      in
+      let bindings, default = BddMap.bindings m in
+      let newmap = BddMap.from_bindings ~key_ty:kty (bindings, default) in
       vmap newmap
   | VClosure _, TArrow _ ->
     failwith "convert_value: Cannot convert function value"
+  | VRecord _, TRecord _ -> failwith "convert_value: encountered record value"
   | _ ->
     failwith "convert_value: type and value do not match"
 ;;

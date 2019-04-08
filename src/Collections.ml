@@ -1,10 +1,6 @@
 open Syntax
 
-module StringMap = BatMap.Make (struct
-  type t = string
-
-  let compare = String.compare
-end)
+module StringMap = RecordUtils.StringMap
 
 module StringSet = BatSet.Make (struct
   type t = String.t

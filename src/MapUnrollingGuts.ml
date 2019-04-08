@@ -44,6 +44,7 @@ let rec unroll_type
       TTuple (BatList.make (List.length keys) (canonicalize_type val_ty))
     else
       TMap (unroll_type key_ty, unroll_type val_ty)
+  | TRecord map -> TRecord (StringMap.map unroll_type map)
   | QVar tyname ->
     failwith "Cannot unroll a type containing a QVar!";
   | TVar _ ->
@@ -76,6 +77,9 @@ let rec unroll_exp
       elet x (unroll_exp e1) (unroll_exp e2)
     | ETuple es ->
       etuple (List.map unroll_exp es)
+    | ERecord map ->
+      erecord (StringMap.map unroll_exp map)
+    | EProject (e1, l) -> eproject (unroll_exp e1) l
     | ESome e1 ->
       esome (unroll_exp e1)
     | EMatch (e1, bs) ->
@@ -230,6 +234,7 @@ let unroll_decl
     in
     DSymbolic (var, toe')
   | DATy t -> DATy (unroll_type t)
+  | DUserTy (l,t) -> DUserTy (l, unroll_type t)
   | DMerge e -> DMerge (unroll_exp e)
   | DTrans e -> DTrans (unroll_exp e)
   | DInit e -> DInit (unroll_exp e)

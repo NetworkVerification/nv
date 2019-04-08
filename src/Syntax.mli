@@ -1,10 +1,14 @@
 open Cudd
+open RecordUtils
+open Batteries
 
 type index = int
 
 type bitwidth = int
 
 type level = int
+
+type var = Var.t
 
 type tyname = Var.t
 
@@ -17,10 +21,9 @@ type ty =
   | TTuple of ty list
   | TOption of ty
   | TMap of ty * ty
+  | TRecord of ty StringMap.t
 
 and tyvar = Unbound of tyname * level | Link of ty
-
-type var = Var.t
 
 type op =
   | And
@@ -46,6 +49,7 @@ type pattern =
   | PInt of Integer.t
   | PTuple of pattern list
   | POption of pattern option
+  | PRecord of pattern StringMap.t
 
 type v = private
   | VBool of bool
@@ -54,6 +58,7 @@ type v = private
   | VTuple of value list
   | VOption of value option
   | VClosure of closure
+  | VRecord of value StringMap.t
 
 and mtbdd = value Mtbdd.t * ty
 
@@ -72,6 +77,8 @@ and e = private
   | ESome of exp
   | EMatch of exp * branches
   | ETy of exp * ty
+  | ERecord of exp StringMap.t
+  | EProject of exp * string
 
 and exp = private
   {e: e; ety: ty option; espan: Span.t; etag: int; ehkey: int}
@@ -89,7 +96,8 @@ and ty_or_exp = Ty of ty | Exp of exp
 type declaration =
   | DLet of var * ty option * exp
   | DSymbolic of var * ty_or_exp
-  | DATy of ty
+  | DATy of ty (* Declaration of the attribute type *)
+  | DUserTy of var * ty (* Declaration of a user-defined type *)
   | DMerge of exp
   | DTrans of exp
   | DInit of exp
@@ -110,6 +118,8 @@ val vmap : mtbdd -> value
 
 val vtuple : value list -> value
 
+val vrecord : value StringMap.t -> value
+
 val voption : value option -> value
 
 val vclosure : closure -> value
@@ -129,6 +139,10 @@ val eif : exp -> exp -> exp -> exp
 val elet : Var.t -> exp -> exp -> exp
 
 val etuple : exp list -> exp
+
+val erecord : exp StringMap.t -> exp
+
+val eproject : exp -> string -> exp
 
 val esome : exp -> exp
 
@@ -201,6 +215,8 @@ val get_nodes : declarations -> Integer.t option
 val get_symbolics : declarations -> (var * ty_or_exp) list
 
 val get_requires : declarations -> exp list
+
+val get_record_types : declarations -> (ty StringMap.t) list
 
 val equal_values : cmp_meta:bool -> value -> value -> bool
 

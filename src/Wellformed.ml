@@ -1,5 +1,6 @@
 open Collections
 open Syntax
+open Batteries
 
 (* Check a variety of other requirements for a well-
    formed program. Assumes the program is well-typed *)
@@ -10,6 +11,7 @@ let rec has_map ty =
   | TTuple ts -> List.exists has_map ts
   | TArrow (ty1, ty2) -> has_map ty1 || has_map ty2
   | TOption ty -> has_map ty
+  | TRecord map -> StringMap.exists (fun _ -> has_map) map
   | TMap _ -> true
 
 let rec check_type ty : bool =
@@ -18,6 +20,7 @@ let rec check_type ty : bool =
   | TTuple ts -> List.for_all check_type ts
   | TOption ty -> check_type ty
   | TArrow (ty1, ty2) -> check_type ty1 && check_type ty2
+  | TRecord map -> StringMap.for_all (fun _ -> check_type) map
   | TMap (kty, vty) ->
     not (has_map kty) && check_type kty && check_type vty
 
@@ -67,6 +70,8 @@ let rec check_closure info (x: VarSet.t) (e: exp) =
     check_closure info set e1 ;
     check_closure info set e2
   | ETuple es -> List.iter (check_closure info x) es
+  | ERecord map -> StringMap.iter (fun _ -> check_closure info x) map
+  | EProject (e, label) -> check_closure info x e
   | ESome e -> check_closure info x e
   | EMatch (e, bs) ->
     check_closure info x e ;
@@ -85,6 +90,10 @@ and pattern_vars (p: pattern) =
     List.fold_left
       (fun acc p -> VarSet.union acc (pattern_vars p))
       VarSet.empty ps
+  | PRecord pmap ->
+    StringMap.fold
+      (fun _ p acc -> VarSet.union acc (pattern_vars p))
+      pmap VarSet.empty
   | POption (Some p) -> pattern_vars p
 
 let check_closures info _ (e: exp) =
@@ -100,6 +109,35 @@ let check_closures info _ (e: exp) =
         Console.error_position info e1.espan msg )
   | _ -> ()
 
+(* Checks that no label appears more than once in
+   record declarations *)
+let check_record_label_uniqueness info decls =
+  (* Check if a sorted list has duplicate elements *)
+  let rec find_dup lst =
+    match lst with
+    | []
+    | [_] -> None
+    | x1::x2::tl ->
+      if String.equal x1 x2
+      then Some x1
+      else find_dup (x2::tl)
+  in
+  let all_labels =
+    get_record_types decls
+    |> List.map (fun map -> BatList.of_enum @@ StringMap.keys map)
+    |> List.concat
+  in
+  let sorted = List.sort String.compare all_labels in
+  match find_dup sorted with
+  | None -> ()
+  | Some name ->
+    let msg =
+      Printf.sprintf
+        "Record label %s appears more than once!"
+        name
+    in
+    Console.error_position info Span.default msg
+
 let rec is_literal (exp : Syntax.exp) : bool =
   match exp.e with
   | EVar _
@@ -113,9 +151,11 @@ let rec is_literal (exp : Syntax.exp) : bool =
   | ESome exp2 ->
     is_literal exp2
   | ETuple es ->
-    List.fold_left (fun b exp -> b && is_literal exp) true es
+    List.for_all is_literal es
   | EVal _ -> true
   | ETy (exp2, _) -> is_literal exp2
+  | ERecord map -> StringMap.for_all (fun _ -> is_literal) map
+  | EProject (exp2, _) -> is_literal exp2
 
 (* Verify that the only map keys used are literals *)
 let check_keys info _ (e : exp) =
@@ -130,6 +170,7 @@ let check_keys info _ (e : exp) =
   | _ -> ()
 
 let check info (ds: declarations) : unit =
+  check_record_label_uniqueness info ds ;
   Visitors.iter_exp_decls (check_types info) ds ;
   Visitors.iter_exp_decls (check_closures info) ds ;
   Visitors.iter_exp_decls (check_keys info) ds

@@ -362,7 +362,7 @@ let rec type_name (ty : ty) : string =
   | TBool -> "Bool"
   | TInt _ -> "Int"
   | TMap _ -> failwith "no maps yet"
-  | TArrow _ | TVar _ | QVar _ -> failwith "unsupported type in SMT"
+  | TArrow _ | TVar _ | QVar _ | TRecord _ -> failwith "unsupported type in SMT"
 
 (** Translates a [Syntax.ty] to an SMT sort *)
 let rec ty_to_sort (ty: ty) : sort =
@@ -381,7 +381,7 @@ let rec ty_to_sort (ty: ty) : sort =
     DataTypeSort (name, [ty_to_sort ty'])
   | TMap _ -> failwith "unimplemented"
   (*       mk_array_sort ctx (ty_to_sort ctx ty1) (ty_to_sort ctx ty2)*)
-  | TVar _ | QVar _ | TArrow _ ->
+  | TVar _ | QVar _ | TArrow _ | TRecord _ ->
     failwith
       (Printf.sprintf "internal error (ty_to_sort): %s"
          (Printing.ty_to_string ty))
@@ -406,7 +406,7 @@ let rec ty_to_type_decl (ty: ty) : datatype_decl =
                      List.mapi (fun i _ ->
                          Printf.sprintf "proj%d" i, List.nth params i) ts} in
     { name = name; params = params; constructors = [mkpair] }
-  | TVar _ | QVar _ | TArrow _ | TMap _ ->
+  | TVar _ | QVar _ | TArrow _ | TMap _ | TRecord _ ->
     failwith "not a datatype"
 
 (** Finds the declaration for the datatype of ty if it exists,
@@ -512,13 +512,13 @@ let rec encode_exp_z3 descr env (e: exp) : term =
          | _ -> failwith "AtMost operator requires a list of boolean variables")
       | AtMost _,_ -> failwith "Wrong arguments for AtMost"
       | MCreate, [e1] ->
-        failwith "not implemented"
+        failwith "Map in SMT encoding"
       | MGet, [e1; e2] ->
-        failwith "not implemented"
+        failwith "Map in SMT encoding"
       | MSet, [e1; e2; e3] ->
-        failwith "not implemented"
+        failwith "Map in SMT encoding"
       | MMap, [{e= EFun {arg= x; argty= ty1; resty= ty2; body= e1}}; e2] ->
-        failwith "not implemented yet"
+        failwith "Map in SMT encoding"
       | MMapFilter, _
       | MMerge, _
       | _ -> failwith "internal error (encode_exp_z3)" )
@@ -569,6 +569,7 @@ let rec encode_exp_z3 descr env (e: exp) : term =
         encode_branches_z3 descr env za bs (oget e.ety)
       end
   | ETy (e, ty) -> encode_exp_z3 descr env e
+  | ERecord _ | EProject _ -> failwith "record or projection in smt encoding"
   | EFun _ | EApp _ -> failwith "function in smt encoding"
 
 (* and make_map env descr arr x (e1, ty1) e2 = *)
@@ -763,7 +764,8 @@ and encode_value_z3 descr env (v: Syntax.value) =
     mk_app (mk_constructor f (ty_to_sort (oget v.vty))) [zv.t] |>
     mk_term ~tloc:v.vspan
   | VClosure _ -> failwith "internal error (closure in smt)"
-  | VMap map -> failwith "not doing maps yet"
+  | VMap map -> failwith "Map in SMT encoding"
+  | VRecord _ -> failwith "Record in SMT encoding"
 
 let exp_to_z3 = encode_exp_z3
 
@@ -834,10 +836,10 @@ let encode_z3_assert str env node assertion =
 
 (** ** Naming convention of useful variables *)
 let label_var i =
-  Printf.sprintf "label-%d" (Integer.to_int i)
+  Printf.sprintf "label-%d-" (Integer.to_int i)
 
 let node_of_label_var s =
-  Integer.of_string (BatString.lchop ~n:6 s)
+  Integer.of_string (List.nth (BatString.split_on_char '-' s) 1)
 
 let assert_var i =
   Printf.sprintf "assert-%d" (Integer.to_int i)
@@ -845,7 +847,7 @@ let assert_var i =
 (* this is flaky, the variable name used by SMT will be
    assert-n-result, we need to chop both ends *)
 let node_of_assert_var s =
-  Integer.of_string (BatString.lchop ~n:7 s |> BatString.rchop ~n:7)
+  Integer.of_string (BatString.chop ~l:7 ~r:7 s)
 
 let symbolic_var (s: Var.t) =
   Var.to_string s

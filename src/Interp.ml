@@ -58,6 +58,7 @@ let rec matches p (v: Syntax.value) : Syntax.value Env.t option =
   | POption None, VOption None -> Some Env.empty
   | POption (Some p), VOption (Some v) -> matches p v
   | (PBool _ | PInt _ | PTuple _ | POption _), _ -> None
+  | PRecord _, _ -> failwith "Record found during interpretation"
 
 and matches_list ps vs =
   match (ps, vs) with
@@ -129,13 +130,16 @@ let rec interp_exp env e =
   | ETuple es -> vtuple (List.map (interp_exp env) es)
   | ESome e -> voption (Some (interp_exp env e))
   | EMatch (e1, branches) ->
-      let v = interp_exp env e1 in
+    let v = interp_exp env e1 in
+    begin
       match match_branches branches v with
       | Some (env2, e) -> interp_exp (update_values env env2) e
       | None ->
           failwith
             ( "value " ^ value_to_string v
-            ^ " did not match any pattern in match statement" )
+              ^ " did not match any pattern in match statement" )
+    end
+  | ERecord _ | EProject _ -> failwith "Record found during interpretation"
 
 and interp_op env ty op es =
   (* if arity op != List.length es then
@@ -227,7 +231,7 @@ let interp = MemoizeExp.memoize ~size:1000 interp
 let interp_closure cl (args: value list) =
   interp (Syntax.apply_closure cl args)
 
-  
+
 (** * Partial Interpreter *)
 
 let rec interp_exp_partial isapp env e =
@@ -260,7 +264,7 @@ let rec interp_exp_partial isapp env e =
      | EFun f when is_value pe2 ->
         interp_exp_partial false (update_value env f.arg (to_value pe2)) f.body
      | _ -> aexp (eapp pe1 pe2, e.ety, e.espan))
-  | EIf (e1, e2, e3) -> 
+  | EIf (e1, e2, e3) ->
      let pe1 = interp_exp_partial false env e1 in
      if is_value pe1 then
        (match (to_value pe1).v with
@@ -294,6 +298,7 @@ let rec interp_exp_partial isapp env e =
        aexp (ematch pe1 (List.map (fun (p,eb) ->
                              (p, interp_exp_partial false env eb)) branches),
              e.ety, e.espan)
+  | ERecord _ | EProject _ -> failwith "Record found during partial interpretation"
 
 and interp_op_partial env ty op es =
   let pes = List.map (interp_exp_partial false env) es in
@@ -301,7 +306,7 @@ and interp_op_partial env ty op es =
     eop op pes
   else
     begin
-      exp_of_value @@ 
+      exp_of_value @@
       match (op, List.map to_value pes) with
       | And, [{v= VBool b1}; {v= VBool b2}] -> vbool (b1 && b2)
       | Or, [{v= VBool b1}; {v= VBool b2}] -> vbool (b1 || b2)
@@ -377,7 +382,7 @@ and interp_op_partial env ty op es =
            (Printf.sprintf "bad operator application: %s"
                            (Printing.op_to_string op))
     end
-    
+
 let interp_partial = fun e -> interp_exp_partial false empty_env e
 
 (* let interp_partial_closure cl (args: value list) = *)
@@ -388,17 +393,17 @@ let interp_partial = MemoizeExp.memoize ~size:1000 interp_partial
 let interp_partial_fun (fn : Syntax.exp) (args: value list) =
   Syntax.apps fn (List.map (fun a -> e_val a) args) |>
     interp_partial
-  
+
 (** * Full reduction Partial Interpreter *)
 
 module Full =
   struct
-    
+
     type 'a isMatch =
       Match of 'a
     | NoMatch
     | Delayed
-    
+
     (* matches p b is Some env if v matches p and None otherwise; assumes no repeated variables in pattern *)
     let rec matches p (e: Syntax.exp) : Syntax.exp Env.t isMatch =
       match p with
@@ -454,6 +459,8 @@ module Full =
                  matches p (exp_of_value v)
               | _ -> NoMatch)
           | _ -> Delayed)
+      | PRecord _ -> failwith "Record found during partial interpretation"
+
 
     and matches_list ps es env =
       match (ps, es) with
@@ -499,9 +506,9 @@ module Full =
              interp_exp_partial (Env.update env f.arg pe2) f.body
           | _ ->
              (*this case shouldn't show up for us *)
-             Console.warning "This case shouldn't show up"; 
+             Console.warning "This case shouldn't show up";
              aexp (eapp pe1 pe2, e.ety, e.espan))
-      | EIf (e1, e2, e3) -> 
+      | EIf (e1, e2, e3) ->
          let pe1 = interp_exp_partial env e1 in
          if is_value pe1 then
            (match (to_value pe1).v with
@@ -530,6 +537,7 @@ module Full =
              aexp (ematch pe1 (List.map (fun (p,eb) ->
                                    (p, interp_exp_partial env eb)) branches),
                    e.ety, e.espan))
+      | ERecord _ | EProject _ -> failwith "Record found during partial interpretation"
 
     (* this is same as above, minus the app boolean. see again if we can get rid of that? *)
     and interp_op_partial env ty op es =
@@ -538,7 +546,7 @@ module Full =
         eop op pes
       else
         begin
-          exp_of_value @@ 
+          exp_of_value @@
             match (op, List.map to_value pes) with
             | And, [{v= VBool b1}; {v= VBool b2}] -> vbool (b1 && b2)
             | Or, [{v= VBool b1}; {v= VBool b2}] -> vbool (b1 || b2)

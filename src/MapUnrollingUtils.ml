@@ -68,6 +68,9 @@ let rec collect_in_exp (exp : Syntax.exp) (acc : maplist) : maplist =
     |> collect_in_exp e3
   | ETuple es ->
     List.fold_left (BatPervasives.flip collect_in_exp) acc es
+  | ERecord map ->
+    StringMap.fold (fun _ -> collect_in_exp) map acc
+  | EProject _ -> failwith ""
   | ESome e ->
     collect_in_exp e acc
   | EMatch (e, branches) ->
@@ -94,6 +97,8 @@ let collect_in_decl (d : declaration) (acc : maplist): maplist =
       | Exp exp -> collect_in_exp exp acc
     end
   | DATy ty ->
+    add_if_map_type (ty, ExpSet.empty) acc
+  | DUserTy (_, ty) ->
     add_if_map_type (ty, ExpSet.empty) acc
   | DMerge exp
   | DTrans exp

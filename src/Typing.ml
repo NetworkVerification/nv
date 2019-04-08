@@ -5,6 +5,8 @@
 open Syntax
 open Printing
 open Unsigned
+open RecordUtils
+open Batteries
 
 let debug = true
 
@@ -47,6 +49,9 @@ let reset_tyvars () =
   (* DPW: don't need to do this *)
   level_reset ()
 
+(* List of record types that are declared *)
+let record_types = ref []
+
 let rec check_annot_val (v: value) =
   ( match v.vty with
     | None ->
@@ -87,7 +92,8 @@ let rec check_annot (e: exp) =
   | EMatch (e, bs) ->
     check_annot e ;
     List.iter (fun (_, e) -> check_annot e) bs
-  | ETy (e, ty) -> check_annot e
+  | ETy (e, _) | EProject (e, _) -> check_annot e
+  | ERecord map -> StringMap.iter (fun _ -> check_annot) map
 
 let check_annot_decl (d: declaration) =
   match d with
@@ -99,7 +105,7 @@ let check_annot_decl (d: declaration) =
   |DAssert e
   |DRequire e ->
     check_annot e
-  | DNodes _ | DEdges _ | DATy _ | DSymbolic _ -> ()
+  | DNodes _ | DEdges _ | DATy _ | DSymbolic _ | DUserTy _ -> ()
 
 let rec check_annot_decls (ds: declarations) =
   match ds with
@@ -116,6 +122,7 @@ let rec strip_ty ty =
   | TTuple ts -> TTuple (List.map strip_ty ts)
   | TOption t -> TOption (strip_ty t)
   | TMap (ty1, ty2) -> TMap (strip_ty ty1, strip_ty ty2)
+  | TRecord map -> TRecord (StringMap.map strip_ty map)
   | QVar _ | TVar _ -> raise Invalid_type
 
 let tyname () = Var.fresh "a"
@@ -139,6 +146,7 @@ let occurs tvr ty =
     | TArrow (t1, t2) -> occ tvr t1 ; occ tvr t2
     | TBool | TInt _ -> ()
     | TTuple ts -> List.iter (occ tvr) ts
+    | TRecord map -> StringMap.iter (fun _ -> occ tvr) map
     | TOption t -> occ tvr t
     | TMap (t1, t2) -> occ tvr t1 ; occ tvr t2
   in
@@ -175,6 +183,15 @@ let rec unify info e t1 t2 : unit =
       | TOption t1, TOption t2 -> try_unify t1 t2
       | TMap (t1, t2), TMap (t3, t4) ->
         try_unify t1 t3 && try_unify t2 t4
+      | TRecord map1, TRecord map2 ->
+        if not (same_labels map1 map2)
+        then false
+        else List.fold_left
+            (fun b l -> b &&
+                        try_unify
+                          (StringMap.find l map1)
+                          (StringMap.find l map2))
+            true (get_record_labels map1)
       | _, _ -> false
   in
   if try_unify t1 t2 then ()
@@ -213,6 +230,7 @@ let generalize ty =
       let ty2 = gen ty2 in
       TArrow (ty1, ty2)
     | TTuple ts -> TTuple (List.map gen ts)
+    | TRecord map -> TRecord (StringMap.map gen map)
     | TOption t ->
       let ty = gen t in
       TOption ty
@@ -243,6 +261,8 @@ let inst subst ty =
     | TTuple ts ->
       let ts = loops subst ts in
       TTuple ts
+    | TRecord map ->
+      TRecord (StringMap.map (loop subst) map)
     | TOption t ->
       let t = loop subst t in
       TOption t
@@ -285,6 +305,7 @@ let substitute (ty: ty) : ty =
     | TArrow (ty1, ty2) ->
       TArrow (substitute_aux ty1, substitute_aux ty2)
     | TTuple ts -> TTuple (List.map substitute_aux ts)
+    | TRecord map -> TRecord (StringMap.map substitute_aux map)
     | TOption t -> TOption (substitute_aux t)
     | TMap (ty1, ty2) -> TMap (substitute_aux ty1, substitute_aux ty2)
   in
@@ -318,11 +339,11 @@ let rec infer_exp i info env (e: exp) : exp =
   let exp =
     match e.e with
     | EVar x -> (
-      match Env.lookup_opt env x with
-      | None ->
+        match Env.lookup_opt env x with
+        | None ->
           (* Console.error_position info e.espan *)
-         failwith ("unbound variable " ^ Var.to_string x)
-      | Some t -> texp (e, substitute t, e.espan) )
+          failwith ("unbound variable " ^ Var.to_string x)
+        | Some t -> texp (e, substitute t, e.espan) )
     | EVal v ->
       let v, t = infer_value info env v |> textractv in
       texp (e_val v, t, e.espan)
@@ -478,6 +499,41 @@ let rec infer_exp i info env (e: exp) : exp =
     | ETuple es ->
       let es, tys = infer_exps (i + 1) info env es in
       texp (etuple es, TTuple tys, e.espan)
+    | ERecord emap ->
+      (* Retrieve the record type corresponding to this expression.
+         All record types should be explicitly declared, and
+         all labels should appear in exactly one declaration *)
+      let label = (List.hd @@ get_record_labels emap) in
+      let ferr = (Console.error_position info e.espan) in
+      let tmap = get_type_with_label (!record_types) ferr label in
+
+      (if not (same_labels emap tmap) then
+         (* The only possible record type was not a match *)
+         Console.error_position info e.espan
+           "Record does not match any declared record type!");
+
+      let emap = StringMap.map (infer_exp (i+1) info env) emap in
+
+      BatEnum.iter
+        (fun l ->
+           let e, t1 = StringMap.find l emap |> textract in
+           let t2 = StringMap.find l tmap in
+           unify info e t1 t2)
+        (StringMap.keys emap);
+
+      texp (erecord emap, TRecord tmap, e.espan)
+    | EProject (e1, label) ->
+      (* Retrieve the record type containing this label.
+         All record types should be explicitly declared, and
+         all labels should appear in exactly one declaration *)
+      let ferr = (Console.error_position info e.espan) in
+      let tmap = get_type_with_label (!record_types) ferr label in
+
+      let label_type = StringMap.find label tmap in
+      let e1, ety = infer_exp (i + 1) info env e1 |> textract in
+      unify info e1 ety (TRecord tmap) ;
+
+      texp (eproject e1 label, label_type, e.espan)
     | ESome e ->
       let e, t = infer_exp (i + 1) info env e |> textract in
       texp (esome e, TOption t, e.espan)
@@ -523,16 +579,16 @@ and infer_value info env (v: Syntax.value) : Syntax.value =
         in
         match vs with
         | [] ->
-           (* let ty = fresh_tyvar () in *)
-           let ty = fresh_tyvar () in
-           tvalue (vmap m, TMap (ty, dty), v.vspan)
-           (* (match v.vty with *)
-           (*  | None -> *)
-           (*     let ty = fresh_tyvar () in *)
-           (*     tvalue (vmap m, TMap (ty, dty), v.vspan) *)
-           (*  | Some ty -> *)
-           (*     let map = BddMap.create ~key_ty:ty default in *)
-           (*     tvalue (vmap map, TMap (ty, dty), v.vspan)) *)
+          (* let ty = fresh_tyvar () in *)
+          let ty = fresh_tyvar () in
+          tvalue (vmap m, TMap (ty, dty), v.vspan)
+        (* (match v.vty with *)
+        (*  | None -> *)
+        (*     let ty = fresh_tyvar () in *)
+        (*     tvalue (vmap m, TMap (ty, dty), v.vspan) *)
+        (*  | Some ty -> *)
+        (*     let map = BddMap.create ~key_ty:ty default in *)
+        (*     tvalue (vmap map, TMap (ty, dty), v.vspan)) *)
         | (kv, vv) :: _ ->
           let kv, kvty = infer_value info env kv |> textractv in
           let vv, vvty = infer_value info env vv |> textractv in
@@ -558,6 +614,12 @@ and infer_value info env (v: Syntax.value) : Syntax.value =
     | VTuple vs ->
       let vs, ts = infer_values info env vs in
       tvalue (vtuple vs, TTuple ts, v.vspan)
+    | VRecord vmap ->
+      (* All VRecords are constructed via ERecords, so shouldn't need
+         to check that the record type has been properly declared *)
+      let vmap = StringMap.map (infer_value info env) vmap in
+      let tmap = StringMap.map (fun v -> oget v.vty) vmap in
+      tvalue (vrecord vmap, TRecord tmap, v.vspan)
     | VOption None ->
       let tv = fresh_tyvar () in
       tvalue (voption None, TOption tv, v.vspan)
@@ -611,6 +673,15 @@ and infer_pattern i info env e tmatch p =
     let ty = TTuple ts in
     unify info e tmatch ty ;
     infer_patterns (i + 1) info env e ts ps
+  | PRecord pmap ->
+    let ptmap = StringMap.map (fun p -> p, fresh_tyvar ()) pmap in
+    let tmap = StringMap.map snd ptmap in
+    let ty = TRecord (tmap) in
+    unify info e tmatch ty ;
+    StringMap.fold
+      (fun _ (p, t) env ->
+         infer_pattern (i + 1) info env e t p)
+      ptmap env
   | POption x ->
     let t = fresh_tyvar () in
     unify info e tmatch (TOption t) ;
@@ -685,7 +756,7 @@ and infer_declaration i info env aty d : ty Env.t * declaration =
     let ty = oget e'.ety in
     unify info e ty (init_ty aty) ;
     (Env.update env (Var.create "init") ty, DInit e')
-  | DATy _ | DNodes _ | DEdges _ -> (env, d)
+  | DATy _ | DUserTy _ | DNodes _ | DEdges _ -> (env, d)
 
 (* ensure patterns do not contain duplicate variables *)
 and valid_pat p = valid_pattern Env.empty p |> ignore
@@ -702,6 +773,8 @@ and valid_pattern env p =
             ^ " appears twice in pattern" ) )
   | PBool _ | PInt _ -> env
   | PTuple ps -> valid_patterns env ps
+  | PRecord map ->
+    StringMap.fold (fun _ p env -> valid_pattern env p) map env
   | POption None -> env
   | POption (Some p) -> valid_pattern env p
 
@@ -709,7 +782,6 @@ and valid_patterns env p =
   match p with
   | [] -> env
   | p :: ps -> valid_patterns (valid_pattern env p) ps
-
 
 (* Convert ty into a canonical form for easy comparison.
    * Unbound TVars are converted to TBool
@@ -738,6 +810,19 @@ let canonicalize_type (ty : ty) : ty =
           ([], map, count) tys
       in
       TTuple (tys'), map, count
+    | TRecord (tmap) ->
+      let tlist =
+        List.combine (get_record_labels tmap) (get_record_entries tmap)
+      in
+      let tmap', map, count =
+        List.fold_left
+          (fun (tmap, map, count) (l,t) ->
+             let t', map, count = aux t map count in
+             StringMap.add l t' tmap, map, count
+          )
+          (StringMap.empty, map, count) tlist
+      in
+      TRecord (tmap'), map, count
     | TOption t ->
       let t', map, count = aux t map count in
       TOption (t'), map, count
@@ -775,4 +860,6 @@ let infer_declarations info (ds: declarations) : declarations =
   | None ->
     Console.error
       "attribute type not declared: type attribute = ..."
-  | Some ty -> infer_declarations_aux 0 info Env.empty ty ds
+  | Some ty ->
+    record_types := get_record_types ds ;
+    infer_declarations_aux 0 info Env.empty ty ds

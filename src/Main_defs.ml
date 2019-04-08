@@ -32,7 +32,13 @@ let smt_query_file =
 
 let run_smt file cfg info ds =
   let fs = [] in
-  let decls = Inline.inline_declarations info ds in
+  let decls = ds in
+  let decls, f = RecordUnrolling.unroll decls in
+  let fs = f :: fs in
+  let decls = Typing.infer_declarations info decls in
+  let decls = Inline.inline_declarations info decls in
+  let decls, f = Renaming.alpha_convert_declarations decls in
+  let fs = f :: fs in
   let decls = Typing.infer_declarations info decls in
   let decls, vars, f = MapUnrolling.unroll info decls in
   let fs = f :: fs in
@@ -59,9 +65,13 @@ let run_smt file cfg info ds =
 
 let run_test cfg info ds =
   let fs = [] in
+  let decls = ds in
+  let decls, f = RecordUnrolling.unroll decls in
+  let fs = f :: fs in
+  let decls = Typing.infer_declarations info decls in
   let (sol, stats), fs =
     if cfg.smart_gen then
-      let ds, f = Renaming.alpha_convert_declarations ds in
+      let ds, f = Renaming.alpha_convert_declarations decls in
       let fs = f :: fs in
       let ds = Inline.inline_declarations info ds in
       (Quickcheck.check_random ds ~iterations:cfg.ntests, fs) (*used to be check_smart *)
@@ -78,13 +88,17 @@ let run_test cfg info ds =
     (CounterExample sol, Some fs)
 
 let run_simulator cfg info decls =
+  let fs = [] in
+  let decls, f = RecordUnrolling.unroll decls in
+  let fs = f :: fs in
+  let decls = Typing.infer_declarations info decls in
   let fs, decls =
     if cfg.inline then
       (* why are we renaming here?*)
       let decls, f = Renaming.alpha_convert_declarations decls in
       let decls = Inline.inline_declarations info decls in
-      ([f], decls)
-    else ([], decls)
+      (f :: fs, decls)
+    else (fs, decls)
   in
   try
     let solution, q =
@@ -163,59 +177,59 @@ let compress file info decls cfg networkOp =
   let relevantSliceGroups = Slicing.groupPrefixesByVertices relevantSlices in
 
   let rec loop (finit: AbstractionMap.abstractionMap)
-               (f: AbstractionMap.abstractionMap)
-               (pre: Prefix.t)
-               (ds: AdjGraph.VertexSet.t)
-               (k: int) =
+      (f: AbstractionMap.abstractionMap)
+      (pre: Prefix.t)
+      (ds: AdjGraph.VertexSet.t)
+      (k: int) =
     (* build abstract network *)
     let failVars, decls =
       time_profile "Build abstract network"
-                   (fun () -> buildAbstractNetwork f network.graph mergeMap transMap
-                                                   initMap assertMap ds
-                                                   network.attr_type pre symb k) in
+        (fun () -> buildAbstractNetwork f network.graph mergeMap transMap
+            initMap assertMap ds
+            network.attr_type pre symb k) in
     let decls = Typing.infer_declarations info decls in
     let groups = AbstractionMap.printAbstractGroups f "\n" in
     Console.show_message groups Console.T.Blue "Abstract groups";
     match networkOp cfg info decls with
     | Success _, _ -> Printf.printf "No counterexamples found\n"
     | (CounterExample sol), fs ->
-       let sol = apply_all sol (oget fs) in
-       let f' =
-         time_profile "Refining abstraction after failures"
-                      (fun () -> FailuresAbstraction.refineForFailures
-                                   cfg.draw file network.graph finit f failVars sol
-                                   k ds network.attr_type)
-       in
-       match f' with
-       | None -> print_solution sol;
-       | Some f' ->
-          loop finit f' pre ds k
+      let sol = apply_all sol (oget fs) in
+      let f' =
+        time_profile "Refining abstraction after failures"
+          (fun () -> FailuresAbstraction.refineForFailures
+              cfg.draw file network.graph finit f failVars sol
+              k ds network.attr_type)
+      in
+      match f' with
+      | None -> print_solution sol;
+      | Some f' ->
+        loop finit f' pre ds k
   in
   PrefixSetSet.iter
     (fun prefixes ->
-      Console.show_message (Slicing.printPrefixes prefixes)
-                           Console.T.Green "Checking SRP for prefixes";
-      (* get a prefix from this class of prefixes *)
-      let pre = PrefixSet.min_elt prefixes in
-      (* find the nodes this class is announced from *)
-      let ds = PrefixMap.find pre relevantSlices in
-      (* do abstraction for 0...k failures *)
-      for i=0 to k do
-        Console.show_message "" Console.T.Green
-                             (Printf.sprintf "Checking for %d failures" i);
-        (* find the initial abstraction function for these destinations *)
-        let f =
-          time_profile "Computing Abstraction for K failures"
-                       (fun () ->
-                         let f = Abstraction.findAbstraction network.graph
-                                                             transMap mergeMap ds in
-                         FailuresAbstraction.refineK network.graph f ds i)
-        in
-      (* let groups = AbstractionMap.printAbstractGroups f "\n" in *)
-      (* Console.show_message groups Console.T.Blue "Abstract groups after refineK"; *)
-      (* run_simulator cfg info decls  *)
-        loop f f pre ds i
-      done) relevantSliceGroups
+       Console.show_message (Slicing.printPrefixes prefixes)
+         Console.T.Green "Checking SRP for prefixes";
+       (* get a prefix from this class of prefixes *)
+       let pre = PrefixSet.min_elt prefixes in
+       (* find the nodes this class is announced from *)
+       let ds = PrefixMap.find pre relevantSlices in
+       (* do abstraction for 0...k failures *)
+       for i=0 to k do
+         Console.show_message "" Console.T.Green
+           (Printf.sprintf "Checking for %d failures" i);
+         (* find the initial abstraction function for these destinations *)
+         let f =
+           time_profile "Computing Abstraction for K failures"
+             (fun () ->
+                let f = Abstraction.findAbstraction network.graph
+                    transMap mergeMap ds in
+                FailuresAbstraction.refineK network.graph f ds i)
+         in
+         (* let groups = AbstractionMap.printAbstractGroups f "\n" in *)
+         (* Console.show_message groups Console.T.Blue "Abstract groups after refineK"; *)
+         (* run_simulator cfg info decls  *)
+         loop f f pre ds i
+       done) relevantSliceGroups
 
 let parse_input (args : string array)
   : Cmdline.t * Console.info * string * Syntax.declarations =
