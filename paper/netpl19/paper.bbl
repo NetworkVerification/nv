@@ -21,4 +21,16 @@ A.~Gember-Jacobson, R.~Viswanathan, A.~Akella, and R.~Mahajan.
 \newblock Fast control plane analysis using an abstract representation.
 \newblock In {\em SIGCOMM}, 2016.
 
+\bibitem{metarouting}
+T.~G. Griffin and J.~L. Sobrinho.
+\newblock Metarouting.
+\newblock In {\em Proceedings of the 2005 Conference on Applications,
+  Technologies, Architectures, and Protocols for Computer Communications},
+  SIGCOMM '05, pages 1--12, August 2005.
+
+\bibitem{routingalgebra}
+J.~a.~L. Sobrinho.
+\newblock An algebraic theory of dynamic network routing.
+\newblock {\em IEEE/ACM Trans. Netw.}, 13(5):1160--1173, October 2005.
+
 \end{thebibliography}
