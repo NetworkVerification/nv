@@ -1007,10 +1007,10 @@ let get_requires ds =
   |> List.rev
 
 let get_record_types ds =
-  List.fold_left
+  BatList.fold_left
     (fun acc d ->
        match d with
-       | DUserTy (_, TRecord lst) -> (lst) :: acc
+       | DUserTy (_, TRecord lst) -> lst :: acc
        | _ -> acc
     )
     [] ds

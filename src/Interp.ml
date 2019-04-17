@@ -145,12 +145,12 @@ let rec interp_exp env e =
   | ESome e -> voption (Some (interp_exp env e))
   | EMatch (e1, branches) -> (
     let v = interp_exp env e1 in 
-      match match_branches branches v env.value with
-      | Some (env2, e) -> interp_exp {env with value=env2} e
-      | None ->
-          failwith
-            ( "value " ^ value_to_string v
-              ^ " did not match any pattern in match statement" ))
+    match match_branches branches v env.value with
+    | Some (env2, e) -> interp_exp {env with value=env2} e
+    | None ->
+       Printf.printf "value %s did not match any pattern in \
+                           match statement" (value_to_string v);
+       failwith "Fatal error")
   | ERecord _ | EProject _ -> failwith "Record found during interpretation"
 
 and interp_op env ty op es =
@@ -368,9 +368,9 @@ let rec interp_exp_partial isapp env e =
        (match match_branches (branches) (to_value pe1) env.value with
         | Some (env2, e) -> interp_exp_partial false {env with value=env2} e
         | None ->
-           failwith
-             ( "value " ^ value_to_string (to_value pe1)
-               ^ " did not match any pattern in match statement"))
+             ( Printf.printf "value %s did not match any pattern in \
+                              match statement" (value_to_string (to_value pe1)));
+             failwith "Fatal error")
      else
        aexp (ematch pe1 (mapBranches (fun (p,e) ->
                              (p, interp_exp_partial false env e)) branches),
@@ -563,8 +563,8 @@ module Full =
           | Match (env2, e) -> interp_exp_partial (Env.updates env env2) e
           | NoMatch ->
              failwith
-               ( "exp " ^ (exp_to_string pe1)
-                 ^ " did not match any pattern in match statement")
+               ( Printf.sprintf "exp %s did not match any pattern in \
+                                 match statement" (exp_to_string pe1))
           | Delayed ->
              aexp (ematch pe1 (mapBranches (fun (p,e) ->
                                    (p,interp_exp_partial env e)) branches),

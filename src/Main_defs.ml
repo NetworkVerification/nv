@@ -234,7 +234,7 @@ let parse_input (args : string array)
   (* let decls = Typing.infer_declarations info decls in *)
   (* failwith "bla"; *)
   let decls =
-    if cfg.inline || cfg.smt || cfg.check_monotonicity || cfg.smart_gen then
+    if cfg.unroll || cfg.inline || cfg.smt || cfg.check_monotonicity || cfg.smart_gen then
       time_profile "Inlining" (
                      fun () -> Inline.inline_declarations decls |>
                                  Typing.infer_declarations info)

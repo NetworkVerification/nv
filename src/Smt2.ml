@@ -1380,6 +1380,7 @@ module ClassicEncoding (E: ExprEncoding): Encoding =
       
       (* Compute the labelling as the merge of all inputs *)
       let labelling = ref AdjGraph.VertexMap.empty in
+      let attr_sort = ty_to_sorts aty in
       for i = 0 to Integer.to_int nodes - 1 do
         let init = AdjGraph.VertexMap.find (Integer.of_int i) !init_map in
         let in_edges =
@@ -1410,7 +1411,7 @@ module ClassicEncoding (E: ExprEncoding): Encoding =
         let lbl_iv = lift1 Var.create lbl_i in
         add_symbolic env lbl_iv aty;
         let l = lift2 (fun lbl s -> mk_constant env (create_vars env "" lbl) s)
-                      lbl_iv (ty_to_sorts aty)
+                      lbl_iv attr_sort
         in
 
         ignore(lift2 (fun l merged ->
@@ -1420,9 +1421,10 @@ module ClassicEncoding (E: ExprEncoding): Encoding =
       (* Propagate labels across edges outputs *)
       AdjGraph.EdgeMap.iter
         (fun (i, j) x ->
-          let label = AdjGraph.VertexMap.find i !labelling in
+          let curlabel = AdjGraph.VertexMap.find j !labelling |> to_list in
+          let label = AdjGraph.VertexMap.find i !labelling |> to_list in
           BatList.iter2 (fun label x ->
-              add_constraint env (mk_term (mk_eq label.t x.t))) (to_list label) x)
+              add_constraint env (mk_term (mk_eq label.t x.t))) (curlabel @ label) x)
         !trans_input_map ;
       (* add assertions at the end *)
       ( match eassert with

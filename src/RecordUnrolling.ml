@@ -29,7 +29,7 @@ let canonicalize_type (ty : ty) : ty =
       TTuple (BatList.rev tys'), map, count
     | TRecord (tmap) ->
       let tmap', map, count =
-        List.fold_left2
+        BatList.fold_left2
           (fun (tmap, map, count) l t ->
              let t', map, count = aux t map count in
              StringMap.add l t' tmap, map, count
@@ -86,7 +86,7 @@ let rec unroll_type
   | TMap (key_ty, val_ty) ->
     TMap (unroll_type key_ty, unroll_type val_ty)
   | TRecord map ->
-    TTuple (get_record_entries map)
+    TTuple (BatList.map unroll_type (get_record_entries map))
   | TVar _ ->
      ty
 ;;

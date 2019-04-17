@@ -44,7 +44,9 @@ let rec unroll_type
       TTuple (BatList.make (BatList.length keys) (canonicalize_type val_ty))
     else
       TMap (unroll_type key_ty, unroll_type val_ty)
-  | TRecord map -> TRecord (StringMap.map unroll_type map)
+  | TRecord map ->
+     failwith "TRecord in map unrolling"
+     (* TRecord (StringMap.map unroll_type map) *)
   | QVar tyname -> QVar tyname
     (* failwith "Cannot unroll a type containing a QVar!"; *)
   | TVar _ ->

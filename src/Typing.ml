@@ -20,7 +20,7 @@ let init_ty aty = TArrow (node_ty, aty)
 
 let merge_ty aty = TArrow (node_ty, TArrow (aty, TArrow (aty, aty)))
 
-let trans_ty aty = TArrow (edge_ty, TArrow (aty, aty))
+let trans_ty aty = TArrow (edge_ty, TArrow (aty, (TArrow (aty, aty))))
 
 let assert_ty aty = TArrow (node_ty, TArrow (aty, TBool))
 

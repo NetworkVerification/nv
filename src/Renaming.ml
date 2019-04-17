@@ -29,10 +29,11 @@ and add_pattern (env, ps) p =
   (env', p' :: ps)
 
 let rec alpha_convert_exp (env: Var.t Env.t) (e: exp) =
-  (* Printf.printf "expr: %s\n" (Printing.exp_to_string e);
-  Printf.printf "type: %s\n" (Printing.ty_to_string (oget e.ety)); *)
+  (* Printf.printf "expr: %s\n" (Printing.exp_to_string e); *)
+  (* Printf.printf "type: %s\n" (Printing.ty_to_string (oget e.ety)); *)
   match e.e with
-  | EVar x -> evar (Env.lookup env x) |> wrap e
+  | EVar x ->
+     evar (Env.lookup env x) |> wrap e
   | EVal v -> e
   | EOp (op, es) ->
       eop op (BatList.map (fun e -> alpha_convert_exp env e) es)
