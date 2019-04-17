@@ -41,7 +41,8 @@ let rec unbox_val v =
   | VOption None ->
      (match v.vty with
       | Some (TOption t) ->
-         aexp (etuple [(vbool false |> exp_of_value); (default_exp_value (get_inner_type t))],
+         aexp (etuple [(vbool false |> exp_of_value);
+                       (default_exp_value (unbox_ty t))],
                  Some (unbox_ty (TOption t)), v.vspan)
      | _ -> failwith "expected option type")
   | VOption (Some v1) ->
