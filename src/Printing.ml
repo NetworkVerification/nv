@@ -204,14 +204,14 @@ and value_to_string_p prec v =
   match v.v with
   | VBool true -> "true"
   | VBool false -> "false"
-  | VInt i -> Integer.to_string i
-  | VMap m -> map_to_string ":=" "," m
+  | VInt i -> Printf.sprintf "%d" (Integer.to_int i)
+  | VMap m -> map_to_string " |-> " "\n" m
   | VTuple vs ->
     "(" ^ comma_sep (value_to_string_p max_prec) vs ^ ")"
   | VOption None -> (* Printf.sprintf "None:%s" (ty_to_string (oget v.vty)) *)
      "None"
   | VOption (Some v) ->
-    let s = "Some(" ^ value_to_string_p max_prec v ^ ")" in
+    let s = "Some (" ^ value_to_string_p max_prec v ^ ")" in
     if max_prec > prec then "(" ^ s ^ ")" else s
   | VClosure cl -> closure_to_string_p prec cl
   | VRecord map -> print_record "=" (value_to_string_p prec) map

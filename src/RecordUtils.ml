@@ -16,10 +16,12 @@ module StringMap = BatMap.Make (struct
    I'm using StringMap.bindings since its return is
    guaranteed to be ordered *)
 let get_record_labels map =
-  List.map fst (StringMap.bindings map)
+  BatList.map fst (StringMap.bindings map)
 
 let get_record_entries map =
-  List.map snd (StringMap.bindings map)
+  BatList.map snd (StringMap.bindings map)
+
+let get_record map = StringMap.bindings map
 
 let same_labels map1 map2 =
   let cmp = List.compare (String.compare)

@@ -222,9 +222,9 @@ let rec convert_value
     vtuple (BatList.map2 convert_value ts vs)
   | VTuple vs, TRecord tmap ->
     (* We found a converted record; convert it back *)
-    let labels = get_record_labels tmap in
+    let labels = get_record tmap in
     let vmap = BatList.fold_left2
-        (fun map k v ->  StringMap.add k v map)
+        (fun map (k,ty) v ->  StringMap.add k (convert_value ty v) map)
         StringMap.empty labels vs
     in
     vrecord vmap

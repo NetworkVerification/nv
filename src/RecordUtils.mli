@@ -5,6 +5,7 @@ module StringMap: Map.S with type key = string
 (* Returns record entries/labels in their canonical order *)
 val get_record_labels: 'a StringMap.t -> string list
 val get_record_entries: 'a StringMap.t -> 'a list
+val get_record: 'a StringMap.t -> (string * 'a) list
 
 (* Test if the two maps have the same set of keys *)
 val same_labels : 'a StringMap.t -> 'b StringMap.t -> bool

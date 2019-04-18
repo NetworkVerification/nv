@@ -179,15 +179,6 @@ let pickOption f x y =
     let (_,y) = b in
     Some (if f x y then a else b)
 
-let pickOption2 f x y =
-  match (x,y) with
-  | (None, None) -> None
-  | (None, Some _) -> y  | (Some _, None) -> x
-  | (Some a, Some b) ->
-     let (_,x) = a in
-     let (_,y) = b in
-     Some (if f x y then a else b)
-
 let best i b =
   match (i,b) with
   | (None, None) -> None
@@ -249,11 +240,21 @@ let merge node x y =
  the received attribute *) 
 let trans edge y x =
   let (ps, rib) = x in
-  (* let test = createDict (transferRoute edge (rib[(0,0)]) y) in (\* parser issue... with the parenthesis *\) *)
   (transPackets edge rib ps, map (fun r -> transferRoute edge r y) rib)
-  (*  test) *)
 
 let init node =
   (initPackets node, initRoute node)
   
-              
+let assert node x =
+  let (_, rib) = x in
+  match node with
+  | 4 ->
+     (match rib[(2399220480,24)] with
+      | Some _ ->
+         true
+      | _ -> false)
+  | 3 ->
+     (match rib[(2399220480,24)] with
+      | Some _ -> true
+      | _ -> false)
+  | _ -> true

@@ -11,15 +11,19 @@ let print_solution solution =
   let cfg = Cmdline.get_cfg () in
   print_newline () ;
   if cfg.verbose then (
+    ANSITerminal.print_string [Foreground Blue; Bold]
+                              ("Symbolic variables\n---------------------\n");
     StringMap.iter
       (fun k v ->
-        Printf.printf "%s:%s\n" k (Printing.value_to_string v) )
+        Printf.printf "%s: %s\n" k (Printing.value_to_string v))
       solution.symbolics ;
+    ANSITerminal.print_string [Foreground Blue; Bold]
+                              ("Labels\n---------------------\n");
     AdjGraph.VertexMap.iter
       (fun k v ->
-        Printf.printf "Label(%d):%s\n"
-          (Integer.to_int k)
-          (Printing.value_to_string v) )
+        ANSITerminal.print_string [Bold]
+                                  (Printf.sprintf "  Label %d:\n" (Integer.to_int k)); 
+        Printf.printf "%s\n" (Printing.value_to_string v))
       solution.labels ) ;
   ( match solution.assertions with
   | None ->
