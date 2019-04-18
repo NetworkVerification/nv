@@ -29,7 +29,14 @@ let smt_query_file =
     incr counter;
     lazy (open_out (file ^ "-" ^
                     (string_of_int !counter) ^ "-query"))
-                       
+
+let partialEvalNet net =
+  {net with
+    init = Interp.interp_partial_opt net.init;
+    trans = Interp.interp_partial_opt net.trans;
+    merge = Interp.interp_partial_opt net.merge
+  }
+    
   let run_smt file cfg info (net : Syntax.network) fs =
     let net, fs =
       if cfg.unbox then
@@ -39,6 +46,11 @@ let smt_query_file =
           let net, f2 =
             time_profile "Flattening Tuples" (fun () -> TupleFlatten.flatten_net net)
           in
+          (*have two different partial evaluation techniques *)
+          (* Printf.printf "emerge %s\n" (Printing.exp_to_string net.merge); *)
+          (* let net = partialEvalNet net in *)
+          (* Printf.printf "emerge %s\n" (Printing.exp_to_string net.merge); *)          
+          (* let net = time_profile "optimizing branches" (fun () -> OptimizeBranches.optimizeNet net) in *)
           net, (f2 :: f1 :: fs)
       end
     else net, fs

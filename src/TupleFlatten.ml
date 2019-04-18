@@ -110,8 +110,8 @@ let rec flatten_exp e : exp =
           | _ ->
              aexp (elet x e1 (flatten_exp e2), Some ty, e.espan)))
   | ETuple es ->
-     let es = List.map flatten_exp es in
-     let es' = List.fold_right (fun e acc ->
+     let es = BatList.map flatten_exp es in
+     let es' = BatList.fold_right (fun e acc ->
                    match e.e with
                    | ETuple es -> es @ acc
                    | EVal v ->
