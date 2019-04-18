@@ -2,7 +2,7 @@ type prefix = (int,int)
 type edgeTy = (int,int)
 
 type bgp = { fwdBgp : edgeTy; bgpad : int; lp : int; aslen : int; ibgp:bool; }
-type rip = { fwdRip : ripad : int; cost: int; }
+type rip = { fwdRip : edgeTy; ripad : int; cost: int; }
 
 (* Because their may be both an iBGP and IGP route over an edge (I
    think?), we keep a forwarding edge for both protocols. The merge
@@ -11,8 +11,8 @@ type rip = { fwdRip : ripad : int; cost: int; }
 (* Note option around the record here does not work, Syntax.ml must be
    changed to find record types correctly *)
 type ribEntry = {fwdEdge: edgeTy;
-     	      	 igp: option[(edgeTy, rip)];
-		 egp: option[(edgeTy, bgp)];
+     	      	 igp: option[rip];
+		 egp: option[bgp];
 		 prot: int}
 
 (* Packets are (for now) used solely to determine iBGP reachability *)
@@ -74,7 +74,7 @@ let flip edge =
 let transBgp edge m soly =
   match m with
   | None -> None
-  | Some (_, m) ->
+  | Some m ->
      (match edge with
       | (0,1) ->
          Some ({m with fwdBgp=flip edge; aslen=m.aslen+1; ibgp=false})
@@ -94,7 +94,7 @@ let transBgp edge m soly =
               (* Router 3 will be forwarding traffic to it's IGP next-hop,
             but then it must also know how to forward traffic, so we
             need to make an iBGP connection for it too? *)     
-              Some (r.fwdEdge, {m with ibgp=true})
+              Some ({m with fwdBgp= r.fwdEdge; ibgp=true})
          else
            None
       | (3,1) ->
@@ -103,7 +103,7 @@ let transBgp edge m soly =
            match riby[(1174405632,32)] with
            | None -> None
            | Some r ->     
-              Some (r.fwdEdge, {m with ibgp=true})
+              Some ({m with fwdBgp=r.fwdEdge; ibgp=true})
          else
            None
       | (1,2) ->
@@ -112,7 +112,7 @@ let transBgp edge m soly =
            match riby[(1174405632,32)] with
            | None -> None
            | Some r ->     
-              Some (r.fwdEdge, {m with ibgp=true})
+              Some ({m with fwdBgp=r.fwdEdge; ibgp=true})
          else
            None
       | (2,1) ->
@@ -121,7 +121,7 @@ let transBgp edge m soly =
            match riby[(1174405888,32)] with
            | None -> None
            | Some r ->     
-              Some (r.fwdEdge, {m with ibgp=true})
+              Some ({m with fwdBgp=r.fwdEdge; ibgp=true})
          else
            None
       | (2,3) ->
@@ -130,7 +130,7 @@ let transBgp edge m soly =
            match riby[(1174405888,32)] with
            | None -> None
            | Some r ->     
-              Some (r.fwdEdge, {m with ibgp=true})
+              Some ({m with fwdBgp=r.fwdEdge; ibgp=true})
          else
            None
       | (3,2) ->
@@ -139,7 +139,7 @@ let transBgp edge m soly =
            match riby[(1174405632,32)] with
            | None -> None
            | Some r ->     
-              Some ((r.fwdEdge), {m with ibgp=true})
+              Some ({m with fwdBgp=r.fwdEdge; ibgp=true})
          else
            None
       | _ -> None)
@@ -147,7 +147,7 @@ let transBgp edge m soly =
 let transRip edge c =
   match c with
   | None -> None
-  | Some (_,c) ->
+  | Some c ->
      if (c.cost) < 16 then Some ({c with fwdRip=flip edge; cost=(c.cost)+1})
      else None
 
@@ -175,9 +175,7 @@ let pickOption f x y =
   | (None, None) -> None
   | (None, Some _) -> y  | (Some _, None) -> x
   | (Some a, Some b) ->
-    let (_,x) = a in
-    let (_,y) = b in
-    Some (if f x y then a else b)
+    Some (if f a b then a else b)
 
 let best i b =
   match (i,b) with
@@ -185,7 +183,10 @@ let best i b =
   | _ ->
      let i = match i with | None -> None | Some i -> Some ((i.fwdRip,0), (i.ripad)) in
      let b = match b with | None -> None | Some b -> Some ((b.fwdBgp,1), (b.bgpad)) in
-     match pickOption (fun iad bad -> iad <= bad) i b with
+     match pickOption (fun x y ->
+               let (_,iad) = x in
+               let (_,bad) = y in
+               iad <= bad) i b with
      | None -> None
      | Some ((f,p), _) -> Some (f,p)
 
