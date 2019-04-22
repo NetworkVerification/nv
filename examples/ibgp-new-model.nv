@@ -71,6 +71,30 @@ let flip edge =
   match edge with
   | (u,v) -> (v,u)
 
+let edgeToPacket edge =
+  match edge with
+  | (1,3) -> { srcIp = 1174405376; dstIp=1174405632; }
+  | (3,1) -> { srcIp = 1174405632; dstIp=1174405376; }
+  | (1,2) -> { srcIp = 1174405376; dstIp=1174405888; }
+  | (2,1) -> { srcIp = 1174405888; dstIp=1174405376; }
+  | (2,3) -> { srcIp = 1174405888; dstIp=1174405632; }
+  | (3,2) -> { srcIp = 1174405632; dstIp=1174405888; }
+           
+let transiBGP edge m soly =
+  if (m.ibgp = true) then None
+  else
+    let (psy, riby) = soly in
+    let ibgpPacket = edgeToPacket edge in
+    (* does the ibgp packet reach the node receiving the attribute *)
+    if psy[ibgpPacket] then
+      (* and can that node forward back to the node that sent the attribute *)
+      match riby[(ibgpPacket.srcIp,32)] with
+      | None -> None
+      | Some r ->     
+         Some ({m with fwdBgp=r.fwdEdge; ibgp=true})
+    else
+      None
+           
 let transBgp edge m soly =
   match m with
   | None -> None
@@ -85,79 +109,43 @@ let transBgp edge m soly =
       | (4,3) ->
          Some ({m with fwdBgp=flip edge; aslen=m.aslen+1; ibgp=false})
       | (1,3) ->
-         let (psy, riby) = soly in
-         if psy[{ srcIp = 1174405376; dstIp=1174405632; }] then
-           (* If a packet from 1 can reach 3 *)
-           match riby[(1174405376,32)] with (* and 3 can forward to 1 *)
-           | None -> None (* 3 cannot forward to 1 *)
-           | Some r ->
-              (* Router 3 will be forwarding traffic to it's IGP next-hop,
-            but then it must also know how to forward traffic, so we
-            need to make an iBGP connection for it too? *)     
-              Some ({m with fwdBgp= r.fwdEdge; ibgp=true})
-         else
-           None
+         transiBGP edge m soly 
       | (3,1) ->
-         let (psy, riby) = soly in
-         if psy[{ srcIp = 1174405632; dstIp=1174405376;}] then
-           match riby[(1174405632,32)] with
-           | None -> None
-           | Some r ->     
-              Some ({m with fwdBgp=r.fwdEdge; ibgp=true})
-         else
-           None
+         transiBGP edge m soly
       | (1,2) ->
-         let (psy, riby) = soly in
-         if psy[{ srcIp = 1174405376; dstIp=1174405888;}] then
-           match riby[(1174405632,32)] with
-           | None -> None
-           | Some r ->     
-              Some ({m with fwdBgp=r.fwdEdge; ibgp=true})
-         else
-           None
+         transiBGP edge m soly
       | (2,1) ->
-         let (psy, riby) = soly in
-         if psy[{ srcIp = 1174405888; dstIp=1174405376;}] then
-           match riby[(1174405888,32)] with
-           | None -> None
-           | Some r ->     
-              Some ({m with fwdBgp=r.fwdEdge; ibgp=true})
-         else
-           None
+         transiBGP edge m soly
       | (2,3) ->
-         let (psy, riby) = soly in
-         if psy[{ srcIp = 1174405888; dstIp=1174405632;}] then
-           match riby[(1174405888,32)] with
-           | None -> None
-           | Some r ->     
-              Some ({m with fwdBgp=r.fwdEdge; ibgp=true})
-         else
-           None
+         transiBGP edge m soly
       | (3,2) ->
-         let (psy, riby) = soly in
-         if psy[{ srcIp = 1174405632; dstIp=1174405888;}] then
-           match riby[(1174405632,32)] with
-           | None -> None
-           | Some r ->     
-              Some ({m with fwdBgp=r.fwdEdge; ibgp=true})
-         else
-           None
-      | _ -> None)
+         transiBGP edge m soly)
 
-let transRip edge c =
+let transRipAux edge c =
   match c with
   | None -> None
   | Some c ->
      if (c.cost) < 16 then Some ({c with fwdRip=flip edge; cost=(c.cost)+1})
      else None
 
+let transRip edge c =
+  match edge with
+  | (1,2) -> transRipAux edge c
+  | (2,1) -> transRipAux edge c
+  | (2,3) -> transRipAux edge c
+  | (3,2) -> transRipAux edge c
+  | _ -> None
+    
 let transferRoute edge x soly =
   match x with
   | None -> None
   | Some x ->
      let newIgp = transRip edge (x.igp) in
      let newEgp = transBgp edge (x.egp) soly in
-     Some ({fwdEdge = edge; igp=newIgp; egp=newEgp; prot=0})
+     match (newIgp, newEgp) with
+     | (None, None) -> None
+     | _ ->
+        Some ({fwdEdge = edge; igp=newIgp; egp=newEgp; prot=0})
     
 (* bgp attribute comparison *)
 let betterBgp b1 b2 =
@@ -254,6 +242,6 @@ let assert node x =
       | _ -> false)
   | 3 ->
      (match rib[(2399220480,24)] with
-      | Some _ -> true
+      | Some _ -> false
       | _ -> false)
   | _ -> true
