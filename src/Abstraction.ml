@@ -1059,29 +1059,29 @@ module FailuresAbstraction =
          in
          match nodes_to_split with
          | [] -> (* cannot refine further.*)
-            (* Printf.printf "Nodes can be disconnected, and no further \
-             *                refinements can be made. Verification will fail.\n";
-             * let concrete_cuts =
-             *   BatList.fold_left (fun acc es ->
-             *       let ces =
-             *         EdgeSet.fold (fun ehat acc ->
-             *             EdgeSet.fold (fun e acc ->
-             *                 e :: acc) (BuildAbstractNetwork.abstractToConcreteEdge g f ehat)
-             *               []) es []
-             *       in
-             *       if (BatList.length ces) <= k then
-             *         ces :: acc
-             *       else
-             *         acc) [] cuts
-             * in
-             * BatList.iter (fun cut ->
-             *     Printf.printf "min-cut: ";
-             *     BatList.iter (fun e ->
-             *         Printf.printf "%s," (printEdge e))
-             *       cut;
-             *     Printf.printf "\n") concrete_cuts;
-             * raise Cutoff *)
-            []
+            Printf.printf "Nodes can be disconnected, and no further \
+                           refinements can be made. Verification will fail.\n";
+            let concrete_cuts =
+              BatList.fold_left (fun acc es ->
+                  let ces =
+                    EdgeSet.fold (fun ehat acc ->
+                        EdgeSet.fold (fun e acc ->
+                            e :: acc) (BuildAbstractNetwork.abstractToConcreteEdge g f ehat)
+                          acc) es []
+                  in
+                  if (BatList.length ces) <= k then
+                    ces :: acc
+                  else
+                    acc) [] cuts
+            in
+            BatList.iter (fun cut ->
+                Printf.printf "min-cut: ";
+                BatList.iter (fun e ->
+                    Printf.printf "%s," (printEdge e))
+                  cut;
+                Printf.printf "\n") concrete_cuts;
+            raise Cutoff
+            (* [] *)
          | uhatss ->
             (* for each element of the list, note that they all belong the same original group:
                  2. Get all their neighbors.
@@ -1151,8 +1151,8 @@ module FailuresAbstraction =
                        (fnew, new_todo)) best_refinements
 
     (* Refine step with less heuristics *)
-    let noFreq = true
-    let noReach = true
+    let noFreq = false
+    let noReach = false
     let noGroups = false
                 
     let refine_step_heuristics (g: AdjGraph.t) forig
@@ -1232,29 +1232,29 @@ module FailuresAbstraction =
          in
          match nodes_to_split with
          | [] -> (* cannot refine further.*)
-            (* Printf.printf "Nodes can be disconnected, and no further \
-             *                refinements can be made. Verification will fail.\n";
-             * let concrete_cuts =
-             *   BatList.fold_left (fun acc es ->
-             *       let ces =
-             *         EdgeSet.fold (fun ehat acc ->
-             *             EdgeSet.fold (fun e acc ->
-             *                 e :: acc) (BuildAbstractNetwork.abstractToConcreteEdge g f ehat)
-             *               []) es []
-             *       in
-             *       if (BatList.length ces) <= k then
-             *         ces :: acc
-             *       else
-             *         acc) [] cuts
-             * in
-             * BatList.iter (fun cut ->
-             *     Printf.printf "min-cut: ";
-             *     BatList.iter (fun e ->
-             *         Printf.printf "%s," (printEdge e))
-             *       cut;
-             *     Printf.printf "\n") concrete_cuts;
-             * raise Cutoff *)
-            []
+            Printf.printf "Nodes can be disconnected, and no further \
+                           refinements can be made. Verification will fail.\n";
+            let concrete_cuts =
+              BatList.fold_left (fun acc es ->
+                  let ces =
+                    EdgeSet.fold (fun ehat acc ->
+                        EdgeSet.fold (fun e acc ->
+                            e :: acc) (BuildAbstractNetwork.abstractToConcreteEdge g f ehat)
+                          []) es []
+                  in
+                  if (BatList.length ces) <= k then
+                    ces :: acc
+                  else
+                    acc) [] cuts
+            in
+            BatList.iter (fun cut ->
+                Printf.printf "min-cut: ";
+                BatList.iter (fun e ->
+                    Printf.printf "%s," (printEdge e))
+                  cut;
+                Printf.printf "\n") concrete_cuts;
+            raise Cutoff
+    
          | uhatss ->
             (* for each element of the list, note that they all belong
                the same original group: 2. Get all their neighbors.

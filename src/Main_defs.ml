@@ -146,9 +146,9 @@ let compress file info net cfg fs networkOp =
        Printf.printf "No counterexamples found\n"
     | (CounterExample sol), fs ->
        let sol = apply_all sol (oget fs) in
-       let aty = if cfg.unbox then
-                   TupleFlatten.flatten_ty (UnboxOptions.unbox_ty slice.net.attr_type)
-                 else
+       let aty = (* if cfg.unbox then
+                  *   TupleFlatten.flatten_ty (UnboxOptions.unbox_ty slice.net.attr_type)
+                  * else *)
                    slice.net.attr_type
        in
        Console.show_message (Printf.sprintf "%d" i) Console.T.Green "Refinement Iteration";
@@ -228,8 +228,9 @@ let parse_input (args : string array)
   let decls = Typing.infer_declarations info ds in
   Typing.check_annot_decls decls ;
   Wellformed.check info decls ;
-  let decls, f = RecordUnrolling.unroll decls in
-  let fs = [f] in
+  (* let decls, f = RecordUnrolling.unroll decls in
+   * let fs = [f] in *)
+  let fs = [] in
   (* Printf.printf "%s\n" (Printing.declarations_to_string decls); *)
   (* let decls = Typing.infer_declarations info decls in *)
   (* failwith "bla"; *)
