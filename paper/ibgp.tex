@@ -1,0 +1,504 @@
+\PassOptionsToPackage{dvipsnames}{xcolor}
+\documentclass[sigconf,10pt]{acmart}
+\usepackage{amsmath}           % basic math features
+\usepackage{amssymb}           % basic additional symbols
+\usepackage{accents}           % mathematicsl accents like hat, vector etc.
+\usepackage{xspace}            % adds a space if needed at the end of a macro
+\usepackage{balance}           % \balance to the last page makes refs symmetric
+\usepackage{enumitem}          % allows customizing lists
+\usepackage[utf8]{inputenc}    % document encoding set to utf8
+\usepackage{graphicx}          % better includegraphics command
+\usepackage{etoolbox}          % enable patching commands, for below
+\patchcmd{\quote}{\rightmargin}{\leftmargin 1em \rightmargin}{}{}
+\usepackage{amsthm}            % basic theorems
+\usepackage{thmtools}          % more flexible theorems
+\usepackage{thm-restate}       % repeat theorems in appendix if needed
+\usepackage{hyperref}          % hyper-text links
+\usepackage{cleveref}          % smarter type-based cross-references
+\usepackage{apptools}          % customizable appendix
+\usepackage{local}             % user-defined commands stored in local.sty
+\usepackage{minted}
+
+\definecolor{lightgray}{gray}{0.98}
+\usemintedstyle{tango}
+
+\newminted[ocamlcode]{ocaml}{
+bgcolor=lightgray,
+fontfamily=tt,
+fontsize=\footnotesize,
+linenos=false,
+numberblanklines=true,
+numbersep=5pt,
+gobble=0,
+% frame=leftline,
+framerule=0.4pt,
+framesep=2mm,
+funcnamehighlighting=true,
+tabsize=4,
+obeytabs=false,
+escapeinside=//,
+mathescape=true,
+samepage=false, %with this setting you can force the list to appear on the same page
+showspaces=false,
+showtabs =false,
+texcl=false,
+}
+
+
+% break long urls in the bibliography
+\def\UrlBreaks{\do\/\do-}
+\hypersetup{breaklinks=true}
+%\hypersetup{draft}
+
+% reclaim the copyright space for the draft
+\settopmatter{printacmref=false}
+\renewcommand\footnotetextcopyrightpermission[1]{}
+\pagestyle{plain}
+
+\begin{document}
+
+\section{Routing Protocols} 
+
+Formalizations of SRPs extend the type of the routing attributes to
+include a special value $\infty$ denoting the lack of a route. This is
+easily expressed in NV using option types; we define the following
+useful operators (functions) to deal with \emph{optional routes}.
+
+\begin{listing}[ht]
+\begin{ocamlcode}
+  let  a `/\bind/` f =
+    match a with
+    | None -> None
+    | Some a -> f a
+    
+  let x `/\fuse{f}/` y =
+    match x,y with
+    | None, None -> None
+    | Some _, None -> x
+    | None, Some _ -> y
+    | Some x, Some y -> f x y
+\end{ocamlcode}
+\caption{Optional routes}
+\label{lst:options}
+\end{listing}
+
+\subsection{Common routing protocols}
+
+\begin{listing}[ht]
+\begin{ocamlcode}
+  type /$\A_{\rip} $/= option /$\nat$/
+
+  let /$\transfer_{\rip}$/ e a =
+    a /\bind/ (/$\lambda$/ c. if c > 15 then None else Some (c+1))
+
+  let rankRip (c1 c2 : /$\nat$/) =
+     if c1 < c2 then Some c1 else Some c2
+   
+  let /$\merge_{\rip}$/ u x y = x /\fuse{\mathrm{rankRip}}/ y
+\end{ocamlcode}
+\caption{Model of the RIP protocol}
+\label{lst:rip}
+\end{listing}
+
+\begin{listing}[ht]
+  \begin{ocamlcode}
+  type bgp = {lp: /$\nat$/; asLen:/$\nat$/; communities: set /$\nat$/ }
+  type /$\A_{\ebgp}$/ = option bgp
+
+  let /$\transfer_{\ebgp}$/ e a = policy dependent
+
+  let rankEBGP (a b: bgp)  =
+    if a.lp > b.lp then Some a
+    else if b.lp > a.lp then Some b
+    else if a.asLen < b.asLen then Some a
+    else Some b
+
+  let /$\merge_{\ebgp}$/ u a b = a /\fuse{\mathrm{rankEBGP}}/ b
+\end{ocamlcode}
+\caption{Model of the eBGP protocol}
+\label{lst:ebgp}
+\end{listing}
+  
+\subsection{Building more realistic models}
+
+Building on top of the simple models developed for eBGP and RIP in the
+previous section, we can model a more realistic model of the control
+plane of modern networks.
+
+\paragraph{Forwarding.}
+
+While computing and reasoning about the routing solution of each node
+is a problem of great interest to network operators, the end goal is
+to reason about the forwarding behavior of the network. A node
+forwards traffic towards the neighbor from which it received the
+``best'' advertisement towards the destination. We capture this, by
+defining a \emph{combinator} that keeps track of this information.
+
+\begin{listing}[ht]
+\begin{ocamlcode}
+  type /$\A_{\mathrm{fwd}}$/ = option {fwdEdge : /$\nat \times \nat$/;  protocol : /$\A$/}
+
+  let /$\transfer_{\mathrm{fwd}}$/ e a =
+    a /\bind/
+      (/$\lambda$/ a.
+        (/$\transfer$/ e a.protocol) /\bind/
+          (/$\lambda$/ route. Some {fwdEdge = flip edge; protocol = route)
+
+  let /$\merge_{\mathrm{fwd}}$/ u a b =
+    let f = /$\lambda$/ a b. if (/$\merge$/ u a.protocol b.protocol) = a.protocol then a else b in      
+      a /\fuse{f}/ b 
+\end{ocamlcode}
+\caption{SRP capturing forwarding behavior}
+\label{lst:fwd-srp}
+\end{listing}
+
+\paragraph{Combining two protocols.}
+Networks often run a combination of protocols. Each protocol runs
+independently and computes the best route according to the protocol's
+definition. Subsequently, a comparison between the protocols is
+performed based to select the best overall protocol. Because protocols
+exchange messages of different types, comparison is done based on an
+extra field called \emph{administrative distance} that denotes how
+desirable each protocol is. Expressing these semantics in NV is
+straightforward:
+
+\begin{listing}[ht]
+  \begin{ocamlcode}
+    type /$\A_{\igp}$/ = { attr/$_{\igp}$/ : /$\A_{\rip}$/; ad/$_{\igp}$/ : /$\nat$/}
+    type /$\A_{\egp}$/ = { attr/$_{\egp}$/ : /$\A_{\ebgp}$/; ad/$_{\egp}$/ : /$\nat$/}
+    type protocolPair = { igp : /$\A_{\igp}$/; egp : /$\A_{\egp}$/; best : /$\nat$/}
+    type /$\A_{\pair}$/ = option protocolPair
+
+    let /$\transfer_{\pair}$/ e a =
+      a /\bind/
+        (/$\lambda$/ a. 
+           { igp  = /$\transfer_{\igp}$/ e a.igp;
+             egp = /$\transfer_{\egp}$/ e a.egp;
+             best = 0
+           })
+
+     let rankPair u (a b : protocolPair) =
+       let i = /$\merge_{\igp}$/ u a.igp b.igp in
+       let e = /$\merge_{\egp}$/ u a.egp b.egp in
+       match i, e with
+       | None, None -> None
+       | Some _, None -> 
+         Some { igp = i; egp = None; best = 0 }
+       | None, Some _ -> 
+         Some { igp = None; egp = e; best = 1 }
+       | _, _ ->
+         Some { igp = i; egp = e; best = if i.ad/$_{\igp} \leq $/ e.ad/$_{\egp}$/ then 0 else 1 }
+           
+     let /$\merge_{\pair}$/ u a b = a /\fuse{\mathrm{rankPair}~u}/ b
+\end{ocamlcode}
+\caption{Combining SRPs}
+\label{lst:pair-srp}
+\end{listing}
+
+So far, we assumed that nodes announce a single route. In
+reality, a node may announce multiple routes, each for a different
+\emph{prefix}. In NV we can easily lift the models above to multiple
+prefixes using \emph{maps}.
+
+
+\begin{listing}[ht]
+  \begin{ocamlcode}
+    type /$A_{\control}$/ = dict[(/$\nat \times \nat$/), /$\A_{\pair}$/]
+
+    let /$\transfer_{\control}$/ e a=
+      map (/$\lambda$/ x. /$\transfer_{\pair}$/ e x) a
+
+    let /$\merge_{\control}$/ u a b =
+      combine (/$\lambda$/ x y. /$\merge_{\pair}$/ u x y) a b     
+\end{ocamlcode}
+\caption{Lifting SRPs to prefix-based routing}
+\label{lst:lifted-srp}
+\end{listing}
+
+\subsection{Data plane}
+As mentioned, reasoning about the behavior of data packets is the end
+goal of network verification; reasoning about the behavior of the
+control plane is a prerequisite to this. In this section, we give a
+semantics to the data plane in terms of another SRP, given the
+solution ($\rib$) to the SRP that models the control plane. Assuming a type
+for the payload of packets, \emph{the stable solution of a node denotes the set of packets
+that have traversed it}.
+
+\begin{listing}[ht]
+  \begin{ocamlcode}
+    type packet = { srcIp : /$\nat$/; dstIp : /$\nat$/; payload : T }
+    type /$A_{\data}$/ = set packet
+
+    symbolic rib : /$A_{\control}$/ 
+
+    (* Note to us: It would be nice if we could write this function in a part of the language that includes more expressions,
+    such as finite recursion, or subtraction, but get's normalized before reaching BDDs or SMT *)
+    
+    (* lpm assumes that the prefixes are installed in a canonical form (i.e. ip & length) *)
+    let lpm (ip : /$\nat$/) (rib : /$\A_{\control}$/) =
+      match rib[ip] with
+      | Some route -> Some route
+      | None -> (
+        match rib[ip & /$2^{31}-1$/] with
+        | Some route -> Some route
+        | None ->
+          (match rib[ip & /$2^{30}-1$/] with
+           | Some route -> Some route
+           | None -> ....)
+        )
+
+    (* Is edge e an edge over which packet p is forwarded according to this rib *)   
+    let isForwarding e (p : packet) (rib : /$A_{\control}$/) =
+      match lpm p.dst rib with
+      | None -> false
+      | Some route -> route.fwdEdge = e
+    
+    let /$\transfer_{\data}$/ e ps =
+      { p /$\in$/ ps | isForwarding e p rib}
+   
+    let /$\merge_{\data}$/ u ps/$_1$/ ps/$_2$/ =
+      ps/$_1$/ /$\cup$/ ps/$_2$/
+\end{ocamlcode}
+\caption{Data plane as an SRP}
+\label{lst:data-srp}
+\end{listing}
+ 
+$\lpm$ is a function capturing the longest matching prefix
+semantics: it returns the rib entry whose prefix is the longest one
+that matches the destination IP of the packet. One can additionally
+model data plane ACLs in the transfer function, by simple adding
+additional predicates in this set filter operation.
+
+\subsection{Modelling iBGP}
+
+So far there is clear phase distinction between control and data
+plane; the control plane generates the route table and the data plane
+uses this to generate the forwarding table. This is no longer true
+when the network uses the iBGP routing protocol. iBGP is used to
+distribute external routes (i.e. learned through eBGP) inside an AS.
+To achieve this, iBGP relies on an IGP (e.g. OSPF or RIP). In
+particular, each node inside an AS that runs iBGP announces a (unique)
+prefix. When a border router learns a new external route through eBGP
+it sends a data packet to each iBGP router in the same AS -- using the
+routes computed by the IGP -- that encapsulates routing information
+for the external route. This creates a kind of ``circular'' dependency
+where the computation of the routes for a prefix depends on the
+forwarding behavior for another prefix. One can explicitly find the
+dependencies between prefixes and compute a sequence of control and
+data planes. Instead, we can avoid dealing with this extra complexity,
+by creating an SRP that represents both the control plane and the data
+plane. The stable state of this SRP is the state that would be
+reached by the semantics which make prefix dependencies explicit.
+
+\begin{listing}[ht]
+  \begin{ocamlcode}
+    type /$A_{\net}$/ = { rib : /$\A_{\control}$/; ps : /$\A_{\data}$/ }
+
+    (* Given a node returns the set of iBGP neighbors *)
+    let ibgpRel (u : node) : set node =
+      match u with
+      | .. -> {..}
+
+    (* When an eBGP route is learned, encapsulate it in a packet and send it to all iBGP
+       neighbors *)
+    let transferIBGP (e : edge) (rib : /$\A_{\control}$/) (pre : /$\nat \times \nat$/) (route : /$\A_{\egp}$/) =
+      let (u,v) = e in
+      let ws = ibgpRel u in (* get iBGP neighbors *))
+      fold (/$\lambda$/ acc w.
+        let p = { srcIp = loopback(u);
+                     dstIp = loopback(w);
+                     payload = Route (pre,route) } (* encapsulate route in packet *)
+        in
+        if isForwarding e p rib then
+          {p} /$\cup$/ acc (* send it if this is the first hop from u to w *)
+        else
+          acc) {} ws
+      
+    let /$\transfer_{\net}$/ e a =
+      let ps' = /$\transfer_{\data}$/ e a.ps in (* transfer data packets as always *)
+      let rib' = /$\transfer_{\control}$/ e a.rib in (* transfer eBGP and IGP routes as always *)
+      foldi (/$\lambda$/ ibgpPackets pre oroute.
+        match oroute with
+        | Some route ->
+          (match route.egp.attr/$_{_\egp}$/ with
+           | None -> ibgpPackets
+           | Some r ->
+             if r.protocol.ibgp then
+               ibgpPackets
+             else
+             ibgpPackets /$\cup$/ (transferIBGP e rib pre {route with ibgp=true})
+            )
+        | None ->
+          ibgpPackets     
+          ) {} a.rib
+
+    let installRoute u (rib : /$A_{\control}$/) (p : packet) =
+      match p with
+      | Route (pre, x) -> (
+        if p.dstIp = loopback(u) then
+          let routeToSrc = rib[(p.srcIp, 32)] in
+          let optRib =
+            rib[(p.srcIp, 32)] /\bind/
+              (/$\lambda$/ routeToSrc.
+                routeToSrc.igp /\bind/
+                  (/$\lambda$/ igpRoute. 
+                    let route = Some { fwdEdge = igpRoute.fwdEdge; protocol = x  } in
+                    /$\merge_{\control}$/ u rib [pre |-> Some {igp = None; egp = route; best = 1}]))
+          in
+          match optRib with
+          | None -> rib
+          | Some newRib -> newRib
+        )
+      | _ -> rib  
+          
+    let /$\merge_{\net}$/ u a b =
+      let ps' = /$\merge_{\data}$/ u a.ps b.ps in
+      let rib' = /$\merge_{\control}$/ u a.rib b.rib in
+      let rib'' = fold (/$\lambda$/ newRib p. installRoute u newRib p) rib' ps' in
+      (rib'', ps')
+\end{ocamlcode}
+\caption{Operational iBGP model}
+\label{lst:ibgp-model}
+\end{listing}
+
+\paragraph{Operational model of iBGP}
+The SRP of figure \ref{lst:ibgp-model} precisely models the way iBGP
+routes are exchanged in a network. When a device learns a route
+through eBGP it send one packet for each iBGP ``neighbor'' (an iBGP
+neighbor is not necessarily physically connected, function $\ibgp(u)$
+returns the iBGP neighbors of node $u$) that encapsulates this
+externally learned route (see $\transfer_{\aux}$ iBGP case). The merge
+function for a node $u$ will look for such packets and if they are
+destined for $u$ it will install the routes in the RIB of the device.
+
+\paragraph{An alternative model for iBGP}
+
+While the operational model faithfully captures iBGP behavior, it is
+not amenable to efficient simulation or automated verification for
+various reasons. Fold operations, routes as keys in maps/sets... To
+overcome this limitation, we develop an alternative (but semantically
+equivalent) model for iBGP based on a new notion of SRP (name it). The
+key idea is to avoid sending iBGP routes through data packets that
+travel through the network to reach an iBGP neighbor. To do this, we
+connect all iBGP neighbors with virtual links, i.e. links that may
+have no topological manifestations. Then, as with other routing
+messages, iBGP messages can be transferred over those links without
+needing to encapsulate them in a data packet. To account for the fact
+that iBGP messages should be transferred over the data plane, each
+device running iBGP sends a packet to the loopback address announced
+by all other devices running iBGP. These packets are forwarded based
+on the IGP computed routes over actual links (and not the iBGP virtual
+links).
+
+\begin{listing}[ht]
+  \begin{ocamlcode}
+    type /$A_{\net}$/ = { rib : /$\A_{\control}$/; ps : /$\A_{\data}$/ }
+
+    (* Given a node returns the set of iBGP neighbors *)
+    let ibgpRel (u : node) : set node =
+      match u with
+      | .. -> {..}
+
+    let isIBGP u v (route : /$A_{\egp}$/) =
+      if ibgpRel(u)[v] then (* are u and v are iBGP neighbors? *)
+        match route.attr with
+        | Some route ->
+          if route.protocol.ibgp then (* is the BGP route learned from iBGP? *)
+            false 
+          else
+            true
+        | None -> false
+     else
+       false   
+
+    let transferBGP e (route : /$\A_{\egp}$/) curSol =
+      let (u,v) = e  in
+      if isIBGP u v then
+        if curSol.ps[ibgpPacket(u,v)] then (*)
+           curSol.rib[loopback(u)] /\bind/
+              (/$\lambda$/ routeBack. 
+                routeBack.igp.attr.fwdEdge /\bind/
+                  (/$\lambda$/ routeBackIGP.
+                  { route with attr/$_{\egp}$/ = { fwdEdge = routeBackIGP.fwdEdge;
+                                                                protocol = /$\transfer_{\ebgp}$/ e {route with ibgp=true}}))
+         else
+            None
+      else
+         /$\transfer_{\ebgp}$/ e route
+
+         (* When an eBGP route is learned, encapsulate it in a packet and send it to all iBGP
+       neighbors *)
+    let transferIBGP (e : edge) (rib : /$\A_{\control}$/) (pre : /$\nat \times \nat$/) (route : /$\A_{\egp}$/) =
+      let (u,v) = e in
+      let ws = ibgpRel u in (* get iBGP neighbors *))
+      fold (/$\lambda$/ acc w.
+        let p = { srcIp = loopback(u);
+                     dstIp = loopback(w);
+                     payload = Route (pre,route) } (* encapsulate route in packet *)
+        in
+        if isForwarding e p rib then
+          {p} /$\cup$/ acc (* send it if this is the first hop from u to w *)
+        else
+          acc) {} ws
+
+
+          
+    let /$\transfer_{\net}$/ e a curSol =
+      { rib = map (\lambda route. transferAux e route curSol) a.rib;
+        ps = /$\transfer_{\data}$/ e a.ps (* transfer data packets as always *)
+      }
+  
+    let installRoute u (rib : /$A_{\control}$/) (p : packet) =
+      match p with
+      | Route (pre, x) -> (
+        if p.dstIp = loopback(u) then
+          let routeToSrc = rib[(p.srcIp, 32)] in
+          let optRib =
+            rib[(p.srcIp, 32)] /\bind/
+              (/$\lambda$/ routeToSrc.
+                routeToSrc.igp /\bind/
+                  (/$\lambda$/ igpRoute. 
+                    let route = Some { fwdEdge = igpRoute.fwdEdge; protocol = x  } in
+                    /$\merge_{\control}$/ u rib [pre |-> Some {igp = None; egp = route; best = 1}]))
+          in
+          match optRib with
+          | None -> rib
+          | Some newRib -> newRib
+        )
+      | _ -> rib  
+          
+    let /$\merge_{\net}$/ u a b =
+      let ps' = /$\merge_{\data}$/ u a.ps b.ps in
+      let rib' = /$\merge_{\control}$/ u a.rib b.rib in
+      let rib'' = fold (/$\lambda$/ newRib p. installRoute u newRib p) rib' ps' in
+      (rib'', ps')
+\end{ocamlcode}
+\caption{Operational iBGP model}
+\label{lst:ibgp-model}
+\end{listing}
+
+\begin{figure}
+\[ \begin{array}{lll}
+     \A_{\net} &=& (\rib : \A_\control) \times (\ps: \A_{\data})\\[0.4em]
+     \transfer_{\net}((u,v),a,\rib_v) &=& (\mapc
+     \transfer_{\aux}(e,x,\lab_v)~a, \transfer_{\data}(e, a.\ps))\\[0.4em]
+     
+     \merge_{\net}(u,a,b)&=& \letc \ps' = ( \merge_{\control}(a.\rib,b.\rib), \merge_{\data}(a.\ps, b.\ps)) \\[0.4em]
+     \text{where }\\
+     \transfer_{\aux}((u,v),x,\lab_V) &= &
+     \begin{cases}
+       \transfer_{\control}((u,v), x),  \text{when sending a non-iBGP route} \\
+       \ifc (p_{(u,v)} \in \lab_v.\ps) \wedge (\ibgpdst,32) \in \lab_v.\rib \thenc \transfer_{control}((u,v),x) \elsec \infty,  \text{for iBGP}
+     \end{cases}\\
+\end{array} \]
+\caption{Alternative iBGP model}
+\label{fig:alternative-ibgp-model}
+\end{figure}
+
+
+
+
+
+
+
+\end{document}
