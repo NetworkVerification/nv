@@ -2,6 +2,40 @@ open Syntax
 open Collections
 open SmtLang
 
+(* Classic encodes the SRP as an SMT expression, Functional encodes
+   the problem as an NV term which is then translated to SMT *)
+type encoding_style = Classic | Functional
+
+type smt_options =
+  { mutable verbose        : bool;
+    mutable optimize       : bool;
+    mutable encoding       : encoding_style;
+    mutable unboxing       : bool;
+    mutable failures       : int option;
+    mutable multiplicities : int Collections.StringMap.t
+  }
+
+let smt_config : smt_options =
+  { verbose = false;
+    optimize = false;
+    encoding = Classic;
+    unboxing = true;
+    failures = None;
+    multiplicities = Collections.StringMap.empty
+  }
+
+let get_requires_no_failures req =
+  BatList.filter (fun e -> match e.e with
+                        | EOp (AtMost _, _) -> false
+                        | _ -> true) req
+
+let get_requires_failures req =
+  BatList.filter (fun e -> match e.e with
+                        | EOp (AtMost _, _) -> true
+                        | _ -> false) req
+  |> List.hd
+
+
 module Constant =
 struct
   type t = constant

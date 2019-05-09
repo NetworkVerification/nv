@@ -7,6 +7,7 @@ open Printing
 open Quickcheck
 open Renaming
 open Smt
+open SmtUtils
 open Solution
 open Slicing
 open Syntax
