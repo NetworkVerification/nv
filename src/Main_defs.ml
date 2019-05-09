@@ -6,7 +6,7 @@ open Hashcons
 open Printing
 open Quickcheck
 open Renaming
-open Smt2
+open Smt
 open Solution
 open Slicing
 open Syntax
@@ -15,7 +15,7 @@ open Abstraction
 open BuildAbstractNetwork
 open Lazy
 open Profile
-   
+
 type answer =
   | Success of (Solution.t option)
   | CounterExample of Solution.t
@@ -36,20 +36,20 @@ let partialEvalNet net =
     trans = Interp.interp_partial_opt net.trans;
     merge = Interp.interp_partial_opt net.merge
   }
-    
+
   let run_smt file cfg info (net : Syntax.network) fs =
     let net, fs =
       if cfg.unbox then
         begin
           smt_config.unboxing <- true;
-          let net, f1 = time_profile "Unbox options" (fun () -> UnboxOptions.unbox_net net) in 
+          let net, f1 = time_profile "Unbox options" (fun () -> UnboxOptions.unbox_net net) in
           let net, f2 =
             time_profile "Flattening Tuples" (fun () -> TupleFlatten.flatten_net net)
           in
           (*have two different partial evaluation techniques *)
           (* Printf.printf "emerge %s\n" (Printing.exp_to_string net.merge); *)
           (* let net = partialEvalNet net in *)
-          (* Printf.printf "emerge %s\n" (Printing.exp_to_string net.merge); *)          
+          (* Printf.printf "emerge %s\n" (Printing.exp_to_string net.merge); *)
           (* let net = time_profile "optimizing branches" (fun () -> OptimizeBranches.optimizeNet net) in *)
           net, (f2 :: f1 :: fs)
       end
@@ -58,7 +58,7 @@ let partialEvalNet net =
   let net, f = Renaming.alpha_convert_net net in
   let fs = f :: fs in
   let res, fs =
-    (Smt2.solve info cfg.query (smt_query_file file) net ~symbolic_vars:[], fs)
+    (Smt.solve info cfg.query (smt_query_file file) net ~symbolic_vars:[], fs)
   in
   match res with
   | Unsat -> (Success None, None)
@@ -215,7 +215,7 @@ let compress file info net cfg fs networkOp =
                                                      mergeMap slice.destinations
                        in
                        (* find the initial abstraction function for these destinations *)
-                       let f = 
+                       let f =
                          FailuresAbstraction.refineK slice.net.graph fbonsai sources
                                                      slice.destinations k
                        in
@@ -227,7 +227,7 @@ let compress file info net cfg fs networkOp =
 let checkPolicy info cfg file ds =
   let ds, _ = Renaming.alpha_convert_declarations ds in
   let net = Slicing.createNetwork ds in
-  CheckProps.checkMonotonicity info cfg.query (smt_query_file file) net 
+  CheckProps.checkMonotonicity info cfg.query (smt_query_file file) net
 
 let parse_input (args : string array)
   : Cmdline.t * Console.info * string * Syntax.network * ((Solution.t -> Solution.t) list) =

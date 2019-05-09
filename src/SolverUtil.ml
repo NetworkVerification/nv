@@ -1,10 +1,12 @@
 (** * Sets up communication with SMT solver *)
+(** Note: this file was formerly known as SmtUtil, but was renamed
+    so that another file could use that name **)
 
 (* TODO: 1. Don't fix the solver, instead get it through an
    environment variable *)
 
 let solver = "z3"
-           
+
 let solver_params = ["-in"]
 
 type solver_proc =
@@ -13,11 +15,11 @@ type solver_proc =
     nvout           : out_channel;
     mutable running : bool;
   }
-  
+
 let start_solver (params : string list) =
   (* compute params *)
   let params = solver_params @ params in
-  
+
   (* pipe that nv writes to and solver reads from *)
   let (solver_in, nv_out) = BatUnix.pipe ~cloexec:false () in
   (* pipe that solver writes to and nv reads from *)
@@ -36,7 +38,7 @@ let start_solver (params : string list) =
   let cin = Unix.in_channel_of_descr nv_in in
   set_binary_mode_in cin false;
   let cout = Unix.out_channel_of_descr nv_out in
-  set_binary_mode_out cout false;  
+  set_binary_mode_out cout false;
   (* let output = BatIO.output_channel ~cleanup:true cout in *)
   {pid=pid; nvin = cin; nvout = cout; running = true}
 

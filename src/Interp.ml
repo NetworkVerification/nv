@@ -86,7 +86,7 @@ let rec val_to_pat v =
   | VTuple vs ->
      PTuple (BatList.map val_to_pat vs)
   | _ -> PWild
-  
+
 let rec match_branches branches v env =
   (* iterBranches (fun (p,e) ->  Printf.printf "%s\n" (Printing.pattern_to_string p)) branches;
    * Printf.printf "val: %s\n" (Printing.value_to_string v); *)
@@ -111,7 +111,7 @@ let build_env (env: env) (free_vars: Var.t BatSet.PSet.t) :
     free_vars base
 
 let bddfunc_cache = ref ExpMap.empty
-                  
+
 let rec interp_exp env e =
   match e.e with
   | ETy (e, _) -> interp_exp env e
@@ -144,7 +144,7 @@ let rec interp_exp env e =
   | ETuple es -> vtuple (List.map (interp_exp env) es)
   | ESome e -> voption (Some (interp_exp env e))
   | EMatch (e1, branches) -> (
-    let v = interp_exp env e1 in 
+    let v = interp_exp env e1 in
       match match_branches branches v env.value with
       | Some (env2, e) -> interp_exp {env with value=env2} e
       | None ->
@@ -255,7 +255,7 @@ let simplify_or v1 e2 =
   | VBool true -> exp_of_value (vbool true)
   | VBool false -> e2
   | _ -> failwith "illegal value to boolean"
-                 
+
 let simplify_logic op pes =
   match op with
   | And ->
@@ -297,7 +297,7 @@ let simplify_match e =
            e
       | _ -> e)
   | _ -> e
-        
+
 (** * Partial Interpreter *)
 
 let isMapOp op =
@@ -319,7 +319,7 @@ let rec matchExpPat pat pe1 penv  =
           | Some env -> matchExpPat (PTuple ps) (etuple es) env)
       | _, _ -> None)
   | _, _ -> None (*for now *)
-       
+
 let rec matchExp branches pe1 penv =
   match popBranch branches with
   | ((pat,e), branches') ->
@@ -420,7 +420,7 @@ and interp_op_partial_opt env expEnv ty op es =
       eop op pes
     else
       begin
-        exp_of_value @@ 
+        exp_of_value @@
           match (op, BatList.map to_value pes) with
           | And, [{v= VBool b1}; {v= VBool b2}] -> vbool (b1 && b2)
           | Or, [{v= VBool b1}; {v= VBool b2}] -> vbool (b1 || b2)
@@ -490,11 +490,12 @@ let rec interp_exp_partial isapp env e =
            e.ety, e.espan)
   | ESome e' -> aexp (esome (interp_exp_partial false env e'), e.ety, e.espan)
   | EMatch (e1, branches) ->
-     (* Printf.printf "match: %s\n" (Printing.exp_to_string e); *)
+     Printf.printf "match: %s\n" (Printing.exp_to_string e);
      let pe1 = interp_exp_partial false env e1 in
      if is_value pe1 then
        (match match_branches branches (to_value pe1) env.value with
-        | Some (env2, e) -> interp_exp_partial false {env with value=env2} e
+        | Some (env2, e) ->      Printf.printf "some: %s\n" (Printing.exp_to_string e);
+          interp_exp_partial false {env with value=env2} e
         | None ->
            failwith
              ( "value " ^ value_to_string (to_value pe1)
@@ -515,7 +516,7 @@ and interp_op_partial env ty op es =
       eop op pes
     else
       begin
-        exp_of_value @@ 
+        exp_of_value @@
           match (op, BatList.map to_value pes) with
           | And, [{v= VBool b1}; {v= VBool b2}] -> vbool (b1 && b2)
           | Or, [{v= VBool b1}; {v= VBool b2}] -> vbool (b1 || b2)
@@ -544,7 +545,7 @@ let interp_partial_opt =
 
 let interp_partial = MemoizeExp.memoize ~size:1000 interp_partial
 (* let interp_partial_opt = MemoizeExp.memoize ~size:1000 interp_partial_opt *)
-                                      
+
 
 let interp_partial_fun (fn : Syntax.exp) (args: value list) =
   Syntax.apps fn (List.map (fun a -> e_val a) args) |>
@@ -643,7 +644,7 @@ module Full =
       if is_value v then
         match lookUpPat (val_to_pat (to_value v)) branches with
         | Found e -> Match (Env.empty, e)
-        | Rest ls -> match_branches_lst ls v          
+        | Rest ls -> match_branches_lst ls v
       else
         Delayed
 
