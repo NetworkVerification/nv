@@ -6,7 +6,7 @@ open Solution
 open SolverUtil
 open Profile
 open SmtLang
-open ExprEncodings
+open SmtExprEncodings
 open SmtUtils
 open SmtEncodings
 open SmtOptimizations

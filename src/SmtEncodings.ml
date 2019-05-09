@@ -1,7 +1,7 @@
 open Collections
 open Syntax
 open SmtLang
-open ExprEncodings
+open SmtExprEncodings
 open SmtUtils
 
 module type Encoding =
