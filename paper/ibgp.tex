@@ -18,6 +18,7 @@
 \usepackage{apptools}          % customizable appendix
 \usepackage{local}             % user-defined commands stored in local.sty
 \usepackage{minted}
+\usepackage{adjustbox}
 
 \definecolor{lightgray}{gray}{0.98}
 \usemintedstyle{tango}
@@ -25,7 +26,7 @@
 \newminted[ocamlcode]{ocaml}{
 bgcolor=lightgray,
 fontfamily=tt,
-fontsize=\footnotesize,
+% fontsize=\small,
 linenos=false,
 numberblanklines=true,
 numbersep=5pt,
@@ -314,24 +315,21 @@ First, we use a function ibgpRel that captures the iBGP neighboring relationship
 
 \begin{listing}[ht]
   \begin{ocamlcode}
-    type /$A_{\net}$/ = { rib : /$\A_{\control}$/; ps : /$\A_{\data}$/ }
+    type /$A_{\op}$/ = { rib : /$\A_{\control}$/; ps : /$\A_{\data}$/ }
 
-    (* When an eBGP route is learned, encapsulate it in a packet and send it to all iBGP
-       neighbors *)
+    (* Encapsulates eBGP route in a packet and sends it to all iBGP neighbors *)
     let transferIBGP (e : edge) (rib : /$\A_{\control}$/) (pre : /$\nat \times \nat$/) (route : /$\A_{\egp}$/) =
       let (u,v) = e in
       let ws = ibgpRel u in (* get iBGP neighbors *))
       fold (/$\lambda$/ acc w.
-        let p = { srcIp = loopback(u);
-                     dstIp = loopback(w);
-                     payload = Route (pre,route) } (* encapsulate route in packet *)
-        in
+       (* encapsulate route in packet *)
+        let p = { srcIp = loopback(u);  dstIp = loopback(w);  payload = Route (pre,route) } in
         if isForwarding e p rib then
           {p} /$\cup$/ acc (* send it if (u,v) is the first hop from u to w *)
         else
           acc) {} ws
       
-    let /$\transfer_{\net}$/ e a =
+    let /$\transfer_{\op}$/ e a =
       let ps' = /$\transfer_{\data}$/ e a.ps in (* transfer data packets as always *)
       let rib' = /$\transfer_{\control}$/ e a.rib in (* transfer eBGP and IGP routes as always *)
       let ps'' = foldi (/$\lambda$/ ibgpPackets pre oroute.
@@ -345,8 +343,7 @@ First, we use a function ibgpRel that captures the iBGP neighboring relationship
                              else
                                ibgpPackets /$\cup$/ (transferIBGP e rib pre {route with ibgp=true})
                            )
-                        | None ->
-                        ibgpPackets ) ps' a.rib
+                        | None -> ibgpPackets ) ps' a.rib
       in
       { rib = rib'; ps = ps''}
       
@@ -357,11 +354,9 @@ First, we use a function ibgpRel that captures the iBGP neighboring relationship
           let routeToSrc = rib[(p.srcIp, 32)] in
           let optRib =
             rib[(p.srcIp, 32)] /\bind/
-              (/$\lambda$/ routeToSrc.
-                routeToSrc.igp /\bind/
-                  (/$\lambda$/ igpRoute. 
-                    let route = Some { fwdEdge = igpRoute.fwdEdge; protocol = x  } in
-                    /$\merge_{\control}$/ u rib [pre |-> Some {igp = None; egp = route; best = 1}]))
+            (/$\lambda$/ routeToSrc. routeToSrc.igp /\bind/
+              (/$\lambda$/ igpRoute. let route = Some { fwdEdge = igpRoute.fwdEdge; protocol = x  } in
+                           /$\merge_{\control}$/ u rib [pre |-> Some {igp = None; egp = route; best = 1}]))
           in
           match optRib with
           | None -> rib
@@ -369,7 +364,7 @@ First, we use a function ibgpRel that captures the iBGP neighboring relationship
         )
       | _ -> rib  
           
-    let /$\merge_{\net}$/ u a b =
+    let /$\merge_{\op}$/ u a b =
       let ps' = /$\merge_{\data}$/ u a.ps b.ps in
       let rib' = /$\merge_{\control}$/ u a.rib b.rib in
       let rib'' = fold (/$\lambda$/ newRib p. installRoute u newRib p) rib' ps' in
@@ -416,7 +411,7 @@ This model of iBGP is much simpler than the operational one; it
 essentially only requires to change the semantics of the transfer
 function for BGP to account for iBGP. The rest of the operations can
 remain as they were before introducing iBGP, modulo the extra argument
-of the transfer function in an \ESRP.
+of the transfer function in an \ESRP, which should be ignored in all cases other than iBGP.
 
 \begin{listing}[ht]
 \begin{ocamlcode}
@@ -452,22 +447,53 @@ of the transfer function in an \ESRP.
 
 \begin{listing}[ht]
   \begin{ocamlcode}
-    type /$A_{\net}$/ = { rib : /$\A_{\control}$/; ps : /$\A_{\data}$/ }
-
-    let  transferAux e route curSol =
-    
-    let /$\transfer_{\net}$/ e a curSol =
+    type /$A_{\alt}$/ = { rib : /$\A_{\control}$/; ps : /$\A_{\data}$/ }
+   
+    let /$\transfer_{\alt}$/ e a curSol =
       { rib = /$\transfer_{\control}$/ e a.rib curSol;
         ps = /$\transfer_{\data}$/ e a.ps
       }
             
-    let /$\merge_{\net}$/ u a b =
+    let /$\merge_{\alt}$/ u a b =
       {rib = /$\merge_{\control}$/ u a.rib b.rib; ps = /$\merge_{\data}$/ u a.ps b.ps}
 \end{ocamlcode}
 \caption{ESRP model of common routing protocols}
 \label{lst:esrp-model}
 \end{listing}
 
+\subsection{Equivalence between the two models}
+
+We prove that the two models compute the same control plane solutions.
+Further, we prove that the non-iBGP data packets traverse the same
+nodes.
+
+% name them op and alt instead of net.
+\begin{defn}[Attribute Equivalence]
+  We say two attributes are equivalent, written as $a \approx \wh{a}$ when:
+  \begin{enumerate}
+  \item The RIBs of the two attributes are the same:
+    
+    \vspace{0.1cm}
+    \begin{adjustbox}{center}
+      $a.rib = \wh{a}.rib$
+    \end{adjustbox}
+  \item The packets of the two attributes are equal, modulo the iBGP packets:
+    % \vspace{0.1cm}
+    % \begin{adjustbox}{center}
+    \begin{align*}
+      \forall (p : packet).~ & ((\forall r.~p.payload \neq Route~r) \Rightarrow (p \in a.ps \Leftrightarrow p \in \wh{a}.ps))~\wedge \\
+                             & (\exists r.~ p.payload = Route~r) \wedge p \in a.ps \Rightarrow \{p with r.payload = Route~\infty\} \in \wh{a}.ps
+    \end{align*}
+    % \end{adjustbox}
+  \end{enumerate}
+\end{defn}
+
+The definition above is weak, because it only specifies one side of
+the relation between iBGP packets in $\wh{a}$ and a. To specify the
+other side, we need access to the solution of the node that originated
+the iBGP packet.
+
+  
 
 
 
