@@ -228,7 +228,7 @@ let compress file info net cfg fs networkOp =
 let checkPolicy info cfg file ds =
   let ds, _ = Renaming.alpha_convert_declarations ds in
   let net = Slicing.createNetwork ds in
-  CheckProps.checkMonotonicity info cfg.query (smt_query_file file) net
+  SmtCheckProps.checkMonotonicity info cfg.query (smt_query_file file) net
 
 let parse_input (args : string array)
   : Cmdline.t * Console.info * string * Syntax.network * ((Solution.t -> Solution.t) list) =
