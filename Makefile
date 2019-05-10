@@ -1,5 +1,5 @@
 PKGS = -package integers -package oUnit
-DIRS = src,test
+DIRS = src,src/smt,src/utils,src/datatypes,src/datastructures,src/transformations,src/transformations/mapUnrolling,src/records,test
 # BUILD = ocamlbuild -use-ocamlfind -use-menhir -r -Is $(DIRS) $(PKGS)
 BUILD = ocamlbuild -tag thread -use-ocamlfind -use-menhir -r -Is $(DIRS) $(PKGS)
 MLFILES= src/*.ml src/*.mli test/*.ml

@@ -1559,7 +1559,7 @@ module BddMap = struct
                   br1 && Vdd.is_cst right
                   && equal_values ~cmp_meta:false
                     (Mtbdd.get (Vdd.dval right))
-                    vr1
+                     vr1
                 then Some right
                 else None
           in
