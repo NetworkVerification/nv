@@ -7,6 +7,7 @@ open Printing
 open Quickcheck
 open Renaming
 open Smt
+open SmtHiding
 open SmtUtils
 open Solution
 open Slicing
@@ -33,45 +34,51 @@ let smt_query_file =
 
 let partialEvalNet net =
   {net with
-    init = Interp.interp_partial_opt net.init;
-    trans = Interp.interp_partial_opt net.trans;
-    merge = Interp.interp_partial_opt net.merge
+   init = Interp.interp_partial_opt net.init;
+   trans = Interp.interp_partial_opt net.trans;
+   merge = Interp.interp_partial_opt net.merge
   }
 
-  let run_smt file cfg info (net : Syntax.network) fs =
-    let net, fs =
-      if cfg.unbox then
-        begin
-          smt_config.unboxing <- true;
-          let net, f1 = time_profile "Unbox options" (fun () -> UnboxOptions.unbox_net net) in
-          let net, f2 =
-            time_profile "Flattening Tuples" (fun () -> TupleFlatten.flatten_net net)
-          in
-          (*have two different partial evaluation techniques *)
-          (* Printf.printf "emerge %s\n" (Printing.exp_to_string net.merge); *)
-          (* let net = partialEvalNet net in *)
-          (* Printf.printf "emerge %s\n" (Printing.exp_to_string net.merge); *)
-          (* let net = time_profile "optimizing branches" (fun () -> OptimizeBranches.optimizeNet net) in *)
-          net, (f2 :: f1 :: fs)
+let run_smt file cfg info (net : Syntax.network) fs =
+  let net, fs =
+    if cfg.unbox then
+      begin
+        smt_config.unboxing <- true;
+        let net, f1 = time_profile "Unbox options" (fun () -> UnboxOptions.unbox_net net) in
+        let net, f2 =
+          time_profile "Flattening Tuples" (fun () -> TupleFlatten.flatten_net net)
+        in
+        (*have two different partial evaluation techniques *)
+        (* Printf.printf "emerge %s\n" (Printing.exp_to_string net.merge); *)
+        (* let net = partialEvalNet net in *)
+        (* Printf.printf "emerge %s\n" (Printing.exp_to_string net.merge); *)
+        (* let net = time_profile "optimizing branches" (fun () -> OptimizeBranches.optimizeNet net) in *)
+        net, (f2 :: f1 :: fs)
       end
     else net, fs
   in
   let net, f = Renaming.alpha_convert_net net in
   let fs = f :: fs in
+  let solve_fun =
+    if cfg.hiding then
+      (SmtHiding.solve_hiding ~starting_vars:[])
+    else
+      Smt.solve
+  in
   let res, fs =
-    (Smt.solve info cfg.query (smt_query_file file) net ~symbolic_vars:[], fs)
+    (solve_fun info cfg.query (smt_query_file file) net ~symbolic_vars:[], fs)
   in
   match res with
   | Unsat -> (Success None, None)
   | Unknown -> Console.error "SMT returned unknown"
   | Sat solution ->
-     match solution.assertions with
-     | None -> Success (Some solution), Some fs
-     | Some m ->
-        if AdjGraph.VertexMap.exists (fun _ b -> not b) m then
-          CounterExample solution, Some fs
-        else
-          Success (Some solution), Some fs
+    match solution.assertions with
+    | None -> Success (Some solution), Some fs
+    | Some m ->
+      if AdjGraph.VertexMap.exists (fun _ b -> not b) m then
+        CounterExample solution, Some fs
+      else
+        Success (Some solution), Some fs
 
 let run_test cfg info net fs =
   let (sol, stats), fs =
@@ -96,7 +103,7 @@ let run_simulator cfg _ net fs =
     let solution, q =
       match cfg.bound with
       | None ->
-         ( Srp.simulate_net net
+        ( Srp.simulate_net net
         , QueueSet.empty Integer.compare )
       | Some b -> Srp.simulate_net_bound net b
     in
@@ -138,91 +145,91 @@ let compress file info net cfg fs networkOp =
   (*   end; *)
 
   let rec loop (finit: AbstractionMap.abstractionMap)
-               (f: AbstractionMap.abstractionMap)
-               (slice : Slicing.network_slice)
-               (sources: AdjGraph.VertexSet.t)
-               (mergeMap: (AdjGraph.Vertex.t, int * Syntax.exp) Hashtbl.t)
-               (transMap: (AdjGraph.Edge.t, int * Syntax.exp) Hashtbl.t)
-               (k: int)
-               (i: int) =
+      (f: AbstractionMap.abstractionMap)
+      (slice : Slicing.network_slice)
+      (sources: AdjGraph.VertexSet.t)
+      (mergeMap: (AdjGraph.Vertex.t, int * Syntax.exp) Hashtbl.t)
+      (transMap: (AdjGraph.Edge.t, int * Syntax.exp) Hashtbl.t)
+      (k: int)
+      (i: int) =
     (* build abstract network *)
     let failVars, absNet =
       time_profile "Build abstract network"
         (fun () -> buildAbstractNetwork f mergeMap transMap slice k) in
-        smt_config.multiplicities <- getEdgeMultiplicities slice.net.graph f failVars;
-        (* let groups = AbstractionMap.printAbstractGroups f "\n" in *)
-        let aedges = BatList.length (AdjGraph.edges absNet.graph) in
+    smt_config.multiplicities <- getEdgeMultiplicities slice.net.graph f failVars;
+    (* let groups = AbstractionMap.printAbstractGroups f "\n" in *)
+    let aedges = BatList.length (AdjGraph.edges absNet.graph) in
     let groups = Printf.sprintf "%d/%d" (AbstractionMap.normalized_size f) aedges in
     Console.show_message groups Console.T.Blue "Number of abstract nodes/edges";
     match networkOp cfg info absNet fs with
     | Success _, _ ->
-       Printf.printf "No counterexamples found\n"
+      Printf.printf "No counterexamples found\n"
     | (CounterExample sol), fs ->
-       let sol = apply_all sol (oget fs) in
-       let aty = if cfg.unbox then
-                   TupleFlatten.flatten_ty (UnboxOptions.unbox_ty slice.net.attr_type)
-                 else
-                   slice.net.attr_type
-       in
-       Console.show_message (Printf.sprintf "%d" i) Console.T.Green "Refinement Iteration";
-       let f' =
-         time_profile "Refining abstraction after failures"
-                      (fun () ->
-                        FailuresAbstraction.refineCounterExample
-                          file slice.net.graph finit f failVars sol
-                          k sources slice.destinations aty i)
-       in
-       match f' with
-       | None -> print_solution sol;
-       | Some f' ->
-          loop finit f' slice sources mergeMap transMap k (i+1)
+      let sol = apply_all sol (oget fs) in
+      let aty = if cfg.unbox then
+          TupleFlatten.flatten_ty (UnboxOptions.unbox_ty slice.net.attr_type)
+        else
+          slice.net.attr_type
+      in
+      Console.show_message (Printf.sprintf "%d" i) Console.T.Green "Refinement Iteration";
+      let f' =
+        time_profile "Refining abstraction after failures"
+          (fun () ->
+             FailuresAbstraction.refineCounterExample
+               file slice.net.graph finit f failVars sol
+               k sources slice.destinations aty i)
+      in
+      match f' with
+      | None -> print_solution sol;
+      | Some f' ->
+        loop finit f' slice sources mergeMap transMap k (i+1)
   in
   (* Iterate over each network slice *)
   BatList.iter
     (fun slice ->
-      Console.show_message (Slicing.printPrefixes slice.prefixes)
-                           Console.T.Green "Checking SRP for prefixes";
-      (* find source nodes *)
-      let n = AdjGraph.num_vertices slice.net.graph in
-      let sources =
-        Slicing.findRelevantNodes (partialEvalOverNodes n (oget slice.net.assertion)) in
-      (* partially evaluate the functions of the network. *)
-      (* TODO, this should be done outside of this loop, maybe just redone here *)
-      (* Printf.printf "Just before opt\n"; *)
-      (* let optTrans = OptimizeBranches.optimizeExp slice.net.trans in *)
-      (* Printf.printf "trans:%s\n" (Printing.exp_to_string slice.net.trans); *)
-      (* Printf.printf "trans\n"; *)
-      (* (Visitors.iter_exp (fun e -> *)
-      (*      match e.e with *)
-      (*      | EMatch (e, bs) -> *)
-      (*         branchSize bs *)
-      (*      | _ -> ()) optTrans); *)
-      (* flush stdout; *)
-      (* failwith "stop"; *)
-      let transMap =
-        Profile.time_profile "partial eval trans"
-                             (fun () ->
-                               Abstraction.partialEvalTrans
-                                          slice.net.graph slice.net.trans)
-      in
-      let mergeMap = Abstraction.partialEvalMerge slice.net.graph slice.net.merge in
-      (* compute the bonsai abstraction *)
+       Console.show_message (Slicing.printPrefixes slice.prefixes)
+         Console.T.Green "Checking SRP for prefixes";
+       (* find source nodes *)
+       let n = AdjGraph.num_vertices slice.net.graph in
+       let sources =
+         Slicing.findRelevantNodes (partialEvalOverNodes n (oget slice.net.assertion)) in
+       (* partially evaluate the functions of the network. *)
+       (* TODO, this should be done outside of this loop, maybe just redone here *)
+       (* Printf.printf "Just before opt\n"; *)
+       (* let optTrans = OptimizeBranches.optimizeExp slice.net.trans in *)
+       (* Printf.printf "trans:%s\n" (Printing.exp_to_string slice.net.trans); *)
+       (* Printf.printf "trans\n"; *)
+       (* (Visitors.iter_exp (fun e -> *)
+       (*      match e.e with *)
+       (*      | EMatch (e, bs) -> *)
+       (*         branchSize bs *)
+       (*      | _ -> ()) optTrans); *)
+       (* flush stdout; *)
+       (* failwith "stop"; *)
+       let transMap =
+         Profile.time_profile "partial eval trans"
+           (fun () ->
+              Abstraction.partialEvalTrans
+                slice.net.graph slice.net.trans)
+       in
+       let mergeMap = Abstraction.partialEvalMerge slice.net.graph slice.net.merge in
+       (* compute the bonsai abstraction *)
 
-      let fbonsai, f =
-        time_profile "Computing Abstraction"
-                     (fun () ->
-                       let fbonsai =
-                         Abstraction.findAbstraction slice.net.graph transMap
-                                                     mergeMap slice.destinations
-                       in
-                       (* find the initial abstraction function for these destinations *)
-                       let f =
-                         FailuresAbstraction.refineK slice.net.graph fbonsai sources
-                                                     slice.destinations k
-                       in
-                       fbonsai, f)
-      in
-      loop fbonsai f slice sources mergeMap transMap k 1
+       let fbonsai, f =
+         time_profile "Computing Abstraction"
+           (fun () ->
+              let fbonsai =
+                Abstraction.findAbstraction slice.net.graph transMap
+                  mergeMap slice.destinations
+              in
+              (* find the initial abstraction function for these destinations *)
+              let f =
+                FailuresAbstraction.refineK slice.net.graph fbonsai sources
+                  slice.destinations k
+              in
+              fbonsai, f)
+       in
+       loop fbonsai f slice sources mergeMap transMap k 1
     ) (Slicing.createSlices info net)
 
 let checkPolicy info cfg file ds =
@@ -249,29 +256,29 @@ let parse_input (args : string array)
   let decls =
     if cfg.inline || cfg.smt || cfg.check_monotonicity || cfg.smart_gen then
       time_profile "Inlining" (
-                     fun () -> Inline.inline_declarations decls |>
-                                 Typing.infer_declarations info)
+        fun () -> Inline.inline_declarations decls |>
+                  Typing.infer_declarations info)
     else
       decls
   in
   let decls, fs = if cfg.unroll then
-                   let decls, f =
-                     time_profile "Map unrolling" (fun () -> MapUnrolling.unroll info decls)
-                   in
-                   (Typing.infer_declarations info decls, f :: fs)
-                 else decls, fs
+      let decls, f =
+        time_profile "Map unrolling" (fun () -> MapUnrolling.unroll info decls)
+      in
+      (Typing.infer_declarations info decls, f :: fs)
+    else decls, fs
   in
   let decls =
     if cfg.inline || cfg.smt || cfg.check_monotonicity || cfg.smart_gen then
       time_profile "Inlining" (
-                     fun () -> Inline.inline_declarations decls |>
-                                 Typing.infer_declarations info)
+        fun () -> Inline.inline_declarations decls |>
+                  Typing.infer_declarations info)
     else
       decls
   in
   let net = Slicing.createNetwork decls in
   let net = if cfg.link_failures > 0 then
-              Failures.buildFailuresNet net cfg.link_failures
-            else net
+      Failures.buildFailuresNet net cfg.link_failures
+    else net
   in
   (cfg, info, file, net, fs)
