@@ -129,190 +129,141 @@ let rec get_vars (tm : SmtLang.smt_term) : string list =
     get_vars tm1 @ (List.concat @@ List.map get_vars tms)
 ;;
 
-type varmap = string list StringMap.t
+(* Overall alg:
+   Remove all constraints and decls except the assertion
+   Re-add decls for each variable in the assertions
+   Unhide all starting_vars (once I figure out how to format them)
+   When unhiding variables:
+      Re-add their constraint & decl
+      for each var in the constraint:
+        if it's not a label var, recursively unhide it
+        otherwise, just add its decl
+*)
 
-let add_to_varmap key strs map =
-  StringMap.add key ((StringMap.find_default [] key map) @ strs) map
+let get_vars_in_command com =
+  match com.com with
+  | Assert tm -> get_vars tm.t
+  | _ -> []
 ;;
 
-(*
-  Given a Z3 program (env), computes immediate dependencies between its variables.
-  We say x depends immediately on y if the program has the constraint x = f(y).
-  Returns two maps: the first takes a variable and returns the list of things
-  it depends on. The second returns the list of things that depend on it.
-*)
-(* let compute_immediate_dependencies (env : smt_env) : varmap * varmap =
-   let leftMap = StringMap.empty in (* var -> things var depends on *)
-   let rightMap = StringMap.empty in (* var -> things that depend on var *)
-   (* First go through the entire program and compute immediate dependencies. *)
-   let extract_dependencies (leftMap, rightMap) cmd =
-    match cmd.com with
-    | Assert {t = (Eq (Var s, tm)); _} ->
-      let vars_in_tm = get_vars tm in
-      (* s depends on all vars in tm *)
-      let leftMap = add_to_varmap s vars_in_tm leftMap in
-      let rightMap =
-        List.fold_left (fun acc key -> add_to_varmap key [s] acc) rightMap vars_in_tm
-      in
-      leftMap, rightMap
-    | _ -> leftMap, rightMap
-   in
-   List.fold_left extract_dependencies (leftMap, rightMap) env.ctx
-   ;; *)
-let compute_immediate_dependencies (env : smt_env) : varmap =
-  let extract_dependencies map cmd =
-    match cmd.com with
-    | Assert {t = (Eq (Var s, tm)); _} ->
-      let vars_in_tm = get_vars tm in
-      (* s depends on all vars in tm *)
-      let map = add_to_varmap s vars_in_tm map in
-      map
-    | _ -> map
+(* Hide all variables except those which are involved in the assertion *)
+let construct_starting_env (full_env : smt_env) : smt_env =
+  (* Step 1: Remove all variable equality commands that don't involve the
+     assertion *)
+  let must_keep com =
+    match com.com with
+    | Assert tm ->
+      begin
+        match tm.t with
+        | Eq (Var s1, _) -> BatString.starts_with s1 "assert-"
+        | _ -> true
+      end
+    | _ -> true
   in
-  List.fold_left extract_dependencies StringMap.empty env.ctx
+  let ctx = List.filter must_keep full_env.ctx in
 
-(*
-  Given a Z3 program (env), computes dependencies between its variables.
-  We say x depends on y if the program has the constraint x = f(y), or if
-  the program has the constraint x = f(z) and z depends on y.
-
-  Returns two maps: the first takes a label variable and returns the list of
-  intermediate variables it depends on. The second takes an intermediate variable
-  and returns the list of label variables that depend on it.
-
-  This is meant to be used to determine which intermediate variables to hide
-  when we hide a label- variable. So in the end, we only care about which
-  _intermedate_ variables a given label- variable depends on. We _don't_ want to
-  track dependencies between two label- variables.
-*)
-let compute_transitive_dependencies (env : smt_env) : varmap * varmap =
-  let immediateMap = compute_immediate_dependencies env in
-  (* Compute the transitive closure of immediateMap, subject to above caveats *)
-
-  (* compMap is the full dependency map. The boolean is for memoization, and indicates
-     whether or not we have computed the dependencies for each variable yet.
-
-     I'm fairly sure we don't need to worry about infinite loops, because we don't
-     recurse on dependencies on label- variables, and I don't think it's possible
-     to get dependency loops among only intermediate variables. Not 100% sure though. *)
-  let rec compute_one_var (compMap : (bool * (string list)) StringMap.t) x =
-    (* If we've already done the computation for x, just return that *)
-    if fst @@ StringMap.find_default (false, []) x compMap then compMap else
-      let immediateDependencies = StringMap.find_default [] x immediateMap in
-      (* Otherwise, recursively compute the full dependencies for each dependency of x *)
-      let updatedCompMap =
-        List.fold_left
-          (fun compMap x ->
-             (* Don't recurse when we depend directly on a label- value.
-                We only want dependencies on intermediate variables *)
-             if BatString.starts_with x "label-" then compMap
-             else compute_one_var compMap x)
-          compMap
-          immediateDependencies
-      in
-      (* Finally, add together those recursively computed dependencies to get
-         the full list of dependencies for x *)
-      (* TODO: We might want to filter the result to avoid duplicates, but I
-         don't think leaving them in causes correctness issues so I'm not bothering *)
-      let allDependencies =
-        immediateDependencies @
-        List.concat @@
-        (List.map (fun x -> snd @@ StringMap.find x updatedCompMap))
-          immediateDependencies
-      in
-      StringMap.add x (true, allDependencies) updatedCompMap
+  (* Step 2: Add decls for all variables which appear in ctx *)
+  let activeVars = List.concat @@ List.map get_vars_in_command ctx in
+  let const_decls : ConstantSet.t =
+    ConstantSet.filter (fun const -> List.mem const.cname activeVars) full_env.const_decls
   in
-  let finalCompMap =
-    BatEnum.fold
-      compute_one_var
-      StringMap.empty
-      (BatEnum.filter (fun s -> BatString.starts_with s "label-") (StringMap.keys immediateMap))
-  in
-  let forwardMap = StringMap.map snd finalCompMap in
-  (* Compute the reverse dependency relation: for each non-label variables, return
-     set of label variables whcih depend on it *)
-  let backwardsMap =
-    BatEnum.fold
-      (fun map lab ->
-         List.fold_left
-           (fun map intVar -> add_to_varmap intVar [lab] map)
-           map
-           (StringMap.find lab forwardMap)
-      )
-      StringMap.empty
-      (BatEnum.filter (fun s -> BatString.starts_with s "label-") (StringMap.keys immediateMap))
-  in
-  forwardMap, backwardsMap
+
+  let type_decls = full_env.type_decls in
+  let symbolics = full_env.symbolics in
+  {ctx; const_decls; type_decls; symbolics}
 ;;
 
+(* Given an env with some variables hidden, and the full env, unhide the variable
+   var and all intermediate variables it depends on.
 
+   TODO: Plenty of potential for optimization here. We could store a list of which
+   variables are hidden at a given point, and check that; we could also
+   have a dict mapping variables to their constraint. *)
+let rec unhide_variable full_env partial_env var : smt_env =
+  (* Find the constraint we need to add to unhide this variable *)
+  let is_target_constraint com =
+    match com.com with
+    | Assert {t = Eq (Var s1, _); _} -> s1 = var
+    | _ -> false
+  in
+  let var_constraint =
+    List.find is_target_constraint full_env.ctx
+  in
+  (* Check if it's already unhidden; do nothing if so *)
+  if List.mem var_constraint partial_env.ctx then partial_env
+  else
+    let new_ctx = var_constraint :: partial_env.ctx in
+    let new_vars = get_vars_in_command var_constraint in
+    let new_decls =
+      ConstantSet.union
+        partial_env.const_decls
+        (ConstantSet.filter (fun const -> List.mem const.cname new_vars) full_env.const_decls)
+    in
+    let new_env = {partial_env with ctx = new_ctx; const_decls = new_decls} in
+    List.fold_left
+      (unhide_variable full_env)
+      new_env
+      (List.filter (fun s -> not @@ BatString.starts_with s "label-") new_vars)
+;;
 
-   (* Hiding alg:
-   Remove var
-   For each var x that it depended on (transitively):
-   See if any non-hidden labels depend on x
-   If not, remove x
- *)
+(* Right now just a copy of the solve function from Smt.ml *)
+let solve_hiding info query chan ?symbolic_vars ?(params=[]) ?(starting_vars=[]) net =
+  let sym_vars =
+    match symbolic_vars with None -> [] | Some ls -> ls
+  in
+  let module ExprEnc = (val expr_encoding smt_config) in
+  let module Enc =
+    (val (if smt_config.encoding = Classic then
+            (module ClassicEncoding(ExprEnc) : Encoding)
+          else
+            (module FunctionalEncoding(ExprEnc) : Encoding)))
+  in
+  (* compute the encoding of the network *)
+  let renaming, full_env =
+    time_profile "Encoding network"
+      (fun () -> let env = Enc.encode_z3 net sym_vars in
+        propagate_eqs_for_hiding env)
+  in
+  let partial_env = construct_starting_env full_env in
+  (* TODO: add starting_vars once I figure that out *)
+  let env = partial_env in
+  (* compile the encoding to SMT-LIB *)
+  let smt_encoding =
+    time_profile "Compiling query"
+      (fun () -> env_to_smt ~verbose:smt_config.verbose info env) in
+  (* print query to a file if asked to *)
+  if query then
+    printQuery chan smt_encoding;
 
-
-   (* Right now just a copy of the solve function from Smt.ml *)
-   let solve_hiding info query chan ?symbolic_vars ?(params=[]) ?(starting_vars=[]) net =
-   let sym_vars =
-   match symbolic_vars with None -> [] | Some ls -> ls
-   in
-   let module ExprEnc = (val expr_encoding smt_config) in
-   let module Enc =
-   (val (if smt_config.encoding = Classic then
-          (module ClassicEncoding(ExprEnc) : Encoding)
-        else
-          (module FunctionalEncoding(ExprEnc) : Encoding)))
-   in
-
-   (* compute the encoding of the network *)
-   let renaming, full_env =
-   time_profile "Encoding network"
-    (fun () -> let env = Enc.encode_z3 net sym_vars in
-      propagate_eqs_for_hiding env)
-   in
-   let env = full_env in
-   (* Search out the equalities between labels and merge-results, and remove them.
-   Store them in hidden_constraints until we want to put them back *)
-   (* let hidden_constraints = TODO *)
-   (* compile the encoding to SMT-LIB *)
-   let smt_encoding =
-   time_profile "Compiling query"
-    (fun () -> env_to_smt ~verbose:smt_config.verbose info env) in
-   (* print query to a file if asked to *)
-   if query then
-   printQuery chan smt_encoding;
-   (* Printf.printf "communicating with solver"; *)
-   (* start communication with solver process *)
-   let solver = start_solver params in
-   ask_solver_blocking solver smt_encoding;
-   match smt_config.failures with
-   | None ->
-   let q = check_sat info in
-   if query then
-    printQuery chan q;
-   ask_solver solver q;
-   let reply = solver |> parse_reply in
-   get_sat query chan info env solver renaming net reply
-   | Some k ->
-   let q = check_sat info in
-   if query then
-    printQuery chan q;
-   (* ask if it is satisfiable *)
-   ask_solver solver q;
-   let reply = solver |> parse_reply in
-   (* check the reply *)
-   let isSat = get_sat query chan info env solver renaming net reply in
-   (* In order to minimize refinement iterations, once we get a
-     counter-example we try to minimize it by only keeping failures
-     on single links. If it works then we found an actual
-     counterexample, otherwise we refine using the first
-     counterexample. *)
-   match isSat with
-   | Unsat -> Unsat
-   | Unknown -> Unknown
-   | Sat model1 ->
-    refineModel model1 info query chan env solver renaming net
+  failwith "Not past here yet";
+  (* Printf.printf "communicating with solver"; *)
+  (* start communication with solver process *)
+  let solver = start_solver params in
+  ask_solver_blocking solver smt_encoding;
+  match smt_config.failures with
+  | None ->
+    let q = check_sat info in
+    if query then
+      printQuery chan q;
+    ask_solver solver q;
+    let reply = solver |> parse_reply in
+    get_sat query chan info env solver renaming net reply
+  | Some k ->
+    let q = check_sat info in
+    if query then
+      printQuery chan q;
+    (* ask if it is satisfiable *)
+    ask_solver solver q;
+    let reply = solver |> parse_reply in
+    (* check the reply *)
+    let isSat = get_sat query chan info env solver renaming net reply in
+    (* In order to minimize refinement iterations, once we get a
+       counter-example we try to minimize it by only keeping failures
+       on single links. If it works then we found an actual
+       counterexample, otherwise we refine using the first
+       counterexample. *)
+    match isSat with
+    | Unsat -> Unsat
+    | Unknown -> Unknown
+    | Sat model1 ->
+      refineModel model1 info query chan env solver renaming net
