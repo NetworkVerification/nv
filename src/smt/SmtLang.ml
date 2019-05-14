@@ -238,14 +238,29 @@ let const_decl_to_smt ?(verbose=false) info const : string =
   Printf.sprintf "(declare-const %s %s)" const.cname
     (sort_to_smt const.csort)
 
-let smt_command_to_smt info (comm : smt_command) : string =
+(*
+  We need to name out assertions so they can appear in an unsat core.
+  For now, our naming scheme assumes that:
+  For each SMT variable x , there is exactly one assertion (x = ...)
+  The only assertion not of this form is the "big and" at the end
+*)
+let assert_tm_to_name tm =
+  match tm.t with
+  | Eq (Var s1, _) -> "constraint-" ^ s1
+  | _ -> "final-assertion"
+;;
+
+let smt_command_to_smt ?(name_asserts=false) (info : Console.info) (comm : smt_command): string =
   match comm with
   | Echo s ->
     Printf.sprintf "(echo %s)" s
   | Eval tm ->
     Printf.sprintf "(eval %s)" (term_to_smt false info tm)
   | Assert tm ->
-    Printf.sprintf "(assert %s)" (term_to_smt false info tm)
+    if name_asserts then
+      Printf.sprintf "(assert (! %s :named %s))" (term_to_smt false info tm) (assert_tm_to_name tm)
+    else
+      Printf.sprintf "(assert %s)" (term_to_smt false info tm)
   | CheckSat ->
     (* for now i am hardcoding the tactics here. *)
     Printf.sprintf "(check-sat-using (then simplify propagate-values simplify \
