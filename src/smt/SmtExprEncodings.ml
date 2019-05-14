@@ -36,7 +36,7 @@ struct
     let name =
       if is_symbolic env.symbolics x then
         begin
-          Var.to_string x
+          "symbolic-" ^ Var.to_string x
         end
       else create_name descr x
     in
@@ -131,7 +131,7 @@ struct
         if is_symbolic env.symbolics x then
           begin
             (* Printf.printf "var:%s\n" (Var.to_string x); *)
-            Var.to_string x
+            "symbolic-" ^ Var.to_string x
           end
         else create_name descr x
       in
@@ -479,7 +479,7 @@ struct
     let name =
       if is_symbolic env.symbolics x then
         begin
-          Var.name x
+          "symbolic-" ^ Var.name x
         end
       else create_name descr x
     in
