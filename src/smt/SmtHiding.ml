@@ -146,6 +146,15 @@ let get_vars_in_command com =
   | _ -> []
 ;;
 
+(* TODO: Would be nice to have a more comprehensive data structure to
+   represent what's hidden and what's not. Something a struct which has
+   A list of hidden vars
+   A map from a variables to their const_decl
+   A map from variables to their constraint in ctx
+   We could either have a function to construct an smt_env from this structure,
+   or have it carry around a partial env which gets updated. Or something else.
+*)
+
 (* Hide all variables except those which are involved in the assertion *)
 let construct_starting_env (full_env : smt_env) : smt_env =
   (* Step 1: Remove all variable equality commands that don't involve the
