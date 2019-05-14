@@ -146,40 +146,82 @@ let get_vars_in_command com =
   | _ -> []
 ;;
 
-(* TODO: Would be nice to have a more comprehensive data structure to
-   represent what's hidden and what's not. Something a struct which has
-   A list of hidden vars
-   A map from a variables to their const_decl
-   A map from variables to their constraint in ctx
-   We could either have a function to construct an smt_env from this structure,
-   or have it carry around a partial env which gets updated. Or something else.
-*)
+let get_assert_var com =
+  match com.com with
+  | Assert tm ->
+    begin
+      match tm.t with
+      | Eq (Var s1, _) -> Some (s1)
+      | _ -> None
+    end
+  | _ -> None
+;;
 
-(* Hide all variables except those which are involved in the assertion *)
-let construct_starting_env (full_env : smt_env) : smt_env =
+(*
+  This data structure represents the current state of a partially hidden network.
+  For each variable:
+  The bool represents whether that variable is currently hidden
+  The command is the constraint for that variable
+  The constant is the declaration of that variable
+*)
+type hiding_map = (bool * command * constant) StringMap.t
+(* A hiding map, together with an integer which represents the number of
+   currently hidden variables *)
+type hiding_status = {map : hiding_map; hidden : int}
+
+(*
+  Hide all variables except those which are involved in the assertion. Return
+  * A starting Z3 program
+  * A hiding map
+  * The number of hidden variables
+*)
+let construct_starting_env (full_env : smt_env) : smt_env * hiding_status =
   (* Step 1: Remove all variable equality commands that don't involve the
      assertion *)
   let must_keep com =
-    match com.com with
-    | Assert tm ->
-      begin
-        match tm.t with
-        | Eq (Var s1, _) -> BatString.starts_with s1 "assert-"
-        | _ -> true
-      end
-    | _ -> true
+    match get_assert_var com with
+    | None -> true
+    | Some s1 -> BatString.starts_with s1 "assert-"
   in
-  let ctx = List.filter must_keep full_env.ctx in
+  let ctx = BatList.filter must_keep full_env.ctx in
 
   (* Step 2: Add decls for all variables which appear in ctx *)
   let activeVars = List.concat @@ List.map get_vars_in_command ctx in
-  let const_decls : ConstantSet.t =
-    ConstantSet.filter (fun const -> List.mem const.cname activeVars) full_env.const_decls
+  let const_decls, hidden_decls =
+    ConstantSet.partition (fun const -> List.mem const.cname activeVars) full_env.const_decls
   in
 
   let type_decls = full_env.type_decls in
   let symbolics = full_env.symbolics in
-  {ctx; const_decls; type_decls; symbolics}
+
+  (* Step 3: Create out mapping of variables to their constraint and const_decl *)
+  let com_map : command StringMap.t =
+    List.fold_left
+      (fun map com ->
+         match get_assert_var com with
+         | None -> map
+         | Some s1 -> StringMap.add s1 com map)
+      StringMap.empty
+      ctx
+  in
+  let hidden_map =
+    ConstantSet.fold
+      (fun const map ->
+         let com = StringMap.find const.cname com_map in
+         StringMap.add const.cname (false, com, const) map)
+      const_decls
+      StringMap.empty
+  in
+  let hidden_map =
+    ConstantSet.fold
+      (fun const map ->
+         let com = StringMap.find const.cname com_map in
+         StringMap.add const.cname (true, com, const) map)
+      hidden_decls
+      hidden_map
+  in
+  {ctx; const_decls; type_decls; symbolics},
+  {map=hidden_map; hidden=ConstantSet.cardinal hidden_decls}
 ;;
 
 (* Given an env with some variables hidden, and the full env, unhide the variable
@@ -188,31 +230,24 @@ let construct_starting_env (full_env : smt_env) : smt_env =
    TODO: Plenty of potential for optimization here. We could store a list of which
    variables are hidden at a given point, and check that; we could also
    have a dict mapping variables to their constraint. *)
-let rec unhide_variable full_env partial_env var : smt_env =
-  (* Find the constraint we need to add to unhide this variable *)
-  let is_target_constraint com =
-    match com.com with
-    | Assert {t = Eq (Var s1, _); _} -> s1 = var
-    | _ -> false
-  in
-  let var_constraint =
-    List.find is_target_constraint full_env.ctx
-  in
-  (* Check if it's already unhidden; do nothing if so *)
-  if List.mem var_constraint partial_env.ctx then partial_env
+let rec unhide_variable hiding_status var : hiding_status * command list * ConstantSet.t =
+  let hidden, com, const = StringMap.find var hiding_status.map in
+  if not hidden then
+    hiding_status, [], ConstantSet.empty
   else
-    let new_ctx = var_constraint :: partial_env.ctx in
-    let new_vars = get_vars_in_command var_constraint in
-    let new_decls =
-      ConstantSet.union
-        partial_env.const_decls
-        (ConstantSet.filter (fun const -> List.mem const.cname new_vars) full_env.const_decls)
-    in
-    let new_env = {partial_env with ctx = new_ctx; const_decls = new_decls} in
-    List.fold_left
-      (unhide_variable full_env)
-      new_env
-      (List.filter (fun s -> not @@ BatString.starts_with s "label-") new_vars)
+    let new_map = StringMap.update var var (false, com, const) hiding_status.map in
+    let new_hiding_status = {map=new_map; hidden=hiding_status.hidden-1} in
+
+    let additional_vars_to_unhide = get_vars_in_command com in
+    (* We could make this tail-recursive if we're having problems with the stack,
+       or if we want it to be a little more efficient. *)
+      List.fold_left
+        (fun (hs, coms, consts) var ->
+           let hs', coms', consts' = unhide_variable hs var in
+           hs', coms @ coms', ConstantSet.union consts consts'
+        )
+        (new_hiding_status, [com], ConstantSet.singleton const)
+        additional_vars_to_unhide
 ;;
 
 (* Right now just a copy of the solve function from Smt.ml *)
@@ -233,7 +268,7 @@ let solve_hiding info query chan ?symbolic_vars ?(params=[]) ?(starting_vars=[])
       (fun () -> let env = Enc.encode_z3 net sym_vars in
         propagate_eqs_for_hiding env)
   in
-  let partial_env = construct_starting_env full_env in
+  let partial_env, hiding_status = construct_starting_env full_env in
   (* TODO: add starting_vars once I figure that out *)
   let env = partial_env in
   (* compile the encoding to SMT-LIB *)
