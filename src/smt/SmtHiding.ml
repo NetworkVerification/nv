@@ -270,7 +270,7 @@ let solve_hiding info query chan ?symbolic_vars ?(params=[]) ?(starting_vars=[])
   in
   let partial_env, hiding_status = construct_starting_env full_env in
   (* TODO: add starting_vars once I figure that out *)
-  let env = partial_env in
+  let env = full_env in
   (* compile the encoding to SMT-LIB *)
   let smt_encoding =
     time_profile "Compiling query"
