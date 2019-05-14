@@ -7,6 +7,7 @@ open SmtUtils
 module type Encoding =
 sig
   val encode_z3: Syntax.network -> 'a list -> smt_env
+ val add_symbolic_constraints: smt_env ->  Syntax.exp list -> Syntax.ty_or_exp Collections.VarMap.t -> unit
 end
 
 module ClassicEncoding (E: ExprEncoding): Encoding =
@@ -26,7 +27,6 @@ struct
       (fun e ->
          let es = encode_exp_z3 "" env e in
          ignore (lift1 (fun e -> add_constraint env e) es)) requires
-
 
   let encode_z3_merge str env merge =
     let rec loop merge acc =
@@ -196,7 +196,7 @@ struct
       let lbl_i_name = label_var (Integer.of_int i) in
       let lbl_i = create_strings lbl_i_name aty in
       let lbl_iv = lift1 Var.create lbl_i in
-      add_symbolic env lbl_iv aty;
+      add_symbolic env lbl_iv (Ty aty);
       let l = lift2 (fun lbl s -> mk_constant env (create_vars env "" lbl) s)
           lbl_iv (ty_to_sorts aty)
       in
@@ -308,7 +308,7 @@ struct
           let lbl_u = create_strings lbl_u_name aty in
           let lblt =
             lift2 (mk_constant env) lbl_u (ty_to_sorts aty) in
-          add_symbolic env (lift1 Var.create lbl_u) aty;
+          add_symbolic env (lift1 Var.create lbl_u) (Ty aty);
           AdjGraph.VertexMap.add u lblt acc)
         nodes AdjGraph.VertexMap.empty
     in

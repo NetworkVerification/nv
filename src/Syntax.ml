@@ -173,16 +173,16 @@ type declaration =
 type declarations = declaration list
 
 type network =
-  { attr_type    : ty;
-    init         : exp;
-    trans        : exp;
-    merge        : exp;
-    assertion    : exp option;
-    symbolics    : (var * ty_or_exp) list;
-    defs         : (var * ty option * exp) list;
-    utys         : (ty StringMap.t) list;
-    requires     : exp list;
-    graph        : AdjGraph.t;
+  { attr_type : ty;
+     init : exp;
+     trans : exp;
+     merge : exp;
+     assertion : exp option;
+     symbolics : (var * ty_or_exp) list;
+     defs : (var * ty option * exp) list;
+     utys : (ty StringMap.t) list;
+     requires : exp list;
+     graph : AdjGraph.t;
   }
 
 

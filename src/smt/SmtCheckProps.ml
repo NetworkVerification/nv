@@ -55,8 +55,8 @@ let checkMonotonicity info query chan net =
   let solver = start_solver [] in
   let unbox x = Boxed.to_list x |> List.hd in
   Hashtbl.iter (fun edge trans ->
-      let env = init_solver net.symbolics in
-      Boxed.add_symbolic env checka_var net.attr_type;
+      let env = Boxed.init_solver net.symbolics in
+      Boxed.add_symbolic env checka_var (Ty net.attr_type);
       let checka =
         Boxed.lift2 (fun checka s -> mk_constant env (Boxed.create_vars env "" checka) s)
           checka_var (Boxed.ty_to_sorts net.attr_type)
@@ -84,7 +84,7 @@ let checkMonotonicity info query chan net =
           merge_var (Boxed.ty_to_sorts net.attr_type)
         |> unbox
       in
-      Boxed.add_symbolic env merge_var net.attr_type;
+      Boxed.add_symbolic env merge_var (Ty net.attr_type);
       (* merge result is equal to some nv variable *)
       add_constraint env (mk_term (mk_eq merge_smt.t merge_result.t));
       let old_ospf_var = Var.create "o" in

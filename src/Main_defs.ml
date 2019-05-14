@@ -78,18 +78,17 @@ let run_test cfg info net fs =
     if cfg.smart_gen then
       let net, f = Renaming.alpha_convert_net net in
       let fs = f :: fs in
-      (Quickcheck.check_random net ~iterations:cfg.ntests, fs) (*used to be check_smart *)
+      (Quickcheck.check_smart info net ~iterations:cfg.ntests, fs)
     else (Quickcheck.check_random net ~iterations:cfg.ntests, fs)
   in
+  print_newline () ;
+  print_string [Bold] "Test cases: " ;
+  Printf.printf "%d\n" stats.iterations ;
+  print_string [Bold] "Rejected: " ;
+  Printf.printf "%d\n" stats.num_rejected ;
   match sol with
   | None -> (Success None, None)
-  | Some sol ->
-    print_newline () ;
-    print_string [Bold] "Test cases: " ;
-    Printf.printf "%d\n" stats.iterations ;
-    print_string [Bold] "Rejected: " ;
-    Printf.printf "%d\n" stats.num_rejected ;
-    (CounterExample sol, Some fs)
+  | Some sol -> (CounterExample sol, Some fs)
 
 let run_simulator cfg _ net fs =
   try
@@ -130,12 +129,6 @@ let compress file info net cfg fs networkOp =
   FailuresAbstraction.refinement_breadth := cfg.depth;
   FailuresAbstraction.counterexample_refinement_breadth := cfg.depth;
   let net = OptimizeBranches.optimizeNet net in
-  (*printing concrete graph *)
-  (* if cfg.draw then *)
-  (*   begin *)
-  (*     let fname = AdjGraph.DrawableGraph.graph_dot_file k file in *)
-  (*     AdjGraph.DrawableGraph.drawGraph network.graph fname *)
-  (*   end; *)
 
   let rec loop (finit: AbstractionMap.abstractionMap)
                (f: AbstractionMap.abstractionMap)
@@ -241,9 +234,9 @@ let parse_input (args : string array)
   let decls = Typing.infer_declarations info ds in
   Typing.check_annot_decls decls ;
   Wellformed.check info decls ;
-  (* let decls, f = RecordUnrolling.unroll decls in
-   * let fs = [f] in *)
-  let fs = [] in
+  let decls, f = RecordUnrolling.unroll decls in
+  let fs = [f] in
+  (* let fs = [] in *)
   (* Printf.printf "%s\n" (Printing.declarations_to_string decls); *)
   (* let decls = Typing.infer_declarations info decls in *)
   (* failwith "bla"; *)
@@ -262,14 +255,14 @@ let parse_input (args : string array)
                    (Typing.infer_declarations info decls, f :: fs)
                  else decls, fs
   in
-  let decls =
-    if cfg.inline || cfg.smt || cfg.check_monotonicity || cfg.smart_gen then
-      time_profile "Inlining" (
-                     fun () -> Inline.inline_declarations decls |>
-                                 Typing.infer_declarations info)
-    else
-      decls
-  in
+  (* let decls =
+   *   if cfg.inline || cfg.smt || cfg.check_monotonicity || cfg.smart_gen then
+   *     time_profile "Inlining" (
+   *                    fun () -> Inline.inline_declarations decls |>
+   *                                Typing.infer_declarations info)
+   *   else
+   *     decls
+   * in *)
   let net = Slicing.createNetwork decls in
   let net = if cfg.link_failures > 0 then
               Failures.buildFailuresNet net cfg.link_failures

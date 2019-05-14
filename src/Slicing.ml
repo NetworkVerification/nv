@@ -17,8 +17,8 @@ module PrefixSetSet = BatSet.Make(PrefixSet)
 module PrefixMap = BatMap.Make(Prefix)
                               
 type network_slice =
-  { net          : network;
-    prefixes     : PrefixSet.t;
+  { net : network;
+    prefixes : PrefixSet.t;
     destinations : AdjGraph.VertexSet.t
   }
   

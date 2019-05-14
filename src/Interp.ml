@@ -490,11 +490,11 @@ let rec interp_exp_partial isapp env e =
            e.ety, e.espan)
   | ESome e' -> aexp (esome (interp_exp_partial false env e'), e.ety, e.espan)
   | EMatch (e1, branches) ->
-     Printf.printf "match: %s\n" (Printing.exp_to_string e);
+     (* Printf.printf "match: %s\n" (Printing.exp_to_string e); *)
      let pe1 = interp_exp_partial false env e1 in
      if is_value pe1 then
        (match match_branches branches (to_value pe1) env.value with
-        | Some (env2, e) ->      Printf.printf "some: %s\n" (Printing.exp_to_string e);
+        | Some (env2, e) ->      (* Printf.printf "some: %s\n" (Printing.exp_to_string e); *)
           interp_exp_partial false {env with value=env2} e
         | None ->
            failwith
