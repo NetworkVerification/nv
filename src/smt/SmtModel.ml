@@ -51,8 +51,9 @@ let eval_model (symbolics: Syntax.ty_or_exp VarMap.t)
   (* Compute eval statements for symbolic variables *)
   let symbols =
     VarMap.fold (fun sv _ acc ->
-        let sv = prefix_if_needed @@ symbolic_var sv in
-        let tm = mk_var (StringMap.find_default sv sv renaming) |> mk_term in
+        let sv = symbolic_var sv in
+        let z3name = prefix_if_needed sv in
+        let tm = mk_var (StringMap.find_default z3name z3name renaming) |> mk_term in
         let ev = mk_eval tm |> mk_command in
         let ec = mk_echo ("\"" ^ (var sv) ^ "\"") |> mk_command in
         ec :: ev :: acc) symbolics assertions in
