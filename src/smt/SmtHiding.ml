@@ -99,53 +99,6 @@ let propagate_eqs_for_hiding (env : smt_env) =
   renaming, env
 ;;
 
-(* Retrieve the names of all smt variables which appear in tm *)
-let rec get_vars (tm : SmtLang.smt_term) : string list =
-  (* This could be optimized to not use @ and be tail-reursive, but I don't
-     think our terms are ever very large so it probably doesn't matter *)
-  match tm with
-  | SmtLang.Int _
-  | SmtLang.Bool _
-  | SmtLang.Bv _
-  | SmtLang.Constructor _ ->
-    []
-  | SmtLang.Var s ->
-    [s]
-  | SmtLang.Not tm1 ->
-    get_vars tm1
-  | SmtLang.And (tm1, tm2)
-  | SmtLang.Or (tm1, tm2)
-  | SmtLang.Add (tm1, tm2)
-  | SmtLang.Sub (tm1, tm2)
-  | SmtLang.Eq (tm1, tm2)
-  | SmtLang.Lt (tm1, tm2)
-  | SmtLang.Leq (tm1, tm2) ->
-    get_vars tm1 @ get_vars tm2
-  | SmtLang.Ite (tm1, tm2, tm3) ->
-    get_vars tm1 @ get_vars tm2 @ get_vars tm3
-  | SmtLang.AtMost (tms1, tms2, tm1) ->
-    get_vars tm1 @ (List.concat @@ List.map get_vars tms1) @ (List.concat @@ List.map get_vars tms2)
-  | SmtLang.App (tm1, tms) ->
-    get_vars tm1 @ (List.concat @@ List.map get_vars tms)
-;;
-
-(* Overall alg:
-   Remove all constraints and decls except the assertion
-   Re-add decls for each variable in the assertions
-   Unhide all starting_vars (once I figure out how to format them)
-   When unhiding variables:
-      Re-add their constraint & decl
-      for each var in the constraint:
-        if it's not a label var, recursively unhide it
-        otherwise, just add its decl
-*)
-
-let get_vars_in_command com =
-  match com.com with
-  | Assert tm -> get_vars tm.t
-  | _ -> []
-;;
-
 let get_assert_var com =
   match com.com with
   | Assert tm ->
@@ -271,6 +224,36 @@ let rec unhide_variable hiding_status var : hiding_status * command list * Const
       (new_hiding_status, coms, ConstantSet.singleton const)
       additional_vars_to_unhide
 ;;
+
+
+(* Overall alg:
+   Remove all constraints and decls except the assertion
+   Re-add decls for each variable in the assertions
+   Unhide all starting_vars (once I figure out how to format them)
+   When unhiding variables:
+      Re-add their constraint & decl
+      for each var in the constraint:
+        if it's not a label var, recursively unhide it
+        otherwise, just add its decl
+*)
+
+(*
+  Actually making queries strategy:
+  Fire up two (2!) instances of Z3
+  Give the first our partially hidden program; don't ask to check sat yet
+  Give the second the full program, with assertion names and unsat core setting
+  While hidden variables remain:
+    Ask the first instance to solve the program.
+    If it gets UNSAT, return "verified"
+    If it gets SAT, query & parse the model
+    In the second instance:
+      Push a new frame onto its stack
+      Give it the constraints from the model (don't need names here)
+      Check if it's SAT
+    If so, real counterexample: return the abstract model
+    Else, false counterexample: query & parse the unsat core
+    Unhide all variables that appear in the unsat core
+*)
 
 (* Right now just a copy of the solve function from Smt.ml *)
 let solve_hiding info query chan ?symbolic_vars ?(params=[]) ?(starting_vars=[]) net =
