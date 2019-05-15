@@ -5,6 +5,19 @@ open SmtLang
 open SmtUtils
 open SmtExprEncodings
 
+let prefix_if_needed varname =
+  if
+    BatString.starts_with varname "label-" ||
+    BatString.starts_with varname "merge-" ||
+    BatString.starts_with varname "trans-" ||
+    BatString.starts_with varname "init-"  ||
+    BatString.starts_with varname "assert-"
+  then
+    varname
+  else
+    "symbolic-" ^ varname
+;;
+
 (** Emits the code that evaluates the model returned by Z3. *)
 let eval_model (symbolics: Syntax.ty_or_exp VarMap.t)
     (num_nodes: Integer.t)
@@ -20,6 +33,8 @@ let eval_model (symbolics: Syntax.ty_or_exp VarMap.t)
   (*       let ec = mk_echo ("\"" ^ (var lblu) ^ "\"") |> mk_command in *)
   (*       ec :: ev :: acc) num_nodes [(mk_echo ("\"end_of_model\"") |> mk_command)] in *)
   let base = [(mk_echo ("\"end_of_model\"") |> mk_command)] in
+  StringMap.iter (fun k v -> Printf.printf "(%s, %s)" k v) renaming
+  ;
   (* Compute eval statements for assertions *)
   let assertions =
     match eassert with
@@ -36,7 +51,7 @@ let eval_model (symbolics: Syntax.ty_or_exp VarMap.t)
   (* Compute eval statements for symbolic variables *)
   let symbols =
     VarMap.fold (fun sv _ acc ->
-        let sv = symbolic_var sv in
+        let sv = prefix_if_needed @@ symbolic_var sv in
         let tm = mk_var (StringMap.find_default sv sv renaming) |> mk_term in
         let ev = mk_eval tm |> mk_command in
         let ec = mk_echo ("\"" ^ (var sv) ^ "\"") |> mk_command in
