@@ -161,13 +161,37 @@ let get_assert_var com =
   This data structure represents the current state of a partially hidden network.
   For each variable:
   The bool represents whether that variable is currently hidden
-  The command is the constraint for that variable
+  The command list is the constraint(s) for that variable
   The constant is the declaration of that variable
 *)
-type hiding_map = (bool * command * constant) StringMap.t
+type hiding_map = (bool * command list * constant) StringMap.t
 (* A hiding map, together with an integer which represents the number of
    currently hidden variables *)
 type hiding_status = {map : hiding_map; hidden : int}
+
+let map_vars_to_commands env : command list StringMap.t =
+  (* Find the list of commands which involve only symbolic variable*)
+  let update_map com map var =
+    let old_coms = StringMap.find_default [] var map in
+    StringMap.add var (com::old_coms) map
+  in
+  let add_com map com =
+    match get_vars_in_command com with
+    | [] -> map
+    | lst ->
+      if BatList.for_all (fun s -> BatString.starts_with s "symbolic-") lst
+      then List.fold_left (update_map com) map lst
+      else
+        match get_assert_var com with
+        | None -> map
+        | Some s1 ->
+          update_map com map s1
+  in
+  List.fold_left
+    add_com
+    StringMap.empty
+    env.ctx
+;;
 
 (*
   Hide all variables except those which are involved in the assertion. Return
@@ -176,16 +200,23 @@ type hiding_status = {map : hiding_map; hidden : int}
   * The number of hidden variables
 *)
 let construct_starting_env (full_env : smt_env) : smt_env * hiding_status =
-  (* Step 1: Remove all variable equality commands that don't involve the
-     assertion *)
+  (*** Step 1: Remove all variable equality commands that don't involve the assertion ***)
+  (* We drop all assertions except the final assertion, which is the "AND" of
+     a bunch of assert- variables *)
   let must_keep com =
-    match get_assert_var com with
-    | None -> true
-    | Some s1 -> BatString.starts_with s1 "assert-"
+    match com.com with
+    | Assert tm ->
+      begin
+        match tm.t with
+        | Eq (Var s1, _) -> BatString.starts_with s1 "assert-"
+        | Not (And (_, (Eq (Var s1, Bool true)))) -> BatString.starts_with s1 "assert-"
+        | _ -> false
+      end
+    | _ -> true
   in
-  let ctx = BatList.filter must_keep full_env.ctx in
+  let ctx, hidden_coms = BatList.partition must_keep full_env.ctx in
 
-  (* Step 2: Add decls for all variables which appear in ctx *)
+  (*** Step 2: Add decls for all variables which appear in ctx ***)
   let activeVars = List.concat @@ List.map get_vars_in_command ctx in
   let const_decls, hidden_decls =
     ConstantSet.partition (fun const -> List.mem const.cname activeVars) full_env.const_decls
@@ -194,17 +225,9 @@ let construct_starting_env (full_env : smt_env) : smt_env * hiding_status =
   let type_decls = full_env.type_decls in
   let symbolics = full_env.symbolics in
 
-  (* Step 3: Create out mapping of variables to their constraint and const_decl *)
-  let com_map : command StringMap.t =
-    List.fold_left
-      (fun map com ->
-         match get_assert_var com with
-         | None -> map
-         | Some s1 -> StringMap.add s1 com map)
-      StringMap.empty
-      ctx
-  in
-  let hidden_map =
+  (*** Step 3: Create our mapping of variables to their constraint(s) and const_decl ***)
+  let com_map = map_vars_to_commands full_env in
+  let hidden_map_kept =
     ConstantSet.fold
       (fun const map ->
          let com = StringMap.find const.cname com_map in
@@ -218,36 +241,35 @@ let construct_starting_env (full_env : smt_env) : smt_env * hiding_status =
          let com = StringMap.find const.cname com_map in
          StringMap.add const.cname (true, com, const) map)
       hidden_decls
-      hidden_map
+      hidden_map_kept
   in
   {ctx; const_decls; type_decls; symbolics},
   {map=hidden_map; hidden=ConstantSet.cardinal hidden_decls}
 ;;
 
 (* Given an env with some variables hidden, and the full env, unhide the variable
-   var and all intermediate variables it depends on.
-
-   TODO: Plenty of potential for optimization here. We could store a list of which
-   variables are hidden at a given point, and check that; we could also
-   have a dict mapping variables to their constraint. *)
+   var and all intermediate variables it depends on. *)
 let rec unhide_variable hiding_status var : hiding_status * command list * ConstantSet.t =
-  let hidden, com, const = StringMap.find var hiding_status.map in
+  let hidden, coms, const = StringMap.find var hiding_status.map in
   if not hidden then
     hiding_status, [], ConstantSet.empty
   else
-    let new_map = StringMap.update var var (false, com, const) hiding_status.map in
+    let new_map = StringMap.update var var (false, coms, const) hiding_status.map in
     let new_hiding_status = {map=new_map; hidden=hiding_status.hidden-1} in
 
-    let additional_vars_to_unhide = get_vars_in_command com in
+    (* TODO: Right now, this could potentially unhide lots of symbolics if we
+       have big commands that involve lots of them, e.g. capping the number of
+       failures. It would be nice to be cleverer. *)
+    let additional_vars_to_unhide = List.concat @@ List.map get_vars_in_command coms in
     (* We could make this tail-recursive if we're having problems with the stack,
        or if we want it to be a little more efficient. *)
-      List.fold_left
-        (fun (hs, coms, consts) var ->
-           let hs', coms', consts' = unhide_variable hs var in
-           hs', coms @ coms', ConstantSet.union consts consts'
-        )
-        (new_hiding_status, [com], ConstantSet.singleton const)
-        additional_vars_to_unhide
+    List.fold_left
+      (fun (hs, coms, consts) var ->
+         let hs', coms', consts' = unhide_variable hs var in
+         hs', coms @ coms', ConstantSet.union consts consts'
+      )
+      (new_hiding_status, coms, ConstantSet.singleton const)
+      additional_vars_to_unhide
 ;;
 
 (* Right now just a copy of the solve function from Smt.ml *)
@@ -270,7 +292,7 @@ let solve_hiding info query chan ?symbolic_vars ?(params=[]) ?(starting_vars=[])
   in
   let partial_env, hiding_status = construct_starting_env full_env in
   (* TODO: add starting_vars once I figure that out *)
-  let env = full_env in
+  let env = partial_env in
   (* compile the encoding to SMT-LIB *)
   let smt_encoding =
     time_profile "Compiling query"
@@ -278,8 +300,9 @@ let solve_hiding info query chan ?symbolic_vars ?(params=[]) ?(starting_vars=[])
   (* print query to a file if asked to *)
   if query then
     printQuery chan smt_encoding;
+  ignore @@ partial_env;
 
-  failwith "Not past here yet";
+  ignore @@ failwith "Not past here yet";
   (* Printf.printf "communicating with solver"; *)
   (* start communication with solver process *)
   let solver = start_solver params in
