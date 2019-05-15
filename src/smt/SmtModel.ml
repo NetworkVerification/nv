@@ -33,8 +33,7 @@ let eval_model (symbolics: Syntax.ty_or_exp VarMap.t)
   (*       let ec = mk_echo ("\"" ^ (var lblu) ^ "\"") |> mk_command in *)
   (*       ec :: ev :: acc) num_nodes [(mk_echo ("\"end_of_model\"") |> mk_command)] in *)
   let base = [(mk_echo ("\"end_of_model\"") |> mk_command)] in
-  StringMap.iter (fun k v -> Printf.printf "(%s, %s)" k v) renaming
-  ;
+  (* StringMap.iter (fun k v -> Printf.printf "(%s, %s)" k v) renaming; *)
   (* Compute eval statements for assertions *)
   let assertions =
     match eassert with
