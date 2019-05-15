@@ -290,10 +290,10 @@ let assert_tm_to_name count tm =
     if BatList.for_all (fun s -> BatString.starts_with s "symbolic-") lst
     then
       let base = "symbolic-constraint" ^ string_of_int count in
-      List.fold_left (fun s1 s2 -> s1 ^ "|" ^ s2) base lst
+      List.fold_left (fun s1 s2 -> s1 ^ "$" ^ s2) base lst
     else
       match tm.t with
-      | Eq (Var s1, _) -> "constraint|" ^ s1
+      | Eq (Var s1, _) -> "constraint$" ^ s1
       | _ -> "final-assertion"
 ;;
 
@@ -357,7 +357,7 @@ let rec parse_reply (solver: solver_proc) =
   | Some "unsat" -> UNSAT
   | Some "unknown" -> UNKNOWN
   | None -> OTHER "EOF"
-  | Some r -> parse_reply solver
+  | Some r -> print_endline r; parse_reply solver
 
 let rec parse_model (solver: solver_proc) =
   let rs = get_reply_until "end_of_model" solver in
