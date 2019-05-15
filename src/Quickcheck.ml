@@ -60,58 +60,50 @@ let rec check_aux info iters acc =
             {info with iterations= info.iterations - 1}
             iters None
 
-let smart_symbolic prog_constants map d =
-  match d with
-  | DSymbolic (x, te) ->
-      let ty = match te with Exp e -> oget e.ety | Ty ty -> ty in
-      let v =
-        match StringMap.Exceptionless.find (Var.to_string x) map with
-        | None -> random_value prog_constants default_max_map_size ty
-        | Some v -> v
-      in
-      DSymbolic (x, Exp (e_val v))
-  | _ -> d
-
-let var_map ds =
+let smart_symbolic prog_constants map symb =
+  let (x, te) = symb in
+  let ty = match te with Exp e -> oget e.ety | Ty ty -> ty in
+  let v =
+    match StringMap.Exceptionless.find (Var.to_string x) map with
+    | None -> random_value prog_constants default_max_map_size ty
+    | Some v -> v
+  in
+  (x, Exp (aexp(e_val v, Some ty, Span.default)))
+ 
+(* Given a network return a map from its symbolic values to their types *)
+let var_map net =
   let map = ref StringMap.empty in
-  List.iter
-    (fun d ->
-      match d with
-      | DSymbolic (x, te) ->
-          let ty =
-            match te with Exp e -> oget e.ety | Ty ty -> ty
-          in
-          map := StringMap.add (Var.to_string x) (x, ty) !map
-      | _ -> () )
-    ds ;
+  BatList.iter
+    (fun (x,te) ->
+      let ty =
+        match te with Exp e -> oget e.ety | Ty ty -> ty
+      in
+      map := StringMap.add (Var.name x) (x, ty) !map) net.symbolics ;
   !map
 
-let add_blocking_require info ds map var_map =
-  let base = e_val (vbool true) in
+let add_blocking_require info net map var_map =
+  let base = aexp(e_val (avalue (vbool true, Some TBool, Span.default)), Some TBool, Span.default) in
   let e =
     StringMap.fold
       (fun x v acc ->
         let var, ty = StringMap.find x var_map in
-        let var = evar var in
-        let v = e_val v in
-        let eq = eop UEq [var; v] in
-        eop And [acc; eq] )
-      map base
+        let var = aexp(evar var, Some ty, Span.default) in
+        let v = aexp(e_val (avalue (v, Some ty, Span.default)), Some ty, Span.default) in
+        let eq = aexp(eop UEq [var; v], Some TBool, Span.default) in
+        aexp(eop And [acc; eq], Some TBool, Span.default))
+          map base
   in
-  let neq = eop Not [e] in
-  let d = DRequire neq in
-  let ds = ds @ [d] in
-  let ds = Typing.infer_declarations info ds in
-  ds
+  let neq = aexp(eop Not [e], Some TBool, Span.default) in
+  {net with requires = neq :: net.requires}
 
-(* let smart_symbolics info prog_constants var_map ds = *)
-(*   (\* print_endline (Printing.declarations_to_string ds) ; *\) *)
-(*   let map = Smt.symvar_assign ds in *)
-(*   match map with *)
-(*   | None -> (ds, None) *)
-(*   | Some map -> *)
-(*       let ds' = List.map (smart_symbolic prog_constants map) ds in *)
-(*       (add_blocking_require info ds map var_map, Some ds') *)
+let smart_symbolics info prog_constants var_map net =
+  (* print_endline (Printing.declarations_to_string ds) ; *)
+  let map = Smt.symvar_assign info net in
+  match map with
+  | None -> (net, None)
+  | Some map ->
+     (add_blocking_require info net map var_map,
+      Some {net with symbolics = BatList.map (smart_symbolic prog_constants map) net.symbolics})
 
 type check_stats = {iterations: int; num_rejected: int}
 
@@ -135,11 +127,11 @@ let check_random net ~iterations =
   let info = {net= net; iterations; num_rejected; generator} in
   check info iterations num_rejected
 
-(* let check_smart info ds ~iterations = *)
-(*   let prog_constants = collect_all_values ds in *)
-(*   let num_rejected = ref 0 in *)
-(*   let generator ds = *)
-(*     smart_symbolics info prog_constants (var_map ds) ds *)
-(*   in *)
-(*   let info = {decls= ds; iterations; num_rejected; generator} in *)
-(*   check info iterations (ref 0) *)
+let check_smart info net ~iterations =
+  let prog_constants = collect_all_values net in
+  let num_rejected = ref 0 in
+  let generator net =
+    smart_symbolics info prog_constants (var_map net) net
+  in
+  let info = {net; iterations; num_rejected; generator} in
+  check info iterations (ref 0)

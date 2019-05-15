@@ -14,11 +14,12 @@ sig
   val create_vars : smt_env -> string -> Syntax.var -> string
   val mk_constant : smt_env -> ?cdescr:string -> ?cloc:Span.t
     -> string -> sort -> term
-  val add_symbolic: smt_env -> Var.t t -> Syntax.ty -> unit
   val lift1: ('a -> 'b) -> 'a t -> 'b t
   val lift2: ('a -> 'b -> 'c) -> 'a t -> 'b t -> 'c t
   val to_list : 'a t -> 'a list
   val combine_term: term t -> term
+  val add_symbolic: smt_env -> Var.t t -> Syntax.ty_or_exp -> unit
+  val init_solver: (Var.t * Syntax.ty_or_exp) list -> smt_env
 end
 
 
@@ -47,6 +48,56 @@ struct
     name
 
   let to_list x = [x]
+
+  (** * Returns the SMT name of a datatype *)
+  let rec datatype_name (ty : ty) : string option =
+    match ty with
+    | TVar {contents= Link t} -> datatype_name t
+    | TTuple ts -> (
+      match ts with
+      | [t] -> datatype_name t
+      | ts ->
+         let len = BatList.length ts in
+         Some (Printf.sprintf "Pair%d" len))
+    | TOption ty -> Some "Option"
+    | _ -> None
+
+  (** Returns the SMT name of any type *)
+  let rec type_name (ty : ty) : string =
+    match ty with
+    | TVar {contents= Link t} -> type_name t
+    | TTuple ts -> (
+      match ts with
+      | [t] -> type_name t
+      | ts ->
+         let len = BatList.length ts in
+         Printf.sprintf "Pair%d" len)
+    | TOption ty -> "Option"
+    | TBool -> "Bool"
+    | TInt _ -> "Int"
+    | TMap _ -> failwith "no maps yet"
+    | TArrow _ | TVar _ | QVar _ | TRecord _ -> failwith "unsupported type in SMT"
+
+  let rec ty_to_sort (ty: ty) : sort =
+    match ty with
+    | TVar {contents= Link t} -> ty_to_sort t
+    | TBool -> BoolSort
+    | TInt _ -> IntSort
+    | TTuple ts -> (
+      match ts with
+      | [t] -> ty_to_sort t
+      | ts ->
+         let name = oget (datatype_name ty) in
+         DataTypeSort (name, BatList.map ty_to_sort ts))
+    | TOption ty' ->
+       let name = oget (datatype_name ty) in
+       DataTypeSort (name, [ty_to_sort ty'])
+    | TMap _ -> failwith "unimplemented"
+    (*       mk_array_sort ctx (ty_to_sort ctx ty1) (ty_to_sort ctx ty2)*)
+    | TVar _ | QVar _ | TArrow _ | TRecord _ ->
+       failwith
+         (Printf.sprintf "internal error (ty_to_sort): %s"
+            (Printing.ty_to_string ty))
 
   (** Translates a [Syntax.ty] to an SMT datatype declaration *)
   let rec ty_to_type_decl (ty: ty) : datatype_decl =
@@ -95,8 +146,11 @@ struct
   let add_constraint (env : smt_env) (c : term) =
     env.ctx <- (mk_assert c |> mk_command) :: env.ctx
 
-  let add_symbolic (env : smt_env) (b: Var.t) (ty: Syntax.ty) =
-    env.symbolics <- VarMap.add b (Syntax.Ty ty) env.symbolics
+  let add_symbolic (env : smt_env) (b: Var.t) (ety: Syntax.ty_or_exp) =
+    ignore(match ety with
+           | Ty ty -> compute_decl env ty
+           | Exp e -> compute_decl env (oget e.ety));
+    env.symbolics <- VarMap.add b ety env.symbolics
 
   let is_symbolic syms x =
     VarMap.mem x syms
@@ -107,25 +161,6 @@ struct
     | _ -> false
 
   let ty_to_sorts = ty_to_sort
-
-  (** Finds the declaration for the datatype of ty if it exists,
-      otherwise it creates it and adds it to the env *)
-  let compute_decl (env : smt_env) ty =
-    let name = datatype_name ty in
-    match name with
-    | None -> None
-    | Some name ->
-      match StringMap.Exceptionless.find name env.type_decls  with
-      | None ->
-        let decl = ty_to_type_decl ty in
-        env.type_decls <- StringMap.add name decl env.type_decls;
-        Some decl
-      | Some decl -> Some decl
-
-  let add_symbolic env b ty =
-    env.symbolics <- VarMap.add b (Syntax.Ty ty) env.symbolics
-
-  let mk_constant = mk_constant
 
   let rec encode_exp_z3 descr env (e: exp) : term =
     (* Printf.printf "expr: %s\n" (Printing.exp_to_string e) ; *)
@@ -413,6 +448,16 @@ struct
     | VMap map -> failwith "not doing maps yet"
     | VRecord _ -> failwith "Record in SMT encoding"
 
+  let init_solver symbs =
+    Var.reset () ;
+    let env = { ctx = [];
+                const_decls = ConstantSet.empty;
+                type_decls = StringMap.empty;
+                symbolics = VarMap.empty}
+    in
+    BatList.iter (fun (v,e) -> add_symbolic env v e) symbs;
+    env
+
 end
 
 (** * SMT encoding without SMT-datatypes *)
@@ -454,13 +499,36 @@ struct
 
   let to_list x = x
 
-  let add_symbolic (env : smt_env) (b: Var.t list) (ty: Syntax.ty) =
+  let add_symbolic (env : smt_env) (b: Var.t list) (ety: Syntax.ty_or_exp) =
+    match ety with
+    | Ty ty ->
+       (match ty with
+       | TTuple ts ->
+          BatList.iter2 (fun b ty ->
+              env.symbolics <- VarMap.add b (Ty ty) env.symbolics) b ts
+       | _ ->
+          env.symbolics <- VarMap.add (BatList.hd b) ety env.symbolics)
+    | Exp e ->
+       (match e.e with
+        | ETuple es ->
+           BatList.iter2 (fun b e ->
+               env.symbolics <- VarMap.add b (Exp e) env.symbolics) b es
+        | _ ->
+           env.symbolics <- VarMap.add (BatList.hd b) ety env.symbolics)
+
+  let rec ty_to_sort (ty: ty) : sort =
     match ty with
-    | TTuple ts ->
-      BatList.iter2 (fun b ty ->
-          env.symbolics <- VarMap.add b (Syntax.Ty ty) env.symbolics) b ts
-    | _ ->
-      env.symbolics <- VarMap.add (BatList.hd b) (Syntax.Ty ty) env.symbolics
+    | TVar {contents= Link t} -> ty_to_sort t
+    | TBool -> BoolSort
+    | TInt _ -> IntSort
+    | TTuple _
+    | TOption _
+    | TMap _ -> failwith "Not a single sort"
+    (*       mk_array_sort ctx (ty_to_sort ctx ty1) (ty_to_sort ctx ty2)*)
+    | TVar _ | QVar _ | TArrow _ | TRecord _ ->
+       failwith
+         (Printf.sprintf "internal error (ty_to_sort): %s"
+            (Printing.ty_to_string ty))
 
   (** Translates a [Syntax.ty] to a list of SMT sorts *)
   let rec ty_to_sorts (ty: ty) : sort list =
@@ -495,15 +563,9 @@ struct
       else create_name descr x
     in
     name
-  (* match ty with *)
-  (* | TTuple ts -> *)
-  (*    List.mapi (fun i _ -> proj i name) ts *)
-  (* | _ -> *)
-  (*    [name] *)
 
   let mk_constant =
     mk_constant
-  (* lift2 (mk_constant env ~cdescr:cdescr ~cloc:cloc) cnames csorts *)
 
   let rec map3 f l1 l2 l3 =
     match (l1, l2, l3) with
@@ -728,4 +790,16 @@ struct
     | VClosure _ -> failwith "internal error (closure in smt)"
     | VMap map -> failwith "not doing maps yet"
     | VRecord _ -> failwith "Record in SMT encoding"
+
+  let init_solver symbs =
+    Var.reset () ;
+    let env = { ctx = [];
+                const_decls = ConstantSet.empty;
+                type_decls = StringMap.empty;
+                symbolics = VarMap.empty}
+    in
+    (* assumes symbs are not of type tuple here *)
+    BatList.iter (fun (v,e) -> add_symbolic env [v] e) symbs;
+    env
+
 end

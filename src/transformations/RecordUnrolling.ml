@@ -7,7 +7,7 @@ open RecordUtils
    In general, I think we shouldn't have unbound Tvars... they should have been generalized
    to qvars *)
 let canonicalize_type (ty : ty) : ty =
-  let open Collections in      
+  let open Collections in
   let rec aux ty map count =
     match ty with
     | TBool
@@ -48,7 +48,7 @@ let canonicalize_type (ty : ty) : ty =
       begin
         match VarMap.find_opt tyname map with
         | None ->
-           let new_var = Var.to_var ("a", count) in
+          let new_var = Var.to_var ("a", count) in
           ( QVar (new_var),
             (VarMap.add tyname new_var map),
             count + 1)
@@ -63,7 +63,7 @@ let canonicalize_type (ty : ty) : ty =
   in
   let (result, _, _) = aux ty (VarMap.empty) 0 in
   result
-   
+
 let rec unroll_type
     (rtys : ty StringMap.t list)
     (ty : ty)
@@ -86,9 +86,9 @@ let rec unroll_type
   | TMap (key_ty, val_ty) ->
     TMap (unroll_type key_ty, unroll_type val_ty)
   | TRecord map ->
-     TTuple (BatList.map unroll_type (get_record_entries map))
+    TTuple (BatList.map unroll_type (get_record_entries map))
   | TVar _ ->
-     ty
+    ty
 ;;
 
 let rec unroll_pattern p =
@@ -115,56 +115,56 @@ let rec unroll_exp
   let unroll_type ty = unroll_type rtys ty in
   match e.e with
   | EVal _ (* No way to construct record value directly *)
-    | EVar _ ->
-     e
+  | EVar _ ->
+    e
   | EFun f ->
-     aexp (efun
-             { f with
-               argty= Some (unroll_type (oget f.argty));
-               resty= Some (unroll_type (oget f.resty));
-               body= unroll_exp f.body },
-           Some (unroll_type (TArrow (oget f.argty, oget f.resty))), e.espan)
+    aexp (efun
+            { f with
+              argty= Some (unroll_type (oget f.argty));
+              resty= Some (unroll_type (oget f.resty));
+              body= unroll_exp f.body },
+          Some (unroll_type (TArrow (oget f.argty, oget f.resty))), e.espan)
   | EApp (e1, e2) ->
-     aexp (eapp (unroll_exp e1) (unroll_exp e2), Some (unroll_type (oget e.ety)), e.espan)
+    aexp (eapp (unroll_exp e1) (unroll_exp e2), Some (unroll_type (oget e.ety)), e.espan)
   | EIf (e1, e2, e3) ->
-     aexp (eif (unroll_exp e1) (unroll_exp e2) (unroll_exp e3),
-           Some (unroll_type (oget e.ety)), e.espan)
-  | ELet (x, e1, e2) ->
-     aexp(elet x (unroll_exp e1) (unroll_exp e2),
+    aexp (eif (unroll_exp e1) (unroll_exp e2) (unroll_exp e3),
           Some (unroll_type (oget e.ety)), e.espan)
+  | ELet (x, e1, e2) ->
+    aexp(elet x (unroll_exp e1) (unroll_exp e2),
+         Some (unroll_type (oget e.ety)), e.espan)
   | ETuple es ->
-     aexp (etuple (BatList.map unroll_exp es), Some (unroll_type (oget e.ety)), e.espan)
+    aexp (etuple (BatList.map unroll_exp es), Some (unroll_type (oget e.ety)), e.espan)
   | ESome e1 ->
-     aexp (esome (unroll_exp e1), Some (unroll_type (oget e.ety)), e.espan)
+    aexp (esome (unroll_exp e1), Some (unroll_type (oget e.ety)), e.espan)
   | EMatch (e1, bs) ->
-     aexp (ematch (unroll_exp e1)
-             (mapBranches (fun (p,eb) -> (unroll_pattern p, unroll_exp eb)) bs),
-           Some (unroll_type (oget e.ety)),
-           e.espan)
+    aexp (ematch (unroll_exp e1)
+            (mapBranches (fun (p,eb) -> (unroll_pattern p, unroll_exp eb)) bs),
+          Some (unroll_type (oget e.ety)),
+          e.espan)
   | ETy (e1, _) -> unroll_exp e1
   | EOp (op, es) ->
-     aexp (eop op (BatList.map unroll_exp es),
-           Some (unroll_type (oget e.ety)), e.espan)
+    aexp (eop op (BatList.map unroll_exp es),
+          Some (unroll_type (oget e.ety)), e.espan)
   | ERecord map ->
-     aexp (etuple (BatList.map unroll_exp @@ get_record_entries map),
+    aexp (etuple (BatList.map unroll_exp @@ get_record_entries map),
           Some (unroll_type (oget e.ety)), e.espan)
   | EProject (e1, l) ->
-     let rty = get_type_with_label rtys failwith l in
-     let labels = get_record_labels rty in
-     let types = get_record_entries rty in
-     let idx = oget @@ BatList.index_of l labels in
-     let ty = BatList.nth types idx in
-     (* Extract tuple element at index idx *)
-     let var = Var.fresh "recordUnrolling" in
-     let ps =
-       BatList.mapi
-         (fun i _ -> if i = idx then PVar var else PWild)
-         labels
-     in
-     let tpattern = PTuple ps in
-     aexp (ematch (unroll_exp e1) (addBranch tpattern
-                                     (aexp (evar var, Some ty, e.espan)) emptyBranch),
-           Some ty, e.espan) 
+    let rty = get_type_with_label rtys failwith l in
+    let labels = get_record_labels rty in
+    let types = get_record_entries rty in
+    let idx = oget @@ BatList.index_of l labels in
+    let ty = BatList.nth types idx in
+    (* Extract tuple element at index idx *)
+    let var = Var.fresh "recordUnrolling" in
+    let ps =
+      BatList.mapi
+        (fun i _ -> if i = idx then PVar var else PWild)
+        labels
+    in
+    let tpattern = PTuple ps in
+    aexp (ematch (unroll_exp e1) (addBranch tpattern
+                                    (aexp (evar var, Some ty, e.espan)) emptyBranch),
+          Some ty, e.espan)
 ;;
 
 let rec unroll_decl
@@ -241,19 +241,18 @@ let rec convert_value
   | VClosure _, TArrow _ ->
     failwith "convert_value: Cannot convert function value"
   | _ ->
-     failwith
-       (Printf.sprintf "convert_value: type (%s) and value (%s) do not match"
-                       (Printing.value_to_string v) (Printing.ty_to_string original_ty))
+    failwith
+      (Printf.sprintf "convert_value: type (%s) and value (%s) do not match"
+         (Printing.value_to_string v) (Printing.ty_to_string original_ty))
 ;;
 
 let convert_symbolics
-      symbolics
+    symbolics
     (sol : Solution.t)
   =
   let convert_symbolic symb v =
     let _, toe =
       BatList.find
-        (* Maybe this should be Var.name s? *)
         (fun (s, _) -> String.equal (Var.to_string s) symb)
         symbolics
     in
@@ -271,7 +270,7 @@ let convert_symbolics
 ;;
 
 let convert_attrs
-      attr_ty
+    attr_ty
     (sol : Solution.t)
   =
   AdjGraph.VertexMap.map
@@ -301,30 +300,30 @@ let unroll_net_aux
     merge = unroll_exp net.merge;
     trans = unroll_exp net.trans;
     symbolics = BatList.map (fun (var, toe) ->
-                    let toe' =
-                      match toe with
-                      | Ty t -> Ty(unroll_type t)
-                      | Exp e -> Exp(unroll_exp e)
-                    in
-                    (var, toe')) net.symbolics;
+        let toe' =
+          match toe with
+          | Ty t -> Ty(unroll_type t)
+          | Exp e -> Exp(unroll_exp e)
+        in
+        (var, toe')) net.symbolics;
     defs = BatList.map (fun (var, tyo, e) ->
-               let tyo' =
-                 match tyo with
-                 | Some t -> Some(unroll_type t)
-                 | None -> None
-               in
-               (var, tyo', unroll_exp e)) net.defs;
+        let tyo' =
+          match tyo with
+          | Some t -> Some(unroll_type t)
+          | None -> None
+        in
+        (var, tyo', unroll_exp e)) net.defs;
     utys =
       BatList.map (fun m -> Collections.StringMap.map unroll_type m) net.utys;
     assertion = (match net.assertion with
-                 | None -> None
-                 | Some e ->
-                    Some (unroll_exp e));
+        | None -> None
+        | Some e ->
+          Some (unroll_exp e));
     requires = BatList.map unroll_exp net.requires;
     graph = net.graph
   }
 
-  
+
 let unroll_net net =
   let rtys = net.utys in
   let unrolled = unroll_net_aux rtys net in

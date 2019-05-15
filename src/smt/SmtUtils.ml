@@ -19,7 +19,7 @@ let smt_config : smt_options =
   { verbose = false;
     optimize = true;
     encoding = Classic;
-    unboxing = true;
+    unboxing = false;
     failures = None;
     multiplicities = Collections.StringMap.empty
   }
@@ -70,22 +70,6 @@ let rec datatype_name (ty : ty) : string option =
         Some (Printf.sprintf "Pair%d" len))
   | TOption ty -> Some "Option"
   | _ -> None
-
-(** Returns the SMT name of any type *)
-let rec type_name (ty : ty) : string =
-  match ty with
-  | TVar {contents= Link t} -> type_name t
-  | TTuple ts -> (
-      match ts with
-      | [t] -> type_name t
-      | ts ->
-        let len = BatList.length ts in
-        Printf.sprintf "Pair%d" len)
-  | TOption ty -> "Option"
-  | TBool -> "Bool"
-  | TInt _ -> "Int"
-  | TMap _ -> failwith "no maps yet"
-  | TArrow _ | TVar _ | QVar _ | TRecord _ -> failwith "unsupported type in SMT"
 
 let add_constant (env : smt_env) ?(cdescr = "") ?(cloc = Span.default) cname csort =
   env.const_decls <- ConstantSet.add {cname; csort; cdescr; cloc} env.const_decls
@@ -154,11 +138,3 @@ let node_of_assert_var s =
 
 let symbolic_var (s: Var.t) =
   Var.name s
-
-let init_solver symbolics =
-  Var.reset () ;
-  { ctx = [];
-    const_decls = ConstantSet.empty;
-    type_decls = StringMap.empty;
-    symbolics =
-      BatList.fold_left (fun acc (v,e) -> VarMap.add v e acc) VarMap.empty symbolics }
