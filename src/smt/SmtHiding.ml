@@ -255,6 +255,31 @@ let rec unhide_variable hiding_status var : hiding_status * command list * Const
     Unhide all variables that appear in the unsat core
 *)
 
+(* Gets a different kind of model than the code in Smt.ml: here, we want values
+   for each _SMT_ variable, rather than for the corresponding NV variables *)
+let get_model verbose info chan solver =
+  let query =
+    Printf.sprintf "%s\n" (GetModel |> mk_command |> command_to_smt verbose info)
+  in
+  printQuery chan query;
+  ask_solver_blocking solver query;
+  let raw_model = get_reply_until ")" solver in
+  let line_regex = Str.regexp "(define-fun \\([^ ]+\\) () [a-zA-z]+" in
+  let rec process_raw_model lst acc =
+    match lst with
+    | []
+    | _::[] -> acc
+    | s1::s2::tl ->
+      let varname =
+        ignore @@ Str.search_forward line_regex s1 0;
+        Str.matched_group 1 s1
+      in
+      let varval = BatString.chop ~l:1 s2 in
+      process_raw_model tl @@ StringMap.add varname varval acc
+  in
+  process_raw_model (List.tl raw_model) StringMap.empty
+;;
+
 (* Right now just a copy of the solve function from Smt.ml *)
 let solve_hiding info query chan ?symbolic_vars ?(params=[]) ?(starting_vars=[]) net =
   let sym_vars =
@@ -275,45 +300,48 @@ let solve_hiding info query chan ?symbolic_vars ?(params=[]) ?(starting_vars=[])
   in
   let partial_env, hiding_status = construct_starting_env full_env in
   (* TODO: add starting_vars once I figure that out *)
-  let env = partial_env in
   (* compile the encoding to SMT-LIB *)
-  let smt_encoding =
-    time_profile "Compiling query"
-      (fun () -> env_to_smt ~verbose:smt_config.verbose info env) in
+  let full_encoding =
+    time_profile "Compiling full query"
+      (fun () -> env_to_smt ~verbose:smt_config.verbose ~name_asserts:true info full_env) in
+  let partial_encoding =
+    time_profile "Compiling partial query"
+      (fun () -> env_to_smt ~verbose:smt_config.verbose ~name_asserts:false info partial_env) in
   (* print query to a file if asked to *)
   if query then
-    printQuery chan smt_encoding;
-  ignore @@ partial_env;
+    printQuery chan partial_encoding;
 
-  ignore @@ failwith "Not past here yet";
-  (* Printf.printf "communicating with solver"; *)
+  (* ignore @@ failwith "Not past here yet"; *)
+  (* Create two solver processes: one for the partially hidden program, and
+     one for the full program with additional constraints *)
   (* start communication with solver process *)
-  let solver = start_solver params in
-  ask_solver_blocking solver smt_encoding;
-  match smt_config.failures with
-  | None ->
-    let q = check_sat info in
-    if query then
-      printQuery chan q;
-    ask_solver solver q;
-    let reply = solver |> parse_reply in
-    get_sat query chan info env solver renaming net reply
-  | Some k ->
-    let q = check_sat info in
-    if query then
-      printQuery chan q;
-    (* ask if it is satisfiable *)
-    ask_solver solver q;
-    let reply = solver |> parse_reply in
-    (* check the reply *)
-    let isSat = get_sat query chan info env solver renaming net reply in
-    (* In order to minimize refinement iterations, once we get a
-       counter-example we try to minimize it by only keeping failures
-       on single links. If it works then we found an actual
-       counterexample, otherwise we refine using the first
-       counterexample. *)
-    match isSat with
-    | Unsat -> Unsat
-    | Unknown -> Unknown
-    | Sat model1 ->
-      refineModel model1 info query chan env solver renaming net
+  let solver_partial = start_solver params in
+  let solver_full = start_solver params in
+  ask_solver_blocking solver_partial partial_encoding;
+  ask_solver_blocking solver_full full_encoding;
+  print_endline "Got to here!";
+
+  let q = check_sat info in
+  if query then
+    printQuery chan q;
+  ask_solver solver_partial q;
+  let reply : smt_answer = solver_partial |> parse_reply in
+  match reply with
+  | SAT ->
+    let model = get_model smt_config.verbose info chan solver_partial in
+    StringMap.iter (fun s1 s2 -> print_endline @@ s1 ^ ":" ^ s2) model;
+    failwith "TODO: Get Model"
+  | UNSAT -> Unsat
+  | UNKNOWN -> Unknown
+  | _ -> failwith "solve_hiding: Unexpected answer from solver"
+(* TODO: Looks like this is the point where we need to start doing things ourselves.
+   Need to: output the questions to ask for a model for the variables that we
+   have, then parse them back in. Most of this functionality probably exists already *)
+
+(* let result =
+   get_sat query chan info partial_env solver_partial renaming net reply
+   in
+   match result with
+   | Unsat
+   | Unknown -> result
+   | Smt.Sat model -> *)
