@@ -297,7 +297,7 @@ let assert_tm_to_name count tm =
       | _ -> "final-assertion"
 ;;
 
-let smt_command_to_smt ?(name_asserts=true) ?(count=0) (info : Console.info) (comm : smt_command): string =
+let smt_command_to_smt ?(name_asserts=false) ?(count=0) (info : Console.info) (comm : smt_command): string =
   match comm with
   | Echo s ->
     Printf.sprintf "(echo %s)" s

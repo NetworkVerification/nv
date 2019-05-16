@@ -35,8 +35,13 @@ type smt_result = Unsat | Unknown | Sat of Solution.t
 (*     Buffer.add_string buf (const_decl_to_smt ~verbose:verbose info c)) env.const_decls; *)
 (* Buffer.contents buf *)
 
-let env_to_smt ?(verbose=false) info (env : smt_env) =
-  let context = BatList.rev_map (fun c -> command_to_smt verbose info c) env.ctx in
+let env_to_smt ?(verbose=false) ?(name_asserts=false) info (env : smt_env) =
+  let count = ref (-1) in
+  let context =
+    BatList.rev_map
+      (fun c ->  count := !count + 1; smt_command_to_smt ~name_asserts:true ~count:(!count) info c.com)
+      env.ctx
+  in
   let context = BatString.concat "\n" context in
 
   (* Emit constants *)
@@ -151,8 +156,8 @@ let solve info query chan ?symbolic_vars ?(params=[]) net =
   let renaming, env =
     time_profile "Encoding network"
       (fun () -> let env = Enc.encode_z3 net sym_vars in
-                 if smt_config.optimize then propagate_eqs env
-                 else StringMap.empty, env)
+        if smt_config.optimize then propagate_eqs env
+        else StringMap.empty, env)
   in
   (* compile the encoding to SMT-LIB *)
   let smt_encoding =
@@ -167,32 +172,32 @@ let solve info query chan ?symbolic_vars ?(params=[]) net =
   ask_solver_blocking solver smt_encoding;
   match smt_config.failures with
   | None ->
-     let q = check_sat info in
-     if query then
-       printQuery chan q;
-     ask_solver solver q;
-     let reply = solver |> parse_reply in
-     get_sat query chan info env solver renaming net reply
+    let q = check_sat info in
+    if query then
+      printQuery chan q;
+    ask_solver solver q;
+    let reply = solver |> parse_reply in
+    get_sat query chan info env solver renaming net reply
   | Some k ->
-     let q = check_sat info in
-     if query then
-       printQuery chan q;
-     (* ask if it is satisfiable *)
-     ask_solver solver q;
-     let reply = solver |> parse_reply in
-     (* check the reply *)
-     let isSat = get_sat query chan info env solver renaming net reply in
-     (* In order to minimize refinement iterations, once we get a
+    let q = check_sat info in
+    if query then
+      printQuery chan q;
+    (* ask if it is satisfiable *)
+    ask_solver solver q;
+    let reply = solver |> parse_reply in
+    (* check the reply *)
+    let isSat = get_sat query chan info env solver renaming net reply in
+    (* In order to minimize refinement iterations, once we get a
        counter-example we try to minimize it by only keeping failures
        on single links. If it works then we found an actual
        counterexample, otherwise we refine using the first
        counterexample. *)
-     match isSat with
-     | Unsat -> Unsat
-     | Unknown -> Unknown
-     | Sat model1 ->
-        refineModel model1 info query chan env solver renaming net
-      
+    match isSat with
+    | Unsat -> Unsat
+    | Unknown -> Unknown
+    | Sat model1 ->
+      refineModel model1 info query chan env solver renaming net
+
 (* For quickcheck smart value generation *)
 let symvar_assign info (net: Syntax.network) : value StringMap.t option =
   let module ExprEnc = (val expr_encoding smt_config) in
@@ -209,26 +214,23 @@ let symvar_assign info (net: Syntax.network) : value StringMap.t option =
   match reply with
   | UNSAT  | UNKNOWN -> None
   | SAT ->
-     (* build model question *)
-     let model = eval_model env.symbolics (Integer.of_int 0) None StringMap.empty in
-     let model_question = commands_to_smt smt_config.verbose info model in
-     ask_solver solver model_question;
-     (* get answer *)
-     let model = solver |> parse_model in
-     let model =
-       match model with
-       | MODEL m ->
-          if smt_config.unboxing then
-            translate_model_unboxed m
-          else
-            translate_model m
-       | OTHER s ->
-          Printf.printf "%s\n" s;
-          failwith "failed to parse a model"
-       | _ -> failwith "failed to parse a model"
-     in
-     Some model.symbolics
+    (* build model question *)
+    let model = eval_model env.symbolics (Integer.of_int 0) None StringMap.empty in
+    let model_question = commands_to_smt smt_config.verbose info model in
+    ask_solver solver model_question;
+    (* get answer *)
+    let model = solver |> parse_model in
+    let model =
+      match model with
+      | MODEL m ->
+        if smt_config.unboxing then
+          translate_model_unboxed m
+        else
+          translate_model m
+      | OTHER s ->
+        Printf.printf "%s\n" s;
+        failwith "failed to parse a model"
+      | _ -> failwith "failed to parse a model"
+    in
+    Some model.symbolics
   | _ -> failwith "Unexpected reply from SMT solver"
-
-
-
