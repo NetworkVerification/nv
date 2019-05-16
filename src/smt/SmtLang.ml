@@ -277,24 +277,14 @@ let const_decl_to_smt ?(verbose=false) info const : string =
 
 (*
   We need to name out assertions so they can appear in an unsat core.
-  For now, our naming scheme assumes that:
-  For each SMT variable x , there is exactly one assertion (x = ...)
-  Every other constraint is either:
-    The final assertion, which only involves "assert-" variables
-    A symbolic "requires", which only mentions symbolic variables.
+  Our naming scheme is as follows:
+  They begin with a prefix constraint-#$, where # ensures all names are unique.
+  Then they simply contain the names of all the variables which appear in
+  the term, separated with $ characters.
 *)
 let assert_tm_to_name count tm =
-  match get_vars tm.t with
-  | [] -> failwith "Term has no variables, so cannot name it"
-  | lst ->
-    if BatList.for_all (fun s -> BatString.starts_with s "symbolic-") lst
-    then
-      let base = "symbolic-constraint" ^ string_of_int count in
-      List.fold_left (fun s1 s2 -> s1 ^ "$" ^ s2) base lst
-    else
-      match tm.t with
-      | Eq (Var s1, _) -> "constraint$" ^ s1
-      | _ -> "final-assertion"
+  let base = "constraint-" ^ string_of_int count in
+  List.fold_left (fun s1 s2 -> s1 ^ "$" ^ s2) base (get_vars tm.t)
 ;;
 
 let smt_command_to_smt ?(name_asserts=false) ?(count=0) (info : Console.info) (comm : smt_command): string =
