@@ -379,7 +379,7 @@ let rec refineModel info verbose query partial_chan full_chan ask_for_nv_model p
   let print_and_ask solver chan q =
     if query then
       printQuery chan q;
-    ask_solver solver q
+    ask_solver_blocking solver q
   in
   let print_and_ask_partial = print_and_ask partial_solver partial_chan in
   let print_and_ask_full = print_and_ask full_solver full_chan in
