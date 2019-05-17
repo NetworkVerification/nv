@@ -39,13 +39,13 @@ let propagate_eqs_for_hiding (env : smt_env) =
      or between an assert-result variable and anything *)
   let should_propagate s1 s2 =
     let should_not_propagate =
-    (* FIXME: The bit that checks for -result is a little fragile, since a user could
-              conceivably make a variable name containing that string. If it starts
-              causing problems we won't lose any precision by removing it. *)
-    (BatString.starts_with s1 "label-" && BatString.starts_with s2 "merge-" && BatString.exists s2 "-result") ||
-    (BatString.starts_with s2 "label-" && BatString.starts_with s1 "merge-" && BatString.exists s1 "-result") ||
-    (BatString.starts_with s1 "assert-" && BatString.ends_with s1 "-result") ||
-    (BatString.starts_with s2 "assert-" && BatString.ends_with s2 "-result")
+      (* FIXME: The bit that checks for -result is a little fragile, since a user could
+                conceivably make a variable name containing that string. If it starts
+                causing problems we won't lose any precision by removing it. *)
+      (BatString.starts_with s1 "label-" && BatString.starts_with s2 "merge-" && BatString.exists s2 "-result") ||
+      (BatString.starts_with s2 "label-" && BatString.starts_with s1 "merge-" && BatString.exists s1 "-result") ||
+      (BatString.starts_with s1 "assert-" && BatString.ends_with s1 "-result") ||
+      (BatString.starts_with s2 "assert-" && BatString.ends_with s2 "-result")
     in
     not should_not_propagate
   in
@@ -148,60 +148,28 @@ let map_vars_to_commands env : command list StringMap.t =
 *)
 type hiding_map = (bool * command list * constant) StringMap.t
 
-(*
-  Hide all variables except those which are involved in the assertion. Return
-  * A starting Z3 program
-  * A hiding map
-  * The number of hidden variables
-*)
-let construct_starting_env (full_env : smt_env) : smt_env * hiding_map =
-  (*** Step 1: Remove all variable equality commands that don't involve the assertion ***)
-  (* We drop all assertions except the final assertion, which is the "AND" of
-     a bunch of assert- variables *)
-  let must_keep com =
+(* For debugging *)
+let hiding_map_to_string hm : string =
+  let com_to_str com =
     match com.com with
     | Assert tm ->
-      begin
-        match tm.t with
-        | Eq (Var s1, _) -> BatString.starts_with s1 "assert-"
-        | Not (And (_, (Eq (Var s1, Bool true)))) -> BatString.starts_with s1 "assert-"
-        | _ -> false
-      end
-    | _ -> true
+      smt_term_to_smt tm.t
+    | _ -> failwith "hiding_map_to_string failure"
   in
-  let ctx, hidden_coms = BatList.partition must_keep full_env.ctx in
-
-  (*** Step 2: Add decls for all variables which appear in ctx ***)
-  let activeVars = List.concat @@ List.map get_vars_in_command ctx in
-  let const_decls, hidden_decls =
-    ConstantSet.partition (fun const -> List.mem const.cname activeVars) full_env.const_decls
-  in
-
-  let type_decls = full_env.type_decls in
-  let symbolics = full_env.symbolics in
-
-  (*** Step 3: Create our mapping of variables to their constraint(s) and const_decl ***)
-  let com_map = map_vars_to_commands full_env in
-  let hidden_map_kept =
-    ConstantSet.fold
-      (fun const map ->
-         let com = StringMap.find const.cname com_map in
-         StringMap.add const.cname (false, com, const) map)
-      const_decls
-      StringMap.empty
-  in
-  let hidden_map =
-    ConstantSet.fold
-      (fun const map ->
-         let com = StringMap.find const.cname com_map in
-         StringMap.add const.cname (true, com, const) map)
-      hidden_decls
-      hidden_map_kept
-  in
-  {ctx; const_decls; type_decls; symbolics}, hidden_map
+  StringMap.fold
+    (fun var (b, coms, decl) acc ->
+       let str =
+         Printf.sprintf "(%b, [%s], %s)" b
+           (BatString.concat ", " @@ List.map com_to_str coms)
+           (decl.cname)
+       in
+       acc ^ str ^ "\n"
+    )
+    hm
+    ""
 ;;
 
-(* Given an env with some variables hidden, and the full env, unhide the variable
+(* Given an env with some variables hidden, unhide the input variable
    var and all intermediate variables it depends on. *)
 let rec unhide_variable hiding_map var : hiding_map * command list * ConstantSet.t =
   let hidden, coms, const = StringMap.find var hiding_map in
@@ -225,23 +193,81 @@ let rec unhide_variable hiding_map var : hiding_map * command list * ConstantSet
       additional_vars_to_unhide
 ;;
 
+let unhide_variables hiding_map vars : hiding_map * command list * ConstantSet.t =
+  List.fold_left
+    (fun (hs, coms, decls) var ->
+       let hs', coms', decls' = unhide_variable hs var in
+       (hs', coms' @ coms, ConstantSet.union decls decls')
+    )
+    (hiding_map, [], ConstantSet.empty)
+    vars
+;;
+
+(*
+  Hide all variables except those which are involved in the assertion. Return
+  * A starting Z3 program
+  * A hiding map
+  * The number of hidden variables
+*)
+let construct_starting_env (full_env : smt_env) : smt_env * hiding_map =
+  (** Create our hiding_map, with every variable hidden **)
+  let com_map = map_vars_to_commands full_env in
+  let hidden_map =
+    ConstantSet.fold
+      (fun const map ->
+         let com = StringMap.find const.cname com_map in
+         StringMap.add const.cname (true, com, const) map)
+      full_env.const_decls
+      StringMap.empty
+  in
+
+  (** Search our constraints to find the one which corresponds to the final assertion **)
+  let must_keep com =
+    match com.com with
+    | Assert tm ->
+      begin
+        match tm.t with
+        | Not (And (_, (Eq (Var s1, Bool true)))) -> BatString.starts_with s1 "assert-"
+        | _ -> false
+      end
+    (* I don't think we'll have any other commands besides asserts, so if we do
+       they're probably important, and so should probably not be hidden. *)
+    | _ -> true
+  in
+  let active_coms, hidden_coms = BatList.partition must_keep full_env.ctx in
+
+  (*** Step 2: Unhide all the variables which appear in the remaining commands.
+       This will probably mean unhiding all the assert-result variables. ***)
+  let active_vars = List.concat @@ List.map get_vars_in_command active_coms in
+  let hidden_map, additional_coms, const_decls =
+    unhide_variables hidden_map active_vars
+  in
+
+  let type_decls = full_env.type_decls in
+  let symbolics = full_env.symbolics in
+
+  print_endline @@ hiding_map_to_string hidden_map; (* TODO: Remove *)
+  {ctx= (active_coms @ additional_coms); const_decls; type_decls; symbolics},
+  hidden_map
+;;
+
 (* Overall alg:
    Remove all constraints and decls except the assertion
    Re-add decls for each variable in the assertions
    Unhide all starting_vars (once I figure out how to format them)
    When unhiding variables:
-      Re-add their constraint & decl
-      for each var in the constraint:
-        if it's not a label var, recursively unhide it
-        otherwise, just add its decl
+   Re-add their constraint & decl
+   for each var in the constraint:
+     if it's not a label var, recursively unhide it
+     otherwise, just add its decl
 *)
 
-(*
-  Actually making queries strategy:
-  Fire up two (2!) instances of Z3
-  Give the first our partially hidden program; don't ask to check sat yet
-  Give the second the full program, with assertion names and unsat core setting
-  While hidden variables remain:
+   (*
+   Actually making queries strategy:
+   Fire up two (2!) instances of Z3
+   Give the first our partially hidden program; don't ask to check sat yet
+   Give the second the full program, with assertion names and unsat core setting
+   While hidden variables remain:
     Ask the first instance to solve the program.
     If it gets UNSAT, return "verified"
     If it gets SAT, query & parse the model
@@ -252,7 +278,7 @@ let rec unhide_variable hiding_map var : hiding_map * command list * ConstantSet
     If so, real counterexample: return the abstract model
     Else, false counterexample: query & parse the unsat core
     Unhide all variables that appear in the unsat core
-*)
+ *)
 
 (* Gets a different kind of model than the code in Smt.ml: here, we want values
    for each _SMT_ variable, rather than for the corresponding NV variables *)
@@ -368,13 +394,7 @@ let rec refineModel info verbose query partial_chan full_chan ask_for_nv_model p
         (* Unhide the variables, and get back the new commands and declarations
            that we need to add to the partial program *)
         let hiding_map, coms_to_add, decls_to_add =
-          List.fold_left
-            (fun (hs, coms, decls) var ->
-               let hs', coms', decls' = unhide_variable hs var in
-               (hs', coms' @ coms, ConstantSet.union decls decls')
-            )
-            (hiding_map, [], ConstantSet.empty)
-            vars_to_unhide
+          unhide_variables hiding_map vars_to_unhide
         in
         (* Convert the constant declarations into a string *)
         let constants =
