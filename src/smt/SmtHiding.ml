@@ -146,7 +146,7 @@ let map_vars_to_commands env : command list StringMap.t =
   The command list is the constraint(s) for that variable
   The constant is the declaration of that variable
 *)
-type hiding_map = (bool * command list * constant) StringMap.t
+type hiding_map = (bool (* is_declared *) * bool (* is_visible *) * command list * constant) StringMap.t
 
 (* For debugging *)
 let hiding_map_to_string hm : string =
@@ -157,9 +157,9 @@ let hiding_map_to_string hm : string =
     | _ -> failwith "hiding_map_to_string failure"
   in
   StringMap.fold
-    (fun var (b, coms, decl) acc ->
+    (fun var (b1, b2, coms, decl) acc ->
        let str =
-         Printf.sprintf "(%b, [%s], %s)" b
+         Printf.sprintf "(%b, %b, [%s], %s)" b1 b2
            (BatString.concat ", " @@ List.map com_to_str coms)
            (decl.cname)
        in
@@ -169,19 +169,46 @@ let hiding_map_to_string hm : string =
     ""
 ;;
 
+let declare_variable hiding_map var : hiding_map * ConstantSet.t =
+  let declared, hidden, coms, decl = StringMap.find var hiding_map in
+  if declared then
+    hiding_map, ConstantSet.empty
+  else
+    StringMap.update var var (true, hidden, coms, decl) hiding_map,
+    ConstantSet.singleton decl
+;;
+
 (* Given an env with some variables hidden, unhide the input variable
    var and all intermediate variables it depends on. *)
 let rec unhide_variable hiding_map var : hiding_map * command list * ConstantSet.t =
-  let hidden, coms, const = StringMap.find var hiding_map in
-  if not hidden then
+  let declared, visible, coms, decl = StringMap.find var hiding_map in
+  if visible then
     hiding_map, [], ConstantSet.empty
   else
-    let new_map = StringMap.update var var (false, coms, const) hiding_map in
+    let new_map = StringMap.update var var (true, true, coms, decl) hiding_map in
+    let new_decls =
+      if declared then ConstantSet.empty else ConstantSet.singleton decl
+    in
 
     (* TODO: Right now, this could potentially unhide lots of symbolics if we
        have big commands that involve lots of them, e.g. capping the number of
        failures. It would be nice to be cleverer. *)
-    let additional_vars_to_unhide = List.concat @@ List.map get_vars_in_command coms in
+    let additional_vars = List.concat @@ List.map get_vars_in_command coms in
+    (* Never recursively unhide a label var: we only unhide these when they appear
+       directly in an unsat core *)
+    let label_vars, intermediate_vars =
+      List.partition (fun s -> BatString.starts_with s "label-") additional_vars
+    in
+    (* Declare, but do not unhide, the label vars *)
+    let new_map, new_decls =
+      List.fold_left
+        (fun (hm, decls) v ->
+           let hm', decls' = declare_variable hm v in
+           hm', ConstantSet.union decls decls')
+        (new_map, new_decls)
+        label_vars
+    in
+    (* Unhide (and implicitly declare if necessary) all other variable *)
     (* We could make this tail-recursive if we're having problems with the stack,
        or if we want it to be a little more efficient. *)
     List.fold_left
@@ -189,8 +216,8 @@ let rec unhide_variable hiding_map var : hiding_map * command list * ConstantSet
          let hs', coms', consts' = unhide_variable hs var in
          hs', coms @ coms', ConstantSet.union consts consts'
       )
-      (new_map, coms, ConstantSet.singleton const)
-      additional_vars_to_unhide
+      (new_map, coms, new_decls)
+      intermediate_vars
 ;;
 
 let unhide_variables hiding_map vars : hiding_map * command list * ConstantSet.t =
@@ -216,7 +243,7 @@ let construct_starting_env (full_env : smt_env) : smt_env * hiding_map =
     ConstantSet.fold
       (fun const map ->
          let com = StringMap.find const.cname com_map in
-         StringMap.add const.cname (true, com, const) map)
+         StringMap.add const.cname (false, false, com, const) map)
       full_env.const_decls
       StringMap.empty
   in
