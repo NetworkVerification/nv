@@ -115,11 +115,19 @@ let get_assert_var com =
   | _ -> None
 ;;
 
+(* Return a map which sends a variable to the list of all constraints on that
+   variable. *)
 let map_vars_to_commands env : command list StringMap.t =
   (* Find the list of commands which involve only symbolic variable*)
   let update_map com map var =
-    let old_coms = StringMap.find_default [] var map in
-    StringMap.add var (com::old_coms) map
+    let old_coms = StringMap.find var map in
+    StringMap.update var var (com::old_coms) map
+  in
+  let default_map =
+    ConstantSet.fold
+      (fun const acc -> StringMap.add const.cname [] acc)
+      env.const_decls
+      StringMap.empty
   in
   let add_com map com =
     match get_vars_in_command com with
@@ -135,7 +143,7 @@ let map_vars_to_commands env : command list StringMap.t =
   in
   List.fold_left
     add_com
-    StringMap.empty
+    default_map
     env.ctx
 ;;
 
