@@ -140,10 +140,7 @@ let refineModel (model : Solution.t) info query chan env solver renaming
       isSat
     | _ -> Sat model
 
-let solve info query chan ?symbolic_vars ?(params=[]) net =
-  let sym_vars =
-    match symbolic_vars with None -> [] | Some ls -> ls
-  in
+let solve info query chan ?(sym_vars=[]) ?(params=[]) net =
   let module ExprEnc = (val expr_encoding smt_config) in
   let module Enc =
     (val (if smt_config.encoding = Classic then

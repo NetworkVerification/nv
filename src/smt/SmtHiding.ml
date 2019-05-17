@@ -142,20 +142,14 @@ let map_vars_to_commands env : command list StringMap.t =
   The constant is the declaration of that variable
 *)
 type hiding_map = (bool * command list * constant) StringMap.t
-(* A hiding map, together with an integer which represents the number of
-   currently hidden variables
-   TODO: I think the count variable is actually useless, so get rid of it And
-   replace hiding_Status with just a hiding_map
 
-*)
-type hiding_status = {map : hiding_map; hidden : int}
 (*
   Hide all variables except those which are involved in the assertion. Return
   * A starting Z3 program
   * A hiding map
   * The number of hidden variables
 *)
-let construct_starting_env (full_env : smt_env) : smt_env * hiding_status =
+let construct_starting_env (full_env : smt_env) : smt_env * hiding_map =
   (*** Step 1: Remove all variable equality commands that don't involve the assertion ***)
   (* We drop all assertions except the final assertion, which is the "AND" of
      a bunch of assert- variables *)
@@ -199,19 +193,17 @@ let construct_starting_env (full_env : smt_env) : smt_env * hiding_status =
       hidden_decls
       hidden_map_kept
   in
-  {ctx; const_decls; type_decls; symbolics},
-  {map=hidden_map; hidden=ConstantSet.cardinal hidden_decls}
+  {ctx; const_decls; type_decls; symbolics}, hidden_map
 ;;
 
 (* Given an env with some variables hidden, and the full env, unhide the variable
    var and all intermediate variables it depends on. *)
-let rec unhide_variable hiding_status var : hiding_status * command list * ConstantSet.t =
-  let hidden, coms, const = StringMap.find var hiding_status.map in
+let rec unhide_variable hiding_map var : hiding_map * command list * ConstantSet.t =
+  let hidden, coms, const = StringMap.find var hiding_map in
   if not hidden then
-    hiding_status, [], ConstantSet.empty
+    hiding_map, [], ConstantSet.empty
   else
-    let new_map = StringMap.update var var (false, coms, const) hiding_status.map in
-    let new_hiding_status = {map=new_map; hidden=hiding_status.hidden-1} in
+    let new_map = StringMap.update var var (false, coms, const) hiding_map in
 
     (* TODO: Right now, this could potentially unhide lots of symbolics if we
        have big commands that involve lots of them, e.g. capping the number of
@@ -224,7 +216,7 @@ let rec unhide_variable hiding_status var : hiding_status * command list * Const
          let hs', coms', consts' = unhide_variable hs var in
          hs', coms @ coms', ConstantSet.union consts consts'
       )
-      (new_hiding_status, coms, ConstantSet.singleton const)
+      (new_map, coms, ConstantSet.singleton const)
       additional_vars_to_unhide
 ;;
 
@@ -263,8 +255,8 @@ let get_model verbose info query chan solver =
   let q =
     Printf.sprintf "%s\n" (GetModel |> mk_command |> command_to_smt verbose info)
   in
-  if query then
-    printQuery chan q;
+  (* if query then
+     printQuery chan q; *)
   ask_solver_blocking solver q;
   let raw_model = get_reply_until ")" solver in
   let line_regex = Str.regexp "(define-fun \\([^ ]+\\) () [a-zA-z]+" in
@@ -302,14 +294,16 @@ let make_constraints_from_model model =
    with the variables that appear in it, plus a prefix to ensure uniqueness.
    So we can do simply string processing to retreive the set of variables
    which appear in the core *)
-let get_variables_to_unhide query chan hiding_status solver =
+let get_variables_to_unhide query chan solver =
   let print_and_ask solver q =
     if query then
       printQuery chan q;
     ask_solver solver q
   in
+  (* TODO: Z3 doesn't minimize cores by default; we may want it to do so *)
   print_and_ask solver "(get-unsat-core)\n";
   let raw_core = oget @@ get_reply solver in
+  print_endline raw_core;
   (* Chop off leading and trailing parens *)
   let chopped_core = BatString.chop ~l:1 ~r:1 raw_core in
   let assertion_names = String.split_on_char ' ' chopped_core in
@@ -323,72 +317,87 @@ let get_variables_to_unhide query chan hiding_status solver =
     assertion_names
 ;;
 
-let rec refineModel info verbose query chan ask_for_nv_model solver_partial solver_full hiding_status =
-  let print_and_ask solver q =
+let rec refineModel info verbose query partial_chan full_chan ask_for_nv_model partial_solver full_solver hiding_map =
+  let print_and_ask solver chan q =
     if query then
       printQuery chan q;
     ask_solver solver q
   in
-  let q = check_sat info in
-  print_and_ask solver_partial q;
-  let reply = solver_partial |> parse_reply in
+  let print_and_ask_partial = print_and_ask partial_solver partial_chan in
+  let print_and_ask_full = print_and_ask full_solver full_chan in
+  (* Check to see if the partially hidden program is SAT. If not, we're done; if
+     so, its model gives us a potential counterexample that we need to check *)
+  print_and_ask_partial (check_sat info);
+  let reply = partial_solver |> parse_reply in
   match reply with
   | SAT ->
+    print_endline "STAGE 1: SAT";
     begin
-      let model = get_model verbose info query chan solver_partial in
+      (* Get a model, and add that model to the full encoding as constraints *)
+      let model = get_model verbose info query partial_chan partial_solver in
       let constraints = make_constraints_from_model model in
-      let q =
+      let constraints_from_model =
         List.fold_left (fun s1 s2 -> s1 ^ s2 ^ "\n") "(push)\n" constraints
       in
-      print_and_ask solver_full q;
-      print_and_ask solver_full (check_sat info);
-      let reply = solver_full |> parse_reply in
+      print_and_ask_full constraints_from_model;
+      (* See if the full network is SAT with the new constraints. If so,
+         we have an actual counterexample; otherwise, the counterexample was
+         spurious, so we refine our partial program by unhiding variables *)
+      print_and_ask_full (check_sat info);
+      let reply = full_solver |> parse_reply in
       match reply with
       | SAT ->
+        print_endline "STAGE 2: SAT";
         (* Real counterexample: Ask for NV model *)
-        ask_for_nv_model solver_full
+        ask_for_nv_model full_solver
       | UNSAT ->
-        (* Spurious counterexample: Get unsat core and unhide the variables which appear in it*)
+        print_endline "STAGE 2: UNSAT";
+        (* Spurious counterexample: Get unsat core and unhide the variables
+           which appear in it *)
         let vars_to_unhide =
-          get_variables_to_unhide query chan hiding_status solver_full
+          get_variables_to_unhide query full_chan full_solver
         in
+        List.iter print_endline vars_to_unhide;
         (* Pop the constraints we added to the full program *)
-        print_and_ask solver_full "(pop)\n";
-        let new_hiding_status, coms_to_add, decls_to_add =
+        print_and_ask_full "(pop)\n";
+        (* Unhide the variables, and get back the new commands and declarations
+           that we need to add to the partial program *)
+        let hiding_map, coms_to_add, decls_to_add =
           List.fold_left
             (fun (hs, coms, decls) var ->
                let hs', coms', decls' = unhide_variable hs var in
                (hs', coms' @ coms, ConstantSet.union decls decls')
             )
-            (hiding_status, [], ConstantSet.empty)
+            (hiding_map, [], ConstantSet.empty)
             vars_to_unhide
         in
+        (* Convert the constant declarations into a string *)
         let constants =
           BatString.concat "\n" @@
           BatList.map (fun c -> const_decl_to_smt ~verbose:verbose info c)
             (ConstantSet.to_list decls_to_add)
         in
+        (* Convert the commands into a string *)
         let commands =
           BatString.concat "\n" @@
           BatList.rev_map
             (fun c ->  smt_command_to_smt info c.com)
             coms_to_add
         in
-        let q = Printf.sprintf "%s\n%s\n" constants commands in
-        print_and_ask solver_partial q;
-        refineModel info verbose query chan ask_for_nv_model solver_partial solver_full hiding_status
+        let unhidden_variables = Printf.sprintf "%s\n%s\n" constants commands in
+        print_and_ask_partial unhidden_variables;
+        (* Recurse: Check if the partial program is still SAT with the newly
+           unhidden variables, and continue *)
+        refineModel info verbose query partial_chan full_chan ask_for_nv_model partial_solver full_solver hiding_map
       | UNKNOWN -> Unknown
-      | _ -> failwith "solve_hiding: Unexpected answer from solver"
+      | _ -> failwith "refineModel: Unexpected answer from solver"
     end
-  | UNSAT -> Unsat
+  | UNSAT ->         print_endline "STAGE 1: UNSAT"; Unsat
   | UNKNOWN -> Unknown
-  | _ -> failwith "solve_hiding: Unexpected answer from solver"
+  | _ -> failwith "refineModel: Unexpected answer from solver"
 ;;
 
-let solve_hiding info query chan ?symbolic_vars ?(params=[]) ?(starting_vars=[]) net =
-  let sym_vars =
-    match symbolic_vars with None -> [] | Some ls -> ls
-  in
+let solve_hiding info query partial_chan ~full_chan ?(sym_vars=[]) ?(params=[]) ?(starting_vars=[]) net =
   let module ExprEnc = (val expr_encoding smt_config) in
   let module Enc =
     (val (if smt_config.encoding = Classic then
@@ -402,7 +411,7 @@ let solve_hiding info query chan ?symbolic_vars ?(params=[]) ?(starting_vars=[])
       (fun () -> let env = Enc.encode_z3 net sym_vars in
         propagate_eqs_for_hiding env)
   in
-  let partial_env, hiding_status = construct_starting_env full_env in
+  let partial_env, hiding_map = construct_starting_env full_env in
   (* TODO: add starting_vars once I figure that out *)
   (* compile the encoding to SMT-LIB *)
   let full_encoding =
@@ -414,17 +423,18 @@ let solve_hiding info query chan ?symbolic_vars ?(params=[]) ?(starting_vars=[])
       (fun () -> env_to_smt ~verbose:smt_config.verbose ~name_asserts:false info partial_env) in
   (* print query to a file if asked to *)
   if query then
-    printQuery chan partial_encoding;
+    (printQuery partial_chan partial_encoding;
+     printQuery full_chan full_encoding);
 
   (* Create two solver processes: one for the partially hidden program, and
      one for the full program with additional constraints *)
   (* start communication with solver process *)
-  let solver_partial = start_solver params in
-  let solver_full = start_solver params in
-  ask_solver_blocking solver_partial partial_encoding;
-  ask_solver_blocking solver_full full_encoding;
+  let partial_solver = start_solver params in
+  let full_solver = start_solver params in
+  ask_solver_blocking partial_solver partial_encoding;
+  ask_solver_blocking full_solver full_encoding;
 
   let ask_for_nv_model solver =
-    ask_for_model query chan info full_env solver renaming net
+    ask_for_model query partial_chan info full_env solver renaming net
   in
-  refineModel info smt_config.verbose query chan ask_for_nv_model solver_partial solver_full hiding_status
+  refineModel info smt_config.verbose query partial_chan full_chan ask_for_nv_model partial_solver full_solver hiding_map
