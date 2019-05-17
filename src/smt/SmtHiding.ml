@@ -35,14 +35,19 @@ let propagate_eqs_for_hiding (env : smt_env) =
       let r = BatUref.uref s in
       r, StringMap.add s r eqSets
   in
-  (* True iff this is not an equality between a label- and a merge- variable *)
+  (* True iff this is not an equality between a label- and a merge- variable,
+     or between an assert-result variable and anything *)
   let should_propagate s1 s2 =
-    not @@
+    let should_not_propagate =
     (* FIXME: The bit that checks for -result is a little fragile, since a user could
               conceivably make a variable name containing that string. If it starts
               causing problems we won't lose any precision by removing it. *)
     (BatString.starts_with s1 "label-" && BatString.starts_with s2 "merge-" && BatString.exists s2 "-result") ||
-    (BatString.starts_with s2 "label-" && BatString.starts_with s1 "merge-" && BatString.exists s1 "-result")
+    (BatString.starts_with s2 "label-" && BatString.starts_with s1 "merge-" && BatString.exists s1 "-result") ||
+    (BatString.starts_with s1 "assert-" && BatString.ends_with s1 "-result") ||
+    (BatString.starts_with s2 "assert-" && BatString.ends_with s2 "-result")
+    in
+    not should_not_propagate
   in
   (* Used for BatUref.unite to ensure it always selects label- variables if
      possible, so the resulting SMT program has things in terms of the attributes
