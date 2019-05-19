@@ -77,9 +77,9 @@ let best c s o b =
       Some (if betterEqOption x y then p1 else p2)
 
 let mergeValues x y =
-  let c = pickOption min (x.connected) (y.connected) in
-  let s = pickOption min (x.static) (y.static) in
-  let o = pickOption betterOspf (x.ospf) (y.ospf) in
+  let c = pickOption min x.connected y.connected in
+  let s = pickOption min x.static y.static in
+  let o = pickOption betterOspf x.ospf (y.ospf) in
   let b = pickOption betterBgp (x.bgp) (y.bgp) in
   { connected = c;
     static = s;
@@ -173,7 +173,7 @@ let init node =
   | Some b -> (
    match edge with
    | (0,4) -> 
-    let b = (if ((isProtocol (x.selected) 3)) then
+    let b = (if ((isProtocol x.selected 3)) then
 (Some {bgpAd= (b.bgpAd); lp= (b.lp); aslen= (b.aslen) + 1; med= (b.med);comms= (b.comms);})
 else
 None)
@@ -188,7 +188,7 @@ None)
       b
    | (1,0) -> 
     let b = (if ((isProtocol (x.selected) 3)) then
-(Some {bgpAd= (b.bgpAd); lp= (b.lp); aslen= (b.aslen) + 1; med= (b.med);comms= (b.comms);})
+(Some {bgpAd= (b.bgpAd); lp= (b.lp); aslen= b.aslen + 1; med= (b.med);comms= (b.comms);})
 else
 None)
     in

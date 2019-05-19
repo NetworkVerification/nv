@@ -364,6 +364,7 @@ expr2:
 
 expr3:
     | ID                                { exp (evar (snd $1)) (fst $1) }
+    | ID DOT ID                       { exp (eproject (evar (snd $1)) (Var.name (snd $3))) (Span.extend (fst $1) (fst $3)) }
     | NUM                               { to_value (vint (snd $1)) (fst $1) }
     | TRUE                              { to_value (vbool true) $1 }
     | FALSE                             { to_value (vbool false) $1 }
