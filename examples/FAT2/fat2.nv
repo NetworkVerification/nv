@@ -79,8 +79,8 @@ let best c s o b =
 let mergeValues x y =
   let c = pickOption min x.connected y.connected in
   let s = pickOption min x.static y.static in
-  let o = pickOption betterOspf x.ospf (y.ospf) in
-  let b = pickOption betterBgp (x.bgp) (y.bgp) in
+  let o = pickOption betterOspf x.ospf y.ospf in
+  let b = pickOption betterBgp x.bgp y.bgp in
   { connected = c;
     static = s;
     ospf = o;
@@ -174,56 +174,56 @@ let init node =
    match edge with
    | (0,4) -> 
     let b = (if ((isProtocol x.selected 3)) then
-(Some {bgpAd= (b.bgpAd); lp= (b.lp); aslen= (b.aslen) + 1; med= (b.med);comms= (b.comms);})
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms;})
 else
 None)
     in
       b
    | (0,1) -> 
-    let b = (if ((isProtocol (x.selected) 3)) then
-(Some {bgpAd= (b.bgpAd); lp= (b.lp); aslen= (b.aslen) + 1; med= (b.med);comms= (b.comms);})
+    let b = (if ((isProtocol x.selected 3)) then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms;})
 else
 None)
     in
       b
    | (1,0) -> 
-    let b = (if ((isProtocol (x.selected) 3)) then
-(Some {bgpAd= (b.bgpAd); lp= (b.lp); aslen= b.aslen + 1; med= (b.med);comms= (b.comms);})
+    let b = (if ((isProtocol x.selected 3)) then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms;})
 else
 None)
     in
       b
    | (1,3) -> 
-    let b = (if ((isProtocol (x.selected) 3)) then
-(Some {bgpAd= (b.bgpAd); lp= (b.lp); aslen= (b.aslen) + 1; med= (b.med);comms= (b.comms);})
+    let b = (if ((isProtocol x.selected 3)) then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms;})
 else
 None)
     in
       b
    | (2,3) -> 
-    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174405632) && (prefix < 1174405632256)))) && (!(isProtocol (x.selected) 3)))) || (isProtocol (x.selected) 3))) then
-(Some {bgpAd= (b.bgpAd); lp= (b.lp); aslen= (b.aslen) + 1; med= (b.med);comms= (b.comms);})
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174405632) && (prefix < 1174405632256)))) && (!(isProtocol x.selected 3)))) || (isProtocol x.selected 3))) then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms;})
 else
 None)
     in
       b
    | (3,2) -> 
-    let b = (if ((isProtocol (x.selected) 3)) then
-(Some {bgpAd= (b.bgpAd); lp= (b.lp); aslen= (b.aslen) + 1; med= (b.med);comms= (b.comms);})
+    let b = (if ((isProtocol x.selected 3)) then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms;})
 else
 None)
     in
       b
    | (3,1) -> 
-    let b = (if ((isProtocol (x.selected) 3)) then
-(Some {bgpAd= (b.bgpAd); lp= (b.lp); aslen= (b.aslen) + 1; med= (b.med);comms= (b.comms);})
+    let b = (if ((isProtocol x.selected 3)) then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms;})
 else
 None)
     in
       b
    | (4,0) -> 
-    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174406144) && (prefix < 1174406144256)))) && (!(isProtocol (x.selected) 3)))) || (isProtocol (x.selected) 3))) then
-(Some {bgpAd= (b.bgpAd); lp= (b.lp); aslen= (b.aslen) + 1; med= (b.med);comms= (b.comms);})
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174406144) && (prefix < 1174406144256)))) && (!(isProtocol x.selected 3)))) || (isProtocol x.selected 3))) then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms;})
 else
 None)
     in
@@ -231,7 +231,7 @@ None)
   | _ -> None)
 
 let transferRoute edge x = 
-  let o = transferOspf edge (x.ospf) in
+  let o = transferOspf edge x.ospf in
   let b = transferBgp edge x in
   {connected=None; static=None; ospf=o; bgp=b; selected=None}
 
