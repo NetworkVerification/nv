@@ -281,7 +281,6 @@ let construct_starting_env (full_env : smt_env) : smt_env * hiding_map =
   let type_decls = full_env.type_decls in
   let symbolics = full_env.symbolics in
 
-  print_endline @@ hiding_map_to_string hidden_map; (* TODO: Remove *)
   {ctx= (active_coms @ additional_coms); const_decls; type_decls; symbolics},
   hidden_map
 ;;
@@ -369,7 +368,6 @@ let get_variables_to_unhide query chan solver =
   (* TODO: Z3 doesn't minimize cores by default; we may want it to do so *)
   print_and_ask solver "(get-unsat-core)\n";
   let raw_core = oget @@ get_reply solver in
-  print_endline raw_core;
   (* Chop off leading and trailing parens *)
   let chopped_core = BatString.chop ~l:1 ~r:1 raw_core in
   let assertion_names = String.split_on_char ' ' chopped_core in
@@ -397,7 +395,6 @@ let rec refineModel info verbose query partial_chan full_chan ask_for_nv_model p
   let reply = partial_solver |> parse_reply in
   match reply with
   | SAT ->
-    print_endline "STAGE 1: SAT";
     begin
       (* Get a model, and add that model to the full encoding as constraints *)
       let model = get_model verbose info query partial_chan partial_solver in
@@ -413,17 +410,14 @@ let rec refineModel info verbose query partial_chan full_chan ask_for_nv_model p
       let reply = full_solver |> parse_reply in
       match reply with
       | SAT ->
-        print_endline "STAGE 2: SAT";
         (* Real counterexample: Ask for NV model *)
         ask_for_nv_model full_solver
       | UNSAT ->
-        print_endline "STAGE 2: UNSAT";
         (* Spurious counterexample: Get unsat core and unhide the variables
            which appear in it *)
         let vars_to_unhide =
           get_variables_to_unhide query full_chan full_solver
         in
-        List.iter print_endline vars_to_unhide;
         (* Pop the constraints we added to the full program *)
         print_and_ask_full "(pop)\n";
         (* Unhide the variables, and get back the new commands and declarations
@@ -452,7 +446,7 @@ let rec refineModel info verbose query partial_chan full_chan ask_for_nv_model p
       | UNKNOWN -> Unknown
       | _ -> failwith "refineModel: Unexpected answer from solver"
     end
-  | UNSAT ->         print_endline "STAGE 1: UNSAT"; Unsat
+  | UNSAT -> Unsat
   | UNKNOWN -> Unknown
   | _ -> failwith "refineModel: Unexpected answer from solver"
 ;;
