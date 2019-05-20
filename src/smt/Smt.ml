@@ -37,11 +37,13 @@ type smt_result = Unsat | Unknown | Sat of Solution.t
 
 let env_to_smt ?(verbose=false) ?(name_asserts=false) info (env : smt_env) =
   let count = ref (-1) in
-  let context =
-    BatList.rev_map
+  let map_fun =
+    if name_asserts then
       (fun c ->  count := !count + 1; smt_command_to_smt ~name_asserts:true ~count:(!count) info c.com)
-      env.ctx
+    else
+      (fun c ->  smt_command_to_smt info c.com)
   in
+  let context = BatList.rev_map map_fun env.ctx in
   let context = BatString.concat "\n" context in
 
   (* Emit constants *)
