@@ -249,31 +249,31 @@ let parse_input (args : string array)
   (* let decls = Typing.infer_declarations info decls in *)
   (* failwith "bla"; *)
   let decls =
-    if cfg.inline || cfg.smt || cfg.check_monotonicity || cfg.smart_gen then
+    if cfg.inline || cfg.unroll || cfg.smt || cfg.check_monotonicity || cfg.smart_gen then
       time_profile "Inlining" (
         fun () -> Inline.inline_declarations decls |>
                   Typing.infer_declarations info)
     else
       decls
   in
-  let decls, fs = if cfg.unroll then
+  let decls, fs = if cfg.unroll || cfg.smt then
       let decls, f =
         time_profile "Map unrolling" (fun () -> MapUnrolling.unroll info decls)
       in
       (Typing.infer_declarations info decls, f :: fs)
     else decls, fs
   in
-    (* let decls =
-   *   if cfg.inline || cfg.smt || cfg.check_monotonicity || cfg.smart_gen then
-   *     time_profile "Inlining" (
-   *                    fun () -> Inline.inline_declarations decls |>
-   *                                Typing.infer_declarations info)
-   *   else
-   *     decls
-   * in *)
-let net = Slicing.createNetwork decls in
-let net = if cfg.link_failures > 0 then
-    Failures.buildFailuresNet net cfg.link_failures
-  else net
-in
-(cfg, info, file, net, fs)
+  let decls =
+    if cfg.unroll || cfg.smt then
+      time_profile "Inlining" (
+        fun () -> Inline.inline_declarations decls |>
+                  Typing.infer_declarations info)
+    else
+      decls
+  in
+  let net = Slicing.createNetwork decls in
+  let net = if cfg.link_failures > 0 then
+      Failures.buildFailuresNet net cfg.link_failures
+    else net
+  in
+  (cfg, info, file, net, fs)
