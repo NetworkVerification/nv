@@ -21,8 +21,10 @@ type answer =
   | Success of (Solution.t option)
   | CounterExample of Solution.t
 
-let rec apply_all s fs =
-  match fs with [] -> s | f :: fs -> apply_all (f s) fs
+let rec apply_all (s : Solution.t) fs =
+  match fs with
+  | [] -> s
+  | f :: fs -> apply_all (f s) fs
 
 let smt_query_file =
   let counter = ref (-1) in
@@ -58,11 +60,10 @@ let run_smt file cfg info (net : Syntax.network) fs =
   in
   let net, f = Renaming.alpha_convert_net net in
   let fs = f :: fs in
-  let res, fs =
-    (Smt.solve info cfg.query (smt_query_file file) net ~symbolic_vars:[], fs)
-  in
+  let res = Smt.solve info cfg.query (smt_query_file file) net ~symbolic_vars:[] in
   match res with
-  | Unsat -> (Success None, None)
+  | Unsat ->
+     (Success None, None)
   | Unknown -> Console.error "SMT returned unknown"
   | Sat solution ->
     match solution.assertions with
@@ -229,43 +230,44 @@ let parse_input (args : string array)
   Cmdline.set_cfg cfg ;
   if cfg.debug then Printexc.record_backtrace true ;
   let file = rest.(0) in
-  let ds, info = Input.parse file in
-  (* Printf.printf "decls:\n %s\n" (Printing.declarations_to_string ds); *)
+  let ds, info = Input.parse file in (* Parse nv file *)
   let decls = Typing.infer_declarations info ds in
   Typing.check_annot_decls decls ;
   Wellformed.check info decls ;
-  let decls, f = RecordUnrolling.unroll decls in
+  let decls, f = RecordUnrolling.unroll decls in (* Unroll records done first *)
   let fs = [f] in
-  (* let fs = [] in *)
-  (* Printf.printf "%s\n" (Printing.declarations_to_string decls); *)
-  (* let decls = Typing.infer_declarations info decls in *)
-  (* failwith "bla"; *)
-  let decls =
+  let decls,fs = (* inlining definitions *)
     if cfg.inline || cfg.unroll || cfg.smt || cfg.check_monotonicity || cfg.smart_gen then
-      time_profile "Inlining" (
-        fun () -> Inline.inline_declarations decls |>
-                  Typing.infer_declarations info)
+      (* Note! Must rename before inling otherwise inling is unsound *)
+      let decls, f = Renaming.alpha_convert_declarations decls in 
+      (time_profile "Inlining" (
+           fun () ->
+           Inline.inline_declarations decls |>
+             Typing.infer_declarations info), f :: fs)
     else
-      decls
+      (decls,fs)
   in
-  let decls, fs = if cfg.unroll || cfg.smt then
-      let decls, f =
+  let decls, fs =
+    if cfg.unroll || cfg.smt then
+      let decls, f = (* unrolling maps *)
         time_profile "Map unrolling" (fun () -> MapUnrolling.unroll info decls)
       in
       (Typing.infer_declarations info decls, f :: fs)
     else decls, fs
   in
-  let decls =
+  let decls = (*Inline again after unrolling, is this necessary? *)
     if cfg.unroll || cfg.smt then
       time_profile "Inlining" (
-        fun () -> Inline.inline_declarations decls |>
-                  Typing.infer_declarations info)
+          fun () -> Inline.inline_declarations decls |>
+                      Typing.infer_declarations info)
     else
       decls
-  in
-  let net = Slicing.createNetwork decls in
-  let net = if cfg.link_failures > 0 then
+  in 
+  let net = Slicing.createNetwork decls in (* Create something of type network *)
+  let net =
+    if cfg.link_failures > 0 then
       Failures.buildFailuresNet net cfg.link_failures
     else net
   in
   (cfg, info, file, net, fs)
+    

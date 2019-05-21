@@ -83,7 +83,6 @@ let box_vals (xs : (int * Syntax.value) list) =
     vtuple (BatList.sort (fun (x1,x2) (y1,y2) -> compare x1 y1) xs
             |> BatList.map (fun (x,y) -> y))
 
-(* TODO: boxing for symbolic variables as well *)
 let translate_model_unboxed (m : (string, string) BatMap.t) : Solution.t =
   let (symbolics, labels, assertions) =
     BatMap.foldi (fun k v (symbolics, labels, assertions) ->
@@ -95,7 +94,6 @@ let translate_model_unboxed (m : (string, string) BatMap.t) : Solution.t =
              ( symbolics,
                AdjGraph.VertexMap.add (node_of_label_var k) [(0,nvval)] labels,
                assertions )
-
            | Some i ->
              ( symbolics,
                AdjGraph.VertexMap.modify_def
@@ -113,12 +111,22 @@ let translate_model_unboxed (m : (string, string) BatMap.t) : Solution.t =
               Some (AdjGraph.VertexMap.add (node_of_assert_var k)
                       (nvval |> Syntax.bool_of_val |> oget) m) )
         | k ->
-          (Collections.StringMap.add k nvval symbolics, labels, assertions)) m
-      (StringMap.empty,AdjGraph.VertexMap.empty, None)
+           (match proj_of_var k with
+            | None ->
+               (Collections.StringMap.add (symbolic_of_proj_var k) [(0,nvval)] symbolics,
+                labels,
+                assertions)
+            | Some i ->
+               (Collections.StringMap.modify_def [] (symbolic_of_proj_var k)
+                  (fun xs -> (i,nvval) :: xs) symbolics,
+                labels,
+                assertions)
+           )) m (StringMap.empty,AdjGraph.VertexMap.empty, None)
   in
-  { symbolics = symbolics;
-    labels = AdjGraph.VertexMap.map (box_vals) labels;
+  { symbolics = Collections.StringMap.map box_vals symbolics;
+    labels = AdjGraph.VertexMap.map box_vals labels;
     assertions = assertions }
+
 
 (* Model Refiners *)
 let refineModelMinimizeFailures (model: Solution.t) info query chan

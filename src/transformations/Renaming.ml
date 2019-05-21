@@ -139,10 +139,10 @@ let alpha_convert_net net =
           let e = alpha_convert_exp env e in
           (env, (y, Exp e) :: acc)
         | Ty ty ->
-          let y = fresh x in
-          map_back bmap y x ;
-          let env = Env.update env x y in
-          (env, (y, Ty ty) :: acc))
+          (* let y = fresh x in
+           * map_back bmap y x ; *)
+          let env = Env.update env x x in
+          (env, (x, Ty ty) :: acc))
       net.symbolics (env, [])
   in
   let env, defs =

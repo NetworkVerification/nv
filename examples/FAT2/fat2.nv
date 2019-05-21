@@ -222,7 +222,7 @@ None)
     in
       b
    | (4,0) -> 
-    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174406144) && (prefix < 1174406144256)))) && (!(isProtocol x.selected 3)))) || (isProtocol x.selected 3))) then
+    let b = (if (((((((prefixLen = 24) && ((prefix >= 1174406144) && (prefix < 1174406144256)))) && (!(isProtocol (x.selected) 3)))) || (isProtocol (x.selected) 3))) then
 (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms;})
 else
 None)
