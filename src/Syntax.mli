@@ -192,6 +192,8 @@ val exp_to_pattern: exp -> pattern
 
 val arity : op -> int
 
+val tupleToList : exp -> exp list
+  
 val tint_of_size : int -> ty
 
 val tint_of_value : Integer.t -> ty

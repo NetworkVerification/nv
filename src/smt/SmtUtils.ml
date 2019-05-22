@@ -17,8 +17,8 @@ type smt_options =
 
 let smt_config : smt_options =
   { verbose = false;
-    optimize = false;
-    encoding = Classic;
+    optimize = true;
+    encoding = Functional;
     unboxing = false;
     failures = None;
     multiplicities = Collections.StringMap.empty

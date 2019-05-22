@@ -243,7 +243,6 @@ let unflatten_val (v : Syntax.value) (ty : Syntax.ty) =
          failwith "incorrect unflattening, leftover list should be empty")
   | _ -> v
 
-(* TODO: This needs to be done for symbolic variables too, in the SMT encoding as well *)
 let unflatten_sol
       (orig_attr: Syntax.ty)
       (sym_types: Syntax.ty Collections.StringMap.t)

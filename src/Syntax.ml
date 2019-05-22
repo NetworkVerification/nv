@@ -774,6 +774,17 @@ let arity op =
   | MMapFilter -> 3
   | MMerge -> 3
 
+(* Requires that e is of type TTuple *)
+let tupleToList (e : exp) =
+  match e.e with
+  | ETuple es -> es
+  | EVal v ->
+     (match v.v with
+      | VTuple vs ->
+         BatList.map (fun v -> aexp(e_val v, v.vty, v.vspan)) vs
+      | _ -> failwith "Not a tuple type")
+  | _ -> failwith "Not a tuple type"
+            
 (* Useful constructors *)
 
 let tint_of_size n = TInt n

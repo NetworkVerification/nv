@@ -791,4 +791,8 @@ module Full =
 
     let interp_partial = fun e -> interp_exp_partial Env.empty e
 
+    let interp_partial_fun (fn : Syntax.exp) (args: exp list) =
+      Syntax.apps fn args |>
+        interp_partial
+
   end
