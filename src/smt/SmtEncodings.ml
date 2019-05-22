@@ -301,11 +301,11 @@ struct
      on the edge is better *)
   let trans_exp etrans u v xs =
     let args = (edge_exp u v) @ xs in
-    Interp.Full.interp_partial_fun etrans args |> Tnf.tnf_exp
+    (Interp.Full.interp_partial_fun etrans args) |> Tnf.tnf_exp
 
   let merge_exp emerge u xs ys =
     let args = (node_exp u) :: (xs @ ys) in
-    Interp.Full.interp_partial_fun emerge args |> Tnf.tnf_exp
+    (Interp.Full.interp_partial_fun emerge args) |> Tnf.tnf_exp
     
   (** An alternative SMT encoding, where we build an NV expression for
       each label, partially evaluate it and then encode it *)
@@ -368,7 +368,7 @@ struct
           AdjGraph.VertexMap.add u best_smt acc) nodes AdjGraph.VertexMap.empty
     in
 
-    AdjGraph.fold_vertices (fun u () ->r
+    AdjGraph.fold_vertices (fun u () ->
         let lblu = try AdjGraph.VertexMap.find u labelling
           with Not_found -> failwith "label variable not found"
         in
