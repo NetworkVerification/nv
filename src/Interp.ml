@@ -158,7 +158,7 @@ and interp_op env ty op es =
     failwith
       (sprintf "operation %s has arity %d not arity %d"
          (op_to_string op) (arity op) (List.length es)) ; *)
-  let vs = List.map (interp_exp env) es in
+  let vs = BatList.map (interp_exp env) es in
   match (op, vs) with
   | And, [{v= VBool b1}; {v= VBool b2}] -> vbool (b1 && b2)
   | Or, [{v= VBool b1}; {v= VBool b2}] -> vbool (b1 || b2)
@@ -594,9 +594,12 @@ module Full =
            (match e.e with
             | ETuple es ->
                matches_list ps es Env.empty
-            | _ ->
-               (* Note that this works because, etuple returns an etuple expression *)
-               Delayed)
+            | EVal v ->
+               (match v.v with
+                | VTuple vs ->
+                   matches_list ps (BatList.map exp_of_value vs) Env.empty
+                | _ -> NoMatch)
+            | _ -> NoMatch)
           else Delayed
       | POption None ->
          if is_value e then
@@ -637,16 +640,44 @@ module Full =
          match matches p v with
          | Match env -> Match (env, e)
          | NoMatch -> match_branches_lst branches v
-         | Delayed ->  Delayed
+         | Delayed -> Delayed
 
-    (*TODO: this is most likely broken after adding maps to branches *)
-    let rec match_branches branches v =
-      if is_value v then
-        match lookUpPat (val_to_pat (to_value v)) branches with
-        | Found e -> Match (Env.empty, e)
-        | Rest ls -> match_branches_lst ls v
-      else
-        Delayed
+let rec matchExpPat pat pe1 env =
+  match pat, pe1.e with
+  | PWild, _ -> Match env
+  | PVar x, EVar y ->
+     Match (Env.update env x pe1)
+  | PTuple ps, ETuple es ->
+     (match ps, es with
+      | [], []-> Match env
+      | p :: ps, e :: es ->
+         (match matchExpPat p e env with
+          | Delayed -> Delayed
+          | Match env -> matchExpPat (PTuple ps) (etuple es) env)
+      | _, _ -> Delayed)
+  | _, _ -> Delayed (*for now *)
+
+let rec matchExp branches pe1 =
+  match popBranch branches with
+  | ((pat,e), branches') ->
+     if isEmptyBranch branches' then
+       match matchExpPat pat pe1 Env.empty with
+       | Delayed -> Delayed
+       | Match env -> Match (env, e)
+     else
+       Delayed
+
+let rec match_branches branches v =
+  if is_value v then
+    ((* Printf.printf "v:%s" (Printing.exp_to_string v);
+      * iterBranches (fun (p,e) -> Printf.printf "pat:%s\n" (Printing.pattern_to_string p)) branches; *)
+     match lookUpPat (val_to_pat (to_value v)) branches with
+     | Found e -> Match (Env.empty, e)
+     | Rest ls -> match_branches_lst ls v)
+  else
+    matchExp branches v
+
+
 
     (** Assumes that inlining has been performed.  Not CBN in the
        strict sense. It will just do function applications over
@@ -657,42 +688,43 @@ module Full =
       | EVar x -> (
         match Env.lookup_opt env x with
         | None ->
-           e
+           (env, e)
         | Some e1 ->
-           e1)
-      | EVal v -> e
+           (env, e1))
+      | EVal v -> (env, e)
       | EOp (op, es) ->
-         aexp (interp_op_partial env (oget e.ety) op es, e.ety, e.espan)
-      | EFun f -> e
+         (env, aexp (interp_op_partial env (oget e.ety) op es, e.ety, e.espan))
+      | EFun f -> (env, e)
+             (* either need to do the partial interpretation here, or return a pair
+                of the efun and the env at this point to be used, sort of like a closure.*)
       | EApp (e1, e2) ->
-         let pe1 = interp_exp_partial env e1 in
-         let pe2 = interp_exp_partial env e2 in
+         let (cenv, pe1) = interp_exp_partial env e1 in
+         let _, pe2 = interp_exp_partial env e2 in
          (match pe1.e with
           | EFun f ->
-             interp_exp_partial (Env.update env f.arg pe2) f.body
+             interp_exp_partial (Env.update cenv f.arg pe2) f.body
           | _ ->
              (*this case shouldn't show up for us *)
-             Console.warning "This case shouldn't show up";
-             aexp (eapp pe1 pe2, e.ety, e.espan))
+             failwith "This case shouldn't show up")
       | EIf (e1, e2, e3) ->
-         let pe1 = interp_exp_partial env e1 in
+         let _, pe1 = interp_exp_partial env e1 in
          if is_value pe1 then
            (match (to_value pe1).v with
             | VBool true  -> interp_exp_partial env e2
             | VBool false -> interp_exp_partial env e3
             | _ -> failwith "bad if condition")
          else
-           aexp (eif pe1 (interp_exp_partial env e2) (interp_exp_partial env e3),
-                 e.ety, e.espan)
+           (env, aexp (eif pe1 (snd (interp_exp_partial env e2)) (snd (interp_exp_partial env e3)),
+                 e.ety, e.espan))
       | ELet (x, e1, e2) ->
-         let pe1 = interp_exp_partial env e1 in
+         let _, pe1 = interp_exp_partial env e1 in
          interp_exp_partial (Env.update env x pe1) e2
       | ETuple es ->
-         aexp (etuple (List.map (interp_exp_partial env) es),
-               e.ety, e.espan)
-      | ESome e' -> aexp (esome (interp_exp_partial env e'), e.ety, e.espan)
+         (env, aexp (etuple (BatList.map (fun e -> snd (interp_exp_partial env e)) es),
+                     e.ety, e.espan))
+      | ESome e' -> (env, aexp (esome (snd (interp_exp_partial env e')), e.ety, e.espan))
       | EMatch (e1, branches) ->
-         let pe1 = interp_exp_partial env e1 in
+         let _, pe1 = interp_exp_partial env e1 in
          (match match_branches branches pe1 with
           | Match (env2, e) -> interp_exp_partial (Env.updates env env2) e
           | NoMatch ->
@@ -700,20 +732,20 @@ module Full =
                ( "exp " ^ (exp_to_string pe1)
                  ^ " did not match any pattern in match statement")
           | Delayed ->
-             aexp (ematch pe1 (mapBranches (fun (p,e) ->
-                                   (p,interp_exp_partial env e)) branches),
-                   e.ety, e.espan))
+             (env, aexp (ematch pe1 (mapBranches (fun (p,e) ->
+                                         (p, snd (interp_exp_partial env e))) branches),
+                   e.ety, e.espan)))
       | ERecord _ | EProject _ -> failwith "Record found during partial interpretation"
 
     (* this is same as above, minus the app boolean. see again if we can get rid of that? *)
     and interp_op_partial env ty op es =
-      let pes = List.map (interp_exp_partial env) es in
-      if List.exists (fun pe -> not (is_value pe)) pes then
+      let pes = BatList.map (fun e -> snd (interp_exp_partial env e)) es in
+      if BatList.exists (fun pe -> not (is_value pe)) pes then
         eop op pes
       else
         begin
           exp_of_value @@
-            match (op, List.map to_value pes) with
+            match (op, BatList.map to_value pes) with
             | And, [{v= VBool b1}; {v= VBool b2}] -> vbool (b1 && b2)
             | Or, [{v= VBool b1}; {v= VBool b2}] -> vbool (b1 || b2)
             | Not, [{v= VBool b1}] -> vbool (not b1)
@@ -789,10 +821,10 @@ module Full =
                                  (Printing.op_to_string op))
         end
 
-    let interp_partial = fun e -> interp_exp_partial Env.empty e
+    let interp_partial = fun e -> snd (interp_exp_partial Env.empty e)
 
     let interp_partial_fun (fn : Syntax.exp) (args: exp list) =
-      Syntax.apps fn args |>
-        interp_partial
+      let e = Syntax.apps fn args in
+      interp_partial e
 
   end

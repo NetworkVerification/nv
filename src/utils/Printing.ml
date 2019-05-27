@@ -158,6 +158,7 @@ let rec pattern_to_string pattern =
 
 let ty_env_to_string env = Env.to_string ty_to_string env.ty
 
+let glob = ref false
 let rec value_env_to_string env =
   Env.to_string (value_to_string_p max_prec) env.value
 
@@ -237,7 +238,7 @@ and exp_to_string_p prec e =
       ^ exp_to_string_p max_prec e1
       ^ " in \n" ^ exp_to_string_p prec e2
     | ETuple es ->
-      "(" ^ comma_sep (exp_to_string_p max_prec) es ^ ")"
+       "(" ^ comma_sep (exp_to_string_p max_prec) es ^ ")"
     | ESome e -> "Some(" ^ exp_to_string_p prec e ^ ")"
     | EMatch (e1, bs) ->
       "(match "

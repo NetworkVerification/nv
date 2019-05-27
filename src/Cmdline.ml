@@ -17,6 +17,7 @@ type t =
   ; compress: int                      (** compress the network for n failures     *)
   ; unroll: bool                       (** whether to unroll maps or not           *)
   ; unbox: bool                        (** unboxes options and flattens tuples     *)
+  ; func: bool                         (** use to enable functional smt encoding   *)
   (* ; draw: bool                         (\** emits a .jpg file of the graph          *\) *)
   ; depth: int                         (** search depth for refinement procedure   *)
   ; check_monotonicity: bool           (** checks monotonicity of trans function   *)
@@ -46,6 +47,7 @@ let default =
   ; compress= -1
   ; unroll= false
   ; unbox = false
+  ; func = false
   (* ; draw=false *)
   ; depth=20
   ; check_monotonicity=false

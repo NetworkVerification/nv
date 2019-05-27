@@ -97,8 +97,8 @@ and env = {ty: ty Env.t; value: value Env.t}
 
 and ty_or_exp = Ty of ty | Exp of exp
 
-type branchLookup = Found of exp | Rest of (pattern * exp) list 
-                                
+type branchLookup = Found of exp | Rest of (pattern * exp) list
+
 val addBranch: Pat.t -> exp -> branches -> branches
 val mapBranches: (Pat.t * exp -> Pat.t * exp) -> branches -> branches
 val iterBranches: (Pat.t * exp -> unit) -> branches -> unit
@@ -193,7 +193,9 @@ val exp_to_pattern: exp -> pattern
 val arity : op -> int
 
 val tupleToList : exp -> exp list
-  
+
+val tupleToListSafe : exp -> exp list
+
 val tint_of_size : int -> ty
 
 val tint_of_value : Integer.t -> ty

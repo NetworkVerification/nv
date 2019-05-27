@@ -146,7 +146,7 @@ and exp =
 and branches = { pmap              : exp PatMap.t;
                  plist             : (pattern * exp) list
                 }
-             
+
 and func = {arg: var; argty: ty option; resty: ty option; body: exp}
 
 and closure = (env * func)
@@ -774,17 +774,6 @@ let arity op =
   | MMapFilter -> 3
   | MMerge -> 3
 
-(* Requires that e is of type TTuple *)
-let tupleToList (e : exp) =
-  match e.e with
-  | ETuple es -> es
-  | EVal v ->
-     (match v.v with
-      | VTuple vs ->
-         BatList.map (fun v -> aexp(e_val v, v.vty, v.vspan)) vs
-      | _ -> failwith "Not a tuple type")
-  | _ -> failwith "Not a tuple type"
-            
 (* Useful constructors *)
 
 let tint_of_size n = TInt n
@@ -873,7 +862,7 @@ let rec is_value e =
 let rec to_value e =
   match e.e with
   | EVal v -> v
-  | ETy (e, _) -> to_value e                  
+  | ETy (e, _) -> to_value e
   | ETuple es ->
     avalue (vtuple (BatList.map to_value es), e.ety, e.espan)
   | ESome e1 -> avalue (voption (Some (to_value e1)), e.ety, e.espan)
@@ -906,7 +895,7 @@ let rec val_to_pattern v =
   | VOption (Some v) -> POption (Some (val_to_pattern v))
   | VRecord rs -> PRecord (StringMap.map val_to_pattern rs)
   | VClosure _ | VMap _ -> failwith "can't use these type of values as patterns"
-    
+
 let rec exp_to_pattern e =
   match e.e with
   | EVal v ->
@@ -916,7 +905,7 @@ let rec exp_to_pattern e =
   | ETy (e, _) -> exp_to_pattern e
   | EVar x -> PVar x
   | ERecord rs -> PRecord (StringMap.map exp_to_pattern rs)
-  | EProject _ 
+  | EProject _
   | EOp _
   | EFun _
   | EApp _
@@ -924,8 +913,7 @@ let rec exp_to_pattern e =
   | ELet _
   | EMatch _ ->
     failwith "can't use these expressions as patterns"
-  
-    
+
 let func x body = {arg= x; argty= None; resty= None; body}
 
 let funcFull x argty resty body = {arg= x; argty= argty; resty= resty; body}
@@ -967,6 +955,23 @@ let rec apps f args : exp =
 
 let apply_closure cl (args: value list) =
   apps (exp_of_v (VClosure cl)) (List.map (fun a -> e_val a) args)
+
+(* Requires that e is of type TTuple *)
+let tupleToList (e : exp) =
+  match e.e with
+  | ETuple es -> es
+  | EVal v ->
+     (match v.v with
+      | VTuple vs ->
+         BatList.map (fun v -> aexp(e_val v, v.vty, v.vspan)) vs
+      | _ -> failwith "Not a tuple type")
+  | _ -> failwith "Not a tuple type"
+
+let tupleToListSafe (e : exp) =
+  match e.e with
+  | ETuple _| EVal _ -> tupleToList e
+  | _ -> [e]
+
 
 let get_decl ds f =
   try

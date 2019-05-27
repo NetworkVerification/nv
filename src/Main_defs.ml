@@ -41,6 +41,8 @@ let partialEvalNet net =
   }
 
 let run_smt file cfg info (net : Syntax.network) fs =
+  if cfg.func then
+    smt_config.encoding <- Functional;
   let net, fs =
     if cfg.unbox then
       begin
