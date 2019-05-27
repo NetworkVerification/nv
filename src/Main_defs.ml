@@ -42,7 +42,7 @@ let partialEvalNet net =
 
 let run_smt file cfg info (net : Syntax.network) fs =
   let net, fs =
-    if cfg.unbox then
+    if cfg.unbox || cfg.hiding then
       begin
         smt_config.unboxing <- true;
         let net, f1 = time_profile "Unbox options" (fun () -> UnboxOptions.unbox_net net) in
