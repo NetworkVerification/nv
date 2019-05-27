@@ -50,7 +50,7 @@ let rec collect_in_exp (exp : Syntax.exp) (acc : maplist) : maplist =
       (* Collect key if necessary *)
       let acc =
         match op, es with
-        (* | MGet, [m; key] *)
+        | MGet, [m; key]
         | MSet, [m; key; _] ->
           add_if_map_type ((oget m.ety), ExpSet.singleton key) acc
         | _ -> acc
