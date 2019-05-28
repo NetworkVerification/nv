@@ -252,9 +252,11 @@ let convert_symbolics
   =
   let convert_symbolic symb v =
     let _, toe =
+      (* Printf.printf "Looking for symbolic %s with symbolics [%s]\n" symb @@
+      BatString.concat ("; ") @@ List.map (fun (s,_) -> Var.to_string s) symbolics; *)
       BatList.find
         (fun (s, _) ->
-             String.equal (Var.name s) symb)
+             String.equal (Var.to_string s) symb)
         symbolics
     in
     let oldty =
