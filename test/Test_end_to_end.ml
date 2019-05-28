@@ -7,15 +7,28 @@ type testfun =
   Console.info ->
   Syntax.network ->
   (Solution.t -> Solution.t) list ->
-  Main_defs.answer * ((Solution.t -> Solution.t) list option)
+  Main_defs.answer * ((Solution.t -> Solution.t) list)
 
 type test = { testname: string; args: string array; testfun: testfun; expected: bool }
 
 (* Expected results should correspond to this function *)
-let bool_of_answer (a : Main_defs.answer * ((Solution.t -> Solution.t) list option)) =
+let bool_of_answer (a : Main_defs.answer * ((Solution.t -> Solution.t) list)) =
+  (* Print the final result to make sure we don't crash in the process,
+     then return a bool *)
+  begin
+    match a with
+    | CounterExample sol, fs -> Solution.print_solution (apply_all sol fs)
+    | Success (Some sol), fs ->
+      Printf.printf "No counterexamples found\n";
+      Solution.print_solution (apply_all sol fs)
+    | Success None, _ ->
+      Printf.printf "No counterexamples found\n"
+  end
+  ;
   match a with
   | Success _, _ -> true
   | CounterExample _,_-> false
+;;
 
 let simulator_test filename expected: test =
   {
