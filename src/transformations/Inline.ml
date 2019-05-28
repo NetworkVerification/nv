@@ -26,7 +26,6 @@ let rec remove_all env p =
   | POption (Some p) -> remove_all env p
   | PRecord _ -> failwith "Found record during Inlining"
 
-
 let rec substitute x e1 e2 =
   match e1.e with
   | EVar y -> if Var.equals x y then e2 else e1
@@ -121,7 +120,7 @@ and inline_exp (env: exp Env.t) (e: exp) : exp =
        (*    Printf.printf "crashes here: %s\n" (Printing.ty_to_string ty)); *)
        (* Printf.printf "crashes here: %s\n" (Printing.exp_to_string e1); *)
        if is_function_ty e1 then
-         inline_exp (Env.update env x e1') e2
+           inline_exp (Env.update env x e1') e2
        else elet x e1' (inline_exp env e2) |> wrap e
   | ETuple es -> etuple (BatList.map (inline_exp env) es) |> wrap e
   | ESome e1 -> esome (inline_exp env e1) |> wrap e

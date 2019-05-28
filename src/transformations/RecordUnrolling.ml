@@ -242,7 +242,7 @@ let rec convert_value
     failwith "convert_value: Cannot convert function value"
   | _ ->
     failwith
-      (Printf.sprintf "convert_value: type (%s) and value (%s) do not match"
+      (Printf.sprintf "convert_value: value (%s) and type (%s) do not match"
          (Printing.value_to_string v) (Printing.ty_to_string original_ty))
 ;;
 
@@ -253,7 +253,8 @@ let convert_symbolics
   let convert_symbolic symb v =
     let _, toe =
       BatList.find
-        (fun (s, _) -> String.equal (Var.to_string s) symb)
+        (fun (s, _) ->
+             String.equal (Var.name s) symb)
         symbolics
     in
     let oldty =

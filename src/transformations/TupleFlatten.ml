@@ -243,18 +243,14 @@ let unflatten_val (v : Syntax.value) (ty : Syntax.ty) =
          failwith "incorrect unflattening, leftover list should be empty")
   | _ -> v
 
-(* TODO: This needs to be done for symbolic variables too, in the SMT encoding as well *)
 let unflatten_sol
       (orig_attr: Syntax.ty)
+      (sym_types: Syntax.ty Collections.StringMap.t)
       (sol : Solution.t) =
-  {sol with
-    labels = AdjGraph.VertexMap.map (fun v ->
-                 (* Printf.printf "%s\n" (Printing.value_to_string v); *)
-                 (* Printf.printf "%s\n" (Printing.ty_to_string orig_attr); *)
-                 let v' = unflatten_val v orig_attr in
-                 (* Printf.printf "%s\n" (Printing.value_to_string v'); *)
-                 v'
-               ) sol.labels
+  { sol with
+    labels = AdjGraph.VertexMap.map (fun v -> unflatten_val v orig_attr) sol.labels;
+    symbolics = Collections.StringMap.mapi (fun x v ->
+                    unflatten_val v (Collections.StringMap.find x sym_types)) sol.symbolics
   }
 
 let flatten_net net =
@@ -289,5 +285,8 @@ let flatten_net net =
     requires = BatList.map (flatten_exp) net.requires;
     graph = net.graph
   }, unflatten_sol net.attr_type
+       (BatList.fold_left (fun acc (x,exp_ty) ->
+            Collections.StringMap.add (Var.name x) (get_ty_from_tyexp exp_ty) acc)
+          Collections.StringMap.empty net.symbolics)
 
 

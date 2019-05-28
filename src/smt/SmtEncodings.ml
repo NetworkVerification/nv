@@ -175,7 +175,6 @@ struct
       in
       let node = avalue (vint (Integer.of_int i), Some Typing.node_ty, Span.default) in
       let emerge_i = Interp.interp_partial_fun emerge [node] in
-      (* Printf.printf "emerge %d:%s\n" i (Printing.exp_to_string emerge_i); *)
       let idx = ref 0 in
       let merged =
         BatList.fold_left
@@ -200,7 +199,6 @@ struct
       let l = lift2 (fun lbl s -> mk_constant env (create_vars env "" lbl) s)
           lbl_iv (ty_to_sorts aty)
       in
-
       ignore(lift2 (fun l merged ->
           add_constraint env (mk_term (mk_eq l.t merged.t))) l merged);
       labelling := AdjGraph.VertexMap.add (Integer.of_int i) l !labelling
@@ -286,9 +284,39 @@ struct
   let node_exp (u: Integer.t) : Syntax.exp =
     aexp(e_val (vint u), Some Typing.node_ty, Span.default)
 
-  let edge_exp (u: Integer.t) (v: Integer.t) : Syntax.exp =
-    aexp(e_val (vtuple [vint u; vint v]),
-         Some Typing.edge_ty, Span.default)
+  let edge_exp (u: Integer.t) (v: Integer.t) : Syntax.exp list =
+    if smt_config.unboxing then
+      [aexp (e_val (vint u), Some Typing.node_ty, Span.default);
+       aexp (e_val (vint v), Some Typing.node_ty, Span.default)]
+    else
+      [aexp(e_val (vtuple [vint u; vint v]),  Some Typing.edge_ty, Span.default)]
+
+  let init_exp einit u =
+    Interp.Full.interp_partial_fun einit [node_exp u] (* |>
+     * Tnf.tnf_exp *)
+
+  (* Reduces the transfer function, maybe a full reduction is not
+     necessary at this point, experiment to see if just reducing based
+     on the edge is better *)
+  let trans_exp etrans u v xs =
+    let args = (edge_exp u v) @ xs in
+    Syntax.apps etrans args
+    (* (Interp.Full.interp_partial_fun etrans args) (\* |> Tnf.tnf_exp *\) *)
+
+  let merge_exp emerge u xs ys =
+    (* let emerge = Interp.interp_partial_opt emerge in *)
+    let args = (node_exp u) :: (xs @ ys) in
+    let e = Syntax.apps emerge args in
+    (* let e = (Interp.Full.interp_partial_fun emerge args) in *)
+    (* Printf.printf "merge after interp:\n%s\n" (Printing.exp_to_string e); *)
+    e
+    (* Tnf.tnf_exp e *)
+
+  let unbox_args e =
+    if smt_config.unboxing then
+      tupleToListSafe e
+    else
+      [e]
 
   (** An alternative SMT encoding, where we build an NV expression for
       each label, partially evaluate it and then encode it *)
@@ -301,27 +329,37 @@ struct
     let nodes = (AdjGraph.num_vertices net.graph) in
     let edges = (AdjGraph.edges net.graph) in
     let aty = net.attr_type in
-    (* Create a map from nodes to smt variables denoting the label of the node*)
+    (* Create a map from nodes to variables and smt variables denoting
+       the label of the node*)
     let labelling =
       AdjGraph.fold_vertices (fun u acc ->
+          (* the string name that corresponds to the label of node u*)
           let lbl_u_name = label_var u in
+          (*create one or more string names depending on boxed/unboxed encoding*)
           let lbl_u = create_strings lbl_u_name aty in
-          let lblt =
-            lift2 (mk_constant env) lbl_u (ty_to_sorts aty) in
-          add_symbolic env (lift1 Var.create lbl_u) (Ty aty);
-          AdjGraph.VertexMap.add u lblt acc)
+          (* create SMT variables *)
+          let lblt = lift2 (mk_constant env) lbl_u (ty_to_sorts aty) in
+          (*create label vars *)
+          let lbl_vars = lift1 Var.create lbl_u in
+          (* declare the label variable as a symbolic variable *)
+          add_symbolic env lbl_vars (Ty aty);
+          AdjGraph.VertexMap.add u (lbl_vars, lblt) acc)
         nodes AdjGraph.VertexMap.empty
     in
-
-    let init_exp u = eapp einit (node_exp u) in
-    let trans_exp u v x = eapp (eapp etrans (edge_exp u v)) x in
-    let merge_exp u x y = eapp (eapp (eapp emerge (node_exp u)) x) y in
-
-    (* map from nodes to incoming messages*)
+    (* Map from nodes to incoming messages*)
     let incoming_messages_map =
       BatList.fold_left (fun acc (u,v) ->
-          let lblu = aexp (evar (label_var u |> Var.create), Some aty, Span.default) in
-          let transuv = trans_exp u v lblu in
+          (* Find the label variables associated with node u*)
+          let varu = fst (AdjGraph.VertexMap.find u labelling) in
+          let lblu =
+            BatList.map (fun v ->
+                (*find the type of each variable *)
+                let tyu = get_ty_from_tyexp (Collections.VarMap.find v env.symbolics) in
+                aexp (evar v, Some tyu, Span.default)) (to_list varu)
+          in
+          (*compute the incoming message through the transfer function *)
+          let transuv = trans_exp etrans u v lblu in
+          (* add them to the incoming messages of node v *)
           AdjGraph.VertexMap.modify_def [] v (fun us -> transuv :: us) acc)
         AdjGraph.VertexMap.empty edges
     in
@@ -330,16 +368,19 @@ struct
     let merged_messages_map =
       AdjGraph.fold_vertices (fun u acc ->
           let messages = AdjGraph.VertexMap.find_default [] u incoming_messages_map in
-          let best = BatList.fold_left (fun accm m -> merge_exp u m accm)
-              (init_exp u) messages
+          let best = BatList.fold_left (fun accm m ->
+                         let m = unbox_args m in
+                         let accm = unbox_args accm in
+                         merge_exp emerge u m accm)
+              (init_exp einit u) messages
           in
           let str = Printf.sprintf "merge-%d" (Integer.to_int u) in
-          let best_smt = Interp.Full.interp_partial best |> encode_exp_z3 str env in
+          let best_eval = Interp.Full.interp_partial best in
+          let best_smt = encode_exp_z3 str env best_eval in
           AdjGraph.VertexMap.add u best_smt acc) nodes AdjGraph.VertexMap.empty
     in
-
     AdjGraph.fold_vertices (fun u () ->
-        let lblu = try AdjGraph.VertexMap.find u labelling
+        let (_,lblu) = try AdjGraph.VertexMap.find u labelling
           with Not_found -> failwith "label variable not found"
         in
         let merged = try AdjGraph.VertexMap.find u merged_messages_map
@@ -355,7 +396,7 @@ struct
       | Some eassert ->
         let all_good = ref (mk_bool true) in
         for i = 0 to Integer.to_int nodes - 1 do
-          let label =
+          let _,label =
             AdjGraph.VertexMap.find (Integer.of_int i) labelling
           in
           let result, x =

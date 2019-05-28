@@ -31,10 +31,6 @@ let get_type_with_label record_types (ferr : string -> 'a) label =
   let has_label map = StringMap.mem label map in
   match List.find_opt has_label record_types with
   | None ->
-     List.iter (
-         fun r ->
-         Printf.printf "---------\n";
-         StringMap.iter (fun k _ -> Printf.printf "%s\n" k) r) record_types;
     let msg =
       Printf.sprintf
         "Label %s does not appear in any declared record type!"

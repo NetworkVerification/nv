@@ -17,7 +17,7 @@ type smt_options =
 
 let smt_config : smt_options =
   { verbose = false;
-    optimize = false;
+    optimize = true;
     encoding = Classic;
     unboxing = false;
     failures = None;
@@ -136,5 +136,9 @@ let assert_var i =
 let node_of_assert_var s =
   Integer.of_string (BatString.chop ~l:7 ~r:7 s)
 
+let symbolic_of_proj_var s =
+  let s1, _ = BatString.split s "-proj" in
+  s1
+  
 let symbolic_var (s: Var.t) =
   Var.name s
