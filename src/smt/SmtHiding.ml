@@ -491,4 +491,7 @@ let solve_hiding info query partial_chan ~full_chan ?(sym_vars=[]) ?(params=[]) 
   let ask_for_nv_model solver =
     ask_for_model query partial_chan info full_env solver renaming net
   in
-  refineModel info smt_config.verbose query partial_chan full_chan ask_for_nv_model partial_solver full_solver hiding_map
+  time_profile_absolute "Solving with hiding"
+    (fun () ->
+       refineModel info smt_config.verbose query partial_chan full_chan ask_for_nv_model partial_solver full_solver hiding_map
+    )
