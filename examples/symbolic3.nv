@@ -1,0 +1,39 @@
+type attribute = option[int]
+
+let nodes = 3
+
+let edges = {
+ 0=1;
+ 0=2;
+}
+
+symbolic fails : (bool,bool)
+
+let merge node x y =
+  match (x,y) with
+  | (None, _) -> y
+  | (_, None) -> x
+  | (Some x, Some y) -> Some (if x < y then x else y)
+
+let trans edge x =
+  match fails with
+  | (fail1, fail2) ->
+  if
+    ((edge = (0,1) || edge = (1,0)) && fail1) ||
+    ((edge = (0,2) || edge = (2,0)) && fail2)
+  then
+    None
+  else
+    match x with
+    | None -> None
+    | Some x -> Some (x + 1)
+
+let init node =
+  match node with
+  | 0 -> Some 0
+  | _ -> None
+
+let assert n x =
+  match x with
+  | None -> false
+  | _ -> true
