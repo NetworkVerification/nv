@@ -75,16 +75,16 @@ let run_smt file cfg info (net : Syntax.network) fs =
   in
   match res with
   | Unsat ->
-     (Success None, None)
+    (Success None, [])
   | Unknown -> Console.error "SMT returned unknown"
   | Sat solution ->
     match solution.assertions with
-    | None -> Success (Some solution), Some fs
+    | None -> Success (Some solution), fs
     | Some m ->
       if AdjGraph.VertexMap.exists (fun _ b -> not b) m then
-        CounterExample solution, Some fs
+        CounterExample solution, fs
       else
-        Success (Some solution), Some fs
+        Success (Some solution), fs
 
 let run_test cfg info net fs =
   let (sol, stats), fs =
@@ -100,8 +100,8 @@ let run_test cfg info net fs =
   print_string [Bold] "Rejected: " ;
   Printf.printf "%d\n" stats.num_rejected ;
   match sol with
-  | None -> (Success None, None)
-  | Some sol -> (CounterExample sol, Some fs)
+  | None -> (Success None, [])
+  | Some sol -> (CounterExample sol, fs)
 
 let run_simulator cfg _ net fs =
   try
@@ -124,12 +124,12 @@ let run_simulator cfg _ net fs =
         print_newline () ;
     );
     match solution.assertions with
-    | None -> Success (Some solution), Some fs
+    | None -> Success (Some solution), fs
     | Some m ->
       if AdjGraph.VertexMap.exists (fun _ b -> not b) m then
-        CounterExample solution, Some fs
+        CounterExample solution, fs
       else
-        Success (Some solution), Some fs
+        Success (Some solution), fs
   with Srp.Require_false ->
     Console.error "required conditions not satisfied"
 
@@ -164,7 +164,7 @@ let compress file info net cfg fs networkOp =
     | Success _, _ ->
       Printf.printf "No counterexamples found\n"
     | (CounterExample sol), fs ->
-      let sol = apply_all sol (oget fs) in
+      let sol = apply_all sol fs in
       let aty = (* if cfg.unbox then
                  *   TupleFlatten.flatten_ty (UnboxOptions.unbox_ty slice.net.attr_type)
                  * else *)

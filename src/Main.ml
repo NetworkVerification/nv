@@ -19,11 +19,10 @@ let main =
   else
     begin
       match networkOp cfg info net fs with
-      | CounterExample sol, Some fs -> print_solution (apply_all sol fs)
-      | CounterExample sol, None -> print_solution sol
+      | CounterExample sol, fs -> print_solution (apply_all sol fs)
       | Success (Some sol), fs ->
          Printf.printf "No counterexamples found\n";
-         print_solution (match fs with None -> sol | Some fs -> apply_all sol fs)
+         print_solution (apply_all sol fs)
       | Success None, _ ->
          Printf.printf "No counterexamples found\n"
     end

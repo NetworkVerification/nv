@@ -7,7 +7,8 @@ let edges = {
  0=2;
 }
 
-symbolic fails : (bool,bool)
+symbolic fail1 = false
+symbolic fail2 : bool
 
 let merge node x y =
   match (x,y) with
@@ -16,8 +17,6 @@ let merge node x y =
   | (Some x, Some y) -> Some (if x < y then x else y)
 
 let trans edge x =
-  match fails with
-  | (fail1, fail2) ->
   if
     ((edge = (0,1) || edge = (1,0)) && fail1) ||
     ((edge = (0,2) || edge = (2,0)) && fail2)
