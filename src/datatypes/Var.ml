@@ -28,8 +28,8 @@ let of_var_string s =
     let v, i = BatString.rsplit s ~by:"~" in
     (v, int_of_string i)
   with
-  | Not_found ->
-    failwith @@ Printf.sprintf "of_var_string: %s has wrong format (no '~')" s
+  | _ ->
+    failwith @@ Printf.sprintf "of_var_string: %s has wrong format" s
 
 let equal (s1, i1) (s2, i2) = s1 = s2 && i1 = i2
 

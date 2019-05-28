@@ -2,7 +2,7 @@ open Collections
 open Generators
 open Syntax
 open Slicing
-   
+
 let default_max_map_size = 4
 
 type check_info =
@@ -64,29 +64,29 @@ let smart_symbolic prog_constants map symb =
   let (x, te) = symb in
   let ty = match te with Exp e -> oget e.ety | Ty ty -> ty in
   let v =
-    match StringMap.Exceptionless.find (Var.to_string x) map with
+    match VarMap.Exceptionless.find x map with
     | None -> random_value prog_constants default_max_map_size ty
     | Some v -> v
   in
   (x, Exp (aexp(e_val v, Some ty, Span.default)))
- 
+
 (* Given a network return a map from its symbolic values to their types *)
 let var_map net =
-  let map = ref StringMap.empty in
+  let map = ref VarMap.empty in
   BatList.iter
     (fun (x,te) ->
       let ty =
         match te with Exp e -> oget e.ety | Ty ty -> ty
       in
-      map := StringMap.add (Var.name x) (x, ty) !map) net.symbolics ;
+      map := VarMap.add x (x, ty) !map) net.symbolics ;
   !map
 
 let add_blocking_require info net map var_map =
   let base = aexp(e_val (avalue (vbool true, Some TBool, Span.default)), Some TBool, Span.default) in
   let e =
-    StringMap.fold
+    VarMap.fold
       (fun x v acc ->
-        let var, ty = StringMap.find x var_map in
+        let var, ty = VarMap.find x var_map in
         let var = aexp(evar var, Some ty, Span.default) in
         let v = aexp(e_val (avalue (v, Some ty, Span.default)), Some ty, Span.default) in
         let eq = aexp(eop UEq [var; v], Some TBool, Span.default) in

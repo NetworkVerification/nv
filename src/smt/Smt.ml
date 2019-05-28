@@ -192,9 +192,9 @@ let solve info query chan ?symbolic_vars ?(params=[]) net =
      | Unknown -> Unknown
      | Sat model1 ->
         refineModel model1 info query chan env solver renaming net
-      
+
 (* For quickcheck smart value generation *)
-let symvar_assign info (net: Syntax.network) : value StringMap.t option =
+let symvar_assign info (net: Syntax.network) : value VarMap.t option =
   let module ExprEnc = (val expr_encoding smt_config) in
   let module Enc =  (val (module ClassicEncoding(ExprEnc) : Encoding)) in
   let env = ExprEnc.init_solver net.symbolics in
@@ -229,6 +229,3 @@ let symvar_assign info (net: Syntax.network) : value StringMap.t option =
      in
      Some model.symbolics
   | _ -> failwith "Unexpected reply from SMT solver"
-
-
-

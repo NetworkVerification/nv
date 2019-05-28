@@ -122,10 +122,11 @@ let node_of_label_var s =
     (BatList.nth (BatString.split_on_char '-' s) 1)
 
 let proj_of_var s =
+  let (name, i) = Var.from_var @@ Var.of_var_string s in
   try
-    let _, s2 = BatString.split s "proj" in
-    Some (int_of_string
-            (BatList.nth (BatString.split_on_char '-' s2) 1))
+    let _, s2 = BatString.split name "-proj-" in
+    let s2 = List.hd @@ BatString.split_on_char '-' s2 in
+    Some (int_of_string s2)
   with Not_found -> None
 
 let assert_var i =
@@ -137,11 +138,12 @@ let node_of_assert_var s =
   Integer.of_string (BatString.chop ~l:7 ~r:7 s)
 
 let symbolic_of_proj_var s =
+  let (name, i) = Var.from_var @@ Var.of_var_string s in
   try
-    let s1, _ = BatString.split s "-proj" in
-    s1
+    let s1, _ = BatString.split name "-proj-" in
+    Var.to_var (s1, i)
   with
-  | Not_found -> s
+  | Not_found -> Var.to_var (name, i)
 
 let symbolic_var (s: Var.t) =
-  Var.name s
+  Var.to_string s

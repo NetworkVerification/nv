@@ -71,8 +71,9 @@ let translate_model (m : (string, string) BatMap.t) : Solution.t =
                               (nvval |> Syntax.bool_of_val |> oget) m)
         }
       | k ->
-        {sol with symbolics= Collections.StringMap.add k nvval sol.symbolics}) m
-    {symbolics = StringMap.empty;
+        let k_var = Var.of_var_string k in
+        {sol with symbolics= VarMap.add k_var nvval sol.symbolics}) m
+    {symbolics = VarMap.empty;
      labels = AdjGraph.VertexMap.empty;
      assertions= None}
 
@@ -111,21 +112,23 @@ let translate_model_unboxed (m : (string, string) BatMap.t) : Solution.t =
               Some (AdjGraph.VertexMap.add (node_of_assert_var k)
                       (nvval |> Syntax.bool_of_val |> oget) m) )
         | k ->
-           (match proj_of_var k with
-            | None ->
-               (Collections.StringMap.add (symbolic_of_proj_var k) [(0,nvval)] symbolics,
-                labels,
-                assertions)
-            | Some i ->
-               (Collections.StringMap.modify_def [] (symbolic_of_proj_var k)
-                  (fun xs -> (i,nvval) :: xs) symbolics,
-                labels,
-                assertions)
-           )) m (StringMap.empty,AdjGraph.VertexMap.empty, None)
-  in
-  { symbolics = Collections.StringMap.map box_vals symbolics;
-    labels = AdjGraph.VertexMap.map box_vals labels;
-    assertions = assertions }
+          ( (* TODO: Make sure I understand how SMT projection vars are named;
+               if I'm wrong, this conversion from string -> Var.t could be wrong *)
+            let k_var = symbolic_of_proj_var k in
+            let new_symbolics =
+              match proj_of_var k with
+              | None ->
+                VarMap.add k_var [(0,nvval)] symbolics
+              | Some i ->
+                VarMap.modify_def [] k_var
+                  (fun xs -> (i,nvval) :: xs) symbolics
+            in
+            new_symbolics, labels, assertions )
+      ) m (VarMap.empty,AdjGraph.VertexMap.empty, None)
+in
+{ symbolics = VarMap.map box_vals symbolics;
+  labels = AdjGraph.VertexMap.map box_vals labels;
+  assertions = assertions }
 
 
 (* Model Refiners *)
@@ -135,18 +138,18 @@ let refineModelMinimizeFailures (model: Solution.t) info query chan
   | EOp(AtMost n, [e1;e2;e3]) ->
     (match e1.e with
      | ETuple es ->
-       Collections.StringMap.iter (fun fvar fval ->
+       VarMap.iter (fun fvar fval ->
            match fval.v with
            | VBool b ->
              if b then
-               Printf.printf "Initial model failed: %s\n" fvar;
+               Printf.printf "Initial model failed: %s\n" (Var.to_string fvar);
            | _ -> failwith "This should be a boolean variable") model.symbolics;
        let mult = smt_config.multiplicities in
        let arg2 =
          aexp(etuple (BatList.map (fun evar ->
              match evar.e with
              | EVar fvar ->
-               let n = Collections.StringMap.find (Var.name fvar)
+               let n = StringMap.find (Var.name fvar)
                    mult in
                (exp_of_value
                   (avalue (vint (Integer.of_int n),
@@ -173,12 +176,15 @@ let refineModelMinimizeFailures (model: Solution.t) info query chan
 let refineModelWithSingles (model : Solution.t) info query chan solve renaming _ ds =
   (* Find and separate the single link failures from the rest *)
   let (failed, notFailed) =
-    Collections.StringMap.fold (fun fvar fval (accFailed, accNotFailed) ->
+    VarMap.fold (fun fvar fval (accFailed, accNotFailed) ->
         match fval.v with
         | VBool b ->
           if b then
             begin
-              let fmult = Collections.StringMap.find fvar smt_config.multiplicities in
+              (* FIXME: I have no idea if Var.name is sufficient here.
+                 A better option is probably to change smt_config.multiplicities
+                 to be a VarMap. *)
+              let fmult = StringMap.find (Var.name fvar) smt_config.multiplicities in
               if fmult > 1 then
                 (accFailed, fvar :: accNotFailed)
               else
@@ -191,12 +197,12 @@ let refineModelWithSingles (model : Solution.t) info query chan solve renaming _
   | [] -> None
   | _ ->
     let failed =
-      BatList.map (fun fvar -> (mk_eq (mk_var fvar) (mk_bool true))
+      BatList.map (fun fvar -> (mk_eq (mk_var (Var.to_string fvar)) (mk_bool true))
                                |> mk_term |> mk_assert |> mk_command) failed
       |> commands_to_smt smt_config.verbose info
     in
     let notFailed =
-      BatList.map (fun fvar -> (mk_eq (mk_var fvar) (mk_bool false))
+      BatList.map (fun fvar -> (mk_eq (mk_var (Var.to_string fvar)) (mk_bool false))
                                |> mk_term |> mk_assert |> mk_command) notFailed
       |> commands_to_smt smt_config.verbose info
     in

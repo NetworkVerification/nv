@@ -94,7 +94,7 @@ struct
        failwith
          (Printf.sprintf "internal error (ty_to_sort): %s"
             (Printing.ty_to_string ty))
-                
+
   (** Translates a [Syntax.ty] to an SMT datatype declaration *)
   let rec ty_to_type_decl (ty: ty) : datatype_decl =
     match ty with
@@ -450,7 +450,7 @@ struct
     in
     BatList.iter (fun (v,e) -> add_symbolic env v e) symbs;
     env
-                 
+
 end
 
 (** * SMT encoding without SMT-datatypes *)
@@ -495,14 +495,14 @@ struct
   let add_symbolic (env : smt_env) (b: Var.t list) (ety: Syntax.ty_or_exp) =
     match ety with
     | Ty ty ->
-       (match ty with 
+       (match ty with
        | TTuple ts ->
           BatList.iter2 (fun b ty ->
               env.symbolics <- VarMap.add b (Ty ty) env.symbolics) b ts
        | _ ->
           env.symbolics <- VarMap.add (BatList.hd b) ety env.symbolics)
     | Exp e ->
-       (match e.e with 
+       (match e.e with
         | ETuple es ->
            BatList.iter2 (fun b e ->
                env.symbolics <- VarMap.add b (Exp e) env.symbolics) b es
@@ -522,7 +522,7 @@ struct
        failwith
          (Printf.sprintf "internal error (ty_to_sort): %s"
             (Printing.ty_to_string ty))
-      
+
   (** Translates a [Syntax.ty] to a list of SMT sorts *)
   let rec ty_to_sorts (ty: ty) : sort list =
     match ty with
@@ -790,5 +790,5 @@ struct
     (* assumes symbs are not of type tuple here *)
     BatList.iter (fun (v,e) -> add_symbolic env [v] e) symbs;
     env
-                 
+
 end

@@ -6,6 +6,12 @@ module StringMap = BatMap.Make (struct
     let compare = String.compare
   end)
 
+module VarMap = BatMap.Make (struct
+    type t = Var.t
+
+    let compare = compare
+  end)
+
 (* It's probably that most of this module is unnecessary.
    These utility functions primarily make sure that everything is
    properly ordered. If we're optimizing, we just need to make

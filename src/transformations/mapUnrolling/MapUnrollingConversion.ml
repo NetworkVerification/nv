@@ -83,13 +83,13 @@ let convert_symbolics
          let oldty = match e with Ty ty -> ty | Exp e -> oget e.ety in
          let newty = unroll_type ty keys oldty in
          if Typing.equiv_tys oldty newty then None
-         else Some (Var.to_string v, oldty))
+         else Some (v, oldty))
       symbolics
   in
   let convert_symbolic var v =
     let symb =
       List.find_opt
-        (fun (var', _) -> String.equal var var')
+        (fun (var', _) -> Var.equal var var')
         symbolics_to_convert
     in
     match symb with
@@ -98,7 +98,7 @@ let convert_symbolics
       convert_value v original_ty
   in
   let new_symbolics =
-    StringMap.mapi convert_symbolic sol.symbolics
+    VarMap.mapi convert_symbolic sol.symbolics
   in
   new_symbolics
 

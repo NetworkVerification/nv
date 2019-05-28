@@ -44,7 +44,7 @@ let rec flatten_val v =
      avalue (vtuple vs', Some (flatten_ty (oget v.vty)), v.vspan)
   | VClosure _ -> failwith "Closures not yet implemented"
   | VRecord _ -> failwith "Record value found during flattening"
-                
+
 let rec flatten_exp e : exp =
   match e.e with
   | ETy (e, ty) -> flatten_exp e
@@ -56,7 +56,7 @@ let rec flatten_exp e : exp =
      let ty = flatten_ty (oget e.ety) in
      (match ty with
       | TTuple ts ->
-         let es = 
+         let es =
            BatList.mapi (fun i ty ->
                aexp(evar (proj_var i x), Some ty, Span.default)) ts
          in
@@ -145,7 +145,7 @@ let rec flatten_exp e : exp =
              Some (flatten_ty (oget e.ety)), e.espan)
     | _ -> failwith "TODO: implement tupple flattening for more map operations")
   | ERecord _ | EProject _ -> failwith "Record expression in flattening"
-        
+
 and flatten_branches bs ty =
   let rec flatten_pattern p ty =
     let ty = get_inner_type ty in
@@ -188,7 +188,7 @@ and flatten_branches bs ty =
     | PRecord _ -> failwith "record pattern in flattening"
   in
   mapBranches (fun (p, e) -> (flatten_pattern p ty, flatten_exp e)) bs
-             
+
 let flatten_decl_single d =
   match d with
   | DLet (x, oty, e) -> DLet (x, Some (flatten_ty (oget oty)), flatten_exp e)
@@ -228,29 +228,29 @@ let rec unflatten_list (vs : Syntax.value list) (ty : Syntax.ty) =
   | TTuple ts ->
      let vs, vleft = BatList.fold_left (fun (vacc, vleft)  ty ->
                          let v, vs' = unflatten_list vleft ty in
-                         (v :: vacc, vs')) ([], vs) ts 
+                         (v :: vacc, vs')) ([], vs) ts
      in
      (vtuple (BatList.rev vs)), vleft
   | _ -> BatList.hd vs, BatList.tl vs
-       
+
 let unflatten_val (v : Syntax.value) (ty : Syntax.ty) =
   match v.v with
   | VTuple vs ->
      (match unflatten_list vs ty with
       | v, [] -> v
       | _, vleft ->
-         Printf.printf "%s" (printList (Printing.value_to_string) vleft "" "\n" "\n"); 
+         Printf.printf "%s" (printList (Printing.value_to_string) vleft "" "\n" "\n");
          failwith "incorrect unflattening, leftover list should be empty")
   | _ -> v
 
 let unflatten_sol
       (orig_attr: Syntax.ty)
-      (sym_types: Syntax.ty Collections.StringMap.t)
+      (sym_types: Syntax.ty VarMap.t)
       (sol : Solution.t) =
   { sol with
     labels = AdjGraph.VertexMap.map (fun v -> unflatten_val v orig_attr) sol.labels;
-    symbolics = Collections.StringMap.mapi (fun x v ->
-                    unflatten_val v (Collections.StringMap.find x sym_types)) sol.symbolics
+    symbolics = VarMap.mapi (fun x v ->
+                    unflatten_val v (VarMap.find x sym_types)) sol.symbolics
   }
 
 let flatten_net net =
@@ -286,7 +286,5 @@ let flatten_net net =
     graph = net.graph
   }, unflatten_sol net.attr_type
        (BatList.fold_left (fun acc (x,exp_ty) ->
-            Collections.StringMap.add (Var.name x) (get_ty_from_tyexp exp_ty) acc)
-          Collections.StringMap.empty net.symbolics)
-
-
+            VarMap.add x (get_ty_from_tyexp exp_ty) acc)
+          VarMap.empty net.symbolics)
