@@ -4,13 +4,24 @@ open Solution
 open SmtLang
 open SmtUtils
 open SmtExprEncodings
+open SolverUtil
 
 (** Emits the code that evaluates the model returned by Z3. *)
 let eval_model (symbolics: Syntax.ty_or_exp VarMap.t)
     (num_nodes: Integer.t)
     (eassert: Syntax.exp option)
-    (renaming: string StringMap.t) : command list =
+    (renaming: string StringMap.t * smt_term StringMap.t) : command list =
+  let renaming, valMap = renaming in
   let var x = "Var:" ^ x in
+  let find_renamed_term str =
+    let renamed = StringMap.find_default str str renaming in
+    let smt_term =
+      match StringMap.Exceptionless.find renamed valMap with
+      | None -> mk_var renamed
+      | Some tmv -> tmv
+    in
+    mk_term smt_term
+  in
   (* Compute eval statements for labels *)
   (* let labels = *)
   (*   AdjGraph.fold_vertices (fun u acc -> *)
@@ -27,7 +38,7 @@ let eval_model (symbolics: Syntax.ty_or_exp VarMap.t)
     | Some _ ->
       AdjGraph.fold_vertices (fun u acc ->
           let assu = (assert_var u) ^ "-result" in
-          let tm = mk_var (StringMap.find_default assu assu renaming) |> mk_term in
+          let tm = find_renamed_term assu in
           let ev = mk_eval tm |> mk_command in
           let ec = mk_echo ("\"" ^ (var assu) ^ "\"")
                    |> mk_command in
@@ -37,11 +48,33 @@ let eval_model (symbolics: Syntax.ty_or_exp VarMap.t)
   let symbols =
     VarMap.fold (fun sv _ acc ->
         let sv = symbolic_var sv in
-        let tm = mk_var (StringMap.find_default sv sv renaming) |> mk_term in
+        let tm = find_renamed_term sv in
         let ev = mk_eval tm |> mk_command in
         let ec = mk_echo ("\"" ^ (var sv) ^ "\"") |> mk_command in
         ec :: ev :: acc) symbolics assertions in
   symbols
+
+let rec parse_model (solver: solver_proc) =
+  let rs = get_reply_until "end_of_model" solver in
+  let rec loop rs model =
+    match rs with
+    | [] -> MODEL model
+    | [v] when v = "end_of_model" ->  MODEL model
+    | vname :: rs when (BatString.starts_with vname "Var:") ->
+      let vname = BatString.lchop ~n:4 vname in
+      let rec grab_vals rs acc =
+        match rs with
+        | [] -> failwith "expected string"
+        | v :: _ when (BatString.starts_with v "Var:") || v = "end_of_model" ->
+          (acc, rs)
+        | v :: rs' ->
+          grab_vals rs' (acc ^ v)
+      in
+      let vval, rs' = grab_vals rs "" in
+      loop rs' (BatMap.add vname vval model)
+    | _ ->
+      failwith "wrong format"
+  in loop rs BatMap.empty
 
 let parse_val (s : string) : Syntax.value =
   let lexbuf = Lexing.from_string s

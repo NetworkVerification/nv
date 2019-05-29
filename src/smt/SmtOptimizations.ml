@@ -111,4 +111,4 @@ let propagate_eqs (env : smt_env) =
             with Not_found ->
               true
           end) env.const_decls;
-  renaming, env
+  (renaming, newValMap), env
