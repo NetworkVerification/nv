@@ -112,23 +112,13 @@ let translate_model_unboxed (m : (string, string) BatMap.t) : Solution.t =
               Some (AdjGraph.VertexMap.add (node_of_assert_var k)
                       (nvval |> Syntax.bool_of_val |> oget) m) )
         | k ->
-          ( (* TODO: Make sure I understand how SMT projection vars are named;
-               if I'm wrong, this conversion from string -> Var.t could be wrong *)
-            let k_var = symbolic_of_proj_var k in
-            let new_symbolics =
-              match proj_of_var k with
-              | None ->
-                VarMap.add k_var [(0,nvval)] symbolics
-              | Some i ->
-                VarMap.modify_def [] k_var
-                  (fun xs -> (i,nvval) :: xs) symbolics
-            in
+          ( let new_symbolics = VarMap.add (Var.of_var_string k) nvval symbolics in
             new_symbolics, labels, assertions )
       ) m (VarMap.empty,AdjGraph.VertexMap.empty, None)
-in
-{ symbolics = VarMap.map box_vals symbolics;
-  labels = AdjGraph.VertexMap.map box_vals labels;
-  assertions = assertions }
+  in
+  { symbolics = symbolics;
+    labels = AdjGraph.VertexMap.map box_vals labels;
+    assertions = assertions }
 
 
 (* Model Refiners *)
