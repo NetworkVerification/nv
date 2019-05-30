@@ -1,18 +1,19 @@
 %{
   open Syntax
   open Unsigned
-        
+
 %}
 
 %token <Integer.t> NUM
 %token <string> ID
-%token TRUE 
+%token TRUE
 %token FALSE
-%token SOME 
+%token UNIT
+%token SOME
 %token NONE
 %token AS
-%token PAIR 
-%token LPAREN 
+%token PAIR
+%token LPAREN
 %token RPAREN
 %token NEG
 
@@ -30,10 +31,11 @@ junk:
 
 value:
     | NUM                               { vint $1 }
-    | LPAREN NEG NUM RPAREN             { vint $3 } 
+    | LPAREN NEG NUM RPAREN             { vint $3 }
     | TRUE				{ vbool true }
     | FALSE				{ vbool false }
     | NONE				{ voption None }
+    | UNIT        { vunit () }
 ;
 
 values:
@@ -41,12 +43,12 @@ values:
     | LPAREN SOME values RPAREN		{ voption (Some $3) }
     | LPAREN AS NONE junk* RPAREN	{ voption None }
     | LPAREN PAIR valuesList RPAREN     { vtuple $3 }
-; 
+;
 
 valuesList:
     | values				{ [$1] }
     | values valuesList			{ $1 :: $2 }
 ;
-	
+
 smtlib:
     | values EOF			{ $1 }

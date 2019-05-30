@@ -12,6 +12,7 @@ let rec random_value ~hints ~max_map_size ty =
     List.nth (ValueSet.elements vs) x
   | _ ->
     match get_inner_type ty with
+    | TUnit -> vunit ()
     | TBool -> vbool (Random.bool ())
     | TInt size ->
       let x = Integer.create_64 ~value:(Random.int64 Int64.max_int) ~size:size in

@@ -29,6 +29,7 @@ let rec unroll_type
   (* print_endline @@  "Unrolling type: " ^ Printing.ty_to_string ty2; *)
   let unroll_type = unroll_type ty keys in
   match (canonicalize_type ty2) with
+  | TUnit
   | TBool
   | TInt _ ->
     ty2
@@ -135,7 +136,7 @@ let rec unroll_exp
                   | _ -> None
                 in
                 (* need expression to pattern function
-                   s.t. k1 -> p1, etc. 
+                   s.t. k1 -> p1, etc.
                  *)
                 let branches = BatList.map2i (fun i pvi ki ->
                                    match pvi with

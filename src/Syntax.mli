@@ -15,6 +15,7 @@ type tyname = Var.t
 type ty =
   | TVar of tyvar ref
   | QVar of tyname
+  | TUnit
   | TBool
   | TInt of bitwidth
   | TArrow of ty * ty
@@ -45,6 +46,7 @@ type op =
 type pattern =
   | PWild
   | PVar of var
+  | PUnit
   | PBool of bool
   | PInt of Integer.t
   | PTuple of pattern list
@@ -56,6 +58,7 @@ module Pat : Map.OrderedType with type t = pattern
 module PatMap : BatMap.S with type key = Pat.t
 
 type v = private
+  | VUnit
   | VBool of bool
   | VInt of Integer.t
   | VMap of mtbdd
@@ -143,6 +146,8 @@ type network =
 
 
 (* Constructors *)
+
+val vunit : unit -> value
 
 val vbool : bool -> value
 
@@ -304,8 +309,8 @@ val show_span: Span.t -> string
 val show_ty: ty -> string
 
 (** [get_ty_from_tyexp t] @return the type wrapped by [Ty] or the type
-   of the expression wrapped by [Exp]. Fails if the expression has no
-   type. *)
+    of the expression wrapped by [Exp]. Fails if the expression has no
+    type. *)
 val get_ty_from_tyexp: ty_or_exp -> ty
 
 val bool_of_val: value -> bool option

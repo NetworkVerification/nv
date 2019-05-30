@@ -28,6 +28,7 @@ and constructor_decl =
   }
 
 and sort =
+  | UnitSort
   | BoolSort
   | IntSort
   | MapSort of sort * sort
@@ -158,6 +159,7 @@ let get_recognizer (constr : constructor_decl) =
 
 let rec sort_to_smt (s : sort) : string =
   match s with
+  | UnitSort -> "Unit"
   | BoolSort -> "Bool"
   | IntSort -> "Int"
   | MapSort (s1, s2) ->

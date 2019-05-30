@@ -117,7 +117,7 @@ exception Invalid_type
 let rec strip_ty ty =
   match ty with
   | TVar {contents= Link t} -> strip_ty t
-  | TBool | TInt _ -> ty
+  | TUnit | TBool | TInt _ -> ty
   | TArrow (t1, t2) -> TArrow (strip_ty t1, strip_ty t2)
   | TTuple ts -> TTuple (BatList.map strip_ty ts)
   | TOption t -> TOption (strip_ty t)
@@ -144,7 +144,7 @@ let occurs tvr ty =
       if_debug ("qvar " ^ Var.to_string q ^ " appears in occ check") ;
       ()
     | TArrow (t1, t2) -> occ tvr t1 ; occ tvr t2
-    | TBool | TInt _ -> ()
+    | TUnit | TBool | TInt _ -> ()
     | TRecord map -> StringMap.iter (fun _ -> occ tvr) map
     | TTuple ts -> BatList.iter (occ tvr) ts
     | TOption t -> occ tvr t
@@ -219,7 +219,7 @@ let generalize ty =
     | TVar {contents= Unbound (name, l)} when l > !current_level ->
       QVar name
     | TVar {contents= Link ty} -> gen ty
-    | TVar _ | TBool | TInt _ -> ty
+    | TVar _ | TUnit | TBool | TInt _ -> ty
     | QVar q ->
       if_debug
         ( "qvar " ^ Var.to_string q
@@ -253,7 +253,7 @@ let inst subst ty =
         if_debug ("found unbound tyvar " ^ Var.to_string name) ;
         try Env.lookup subst name with Env.Unbound_var x ->
           Console.error ("bad instantiation: " ^ Var.to_string x) )
-    | TBool | TInt _ -> ty
+    | TUnit | TBool | TInt _ -> ty
     | TArrow (ty1, ty2) ->
       let ty1 = loop subst ty1 in
       let ty2 = loop subst ty2 in
@@ -301,7 +301,7 @@ let substitute (ty: ty) : ty =
           map := Env.update !map name ty ;
           ty
         | Some ty -> ty )
-    | TVar _ | TBool | TInt _ -> ty
+    | TVar _ | TUnit | TBool | TInt _ -> ty
     | TArrow (ty1, ty2) ->
       TArrow (substitute_aux ty1, substitute_aux ty2)
     | TRecord map -> TRecord (StringMap.map substitute_aux map)
@@ -573,6 +573,7 @@ and infer_value info env (v: Syntax.value) : Syntax.value =
   (* Printf.printf "infer_value: %s\n" (Printing.value_to_string v) ; *)
   let ret =
     match v.v with
+    | VUnit -> tvalue (v, TUnit, v.vspan)
     | VBool b -> tvalue (v, TBool, v.vspan)
     | VInt i -> tvalue (v, tint_of_value i, v.vspan)
     | VMap m -> (
@@ -680,6 +681,9 @@ and infer_pattern i info env e tmatch p =
   match p with
   | PWild -> env
   | PVar x -> Env.update env x tmatch
+  | PUnit ->
+    unify info e tmatch TUnit ;
+    env
   | PBool _ ->
     unify info e tmatch TBool ;
     env
@@ -781,7 +785,7 @@ and valid_pat p = valid_pattern Env.empty p |> ignore
 
 and valid_pattern env p =
   match p with
-  | PWild -> env
+  | PWild | PUnit | PBool _ | PInt _ -> env
   | PVar x -> (
       match Env.lookup_opt env x with
       | None -> Env.update env x ()
@@ -789,7 +793,6 @@ and valid_pattern env p =
         Console.error
           ( "variable " ^ Var.to_string x
             ^ " appears twice in pattern" ) )
-  | PBool _ | PInt _ -> env
   | PTuple ps -> valid_patterns env ps
   | PRecord map ->
     StringMap.fold (fun _ p env -> valid_pattern env p) map env
@@ -805,6 +808,7 @@ let canonicalize_type (ty : ty) : ty =
   let open Collections in
   let rec aux ty map count =
     match ty with
+    | TUnit
     | TBool
     | TInt _ ->
       ty, map, count
@@ -853,7 +857,7 @@ let canonicalize_type (ty : ty) : ty =
       begin
         match !r with
         | Link t -> aux t map count
-        | Unbound _ -> TBool, map, count
+        | Unbound _ -> TUnit, map, count
       end
   in
   let (result, _, _) = aux ty (VarMap.empty) 0 in

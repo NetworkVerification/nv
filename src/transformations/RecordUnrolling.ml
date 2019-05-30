@@ -9,6 +9,7 @@ let canonicalize_type (ty : ty) : ty =
   let open Collections in
   let rec aux ty map count =
     match ty with
+    | TUnit
     | TBool
     | TInt _ ->
       ty, map, count
@@ -72,6 +73,7 @@ let rec unroll_type
   let unroll_type = unroll_type rtys in
   let ty = canonicalize_type ty in
   match ty with
+  | TUnit
   | TBool
   | TInt _
   | QVar _ ->
@@ -93,6 +95,7 @@ let rec unroll_type
 let rec unroll_pattern p =
   match p with
   | PWild
+  | PUnit
   | PInt _
   | PBool _
   | PVar _

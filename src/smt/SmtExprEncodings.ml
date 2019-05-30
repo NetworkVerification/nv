@@ -50,12 +50,14 @@ struct
     match ty with
     | TVar {contents= Link t} -> datatype_name t
     | TTuple ts -> (
-      match ts with
-      | [t] -> datatype_name t
-      | ts ->
-         let len = BatList.length ts in
-         Some (Printf.sprintf "Pair%d" len))
+        match ts with
+        | [] -> failwith "0-element tuples not allowed"
+        | [t] -> failwith "1-element tuples not allowed"
+        | ts ->
+          let len = BatList.length ts in
+          Some (Printf.sprintf "Pair%d" len))
     | TOption ty -> Some "Option"
+    | TUnit -> Some "Unit"
     | _ -> None
 
   (** Returns the SMT name of any type *)
@@ -63,12 +65,14 @@ struct
     match ty with
     | TVar {contents= Link t} -> type_name t
     | TTuple ts -> (
-      match ts with
-      | [t] -> type_name t
-      | ts ->
-         let len = BatList.length ts in
-         Printf.sprintf "Pair%d" len)
+        match ts with
+        | [] -> failwith "0-element tuples not allowed"
+        | [t] -> failwith "1-element tuples not allowed"
+        | ts ->
+          let len = BatList.length ts in
+          Printf.sprintf "Pair%d" len)
     | TOption ty -> "Option"
+    | TUnit -> "Unit"
     | TBool -> "Bool"
     | TInt _ -> "Int"
     | TMap _ -> failwith "no maps yet"
@@ -77,28 +81,33 @@ struct
   let rec ty_to_sort (ty: ty) : sort =
     match ty with
     | TVar {contents= Link t} -> ty_to_sort t
+    | TUnit -> UnitSort
     | TBool -> BoolSort
     | TInt _ -> IntSort
     | TTuple ts -> (
-      match ts with
-      | [t] -> ty_to_sort t
-      | ts ->
-         let name = oget (datatype_name ty) in
-         DataTypeSort (name, BatList.map ty_to_sort ts))
+        match ts with
+        | [t] -> ty_to_sort t
+        | ts ->
+          let name = oget (datatype_name ty) in
+          DataTypeSort (name, BatList.map ty_to_sort ts))
     | TOption ty' ->
-       let name = oget (datatype_name ty) in
-       DataTypeSort (name, [ty_to_sort ty'])
+      let name = oget (datatype_name ty) in
+      DataTypeSort (name, [ty_to_sort ty'])
     | TMap _ -> failwith "unimplemented"
     (*       mk_array_sort ctx (ty_to_sort ctx ty1) (ty_to_sort ctx ty2)*)
     | TVar _ | QVar _ | TArrow _ | TRecord _ ->
-       failwith
-         (Printf.sprintf "internal error (ty_to_sort): %s"
-            (Printing.ty_to_string ty))
+      failwith
+        (Printf.sprintf "internal error (ty_to_sort): %s"
+           (Printing.ty_to_string ty))
 
   (** Translates a [Syntax.ty] to an SMT datatype declaration *)
   let rec ty_to_type_decl (ty: ty) : datatype_decl =
     match ty with
     | TVar {contents= Link t} -> ty_to_type_decl t
+    | TUnit ->
+      let name = datatype_name ty |> oget in
+      let constr = { constr_name = "mkUnit"; constr_args = [] } in
+      { name; params = []; constructors = [constr] }
     | TInt _ | TBool -> failwith "not a datatype"
     | TOption _ ->
       let name = datatype_name ty |> oget in
@@ -144,8 +153,8 @@ struct
 
   let add_symbolic (env : smt_env) (b: Var.t) (ety: Syntax.ty_or_exp) =
     ignore(match ety with
-           | Ty ty -> compute_decl env ty
-           | Exp e -> compute_decl env (oget e.ety));
+        | Ty ty -> compute_decl env ty
+        | Exp e -> compute_decl env (oget e.ety));
     env.symbolics <- VarMap.add b ety env.symbolics
 
   let is_symbolic syms x =
@@ -304,6 +313,9 @@ struct
       let za = mk_constant env local_name (ty_to_sort t) in
       add_constraint env (mk_term (mk_eq za.t zname.t));
       mk_bool true |> mk_term
+    | PUnit, TUnit ->
+      mk_bool true |>
+      mk_term
     | PBool b, TBool ->
       mk_eq zname.t (mk_bool b) |>
       mk_term
@@ -411,6 +423,11 @@ struct
   and encode_value_z3 descr env (v: Syntax.value) =
     (* Printf.printf "value: %s\n" (Printing.value_to_string v) ; *)
     match v.v with
+    | VUnit ->
+      let unit_decl = compute_decl env TUnit in
+      let f = (unit_decl |> oget |> get_constructors |> BatList.hd).constr_name in
+      let e = mk_app (mk_constructor f (ty_to_sort TUnit)) [] in
+      mk_term ~tloc:v.vspan e
     | VBool b ->
       mk_bool b |>
       mk_term ~tloc:v.vspan
@@ -495,23 +512,24 @@ struct
   let add_symbolic (env : smt_env) (b: Var.t list) (ety: Syntax.ty_or_exp) =
     match ety with
     | Ty ty ->
-       (match ty with
+      (match ty with
        | TTuple ts ->
-          BatList.iter2 (fun b ty ->
-              env.symbolics <- VarMap.add b (Ty ty) env.symbolics) b ts
+         BatList.iter2 (fun b ty ->
+             env.symbolics <- VarMap.add b (Ty ty) env.symbolics) b ts
        | _ ->
-          env.symbolics <- VarMap.add (BatList.hd b) ety env.symbolics)
+         env.symbolics <- VarMap.add (BatList.hd b) ety env.symbolics)
     | Exp e ->
-       (match e.e with
-        | ETuple es ->
-           BatList.iter2 (fun b e ->
-               env.symbolics <- VarMap.add b (Exp e) env.symbolics) b es
-        | _ ->
-           env.symbolics <- VarMap.add (BatList.hd b) ety env.symbolics)
+      (match e.e with
+       | ETuple es ->
+         BatList.iter2 (fun b e ->
+             env.symbolics <- VarMap.add b (Exp e) env.symbolics) b es
+       | _ ->
+         env.symbolics <- VarMap.add (BatList.hd b) ety env.symbolics)
 
   let rec ty_to_sort (ty: ty) : sort =
     match ty with
     | TVar {contents= Link t} -> ty_to_sort t
+    | TUnit -> UnitSort
     | TBool -> BoolSort
     | TInt _ -> IntSort
     | TTuple _
@@ -519,15 +537,16 @@ struct
     | TMap _ -> failwith "Not a single sort"
     (*       mk_array_sort ctx (ty_to_sort ctx ty1) (ty_to_sort ctx ty2)*)
     | TVar _ | QVar _ | TArrow _ | TRecord _ ->
-       failwith
-         (Printf.sprintf "internal error (ty_to_sort): %s"
-            (Printing.ty_to_string ty))
+      failwith
+        (Printf.sprintf "internal error (ty_to_sort): %s"
+           (Printing.ty_to_string ty))
 
   (** Translates a [Syntax.ty] to a list of SMT sorts *)
   let rec ty_to_sorts (ty: ty) : sort list =
     match ty with
     | TVar {contents= Link t} ->
       ty_to_sorts t
+    | TUnit -> [UnitSort]
     | TBool -> [BoolSort]
     | TInt _ -> [IntSort]
     | TTuple ts -> (
@@ -542,6 +561,10 @@ struct
       failwith
         (Printf.sprintf "internal error (ty_to_sort): %s"
            (Printing.ty_to_string ty))
+  let unit_decl =
+    let constr = { constr_name = "mkUnit"; constr_args = [] } in
+    { name = "Unit"; params = []; constructors = [constr] }
+  ;;
 
   let create_vars (env: smt_env) descr (x: Syntax.var) =
     let name =
@@ -734,6 +757,8 @@ struct
     match (p, ty) with
     | PWild, _ ->
       [mk_bool true |> mk_term]
+    | PUnit, TUnit ->
+      [mk_bool true |> mk_term]
     | PVar x, t ->
       let local_name = create_vars env descr x in
       let sort = ty_to_sort t in
@@ -768,6 +793,11 @@ struct
 
   and encode_value_z3_single descr env (v: Syntax.value) : term =
     match v.v with
+    | VUnit ->
+      env.type_decls <- StringMap.add "Unit" unit_decl env.type_decls;
+      let f = (unit_decl |> get_constructors |> BatList.hd).constr_name in
+      let e = mk_app (mk_constructor f (ty_to_sort TUnit)) [] in
+      mk_term ~tloc:v.vspan e
     | VBool b ->
       mk_bool b |>
       mk_term ~tloc:v.vspan

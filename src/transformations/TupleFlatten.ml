@@ -5,8 +5,7 @@ open Slicing
 let rec flatten_ty ty =
   match ty with
   | TVar {contents= Link t} -> flatten_ty t
-  | TBool -> ty
-  | TInt _ -> ty
+  | TUnit | TBool | TInt _ -> ty
   | TArrow (t1, t2) ->
     let ty1 = flatten_ty t1 in
     (match ty1 with
@@ -31,7 +30,7 @@ let rec flatten_ty ty =
 
 let rec flatten_val v =
   match v.v with
-  | VBool _ | VInt _ | VMap _ | VOption None -> v
+  | VUnit | VBool _ | VInt _ | VMap _ | VOption None -> v
   | VOption (Some v) ->
     avalue (voption (Some (flatten_val v)), Some (flatten_ty (oget v.vty)), v.vspan)
   | VTuple vs ->
@@ -184,7 +183,7 @@ and flatten_branches bs ty =
             PTuple ps
           | _ -> failwith "must be ttuple")
        | _ -> p)
-    | PBool _ | PInt _ | POption None  -> p
+    | PUnit | PBool _ | PInt _ | POption None  -> p
     | PRecord _ -> failwith "record pattern in flattening"
   in
   mapBranches (fun (p, e) -> (flatten_pattern p ty, flatten_exp e)) bs

@@ -66,6 +66,7 @@ let max_prec = 10
 
 let ty_prec t =
   match t with
+  | TUnit -> 0
   | TVar _ -> 0
   | QVar _ -> 0
   | TBool -> 0
@@ -104,6 +105,7 @@ let rec ty_to_string_p prec t =
     match t with
     | TVar {contents= tv} -> tyvar_to_string tv
     | QVar name -> "{" ^ Var.to_string name ^ "}"
+    | TUnit -> "unit"
     | TBool -> "bool"
     | TInt i -> "int" ^ string_of_int i
     | TArrow (t1, t2) ->
@@ -148,6 +150,7 @@ let rec pattern_to_string pattern =
   match pattern with
   | PWild -> "_"
   | PVar x -> Var.to_string x
+  | PUnit -> "()"
   | PBool true -> "true"
   | PBool false -> "false"
   | PInt i -> Integer.to_string i
@@ -203,6 +206,7 @@ and map_to_string sep_s term_s m =
 
 and value_to_string_p prec v =
   match v.v with
+  | VUnit -> "()"
   | VBool true -> "true"
   | VBool false -> "false"
   | VInt i -> Integer.to_string i
