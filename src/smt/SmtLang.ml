@@ -348,25 +348,3 @@ let rec parse_reply (solver: solver_proc) =
   | Some "unknown" -> UNKNOWN
   | None -> OTHER "EOF"
   | Some r -> print_endline r; parse_reply solver
-
-let rec parse_model (solver: solver_proc) =
-  let rs = get_reply_until "end_of_model" solver in
-  let rec loop rs model =
-    match rs with
-    | [] -> MODEL model
-    | [v] when v = "end_of_model" ->  MODEL model
-    | vname :: rs when (BatString.starts_with vname "Var:") ->
-      let vname = BatString.lchop ~n:4 vname in
-      let rec grab_vals rs acc =
-        match rs with
-        | [] -> failwith "expected string"
-        | v :: _ when (BatString.starts_with v "Var:") || v = "end_of_model" ->
-          (acc, rs)
-        | v :: rs' ->
-          grab_vals rs' (acc ^ v)
-      in
-      let vval, rs' = grab_vals rs "" in
-      loop rs' (BatMap.add vname vval model)
-    | _ ->
-      failwith "wrong format"
-  in loop rs BatMap.empty

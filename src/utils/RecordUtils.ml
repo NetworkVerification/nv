@@ -6,6 +6,12 @@ module StringMap = BatMap.Make (struct
     let compare = String.compare
   end)
 
+module VarMap = BatMap.Make (struct
+    type t = Var.t
+
+    let compare = compare
+  end)
+
 (* It's probably that most of this module is unnecessary.
    These utility functions primarily make sure that everything is
    properly ordered. If we're optimizing, we just need to make
@@ -38,3 +44,11 @@ let get_type_with_label record_types (ferr : string -> 'a) label =
     in
     ferr msg; failwith "Bad Label"
   | Some map -> map
+;;
+
+let print_record f map =
+  Printf.sprintf "{%s}" @@
+  BatString.concat "; " @@
+  List.map (fun (label, v) -> Printf.sprintf "%s:%s" label (f v)) @@
+  StringMap.bindings map
+;;

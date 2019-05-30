@@ -3,7 +3,7 @@ open Unsigned
 open Solution
 open Syntax
 open Slicing
-   
+
 type srp =
   { graph: AdjGraph.t
   ; trans: Syntax.closure
@@ -55,7 +55,7 @@ type info =
     mutable es: (Integer.t * Integer.t) list option
   ; (* edges *)
     mutable init: Syntax.closure option (* initial state *)
-  ; mutable syms: value StringMap.t }
+  ; mutable syms: value VarMap.t }
 
 exception Require_false
 
@@ -68,7 +68,7 @@ let net_to_srp net ~throw_requires =
     ; ns= None
     ; es= None
     ; init= None
-    ; syms= StringMap.empty }
+    ; syms= VarMap.empty }
   in
   (* let if_none opt f msg = *)
   (*   match opt with None -> f () | Some f -> Console.error msg *)
@@ -87,7 +87,7 @@ let net_to_srp net ~throw_requires =
       in
       let v = Interp.interp_exp env e in
       info.env <- Interp.update_value env x v ;
-      info.syms <- StringMap.add (Var.to_string x) v info.syms) Slicing.(net.symbolics);
+      info.syms <- VarMap.add x v info.syms) Slicing.(net.symbolics);
   (* process let definitions *)
   BatList.iter (fun (x, _, e) ->
       let env = info.env in

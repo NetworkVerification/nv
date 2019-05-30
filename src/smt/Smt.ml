@@ -156,7 +156,7 @@ let solve info query chan ?(sym_vars=[]) ?(params=[]) net =
     time_profile "Encoding network"
       (fun () -> let env = Enc.encode_z3 net sym_vars in
         if smt_config.optimize then propagate_eqs env
-        else StringMap.empty, env)
+        else (StringMap.empty, StringMap.empty), env)
   in
   (* compile the encoding to SMT-LIB *)
   let smt_encoding =
@@ -198,7 +198,7 @@ let solve info query chan ?(sym_vars=[]) ?(params=[]) net =
       refineModel model1 info query chan env solver renaming net
 
 (* For quickcheck smart value generation *)
-let symvar_assign info (net: Syntax.network) : value StringMap.t option =
+let symvar_assign info (net: Syntax.network) : value VarMap.t option =
   let module ExprEnc = (val expr_encoding smt_config) in
   let module Enc =  (val (module ClassicEncoding(ExprEnc) : Encoding)) in
   let env = ExprEnc.init_solver net.symbolics in
@@ -214,7 +214,7 @@ let symvar_assign info (net: Syntax.network) : value StringMap.t option =
   | UNSAT  | UNKNOWN -> None
   | SAT ->
     (* build model question *)
-    let model = eval_model env.symbolics (Integer.of_int 0) None StringMap.empty in
+    let model = eval_model env.symbolics (Integer.of_int 0) None (StringMap.empty, StringMap.empty) in
     let model_question = commands_to_smt smt_config.verbose info model in
     ask_solver solver model_question;
     (* get answer *)

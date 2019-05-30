@@ -62,6 +62,7 @@ let run_smt file cfg info (net : Syntax.network) fs =
       end
     else net, fs
   in
+
   let net, f = Renaming.alpha_convert_net net in
   let fs = f :: fs in
   let solve_fun =

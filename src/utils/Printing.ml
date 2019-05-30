@@ -210,7 +210,7 @@ and value_to_string_p prec v =
   | VTuple vs ->
     "(" ^ comma_sep (value_to_string_p max_prec) vs ^ ")"
   | VOption None -> (* Printf.sprintf "None:%s" (ty_to_string (oget v.vty)) *)
-     "None"
+    "None"
   | VOption (Some v) ->
     let s = "Some(" ^ value_to_string_p max_prec v ^ ")" in
     if max_prec > prec then "(" ^ s ^ ")" else s
@@ -238,7 +238,7 @@ and exp_to_string_p prec e =
       ^ exp_to_string_p max_prec e1
       ^ " in \n" ^ exp_to_string_p prec e2
     | ETuple es ->
-       "(" ^ comma_sep (exp_to_string_p max_prec) es ^ ")"
+      "(" ^ comma_sep (exp_to_string_p max_prec) es ^ ")"
     | ESome e -> "Some(" ^ exp_to_string_p prec e ^ ")"
     | EMatch (e1, bs) ->
       "(match "
@@ -321,3 +321,56 @@ let rec declarations_to_string ds =
   | [] -> ""
   | d :: ds ->
     declaration_to_string d ^ "\n" ^ declarations_to_string ds
+
+let network_to_string ?(show_topology=false) (net : Syntax.network) =
+  BatString.concat "" @@
+
+  (** User types **)
+  List.mapi (fun i map ->
+      Printf.sprintf "type record_%d = %s\n" i (RecordUtils.print_record ty_to_string map))
+    net.utys
+  @ ["\n"] @
+  (** Attr type **)
+  [ Printf.sprintf "type attribute = %s\n" (ty_to_string net.attr_type) ]
+  @ ["\n"] @
+  (** Topology -- hide unless specifically requested **)
+  (if not show_topology then [] else
+     [
+       Printf.sprintf "let nodes = %s\n\n" (Integer.to_string @@ AdjGraph.num_vertices net.graph);
+
+       Printf.sprintf "let edges = {%s}\n\n" @@ list_to_string
+         (fun (i, j) ->
+            Printf.sprintf "%s-%s" (Integer.to_string i) (Integer.to_string j))
+         (AdjGraph.edges net.graph);
+     ])
+  @
+  (** Symbolic Variables **)
+  List.map (fun (var, toe) ->
+      Printf.sprintf "symbolic %s %s\n" (Var.to_string var) @@
+      match toe with
+      | Ty ty -> ": " ^ ty_to_string ty
+      | Exp e -> "= " ^ exp_to_string e)
+    net.symbolics
+  @ ["\n"] @
+  (** Requires **)
+  List.map (fun e -> Printf.sprintf "require %s\n" (exp_to_string e)) net.requires
+  @ ["\n"] @
+  (** Additional declarations **)
+  List.map
+    (fun (var, tyo, e) ->
+       Printf.sprintf "let %s%s = %s\n\n"
+         (Var.to_string var)
+         (match tyo with None -> "" | Some ty -> " : " ^ ty_to_string ty)
+         (exp_to_string e))
+    net.defs
+  @
+  [
+    Printf.sprintf "let init = %s\n\n" @@ exp_to_string net.init;
+    Printf.sprintf "let trans = %s\n\n" @@ exp_to_string net.trans;
+    Printf.sprintf "let merge = %s\n\n" @@ exp_to_string net.merge;
+  ]
+  @
+  (match net.assertion with
+   | None -> []
+   | Some e -> [Printf.sprintf "let assert = %s\n\n" @@ exp_to_string e]
+  )

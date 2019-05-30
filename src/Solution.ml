@@ -3,7 +3,7 @@ open ANSITerminal
 open Collections
 
 type t =
-  { symbolics: Syntax.value StringMap.t
+  { symbolics: Syntax.value VarMap.t
   ; labels: Syntax.value VertexMap.t
   ; assertions: bool VertexMap.t option }
 
@@ -11,9 +11,9 @@ let print_solution solution =
   let cfg = Cmdline.get_cfg () in
   print_newline () ;
   if cfg.verbose then (
-    StringMap.iter
+    VarMap.iter
       (fun k v ->
-        Printf.printf "%s:%s\n" k (Printing.value_to_string v) )
+         Printf.printf "%s:%s\n" (Var.name k) (Printing.value_to_string v) )
       solution.symbolics ;
     AdjGraph.VertexMap.iter
       (fun k v ->

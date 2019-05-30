@@ -25,3 +25,5 @@ val env_to_string : env -> string
 val declaration_to_string : declaration -> string
 
 val declarations_to_string : declarations -> string
+
+val network_to_string : ?show_topology:bool -> Syntax.network -> string

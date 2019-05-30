@@ -1,7 +1,6 @@
 open Syntax
 open RecordUtils
 
-
 (* Re-copying that here, to turn Unbound tvars into unbound tvars instead of TBool.
    We do the TBool thing, such that the SMT can handle those values (e.g. unused None).
    In general, I think we shouldn't have unbound Tvars... they should have been generalized
@@ -46,7 +45,7 @@ let canonicalize_type (ty : ty) : ty =
       TMap (t1', t2'), map, count
     | QVar tyname ->
       begin
-        match VarMap.find_opt tyname map with
+        match VarMap.Exceptionless.find tyname map with
         | None ->
           let new_var = Var.to_var ("a", count) in
           ( QVar (new_var),
@@ -252,10 +251,9 @@ let convert_symbolics
   =
   let convert_symbolic symb v =
     let _, toe =
-      BatList.find
-        (fun (s, _) ->
-             String.equal (Var.name s) symb)
-        symbolics
+      (* Printf.printf "Looking for symbolic %s with symbolics [%s]\n" symb @@
+      BatString.concat ("; ") @@ List.map (fun (s,_) -> Var.to_string s) symbolics; *)
+      BatList.find (fun (v, _) -> Var.equal v symb) symbolics
     in
     let oldty =
       match toe with
@@ -265,7 +263,7 @@ let convert_symbolics
     convert_value oldty v
   in
   let new_symbolics =
-    StringMap.mapi convert_symbolic sol.symbolics
+    VarMap.mapi convert_symbolic sol.symbolics
   in
   new_symbolics
 ;;

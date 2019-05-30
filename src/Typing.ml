@@ -94,7 +94,7 @@ let rec check_annot (e: exp) =
      iterBranches (fun (_, e) -> check_annot e) bs
   | ETy (e, _) | EProject (e, _) -> check_annot e
   | ERecord map -> StringMap.iter (fun _ -> check_annot) map
-                 
+
 let check_annot_decl (d: declaration) =
   match d with
   | DLet (_, _, e)
@@ -644,7 +644,7 @@ and infer_values info env vs =
     let vs, ts = infer_values info env vs in
     (v :: vs, t :: ts)
 
-and infer_branches i info env exp tmatch bs =      
+and infer_branches i info env exp tmatch bs =
   match popBranch bs with
   | ((p, e), bs) when isEmptyBranch bs ->
      let env2 = infer_pattern (i + 1) info env exp tmatch p in
@@ -674,7 +674,7 @@ and infer_branches i info env exp tmatch bs =
 (*       let e, t = infer_exp (i + 1) info env2 e |> textract in *)
 (*       infer_branches_aux (i+1) info env exp tmatch bs (addBranch p e emptyBranch) t *)
 (*   with | Not_found -> failwith "internal error (infer branches)" *)
-         
+
 and infer_pattern i info env e tmatch p =
   valid_pat p ;
   match p with
@@ -799,10 +799,10 @@ and valid_pattern env p =
 and valid_patterns env p =
   match p with
   | [] -> env
-  | p :: ps -> valid_patterns (valid_pattern env p) ps            
-   
+  | p :: ps -> valid_patterns (valid_pattern env p) ps
+
 let canonicalize_type (ty : ty) : ty =
-  let open Collections in      
+  let open Collections in
   let rec aux ty map count =
     match ty with
     | TBool
@@ -841,7 +841,7 @@ let canonicalize_type (ty : ty) : ty =
       TMap (t1', t2'), map, count
     | QVar tyname ->
       begin
-        match VarMap.find_opt tyname map with
+        match VarMap.Exceptionless.find tyname map with
         | None ->
            let new_var = Var.to_var ("a", count) in
           ( QVar (new_var),

@@ -1,0 +1,52 @@
+type attribute = dict[int, dict[int, option[int]]]
+
+(* nodes 0-1 are in area 1
+   nodes 1-2 are in area 0 (backbone)
+ *)
+
+let nodes = 3
+let edges = {
+  0=1;
+  1=2;
+}
+
+let area edge = match edge with
+  | (0,1) -> 1
+  | (1,0) -> 1
+  | (1,2) -> 0
+  | (2,1) -> 0
+
+let mapo f o =
+  match o with
+  | None -> None
+  | Some x -> Some (f x)
+
+let mapbetter f o1 o2 =
+  match (o1, o2) with
+  | (None, x) -> x
+  | (x , None) -> x
+  | (Some x, Some y) -> Some (f x y)
+
+let merge node x y =
+  let f = mapbetter (fun x y -> if x < y then x else y) in
+    combine (fun a b -> combine f a b) x y
+
+let trans edge x =
+  let area = area edge in
+  let m = createDict (createDict None) in
+  match area with
+  | 0 ->
+      let db = x[0] in
+        m[0 := map (fun o -> mapo (fun c -> c + 1) o) db]
+  | 1 ->
+      let db = x[1] in
+        m[1 := map (fun o -> mapo (fun c -> c + 1) o) db]
+
+let init node =
+  let m = createDict (createDict None) in
+  match node with
+  | 0 -> let n = createDict None in
+    m[1 := n[3 := Some 0]]
+  | 1 -> m
+  | 2 -> let n = createDict None in
+    m[0 := n[5 := Some 0]]

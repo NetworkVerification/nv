@@ -16,6 +16,9 @@ val from_var : t -> string * int
 
 val to_string : t -> string
 
+(* Inverse of to_string. Do not use for other values. *)
+val of_var_string : string -> t
+
 val equal : t -> t -> bool
 
 (* Alias for equal TODO: Refactor this out*)

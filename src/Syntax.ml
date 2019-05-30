@@ -72,7 +72,7 @@ module Pat =
       | PTuple ps ->
          BatList.for_all (isConcretePat) ps
       | _ -> false
-        
+
     let rec compare p1 p2 =
       match p1, p2 with
       | PInt n1, PInt n2 ->
@@ -188,7 +188,7 @@ type network =
 
 (** * Handling branches *)
 
-type branchLookup = Found of exp | Rest of (pattern * exp) list 
+type branchLookup = Found of exp | Rest of (pattern * exp) list
 (* adding to the right place won't really work.. *)
 let addBranch p e b =
   {b with plist = (p,e) :: b.plist}
@@ -199,7 +199,7 @@ let mapBranches f b =
               let p, e = f (p, e) in
               PatMap.add p e pmap) b.pmap PatMap.empty;
    plist = BatList.map f b.plist}
-  
+
 let iterBranches f b =
   PatMap.iter (fun p e -> f (p,e)) b.pmap;
   BatList.iter f b.plist
@@ -214,7 +214,7 @@ let lookUpPat p b =
      Found e
   | None ->
      Rest b.plist
-         
+
 let popBranch b =
   if PatMap.is_empty b.pmap then
     match b.plist with
@@ -229,7 +229,7 @@ let emptyBranch =
   { pmap = PatMap.empty;
     plist = []
   }
-  
+
 let isEmptyBranch b =
   PatMap.is_empty b.pmap && BatList.is_empty b.plist
 
@@ -381,7 +381,7 @@ and show_env ~show_meta e =
   Printf.sprintf "{ty=%s; value=%s}"
     (Env.to_string show_ty e.ty)
     (Env.to_string (show_value ~show_meta) e.value)
-  
+
 (* equality / hashing *)
 
 let equal_spans (s1: Span.t) (s2: Span.t) =
@@ -693,7 +693,7 @@ and hash_branches ~hash_meta bs =
   in
   PatMap.fold
     (fun p e acc -> acc + hash_pattern p + hash_exp ~hash_meta e) bs.pmap acc1
-  
+
 and hash_pattern p =
   match p with
   | PWild -> 1
@@ -985,7 +985,7 @@ let get_decl ds f =
 
 let get_lets ds =
   BatList.filter_map (fun d -> match d with DLet (x,ty,e) -> Some (x,ty,e) | _ -> None) ds
-          
+
 let get_attr_type ds =
   get_decl ds (fun d -> match d with DATy ty -> Some ty | _ -> None)
 
@@ -1047,6 +1047,11 @@ let bool_of_val (v : value) : bool option =
 let proj_var (n: int) (x: var) =
   let (s,i) = Var.from_var x in
   Var.to_var (Printf.sprintf "%s-proj-%d" s n,i)
+
+let unproj_var (x : var) =
+  let (s,i) = Var.from_var x in
+  let name, n = BatString.split s "-proj-" in
+  (int_of_string n, Var.to_var (name, i))
 
 open BatSet
 
@@ -1171,7 +1176,7 @@ let rec default_exp_value ty =
        default_exp_value t
     | TVar _ | QVar _ | TArrow _ ->
        failwith "internal error (default_value)"
-      
+
 (* Memoization *)
 
 module type MEMOIZER = sig
@@ -1799,7 +1804,7 @@ module BddFunc = struct
       let env, x =
         foldBranches (fun (p,e) (env, x) ->
             let env, cond = eval_branch env bddf p in
-            (env, ite cond (eval env e) x))                       
+            (env, ite cond (eval env e) x))
           (env, x) bs
       in
       x )
@@ -1874,4 +1879,3 @@ module BddFunc = struct
 end
 
 let default_value = BddMap.default_value
-

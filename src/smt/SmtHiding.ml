@@ -101,7 +101,7 @@ let propagate_eqs_for_hiding (env : smt_env) =
             with Not_found ->
               true
           end) env.const_decls;
-  renaming, env
+  (renaming, valMap), env
 ;;
 
 let get_assert_var com =

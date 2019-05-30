@@ -4,9 +4,10 @@ open Slicing
 
 (* Maps fresh names back to the original names *)
 let map_back bmap new_name old_name =
-  bmap := StringMap.add (Var.to_string new_name) (Var.to_string old_name) !bmap
+  bmap := VarMap.add new_name old_name !bmap
 
-let fresh x = Var.fresh (Var.to_string x)
+(* TODO: Make sure this doesn't have to be Var.to_string *)
+let fresh x = Var.fresh (Var.name x)
 
 let rec update_pattern (env: Var.t Env.t) (p: pattern) :
   pattern * Var.t Env.t =
@@ -84,16 +85,16 @@ let alpha_convert_declaration bmap (env: Var.t Env.t)
     let env = Env.update env x y in
     let e = alpha_convert_exp env e in
     (env, DSymbolic (y, Exp e))
-  | DSymbolic (x, Ty ty) ->
-    (* let y = fresh x in *)
-    (* map_back bmap x x ; *)
-    let env = Env.update env x x in
-    (env, DSymbolic (x, Ty ty))
   (* | DSymbolic (x, Ty ty) -> *)
-  (*    let y = fresh x in *)
-  (*    map_back bmap y x ; *)
-  (*    let env = Env.update env x y in *)
-  (*    (env, DSymbolic (y, Ty ty)) *)
+  (* let y = fresh x in *)
+  (* map_back bmap x x ; *)
+  (* let env = Env.update env x x in
+     (env, DSymbolic (x, Ty ty)) *)
+  | DSymbolic (x, Ty ty) ->
+    let y = fresh x in
+    map_back bmap y x ;
+    let env = Env.update env x y in
+    (env, DSymbolic (y, Ty ty))
   | DMerge e -> (env, DMerge (alpha_convert_exp env e))
   | DTrans e -> (env, DTrans (alpha_convert_exp env e))
   | DInit e -> (env, DInit (alpha_convert_exp env e))
@@ -109,40 +110,37 @@ let rec alpha_convert_aux bmap env (ds: declarations) : declarations =
     d' :: alpha_convert_aux bmap env' ds'
 
 let update_symbolics bmap smap =
-  StringMap.fold
+  VarMap.fold
     (fun s v acc ->
-       match StringMap.Exceptionless.find s bmap with
-       | None -> StringMap.add s v acc
-       | Some k -> StringMap.add k v acc )
-    smap StringMap.empty
+       match VarMap.Exceptionless.find s bmap with
+       | None -> VarMap.add s v acc
+       | Some k -> VarMap.add k v acc )
+    smap VarMap.empty
 
 let adjust_solution bmap (s: Solution.t) =
   {s with symbolics= update_symbolics bmap s.symbolics}
 
 let rec alpha_convert_declarations (ds: declarations) =
-  Var.reset () ;
-  let bmap = ref StringMap.empty in
+  (* Var.reset () ; *)
+  let bmap = ref VarMap.empty in
   let prog = alpha_convert_aux bmap Env.empty ds in
   (prog, adjust_solution !bmap)
 
 let alpha_convert_net net =
-  Var.reset () ;
-  let bmap = ref StringMap.empty in
+  (* Var.reset () ; *)
+  let bmap = ref VarMap.empty in
   let env = Env.empty in
   let env, symbolics =
     BatList.fold_right (fun (x, ty_exp) (env, acc) ->
+        let y = fresh x in
+        map_back bmap y x ;
+        let env = Env.update env x y in
         match ty_exp with
         |  Exp e ->
-          let y = fresh x in
-          map_back bmap y x ;
-          let env = Env.update env x y in
           let e = alpha_convert_exp env e in
           (env, (y, Exp e) :: acc)
         | Ty ty ->
-          (* let y = fresh x in
-           * map_back bmap y x ; *)
-          let env = Env.update env x x in
-          (env, (x, Ty ty) :: acc))
+          (env, (y, Ty ty) :: acc))
       net.symbolics (env, [])
   in
   let env, defs =

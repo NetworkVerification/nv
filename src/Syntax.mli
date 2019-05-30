@@ -87,7 +87,7 @@ and e = private
 and exp = private
   {e: e; ety: ty option; espan: Span.t; etag: int; ehkey: int}
 
-and branches 
+and branches
 
 and func = {arg: var; argty: ty option; resty: ty option; body: exp}
 
@@ -141,7 +141,7 @@ type network =
     graph        : AdjGraph.t;
   }
 
-  
+
 (* Constructors *)
 
 val vbool : bool -> value
@@ -241,7 +241,7 @@ val apps : exp -> exp list -> exp
 val apply_closure : closure -> value list -> exp
 
 val get_lets : declarations ->  (var * ty option * exp) list
-  
+
 val get_attr_type : declarations -> ty option
 
 val get_merge : declarations -> exp option
@@ -312,8 +312,10 @@ val bool_of_val: value -> bool option
 
 val proj_var: int -> var -> var
 
+val unproj_var: var -> (int * var)
+
 val default_exp_value: ty -> exp
-  
+
 module type MEMOIZER = sig
   type t
 
