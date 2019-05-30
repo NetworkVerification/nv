@@ -140,7 +140,7 @@ let alpha_convert_net net =
           let e = alpha_convert_exp env e in
           (env, (y, Exp e) :: acc)
         | Ty ty ->
-          (env, (x, Ty ty) :: acc))
+          (env, (y, Ty ty) :: acc))
       net.symbolics (env, [])
   in
   let env, defs =
