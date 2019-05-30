@@ -9,7 +9,7 @@ let unroll info decls =
   let maplist =
     MapUnrollingUtils.collect_map_types_and_keys decls
   in
-  let final_decls, map_back =
+  let unrolled_decls, map_back1 =
     BatList.fold_left
       (fun (decls, f) (mty, keys) ->
          let keys = (Collections.ExpSet.elements keys) in
@@ -18,5 +18,8 @@ let unroll info decls =
          (Typing.infer_declarations info new_decls, (fun x -> f (f' x))))
       (decls, (fun x -> x)) maplist
   in
-  final_decls, map_back
+  let final_decls, map_back2 =
+    MapUnrollingCleanup.replace_declarations unrolled_decls
+  in
+  final_decls, (fun x -> map_back1 (map_back2 x))
 ;;

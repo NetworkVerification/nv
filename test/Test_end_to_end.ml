@@ -92,8 +92,8 @@ let simulator_tests =
 let smt_tests =
   List.map (fun (f,b) -> smt_test f b)
     [
-      (* Currently buggy due to map unrolling resulting in 0- or 1-element tuples *)
-      (* ("examples/debug-combine.nv", true); *)
+      ("examples/debug-combine.nv", true);
+      (* Takes forever? *)
       (* ("examples/batfish.nv", false); *)
       ("examples/diamond.nv", true);
       ("examples/diamond-ospf.nv", true);
