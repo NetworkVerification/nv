@@ -3,6 +3,7 @@ open Batteries
 module StringMap: BatMap.S with type key = string
 module VarMap: BatMap.S with type key = Var.t
 
+val print_record : ('a -> string) -> 'a StringMap.t -> string
 
 (* Returns record entries/labels in their canonical order *)
 val get_record_labels: 'a StringMap.t -> string list

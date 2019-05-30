@@ -44,3 +44,11 @@ let get_type_with_label record_types (ferr : string -> 'a) label =
     in
     ferr msg; failwith "Bad Label"
   | Some map -> map
+;;
+
+let print_record f map =
+  Printf.sprintf "{%s}" @@
+  BatString.concat "; " @@
+  List.map (fun (label, v) -> Printf.sprintf "%s:%s" label (f v)) @@
+  StringMap.bindings map
+;;
