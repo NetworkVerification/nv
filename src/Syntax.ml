@@ -61,6 +61,40 @@ type pattern =
   | PRecord of pattern StringMap.t
 [@@deriving ord, eq]
 
+module Pat =
+  struct
+    type t = pattern
+
+    let rec isConcretePat p =
+      match p with
+      | PInt _ | PBool _ | POption None -> true
+      | POption (Some p) -> isConcretePat p
+      | PTuple ps ->
+         BatList.for_all (isConcretePat) ps
+      | _ -> false
+
+    let rec compare p1 p2 =
+      match p1, p2 with
+      | PInt n1, PInt n2 ->
+         Pervasives.compare n1 n2
+      | PBool b1, PBool b2 ->
+         Pervasives.compare b1 b2
+      | POption p1, POption p2 ->
+         Pervasives.compare p1 p2
+      | PTuple ps1, PTuple ps2 ->
+         BatList.fold_left2 (fun b p1 p2 ->
+             if b = 0 then
+               begin
+                 let c = compare p1 p2 in
+                 if (c = 0) then b
+                 else c
+               end
+             else b) 0 ps1 ps2
+      | _, _ -> failwith "No comparison between non-concrete patterns"
+  end
+
+module PatMap = BatMap.Make(Pat)
+
 type v =
   | VBool of bool
   | VInt of Integer.t
@@ -109,7 +143,9 @@ and exp =
   }
 [@@deriving ord]
 
-and branches = (pattern * exp) list
+and branches = { pmap              : exp PatMap.t;
+                 plist             : (pattern * exp) list
+                }
 
 and func = {arg: var; argty: ty option; resty: ty option; body: exp}
 
@@ -135,6 +171,84 @@ type declaration =
   | DEdges of (Integer.t * Integer.t) list
 
 type declarations = declaration list
+
+type network =
+  { attr_type : ty;
+     init : exp;
+     trans : exp;
+     merge : exp;
+     assertion : exp option;
+     symbolics : (var * ty_or_exp) list;
+     defs : (var * ty option * exp) list;
+     utys : (ty StringMap.t) list;
+     requires : exp list;
+     graph : AdjGraph.t;
+  }
+
+
+(** * Handling branches *)
+
+type branchLookup = Found of exp | Rest of (pattern * exp) list
+(* adding to the right place won't really work.. *)
+let addBranch p e b =
+  {b with plist = (p,e) :: b.plist}
+
+(* f should preserve concrete patterns *)
+let mapBranches f b =
+  {pmap = PatMap.fold (fun p e pmap ->
+              let p, e = f (p, e) in
+              PatMap.add p e pmap) b.pmap PatMap.empty;
+   plist = BatList.map f b.plist}
+
+let iterBranches f b =
+  PatMap.iter (fun p e -> f (p,e)) b.pmap;
+  BatList.iter f b.plist
+
+let foldBranches f acc b =
+  BatList.fold_left (fun acc x -> f x acc)
+    (PatMap.fold (fun p e acc -> f (p,e) acc) b.pmap acc) b.plist
+
+let lookUpPat p b =
+  match PatMap.Exceptionless.find p b.pmap with
+  | Some e ->
+     Found e
+  | None ->
+     Rest b.plist
+
+let popBranch b =
+  if PatMap.is_empty b.pmap then
+    match b.plist with
+    | [] -> raise Not_found
+    | (p,e) :: bs ->
+       (p,e), {b with plist = bs}
+  else
+    let (pe, pmap) = PatMap.pop b.pmap in
+    (pe, {b with pmap = pmap})
+
+let emptyBranch =
+  { pmap = PatMap.empty;
+    plist = []
+  }
+
+let isEmptyBranch b =
+  PatMap.is_empty b.pmap && BatList.is_empty b.plist
+
+let optimizeBranches b =
+  let rec loop map lst =
+    match lst with
+    | [] -> {pmap = map; plist = []}
+    | (p,e) :: lst' when Pat.isConcretePat p = true ->
+       loop (PatMap.add p e map) lst'
+    | (p,e) :: _ when Pat.isConcretePat p = false ->
+       {pmap = map; plist = lst}
+  in
+  loop b.pmap b.plist
+
+let branchToList b =
+  (PatMap.fold (fun p e acc -> (p,e) :: acc) b.pmap b.plist)
+
+let branchSize b =
+  Printf.printf "%d\n" (PatMap.cardinal b.pmap)
 
 (* structural printing *)
 (* TODO: This should probably be its own file *)
@@ -163,7 +277,7 @@ let rec show_ty ty =
       match !tyvar with
       | Unbound (name, _) ->
         Printf.sprintf "TVar (Unbound %s)" (Var.to_string name)
-      | Link t -> show_ty t )
+      | Link t -> Printf.sprintf "Link (%s)" (show_ty t) )
   | QVar name -> Printf.sprintf "QVar (%s)" (Var.to_string name)
   | TBool -> "TBool"
   | TInt _ -> "TInt"
@@ -206,8 +320,8 @@ and show_e ~show_meta e =
   | ETuple es -> Printf.sprintf "ETuple %s" (show_list (show_exp ~show_meta) es)
   | ESome e -> Printf.sprintf "ESome (%s)" (show_exp ~show_meta e)
   | EMatch (e, bs) ->
-    Printf.sprintf "EMatch (%s,%s)" (show_exp ~show_meta e)
-      (show_list (show_branch ~show_meta) bs)
+      Printf.sprintf "EMatch (%s,%s)" (show_exp ~show_meta e)
+        (show_list (show_branch ~show_meta) (branchToList bs))
   | ETy (e, ty) ->
     Printf.sprintf "ETy (%s,%s)" (show_exp ~show_meta e) (show_ty ty)
   | ERecord map ->
@@ -390,13 +504,22 @@ and equal_lists_es ~cmp_meta es1 es2 =
     equal_exps ~cmp_meta e1 e2 && equal_lists_es ~cmp_meta es1 es2
 
 and equal_branches ~cmp_meta bs1 bs2 =
-  match (bs1, bs2) with
-  | [], [] -> true
-  | [], _ | _, [] -> false
-  | (p1, e1) :: bs1, (p2, e2) :: bs2 ->
-    equal_patterns p1 p2
-    && equal_exps ~cmp_meta e1 e2
-    && equal_branches ~cmp_meta bs1 bs2
+  let rec equal_branches_lst bs1 bs2 =
+    match (bs1, bs2) with
+    | [], [] -> true
+    | [], _ | _, [] -> false
+    | (p1, e1) :: bs1, (p2, e2) :: bs2 ->
+       equal_patterns p1 p2
+       && equal_exps ~cmp_meta e1 e2
+       && equal_branches_lst bs1 bs2
+  in
+  let equal_branches_map bs1 bs2 =
+    PatMap.cardinal bs1.pmap = PatMap.cardinal bs2.pmap &&
+      PatMap.for_all (fun p e -> match PatMap.Exceptionless.find p bs2.pmap with
+                                 | None -> false
+                                 | Some e' -> equal_exps ~cmp_meta e e') bs1.pmap
+  in
+  (equal_branches_map bs1 bs2) && (equal_branches_lst bs1.plist bs2.plist)
 
 and equal_patterns p1 p2 =
   match (p1, p2) with
@@ -564,9 +687,12 @@ and hash_es ~hash_meta es =
   List.fold_left (fun acc e -> acc + hash_exp ~hash_meta e) 0 es
 
 and hash_branches ~hash_meta bs =
-  List.fold_left
-    (fun acc (p, e) -> acc + hash_pattern p + hash_exp ~hash_meta e)
-    0 bs
+  let acc1 = BatList.fold_left
+               (fun acc (p, e) -> acc + hash_pattern p + hash_exp ~hash_meta e)
+               0 bs.plist
+  in
+  PatMap.fold
+    (fun p e acc -> acc + hash_pattern p + hash_exp ~hash_meta e) bs.pmap acc1
 
 and hash_pattern p =
   match p with
@@ -640,7 +766,7 @@ let arity op =
   | UEq -> 2
   | ULess _ -> 2
   | ULeq _ -> 2
-  | AtMost _ -> 2
+  | AtMost _ -> 3
   | MCreate -> 1
   | MGet -> 2
   | MSet -> 3
@@ -672,7 +798,7 @@ let wrap exp e = {e with ety= exp.ety; espan= exp.espan}
 
 (* Constructors *)
 
-let vbool b = value (VBool b)
+let vbool b = {(value (VBool b)) with vty = Some TBool}
 
 let vint i = value (VInt i)
 
@@ -712,18 +838,33 @@ let ematch e bs = exp (EMatch (e, bs))
 
 let ety e ty = exp (ETy (e, ty))
 
+let deconstructFun exp =
+  match exp.e with
+  | EFun f ->
+     f
+  | _ -> failwith "expected a function"
+
 let rec is_value e =
   match e.e with
   | EVal _ -> true
-  | ETuple es -> List.for_all is_value es
+  | ETuple es -> BatList.for_all is_value es
   | ESome e -> is_value e
-  | _ -> false
+  | ETy (e, _) -> is_value e
+  | EVar _
+  | EOp _
+  | EFun _
+  | EApp _
+  | EIf _
+  | ELet _
+  | EMatch _ ->
+    false
 
 let rec to_value e =
   match e.e with
   | EVal v -> v
+  | ETy (e, _) -> to_value e
   | ETuple es ->
-    avalue (vtuple (List.map to_value es), e.ety, e.espan)
+    avalue (vtuple (BatList.map to_value es), e.ety, e.espan)
   | ESome e1 -> avalue (voption (Some (to_value e1)), e.ety, e.espan)
   | _ -> failwith "internal error (to_value)"
 
@@ -736,7 +877,7 @@ let rec exp_of_value v =
     let e = e_val v in
     {e with ety= v.vty; espan=v.vspan}
   | VTuple vs ->
-    let e = etuple (List.map exp_of_value vs) in
+    let e = etuple (BatList.map exp_of_value vs) in
     {e with ety= v.vty; espan=v.vspan}
   | VRecord map ->
     let e = erecord (StringMap.map exp_of_value map) in
@@ -744,6 +885,34 @@ let rec exp_of_value v =
   | VOption (Some v1) ->
     let e = esome (exp_of_value v1) in
     {e with ety= v.vty; espan=v.vspan}
+
+let rec val_to_pattern v =
+  match v.v with
+  | VBool b -> PBool b
+  | VInt i -> PInt i
+  | VTuple vs -> PTuple (BatList.map val_to_pattern vs)
+  | VOption None -> POption None
+  | VOption (Some v) -> POption (Some (val_to_pattern v))
+  | VRecord rs -> PRecord (StringMap.map val_to_pattern rs)
+  | VClosure _ | VMap _ -> failwith "can't use these type of values as patterns"
+
+let rec exp_to_pattern e =
+  match e.e with
+  | EVal v ->
+     val_to_pattern v
+  | ETuple es -> PTuple (BatList.map exp_to_pattern es)
+  | ESome e -> POption (Some (exp_to_pattern e))
+  | ETy (e, _) -> exp_to_pattern e
+  | EVar x -> PVar x
+  | ERecord rs -> PRecord (StringMap.map exp_to_pattern rs)
+  | EProject _
+  | EOp _
+  | EFun _
+  | EApp _
+  | EIf _
+  | ELet _
+  | EMatch _ ->
+    failwith "can't use these expressions as patterns"
 
 let func x body = {arg= x; argty= None; resty= None; body}
 
@@ -787,6 +956,23 @@ let rec apps f args : exp =
 let apply_closure cl (args: value list) =
   apps (exp_of_v (VClosure cl)) (List.map (fun a -> e_val a) args)
 
+(* Requires that e is of type TTuple *)
+let tupleToList (e : exp) =
+  match e.e with
+  | ETuple es -> es
+  | EVal v ->
+     (match v.v with
+      | VTuple vs ->
+         BatList.map (fun v -> aexp(e_val v, v.vty, v.vspan)) vs
+      | _ -> failwith "Not a tuple type")
+  | _ -> failwith "Not a tuple type"
+
+let tupleToListSafe (e : exp) =
+  match e.e with
+  | ETuple _| EVal _ -> tupleToList e
+  | _ -> [e]
+
+
 let get_decl ds f =
   try
     let daty : declaration =
@@ -796,6 +982,9 @@ let get_decl ds f =
     in
     f daty
   with _ -> None
+
+let get_lets ds =
+  BatList.filter_map (fun d -> match d with DLet (x,ty,e) -> Some (x,ty,e) | _ -> None) ds
 
 let get_attr_type ds =
   get_decl ds (fun d -> match d with DATy ty -> Some ty | _ -> None)
@@ -855,6 +1044,15 @@ let bool_of_val (v : value) : bool option =
   | VBool b -> Some b
   | _ -> None
 
+let proj_var (n: int) (x: var) =
+  let (s,i) = Var.from_var x in
+  Var.to_var (Printf.sprintf "%s-proj-%d" s n,i)
+
+let unproj_var (x : var) =
+  let (s,i) = Var.from_var x in
+  let name, n = BatString.split s "-proj-" in
+  (int_of_string n, Var.to_var (name, i))
+
 open BatSet
 
 let rec free (seen: Var.t PSet.t) (e: exp) : Var.t PSet.t =
@@ -883,13 +1081,21 @@ let rec free (seen: Var.t PSet.t) (e: exp) : Var.t PSet.t =
     PSet.union (free seen e1) (free seen e2)
   | ESome e | ETy (e, _) | EProject (e, _) -> free seen e
   | EMatch (e, bs) ->
-    let bs =
-      List.fold_left
-        (fun set (p, e) ->
+     let bs1 =
+       PatMap.fold
+         (fun p e set ->
            let seen = PSet.union seen (pattern_vars p) in
            PSet.union set (free seen e) )
-        (PSet.create Var.compare)
-        bs
+         bs.pmap
+         (PSet.create Var.compare)
+     in
+     let bs =
+       BatList.fold_left
+         (fun set (p, e) ->
+           let seen = PSet.union seen (pattern_vars p) in
+           PSet.union set (free seen e) )
+         bs1
+       bs.plist
     in
     PSet.union (free seen e) bs
 
@@ -944,9 +1150,33 @@ let rec free_dead_vars (e : exp) =
     erecord (StringMap.map free_dead_vars map)
   | ESome e -> esome (free_dead_vars e)
   | EMatch (e1, branches) ->
-    let e1 = free_dead_vars e1 in
-    ematch e1 (List.map (fun (ps, e) -> (ps, free_dead_vars e)) branches)
+     let e1 = free_dead_vars e1 in
+     ematch e1
+       (mapBranches (fun (ps, e) -> (ps, free_dead_vars e)) branches)
   | EProject (e, l) -> eproject (free_dead_vars e) l
+
+
+(* This is used because for SMT we represent maps as map expression
+   and not values, and we want some type of default value for them as
+   well *)
+let rec default_exp_value ty =
+    match ty with
+    | TBool -> exp_of_value (avalue (vbool false, Some ty, Span.default))
+    | TInt size ->
+       exp_of_value (avalue (vint (Integer.create ~value:0 ~size:size), Some ty, Span.default))
+    | TTuple ts ->
+       aexp (etuple (BatList.map default_exp_value ts), Some ty, Span.default)
+    | TRecord map -> aexp (etuple (BatList.map default_exp_value @@ get_record_entries map),
+                           Some ty, Span.default)
+    | TOption _ ->
+       exp_of_value (avalue (voption None, Some ty, Span.default))
+    | TMap (ty1, ty2) ->
+       aexp(eop MCreate [default_exp_value ty2], Some ty, Span.default)
+    | TVar {contents= Link t} ->
+       default_exp_value t
+    | TVar _ | QVar _ | TArrow _ ->
+       failwith "internal error (default_value)"
+
 (* Memoization *)
 
 module type MEMOIZER = sig
@@ -1073,19 +1303,22 @@ module BddMap = struct
     (Mtbdd.cst B.mgr B.tbl v, ty)
 
   let rec default_value ty =
-    let v =
-      match ty with
-      | TBool -> VBool false
-      | TInt size -> VInt (Integer.create ~value:0 ~size:size)
-      | TTuple ts -> VTuple (List.map default_value ts)
-      | TRecord map -> VTuple (List.map default_value @@ get_record_entries map)
-      | TOption ty -> VOption None
-      | TMap (ty1, ty2) ->
-        VMap (create ~key_ty:ty1 (default_value ty2))
-      | TVar _ | QVar _ | TArrow _ ->
-        failwith "internal error (default_value)"
-    in
-    value v
+    match ty with
+    | TBool -> avalue (vbool false, Some ty, Span.default)
+    | TInt size ->
+       avalue (vint (Integer.create ~value:0 ~size:size), Some ty, Span.default)
+    | TRecord map -> avalue (vtuple (BatList.map default_value @@ get_record_entries map),
+                             Some ty, Span.default)
+    | TTuple ts ->
+       avalue (vtuple (BatList.map default_value ts), Some ty, Span.default)
+    | TOption _ ->
+       avalue (voption None, Some ty, Span.default)
+    | TMap (ty1, ty2) ->
+       avalue (vmap (create ~key_ty:ty1 (default_value ty2)), Some ty, Span.default)
+    | TVar {contents= Link t} ->
+       default_value t
+    | TVar _ | QVar _ | TArrow _ ->
+       failwith "internal error (default_value)"
 
   let value_to_bdd (v: value) : Bdd.vt =
     let rec aux v idx =
@@ -1347,7 +1580,7 @@ module BddMap = struct
                   br1 && Vdd.is_cst right
                   && equal_values ~cmp_meta:false
                     (Mtbdd.get (Vdd.dval right))
-                    vr1
+                     vr1
                 then Some right
                 else None
           in
@@ -1546,7 +1779,7 @@ module BddFunc = struct
         | ULess _, [e1; e2] -> lt (eval env e1) (eval env e2)
         | ULeq _, [e1; e2] -> leq (eval env e1) (eval env e2)
         | USub _, [e1; e2] -> failwith "subtraction not implemented"
-        | _ -> failwith "internal error 2 (eval)" )
+        | _ -> failwith "unimplemented" )
     | EIf (e1, e2, e3) -> (
         let v1 = eval env e1 in
         let v2 = eval env e2 in
@@ -1555,6 +1788,7 @@ module BddFunc = struct
         | BBool b -> ite b v2 v3
         | _ -> failwith "internal error (eval)" )
     | ELet (x, e1, e2) ->
+       (* Printf.printf "ELet e1: %s\n" (show_exp ~show_meta:false e1); *)
       let v1 = eval env e1 in
       eval (Env.update env x v1) e2
     | ETuple es ->
@@ -1562,19 +1796,18 @@ module BddFunc = struct
       BTuple vs
     | ESome e -> BOption (Bdd.dtrue B.mgr, eval env e)
     | EMatch (e1, branches) -> (
-        let bddf = eval env e1 in
-        match branches with
-        | [] -> failwith "impossible"
-        | (p, e) :: bs ->
-          let x = eval env e in
-          let _, x =
-            List.fold_left
-              (fun (env, x) (p, e) ->
-                 let env, cond = eval_branch env bddf p in
-                 (env, ite cond (eval env e) x) )
-              (env, x) bs
-          in
-          x )
+      Printf.printf "Ematch e1: %s\n" (show_exp ~show_meta:false e1);
+      let bddf = eval env e1 in
+      let ((p,e), bs) = popBranch branches in
+      let env, _ = eval_branch env bddf p in
+      let x = eval env e in
+      let env, x =
+        foldBranches (fun (p,e) (env, x) ->
+            let env, cond = eval_branch env bddf p in
+            (env, ite cond (eval env e) x))
+          (env, x) bs
+      in
+      x )
     | EFun _ | EApp _ | ERecord _ | EProject _ -> failwith "internal error (eval)"
 
   and eval_branch env bddf p : t Env.t * Bdd.vt =

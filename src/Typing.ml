@@ -61,10 +61,10 @@ let rec check_annot_val (v: value) =
     | Some _ -> () ) ;
   match v.v with
   | VOption (Some v) -> check_annot_val v
-  | VTuple vs -> List.iter check_annot_val vs
+  | VTuple vs -> BatList.iter check_annot_val vs
   | VMap map ->
     let bs, _ = BddMap.bindings map in
-    List.iter
+    BatList.iter
       (fun (v1, v2) -> check_annot_val v1 ; check_annot_val v2)
       bs
   | _ -> ()
@@ -81,17 +81,17 @@ let rec check_annot (e: exp) =
   match e.e with
   | EVar _ -> ()
   | EVal v -> check_annot_val v
-  | EOp (op, es) -> List.iter check_annot es
+  | EOp (op, es) -> BatList.iter check_annot es
   | EFun f -> check_annot f.body
   | EApp (e1, e2) -> check_annot e1 ; check_annot e2
   | EIf (e1, e2, e3) ->
     check_annot e1 ; check_annot e2 ; check_annot e3
   | ELet (_, e1, e2) -> check_annot e1 ; check_annot e2
-  | ETuple es -> List.iter check_annot es
+  | ETuple es -> BatList.iter check_annot es
   | ESome e -> check_annot e
   | EMatch (e, bs) ->
-    check_annot e ;
-    List.iter (fun (_, e) -> check_annot e) bs
+     check_annot e ;
+     iterBranches (fun (_, e) -> check_annot e) bs
   | ETy (e, _) | EProject (e, _) -> check_annot e
   | ERecord map -> StringMap.iter (fun _ -> check_annot) map
 
@@ -119,7 +119,7 @@ let rec strip_ty ty =
   | TVar {contents= Link t} -> strip_ty t
   | TBool | TInt _ -> ty
   | TArrow (t1, t2) -> TArrow (strip_ty t1, strip_ty t2)
-  | TTuple ts -> TTuple (List.map strip_ty ts)
+  | TTuple ts -> TTuple (BatList.map strip_ty ts)
   | TOption t -> TOption (strip_ty t)
   | TMap (ty1, ty2) -> TMap (strip_ty ty1, strip_ty ty2)
   | TRecord map -> TRecord (StringMap.map strip_ty map)
@@ -145,8 +145,8 @@ let occurs tvr ty =
       ()
     | TArrow (t1, t2) -> occ tvr t1 ; occ tvr t2
     | TBool | TInt _ -> ()
-    | TTuple ts -> List.iter (occ tvr) ts
     | TRecord map -> StringMap.iter (fun _ -> occ tvr) map
+    | TTuple ts -> BatList.iter (occ tvr) ts
     | TOption t -> occ tvr t
     | TMap (t1, t2) -> occ tvr t1 ; occ tvr t2
   in
@@ -186,7 +186,7 @@ let rec unify info e t1 t2 : unit =
       | TRecord map1, TRecord map2 ->
         if not (same_labels map1 map2)
         then false
-        else List.fold_left
+        else BatList.fold_left
             (fun b l -> b &&
                         try_unify
                           (StringMap.find l map1)
@@ -229,8 +229,8 @@ let generalize ty =
       let ty1 = gen ty1 in
       let ty2 = gen ty2 in
       TArrow (ty1, ty2)
-    | TTuple ts -> TTuple (List.map gen ts)
     | TRecord map -> TRecord (StringMap.map gen map)
+    | TTuple ts -> TTuple (BatList.map gen ts)
     | TOption t ->
       let ty = gen t in
       TOption ty
@@ -286,8 +286,8 @@ let inst_schema (names, ty) =
     let tv = fresh_tyvar () in
     Env.update env name tv
   in
-  let subst = List.fold_left add_name Env.empty names in
-  let tys = List.map (fun name -> Env.lookup subst name) names in
+  let subst = BatList.fold_left add_name Env.empty names in
+  let tys = BatList.map (fun name -> Env.lookup subst name) names in
   (inst subst ty, tys)
 
 let substitute (ty: ty) : ty =
@@ -304,8 +304,8 @@ let substitute (ty: ty) : ty =
     | TVar _ | TBool | TInt _ -> ty
     | TArrow (ty1, ty2) ->
       TArrow (substitute_aux ty1, substitute_aux ty2)
-    | TTuple ts -> TTuple (List.map substitute_aux ts)
     | TRecord map -> TRecord (StringMap.map substitute_aux map)
+    | TTuple ts -> TTuple (BatList.map substitute_aux ts)
     | TOption t -> TOption (substitute_aux t)
     | TMap (ty1, ty2) -> TMap (substitute_aux ty1, substitute_aux ty2)
   in
@@ -321,7 +321,10 @@ let op_typ op =
   | USub size -> ([tint_of_size size; tint_of_size size], tint_of_size size)
   | ULess size-> ([tint_of_size size; tint_of_size size], TBool)
   | ULeq size -> ([tint_of_size size; tint_of_size size], TBool)
-  | AtMost n -> ([TTuple (List.init n (fun _ -> TBool)); (TInt 32)], TBool)
+  | AtMost n ->
+     ([TTuple (BatList.init n (fun _ -> TBool));
+       TTuple (BatList.init n (fun _ -> TInt 32));
+        (TInt 32)], TBool)
   (* Map operations *)
   | MCreate | MGet | MSet | MMap | MMerge | MMapFilter | UEq ->
     failwith "internal error (op_typ)"
@@ -341,8 +344,8 @@ let rec infer_exp i info env (e: exp) : exp =
     | EVar x -> (
         match Env.lookup_opt env x with
         | None ->
-          (* Console.error_position info e.espan *)
-          failwith ("unbound variable " ^ Var.to_string x)
+          Console.error_position info e.espan
+          (* failwith *) ("unbound variable " ^ Var.to_string x)
         | Some t -> texp (e, substitute t, e.espan) )
     | EVal v ->
       let v, t = infer_value info env v |> textractv in
@@ -537,12 +540,12 @@ let rec infer_exp i info env (e: exp) : exp =
     | ESome e ->
       let e, t = infer_exp (i + 1) info env e |> textract in
       texp (esome e, TOption t, e.espan)
-    | EMatch (e, branches) ->
-      let e, tmatch = infer_exp (i + 1) info env e |> textract in
+    | EMatch (e1, branches) ->
+      let e1, tmatch = infer_exp (i + 1) info env e1 |> textract in
       let branches, t =
-        infer_branches (i + 1) info env e tmatch branches
+        infer_branches (i + 1) info env e1 tmatch branches
       in
-      texp (ematch e branches, t, e.espan)
+      texp (ematch e1 branches, t, e1.espan)
     | ETy (e, t) ->
       let e, t1 = infer_exp (i + 1) info env e |> textract in
       unify info e t t1 ;
@@ -594,7 +597,7 @@ and infer_value info env (v: Syntax.value) : Syntax.value =
           let vv, vvty = infer_value info env vv |> textractv in
           unify info (exp_of_value v) vvty dty ;
           let vs =
-            List.map
+            BatList.map
               (fun (kv2, vv2) ->
                  let kv2, kvty2 =
                    infer_value info env kv2 |> textractv
@@ -642,20 +645,35 @@ and infer_values info env vs =
     (v :: vs, t :: ts)
 
 and infer_branches i info env exp tmatch bs =
-  match bs with
-  | [] -> failwith "internal error (infer branches)"
-  | [(p, e)] ->
-    let env2 = infer_pattern (i + 1) info env exp tmatch p in
-    let e, t = infer_exp (i + 1) info env2 e |> textract in
-    ([(p, e)], t)
-  | (p, e) :: bs ->
+  match popBranch bs with
+  | ((p, e), bs) when isEmptyBranch bs ->
+     let env2 = infer_pattern (i + 1) info env exp tmatch p in
+     let e, t = infer_exp (i + 1) info env2 e |> textract in
+     (addBranch p e emptyBranch, t)
+  | ((p, e), bs) ->
     let bs, tbranch =
       infer_branches (i + 1) info env exp tmatch bs
     in
     let env2 = infer_pattern (i + 1) info env exp tmatch p in
     let e, t = infer_exp (i + 1) info env2 e |> textract in
     unify info e t tbranch ;
-    ((p, e) :: bs, t)
+    (addBranch p e bs, t)
+
+(* and infer_branches i info env exp tmatch bs = *)
+(*   let rec infer_branches_aux i info env exp tmatch bs accbs accty = *)
+(*     try let ((p,e), bs) = popBranch bs in *)
+(*         let env2 = infer_pattern (i + 1) info env exp tmatch p in *)
+(*         let e, t = infer_exp (i + 1) info env2 e |> textract in *)
+(*         unify info e t accty ; *)
+(*         infer_branches_aux (i+1) info env exp tmatch bs (addBranch p e accbs) t *)
+(*     with *)
+(*     | Not_found -> (accbs, accty) *)
+(*   in *)
+(*   try let ((p, e), bs) = popBranch bs in *)
+(*       let env2 = infer_pattern (i + 1) info env exp tmatch p in *)
+(*       let e, t = infer_exp (i + 1) info env2 e |> textract in *)
+(*       infer_branches_aux (i+1) info env exp tmatch bs (addBranch p e emptyBranch) t *)
+(*   with | Not_found -> failwith "internal error (infer branches)" *)
 
 and infer_pattern i info env e tmatch p =
   valid_pat p ;
@@ -669,7 +687,7 @@ and infer_pattern i info env e tmatch p =
     unify info e tmatch (tint_of_value i);
     env
   | PTuple ps ->
-    let ts = List.map (fun p -> fresh_tyvar ()) ps in
+    let ts = BatList.map (fun p -> fresh_tyvar ()) ps in
     let ty = TTuple ts in
     unify info e tmatch ty ;
     infer_patterns (i + 1) info env e ts ps
@@ -783,14 +801,8 @@ and valid_patterns env p =
   | [] -> env
   | p :: ps -> valid_patterns (valid_pattern env p) ps
 
-(* Convert ty into a canonical form for easy comparison.
-   * Unbound TVars are converted to TBool
-   * Linked TVars are converted to the linked type
-   * QVars are renamed deterministically *)
 let canonicalize_type (ty : ty) : ty =
   let open Collections in
-  (* Keep a map to track which QVars have been renamed to what
-     Keep a counter for making fresh variable names manually *)
   let rec aux ty map count =
     match ty with
     | TBool
@@ -802,27 +814,24 @@ let canonicalize_type (ty : ty) : ty =
       TArrow (t1', t2'), map, count
     | TTuple (tys) ->
       let tys', map, count =
-        List.fold_left
+        BatList.fold_left
           (fun (lst, map, count) t ->
              let t', map, count = aux t map count in
-             lst @ [t'], map, count
+             t' :: lst, map, count
           )
           ([], map, count) tys
       in
-      TTuple (tys'), map, count
+      TTuple (BatList.rev tys'), map, count
     | TRecord (tmap) ->
-      let tlist =
-        List.combine (get_record_labels tmap) (get_record_entries tmap)
-      in
       let tmap', map, count =
-        List.fold_left
-          (fun (tmap, map, count) (l,t) ->
+        List.fold_left2
+          (fun (tmap, map, count) l t ->
              let t', map, count = aux t map count in
              StringMap.add l t' tmap, map, count
           )
-          (StringMap.empty, map, count) tlist
+          (StringMap.empty, map, count) (get_record_labels tmap) (get_record_entries tmap)
       in
-      TRecord (tmap'), map, count
+      TRecord tmap', map, count
     | TOption t ->
       let t', map, count = aux t map count in
       TOption (t'), map, count
@@ -832,9 +841,9 @@ let canonicalize_type (ty : ty) : ty =
       TMap (t1', t2'), map, count
     | QVar tyname ->
       begin
-        match VarMap.find_opt tyname map with
+        match VarMap.Exceptionless.find tyname map with
         | None ->
-          let new_var = Var.to_var ("a", count) in
+           let new_var = Var.to_var ("a", count) in
           ( QVar (new_var),
             (VarMap.add tyname new_var map),
             count + 1)
@@ -849,7 +858,6 @@ let canonicalize_type (ty : ty) : ty =
   in
   let (result, _, _) = aux ty (VarMap.empty) 0 in
   result
-;;
 
 let rec equiv_tys ty1 ty2 =
   equal_tys (canonicalize_type ty1) (canonicalize_type ty2)

@@ -59,26 +59,31 @@
 %
 %=====================================================
 
-\paragraph{Introduction} 
+\paragraph{Introduction}
 
 Network devices often rely on distributed protocols, such as BGP, to
 make routing decisions. Network operators can enforce routing policies
 (that may express security, economic or other concerns) by configuring
-what routing protocols devices execute, and how they process routing
-messages.  These configurations are expressed in low-level, vendor
+what routing protocols each device executes, how it uses the routing
+information received by neighbors and what routing information it
+shares. These configurations are expressed in low-level, vendor
 specific languages. Combined with the distributed nature of routing
-protocols, reasoning about the correctness of the configurations is a
-daunting task for operators.  Network verification
-\cite{minesweeper,arc} and simulation tools \cite{batfish} have been
-proposed to aid operators. Additionally, as those techniques often
-face scaling problems, researchers have suggested ways \cite{bonsai} to simplify the complexity of networks.
+protocols, reasoning about the correctness of the configurations --
+and in extension, of the network -- is a daunting task for operators.
+Network verification \cite{minesweeper,arc} and simulation tools
+\cite{batfish} have been proposed to aid operators. Additionally, as
+those techniques often face scaling problems, researchers have
+suggested network transformations \cite{bonsai, origami} in order to
+simplify the complexity of networks.
 
+\paragraph{Modelling network configurations}
 Regardless of the transformation or reasoning principles used, one
 needs to parse the original network configurations as provided by
-operators. To tackle the range of vendor-specific configurations,
-Batfish \cite{batfish} uses a vendor-agnostic representation of
-routing configurations for common protocols, and provides a translation from each vendor's
-language to Batfish's representation. Subsequent analysis such as
+operators. Batfish \cite{batfish} was the first to tackle this
+problem, by devising a vendor-agnostic representation of common
+routing protocols and providing a translation from each vendor's
+language to the Batfish representation, a concept akin to intermediate
+languages, such as LLVM, in compilers. Subsequent analysis such as
 compression \cite{bonsai}, simulation \cite{batfish} or verification
 \cite{minesweeper,arc} can be then performed on top of this
 representation.
@@ -89,83 +94,82 @@ vendors. Unfortunately, its intermediate language (IR) falls short of
 many language design goals. First, at 105 different expressions and 23
 statements Batfish's IR is \emph{massive}. This is a symptom of other
 problems in the design of the IR. In particular, the expressions and
-structures used are \emph{specialized} to routing protocols. For
-example, instead of a set operation that specifies the field of the
-attribute to be changed along with its new value, Batfish uses a
-different expression to set the local preference of a BGP attribute, a
-different expression to set the MED value, and so on. As such,
-expressions cannot be \emph{composed} to build other more complex
+structures used are highly \emph{specialized} to common routing
+protocols (e.g. expression to set the local preference of a BGP
+attribute). As such, they cannot be \emph{composed} to build other
 operations. Besides the explosion in the size of the IR, this poses
-another issue: many desirable transformations cannot be expressed
+another issue: desirable transformations often cannot be expressed
 within Batfish's IR. For instance, replacing the \texttt{AS Path}
-attribute of BGP with its length can often improve simulation
-performance without loss of precision. Yet, this transformation cannot
-be expressed within Batfish's current AST, because one cannot alter
-the type of the \texttt{AS Path} or the operations on it. Moreover,
-understanding the semantics of the language requires deep knowledge of
-routing protocols and the intricacies of vendor specific implementations.
+attribute of BGP with its length, can often improve simulation
+performance without loss of precision. Yet, this simple transformation
+cannot be expressed within Batfish's current AST.  Moreover, the
+semantics of the language requires a deep understanding of routing
+protocols and the intricacies of vendor specific implementations to
+understand. As a consequence, because of the size of the language and
+the complexity of its semantics, writing new analyses over
+configurations is often a tedious task.
 
-Finally, some effects of executing a protocol are not expressed in the
-configurations, but are left \emph{implicit} and it's up to the
-backend (e.g. the simulator) to correctly capture
-them. This makes it difficult to implement new analyses of
-configurations, as one has to correctly implement any implicit effects
-operations may have.
-%Potentially mention that this poses a maintenance problem.
+Finally, Batfish suffers from the fact that some effects of executing
+a protocol are not expressed in the configurations, but are left
+\emph{implicit} and it's up to the backend (simulator, SMT verifier,
+etc.) to correctly capture them. This makes it notoriously difficult
+to analyze configurations, one has to look at the backend to
+understand the semantics of configurations. It also makes it harder to
+keep the various backends in sync.
 
 \paragraph{NV: A flexible IR for control plane configurations}
 
-To overcome these limitations, we propose a typed intermediate
-language, called NV. NV allows the user to specify the topology of a
-network, the type of the routing messages exchanged, and functions
-that define how each device processes these messages. The key design
-points of NV are its compact size, the compositionality of its
-expressions, and the use of standard programming language constructs
-(similar to the ones of ML based languages). We have implemented two
-different backends to NV, a BDD-based simulator that simulates the
-message exchange procedure of distributed routing protocols, and a
-SMT-based logical encoding that can verify properties of the
-converged state of a network. Furthermore, to improve the
-performance of such techniques we have implemented some common
-compiler optimizations such as constant unfolding, inlining and
-partial evaluation. The small size and the use of standard constructs
-with well-defined semantics facilitates the
-implementation of such optimizations.
+To overcome these limitations, we propose an intermediate language,
+called NV, that is based on the ML programming language
+\cite{milner1978theory}. As the basis of many modern programming
+languages, ML has been widely studied and has a \emph{rigorous
+  semantics}. As a result, one does not need to be an expert in
+routing protocols to understand an NV program. Importantly, we
+demonstrate that with just \emph{a few} standard constructs (options,
+pairs, booleans/integers and their operations, functions,
+dictionaries, graphs, match statements) we can clearly express the
+configurations of common routing protocols such as BGP and OSPF, by
+translating the Batfish IR to NV.
 
-NV is designed to be an IR, but also a verification framework. NV
-includes two key features to support this role: 1. symbolic variables
-that denote unknowns in the network, 2. assertions to be verified
-about the network's converged state. For instance, a symbolic variable
-can model a potential link failure, or a routing announcement from an
-external peer.
+Implementing and reasoning about the correctness of transformations of
+NV code is facilitated by the small size of the language and the
+simplicity of its semantics. For instance, it is straightforward to
+implement common compiler transformations such as constant folding and
+inlining, to improve the performance of simulation/verification. Or a
+transformation where the path component of BGP is replaced by an
+integer. Moreover, because the semantics of the program remain
+explicit, those transformations do not require any change in
+subsequent tools in the toolchain (such as a Batfish style simulator,
+or an SMT verifier).
 
-Finally, for NV to be useful, it must be able to (at least) model
-commonly used routing protocols, such as BGP and OSPF. One of the
-challenges we faced is to find a language that is sufficient to model
-in detail these protocols, but that we can also
-efficiently compile to BDDs or logical formulas to be verified by an
-SMT solver. Currently, we can translate a number of protocol
-configurations from Batfish to NV, including eBGP and OSPF, and we are
-working towards supporting more complicated protocols such as iBGP.
+\paragraph{Challenges}
 
-% On a similar note, Batfish's specialized expressions provide room for
-% specialized (in terms of efficiency) interpretations. For example,
-% when simulating a network that runs iBGP over some IGP, Batfish will
-% not simulate the iBGP part until the IGP has converged. This and other
-% similar optimizations help speed up the simulation. In an IR where
-% iBGP and IGP are not directly exposed, but rather are build from
-% smaller blocks, it is not straightforward to implement such
-% optimizations. Exploiting the high-level structure of the
-% configurations to -- among other things -- improve the performance of
-% the simulation is an important future direction.
-\paragraph{Related Work} The design of NV is partly inspired from
-routing algebras \cite{routingalgebra,metarouting}. Routing
-algebras were originally devised to reason about convergence
-properties of protocols, but the main goal of NV is to enable modelling of
-protocols and reasoning about routing properties such as reachability,
-way-pointing, and fault tolerance.
+When defining a new IR there is a tension between expressiveness of
+the language, i.e. the ability to accurately describe common routing
+protocols and potentially new ones, and the efficiency of
+simulation/verification techniques. For instance, total maps is an
+essential data structure in the context of networks, but it does not
+admit an efficient or complete SMT encoding. To achieve the desired
+efficiency and completeness goal of our SMT encoding of the IR, we had
+to impose additional restrictions on the operations of the maps. In a
+general purpose language these restrictions may not make sense, but in
+the context of routing protocols they do not hinder expressiveness.
 
- 
+On a similar note, Batfish's specialized expressions provide room for
+specialized (in terms of efficiency) interpretations. For example,
+when simulating a network that runs iBGP over some IGP, Batfish will
+not simulate the iBGP part until the IGP has converged. This and other
+similar optimizations help speed up the simulation. In an IR where
+iBGP and IGP are not directly exposed, but rather are build from
+smaller blocks, it is not straightforward to implement such
+optimizations. Exploiting the high-level structure of the
+configurations to -- among other things -- improve the performance of
+the simulation is an important future direction.
+
+* Provenance? Pinpointing to the fault may not be as easy..
+
+
+
 \bibliographystyle{abbrv}
 \bibliography{references}
 

@@ -1,0 +1,241 @@
+type prefix = (int,int)
+type edgeTy = (int,int)
+
+type bgp = { bgpad : int; lp : int; aslen : int; ibgp:bool; }
+type rip = { ripad : int; cost: int; }
+
+(* Because their may be both an iBGP and IGP route over an edge (I
+   think?), we keep a forwarding edge for both protocols. The merge
+   function should set the fwdEdge according to the protocol
+   selected.*)
+type ribEntry = option[{fwdEdge: edgeTy;
+     	      	        igp: option[(edgeTy, rip)];
+			egp: option[(edgeTy, bgp)];
+			prot: int}]
+
+(* Packets are (for now) used solely to determine iBGP reachability *)
+type packet = { srcIp: int; dstIp: int; }
+type packets = set[packet]
+
+type attribute = (packets, dict[prefix,ribEntry])
+
+let nodes = 4
+
+(* 0,4 are external routers, 
+   1 and 3 are border routers, 
+   2 runs iBGP *)
+let edges = {
+  0=1;
+  1=2;
+  2=3;
+  3=4;
+  1=3; (* virtual link *)
+ }
+
+(* Data Plane functions *)
+let mergePackets node x y = x union y
+
+(* for this to work, rib must be a partial map *)
+(* longestMatchingPrefix, should check whether p's headers match an
+   entry in the rib and whether edge is the forwarding edge on that
+   rib *)
+let longestMatchingPrefix edge p rib =
+  let dst = p.dstIp in
+  match rib[(dst,32)] with
+  | None -> false
+  | Some (fwd, _) ->
+     (* fwd = edge *)
+     if (fwd = edge) then true else false
+(* just fwd = edge crashes in SMT... *)
+
+let transPackets edge rib ps = 
+  mapIf (fun p -> !(longestMatchingPrefix edge p rib)) (fun b -> false) ps
+
+(*1 announces 1174405376
+  2 announces 1174405888
+  3 announces 1174405632 *)
+let initPackets node =
+  match node with
+  | 1 -> {{ srcIp = 1174405376; dstIp=1174405632; };
+          { srcIp = 1174405376; dstIp=1174405888; }}
+  | 2 -> {{ srcIp = 1174405888; dstIp=1174405376; };
+          { srcIp = 1174405888; dstIp=1174405632; }}
+  | 3 -> {{ srcIp = 1174405632; dstIp=1174405376; };
+          { srcIp = 1174405632; dstIp=1174405888; }}
+
+(* Control Plane functions *)
+let flip edge =
+  match edge with
+  | (u,v) -> (v,u)
+
+let transBgp edge m soly =
+  match edge with
+  | (0,1) ->
+     {m with aslen=aslen+1; ibgp=false}
+  | (1,0) ->
+     {m with aslen=aslen+1; ibgp=false}
+  | (3,4) ->
+     {m with aslen=aslen+1; ibgp=false}
+  | (4,3) ->
+     {m with aslen=aslen+1; ibgp=false}
+  | (1,3) ->
+    let (psy, riby) = soly in
+    if psy[{ srcIp = 1174405376; dstIp=1174405632; }] then
+      (* If a packet from 1 can reach 3 *)
+      match riby[(1174405376,32)] with (* and 3 can forward to 1 *)
+      | None -> None (* 3 cannot forward to 1 *)
+      | Some r ->
+         (* Router 3 will be forwarding traffic to it's IGP next-hop,
+            but then it must also know how to forward traffic, so we
+            need to make an iBGP connection for it too? *)     
+         Some (r.fwdEdge, {m with ibgp=true})
+    else
+      None
+  | (3,1) ->
+     let (psy, riby) = soly in
+     if psy[{ srcIp = 1174405632; dstIp=1174405376;}] then
+       match riby[(1174405632,32)] with
+       | None -> None
+       | Some r ->     
+          Some (r.fwdEdge, {m with ibgp=true})
+     else
+       None
+  | (1,2) ->
+     let (psy, riby) = soly in
+     if psy[{ srcIp = 1174405376; dstIp=1174405888;}] then
+       match riby[(1174405632,32)] with
+       | None -> None
+       | Some r ->     
+          Some (r.fwdEdge, {m with ibgp=true})
+     else
+       None
+  | (2,1) ->
+     let (psy, riby) = soly in
+     if psy[{ srcIp = 1174405888; dstIp=1174405376;}] then
+       match riby[(1174405888,32)] with
+       | None -> None
+       | Some r ->     
+          Some (r.fwdEdge, {m with ibgp=true})
+     else
+       None
+  | (2,3) ->
+     let (psy, riby) = soly in
+     if psy[{ srcIp = 1174405888; dstIp=1174405632;}] then
+       match riby[(1174405888,32)] with
+       | None -> None
+       | Some r ->     
+          Some (r.fwdEdge, {m with ibgp=true})
+     else
+       None
+  | (3,2) ->
+     let (psy, riby) = soly in
+     if psy[{ srcIp = 1174405632; dstIp=1174405888;}] then
+       match riby[(1174405632,32)] with
+       | None -> None
+       | Some r ->     
+          Some (r.fwdEdge, {m with ibgp=true})
+     else
+       None
+  | _ -> None
+
+let transRip edge c =
+  match c with
+  | None -> None
+  | Some c ->
+     if c < 16 then Some (edge, c+1) else None
+
+let transferRoute edge x soly =
+  let newIgp = transRip x.rip in
+  let newEgp = transBgp (flip edge) x.egp soly in
+  Some {fwdEdge = edge; ig=newIgp; egp=newEgp; prot=0}
+
+let transfer edge x y =
+  map (fun r -> transferRoute edge r y) x
+    
+(* bgp attribute comparison *)
+let betterBgp b1 b2 =
+  if b1.lp > b2.lp then true
+  else if b2.lp > b1.lp then false 
+  else if b1.cost < b2.cost then true
+  else false
+
+(* rip attribute comparison *)
+let min x y = if x < y then x else y
+
+let pickOption f x y =
+  match (x,y) with
+  | (None, None) -> None
+  | (None, Some _) -> y  | (Some _, None) -> x
+  | (Some a, Some b) ->
+    let (_,x) = a in
+    let (_,y) = b in
+    Some (if f x y then a else b)
+
+let best i b =
+  match (i,b) with
+  | (None,None) -> None
+  | _ ->
+     let i = match i with | None -> None | Some (fwdi, i) -> Some ((fwdi,0), i) in
+     let b = match b with | None -> None | Some (fwdb, b) -> Some ((fwdb,1), b) in
+     let ((fwd,p), _) = pickOption (fun x y => let (_, i) = x in
+                                               let (_, b) = y in
+                                               i.ripad <= b.bgpad) i b
+     in
+     Some (fwd,p)
+
+let mergeValues x y =
+  let (cx,sx,ox,bx,_) = x in
+  let (cy,sy,oy,by,_) = y in
+  let c = pickOption min cx cy in
+  let s = pickOption min sx sy in
+  let o = pickOption betterOspf ox oy in
+  let b = pickOption betterBgp bx by in
+  (c,s,o,b, best c s o b)
+    
+let mergeRoute lab1 lab2 =
+  let i = pickOption min lab1.igp lab2.igp in
+  let b = pickOption betterBgp lab1.egp lab2.egp in
+  match best i b with
+  | None -> None
+  | Some (fwd, p) ->
+     Some {fwdEdge=fwd; igp=i; egp=b; prot=p}
+  
+let initRoute node =
+  let d = createDict None in
+  match node with
+  | 0 ->
+     let b = {bgpad=20; lp=100; cost=0; ibgp=false;} in
+     let p = {fwdEdge=(0,0); igp=None; bgp=Some b; prot=1} in
+     d[(2399220480,24) := Some p]
+  | 1 ->
+     (* announces an internal loopback destination *)
+     let i = Some 0 in
+     let p = {fwdEdge=(1,1); igp=i; bgp=None; prot=0} in
+     d[(1174405376,32) := Some p]
+  | 2 ->
+     (* announces an internal loopback destination *)
+     let i = Some 0 in
+     let p = {fwdEdge=(1,1); igp=i; bgp=None; prot=0} in
+     d[(1174405888,32) := Some p]
+  | 3 ->
+     (* announces an internal loopback destination *)
+     let i = Some 0 in
+     let p = {fwdEdge=(1,1); igp=i; bgp=None; prot=0} in
+     d[(1174405632,32) := Some p]
+  | _ -> d
+
+(* Combined functions *)
+
+let merge node x y =
+  let (psx, labx) = x in
+  let (psy, laby) = y in
+  (mergePackets node psx psy, combine mergeRoute labx laby)
+    
+let trans edge x y =
+  let (ps, rib) = x in
+  (transPackets edge rib ps, map (fun r -> transferRoute edge r y) rib)
+
+let init node =
+  (initPackets node, initRoute node)
+  
+              

@@ -1,7 +1,7 @@
 %{
   open Syntax
   open RecordUtils
-  open Batteries
+  (* open Batteries *)
 
   type user_type = Var.t (* name *) * ty (* type *)
   let user_types : user_type list ref = ref []
@@ -276,7 +276,7 @@ expr:
                                           exp (elet id e $6) span }
     | LET LPAREN patterns RPAREN EQ expr IN expr
                                         { let p = tuple_pattern $3 in
-                                          let e = ematch $6 [(p,$8)] in
+                                          let e = ematch $6 (addBranch p $8 emptyBranch) in
                                           let span = Span.extend $1 $8.espan in
                                           exp e span }
     | IF expr THEN expr ELSE expr       { exp (eif $2 $4 $6) (Span.extend $1 $6.espan) }
@@ -364,6 +364,7 @@ expr2:
 
 expr3:
     | ID                                { exp (evar (snd $1)) (fst $1) }
+    | ID DOT ID                       { exp (eproject (evar (snd $1)) (Var.name (snd $3))) (Span.extend (fst $1) (fst $3)) }
     | NUM                               { to_value (vint (snd $1)) (fst $1) }
     | TRUE                              { to_value (vbool true) $1 }
     | FALSE                             { to_value (vbool false) $1 }
@@ -427,8 +428,8 @@ branch:
 ;
 
 branches:
-    | branch                            { [$1] }
-    | branch branches                   { $1::$2 }
+    | branch                            { addBranch (fst $1) (snd $1) emptyBranch }
+    | branch branches                   { addBranch (fst $1) (snd $1) $2 }
 ;
 
 prog:

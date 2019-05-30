@@ -16,7 +16,7 @@ module AbstractNode =
         | [u] -> printAux [] ((Printf.sprintf "%s" (printVertex u)) :: acc)
         | u :: lst -> printAux lst ((Printf.sprintf "%s," (printVertex u)) :: acc)
       in
-      String.concat "" (List.rev (printAux (VertexSet.elements us) ["{"]))
+      String.concat "" (BatList.rev (printAux (VertexSet.elements us) ["{"]))
 
     let randomSplit (us : t) : (t * t) =
       let u1, u2, _ =
@@ -99,15 +99,17 @@ let getAbstractGroups (f: abstractionMap) : (GroupMap.key * AbstractNode.t) list
   GroupMap.bindings f.absGroups
 
 let printAbstractGroups (f: abstractionMap) (sep: string) : string =
-  List.fold_left (fun acc (k, us) ->
+  BatList.fold_left (fun acc (k, us) ->
       (Integer.to_string k) ^ ": " ^
         (AbstractNode.printAbstractNode us) ^ sep ^ acc)
     "" (getAbstractGroups f)
 
+let emptyAbstraction = { absGroups = GroupMap.empty;
+                         groupId = VertexMap.empty;
+                         nextId = Integer.create ~value:0 ~size:32}
+  
 let createAbstractionMap g : abstractionMap =
-  let f = { absGroups = GroupMap.empty;
-            groupId = VertexMap.empty;
-            nextId = Integer.create ~value:0 ~size:32} in
+  let f = emptyAbstraction in
   partitionNodes f (f.nextId) (AdjGraph.get_vertices g)
 
 let fold (g: AbstractNode.t -> 'a -> 'a) (f: abstractionMap) (acc: 'a) : 'a =

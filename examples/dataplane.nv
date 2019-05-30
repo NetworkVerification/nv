@@ -1,0 +1,109 @@
+type prefix = (int,int)
+type edgeTy = (int,int)
+
+type bgp = { bgpad : int; lp : int; cost : int; }
+type ribEntry = option[(edgeTy,bgp)] (*edgeTy should maybe be an option for initial value*)
+
+type packet = { srcIp: int; dstIp: int; volume: int; }
+type packets = set[packet]
+
+type attribute = (packets, dict[prefix,ribEntry])
+
+let nodes = 4
+
+let edges = {
+  0=1;
+  0=2;
+  1=3;
+  2=3;
+ }
+
+(* Data Plane functions *)
+let mergePackets node x y = x union y
+
+(* for this to work, rib must be a partial map *)
+(* longestMatchingPrefix, should check whether p's headers match an
+   entry in the rib and whether edge is the forwarding edge on that
+   rib *)
+let longestMatchingPrefix edge p rib =
+  let dst = p.dstIp in
+  match rib[(dst,32)] with
+  | None -> false
+  | Some (fwd, _) ->
+     (* fwd = edge *)
+     if (fwd = edge) then true else false
+(* just fwd = edge crashes in SMT... *)
+
+
+(* is that how you would filter a set? *)
+let transPackets edge rib ps = 
+  mapIf (fun p -> !(longestMatchingPrefix edge p rib)) (fun b -> false) ps
+
+let initPackets node =
+  match node with
+  | 3 -> {{ srcIp = 1; dstIp=0; volume=100; }}
+  | _ -> {}
+
+(* Control Plane functions *)
+let flip edge =
+  match edge with
+  | (u,v) -> (v,u)
+       
+let transRoute edge ps b =
+    match b with
+    | None -> None
+    | Some (_, b) ->
+       Some ((flip edge), {b with cost = b.cost + 1})
+
+(* bgp attributes comparison *)
+let betterBgp o1 o2 =
+  if o1.lp > o2.lp then true
+  else if o2.lp > o1.lp then false 
+  else if o1.cost < o2.cost then true
+  else false
+        
+let pickOption f x y =
+  match (x,y) with
+  | (None, None) -> None
+  | (None, Some _) -> y  | (Some _, None) -> x
+  | (Some a, Some b) ->
+    let (_,x) = a in
+    let (_,y) = b in
+    Some (if f x y then a else b)
+    
+let mergeRoute lab1 lab2 =
+  pickOption (fun x y -> betterBgp x y) lab1 lab2
+
+let initRoute node =
+  let d = createDict None in
+  match node with
+  | 0 ->
+     let b0 = {bgpad=20; lp=100; cost=0;} in
+     d[(0,32) := Some ((0,0), b0)]
+  | _ -> d
+
+(* Combined functions *)
+
+let merge node x y =
+  let (psx, labx) = x in
+  let (psy, laby) = y in
+  (mergePackets node psx psy, combine mergeRoute labx laby)
+    
+let trans edge x =
+  let (ps, rib) = x in
+  (transPackets edge rib ps, map (transRoute edge ps) rib)
+
+let init node =
+  (initPackets node, initRoute node)
+  
+let assert node x =
+  match node with
+  | 1 ->
+     (
+       let (ps, rib) = x in
+       match ps[{ srcIp = 1; dstIp=0; volume=100;}] with
+       | true ->
+          true
+       | false -> false)
+  | _ -> true
+              
