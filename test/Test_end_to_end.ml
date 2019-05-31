@@ -85,7 +85,7 @@ let simulator_tests =
 
       ("examples/symbolic3.nv", true);
       ("examples/symbolicDecls.nv", true);
-
+      ("examples/ospf-areas.nv", true);
     ]
 ;;
 
@@ -117,6 +117,7 @@ let smt_tests =
 
       ("examples/symbolic3.nv", false);
       ("examples/symbolicDecls.nv", false);
+      ("examples/ospf-areas.nv", true);
     ]
 ;;
 
@@ -147,6 +148,7 @@ let unboxed_tests =
 
       ("examples/symbolic3.nv", false);
       ("examples/symbolicDecls.nv", false);
+      ("examples/ospf-areas.nv", true);
     ]
 ;;
 

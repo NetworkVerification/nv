@@ -33,12 +33,13 @@ let merge node x y =
 
 let trans edge x =
   let area = area edge in
-  let m = createDict (createDict None) in
   match area with
   | 0 ->
+    let m = createDict (createDict None) in
       let db = x[0] in
         m[0 := map (fun o -> mapo (fun c -> c + 1) o) db]
   | 1 ->
+    let m = createDict (createDict None) in
       let db = x[1] in
         m[1 := map (fun o -> mapo (fun c -> c + 1) o) db]
 

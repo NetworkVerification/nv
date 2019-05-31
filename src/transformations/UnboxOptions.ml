@@ -4,7 +4,7 @@ open Slicing
 open Solution
 
 let rec empty_pattern ty =
-  match ty with
+  match Typing.canonicalize_type ty with
   | TUnit
   | TBool
   | TInt _
@@ -17,10 +17,10 @@ let rec empty_pattern ty =
   | TTuple ts ->
     PTuple (BatList.map empty_pattern ts)
   | TVar _ | QVar _ | TArrow _ ->
-    failwith ("internal error (empty_pattern)" ^ (Printing.ty_to_string ty))
+    failwith ("internal error (empty_pattern): " ^ (Printing.ty_to_string ty))
 
 let rec unbox_ty ty =
-  match ty with
+  match Typing.canonicalize_type ty with
   | TVar {contents= Link t} -> unbox_ty t
   | TUnit | TBool | TInt _ -> ty
   | TArrow (t1, t2) ->
@@ -30,7 +30,7 @@ let rec unbox_ty ty =
   | TMap (ty1, ty2) ->
     TMap (unbox_ty ty1, unbox_ty ty2)
   | TRecord _ -> failwith "should be unrolled to a tuple"
-  | QVar _ | TVar _ -> failwith "internal error (unbox_ty)"
+  | QVar _ | TVar _ -> failwith ("internal error (unbox_ty): " ^ Printing.ty_to_string ty)
 
 let rec unbox_val v =
   match v.v with
@@ -40,7 +40,7 @@ let rec unbox_val v =
     (match v.vty with
      | Some (TOption t) ->
        aexp (etuple [(vbool false |> exp_of_value);
-                     (default_exp_value (unbox_ty t))],
+                     (default_exp_value (Typing.canonicalize_type @@ unbox_ty t))],
              Some (unbox_ty (TOption t)), v.vspan)
      | _ -> failwith "expected option type")
   | VOption (Some v1) ->
@@ -173,7 +173,7 @@ let rec unbox_val v =
   | VOption None ->
     (match v.vty with
      | Some (TOption t) ->
-       aexp (etuple [(vbool false |> exp_of_value); (default_exp_value (get_inner_type t))],
+       aexp (etuple [(vbool false |> exp_of_value); (default_exp_value (Typing.canonicalize_type @@ get_inner_type t))],
              Some (unbox_ty (TOption t)), v.vspan)
      | _ -> failwith "expected option type")
   | VOption (Some v1) ->

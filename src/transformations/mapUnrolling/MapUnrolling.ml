@@ -15,7 +15,7 @@ let unroll info decls =
          let keys = (Collections.ExpSet.elements keys) in
          let new_decls = MapUnrollingGuts.unroll_one_map_type mty keys decls in
          let f' = MapUnrollingConversion.convert_solution mty keys decls in
-         (Typing.infer_declarations info new_decls, (fun x -> f (f' x))))
+         (new_decls, (fun x -> f (f' x))))
       (decls, (fun x -> x)) maplist
   in
   let final_decls, map_back2 =
