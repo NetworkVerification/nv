@@ -40,6 +40,11 @@ let partialEvalNet net =
    merge = Interp.interp_partial_opt net.merge
   }
 
+let run_smt_func file cfg info net fs =
+  smt_config.encoding <- Functional;
+  let srp = SmtSrp.network_to_srp net in
+  let srp, f = Renaming.alpha_convert_srp srp in
+
 let run_smt file cfg info (net : Syntax.network) fs =
   if cfg.func then
     smt_config.encoding <- Functional;
@@ -255,17 +260,17 @@ let parse_input (args : string array)
       let decls, f = (* unrolling maps *)
         time_profile "Map unrolling" (fun () -> MapUnrolling.unroll info decls)
       in
-      (Typing.infer_declarations info decls, f :: fs)
+      (Typing.infer_declarations info decls, f :: fs) (* TODO: is type inf necessary here?*)
     else decls, fs
   in
-  let decls = (*Inline again after unrolling, is this necessary? *)
-    if cfg.unroll || cfg.smt then
-      time_profile "Inlining" (
-          fun () -> Inline.inline_declarations decls |>
-                      Typing.infer_declarations info)
-    else
-      decls
-  in
+  (* let decls = (\*TODO: Inline again after unrolling, is this necessary? *\)
+   *   if cfg.unroll then
+   *     time_profile "Inlining" (
+   *         fun () -> Inline.inline_declarations decls |>
+   *                     Typing.infer_declarations info)
+   *   else
+   *     decls
+   * in *)
   let net = Slicing.createNetwork decls in (* Create something of type network *)
   let net =
     if cfg.link_failures > 0 then

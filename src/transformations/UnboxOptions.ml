@@ -232,3 +232,17 @@ let unbox_net net =
     requires = BatList.map unbox_exp net.requires;
     graph = net.graph
   }, box_sol net.attr_type
+
+let unbox_srp (srp : Syntax.srp_unfold) =
+  { srp_attr = unbox_ty srp.srp_attr;
+    srp_constraints = AdjGraph.VertexMap.map unbox_exp srp.srp_constraints;
+    srp_labels = AdjGraph.VertexMap.map unbox_exp srp.srp_labels;
+    srp_symbolics =  BatList.map (fun (x,e) ->
+        match e with
+        | Ty ty -> (x, Ty (unbox_ty ty))
+        | Exp e -> (x, Exp (unbox_exp e))) srp.srp_symbolics;
+    srp_assertion = (match srp.srp_assertion with
+        | None -> None
+        | Some e -> Some (unbox_exp e));
+    srp_requires = BatList.map unbox_exp srp.srp_requires
+  }, box_sol srp.srp_attr
