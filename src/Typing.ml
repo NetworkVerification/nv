@@ -247,12 +247,12 @@ let inst subst ty =
     match ty with
     | QVar name -> (
         try Env.lookup subst name with Env.Unbound_var x ->
-          Console.error ("bad instantiation: " ^ Var.to_string x) )
+          Console.error ("bad instantiation: " ^ x) )
     | TVar {contents= Link ty} -> loop subst ty
     | TVar {contents= Unbound (name, _)} -> (
         if_debug ("found unbound tyvar " ^ Var.to_string name) ;
         try Env.lookup subst name with Env.Unbound_var x ->
-          Console.error ("bad instantiation: " ^ Var.to_string x) )
+          Console.error ("bad instantiation: " ^ x) )
     | TUnit | TBool | TInt _ -> ty
     | TArrow (ty1, ty2) ->
       let ty1 = loop subst ty1 in

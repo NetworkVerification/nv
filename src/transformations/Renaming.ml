@@ -167,6 +167,34 @@ let alpha_convert_net net =
   in
   (net', adjust_solution !bmap)
 
+let alpha_convert_srp (srp : Syntax.srp_unfold) =
+  Var.reset () ;
+  let bmap = ref StringMap.empty in
+  let env = Env.empty in
+  let env, symbolics =
+    BatList.fold_right (fun (x, ty_exp) (env, acc) ->
+        match ty_exp with
+        | Exp e ->
+          let e = alpha_convert_exp env e in
+          (env, (x, Exp e) :: acc)
+        | Ty ty ->
+          let env = Env.update env x x in
+          (env, (x, Ty ty) :: acc))
+      srp.srp_symbolics (env, [])
+  in
+  let srp' =
+    { srp_attr = srp.srp_attr;
+      srp_constraints = AdjGraph.VertexMap.map (alpha_convert_exp env) srp.srp_constraints;
+      srp_labels = AdjGraph.VertexMap.map (alpha_convert_exp env) srp.srp_labels;
+      srp_assertion = (match srp.srp_assertion with
+          | None -> None
+          | Some e -> Some (alpha_convert_exp env e));
+      srp_symbolics = symbolics;
+      srp_requires = BatList.map (alpha_convert_exp env) srp.srp_requires;
+    }
+  in
+  (srp', adjust_solution !bmap)
+
 
 module Tests =
 struct

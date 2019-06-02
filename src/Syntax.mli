@@ -144,9 +144,16 @@ type network =
     graph        : AdjGraph.t;
   }
 
+type srp_unfold =
+  { srp_attr : ty;
+    srp_constraints : exp AdjGraph.VertexMap.t;
+    srp_labels : exp AdjGraph.VertexMap.t;
+    srp_symbolics : (var * ty_or_exp) list;
+    srp_assertion : exp option;
+    srp_requires : exp list;
+  }
 
 (* Constructors *)
-
 val vunit : unit -> value
 
 val vbool : bool -> value

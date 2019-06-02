@@ -701,51 +701,52 @@ struct
           (env, e)
         | Some e1 ->
           (env, e1))
-    | EVal v -> (env, e)
-    | EOp (op, es) ->
-      (env, aexp (interp_op_partial env (oget e.ety) op es, e.ety, e.espan))
-    | EFun f -> (env, e)
-    (* either need to do the partial interpretation here, or return a pair
-       of the efun and the env at this point to be used, sort of like a closure.*)
-    | EApp (e1, e2) ->
-      let (cenv, pe1) = interp_exp_partial env e1 in
-      let _, pe2 = interp_exp_partial env e2 in
-      (match pe1.e with
-       | EFun f ->
-         interp_exp_partial (Env.update cenv f.arg pe2) f.body
-       | _ ->
-         (*this case shouldn't show up for us *)
-         failwith "This case shouldn't show up")
-    | EIf (e1, e2, e3) ->
-      let _, pe1 = interp_exp_partial env e1 in
-      if is_value pe1 then
-        (match (to_value pe1).v with
-         | VBool true  -> interp_exp_partial env e2
-         | VBool false -> interp_exp_partial env e3
-         | _ -> failwith "bad if condition")
-      else
-        (env, aexp (eif pe1 (snd (interp_exp_partial env e2)) (snd (interp_exp_partial env e3)),
-                    e.ety, e.espan))
-    | ELet (x, e1, e2) ->
-      let _, pe1 = interp_exp_partial env e1 in
-      interp_exp_partial (Env.update env x pe1) e2
-    | ETuple es ->
-      (env, aexp (etuple (BatList.map (fun e -> snd (interp_exp_partial env e)) es),
-                  e.ety, e.espan))
-    | ESome e' -> (env, aexp (esome (snd (interp_exp_partial env e')), e.ety, e.espan))
-    | EMatch (e1, branches) ->
-      let _, pe1 = interp_exp_partial env e1 in
-      (match match_branches branches pe1 with
-       | Match (env2, e) -> interp_exp_partial (Env.updates env env2) e
-       | NoMatch ->
-         failwith
-           ( "exp " ^ (exp_to_string pe1)
-             ^ " did not match any pattern in match statement")
-       | Delayed ->
-         (env, aexp (ematch pe1 (mapBranches (fun (p,e) ->
-              (p, snd (interp_exp_partial env e))) branches),
-                     e.ety, e.espan)))
-    | ERecord _ | EProject _ -> failwith "Record found during partial interpretation"
+      | EVal v -> (env, e)
+      | EOp (op, es) ->
+         (env, aexp (interp_op_partial env (oget e.ety) op es, e.ety, e.espan))
+      | EFun f -> (env, e)
+             (* either need to do the partial interpretation here, or return a pair
+                of the efun and the env at this point to be used, sort of like a closure.*)
+      | EApp (e1, e2) ->
+         let (cenv, pe1) = interp_exp_partial env e1 in
+         let _, pe2 = interp_exp_partial env e2 in
+         (match pe1.e with
+          | EFun f ->
+             interp_exp_partial (Env.update cenv f.arg pe2) f.body
+          | _ ->
+             (*this case shouldn't show up for us *)
+             failwith "This case shouldn't show up")
+      | EIf (e1, e2, e3) ->
+         let _, pe1 = interp_exp_partial env e1 in
+         if is_value pe1 then
+           (match (to_value pe1).v with
+            | VBool true  -> interp_exp_partial env e2
+            | VBool false -> interp_exp_partial env e3
+            | _ -> failwith "bad if condition")
+         else
+           (env, aexp (eif pe1 (snd (interp_exp_partial env e2)) (snd (interp_exp_partial env e3)),
+                 e.ety, e.espan))
+      | ELet (x, e1, e2) ->
+         let _, pe1 = interp_exp_partial env e1 in
+         (* (env, elet x pe1 (snd (interp_exp_partial env e2))) *)
+         interp_exp_partial (Env.update env x pe1) e2
+      | ETuple es ->
+         (env, aexp (etuple (BatList.map (fun e -> snd (interp_exp_partial env e)) es),
+                     e.ety, e.espan))
+      | ESome e' -> (env, aexp (esome (snd (interp_exp_partial env e')), e.ety, e.espan))
+      | EMatch (e1, branches) ->
+         let _, pe1 = interp_exp_partial env e1 in
+         (match match_branches branches pe1 with
+          | Match (env2, e) -> interp_exp_partial (Env.updates env env2) e
+          | NoMatch ->
+             failwith
+               ( "exp " ^ (exp_to_string pe1)
+                 ^ " did not match any pattern in match statement")
+          | Delayed ->
+             (env, aexp (ematch pe1 (mapBranches (fun (p,e) ->
+                                         (p, snd (interp_exp_partial env e))) branches),
+                   e.ety, e.espan)))
+      | ERecord _ | EProject _ -> failwith "Record found during partial interpretation"
 
   (* this is same as above, minus the app boolean. see again if we can get rid of that? *)
   and interp_op_partial env ty op es =

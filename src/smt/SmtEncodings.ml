@@ -7,7 +7,7 @@ open SmtUtils
 module type Encoding =
 sig
   val encode_z3: Syntax.network -> 'a list -> smt_env
- val add_symbolic_constraints: smt_env ->  Syntax.exp list -> Syntax.ty_or_exp Collections.VarMap.t -> unit
+  val add_symbolic_constraints: smt_env ->  Syntax.exp list -> Syntax.ty_or_exp Collections.VarMap.t -> unit
 end
 
 module ClassicEncoding (E: ExprEncoding): Encoding =
@@ -281,37 +281,6 @@ struct
     in
     loop assertion []
 
-  let node_exp (u: Integer.t) : Syntax.exp =
-    aexp(e_val (vint u), Some Typing.node_ty, Span.default)
-
-  let edge_exp (u: Integer.t) (v: Integer.t) : Syntax.exp list =
-    if smt_config.unboxing then
-      [aexp (e_val (vint u), Some Typing.node_ty, Span.default);
-       aexp (e_val (vint v), Some Typing.node_ty, Span.default)]
-    else
-      [aexp(e_val (vtuple [vint u; vint v]),  Some Typing.edge_ty, Span.default)]
-
-  let init_exp einit u =
-    Interp.Full.interp_partial_fun einit [node_exp u] (* |>
-     * Tnf.tnf_exp *)
-
-  (* Reduces the transfer function, maybe a full reduction is not
-     necessary at this point, experiment to see if just reducing based
-     on the edge is better *)
-  let trans_exp etrans u v xs =
-    let args = (edge_exp u v) @ xs in
-    Syntax.apps etrans args
-    (* (Interp.Full.interp_partial_fun etrans args) (\* |> Tnf.tnf_exp *\) *)
-
-  let merge_exp emerge u xs ys =
-    (* let emerge = Interp.interp_partial_opt emerge in *)
-    let args = (node_exp u) :: (xs @ ys) in
-    let e = Syntax.apps emerge args in
-    (* let e = (Interp.Full.interp_partial_fun emerge args) in *)
-    (* Printf.printf "merge after interp:\n%s\n" (Printing.exp_to_string e); *)
-    e
-    (* Tnf.tnf_exp e *)
-
   let unbox_args e =
     if smt_config.unboxing then
       tupleToListSafe e
@@ -376,6 +345,15 @@ struct
           in
           let str = Printf.sprintf "merge-%d" (Integer.to_int u) in
           let best_eval = Interp.Full.interp_partial best in
+          let vars = AdjGraph.VertexMap.fold
+                       (fun _ (lblv, _) acc -> Env.update acc (List.hd (to_list lblv)) (List.hd (to_list lblv)))
+                        labelling Env.empty in
+          let best_eval =
+            Renaming.alpha_convert_exp
+              (BatList.fold_left (fun acc (x,_) -> Env.update acc x x) vars net.symbolics)
+              best_eval
+          in
+          (* Printf.printf "merge after interp:\n%s\n" (Printing.exp_to_string best_eval); *)
           let best_smt = encode_exp_z3 str env best_eval in
           AdjGraph.VertexMap.add u best_smt acc) nodes AdjGraph.VertexMap.empty
     in
