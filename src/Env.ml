@@ -4,10 +4,10 @@ type 'a t = 'a M.t
 
 let empty = M.empty
 
-exception Unbound_var of Var.t
+exception Unbound_var of string
 
 let lookup env x =
-  try M.find x env with Not_found -> raise (Unbound_var x)
+  try M.find x env with Not_found -> raise (Unbound_var (Var.to_string x))
 
 let lookup_opt env x = M.find_opt x env
 

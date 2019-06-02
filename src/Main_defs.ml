@@ -241,7 +241,7 @@ let parse_input (args : string array)
   let decls,fs = (* inlining definitions *)
     if cfg.inline || cfg.unroll || cfg.smt || cfg.check_monotonicity || cfg.smart_gen then
       (* Note! Must rename before inling otherwise inling is unsound *)
-      let decls, f = Renaming.alpha_convert_declarations decls in 
+      let decls, f = Renaming.alpha_convert_declarations decls in
       (time_profile "Inlining" (
            fun () ->
            Inline.inline_declarations decls |>
@@ -264,7 +264,7 @@ let parse_input (args : string array)
                       Typing.infer_declarations info)
     else
       decls
-  in 
+  in
   let net = Slicing.createNetwork decls in (* Create something of type network *)
   let net =
     if cfg.link_failures > 0 then
@@ -272,4 +272,3 @@ let parse_input (args : string array)
     else net
   in
   (cfg, info, file, net, fs)
-    

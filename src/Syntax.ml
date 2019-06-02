@@ -185,6 +185,14 @@ type network =
      graph : AdjGraph.t;
   }
 
+type srp_unfold =
+  { srp_attr : ty;
+    srp_constraints : exp AdjGraph.VertexMap.t;
+    srp_labels : exp AdjGraph.VertexMap.t;
+    srp_symbolics : (var * ty_or_exp) list;
+    srp_assertion : exp option;
+    srp_requires : exp list;
+  }
 
 (** * Handling branches *)
 
@@ -199,7 +207,7 @@ let mapBranches f b =
               let p, e = f (p, e) in
               PatMap.add p e pmap) b.pmap PatMap.empty;
    plist = BatList.map f b.plist}
-  
+
 let iterBranches f b =
   PatMap.iter (fun p e -> f (p,e)) b.pmap;
   BatList.iter f b.plist
