@@ -1,0 +1,29 @@
+type attribute = (bool, bool, bool)
+
+let nodes = 2
+
+let edges = {
+ 0-1;
+}
+
+let merge node a1 a2 =
+match a1 with
+| (r, x, y) ->
+match a2 with
+| (r2, x2, y2) ->
+ (r || r2, x || x2, y || y2)
+
+let trans edge a =
+match a with
+| (r, x, y) ->
+( r && x, x, y && x)
+
+let init node =
+  match node with
+  | 0 -> (true, true, true)
+  | _ -> (false, false, false)
+
+let assert node a =
+match a with
+| (r, x, y) ->
+  r
