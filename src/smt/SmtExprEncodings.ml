@@ -79,6 +79,8 @@ struct
     | TUnit -> "Unit"
     | TBool -> "Bool"
     | TInt _ -> "Int"
+    | TNode -> type_name (TInt 32)
+    | TEdge -> type_name (TTuple [TNode; TNode])
     | TMap _ -> failwith "no maps yet"
     | TArrow _ | TVar _ | QVar _ | TRecord _ -> failwith "unsupported type in SMT"
 
@@ -88,6 +90,8 @@ struct
     | TUnit -> UnitSort
     | TBool -> BoolSort
     | TInt _ -> IntSort
+    | TNode -> ty_to_sort (TInt 32)
+    | TEdge -> ty_to_sort (TTuple [TNode; TNode])
     | TTuple ts -> (
         match ts with
         | [t] -> ty_to_sort t
@@ -112,7 +116,8 @@ struct
       let name = datatype_name ty |> oget in
       let constr = { constr_name = "mkUnit"; constr_args = [] } in
       { name; params = []; constructors = [constr] }
-    | TInt _ | TBool -> failwith "not a datatype"
+    | TNode | TInt _ | TBool -> failwith "not a datatype"
+    | TEdge -> ty_to_type_decl (TTuple [TNode; TNode])
     | TOption _ ->
       let name = datatype_name ty |> oget in
       let param = VarSort "T1" in
@@ -441,6 +446,14 @@ struct
     | VInt i ->
       mk_int_u32 i |>
       mk_term ~tloc:v.vspan
+    | VNode n ->
+      encode_value_z3 descr env @@
+      avalue (vint (Integer.create ~size: 32 ~value:n), Some (TInt 32), v.vspan)
+    | VEdge (n1, n2) ->
+      let n1 = avalue (vnode n1, Some TNode, v.vspan) in
+      let n2 = avalue (vnode n2, Some TNode, v.vspan) in
+      encode_value_z3 descr env @@
+      avalue (vtuple [n1; n2], Some (TTuple [TNode; TNode]), v.vspan)
     | VTuple vs -> (
         match oget v.vty with
         | TTuple ts ->
@@ -539,6 +552,8 @@ struct
     | TUnit -> UnitSort
     | TBool -> BoolSort
     | TInt _ -> IntSort
+    | TNode -> ty_to_sort (TInt 32)
+    | TEdge
     | TTuple _
     | TOption _
     | TMap _ -> failwith "Not a single sort"
@@ -556,6 +571,8 @@ struct
     | TUnit -> [UnitSort]
     | TBool -> [BoolSort]
     | TInt _ -> [IntSort]
+    | TNode -> ty_to_sorts (TInt 32)
+    | TEdge ->  ty_to_sorts (TTuple [TNode; TNode])
     | TTuple ts -> (
         match ts with
         | [] -> failwith "empty tuple"
@@ -798,6 +815,11 @@ struct
 
   and encode_value_z3 descr env (v: Syntax.value) : term list =
     match v.v with
+    | VEdge (n1, n2) ->
+      let v1 = avalue (vnode n1, Some TNode, v.vspan) in
+      let v2 = avalue (vnode n2, Some TNode, v.vspan) in
+      encode_value_z3 descr env @@
+      avalue (vtuple [v1; v2], Some (TTuple [TNode; TNode]), v.vspan)
     | VTuple vs ->
       BatList.map (fun v -> encode_value_z3_single descr env v) vs
     | _ -> [encode_value_z3_single descr env v]
@@ -815,6 +837,10 @@ struct
     | VInt i ->
       mk_int_u32 i |>
       mk_term ~tloc:v.vspan ~tdescr:"val"
+    | VNode n ->
+      encode_value_z3_single descr env @@
+      avalue (vint (Integer.create ~size:32 ~value:n), Some (TInt 32), v.vspan)
+    | VEdge _ -> failwith "internal error (tried to directly encode edge)"
     | VOption _ -> failwith "options should have been unboxed"
     | VTuple _ -> failwith "internal error (check that tuples are flat)"
     | VClosure _ -> failwith "internal error (closure in smt)"

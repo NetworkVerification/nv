@@ -36,7 +36,9 @@ let rec unroll_type
   match (canonicalize_type ty2) with
   | TUnit
   | TBool
-  | TInt _ ->
+  | TInt _
+  | TNode
+  | TEdge ->
     ty2
   | TArrow (t1, t2) ->
     TArrow (unroll_type t1, unroll_type t2)

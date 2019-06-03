@@ -1,15 +1,15 @@
 module Vertex :
   sig
-    type t = Integer.t
+    type t = int (* Really should be Syntax.node, but that causes a dependency loop *)
 
     val printVertex : t -> string
     val compare : t -> t -> int
   end
 
-module Edge : Map.OrderedType with type t = Integer.t * Integer.t
+module Edge : Map.OrderedType with type t = Vertex.t * Vertex.t
 
 val printEdge : Edge.t -> string
-     
+
 module VertexMap : BatMap.S with type key = Vertex.t
 
 module VertexSet : BatSet.S with type elt = Vertex.t
@@ -29,10 +29,10 @@ val print_vertex_map : ('a -> string) -> 'a VertexMap.t -> unit
 (* graph *)
 
 type t
-  
+
 (* raise BadVertex if a vertex v does not belong to a graph's set of vertices, ie: 0..num_vertex-1 *)
 
-exception BadVertex of Integer.t
+exception BadVertex of Vertex.t
 
 val good_vertex : t -> Vertex.t -> unit
 
@@ -40,21 +40,21 @@ val good_graph : t -> unit
 
 (* create a graph with i vertices named 0..i-1 *)
 
-val create : Integer.t -> t
+val create : int -> t
 
 (* number of vertices in the graph (named 0..i-1) *)
 
-val num_vertices : t -> Integer.t
+val num_vertices : t -> int
 
-  
-val fold_vertices : (Vertex.t -> 'a -> 'a) -> Integer.t -> 'a -> 'a
-  
+
+val fold_vertices : (Vertex.t -> 'a -> 'a) -> Vertex.t -> 'a -> 'a
+
 (** Vertices in the adjacency graph *)
 val get_vertices : t -> VertexSet.t
-  
+
 (* edges in the graph *)
 
-val edges : t -> (Integer.t * Integer.t) list
+val edges : t -> (Vertex.t * Vertex.t) list
 
 (* add_edge g e adds directed edge e to g *)
 

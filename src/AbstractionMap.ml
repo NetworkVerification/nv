@@ -1,14 +1,14 @@
 open AdjGraph
 open Unsigned
 open Vertex
-   
+
 module AbstractNode =
   struct
     include AdjGraph.VertexSet
 
     let toSet x = x
     let fromSet x = x
-                  
+
     let printAbstractNode (us : t) =
       let rec printAux lst acc =
         match lst with
@@ -30,9 +30,9 @@ module AbstractNode =
   end
 
 module UInts = struct
-  type t = Integer.t
+  type t = AdjGraph.Vertex.t
 
-  let compare = Integer.compare
+  let compare = Pervasives.compare
 end
 
 type abstrId = UInts.t
@@ -65,10 +65,10 @@ let getGroupRepresentative (f: abstractionMap) (u: AbstractNode.t) : Vertex.t =
 
 let getGroupRepresentativeId (f: abstractionMap) (uhat: abstrId) : Vertex.t =
   getGroupRepresentative f (getGroupById f uhat)
-  
+
 let getGroupId (f: abstractionMap) (u: AbstractNode.t) : abstrId =
   getId f (getGroupRepresentative f u)
-  
+
 (* Removes the node u from it's current abstract group and assigns it to the id newId *)
 let partitionNode (f: abstractionMap) (newId: abstrId) (u: Vertex.t) : abstractionMap =
   let f' =  match getIdPartial f u with
@@ -92,7 +92,7 @@ let partitionNodes (f: abstractionMap) (i: abstrId) (us: AbstractNode.t) : abstr
 let split (f: abstractionMap) (us: AbstractNode.t) : abstractionMap =
   let f' = {absGroups = f.absGroups;
             groupId = f.groupId;
-            nextId = Integer.succ f.nextId} in
+            nextId = f.nextId + 1} in
   partitionNodes f' (f'.nextId) us
 
 let getAbstractGroups (f: abstractionMap) : (GroupMap.key * AbstractNode.t) list =
@@ -100,14 +100,14 @@ let getAbstractGroups (f: abstractionMap) : (GroupMap.key * AbstractNode.t) list
 
 let printAbstractGroups (f: abstractionMap) (sep: string) : string =
   BatList.fold_left (fun acc (k, us) ->
-      (Integer.to_string k) ^ ": " ^
+      (string_of_int k) ^ ": " ^
         (AbstractNode.printAbstractNode us) ^ sep ^ acc)
     "" (getAbstractGroups f)
 
 let emptyAbstraction = { absGroups = GroupMap.empty;
                          groupId = VertexMap.empty;
-                         nextId = Integer.create ~value:0 ~size:32}
-  
+                         nextId = 0}
+
 let createAbstractionMap g : abstractionMap =
   let f = emptyAbstraction in
   partitionNodes f (f.nextId) (AdjGraph.get_vertices g)
@@ -122,17 +122,17 @@ let size (f: abstractionMap) : int =
   GroupMap.cardinal (f.absGroups)
 
 let normalized_size (f: abstractionMap) : int =
-  f.nextId |> Integer.to_int
+  f.nextId
 
 let copyMap (f: abstractionMap) =
   {absGroups = f.absGroups; groupId = f.groupId; nextId = f.nextId}
 
 (* does not preserve ids through refinements *)
 let normalize (f: abstractionMap) =
-  let init =  (Integer.create ~value:0 ~size:32, VertexMap.empty, GroupMap.empty) in
+  let init =  (0, VertexMap.empty, GroupMap.empty) in
   let (nextIdN, groupIdN, absGroupsN) =
     GroupMap.fold (fun id us (nextIdN, groupIdN, absGroupsN) ->
-        (Integer.succ nextIdN,
+        (nextIdN + 1,
          VertexSet.fold (fun u acc -> VertexMap.add u nextIdN acc) us groupIdN,
          GroupMap.add nextIdN (getGroupById f id) absGroupsN))
                   f.absGroups init
@@ -177,5 +177,3 @@ let normalize (f: abstractionMap) =
  *          GroupMap.add !freshId us absGroupsN))
  *                    (Integer.create ~value:0 ~size:32, groupIdN, absGroupsN) leftovers
  *   in { absGroups = absGroupsN; groupId = groupIdN; nextId = nextIdN} *)
-
-    

@@ -33,6 +33,9 @@ let rec equal_val v1 v2 =
   | VTuple vs1, VTuple vs2 -> equal_vals vs1 vs2
   | VOption None, VOption None -> true
   | VOption (Some v1), VOption (Some v2) -> equal_val v1 v2
+  | VRecord map1, VRecord map2 -> RecordUtils.StringMap.equal equal_val map1 map2
+  | VNode n1, VNode n2 -> n1 = n2
+  | VEdge e1, VEdge e2 -> e1 = e2
   | VClosure _, _ -> failwith "internal error (equal_val)"
   | _, VClosure _ -> failwith "internal error (equal_val)"
   | _, _ -> false
@@ -56,6 +59,10 @@ let rec matches p (v: Syntax.value) env : Syntax.value Env.t option =
   | PBool false, VBool false -> Some env
   | PInt i1, VInt i2 ->
     if Integer.equal i1 i2 then Some env else None
+  | PNode n1, VNode n2 ->
+    if n1 = n2 then Some env else None
+  | PEdge e1, VEdge e2 ->
+    if e1 = e2 then Some env else None
   | PTuple ps, VTuple vs -> (* matches_list ps vs *)
     (match ps, vs with
      | [], []-> Some env
@@ -66,7 +73,7 @@ let rec matches p (v: Syntax.value) env : Syntax.value Env.t option =
      | _, _ -> None)
   | POption None, VOption None -> Some env
   | POption (Some p), VOption (Some v) -> matches p v env
-  | (PUnit | PBool _ | PInt _ | PTuple _ | POption _), _ -> None
+  | (PUnit | PBool _ | PInt _ | PTuple _ | POption _ | PNode _ | PEdge _), _ -> None
   | PRecord _, _ -> failwith "Record found during interpretation"
 
 
@@ -86,7 +93,12 @@ let rec val_to_pat v =
   | VOption None -> POption None
   | VTuple vs ->
     PTuple (BatList.map val_to_pat vs)
-  | _ -> PWild
+  | VRecord map -> PRecord (RecordUtils.StringMap.map val_to_pat map)
+  | VNode n -> PNode n
+  | VEdge e -> PEdge e
+  | VUnit -> PUnit
+  | VMap _
+  | VClosure _ -> PWild
 
 let rec match_branches branches v env =
   (* iterBranches (fun (p,e) ->  Printf.printf "%s\n" (Printing.pattern_to_string p)) branches;
@@ -593,6 +605,22 @@ struct
         match (to_value e).v with
         | VInt i2 ->
           if Integer.equal i1 i2 then Match Env.empty else NoMatch
+        | _ -> NoMatch
+      else
+        Delayed
+    | PNode n1 ->
+      if is_value e then
+        match (to_value e).v with
+        | VNode n2 ->
+          if n1 = n2 then Match Env.empty else NoMatch
+        | _ -> NoMatch
+      else
+        Delayed
+    | PEdge (n1, n2) ->
+      if is_value e then
+        match (to_value e).v with
+        | VEdge (n1', n2') ->
+          if n1 = n1' && n2 = n2' then Match Env.empty else NoMatch
         | _ -> NoMatch
       else
         Delayed

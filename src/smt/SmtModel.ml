@@ -21,7 +21,7 @@ let prefix_if_needed varname =
 
 (** Emits the code that evaluates the model returned by Z3. *)
 let eval_model (symbolics: Syntax.ty_or_exp VarMap.t)
-    (num_nodes: Integer.t)
+    (num_nodes: int)
     (eassert: Syntax.exp option)
     (renaming: string StringMap.t * smt_term StringMap.t) : command list =
   let renaming, valMap = renaming in

@@ -121,6 +121,7 @@
 
 %token <Span.t * Var.t> ID
 %token <Span.t * Integer.t> NUM
+%token <Span.t * int> NODE
 %token <Span.t> AND
 %token <Span.t> OR
 %token <Span.t> NOT
@@ -165,6 +166,8 @@
 %token <Span.t> TYPE
 %token <Span.t> COLON
 %token <Span.t> TBOOL
+%token <Span.t> TNODE
+%token <Span.t> TEDGE
 %token <Span.t * int> TINT
 %token <Span.t> EDGES
 %token <Span.t> NODES
@@ -199,6 +202,8 @@
 ty:
    | ty ARROW ty                        { TArrow ($1,$3) }
    | TBOOL                              { TBool }
+   | TNODE                              { TNode }
+   | TEDGE                              { TEdge }
    | TINT                               { Syntax.TInt (snd $1) }
    | LPAREN tys RPAREN                  { if List.length $2 = 1 then List.hd $2 else TTuple $2 }
    | TOPTION LBRACKET ty RBRACKET       { TOption $3 }
@@ -246,7 +251,7 @@ component:
     | REQUIRE expr                      { DRequire $2 }
     | LET EDGES EQ LBRACE RBRACE        { DEdges [] }
     | LET EDGES EQ LBRACE edges RBRACE  { DEdges $5 }
-    | LET NODES EQ NUM                  { DNodes (snd $4) }
+    | LET NODES EQ NUM                  { DNodes (Integer.to_int (snd $4)) }
     | TYPE ATTRIBUTE EQ ty              { DATy $4 }
     | TYPE ID EQ ty                     { (add_user_type (snd $2) $4; DUserTy (snd $2, $4)) }
 
@@ -364,8 +369,10 @@ expr2:
 
 expr3:
     | ID                                { exp (evar (snd $1)) (fst $1) }
-    | ID DOT ID                       { exp (eproject (evar (snd $1)) (Var.name (snd $3))) (Span.extend (fst $1) (fst $3)) }
+    | ID DOT ID                         { exp (eproject (evar (snd $1)) (Var.name (snd $3))) (Span.extend (fst $1) (fst $3)) }
     | NUM                               { to_value (vint (snd $1)) (fst $1) }
+    | NODE                              { to_value (vnode (snd $1)) (fst $1)}
+    | NODE SUB NODE                     { to_value (vedge (snd $1, snd $3)) (Span.extend (fst $1) (fst $3))}
     | TRUE                              { to_value (vbool true) $1 }
     | FALSE                             { to_value (vbool false) $1 }
     | NONE                              { to_value (voption None) $1 }
@@ -382,9 +389,14 @@ exprsspace:
     | expr3 exprsspace                  { $1 :: $2 }
 ;
 
+edgenode:
+    | NUM                               { Integer.to_int (snd $1) }
+    | NODE                              { snd $1 }
+;
+
 edge:
-    | NUM SUB NUM SEMI                  { [(snd $1, snd $3)] }
-    | NUM EQ NUM SEMI                   { [(snd $1, snd $3); (snd $3, snd $1)] }
+    | edgenode SUB edgenode SEMI        { [($1, $3)] }
+    | edgenode EQ edgenode SEMI         { [($1, $3); ($3, $1)] }
 ;
 
 edges:
@@ -398,6 +410,8 @@ pattern:
     | TRUE                              { PBool true }
     | FALSE                             { PBool false }
     | NUM                               { PInt (snd $1) }
+    | NODE                              { PNode (snd $1) }
+    | NODE SUB NODE                     { PEdge (snd $1, snd $3)}
     | LPAREN patterns RPAREN            { tuple_pattern $2 }
     | NONE                              { POption None }
     | SOME pattern                      { POption (Some $2) }
@@ -405,7 +419,6 @@ pattern:
                                           (if snd $2
                                            then fill_record (fst $2) (fun _ -> PWild)
                                            else fst $2)) }
-
 ;
 
 patterns:

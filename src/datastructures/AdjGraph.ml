@@ -1,12 +1,12 @@
 module Vertex = struct
-  type t = Integer.t
+  type t = int (* Really should be Syntax.node, but that causes a dependency loop *)
 
   let printVertex i =
-    Printf.sprintf "%d" (Integer.to_int i)
+    Printf.sprintf "%d" i
 
-  let compare = Integer.compare
-  let equal = Integer.equal
-  let hash = Hashtbl.hash 
+  let compare = Pervasives.compare
+  let equal = (fun a b -> compare a b = 0)
+  let hash = Hashtbl.hash
 end
 
 module VertexMap = BatMap.Make (Vertex)
@@ -18,16 +18,16 @@ module Edge = struct
   type t = Vertex.t * Vertex.t
 
   let compare (v1, w1) (v2, w2) =
-    if Integer.compare v1 v2 <> 0 then Integer.compare v1 v2
-    else Integer.compare w1 w2
+    if Pervasives.compare v1 v2 <> 0 then Pervasives.compare v1 v2
+    else Pervasives.compare w1 w2
 end
 
 let printEdge (e : Edge.t) =
-  Printf.sprintf "<%d,%d>" (Integer.to_int (fst e)) (Integer.to_int (snd e)); 
-            
+  Printf.sprintf "<%d,%d>" (fst e) (snd e);
+
 module EdgeSet = BatSet.Make(Edge)
 module EdgeMap = BatMap.Make(Edge)
-            
+
 (* OCaml 4.06 contains find_opt and update built in. upgrade compiler. *)
 let find_opt v m =
   try Some (VertexMap.find v m) with Not_found -> None
@@ -40,17 +40,17 @@ let update v f m =
 let vertex_map_to_string elem_to_string m =
   let kvs = VertexMap.fold (fun k v l -> (k, v) :: l) m [] in
   BatList.fold_left
-    (fun s (k, v) -> Integer.to_string k ^ ":" ^ elem_to_string v ^ s)
+    (fun s (k, v) -> string_of_int k ^ ":" ^ elem_to_string v ^ s)
     "" kvs
 
 let print_vertex_map elem_to_string m =
   VertexMap.iter
     (fun k v ->
-      print_endline (Integer.to_string k ^ ":" ^ elem_to_string v) )
+      print_endline (string_of_int k ^ ":" ^ elem_to_string v) )
     m
 
 (* a graph as ajacency list * # of vertices *)
-type t = Vertex.t list VertexMap.t * Integer.t
+type t = Vertex.t list VertexMap.t * int
 
 (* create a graph with i vertices *)
 let create i = (VertexMap.empty, i)
@@ -65,19 +65,18 @@ let num_vertices (m, i) = i
 let fold_vertices (f: Vertex.t -> 'a -> 'a) i (acc: 'a) : 'a =
   let rec loop j =
     if i = j then acc
-    else f j (loop (Integer.succ j))
+    else f j (loop (j + 1))
   in
-  loop (Integer.create ~value:0 ~size:32)
+  loop 0
 
-                        
 (* get_vertices now returns all the vertices in the graph, not just
    the ones that have an outgoing edge.*)
 let get_vertices (m, i) =
   let rec loop j =
     if i = j then VertexSet.empty
-    else VertexSet.add j (loop (Integer.succ j))
+    else VertexSet.add j (loop (j+1))
   in
-  loop (Integer.create ~value:0 ~size:32)
+  loop 0
 
 let edges (m, i) =
   let my_edges v neighbors acc =
@@ -97,10 +96,10 @@ let edges_map (m, i) (f: Edge.t -> 'a) =
     m EdgeMap.empty
 
 (* a vertex v does not belong to a graph's set of vertices *)
-exception BadVertex of Integer.t
+exception BadVertex of Vertex.t
 
 let good_vertex (m, i) v =
-  if Integer.compare v (Integer.of_int 0) < 0 || not (Integer.compare i v > 0)
+  if Pervasives.compare v 0 < 0 || not (Pervasives.compare i v > 0)
   then (Printf.printf "bad: %s" (Vertex.printVertex v); raise (BadVertex v))
 
 let good_graph g =
@@ -133,7 +132,7 @@ let remove_edge (m, i) (v, w) =
     | None -> adj
     | Some ns ->
       match
-        BatList.filter (fun a -> not (Integer.compare a w = 0)) ns
+        BatList.filter (fun a -> not (a = w)) ns
       with
       | [] -> None
       | ns' -> Some ns'
@@ -158,17 +157,17 @@ let remove_edges (m, i) (es: EdgeSet.t) =
   in
   let m' = VertexMap.fold (fun u vs acc -> update u (f vs) acc) umap m in
   (m', i)
-  
+
 (* neighbors of v in g *)
 let neighbors (m, i) v =
   good_vertex (m, i) v ;
   match find_opt v m with None -> [] | Some ns -> ns
 
 let print g =
-  Printf.printf "%d\n" (Integer.to_int (num_vertices g)) ;
+  Printf.printf "%d\n" (num_vertices g) ;
   BatList.iter
     (fun (v, w) ->
-      Printf.printf "%d -> %d\n" (Integer.to_int v) (Integer.to_int w)
+      Printf.printf "%d -> %d\n" v w
       )
     (edges g)
 
@@ -179,11 +178,10 @@ let to_string g =
     | [] -> ()
     | (v, w) :: rest ->
         Buffer.add_string b
-          (Printf.sprintf "%d -> %d\n" (Integer.to_int v)
-             (Integer.to_int w)) ;
+          (Printf.sprintf "%d -> %d\n" v w) ;
         add_edges rest
   in
-  Buffer.add_string b (Integer.to_string (num_vertices g) ^ "\n") ;
+  Buffer.add_string b (string_of_int (num_vertices g) ^ "\n") ;
   add_edges (edges g) ;
   Buffer.contents b
 
@@ -224,7 +222,7 @@ let dfs (g: t) (rg : int EdgeMap.t) (s: Vertex.t) =
         else accvs) visited vs
   in
   loop s VertexSet.empty
-          
+
 let min_cut g s t =
   let rg = ref (edges_map g (fun _ -> 1)) in
   let rec loop reach path =
@@ -259,7 +257,7 @@ let min_cut g s t =
                   cutset) !rg EdgeSet.empty
   in
   (cut, visited, VertexSet.diff (get_vertices g) visited)
-        
+
 open Graph
 
 module BoolOrdered = struct
@@ -275,9 +273,9 @@ module DrawableGraph = struct
     fun (k: int) (file: string) ->
     incr counter;
     file ^ "-" ^ (string_of_int k) ^ "-" ^ (string_of_int !counter)
-  
+
   module G = Graph.Persistent.Graph.Concrete (Vertex)
-           
+
   let createGraph ((m,i): t)  =
     VertexMap.fold (fun u es acc ->
         BatList.fold_left (fun acc v ->
@@ -292,9 +290,9 @@ module DrawableGraph = struct
                    let vertex_attributes v =
                      let label = Vertex.printVertex v in
                      [`Shape `Circle; `Label label; `Fontsize 11;]
-                   let vertex_name v = string_of_int (Integer.to_int v)
+                   let vertex_name v = string_of_int v
                    let default_vertex_attributes _ = []
-                   let graph_attributes _ = [`Center true; `Nodesep 0.45; 
+                   let graph_attributes _ = [`Center true; `Nodesep 0.45;
                                              `Ranksep 0.45; `Size (82.67, 62.42)]
                  end)
 

@@ -7,7 +7,7 @@ open Batteries
 
 let rec has_map ty =
   match get_inner_type ty with
-  | TUnit | TBool | TInt _ | TVar _ | QVar _ -> false
+  | TUnit | TBool | TInt _ | TNode | TEdge | TVar _ | QVar _ -> false
   | TTuple ts -> List.exists has_map ts
   | TArrow (ty1, ty2) -> has_map ty1 || has_map ty2
   | TOption ty -> has_map ty
@@ -16,7 +16,7 @@ let rec has_map ty =
 
 let rec check_type ty : bool =
   match get_inner_type ty with
-  | TUnit | TBool | TInt _ | TVar _ | QVar _ -> true
+  | TUnit | TBool | TInt _  | TNode | TEdge | TVar _ | QVar _ -> true
   | TTuple ts -> List.for_all check_type ts
   | TOption ty -> check_type ty
   | TArrow (ty1, ty2) -> check_type ty1 && check_type ty2
@@ -86,7 +86,7 @@ let rec check_closure info (x: VarSet.t) (e: exp) =
 
 and pattern_vars (p: pattern) =
   match p with
-  | PWild | PUnit | PBool _ | PInt _ | POption None -> VarSet.empty
+  | PWild | PUnit | PBool _ | PInt _  | PNode _ | PEdge _ | POption None -> VarSet.empty
   | PVar v -> VarSet.singleton v
   | PTuple ps ->
     List.fold_left

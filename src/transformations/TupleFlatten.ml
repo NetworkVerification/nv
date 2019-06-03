@@ -5,7 +5,7 @@ open Slicing
 let rec flatten_ty ty =
   match ty with
   | TVar {contents= Link t} -> flatten_ty t
-  | TUnit | TBool | TInt _ -> ty
+  | TUnit | TBool | TInt _ | TNode -> ty
   | TArrow (t1, t2) ->
     let ty1 = flatten_ty t1 in
     (match ty1 with
@@ -14,6 +14,7 @@ let rec flatten_ty ty =
            TArrow (t, acc)) ts (flatten_ty t2)
      | _ ->
        TArrow (ty1, flatten_ty t2))
+  | TEdge -> flatten_ty (TTuple [TNode; TNode])
   | TTuple ts ->
     let ts = BatList.map flatten_ty ts in
     let ts' = BatList.fold_right (fun ty acc ->
@@ -30,9 +31,13 @@ let rec flatten_ty ty =
 
 let rec flatten_val v =
   match v.v with
-  | VUnit | VBool _ | VInt _ | VMap _ | VOption None -> v
+  | VUnit | VBool _ | VInt _ | VNode _ | VOption None -> v
   | VOption (Some v) ->
     avalue (voption (Some (flatten_val v)), Some (flatten_ty (oget v.vty)), v.vspan)
+  | VEdge (n1, n2) ->
+    let v1 = avalue (vnode n1, Some TNode, v.vspan) in
+    let v2 = avalue (vnode n2, Some TNode, v.vspan) in
+    flatten_val @@ avalue (vtuple [v1; v2], Some (TTuple [TNode; TNode]), v.vspan)
   | VTuple vs ->
     let vs = BatList.map flatten_val vs in
     let vs' = BatList.fold_right (fun v acc ->
@@ -43,6 +48,7 @@ let rec flatten_val v =
     avalue (vtuple vs', Some (flatten_ty (oget v.vty)), v.vspan)
   | VClosure _ -> failwith "Closures not yet implemented"
   | VRecord _ -> failwith "Record value found during flattening"
+  | VMap _ -> failwith "Map value found during flattening"
 
 let rec flatten_exp e : exp =
   match e.e with
@@ -154,6 +160,8 @@ and flatten_branches bs ty =
        | TOption t ->
          POption (Some (flatten_pattern p t))
        | _ -> failwith "expected option type")
+    | PEdge (n1, n2) ->
+      flatten_pattern (PTuple [PNode n1; PNode n2]) (TTuple [TNode; TNode])
     | PTuple ps ->
       (match ty with
        | TTuple ts ->
@@ -183,7 +191,7 @@ and flatten_branches bs ty =
             PTuple ps
           | _ -> failwith "must be ttuple")
        | _ -> p)
-    | PUnit | PBool _ | PInt _ | POption None  -> p
+    | PUnit | PBool _ | PInt _ | POption None | PNode _ -> p
     | PRecord _ -> failwith "record pattern in flattening"
   in
   mapBranches (fun (p, e) -> (flatten_pattern p ty, flatten_exp e)) bs
@@ -229,6 +237,12 @@ let flatten ds =
 
 let rec unflatten_list (vs : Syntax.value list) (ty : Syntax.ty) =
   match ty with
+  | TEdge ->
+    begin
+      match vs with
+      | [{v=VNode n1; _}; {v=VNode n2; _}] -> (vedge (n1, n2)), []
+      | _ -> failwith "internal error unflattening edge"
+    end
   | TTuple ts ->
     let vs, vleft = BatList.fold_left (fun (vacc, vleft)  ty ->
         let v, vs' = unflatten_list vleft ty in

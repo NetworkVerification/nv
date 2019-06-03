@@ -110,7 +110,7 @@ let run_simulator cfg _ net fs =
       match cfg.bound with
       | None ->
         ( Srp.simulate_net net
-        , QueueSet.empty Integer.compare )
+        , QueueSet.empty Pervasives.compare )
       | Some b -> Srp.simulate_net_bound net b
     in
     ( match QueueSet.pop q with
@@ -119,7 +119,7 @@ let run_simulator cfg _ net fs =
         print_string [] "non-quiescent nodes:" ;
         QueueSet.iter
           (fun q ->
-             print_string [] (Integer.to_string q ^ ";") )
+             print_string [] (string_of_int q ^ ";") )
           q ;
         print_newline () ;
         print_newline () ;

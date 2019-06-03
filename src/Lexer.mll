@@ -22,6 +22,7 @@ let symbol = ['~' '`' '!' '@' '#' '$' '%' '^' '&' '|' ':' '?' '>' '<' '[' ']' '=
 let num = ['0'-'9']+
 let width = "u"num
 let tid = ['\'']['a'-'z' 'A'-'Z']['a'-'z' 'A'-'Z' '_' '0'-'9']*
+let node = num"n"
 
 rule token = parse
   | "(*"              { comments 0 lexbuf }
@@ -55,9 +56,12 @@ rule token = parse
   | "int" num as s    { TINT (position lexbuf, int_of_string @@ String.lchop ~n:3 s) }
   | "int"             { TINT (position lexbuf, 32) }
   | "bool"            { TBOOL (position lexbuf) }
+  | "node"            { TNODE (position lexbuf) }
+  | "edge"            { TEDGE (position lexbuf) }
   | "type"            { TYPE (position lexbuf) }
   | "attribute"       { ATTRIBUTE (position lexbuf) }
   | id as s           { ID (position lexbuf, Var.create s) }
+  | node as s         { NODE (position lexbuf, int_of_string (String.rchop ~n:1 s)) }
   | num width as n    { NUM (position lexbuf, Integer.of_string n) }
   | num as n          { NUM (position lexbuf, Integer.of_string n) }
   | "&&"              { AND (position lexbuf) }

@@ -18,7 +18,7 @@ let print_solution solution =
     AdjGraph.VertexMap.iter
       (fun k v ->
         Printf.printf "Label(%d):%s\n"
-          (Integer.to_int k)
+          k
           (Printing.value_to_string v) )
       solution.labels ) ;
   ( match solution.assertions with
@@ -35,7 +35,6 @@ let print_solution solution =
           (fun k v ->
             if not v then (
               print_string [red; Bold] "Failed: " ;
-              Printf.printf "assertion for node %s\n"
-                (Integer.to_string k) ) )
+              Printf.printf "assertion for node %d\n" k ) )
           m ) ;
   print_newline ()

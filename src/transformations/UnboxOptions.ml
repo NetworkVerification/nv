@@ -8,6 +8,8 @@ let rec empty_pattern ty =
   | TUnit
   | TBool
   | TInt _
+  | TNode
+  | TEdge
   | TOption _
   | TMap _
   | TRecord _ ->
@@ -22,7 +24,7 @@ let rec empty_pattern ty =
 let rec unbox_ty ty =
   match Typing.canonicalize_type ty with
   | TVar {contents= Link t} -> unbox_ty t
-  | TUnit | TBool | TInt _ -> ty
+  | TUnit | TBool | TInt _ | TNode | TEdge -> ty
   | TArrow (t1, t2) ->
     TArrow (unbox_ty t1, unbox_ty t2)
   | TTuple ts -> TTuple (BatList.map unbox_ty ts)
@@ -34,7 +36,7 @@ let rec unbox_ty ty =
 
 let rec unbox_val v =
   match v.v with
-  | VUnit | VBool _ | VInt _ ->
+  | VUnit | VBool _ | VInt _ | VNode _ | VEdge _->
     exp_of_value v
   | VOption None ->
     (match v.vty with
@@ -168,7 +170,7 @@ let unbox ds = BatList.map unbox_decl ds
 
 let rec unbox_val v =
   match v.v with
-  | VUnit | VBool _ | VInt _ ->
+  | VUnit | VBool _ | VInt _ | VNode _ | VEdge _ ->
     exp_of_value v
   | VOption None ->
     (match v.vty with
@@ -202,7 +204,7 @@ let rec box_val v ty =
     Printf.printf "%s\n" (printList (Printing.value_to_string) vs "" "," "");
     Printf.printf "%s\n" (Printing.ty_to_string ty);
     failwith "mistyped value"
-  | VUnit, _ | VBool _, _ | VInt _, _ -> v
+  | VUnit, _ | VBool _, _ | VInt _, _ | VNode _, _ | VEdge _, _ -> v
   | VOption _, _ | VClosure _, _ | VMap _, _ | VRecord _, _ -> failwith "no such values"
 
 let box_sol ty sol =
