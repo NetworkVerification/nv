@@ -19,8 +19,8 @@ let trans edge x =
   match fails with
   | (fail1, fail2) ->
   if
-    ((edge = (0,1) || edge = (1,0)) && fail1) ||
-    ((edge = (0,2) || edge = (2,0)) && fail2)
+    ((edge = 0n-1n || edge = 1n-0n) && fail1) ||
+    ((edge = 0n-2n || edge = 2n-0n) && fail2)
   then
     None
   else
@@ -30,7 +30,7 @@ let trans edge x =
 
 let init node =
   match node with
-  | 0 -> Some 0
+  | 0n -> Some 0
   | _ -> None
 
 let assert n x =

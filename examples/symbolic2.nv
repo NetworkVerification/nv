@@ -20,12 +20,12 @@ let trans edge x =
   | None -> None
   | Some x ->
     match edge with
-      | (0,1) -> if fail[(0,1)] then None else Some (x + 1)
-      | (1,0) -> if fail[(1,0)] then None else Some (x + 1)
+      | 0n-1n -> if fail[0n-1n] then None else Some (x + 1)
+      | 1n-0n -> if fail[1n-0n] then None else Some (x + 1)
 
 let init node =
   match node with
-  | 0 -> Some 0
+  | 0n -> Some 0
   | _ -> None
 
 let assert n x =

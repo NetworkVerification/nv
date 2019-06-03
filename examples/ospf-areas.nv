@@ -11,10 +11,10 @@ let edges = {
 }
 
 let area edge = match edge with
-  | (0,1) -> 1
-  | (1,0) -> 1
-  | (1,2) -> 0
-  | (2,1) -> 0
+  | 0n-1n -> 1
+  | 1n-0n -> 1
+  | 1n-2n -> 0
+  | 2n-1n -> 0
 
 let mapo f o =
   match o with
@@ -46,8 +46,8 @@ let trans edge x =
 let init node =
   let m = createDict (createDict None) in
   match node with
-  | 0 -> let n = createDict None in
+  | 0n -> let n = createDict None in
     m[1 := n[3 := Some 0]]
-  | 1 -> m
-  | 2 -> let n = createDict None in
+  | 1n -> m
+  | 2n -> let n = createDict None in
     m[0 := n[5 := Some 0]]

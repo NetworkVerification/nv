@@ -1,4 +1,4 @@
-type attribute = dict[int, option[int]]
+type attribute = dict[tnode, option[int]]
 
 let nodes = 20
 
@@ -59,28 +59,28 @@ let ip_of_node node = node
 let init node =
   let m = createDict None in
   match node with
-  | 0 -> m[0 := Some 0]
-  | 1 -> m[1 := Some 0]
-  | 2 -> m[2 := Some 0]
-  | 3 -> m[3 := Some 0]
-  | 4 -> m[4 := Some 0]
-  | 5 -> m[5 := Some 0]
-  | 6 -> m[6 := Some 0]
-  | 7 -> m[7 := Some 0]
-  | 8 -> m[8 := Some 0]
-  | 9 -> m[9 := Some 0]
-  | 10 -> m[10 := Some 0]
-  | 11 -> m[11 := Some 0]
-  | 12 -> m[12 := Some 0]
-  | 13 -> m[13 := Some 0]
-  | 14 -> m[14 := Some 0]
-  | 15 -> m[15 := Some 0]
-  | 16 -> m[16 := Some 0]
-  | 17 -> m[17 := Some 0]
-  | 18 -> m[18 := Some 0]
-  | 19 -> m[19 := Some 0]
+  | 0n -> m[0n := Some 0]
+  | 1n -> m[1n := Some 0]
+  | 2n -> m[2n := Some 0]
+  | 3n -> m[3n := Some 0]
+  | 4n -> m[4n := Some 0]
+  | 5n -> m[5n := Some 0]
+  | 6n -> m[6n := Some 0]
+  | 7n -> m[7n := Some 0]
+  | 8n -> m[8n := Some 0]
+  | 9n -> m[9n := Some 0]
+  | 10n -> m[10n := Some 0]
+  | 11n -> m[11n := Some 0]
+  | 12n -> m[12n := Some 0]
+  | 13n -> m[13n := Some 0]
+  | 14n -> m[14n := Some 0]
+  | 15n -> m[15n := Some 0]
+  | 16n -> m[16n := Some 0]
+  | 17n -> m[17n := Some 0]
+  | 18n -> m[18n := Some 0]
+  | 19n -> m[19n := Some 0]
 
 let assert node x =
-  match x[19] with
+  match x[19n] with
   | None -> false
   | Some _ -> true

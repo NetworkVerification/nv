@@ -16,9 +16,9 @@ let mapbetter f o1 o2 =
   | (None, x) -> x
   | (x , None) -> x
   | (Some x, Some y) -> Some (f x y)
-      
+
 let merge node x y =
-  let f = mapbetter (fun x y -> if x < y then x else y) in 
+  let f = mapbetter (fun x y -> if x < y then x else y) in
   combine f x y
 
 let trans edge x =
@@ -27,5 +27,5 @@ let trans edge x =
 let init node =
   let m = createDict None in
   match node with
-  | 0 -> m[3 := Some 0]
-  | 1 -> m[5 := Some 0]
+  | 0n -> m[3 := Some 0]
+  | 1n -> m[5 := Some 0]

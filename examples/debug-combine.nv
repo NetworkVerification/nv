@@ -17,7 +17,7 @@ match (x,y) with
 | (Some x, Some y) ->
   if x < y then Some x else Some y
 
-let merge node x y = combine mergeValues x y 
+let merge node x y = combine mergeValues x y
 
 (*let merge node x y =
    let z = createDict(None) in
@@ -41,5 +41,5 @@ x[0 := x0]
 let init node =
     let d = createDict(None) in
     match node with
-    | 0 -> d[0 := Some 1]
-    | 1 -> d
+    | 0n -> d[0 := Some 1]
+    | 1n -> d

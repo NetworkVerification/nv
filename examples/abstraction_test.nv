@@ -20,7 +20,7 @@ match a with
 
 let init node =
   match node with
-  | 0 -> (true, true, true)
+  | 0n -> (true, true, true)
   | _ -> (false, false, false)
 
 let assert node a =

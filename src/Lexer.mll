@@ -56,8 +56,8 @@ rule token = parse
   | "int" num as s    { TINT (position lexbuf, int_of_string @@ String.lchop ~n:3 s) }
   | "int"             { TINT (position lexbuf, 32) }
   | "bool"            { TBOOL (position lexbuf) }
-  | "node"            { TNODE (position lexbuf) }
-  | "edge"            { TEDGE (position lexbuf) }
+  | "tnode"            { TNODE (position lexbuf) }
+  | "tedge"            { TEDGE (position lexbuf) }
   | "type"            { TYPE (position lexbuf) }
   | "attribute"       { ATTRIBUTE (position lexbuf) }
   | id as s           { ID (position lexbuf, Var.create s) }

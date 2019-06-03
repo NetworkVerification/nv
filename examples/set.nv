@@ -8,11 +8,11 @@ let edges = {
 
 let merge node x y = x union y
 
-let trans edge x = 
-  if edge = (0,1) then filter (fun k -> k=3) x else x 
+let trans edge x =
+  if edge = 0n-1n then filter (fun k -> k=3) x else x
 
 let init node =
   let m = {} in
   match node with
-  | 0 -> m[3 := true]
-  | 1 -> m[5 := true]
+  | 0n -> m[3 := true]
+  | 1n -> m[5 := true]

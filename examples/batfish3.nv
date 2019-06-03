@@ -62,7 +62,7 @@ let betterEqOption o1 o2 =
 let best c s o b =
   match (c,s,o,b) with
   | (None,None,None,None) -> None
-  | _ -> 
+  | _ ->
       let o = match o with | None -> None | Some (ad,_,_,_) -> Some ad in
       let b = match b with | None -> None | Some (ad,_,_,_,_) -> Some ad in
       let (x,p1) = if betterEqOption c s then (c,0) else (s,1) in
@@ -82,7 +82,7 @@ let merge node x y = mergeValues x y
 
 let init node =
   match node with
-  | 0 -> 
+  | 0n ->
      if (d = (1174406144, 24)) then
        let c = None in
        let s = None in
@@ -98,7 +98,7 @@ let init node =
        let fib = best c s o b in
         (c,s,o,b,fib)
      else (None,None,None,None,None)
-  | 1 -> 
+  | 1n ->
      if (d = (167772160, 31)) || (d = (167772672, 31)) || (d = (1174405376, 32)) then
        let c = Some 0 in
        let s = None in
@@ -107,7 +107,7 @@ let init node =
        let fib = best c s o b in
         (c,s,o,b,fib)
      else (None,None,None,None,None)
-  | 2 -> 
+  | 2n ->
      if (d = (167772928, 31)) || (d = (167772672, 31)) || (d = (1174405120, 32)) then
        let c = Some 0 in
        let s = None in
@@ -116,7 +116,7 @@ let init node =
        let fib = best c s o b in
         (c,s,o,b,fib)
      else (None,None,None,None,None)
-  | 3 -> 
+  | 3n ->
      if (d = (1174405632, 24)) then
        let c = None in
        let s = None in
@@ -132,7 +132,7 @@ let init node =
        let fib = best c s o b in
         (c,s,o,b,fib)
      else (None,None,None,None,None)
-  | 4 -> 
+  | 4n ->
      if (d = (167772416, 31)) || (d = (167772928, 31)) || (d = (1174405888, 32)) then
        let c = Some 0 in
        let s = None in
@@ -148,31 +148,31 @@ let init node =
    | None -> None
    | Some (ad,cost,areaType,areaId) -> (
    match edge with
-   | (0,4) -> None
-   | (4,0) -> None
-   | (4,2) -> None
-   | (2,1) -> None
-   | (2,4) -> None
-   | (3,1) -> None
-   | (1,2) -> None
-   | (1,3) -> None
+   | 0n-4n -> None
+   | 4n-0n -> None
+   | 4n-2n -> None
+   | 2n-1n -> None
+   | 2n-4n -> None
+   | 3n-1n -> None
+   | 1n-2n -> None
+   | 1n-3n -> None
 )
  let transferBgp edge b =
    match b with
    | None -> None
    | Some (ad,lp,cost,med,comms) -> (
    match edge with
-   | (0,4) -> Some (ad, lp, cost + 1, med, comms)
-   | (4,0) -> Some (ad, lp, cost + 1, med, comms)
-   | (4,2) -> Some (ad, lp, cost + 1, med, comms)
-   | (2,1) -> Some (ad, lp, cost + 1, med, comms)
-   | (2,4) -> Some (ad, lp, cost + 1, med, comms)
-   | (3,1) -> Some (ad, lp, cost + 1, med, comms)
-   | (1,2) -> Some (ad, lp, cost + 1, med, comms)
-   | (1,3) -> Some (ad, lp, cost + 1, med, comms)
+   | 0n-4n -> Some (ad, lp, cost + 1, med, comms)
+   | 4n-0n -> Some (ad, lp, cost + 1, med, comms)
+   | 4n-2n -> Some (ad, lp, cost + 1, med, comms)
+   | 2n-1n -> Some (ad, lp, cost + 1, med, comms)
+   | 2n-4n -> Some (ad, lp, cost + 1, med, comms)
+   | 3n-1n -> Some (ad, lp, cost + 1, med, comms)
+   | 1n-2n -> Some (ad, lp, cost + 1, med, comms)
+   | 1n-2n -> Some (ad, lp, cost + 1, med, comms)
 )
 
-let transferRoute edge x = 
+let transferRoute edge x =
   let (c,s,o,b,fib) = x in
   let o = transferOspf edge o in
   let b = transferBgp edge b in
@@ -183,7 +183,7 @@ let trans edge x =
 
 let assert node x = false
 (*match node with
-| 3 ->
+| 3n ->
     if (d = (1174406144, 24)) then
        match x with
        | (None, None, None, None, None) -> false
