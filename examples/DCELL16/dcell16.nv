@@ -11818,7 +11818,7 @@ let trans edge x =
 
 (* switch to switch reachability *)
 let assert node x =
-  if (node >n 101n && node <n 111n) || (noden >n 189n && node <n 199n) then
+  if (node >n 101n && node <n 111n) || (node >n 189n && node <n 199n) then
     if (d = (1174476544, 24)) then
       match x with
       | (None, None, None, None, None) -> false

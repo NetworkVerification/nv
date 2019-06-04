@@ -10996,14 +10996,14 @@ let merge node x y =
   combine (fun x y -> mapbetter (fun x y -> if x < y then x else y) x y) x y (Some None) None (Some None) None
 
 let filt1 k =
-  (k<=10 && k>=5) ||
-  (k<=20 && k>=15) ||
-  (k<=30 && k>=25) ||
-  (k<=40 && k>=35) ||
-  (k<=50 && k>=45) ||
-  (k<=60 && k>=55) ||
-  (k<=70 && k>=65) ||
-  (k<=80 && k>=75)
+  (k <=n 10n && k >=n 5n) ||
+  (k <=n 20n && k >=n 15n) ||
+  (k <=n 30n && k >=n 25n) ||
+  (k <=n 40n && k >=n 35n) ||
+  (k <=n 50n && k >=n 45n) ||
+  (k <=n 60n && k >=n 55n) ||
+  (k <=n 70n && k >=n 65n) ||
+  (k <=n 80n && k >=n 75n)
 
 let trans edge x =
   let m = mapIf filt1 (fun x -> None) x in

@@ -46,11 +46,13 @@ type op =
   | And
   | Or
   | Not
+  | Eq
   | UAdd of bitwidth
   | USub of bitwidth
-  | UEq
   | ULess of bitwidth
   | ULeq of bitwidth
+  | NLess
+  | NLeq
   | AtMost of int
   | MCreate
   | MGet
@@ -768,7 +770,7 @@ and hash_op op =
   | And -> 1
   | Or -> 2
   | Not -> 3
-  | UEq -> 4
+  | Eq -> 4
   | MCreate -> 5
   | MGet -> 6
   | MSet -> 7
@@ -780,6 +782,8 @@ and hash_op op =
   | ULess n -> 11 + n + 256 * 3
   | ULeq n -> 11  + n + 256 * 4
   | AtMost n -> 12 + n
+  | NLess -> 13
+  | NLeq -> 14
 (* hashconsing information/tables *)
 
 let meta_v : (v, value) meta =
@@ -815,9 +819,11 @@ let arity op =
   | Not -> 1
   | UAdd _ -> 2
   | USub _ -> 2
-  | UEq -> 2
+  | Eq -> 2
   | ULess _ -> 2
   | ULeq _ -> 2
+  | NLess -> 2
+  | NLeq -> 2
   | AtMost _ -> 3
   | MCreate -> 1
   | MGet -> 2
@@ -1871,11 +1877,13 @@ module BddFunc = struct
         | And, [e1; e2] -> eval_bool_op2 env Bdd.dand e1 e2
         | Or, [e1; e2] -> eval_bool_op2 env Bdd.dor e1 e2
         | Not, [e1] -> eval_bool_op1 env Bdd.dnot e1
-        | UEq, [e1; e2] -> eq (eval env e1) (eval env e2)
+        | Eq, [e1; e2] -> eq (eval env e1) (eval env e2)
         | UAdd _, [e1; e2] -> add (eval env e1) (eval env e2)
         | ULess _, [e1; e2] -> lt (eval env e1) (eval env e2)
         | ULeq _, [e1; e2] -> leq (eval env e1) (eval env e2)
         | USub _, [e1; e2] -> failwith "subtraction not implemented"
+        | NLess, [e1; e2] -> lt (eval env e1) (eval env e2)
+        | NLeq, [e1; e2] -> leq (eval env e1) (eval env e2)
         | _ -> failwith "unimplemented" )
     | EIf (e1, e2, e3) -> (
         let v1 = eval env e1 in

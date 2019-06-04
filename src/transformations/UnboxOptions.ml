@@ -104,13 +104,15 @@ let rec unbox_exp e : exp =
       | Not, _
       | UAdd _, _
       | USub _, _
-      | UEq, _
+      | Eq, _
       | ULess _, _
       | AtMost _, _
       | ULeq _, _
       | MCreate, _
       | MGet, _
-      | MSet, _ ->
+      | MSet, _
+      | NLess, _
+      | NLeq, _ ->
         aexp (eop op (BatList.map unbox_exp es),
               Some (unbox_ty (oget e.ety)), e.espan)
       | _ -> failwith "TODO: implement option unboxing for rest of map operations")

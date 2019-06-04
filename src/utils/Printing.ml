@@ -4,7 +4,7 @@ open Syntax
 
 let is_keyword_op op =
   match op with
-  | And | Or | Not | UAdd _ | USub _ | UEq | ULess _ | ULeq _ | MGet -> false
+  | And | Or | Not | UAdd _ | USub _ | Eq | ULess _ | ULeq _ | MGet | NLess | NLeq -> false
   | MCreate | MSet | MMap | MMerge | MMapFilter | AtMost _ -> true
 
 (* set to true if you want to print universal quanifiers explicitly *)
@@ -19,9 +19,11 @@ let prec_op op =
   | Not -> 6
   | UAdd _ -> 4
   | USub _ -> 4
-  | UEq -> 5
+  | Eq -> 5
   | ULess _ -> 5
   | ULeq _ -> 5
+  | NLess -> 5
+  | NLeq -> 5
   | MCreate -> 5
   | MGet -> 5
   | MSet -> 3
@@ -139,9 +141,11 @@ let op_to_string op =
   | Not -> "!"
   | UAdd n -> "+" ^ "u" ^ (string_of_int n)
   | USub n -> "-" ^ "u" ^ (string_of_int n)
-  | UEq -> "="
+  | Eq -> "="
   | ULess n -> "<" ^ "u" ^ (string_of_int n)
   | ULeq n -> "<=" ^ "u" ^ (string_of_int n)
+  | NLess -> "<n"
+  | NLeq -> "<=n"
   | MCreate -> "createMap"
   | MGet -> "at"
   | MSet -> "set"

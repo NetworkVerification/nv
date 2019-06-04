@@ -58,7 +58,7 @@ let get_prefixes_from_expr (expr: Syntax.exp) : PrefixSet.t =
   let prefixes = ref PrefixSet.empty in
   Visitors.iter_exp (fun e ->
       match e.e with
-      | EOp (UEq, [var; pre]) when is_value pre ->
+      | EOp (Eq, [var; pre]) when is_value pre ->
          (match var.e with
           | EVar x ->
              if (Var.name x) = "d" then

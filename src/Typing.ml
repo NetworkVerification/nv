@@ -323,12 +323,14 @@ let op_typ op =
   | USub size -> ([tint_of_size size; tint_of_size size], tint_of_size size)
   | ULess size-> ([tint_of_size size; tint_of_size size], TBool)
   | ULeq size -> ([tint_of_size size; tint_of_size size], TBool)
+  | NLess -> ([TNode; TNode], TBool)
+  | NLeq -> ([TNode; TNode], TBool)
   | AtMost n ->
     ([TTuple (BatList.init n (fun _ -> TBool));
       TTuple (BatList.init n (fun _ -> TInt 32));
       (TInt 32)], TBool)
   (* Map operations *)
-  | MCreate | MGet | MSet | MMap | MMerge | MMapFilter | UEq ->
+  | MCreate | MGet | MSet | MMap | MMerge | MMapFilter | Eq ->
     failwith "internal error (op_typ)"
 
 let texp (e, ty, span) = aexp (e, Some ty, span)
@@ -453,7 +455,7 @@ let rec infer_exp i info env (e: exp) : exp =
         | MGet, _ | MSet, _ | MCreate, _ | MMap, _ ->
           Console.error_position info e.espan
             (Printf.sprintf "invalid number of parameters")
-        | UEq, [e1; e2] ->
+        | Eq, [e1; e2] ->
           let e1, ty1 = infer_exp (i + 1) info env e1 |> textract in
           let e2, ty2 = infer_exp (i + 1) info env e2 |> textract in
           unify info e ty1 ty2 ;

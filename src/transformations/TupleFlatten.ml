@@ -139,13 +139,15 @@ let rec flatten_exp e : exp =
       | Not
       | UAdd _
       | USub _
-      | UEq
+      | Eq
       | ULess _
       | AtMost _
       | MCreate
       | MGet
       | MSet
-      | ULeq _ ->
+      | ULeq _
+      | NLess
+      | NLeq ->
         aexp (eop op (BatList.map flatten_exp es),
               Some (flatten_ty (oget e.ety)), e.espan)
       | _ -> failwith "TODO: implement tupple flattening for more map operations")

@@ -219,16 +219,18 @@ struct
           let ze2 = encode_exp_z3 descr env e2 in
           mk_sub ze1.t ze2.t |>
           mk_term ~tloc:e.espan
-        | UEq, [e1;e2] ->
+        | Eq, [e1;e2] ->
           let ze1 = encode_exp_z3 descr env e1 in
           let ze2 = encode_exp_z3 descr env e2 in
           mk_eq ze1.t ze2.t |>
           mk_term ~tloc:e.espan
+        | NLess, [e1;e2]
         | ULess _, [e1;e2] ->
           let ze1 = encode_exp_z3 descr env e1 in
           let ze2 = encode_exp_z3 descr env e2 in
           mk_lt ze1.t ze2.t |>
           mk_term ~tloc:e.espan
+        | NLeq, [e1;e2]
         | ULeq _, [e1;e2] ->
           let ze1 = encode_exp_z3 descr env e1 in
           let ze2 = encode_exp_z3 descr env e2 in
@@ -664,7 +666,7 @@ struct
           let ze1 = encode_exp_z3_single descr env e1 in
           let ze2 = encode_exp_z3_single descr env e2 in
           mk_sub ze1.t ze2.t |> mk_term ~tloc:e.espan
-        | UEq, [e1;e2] ->
+        | Eq, [e1;e2] ->
           let ze1 = encode_exp_z3_single descr env e1 in
           let ze2 = encode_exp_z3_single descr env e2 in
           mk_eq ze1.t ze2.t |> mk_term ~tloc:e.espan
@@ -713,7 +715,7 @@ struct
     match e.e with
     | EOp (op, es) ->
       (match op, es with
-       | UEq, [e1;e2] ->
+       | Eq, [e1;e2] ->
          let ze1 = encode_exp_z3 descr env e1 in
          let ze2 = encode_exp_z3 descr env e2 in
          lift2 (fun ze1 ze2 -> mk_eq ze1.t ze2.t |> mk_term ~tloc:e.espan) ze1 ze2

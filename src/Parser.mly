@@ -134,6 +134,10 @@
 %token <Span.t * int> GREATER
 %token <Span.t * int> LEQ
 %token <Span.t * int> GEQ
+%token <Span.t> NLESS
+%token <Span.t> NGREATER
+%token <Span.t> NLEQ
+%token <Span.t> NGEQ
 %token <Span.t> LET
 %token <Span.t> IN
 %token <Span.t> IF
@@ -190,7 +194,7 @@
 %right ELSE IN     /* lowest precedence */
 %right ARROW
 %left AND OR
-%nonassoc GEQ GREATER LEQ LESS EQ
+%nonassoc GEQ GREATER LEQ LESS EQ NLEQ NGEQ NLESS NGREATER
 %left PLUS SUB UNION INTER MINUS
 %right NOT
 %right SOME
@@ -298,11 +302,15 @@ expr:
     | expr OR expr                      { exp (eop Or [$1;$3]) (Span.extend $1.espan $3.espan) }
     | expr PLUS expr                    { exp (eop (UAdd (snd $2)) [$1;$3]) (Span.extend $1.espan $3.espan) }
     | expr SUB expr                     { exp (eop (USub (snd $2)) [$1;$3]) (Span.extend $1.espan $3.espan) }
-    | expr EQ expr                      { exp (eop UEq [$1;$3]) (Span.extend $1.espan $3.espan) }
+    | expr EQ expr                      { exp (eop Eq [$1;$3]) (Span.extend $1.espan $3.espan) }
     | expr LESS expr                    { exp (eop (ULess (snd $2)) [$1;$3]) (Span.extend $1.espan $3.espan) }
     | expr GREATER expr                 { exp (eop (ULess (snd $2)) [$3;$1]) (Span.extend $1.espan $3.espan) }
     | expr LEQ expr                     { exp (eop (ULeq (snd $2)) [$1;$3]) (Span.extend $1.espan $3.espan) }
     | expr GEQ expr                     { exp (eop (ULeq (snd $2)) [$3;$1]) (Span.extend $1.espan $3.espan) }
+    | expr NLESS expr                   { exp (eop NLess [$1;$3]) (Span.extend $1.espan $3.espan) }
+    | expr NGREATER expr                { exp (eop NLess [$3;$1]) (Span.extend $1.espan $3.espan) }
+    | expr NLEQ expr                    { exp (eop NLeq [$1;$3]) (Span.extend $1.espan $3.espan) }
+    | expr NGEQ expr                    { exp (eop NLeq [$3;$1]) (Span.extend $1.espan $3.espan) }
     | LPAREN expr COLON ty RPAREN       { exp (ety $2 $4) (Span.extend $1 $5) }
     | expr LBRACKET expr RBRACKET               { exp (eop MGet [$1;$3]) (Span.extend $1.espan $4) }
     | expr LBRACKET expr COLON EQ expr RBRACKET { exp (eop MSet [$1;$3;$6]) (Span.extend $1.espan $7) }

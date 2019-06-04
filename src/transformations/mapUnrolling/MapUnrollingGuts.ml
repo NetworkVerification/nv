@@ -107,7 +107,9 @@ let rec unroll_exp
       | USub _, _
       | ULess _, _
       | ULeq _, _
-      | UEq, _ ->
+      | NLess, _
+      | NLeq, _
+      | Eq, _ ->
         eop op (BatList.map unroll_exp es)
       | MCreate, [e1] ->
         if not (has_target_type e) then

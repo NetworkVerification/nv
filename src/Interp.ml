@@ -178,13 +178,17 @@ and interp_op env ty op es =
   | Not, [{v= VBool b1}] -> vbool (not b1)
   | UAdd _, [{v= VInt i1}; {v= VInt i2}] ->
     vint (Integer.add i1 i2)
-  | UEq, [v1; v2] ->
+  | Eq, [v1; v2] ->
     if equal_values ~cmp_meta:false v1 v2 then vbool true
     else vbool false
   | ULess _, [{v= VInt i1}; {v= VInt i2}] ->
     if Integer.lt i1 i2 then vbool true else vbool false
   | ULeq _, [{v= VInt i1}; {v= VInt i2}] ->
     if Integer.leq i1 i2 then vbool true else vbool false
+  | NLess, [{v= VNode n1}; {v= VNode n2}] ->
+    if n1 < n2 then vbool true else vbool false
+  | NLeq, [{v= VNode n1}; {v= VNode n2}] ->
+    if n1 <= n2 then vbool true else vbool false
   | MCreate, [v] -> (
       match get_inner_type ty with
       | TMap (kty, _) -> vmap (BddMap.create ~key_ty:kty v)
@@ -440,13 +444,17 @@ and interp_op_partial_opt env expEnv ty op es =
       | Not, [{v= VBool b1}] -> vbool (not b1)
       | UAdd _, [{v= VInt i1}; {v= VInt i2}] ->
         vint (Integer.add i1 i2)
-      | UEq, [v1; v2] ->
+      | Eq, [v1; v2] ->
         if equal_values ~cmp_meta:false v1 v2 then vbool true
         else vbool false
       | ULess _, [{v= VInt i1}; {v= VInt i2}] ->
         if Integer.lt i1 i2 then vbool true else vbool false
       | ULeq _, [{v= VInt i1}; {v= VInt i2}] ->
         if Integer.leq i1 i2 then vbool true else vbool false
+      | NLess, [{v= VNode n1}; {v= VNode n2}] ->
+        if n1 < n2 then vbool true else vbool false
+      | NLeq, [{v= VNode n1}; {v= VNode n2}] ->
+        if n1 <= n2 then vbool true else vbool false
       | _, _ ->
         failwith
           (Printf.sprintf "bad operator application: %s"
@@ -536,13 +544,17 @@ and interp_op_partial env ty op es =
       | Not, [{v= VBool b1}] -> vbool (not b1)
       | UAdd _, [{v= VInt i1}; {v= VInt i2}] ->
         vint (Integer.add i1 i2)
-      | UEq, [v1; v2] ->
+      | Eq, [v1; v2] ->
         if equal_values ~cmp_meta:false v1 v2 then vbool true
         else vbool false
       | ULess _, [{v= VInt i1}; {v= VInt i2}] ->
         if Integer.lt i1 i2 then vbool true else vbool false
       | ULeq _, [{v= VInt i1}; {v= VInt i2}] ->
         if Integer.leq i1 i2 then vbool true else vbool false
+      | NLess, [{v= VNode n1}; {v= VNode n2}] ->
+        if n1 < n2 then vbool true else vbool false
+      | NLeq, [{v= VNode n1}; {v= VNode n2}] ->
+        if n1 <= n2 then vbool true else vbool false
       | _, _ ->
         failwith
           (Printf.sprintf "bad operator application: %s"
@@ -789,13 +801,17 @@ struct
         | Not, [{v= VBool b1}] -> vbool (not b1)
         | UAdd _, [{v= VInt i1}; {v= VInt i2}] ->
           vint (Integer.add i1 i2)
-        | UEq, [v1; v2] ->
+        | Eq, [v1; v2] ->
           if equal_values ~cmp_meta:false v1 v2 then vbool true
           else vbool false
         | ULess _, [{v= VInt i1}; {v= VInt i2}] ->
           if Integer.lt i1 i2 then vbool true else vbool false
         | ULeq _, [{v= VInt i1}; {v= VInt i2}] ->
           if Integer.leq i1 i2 then vbool true else vbool false
+        | NLess, [{v= VNode n1}; {v= VNode n2}] ->
+          if n1 < n2 then vbool true else vbool false
+        | NLeq, [{v= VNode n1}; {v= VNode n2}] ->
+          if n1 <= n2 then vbool true else vbool false
         | MCreate, [v] -> (
             match get_inner_type ty with
             | TMap (kty, _) -> vmap (BddMap.create ~key_ty:kty v)

@@ -46,7 +46,7 @@ let rec check_closure info (x: VarSet.t) (e: exp) =
   | EVal v -> ()
   | EOp (op, es) ->
     ( match op with
-      | And | Or | Not | UEq | UAdd _ | ULess _ | ULeq _ | USub _ -> ()
+      | And | Or | Not | Eq | UAdd _ | ULess _ | ULeq _ | USub _ | NLess | NLeq -> ()
       | _ ->
         let msg =
           Printf.sprintf
@@ -174,5 +174,5 @@ let check_keys info _ (e : exp) =
 let check info (ds: declarations) : unit =
   check_record_label_uniqueness info ds ;
   Visitors.iter_exp_decls (check_types info) ds ;
-  Visitors.iter_exp_decls (check_closures info) ds ;
+  (* Visitors.iter_exp_decls (check_closures info) ds ; *) (* Is this still necessary? *)
   Visitors.iter_exp_decls (check_keys info) ds

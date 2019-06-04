@@ -36,11 +36,13 @@ type op =
   | And
   | Or
   | Not
+  | Eq
   | UAdd of bitwidth
   | USub of bitwidth
-  | UEq
   | ULess of bitwidth
   | ULeq of bitwidth
+  | NLess
+  | NLeq
   | AtMost of int
   | MCreate
   | MGet
