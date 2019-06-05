@@ -62,16 +62,8 @@ let edge_failed edge =
 let trans edge x =
   if edge_failed edge then None
   else
-    (*
-    let (a,b) = edge in
-    if a = 0 && d < 3 then None else *)
-    let test =
-    match edge with
-      | 0~1 -> d < 3
-      | 0~2 -> d < 3
-      | _ -> false
-    in
-    if test then None else
+    let (a~b) = edge in
+    if a = 0n && d < 3 then None else
     mapo (fun x -> x + 1) x
 
 let init node =
