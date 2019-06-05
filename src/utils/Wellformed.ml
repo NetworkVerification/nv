@@ -86,8 +86,9 @@ let rec check_closure info (x: VarSet.t) (e: exp) =
 
 and pattern_vars (p: pattern) =
   match p with
-  | PWild | PUnit | PBool _ | PInt _  | PNode _ | PEdge _ | POption None -> VarSet.empty
+  | PWild | PUnit | PBool _ | PInt _  | PNode _ | POption None -> VarSet.empty
   | PVar v -> VarSet.singleton v
+  | PEdge (p1, p2) -> VarSet.union (pattern_vars p1) (pattern_vars p2) 
   | PTuple ps ->
     List.fold_left
       (fun acc p -> VarSet.union acc (pattern_vars p))

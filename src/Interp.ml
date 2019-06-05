@@ -61,8 +61,12 @@ let rec matches p (v: Syntax.value) env : Syntax.value Env.t option =
     if Integer.equal i1 i2 then Some env else None
   | PNode n1, VNode n2 ->
     if n1 = n2 then Some env else None
-  | PEdge e1, VEdge e2 ->
-    if e1 = e2 then Some env else None
+  | PEdge (p1, p2), VEdge (n1, n2) ->
+    begin
+      match matches p1 (vnode n1) env with
+      | None -> None
+      | Some env -> matches p2 (vnode n2) env
+    end
   | PTuple ps, VTuple vs -> (* matches_list ps vs *)
     (match ps, vs with
      | [], []-> Some env
@@ -95,7 +99,7 @@ let rec val_to_pat v =
     PTuple (BatList.map val_to_pat vs)
   | VRecord map -> PRecord (RecordUtils.StringMap.map val_to_pat map)
   | VNode n -> PNode n
-  | VEdge e -> PEdge e
+  | VEdge (n1, n2) -> PEdge (PNode n1, PNode n2)
   | VUnit -> PUnit
   | VMap _
   | VClosure _ -> PWild
@@ -628,11 +632,11 @@ struct
         | _ -> NoMatch
       else
         Delayed
-    | PEdge (n1, n2) ->
+    | PEdge (p1, p2) ->
       if is_value e then
         match (to_value e).v with
-        | VEdge (n1', n2') ->
-          if n1 = n1' && n2 = n2' then Match Env.empty else NoMatch
+        | VEdge (n1, n2) ->
+          matches_list [p1; p2] [e_val (vnode n1); e_val (vnode n2)] Env.empty
         | _ -> NoMatch
       else
         Delayed

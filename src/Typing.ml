@@ -699,9 +699,9 @@ and infer_pattern i info env e tmatch p =
   | PNode _ ->
     unify info e tmatch TNode ;
     env
-  | PEdge _ ->
+  | PEdge (p1, p2) ->
     unify info e tmatch TEdge ;
-    env
+    infer_patterns (i + 1) info env e [TNode; TNode] [p1; p2]
   | PTuple ps ->
     let ts = BatList.map (fun p -> fresh_tyvar ()) ps in
     let ty = TTuple ts in
@@ -797,7 +797,7 @@ and valid_pat p = valid_pattern Env.empty p |> ignore
 
 and valid_pattern env p =
   match p with
-  | PWild | PUnit | PBool _ | PInt _ | PNode _ | PEdge _ -> env
+  | PWild | PUnit | PBool _ | PInt _ | PNode _ -> env
   | PVar x -> (
       match Env.lookup_opt env x with
       | None -> Env.update env x ()
@@ -805,6 +805,7 @@ and valid_pattern env p =
         Console.error
           ( "variable " ^ Var.to_string x
             ^ " appears twice in pattern" ) )
+  | PEdge (p1, p2) -> valid_patterns env [p1; p2]
   | PTuple ps -> valid_patterns env ps
   | PRecord map ->
     StringMap.fold (fun _ p env -> valid_pattern env p) map env

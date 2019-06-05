@@ -14,6 +14,11 @@
     | Some (_, ty) -> ty
     | None -> failwith @@ "Unknown user-defined type " ^ (Var.name name)
 
+  let ensure_node_pattern p =
+    match p with
+    | PInt n -> PNode (Integer.to_int n)
+    | _ -> p
+
   let exp e span : exp = aexp (e, None, span)
 
   let value v span : value = avalue (v, None, span)
@@ -159,6 +164,7 @@
 %token <Span.t> LBRACE
 %token <Span.t> RBRACE
 %token <Span.t> COMMA
+%token <Span.t> TILDE
 %token <Span.t> UNDERSCORE
 %token <Span.t> CREATEMAP
 %token <Span.t> MAP
@@ -380,12 +386,16 @@ expr3:
     | ID DOT ID                         { exp (eproject (evar (snd $1)) (Var.name (snd $3))) (Span.extend (fst $1) (fst $3)) }
     | NUM                               { to_value (vint (snd $1)) (fst $1) }
     | NODE                              { to_value (vnode (snd $1)) (fst $1)}
-    | NODE SUB NODE                     { to_value (vedge (snd $1, snd $3)) (Span.extend (fst $1) (fst $3))}
+    | edge_arg TILDE edge_arg           { to_value (vedge (snd $1, snd $3)) (Span.extend (fst $1) (fst $3))}
     | TRUE                              { to_value (vbool true) $1 }
     | FALSE                             { to_value (vbool false) $1 }
     | NONE                              { to_value (voption None) $1 }
     | LPAREN exprs RPAREN               { tuple_it $2 (Span.extend $1 $3) }
 ;
+
+edge_arg:
+  | NUM                                 { (fst $1), (Integer.to_int (snd $1))}
+  | NODE                                { (fst $1), (snd $1) }
 
 exprs:
     | expr                              { [$1] }
@@ -403,6 +413,7 @@ edgenode:
 ;
 
 edge:
+    | edgenode TILDE edgenode SEMI      { [($1, $3)] }
     | edgenode SUB edgenode SEMI        { [($1, $3)] }
     | edgenode EQ edgenode SEMI         { [($1, $3); ($3, $1)] }
 ;
@@ -419,7 +430,7 @@ pattern:
     | FALSE                             { PBool false }
     | NUM                               { PInt (snd $1) }
     | NODE                              { PNode (snd $1) }
-    | NODE SUB NODE                     { PEdge (snd $1, snd $3)}
+    | pattern TILDE pattern             { PEdge (ensure_node_pattern $1, ensure_node_pattern $3)}
     | LPAREN patterns RPAREN            { tuple_pattern $2 }
     | NONE                              { POption None }
     | SOME pattern                      { POption (Some $2) }

@@ -148,28 +148,28 @@ let init node =
    | None -> None
    | Some (ad,cost,areaType,areaId) -> (
    match edge with
-   | 0n-4n -> None
-   | 4n-0n -> None
-   | 4n-2n -> None
-   | 2n-1n -> None
-   | 2n-4n -> None
-   | 3n-1n -> None
-   | 1n-2n -> None
-   | 1n-3n -> None
+   | 0~4 -> None
+   | 4~0 -> None
+   | 4~2 -> None
+   | 2~1 -> None
+   | 2~4 -> None
+   | 3~1 -> None
+   | 1~2 -> None
+   | 1~3 -> None
 )
  let transferBgp edge b =
    match b with
    | None -> None
    | Some (ad,lp,cost,med) -> (
    match edge with
-   | 0n-4n -> Some (ad, lp, cost + 1, med)
-   | 4n-0n -> Some (ad, lp, cost + 1, med)
-   | 4n-2n -> Some (ad, lp, cost + 1, med)
-   | 2n-1n -> Some (ad, lp, cost + 1, med)
-   | 2n-4n -> Some (ad, lp, cost + 1, med)
-   | 3n-1n -> Some (ad, lp, cost + 1, med)
-   | 1n-2n -> Some (ad, lp, cost + 1, med)
-   | 1n-3n -> Some (ad, lp, cost + 1, med)
+   | 0~4 -> Some (ad, lp, cost + 1, med)
+   | 4~0 -> Some (ad, lp, cost + 1, med)
+   | 4~2 -> Some (ad, lp, cost + 1, med)
+   | 2~1 -> Some (ad, lp, cost + 1, med)
+   | 2~4 -> Some (ad, lp, cost + 1, med)
+   | 3~1 -> Some (ad, lp, cost + 1, med)
+   | 1~2 -> Some (ad, lp, cost + 1, med)
+   | 1~3 -> Some (ad, lp, cost + 1, med)
 )
 
 let transferRoute edge x =

@@ -91,7 +91,7 @@ let buildFailTrans
          failed *)
   let branches =
     Hashtbl.fold (fun (u,v) transuv acc ->
-        let p = PEdge (u,v) in
+        let p = PEdge (PNode u, PNode v) in
         addBranch p (addFailureCheck (EdgeMap.find (u, v) failuresMap) transuv) acc)
       trans emptyBranch
   in

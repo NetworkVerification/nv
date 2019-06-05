@@ -18,8 +18,8 @@ let merge node x y =
 
 let trans edge x =
   if
-    ((edge = 0n-1n || edge = 1n-0n) && fail1) ||
-    ((edge = 0n-2n || edge = 2n-0n) && fail2)
+    ((edge = 0~1 || edge = 1~0) && fail1) ||
+    ((edge = 0~2 || edge = 2~0) && fail2)
   then
     None
   else

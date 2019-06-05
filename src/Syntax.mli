@@ -61,7 +61,7 @@ type pattern =
   | POption of pattern option
   | PRecord of pattern StringMap.t
   | PNode of node
-  | PEdge of edge
+  | PEdge of pattern * pattern
 
 module Pat : Map.OrderedType with type t = pattern
 

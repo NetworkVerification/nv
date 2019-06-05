@@ -167,7 +167,7 @@ let rec pattern_to_string pattern =
   | POption (Some p) -> "Some " ^ pattern_to_string p
   | PRecord map -> print_record "=" pattern_to_string map
   | PNode n -> Printf.sprintf "%dn" n
-  | PEdge (n1, n2) -> Printf.sprintf "%dn-%dn" n1 n2
+  | PEdge (p1, p2) -> Printf.sprintf "%s~%s" (pattern_to_string p1) (pattern_to_string p2)
 
 let ty_env_to_string env = Env.to_string ty_to_string env.ty
 

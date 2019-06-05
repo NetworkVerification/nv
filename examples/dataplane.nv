@@ -1,8 +1,7 @@
 type prefix = (int,int)
-type edgeTy = (int,int)
 
 type bgp = { bgpad : int; lp : int; cost : int; }
-type ribEntry = option[(edgeTy,bgp)] (*edgeTy should maybe be an option for initial value*)
+type ribEntry = option[(tedge,bgp)]
 
 type packet = { srcIp: int; dstIp: int; volume: int; }
 type packets = set[packet]
@@ -47,7 +46,7 @@ let initPackets node =
 (* Control Plane functions *)
 let flip edge =
   match edge with
-  | (u,v) -> (v,u)
+  | a~b -> edge (* FIXME: This should be toEdge a b, with some handling for options *)
 
 let transRoute edge ps b =
     match b with
@@ -79,7 +78,7 @@ let initRoute node =
   match node with
   | 0n ->
      let b0 = {bgpad=20; lp=100; cost=0;} in
-     d[(0,32) := Some ((0,0), b0)]
+     d[(0,32) := Some (0~0, b0)]
   | _ -> d
 
 (* Combined functions *)

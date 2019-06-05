@@ -70,6 +70,7 @@ rule token = parse
   | "->"              { ARROW (position lexbuf) }
   | "!"               { NOT (position lexbuf) }
   | ","               { COMMA (position lexbuf) }
+  | "~"               { TILDE (position lexbuf) }
   | "+" width as s    { PLUS (position lexbuf, int_of_string @@ String.lchop ~n:2 s) }
   | "+"               { PLUS (position lexbuf, 32) }
   | "-" width as s    { SUB (position lexbuf, int_of_string @@ String.lchop ~n:2 s) }

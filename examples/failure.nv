@@ -43,14 +43,14 @@ let merge node x y =
 
 let edge_failed edge =
   match edge with
-  | 0n-1n -> fail01
-  | 1n-0n -> fail01
-  | 0n-2n -> fail02
-  | 2n-0n -> fail02
-  | 1n-2n -> fail12
-  | 2n-1n -> fail12
-  | 1n-3n -> fail13
-  | 3n-1n -> fail13
+  | 0~1 -> fail01
+  | 1~0 -> fail01
+  | 0~2 -> fail02
+  | 2~0 -> fail02
+  | 1~2 -> fail12
+  | 2~1 -> fail12
+  | 1~3 -> fail13
+  | 3~1 -> fail13
   | _ -> fail23
 
 

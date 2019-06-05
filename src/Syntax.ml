@@ -72,7 +72,7 @@ type pattern =
   | POption of pattern option
   | PRecord of pattern StringMap.t
   | PNode of node
-  | PEdge of edge
+  | PEdge of pattern * pattern
 [@@deriving ord, eq]
 
 module Pat =
@@ -81,7 +81,8 @@ struct
 
   let rec isConcretePat p =
     match p with
-    | PInt _ | PBool _ | PNode _ | PEdge _ | POption None -> true
+    | PInt _ | PBool _ | PNode _ | POption None -> true
+    | PEdge (p1, p2) -> isConcretePat p1 && isConcretePat p2
     | POption (Some p) -> isConcretePat p
     | PTuple ps ->
       BatList.for_all (isConcretePat) ps
@@ -95,8 +96,8 @@ struct
       Pervasives.compare b1 b2
     | PNode n1, PNode n2 ->
       Pervasives.compare n1 n2
-    | PEdge e1, PEdge e2 ->
-      Pervasives.compare e1 e2
+    | PEdge (p1, p2), PEdge (p1', p2') ->
+      Pervasives.compare (p1, p2) (p1', p2')
     | POption p1, POption p2 ->
       Pervasives.compare p1 p2
     | PTuple ps1, PTuple ps2 ->
@@ -380,8 +381,8 @@ and show_pattern p =
     show_record show_pattern "PRecord" map
   | PNode node ->
     Printf.sprintf "PNode %d" node
-  | PEdge (n1, n2) ->
-    Printf.sprintf "PEdge %dn-%dn" n1 n2
+  | PEdge (p1, p2) ->
+    Printf.sprintf "PEdge %s~%s" (show_pattern p1) (show_pattern p2)
 
 and show_value ~show_meta v =
   if show_meta then
@@ -575,7 +576,7 @@ and equal_patterns p1 p2 =
   | POption (Some p1), POption (Some p2) -> equal_patterns p1 p2
   | PRecord map1, PRecord map2 -> StringMap.equal equal_patterns map1 map2
   | PNode n1, PNode n2 -> n1 = n2
-  | PEdge e1, PEdge e2 -> e1 = e2
+  | PEdge (p1, p2), PEdge (p1', p2') -> equal_patterns p1 p1' && equal_patterns p2 p2'
   | _ -> false
 
 and equal_patterns_list ps1 ps2 =
@@ -672,9 +673,9 @@ and hash_v ~hash_meta v =
         map 0
     in
     (19 * acc) + 7
-    | VUnit -> 8
-    | VNode n -> (19 * n) + 9
-    | VEdge (e1, e2) -> (19 * (e1 + 19 * e2)) + 10
+  | VUnit -> 8
+  | VNode n -> (19 * n) + 9
+  | VEdge (e1, e2) -> (19 * (e1 + 19 * e2)) + 10
 
 and hash_exp ~hash_meta e =
   let cfg = Cmdline.get_cfg () in
@@ -760,7 +761,7 @@ and hash_pattern p =
      StringMap.fold (fun l p acc -> acc + + hash_string l + hash_pattern p) map 0
      + 8)
   | PNode n -> (19 * n) + 9
-  | PEdge (n1, n2) -> (19 * (n1 + 19 * n2)) + 10
+  | PEdge (p1, p2) -> (19 * (hash_pattern p1 + 19 * hash_pattern p2)) + 10
 
 and hash_patterns ps =
   List.fold_left (fun acc p -> acc + hash_pattern p) 0 ps
@@ -956,7 +957,7 @@ let rec val_to_pattern v =
   match v.v with
   | VUnit -> PUnit
   | VNode n -> PNode n
-  | VEdge e -> PEdge e
+  | VEdge (n1, n2) -> PEdge (PNode n1, PNode n2)
   | VBool b -> PBool b
   | VInt i -> PInt i
   | VTuple vs -> PTuple (BatList.map val_to_pattern vs)
@@ -1170,9 +1171,10 @@ let rec free (seen: Var.t PSet.t) (e: exp) : Var.t PSet.t =
 
 and pattern_vars p =
   match p with
-  | PWild | PUnit | PBool _ | PInt _ | POption None | PNode _ | PEdge _ ->
+  | PWild | PUnit | PBool _ | PInt _ | POption None | PNode _ ->
     PSet.create Var.compare
   | PVar v -> PSet.singleton ~cmp:Var.compare v
+  | PEdge (p1, p2) -> pattern_vars (PTuple [p1; p2]) 
   | PTuple ps ->
     List.fold_left
       (fun set p -> PSet.union set (pattern_vars p))

@@ -228,7 +228,7 @@ module BuildAbstractNetwork =
          failed *)
       let branches =
         BatList.fold_left (fun acc (uhat, vhat) ->
-            let p = PEdge (uhat, vhat) in
+            let p = PEdge (PNode uhat, PNode vhat) in
             let u = getGroupRepresentativeId f uhat in
             match getNeighborsInVhat f g u vhat with
             | [] -> failwith "There must be a concrete edge

@@ -26,8 +26,8 @@ let merge node x y =
 
 let weight edge =
   match edge with
-  | 0n-1n -> 1
-  | 1n-2n -> 1
+  | 0~1 -> 1
+  | 1~2 -> 1
   | _ -> 3
 
 let trans edge x =

@@ -162,8 +162,8 @@ and flatten_branches bs ty =
        | TOption t ->
          POption (Some (flatten_pattern p t))
        | _ -> failwith "expected option type")
-    | PEdge (n1, n2) ->
-      flatten_pattern (PTuple [PNode n1; PNode n2]) (TTuple [TNode; TNode])
+    | PEdge (p1, p2) ->
+      flatten_pattern (PTuple [p1; p2]) (TTuple [TNode; TNode])
     | PTuple ps ->
       (match ty with
        | TTuple ts ->

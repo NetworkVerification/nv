@@ -172,56 +172,56 @@ let init node =
   | None -> None
   | Some b -> (
    match edge with
-   | 0n-4n ->
+   | 0~4 ->
     let b = (if ((isProtocol x.selected 3)) then
 (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms;})
 else
 None)
     in
       b
-   | 0n-1n ->
+   | 0~1 ->
     let b = (if ((isProtocol x.selected 3)) then
 (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms;})
 else
 None)
     in
       b
-   | 1n-0n ->
+   | 1~0 ->
     let b = (if ((isProtocol x.selected 3)) then
 (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms;})
 else
 None)
     in
       b
-   | 1n-3n ->
+   | 1~3 ->
     let b = (if ((isProtocol x.selected 3)) then
 (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms;})
 else
 None)
     in
       b
-   | 2n-3n ->
+   | 2~3 ->
     let b = (if (((((((prefixLen = 24) && ((prefix >= 1174405632) && (prefix < 1174405632256)))) && (!(isProtocol x.selected 3)))) || (isProtocol x.selected 3))) then
 (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms;})
 else
 None)
     in
       b
-   | 3n-2n ->
+   | 3~2 ->
     let b = (if ((isProtocol x.selected 3)) then
 (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms;})
 else
 None)
     in
       b
-   | 3n-1n ->
+   | 3~1 ->
     let b = (if ((isProtocol x.selected 3)) then
 (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms;})
 else
 None)
     in
       b
-   | 4n-0n ->
+   | 4~0 ->
     let b = (if (((((((prefixLen = 24) && ((prefix >= 1174406144) && (prefix < 1174406144256)))) && (!(isProtocol (x.selected) 3)))) || (isProtocol (x.selected) 3))) then
 (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms;})
 else

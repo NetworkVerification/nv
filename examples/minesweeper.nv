@@ -48,16 +48,16 @@ let merge node x y =
 
 let edge_failed edge =
   match edge with
-  | 0n-1n -> fail01
-  | 1n-0n -> fail01
-  | 0n-2n -> fail02
-  | 2n-0n -> fail02
-  | 1n-2n -> fail12
-  | 2n-1n -> fail12
-  | 1n-3n -> fail13
-  | 3n-1n -> fail13
-  | 2n-3n -> fail23
-  | 3n-2n -> fail23
+  | 0~1 -> fail01
+  | 1~0 -> fail01
+  | 0~2 -> fail02
+  | 2~0 -> fail02
+  | 1~2 -> fail12
+  | 2~1 -> fail12
+  | 1~3 -> fail13
+  | 3~1 -> fail13
+  | 2~3 -> fail23
+  | 3~2 -> fail23
 
 let trans edge x =
   if edge_failed edge then None
@@ -67,8 +67,8 @@ let trans edge x =
     if a = 0 && d < 3 then None else *)
     let test =
     match edge with
-      | 0n-1n -> d < 3
-      | 0n-2n -> d < 3
+      | 0~1 -> d < 3
+      | 0~2 -> d < 3
       | _ -> false
     in
     if test then None else

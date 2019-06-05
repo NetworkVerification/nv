@@ -11,10 +11,10 @@ let edges = {
 }
 
 let area edge = match edge with
-  | 0n-1n -> 1
-  | 1n-0n -> 1
-  | 1n-2n -> 0
-  | 2n-1n -> 0
+  | 0~1 -> 1
+  | 1~0 -> 1
+  | 1~2 -> 0
+  | 2~1 -> 0
 
 let mapo f o =
   match o with
