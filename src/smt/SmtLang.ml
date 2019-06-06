@@ -155,6 +155,43 @@ let get_projections (constr: constructor_decl) =
 let get_recognizer (constr : constructor_decl) =
   "is-" ^ constr.constr_name
 
+(** ** Utility functions for extracting variables from terms *)
+(* Retrieve the names of all smt variables which appear in tm *)
+let rec get_vars (tm : smt_term) : string list =
+  (* This could be optimized to not use @ and be tail-reursive, but I don't
+     think our terms are ever very large so it probably doesn't matter *)
+  match tm with
+  | Int _
+  | Bool _
+  | Bv _
+  | Constructor _ ->
+    []
+  | Var s ->
+    [s]
+  | Not tm1 ->
+    get_vars tm1
+  | And (tm1, tm2)
+  | Or (tm1, tm2)
+  | Add (tm1, tm2)
+  | Sub (tm1, tm2)
+  | Eq (tm1, tm2)
+  | Lt (tm1, tm2)
+  | Leq (tm1, tm2) ->
+    get_vars tm1 @ get_vars tm2
+  | Ite (tm1, tm2, tm3) ->
+    get_vars tm1 @ get_vars tm2 @ get_vars tm3
+  | AtMost (tms1, tms2, tm1) ->
+    get_vars tm1 @ (List.concat @@ List.map get_vars tms1) @ (List.concat @@ List.map get_vars tms2)
+  | App (tm1, tms) ->
+    get_vars tm1 @ (List.concat @@ List.map get_vars tms)
+;;
+
+let get_vars_in_command com =
+  match com.com with
+  | Assert tm -> get_vars tm.t
+  | _ -> []
+;;
+
 (** ** Compilation to SMT-LIB2 *)
 
 let rec sort_to_smt (s : sort) : string =
@@ -240,14 +277,29 @@ let const_decl_to_smt ?(verbose=false) info const : string =
   Printf.sprintf "(declare-const %s %s)" const.cname
     (sort_to_smt const.csort)
 
-let smt_command_to_smt info (comm : smt_command) : string =
+(*
+  We need to name out assertions so they can appear in an unsat core.
+  Our naming scheme is as follows:
+  They begin with a prefix constraint-#$, where # ensures all names are unique.
+  Then they simply contain the names of all the variables which appear in
+  the term, separated with $ characters.
+*)
+let assert_tm_to_name count tm =
+  let base = "constraint-" ^ string_of_int count in
+  List.fold_left (fun s1 s2 -> s1 ^ "$" ^ s2) base (get_vars tm.t)
+;;
+
+let smt_command_to_smt ?(name_asserts=false) ?(count=0) (info : Console.info) (comm : smt_command): string =
   match comm with
   | Echo s ->
     Printf.sprintf "(echo %s)" s
   | Eval tm ->
     Printf.sprintf "(eval %s)" (term_to_smt false info tm)
   | Assert tm ->
-    Printf.sprintf "(assert %s)" (term_to_smt false info tm)
+    if name_asserts then
+      Printf.sprintf "(assert (! %s :named %s))" (term_to_smt false info tm) (assert_tm_to_name count tm)
+    else
+      Printf.sprintf "(assert %s)" (term_to_smt false info tm)
   | CheckSat ->
     (* for now i am hardcoding the tactics here. *)
     Printf.sprintf "(check-sat-using (then simplify propagate-values simplify \
@@ -297,4 +349,4 @@ let rec parse_reply (solver: solver_proc) =
   | Some "unsat" -> UNSAT
   | Some "unknown" -> UNKNOWN
   | None -> OTHER "EOF"
-  | Some r -> parse_reply solver
+  | Some r -> print_endline r; parse_reply solver

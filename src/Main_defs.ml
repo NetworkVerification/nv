@@ -7,6 +7,7 @@ open Printing
 open Quickcheck
 open Renaming
 open Smt
+open SmtHiding
 open SmtUtils
 open Solution
 open Slicing
@@ -30,8 +31,9 @@ let smt_query_file =
   let counter = ref (-1) in
   fun (file: string) ->
     incr counter;
+    let count = !counter in
     lazy (open_out (file ^ "-" ^
-                    (string_of_int !counter) ^ "-query"))
+                    (string_of_int count) ^ "-query"))
 
 let partialEvalNet net =
   {net with
@@ -73,7 +75,7 @@ let run_smt_func file cfg info net fs =
 
 let run_smt_classic file cfg info (net : Syntax.network) fs =
   let net, fs =
-    if cfg.unbox then
+    if cfg.unbox || cfg.hiding then
       begin
         smt_config.unboxing <- true;
         let net, f1 = time_profile "Unbox options" (fun () -> UnboxOptions.unbox_net net) in
@@ -92,7 +94,15 @@ let run_smt_classic file cfg info (net : Syntax.network) fs =
 
   let net, f = Renaming.alpha_convert_net net in (*TODO: why are we renaming here?*)
   let fs = f :: fs in
-  let res = Smt.solveClassic info cfg.query (smt_query_file file) net in
+  let solve_fun =
+    if cfg.hiding then
+      (SmtHiding.solve_hiding ~starting_vars:[] ~full_chan:(smt_query_file file))
+    else
+      Smt.solveClassic
+  in
+  let res =
+    solve_fun info cfg.query (smt_query_file file) net
+  in
   match res with
   | Unsat ->
     (Success None, [])

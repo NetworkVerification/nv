@@ -92,7 +92,8 @@ let is_var (tm: SmtLang.term) =
 let rec ty_to_sort (ty: ty) : sort =
   match ty with
   | TVar {contents= Link t} -> ty_to_sort t
-  | TUnit | TBool -> BoolSort
+  | TUnit -> UnitSort
+  | TBool -> BoolSort
   | TInt _ -> IntSort
   | TTuple ts -> (
       match ts with

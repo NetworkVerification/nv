@@ -22,6 +22,7 @@ type t =
   ; depth: int                         (** search depth for refinement procedure   *)
   ; check_monotonicity: bool           (** checks monotonicity of trans function   *)
   ; link_failures: int                  (** adds at most k link failures to the network  *)
+  ; hiding: bool                        (** Use the hiding abstraction during SMT solving *)
   }
 [@@deriving
   show
@@ -52,6 +53,7 @@ let default =
   ; depth=20
   ; check_monotonicity=false
   ; link_failures=0
+  ; hiding=false
   }
 
 let cfg = ref default

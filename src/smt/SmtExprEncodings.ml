@@ -39,7 +39,11 @@ struct
     let name =
       if is_symbolic env.symbolics x then
         begin
-          symbolic_var x
+          let str = Var.to_string x in
+          if BatString.starts_with str "label-" then
+            str
+          else
+          "symbolic-" ^ str
         end
       else create_name descr x
     in
@@ -179,7 +183,12 @@ struct
       let name =
         if is_symbolic env.symbolics x then
           begin
-            symbolic_var x
+            (*symbolic_var x*)
+            let str = Var.to_string x in
+            if BatString.starts_with str "label-" then
+              str
+            else
+              "symbolic-" ^ str
           end
         else create_name descr x
       in
@@ -577,7 +586,11 @@ struct
     let name =
       if is_symbolic env.symbolics x then
         begin
-          symbolic_var x
+          let str = Var.to_string x in
+          if BatString.starts_with str "label-" then
+            str
+          else
+            "symbolic-" ^ str
         end
       else create_name descr x
     in

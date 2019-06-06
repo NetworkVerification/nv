@@ -293,7 +293,6 @@ struct
       AdjGraph.VertexMap.fold (fun _ xs acc -> xs :: acc) srp.srp_labels [] |>
         BatList.concat
     in
-    Printf.printf "%s\n" (printList (fun (x,_) -> Var.to_string x) labels "\n" "\n" "\n");
     let env = init_solver srp.srp_symbolics ~labels:labels in
     let aty = srp.srp_attr in
     let nodes = (AdjGraph.num_vertices srp.srp_graph) in
@@ -311,6 +310,16 @@ struct
         in
         let merged = try AdjGraph.VertexMap.find u srp.srp_constraints
           with Not_found -> failwith "constraints not found"
+        in
+        let merged =
+          if smt_config.unboxing then
+            begin
+              let merged = Interp.Full.interp_partial merged in
+              (* Printf.printf "merge after interp:\n%s\n" (Printing.exp_to_string merged); *)
+              merged
+            end
+          else
+            merged
         in
         let str = Printf.sprintf "merge-%d" (Integer.to_int u) in
         (* compute SMT encoding of label constraint*)

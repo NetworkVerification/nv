@@ -25,8 +25,15 @@ type smt_result = Unsat | Unknown | Sat of Solution.t
 (** ** Translate the environment to SMT-LIB2 *)
 
 
-let env_to_smt ?(verbose=false) info (env : smt_env) =
-  let context = BatList.rev_map (fun c -> command_to_smt verbose info c) env.ctx in
+let env_to_smt ?(verbose=false) ?(name_asserts=false) info (env : smt_env) =
+  let count = ref (-1) in
+  let map_fun =
+    if name_asserts then
+      (fun c ->  count := !count + 1; smt_command_to_smt ~name_asserts:true ~count:(!count) info c.com)
+    else
+      (fun c ->  smt_command_to_smt info c.com)
+  in
+  let context = BatList.rev_map map_fun env.ctx in
   let context = BatString.concat "\n" context in
 
   (* Emit constants *)
@@ -186,7 +193,6 @@ let solveFunc info query chan ?(params=[]) srp =
   solve info query chan params (fun () -> Enc.encode_z3 srp)
     (AdjGraph.num_vertices srp.srp_graph) srp.srp_assertion srp.srp_requires
 
-
 (** For quickcheck smart value generation *)
 let symvar_assign info (net: Syntax.network) : value VarMap.t option =
   let module ExprEnc = (val expr_encoding smt_config) in
@@ -203,23 +209,23 @@ let symvar_assign info (net: Syntax.network) : value VarMap.t option =
   match reply with
   | UNSAT  | UNKNOWN -> None
   | SAT ->
-     (* build model question *)
+    (* build model question *)
     let model = eval_model env.symbolics (Integer.of_int 0) None (StringMap.empty, StringMap.empty) in
-     let model_question = commands_to_smt smt_config.verbose info model in
-     ask_solver solver model_question;
-     (* get answer *)
-     let model = solver |> parse_model in
-     let model =
-       match model with
-       | MODEL m ->
-          if smt_config.unboxing then
-            translate_model_unboxed m
-          else
-            translate_model m
-       | OTHER s ->
-          Printf.printf "%s\n" s;
-          failwith "failed to parse a model"
-       | _ -> failwith "failed to parse a model"
-     in
-     Some model.symbolics
+    let model_question = commands_to_smt smt_config.verbose info model in
+    ask_solver solver model_question;
+    (* get answer *)
+    let model = solver |> parse_model in
+    let model =
+      match model with
+      | MODEL m ->
+        if smt_config.unboxing then
+          translate_model_unboxed m
+        else
+          translate_model m
+      | OTHER s ->
+        Printf.printf "%s\n" s;
+        failwith "failed to parse a model"
+      | _ -> failwith "failed to parse a model"
+    in
+    Some model.symbolics
   | _ -> failwith "Unexpected reply from SMT solver"
