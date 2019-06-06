@@ -244,7 +244,9 @@ let parse_input (args : string array)
   if cfg.debug then Printexc.record_backtrace true ;
   let file = rest.(0) in
   let ds, info = Input.parse file in (* Parse nv file *)
-  let decls = Typing.infer_declarations info ds in
+  let decls = ds in
+  let decls = ToEdge.toEdge_decl decls :: decls in
+  let decls = Typing.infer_declarations info decls in
   Typing.check_annot_decls decls ;
   Wellformed.check info decls ;
   let decls, f = RecordUnrolling.unroll decls in (* Unroll records done first *)
