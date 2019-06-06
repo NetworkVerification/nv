@@ -545,12 +545,12 @@ struct
   let rec ty_to_sort (ty: ty) : sort =
     match ty with
     | TVar {contents= Link t} -> ty_to_sort t
-    | TUnit -> UnitSort
     | TBool -> BoolSort
     | TInt _ -> IntSort
     | TTuple _
+      | TMap _ -> failwith "Not a single sort"
     | TOption _
-    | TMap _ -> failwith "Not a single sort"
+      | TUnit -> failwith "should be unboxed"
     (*       mk_array_sort ctx (ty_to_sort ctx ty1) (ty_to_sort ctx ty2)*)
     | TVar _ | QVar _ | TArrow _ | TRecord _ ->
       failwith
@@ -562,7 +562,6 @@ struct
     match ty with
     | TVar {contents= Link t} ->
       ty_to_sorts t
-    | TUnit -> [UnitSort]
     | TBool -> [BoolSort]
     | TInt _ -> [IntSort]
     | TTuple ts -> (
@@ -571,16 +570,13 @@ struct
         | [t] -> ty_to_sorts t
         | ts -> BatList.map ty_to_sorts ts |> BatList.concat)
     | TOption _ -> failwith "options should be unboxed"
+    | TUnit -> failwith "Unit shoulds be unboxed"
     | TMap _ -> failwith "unimplemented"
     | TRecord _ -> failwith "Record type in SMT"
     | TVar _ | QVar _ | TArrow _ ->
       failwith
         (Printf.sprintf "internal error (ty_to_sort): %s"
            (Printing.ty_to_string ty))
-  let unit_decl =
-    let constr = { constr_name = "mkUnit"; constr_args = [] } in
-    { name = "Unit"; params = []; constructors = [constr] }
-  ;;
 
   let create_vars (env: smt_env) descr (x: Syntax.var) =
     let name =
@@ -771,13 +767,10 @@ struct
           mk_term ~tloc:e.espan) zes
         (encode_branches_aux_z3 descr env names bs t)
 
-
   and encode_pattern_z3 descr env znames p (t: ty) =
     let ty = get_inner_type t in
     match (p, ty) with
     | PWild, _ ->
-      [mk_bool true |> mk_term]
-    | PUnit, TUnit ->
       [mk_bool true |> mk_term]
     | PVar x, t ->
       let local_name = create_vars env descr x in
@@ -813,17 +806,13 @@ struct
 
   and encode_value_z3_single descr env (v: Syntax.value) : term =
     match v.v with
-    | VUnit ->
-      env.type_decls <- StringMap.add "Unit" unit_decl env.type_decls;
-      let f = (unit_decl |> get_constructors |> BatList.hd).constr_name in
-      let e = mk_app (mk_constructor f (ty_to_sort TUnit)) [] in
-      mk_term ~tloc:v.vspan e
     | VBool b ->
       mk_bool b |>
       mk_term ~tloc:v.vspan
     | VInt i ->
       mk_int_u32 i |>
       mk_term ~tloc:v.vspan ~tdescr:"val"
+    | VUnit -> failwith "units should have been unboxed"
     | VOption _ -> failwith "options should have been unboxed"
     | VTuple _ -> failwith "internal error (check that tuples are flat)"
     | VClosure _ -> failwith "internal error (closure in smt)"

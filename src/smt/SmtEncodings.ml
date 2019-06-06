@@ -315,7 +315,8 @@ struct
           if smt_config.unboxing then
             begin
               let merged = Interp.Full.interp_partial merged in
-              (* Printf.printf "merge after interp:\n%s\n" (Printing.exp_to_string merged); *)
+              (* Printf.printf "merge after interp:\n%s\n" (Printing.exp_to_string merged);
+               * failwith "merged"; *)
               merged
             end
           else
