@@ -156,8 +156,8 @@ let translate_model_unboxed (m : (string, string) BatMap.t) : Solution.t =
 
 (* Model Refiners *)
 let refineModelMinimizeFailures (model: Solution.t) info query chan
-    solve renaming env net =
-  match (get_requires_failures net.requires).e with
+    solve renaming env requires =
+  match (get_requires_failures requires).e with
   | EOp(AtMost n, [e1;e2;e3]) ->
     (match e1.e with
      | ETuple es ->

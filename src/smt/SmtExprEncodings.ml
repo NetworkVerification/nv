@@ -17,9 +17,11 @@ sig
   val lift1: ('a -> 'b) -> 'a t -> 'b t
   val lift2: ('a -> 'b -> 'c) -> 'a t -> 'b t -> 'c t
   val to_list : 'a t -> 'a list
+  val of_list : 'a list -> 'a t
   val combine_term: term t -> term
   val add_symbolic: smt_env -> Var.t t -> Syntax.ty_or_exp -> unit
-  val init_solver: (Var.t * Syntax.ty_or_exp) list -> smt_env
+  val init_solver: (Var.t * Syntax.ty_or_exp) list ->
+                   labels:(Syntax.var * Syntax.ty) list -> smt_env
 end
 
 
@@ -44,6 +46,9 @@ struct
     name
 
   let to_list x = [x]
+
+  let of_list x =
+    BatList.hd x
 
   (** * Returns the SMT name of a datatype *)
   let rec datatype_name (ty : ty) : string option =
@@ -174,7 +179,6 @@ struct
       let name =
         if is_symbolic env.symbolics x then
           begin
-            (* Printf.printf "var:%s\n" (Var.to_string x); *)
             symbolic_var x
           end
         else create_name descr x
@@ -458,7 +462,7 @@ struct
     | VMap map -> failwith "not doing maps yet"
     | VRecord _ -> failwith "Record in SMT encoding"
 
-  let init_solver symbs =
+  let init_solver symbs ~labels =
     Var.reset () ;
     let env = { ctx = [];
                 const_decls = ConstantSet.empty;
@@ -466,6 +470,7 @@ struct
                 symbolics = VarMap.empty}
     in
     BatList.iter (fun (v,e) -> add_symbolic env v e) symbs;
+    BatList.iter (fun (v,ty) -> add_symbolic env v (Ty ty)) labels;
     env
 
 end
@@ -508,6 +513,8 @@ struct
     | _ -> [str]
 
   let to_list x = x
+
+  let of_list x = x
 
   let add_symbolic (env : smt_env) (b: Var.t list) (ety: Syntax.ty_or_exp) =
     match ety with
@@ -810,15 +817,18 @@ struct
     | VMap map -> failwith "not doing maps yet"
     | VRecord _ -> failwith "Record in SMT encoding"
 
-  let init_solver symbs =
+  let init_solver symbs ~labels =
     Var.reset () ;
     let env = { ctx = [];
                 const_decls = ConstantSet.empty;
                 type_decls = StringMap.empty;
                 symbolics = VarMap.empty}
     in
-    (* assumes symbs are not of type tuple here *)
+    (* assumes symbs are not of type tuple here. This is not a weird assumption
+       to make. When unboxed, symbolics of type tuple are spread to multiple
+       symbolic variables*)
     BatList.iter (fun (v,e) -> add_symbolic env [v] e) symbs;
+    BatList.iter (fun (v,ty) -> add_symbolic env [v] (Ty ty)) labels;
     env
 
 end

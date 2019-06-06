@@ -728,8 +728,8 @@ struct
                  e.ety, e.espan))
       | ELet (x, e1, e2) ->
          let _, pe1 = interp_exp_partial env e1 in
-         (* (env, elet x pe1 (snd (interp_exp_partial env e2))) *)
-         interp_exp_partial (Env.update env x pe1) e2
+         (env, aexp(elet x pe1 (snd (interp_exp_partial env e2)), Some (oget e.ety), e.espan))
+         (* interp_exp_partial (Env.update env x pe1) e2 *)
       | ETuple es ->
          (env, aexp (etuple (BatList.map (fun e -> snd (interp_exp_partial env e)) es),
                      e.ety, e.espan))

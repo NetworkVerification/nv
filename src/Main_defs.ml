@@ -44,10 +44,34 @@ let run_smt_func file cfg info net fs =
   smt_config.encoding <- Functional;
   let srp = SmtSrp.network_to_srp net in
   let srp, f = Renaming.alpha_convert_srp srp in
+  let srp, fs =
+    if cfg.unbox then
+      begin
+        smt_config.unboxing <- true;
+        let srp, f1 = time_profile "Unbox options" (fun () -> UnboxOptions.unbox_srp srp) in
+        let srp, f2 =
+          time_profile "Flattening Tuples" (fun () -> TupleFlatten.flatten_srp srp)
+        in
+        srp, (f2 :: f1 :: f :: fs)
+      end
+    else
+      srp, f :: fs
+  in
+  let res = Smt.solveFunc info cfg.query (smt_query_file file) srp in
+  match res with
+  | Unsat ->
+    (Success None, [])
+  | Unknown -> Console.error "SMT returned unknown"
+  | Sat solution ->
+    match solution.assertions with
+    | None -> Success (Some solution), fs
+    | Some m ->
+      if AdjGraph.VertexMap.exists (fun _ b -> not b) m then
+        CounterExample solution, fs
+      else
+        Success (Some solution), fs
 
-let run_smt file cfg info (net : Syntax.network) fs =
-  if cfg.func then
-    smt_config.encoding <- Functional;
+let run_smt_classic file cfg info (net : Syntax.network) fs =
   let net, fs =
     if cfg.unbox then
       begin
@@ -66,9 +90,9 @@ let run_smt file cfg info (net : Syntax.network) fs =
     else net, fs
   in
 
-  let net, f = Renaming.alpha_convert_net net in
+  let net, f = Renaming.alpha_convert_net net in (*TODO: why are we renaming here?*)
   let fs = f :: fs in
-  let res = Smt.solve info cfg.query (smt_query_file file) net ~symbolic_vars:[] in
+  let res = Smt.solveClassic info cfg.query (smt_query_file file) net in
   match res with
   | Unsat ->
     (Success None, [])
@@ -81,6 +105,12 @@ let run_smt file cfg info (net : Syntax.network) fs =
         CounterExample solution, fs
       else
         Success (Some solution), fs
+
+let run_smt file cfg info (net : Syntax.network) fs =
+  if cfg.func then
+    run_smt_func file cfg info net fs
+  else
+    run_smt_classic file cfg info net fs
 
 let run_test cfg info net fs =
   let (sol, stats), fs =

@@ -55,7 +55,7 @@ let checkMonotonicity info query chan net =
   let solver = start_solver [] in
   let unbox x = Boxed.to_list x |> List.hd in
   Hashtbl.iter (fun edge trans ->
-      let env = Boxed.init_solver net.symbolics in
+      let env = Boxed.init_solver net.symbolics [] in
       Boxed.add_symbolic env checka_var (Ty net.attr_type);
       let checka =
         Boxed.lift2 (fun checka s -> mk_constant env (Boxed.create_vars env "" checka) s)

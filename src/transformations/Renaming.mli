@@ -10,3 +10,6 @@ val alpha_convert_declarations :
 val alpha_convert_net :
   Syntax.network
   -> Syntax.network * (Solution.t -> Solution.t)
+
+val alpha_convert_srp :
+  Syntax.srp_unfold -> Syntax.srp_unfold * (Solution.t -> Solution.t)

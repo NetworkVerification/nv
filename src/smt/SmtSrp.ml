@@ -33,22 +33,17 @@ let network_to_srp net =
       AdjGraph.fold_vertices (fun u acc ->
           (* the string name that corresponds to the label of node u*)
           let lbl_u_name = label_var u in
-          let lbl_u = Boxed.create_strings lbl_u_name net.attr_type in
-          (*create label vars *)
-          let lbl_vars = Boxed.lift1 Var.create lbl_u in
-          let lbl_exp =
-            Boxed.lift1 (fun v -> aexp(evar v, Some net.attr_type, Span.default))
-              lbl_vars
-          in
-          let lbl_exp = Boxed.to_list lbl_exp |> BatList.hd in
-          AdjGraph.VertexMap.add u lbl_exp acc)
+          (*create label var *)
+          let lbl_var = Var.create lbl_u_name in
+          AdjGraph.VertexMap.add u [(lbl_var, net.attr_type)] acc)
         (AdjGraph.num_vertices net.graph) AdjGraph.VertexMap.empty
   in
   (* Map from nodes to incoming messages*)
   let incoming_messages_map =
     BatList.fold_left (fun acc (u,v) ->
         (* Find the label variables associated with node u*)
-        let lblu = AdjGraph.VertexMap.find u labelling in
+        let varu, ty = AdjGraph.VertexMap.find u labelling |> BatList.hd in
+        let lblu = aexp(evar varu, Some ty, Span.default) in
         (*compute the incoming message through the transfer function *)
         let transuv = trans_exp net.trans u v lblu in
         (* add them to the incoming messages of node v *)
@@ -73,5 +68,6 @@ let network_to_srp net =
     srp_labels = labelling;
     srp_symbolics = net.symbolics;
     srp_assertion = net.assertion;
-    srp_requires = net.requires
+    srp_requires = net.requires;
+    srp_graph = net.graph;
   }

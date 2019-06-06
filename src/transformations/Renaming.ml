@@ -85,11 +85,6 @@ let alpha_convert_declaration bmap (env: Var.t Env.t)
     let env = Env.update env x y in
     let e = alpha_convert_exp env e in
     (env, DSymbolic (y, Exp e))
-  (* | DSymbolic (x, Ty ty) -> *)
-  (* let y = fresh x in *)
-  (* map_back bmap x x ; *)
-  (* let env = Env.update env x x in
-     (env, DSymbolic (x, Ty ty)) *)
   | DSymbolic (x, Ty ty) ->
     let y = fresh x in
     map_back bmap y x ;
@@ -127,7 +122,6 @@ let rec alpha_convert_declarations (ds: declarations) =
   (prog, adjust_solution !bmap)
 
 let alpha_convert_net net =
-  (* Var.reset () ; *)
   let bmap = ref VarMap.empty in
   let env = Env.empty in
   let env, symbolics =
@@ -137,8 +131,8 @@ let alpha_convert_net net =
         let env = Env.update env x y in
         match ty_exp with
         |  Exp e ->
-          let e = alpha_convert_exp env e in
-          (env, (y, Exp e) :: acc)
+           let e = alpha_convert_exp env e in
+           (env, (y, Exp e) :: acc)
         | Ty ty ->
           (env, (y, Ty ty) :: acc))
       net.symbolics (env, [])
@@ -168,29 +162,35 @@ let alpha_convert_net net =
   (net', adjust_solution !bmap)
 
 let alpha_convert_srp (srp : Syntax.srp_unfold) =
-  Var.reset () ;
-  let bmap = ref StringMap.empty in
+  let bmap = ref VarMap.empty in
   let env = Env.empty in
   let env, symbolics =
     BatList.fold_right (fun (x, ty_exp) (env, acc) ->
+        let y = fresh x in
+        map_back bmap y x ;
+        let env = Env.update env x y in
         match ty_exp with
-        | Exp e ->
+        |  Exp e ->
           let e = alpha_convert_exp env e in
-          (env, (x, Exp e) :: acc)
+          (env, (y, Exp e) :: acc)
         | Ty ty ->
-          let env = Env.update env x x in
-          (env, (x, Ty ty) :: acc))
+          (env, (y, Ty ty) :: acc))
       srp.srp_symbolics (env, [])
+  in
+  let env = AdjGraph.VertexMap.fold (fun _ xs env ->
+                BatList.fold_right (fun (x, _) env ->
+                    Env.update env x x) xs env) srp.srp_labels env
   in
   let srp' =
     { srp_attr = srp.srp_attr;
       srp_constraints = AdjGraph.VertexMap.map (alpha_convert_exp env) srp.srp_constraints;
-      srp_labels = AdjGraph.VertexMap.map (alpha_convert_exp env) srp.srp_labels;
+      srp_labels = srp.srp_labels;
       srp_assertion = (match srp.srp_assertion with
           | None -> None
           | Some e -> Some (alpha_convert_exp env e));
       srp_symbolics = symbolics;
       srp_requires = BatList.map (alpha_convert_exp env) srp.srp_requires;
+      srp_graph = srp.srp_graph
     }
   in
   (srp', adjust_solution !bmap)
