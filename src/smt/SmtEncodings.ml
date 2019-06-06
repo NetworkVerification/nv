@@ -271,11 +271,10 @@ struct
          | EFun _ ->
            loop exp ((x,xty) :: acc)
          | _ ->
-           let acc = BatList.rev acc in
-           let xs = BatList.map (fun (x,xty) -> create_vars env str x) acc in
-           let xstr = BatList.map (fun x -> mk_constant env x (ty_to_sort xty)
-                                      ~cdescr:"assert x argument" ~cloc:assertion.espan ) xs
-           in
+           let xstr = BatList.rev_map (fun (x,xty) ->
+               mk_constant env (create_vars env str x) (ty_to_sort xty)
+                 ~cdescr:"assert x argument" ~cloc:assertion.espan )
+               ((x,xty) :: acc) in
            let names = create_strings (Printf.sprintf "%s-result" str) (oget exp.ety) in
            let results =
              lift2 (mk_constant env) names (oget exp.ety |> ty_to_sorts) in
@@ -330,8 +329,10 @@ struct
           let label =
             AdjGraph.VertexMap.find (Integer.of_int i) smt_labels
           in
+          let node = avalue (vint (Integer.of_int i), Some Typing.node_ty, Span.default) in
+          let eassert_i = Interp.interp_partial_fun eassert [node] in
           let result, x =
-            encode_z3_assert (assert_var (Integer.of_int i)) env (Integer.of_int i) eassert
+            encode_z3_assert (assert_var (Integer.of_int i)) env (Integer.of_int i) eassert_i
           in
           BatList.iter2 (fun x label ->
               add_constraint env (mk_term (mk_eq x.t label.t))) x (to_list label);
