@@ -319,5 +319,4 @@ let parse_input (args : string array)
       Failures.buildFailuresNet net cfg.link_failures
     else net
   in
-  print_endline @@ Printing.network_to_string net; failwith "AAAH";
   (cfg, info, file, net, fs)
