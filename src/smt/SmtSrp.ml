@@ -2,11 +2,11 @@ open Syntax
 open SmtUtils
 open SmtExprEncodings
 
-let node_exp (u: Integer.t) : Syntax.exp =
-  aexp(e_val (vint u), Some Typing.node_ty, Span.default)
+let node_exp (u: Syntax.node) : Syntax.exp =
+  aexp(e_val (vnode u), Some Typing.node_ty, Span.default)
 
-let edge_exp (u: Integer.t) (v: Integer.t) : Syntax.exp =
-  aexp(e_val (vtuple [vint u; vint v]), Some Typing.edge_ty, Span.default)
+let edge_exp (u: Syntax.node) (v: Syntax.node) : Syntax.exp =
+  aexp(e_val (vtuple [vnode u; vnode v]), Some Typing.edge_ty, Span.default)
 
 let init_exp einit u =
   Interp.Full.interp_partial_fun einit [node_exp u]

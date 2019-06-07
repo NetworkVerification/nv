@@ -15,5 +15,5 @@ let trans edge x = x
 let init node =
   let m = {} in
   match node with
-  | 0 -> m[{ val = 2; isNone = false } := true]
-  | 1 -> m[{ isNone = false; val = 7;} := true]
+  | 0n -> m[{ val = 2; isNone = false } := true]
+  | 1n -> m[{ isNone = false; val = 7;} := true]

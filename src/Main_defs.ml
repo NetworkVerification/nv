@@ -145,7 +145,7 @@ let run_simulator cfg _ net fs =
       match cfg.bound with
       | None ->
         ( Srp.simulate_net net
-        , QueueSet.empty Integer.compare )
+        , QueueSet.empty Pervasives.compare )
       | Some b -> Srp.simulate_net_bound net b
     in
     ( match QueueSet.pop q with
@@ -154,7 +154,7 @@ let run_simulator cfg _ net fs =
         print_string [] "non-quiescent nodes:" ;
         QueueSet.iter
           (fun q ->
-             print_string [] (Integer.to_string q ^ ";") )
+             print_string [] (string_of_int q ^ ";") )
           q ;
         print_newline () ;
         print_newline () ;
@@ -279,7 +279,9 @@ let parse_input (args : string array)
   if cfg.debug then Printexc.record_backtrace true ;
   let file = rest.(0) in
   let ds, info = Input.parse file in (* Parse nv file *)
-  let decls = Typing.infer_declarations info ds in
+  let decls = ds in
+  let decls = ToEdge.toEdge_decl decls :: decls in
+  let decls = Typing.infer_declarations info decls in
   Typing.check_annot_decls decls ;
   Wellformed.check info decls ;
   let decls, f = RecordUnrolling.unroll decls in (* Unroll records done first *)

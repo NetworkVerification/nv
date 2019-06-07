@@ -37,6 +37,7 @@ let rec random_value ~hints ~max_map_size ty =
     | QVar _ | TVar _ -> failwith "internal error (random_value)"
     | TRecord _ -> failwith "random_value: found record"
     | TArrow (ty1, ty2) -> failwith "unimplemented"
+    | TNode | TEdge -> failwith "unimplemented (TODO)"
 
 let random_symbolic hints max_map_size d =
   match d with

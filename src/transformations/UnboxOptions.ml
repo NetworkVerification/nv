@@ -8,6 +8,8 @@ let rec empty_pattern ty =
   | TUnit
   | TBool
   | TInt _
+  | TNode
+  | TEdge
   | TOption _
   | TMap _
   | TRecord _ ->
@@ -22,7 +24,7 @@ let rec empty_pattern ty =
 let rec unbox_ty ty =
   match Typing.canonicalize_type ty with
   | TVar {contents= Link t} -> unbox_ty t
-  | TBool | TInt _ -> ty
+  | TBool | TInt _ | TNode | TEdge -> ty
   | TUnit -> TBool
   | TArrow (t1, t2) ->
     TArrow (unbox_ty t1, unbox_ty t2)
@@ -36,7 +38,7 @@ let rec unbox_ty ty =
 let rec unbox_val v =
   match v.v with
   | VUnit ->  aexp(vbool true |> exp_of_value, Some TBool, v.vspan)
-  | VBool _ | VInt _ ->
+  | VBool _ | VInt _ | VNode _ | VEdge _->
     exp_of_value v
   | VOption None ->
     (match v.vty with
@@ -104,13 +106,15 @@ let rec unbox_exp e : exp =
       | Not, _
       | UAdd _, _
       | USub _, _
-      | UEq, _
+      | Eq, _
       | ULess _, _
       | AtMost _, _
       | ULeq _, _
       | MCreate, _
       | MGet, _
-      | MSet, _ ->
+      | MSet, _
+      | NLess, _
+      | NLeq, _ ->
         aexp (eop op (BatList.map unbox_exp es),
               Some (unbox_ty (oget e.ety)), e.espan)
       | _ -> failwith "TODO: implement option unboxing for rest of map operations")
@@ -186,7 +190,7 @@ let rec box_val v ty =
     Printf.printf "%s\n" (Printing.ty_to_string ty);
     failwith "mistyped value"
   | VBool _, TUnit -> vunit ()
-  | VBool _, _ | VInt _, _ -> v
+  | VBool _, _ | VInt _, _ | VNode _, _ | VEdge _, _ -> v
   | VUnit, _ | VOption _, _ | VClosure _, _ | VMap _, _ | VRecord _, _ -> failwith "no such values"
 
 let box_sol ty sol =
@@ -222,7 +226,7 @@ let unbox_srp (srp : Syntax.srp_unfold) =
   { srp_attr = unboxed_attr;
     srp_constraints = AdjGraph.VertexMap.map unbox_exp srp.srp_constraints;
     srp_labels = AdjGraph.VertexMap.map
-          (fun xs -> BatList.map (fun (x,ty) -> (x, unboxed_attr)) xs) srp.srp_labels;
+        (fun xs -> BatList.map (fun (x,ty) -> (x, unboxed_attr)) xs) srp.srp_labels;
     srp_symbolics =  BatList.map (fun (x,e) ->
         match e with
         | Ty ty -> (x, Ty (unbox_ty ty))

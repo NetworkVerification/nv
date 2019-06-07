@@ -6,6 +6,12 @@ open RecordUtils
 (* indices into maps or map sizes must be static constants *)
 type index = int
 
+type node = int
+[@@deriving eq, ord, show]
+
+type edge = node * node
+[@@deriving eq, ord, show]
+
 type bitwidth = int
 [@@deriving eq, ord, show]
 
@@ -30,6 +36,8 @@ type ty =
   | TOption of ty
   | TMap of ty * ty
   | TRecord of ty StringMap.t
+  | TNode
+  | TEdge
 [@@deriving ord, eq]
 
 and tyvar = Unbound of tyname * level | Link of ty
@@ -38,11 +46,13 @@ type op =
   | And
   | Or
   | Not
+  | Eq
   | UAdd of bitwidth
   | USub of bitwidth
-  | UEq
   | ULess of bitwidth
   | ULeq of bitwidth
+  | NLess
+  | NLeq
   | AtMost of int
   | MCreate
   | MGet
@@ -61,6 +71,8 @@ type pattern =
   | PTuple of pattern list
   | POption of pattern option
   | PRecord of pattern StringMap.t
+  | PNode of node
+  | PEdge of pattern * pattern
 [@@deriving ord, eq]
 
 module Pat =
@@ -69,7 +81,8 @@ struct
 
   let rec isConcretePat p =
     match p with
-    | PInt _ | PBool _ | POption None -> true
+    | PInt _ | PBool _ | PNode _ | POption None -> true
+    | PEdge (p1, p2) -> isConcretePat p1 && isConcretePat p2
     | POption (Some p) -> isConcretePat p
     | PTuple ps ->
       BatList.for_all (isConcretePat) ps
@@ -81,6 +94,10 @@ struct
       Pervasives.compare n1 n2
     | PBool b1, PBool b2 ->
       Pervasives.compare b1 b2
+    | PNode n1, PNode n2 ->
+      Pervasives.compare n1 n2
+    | PEdge (p1, p2), PEdge (p1', p2') ->
+      Pervasives.compare (p1, p2) (p1', p2')
     | POption p1, POption p2 ->
       Pervasives.compare p1 p2
     | PTuple ps1, PTuple ps2 ->
@@ -106,6 +123,8 @@ type v =
   | VOption of value option
   | VClosure of closure
   | VRecord of value StringMap.t
+  | VNode of node
+  | VEdge of edge
 [@@deriving ord]
 
 and value =
@@ -170,8 +189,8 @@ type declaration =
   | DInit of exp
   | DAssert of exp
   | DRequire of exp
-  | DNodes of Integer.t
-  | DEdges of (Integer.t * Integer.t) list
+  | DNodes of int
+  | DEdges of (node * node) list
 
 type declarations = declaration list
 
@@ -304,6 +323,8 @@ let rec show_ty ty =
     Printf.sprintf "TMap (%s,%s)" (show_ty ty1) (show_ty ty2)
   | TRecord map -> show_record show_ty "TRecord" map
   | TUnit -> "TUnit"
+  | TNode -> "TNode"
+  | TEdge -> "TEdge"
 
 
 let rec show_exp ~show_meta e =
@@ -367,6 +388,10 @@ and show_pattern p =
     Printf.sprintf "POption (Some %s)" (show_pattern p)
   | PRecord map ->
     show_record show_pattern "PRecord" map
+  | PNode node ->
+    Printf.sprintf "PNode %d" node
+  | PEdge (p1, p2) ->
+    Printf.sprintf "PEdge %s~%s" (show_pattern p1) (show_pattern p2)
 
 and show_value ~show_meta v =
   if show_meta then
@@ -389,6 +414,8 @@ and show_v ~show_meta v =
     Printf.sprintf "VOption (%s)" (show_opt (show_value ~show_meta) vo)
   | VClosure c -> Printf.sprintf "VClosure %s" (show_closure ~show_meta c)
   | VRecord map -> show_record (show_value ~show_meta) "VRecord" map
+  | VNode node -> Printf.sprintf "VNode %dn" node
+  | VEdge (n1, n2) -> Printf.sprintf "VEdge %dn-%dn" n1 n2
 
 and show_closure ~show_meta (e, f) =
   Printf.sprintf "{env=%s; func=%s}" (show_env ~show_meta e) (show_func ~show_meta f)
@@ -417,6 +444,10 @@ let rec equal_lists eq_elts lst1 lst2 =
 
 let rec equal_tys ty1 ty2 =
   match (ty1, ty2) with
+  | TBool, TBool
+  | TInt _, TInt _
+  | TNode, TNode
+  | TEdge, TEdge -> true
   | TVar t1, TVar t2 -> (
       match (!t1, !t2) with
       | Unbound (n1, x1), Unbound (n2, x2) ->
@@ -424,10 +455,10 @@ let rec equal_tys ty1 ty2 =
       | Link t1, Link t2 -> equal_tys t1 t2
       | _ -> false )
   | QVar n1, QVar n2 -> Var.equals n1 n2
-  | TBool, TBool | TInt _, TInt _ -> true
   | TArrow (t1, t2), TArrow (s1, s2) ->
     equal_tys t1 s1 && equal_tys t2 s2
   | TTuple ts1, TTuple ts2 -> equal_lists equal_tys ts1 ts2
+  | TRecord map1, TRecord map2 -> StringMap.equal equal_tys map1 map2
   | TOption t1, TOption t2 -> equal_tys t1 t2
   | TMap (t1, t2), TMap (s1, s2) ->
     equal_tys t1 s1 && equal_tys t2 s2
@@ -448,6 +479,8 @@ let rec equal_values ~cmp_meta (v1: value) (v2: value) =
 and equal_vs ~cmp_meta v1 v2 =
   match (v1, v2) with
   | VBool b1, VBool b2 -> b1 = b2
+  | VNode n1, VNode n2 -> n1 = n2
+  | VEdge e1, VEdge e2 -> e1 = e2
   | VInt i1, VInt i2 -> Integer.equal i1 i2
   | VMap (m1, ty1), VMap (m2, ty2) ->
     Mtbdd.is_equal m1 m2 && equal_tys ty1 ty2
@@ -510,6 +543,10 @@ and equal_es ~cmp_meta e1 e2 =
     equal_exps ~cmp_meta e1 e2 && equal_branches ~cmp_meta bs1 bs2
   | ETy (e1, ty1), ETy (e2, ty2) ->
     equal_exps ~cmp_meta e1 e2 && ty1 = ty2
+  | ERecord map1, ERecord map2 ->
+    StringMap.equal (equal_exps ~cmp_meta) map1 map2
+  | EProject (e1, label1), EProject (e2, label2) ->
+    String.equal label1 label2 && equal_exps ~cmp_meta e1 e2
   | _, _ -> false
 
 and equal_lists_es ~cmp_meta es1 es2 =
@@ -546,6 +583,9 @@ and equal_patterns p1 p2 =
   | PTuple ps1, PTuple ps2 -> equal_patterns_list ps1 ps2
   | POption None, POption None -> true
   | POption (Some p1), POption (Some p2) -> equal_patterns p1 p2
+  | PRecord map1, PRecord map2 -> StringMap.equal equal_patterns map1 map2
+  | PNode n1, PNode n2 -> n1 = n2
+  | PEdge (p1, p2), PEdge (p1', p2') -> equal_patterns p1 p1' && equal_patterns p2 p2'
   | _ -> false
 
 and equal_patterns_list ps1 ps2 =
@@ -590,6 +630,8 @@ let rec hash_ty ty =
   | TRecord map ->
     StringMap.fold (fun l t acc -> acc + + hash_string l + hash_ty t) map 0 + 10
   | TUnit -> 11
+  | TNode -> 12
+  | TEdge -> 13
 
 let hash_span (span: Span.t) = (19 * span.start) + span.finish
 
@@ -608,7 +650,6 @@ let rec hash_value ~hash_meta v : int =
 
 and hash_v ~hash_meta v =
   match v with
-  | VUnit -> 8
   | VBool b -> if b then 1 else 0
   | VInt i -> (19 * Integer.to_int i) + 1
   | VMap m -> (19 * Hashtbl.hash m) + 2
@@ -641,6 +682,9 @@ and hash_v ~hash_meta v =
         map 0
     in
     (19 * acc) + 7
+  | VUnit -> 8
+  | VNode n -> (19 * n) + 9
+  | VEdge (e1, e2) -> (19 * (e1 + 19 * e2)) + 10
 
 and hash_exp ~hash_meta e =
   let cfg = Cmdline.get_cfg () in
@@ -725,6 +769,8 @@ and hash_pattern p =
     (19 *
      StringMap.fold (fun l p acc -> acc + + hash_string l + hash_pattern p) map 0
      + 8)
+  | PNode n -> (19 * n) + 9
+  | PEdge (p1, p2) -> (19 * (hash_pattern p1 + 19 * hash_pattern p2)) + 10
 
 and hash_patterns ps =
   List.fold_left (fun acc p -> acc + hash_pattern p) 0 ps
@@ -734,7 +780,7 @@ and hash_op op =
   | And -> 1
   | Or -> 2
   | Not -> 3
-  | UEq -> 4
+  | Eq -> 4
   | MCreate -> 5
   | MGet -> 6
   | MSet -> 7
@@ -746,6 +792,8 @@ and hash_op op =
   | ULess n -> 11 + n + 256 * 3
   | ULeq n -> 11  + n + 256 * 4
   | AtMost n -> 12 + n
+  | NLess -> 13
+  | NLeq -> 14
 (* hashconsing information/tables *)
 
 let meta_v : (v, value) meta =
@@ -781,9 +829,11 @@ let arity op =
   | Not -> 1
   | UAdd _ -> 2
   | USub _ -> 2
-  | UEq -> 2
+  | Eq -> 2
   | ULess _ -> 2
   | ULeq _ -> 2
+  | NLess -> 2
+  | NLeq -> 2
   | AtMost _ -> 3
   | MCreate -> 1
   | MGet -> 2
@@ -819,6 +869,10 @@ let wrap exp e = {e with ety= exp.ety; espan= exp.espan}
 let vunit () = value VUnit
 
 let vbool b = {(value (VBool b)) with vty = Some TBool}
+
+let vnode n = value (VNode n)
+
+let vedge e = value (VEdge e)
 
 let vint i = value (VInt i)
 
@@ -895,7 +949,7 @@ let exp_of_v x = exp (EVal (value x))
 
 let rec exp_of_value v =
   match v.v with
-  | VUnit | VBool _ | VInt _ | VMap _ | VClosure _ | VOption None ->
+  | VUnit | VBool _ | VInt _ | VMap _ | VClosure _ | VOption None | VNode _ | VEdge _->
     let e = e_val v in
     {e with ety= v.vty; espan=v.vspan}
   | VTuple vs ->
@@ -911,6 +965,8 @@ let rec exp_of_value v =
 let rec val_to_pattern v =
   match v.v with
   | VUnit -> PUnit
+  | VNode n -> PNode n
+  | VEdge (n1, n2) -> PEdge (PNode n1, PNode n2)
   | VBool b -> PBool b
   | VInt i -> PInt i
   | VTuple vs -> PTuple (BatList.map val_to_pattern vs)
@@ -1124,9 +1180,10 @@ let rec free (seen: Var.t PSet.t) (e: exp) : Var.t PSet.t =
 
 and pattern_vars p =
   match p with
-  | PWild | PUnit | PBool _ | PInt _ | POption None ->
+  | PWild | PUnit | PBool _ | PInt _ | POption None | PNode _ ->
     PSet.create Var.compare
   | PVar v -> PSet.singleton ~cmp:Var.compare v
+  | PEdge (p1, p2) -> pattern_vars (PTuple [p1; p2]) 
   | PTuple ps ->
     List.fold_left
       (fun set p -> PSet.union set (pattern_vars p))
@@ -1186,6 +1243,8 @@ let rec default_exp_value ty =
   match ty with
   | TUnit -> exp_of_value (avalue (vunit (), Some ty, Span.default))
   | TBool -> exp_of_value (avalue (vbool false, Some ty, Span.default))
+  | TNode -> exp_of_value (avalue (vnode 0, Some TNode, Span.default))
+  | TEdge -> exp_of_value (avalue (vedge (0, 1), Some TEdge, Span.default))
   | TInt size ->
     exp_of_value (avalue (vint (Integer.create ~value:0 ~size:size), Some ty, Span.default))
   | TTuple ts ->
@@ -1278,6 +1337,8 @@ module BddUtils = struct
     | TTuple ts ->
       List.fold_left (fun acc t -> acc + ty_to_size t) 0 ts
     | TRecord tmap -> ty_to_size (TTuple (get_record_entries tmap))
+    | TNode -> ty_to_size (TInt 32) (* Encode as int *)
+    | TEdge -> ty_to_size (TTuple [TNode; TNode]) (* Encode as node pair *)
     | TArrow _ | TMap _ | TVar _ | QVar _ ->
       failwith ("internal error (ty_to_size): " ^ (show_ty ty))
 
@@ -1341,6 +1402,8 @@ module BddMap = struct
       avalue (voption None, Some ty, Span.default)
     | TMap (ty1, ty2) ->
       avalue (vmap (create ~key_ty:ty1 (default_value ty2)), Some ty, Span.default)
+    | TNode -> avalue (vnode 0, Some ty, Span.default)
+    | TEdge -> avalue (vedge (0, 1), Some ty, Span.default)
     | TVar {contents= Link t} ->
       default_value t
     | TVar _ | QVar _ | TArrow _ ->
@@ -1367,6 +1430,13 @@ module BddMap = struct
       | VRecord map ->
         (* Convert this to a tuple type, then encode that *)
         let tup = value @@ VTuple (get_record_entries map) in
+        aux tup idx
+      | VNode n ->
+        (* Encode same way as we encode ints *)
+        aux (value @@ VInt (Integer.create ~value:n ~size:32)) idx
+      | VEdge (e1, e2) ->
+        (* Encode same way as we encode tuples of nodes *)
+        let tup = value @@ VTuple [value (VNode e1); value (VNode e2)] in
         aux tup idx
       | VOption None ->
         let var = B.ithvar idx in
@@ -1415,6 +1485,12 @@ module BddMap = struct
              So get the tuple type and use that to decode *)
           let tup = TTuple (get_record_entries map) in
           aux idx tup
+        | TNode ->
+          (* Was encoded as int, so decode same way *)
+          aux idx (TInt 32)
+        | TEdge ->
+          (* Was encoded as tuple of nodes *)
+          aux idx (TTuple [TNode; TNode])
         | TOption tyo ->
           let tag = B.tbool_to_bool vars.(idx) in
           let v, i = aux (idx + 1) tyo in
@@ -1474,6 +1550,8 @@ module BddMap = struct
     | TUnit -> size (TBool) (* Encode as boolean because I don't understand this code *)
     | TBool -> 1
     | TInt _ -> 32
+    | TNode -> size (TInt 32)
+    | TEdge -> size (TTuple [TNode; TNode])
     | TTuple ts -> List.fold_left (fun acc t -> acc + size t) 0 ts
     | TRecord map -> size (TTuple (get_record_entries map))
     | TOption t -> 1 + size t
@@ -1667,6 +1745,10 @@ module BddFunc = struct
       | TBool -> (BBool (B.ithvar i), i + 1)
       | TInt size ->
         (BInt (Array.init size (fun j -> B.ithvar (i + j))), i + size)
+      | TNode ->
+        aux i (TInt 32)
+      | TEdge ->
+        aux i (TTuple [TNode; TNode])
       | TTuple ts ->
         let bs, idx =
           List.fold_left
@@ -1806,11 +1888,13 @@ module BddFunc = struct
         | And, [e1; e2] -> eval_bool_op2 env Bdd.dand e1 e2
         | Or, [e1; e2] -> eval_bool_op2 env Bdd.dor e1 e2
         | Not, [e1] -> eval_bool_op1 env Bdd.dnot e1
-        | UEq, [e1; e2] -> eq (eval env e1) (eval env e2)
+        | Eq, [e1; e2] -> eq (eval env e1) (eval env e2)
         | UAdd _, [e1; e2] -> add (eval env e1) (eval env e2)
         | ULess _, [e1; e2] -> lt (eval env e1) (eval env e2)
         | ULeq _, [e1; e2] -> leq (eval env e1) (eval env e2)
         | USub _, [e1; e2] -> failwith "subtraction not implemented"
+        | NLess, [e1; e2] -> lt (eval env e1) (eval env e2)
+        | NLeq, [e1; e2] -> leq (eval env e1) (eval env e2)
         | _ -> failwith "unimplemented" )
     | EIf (e1, e2, e3) -> (
         let v1 = eval env e1 in
@@ -1898,6 +1982,10 @@ module BddFunc = struct
             bdd_of_bool bit )
       in
       BInt bs
+    | VNode n ->
+      eval_value env (value (VInt (Integer.create ~size:32 ~value:n)))
+    | VEdge (n1, n2) ->
+      eval_value env (value (VTuple [value (VNode n1); value (VNode n2)]))
     | VOption None ->
       let ty =
         match get_inner_type (oget v.vty) with

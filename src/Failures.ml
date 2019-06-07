@@ -76,26 +76,26 @@ let buildFailTrans
     : Syntax.exp =
   (* edge argument used by abstract transfer function *)
   let aedge_var = Var.create "edge" in
-  
+
   (* code that implements check for a failed edge *)
   let failCheck fvar body =
     aexp(eif (aexp(evar fvar, Some TBool, Span.default))
              (Syntax.default_exp_value attrTy)
              body, Some attrTy, Span.default)in
-  
+
   (* inserting that code in the body of the transfer function *)
   let addFailureCheck fvar exp = (deconstructFun exp).body |> (failCheck fvar) in
-  
+
   (* for each edge, find it's corresponding
          transfer function and augment it with a check for whether it's
          failed *)
   let branches =
     Hashtbl.fold (fun (u,v) transuv acc ->
-        let p = PTuple [PInt u; PInt v] in
+        let p = PEdge (PNode u, PNode v) in
         addBranch p (addFailureCheck (EdgeMap.find (u, v) failuresMap) transuv) acc)
       trans emptyBranch
   in
-  
+
   (* partial evaluted trans functions are of the form fun m -> ..., grab m *)
   (*trick to find a transfer function *)
   let uv, _ = EdgeMap.min_binding failuresMap in
@@ -109,7 +109,7 @@ let buildFailTrans
   (* create fun m -> trans_hat_body *)
   let trans_hat_msg = efunc {arg=messageArg; argty=transf.argty; resty=transf.resty;
                              body=match_exp} in
-  (*return fun e_hat m -> trans_hat_body *)  
+  (*return fun e_hat m -> trans_hat_body *)
   efunc {arg=aedge_var; argty=Some Typing.edge_ty; resty= transuv.ety;
          body=trans_hat_msg}
 
@@ -124,4 +124,3 @@ let buildFailuresNet net k =
             requires = failuresConstraint :: net.requires;
             symbolics = failuresSym @ net.symbolics
   }
-          

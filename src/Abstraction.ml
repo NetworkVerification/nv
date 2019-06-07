@@ -30,7 +30,7 @@ module TransAbsId =
     let compare (x1,x2) (y1,y2) =
       let cmp = Pervasives.compare x1 y1 in
       if cmp = 0 then
-        Integer.compare x2 y2
+        Pervasives.compare x2 y2
       else
         cmp
 
@@ -136,21 +136,19 @@ let abstraction (f: abstractionMap) (g: AdjGraph.t)
 
 let partialEvalTrans (graph : AdjGraph.t)
                      (trans : Syntax.exp) : (Edge.t, int * Syntax.exp) Hashtbl.t  =
-  let edge_to_val e = vtuple [vint (fst e); vint (snd e)] in
   let es = AdjGraph.edges graph in
   let tbl = Hashtbl.create (BatList.length es) in
   BatList.iter (fun e ->
-      let ptrans = Interp.interp_partial_fun trans [edge_to_val e] in
+      let ptrans = Interp.interp_partial_fun trans [vedge e] in
       Hashtbl.add tbl e ((Syntax.hash_exp ~hash_meta:false ptrans), ptrans)) es;
   tbl
 
 let partialEvalMerge (graph : AdjGraph.t)
                      (merge : Syntax.exp) : (Vertex.t, int * Syntax.exp) Hashtbl.t =
-  let node_to_val n = vint n in
   let ns = AdjGraph.get_vertices graph in
   let tbl = Hashtbl.create (VertexSet.cardinal ns) in
   VertexSet.iter (fun v ->
-      let pmerge = Interp.interp_partial_fun merge [node_to_val v] in
+      let pmerge = Interp.interp_partial_fun merge [vnode v] in
       Hashtbl.add tbl v (Syntax.hash_exp ~hash_meta:false pmerge, pmerge)) ns;
   tbl
 
@@ -183,17 +181,17 @@ module BuildAbstractNetwork =
     (* Given a concrete graph and an abstraction function returns the node
    and edges of the abstract graph *)
     let buildAbstractAdjGraphDecls (g: AdjGraph.t) (f: abstractionMap)
-        : Integer.t * (Edge.t list) =
-      let n = Integer.create ~value:(size f) ~size:32 in
+        : int * (Edge.t list) =
+      let n = size f in
       let rec edges uhat =
         if uhat = n then EdgeSet.empty
         else
-          EdgeSet.union (findAbstractEdges g f uhat) (edges (Integer.succ uhat))
+          EdgeSet.union (findAbstractEdges g f uhat) (edges (uhat + 1))
       in
-      (n, EdgeSet.to_list (edges zero))
+      (n, EdgeSet.to_list (edges 0))
 
     let buildAbstractAdjGraph (g: AdjGraph.t) (f: abstractionMap) : AdjGraph.t =
-      let n = Integer.create ~value:(size f) ~size:32 in
+      let n = size f in
       let ag = AdjGraph.create n in
       fold_vertices (fun uhat ag ->
           let es = findAbstractEdges g f uhat in
@@ -230,7 +228,7 @@ module BuildAbstractNetwork =
          failed *)
       let branches =
         BatList.fold_left (fun acc (uhat, vhat) ->
-            let p = PTuple [PInt uhat; PInt vhat] in
+            let p = PEdge (PNode uhat, PNode vhat) in
             let u = getGroupRepresentativeId f uhat in
             match getNeighborsInVhat f g u vhat with
             | [] -> failwith "There must be a concrete edge
@@ -269,13 +267,13 @@ module BuildAbstractNetwork =
 
     (* Given the number of abstract nodes and a concrete merge function,
    synthesizes an abstract merge function. *)
-    let buildAbstractMerge (n : Integer.t)
+    let buildAbstractMerge (n : int)
                            (merge: (Vertex.t, int * Syntax.exp) Hashtbl.t)
                            (f: abstractionMap) : Syntax.exp =
       (* vertex argument used by abstract merge function *)
       let avertex_var = Var.create "node" in
 
-      let _, merge0 = Hashtbl.find merge zero in
+      let _, merge0 = Hashtbl.find merge 0 in
       let merge0x = deconstructFun merge0 in
       let merge0y = deconstructFun merge0x.body in
 
@@ -287,18 +285,18 @@ module BuildAbstractNetwork =
       let rec branches uhat =
         if uhat = n then emptyBranch
         else
-          let p = PInt uhat in
+          let p = PNode uhat in
           let u = getGroupRepresentativeId f uhat in
           let (_, mergeu) = Hashtbl.find merge u in
           let mergeu0 = deconstructFun mergeu in
           let mergeu1 = deconstructFun mergeu0.body in
           addBranch p (aexp(mergeu1.body, mergeu1.resty, Span.default))
-            (branches (Integer.succ uhat))
+            (branches (uhat + 1))
       in
       (* create a match on the node expression *)
       let match_exp =
         aexp(ematch (aexp (evar avertex_var, Some Typing.node_ty, Span.default))
-               (branches zero), merge0y.resty, Span.default)
+               (branches 0), merge0y.resty, Span.default)
       in
       (* create a function from attributes *)
       efunc {arg=avertex_var; argty= Some Typing.node_ty; resty = merge0.ety;
@@ -328,7 +326,7 @@ module BuildAbstractNetwork =
       let branches =
         VertexSet.fold (fun u acc ->
             let uhat = getId f u in
-            let p = PInt uhat in
+            let p = PNode uhat in
             addBranch p vinit acc) dst (addBranch PWild default_attr emptyBranch)
       in
       (*build the match expression *)
@@ -350,10 +348,10 @@ module BuildAbstractNetwork =
       let avertex_var = Var.create "node" in
 
       (* get abstract nodes *)
-      let n = Integer.of_int (AbstractionMap.size f) in
+      let n = AbstractionMap.size f in
 
       (* get the argument name of the attribute *)
-      let mineu = Hashtbl.find assertionMap zero in
+      let mineu = Hashtbl.find assertionMap 0 in
       let mineufun = deconstructFun mineu in
       let messageArg = mineufun.arg in
 
@@ -362,17 +360,17 @@ module BuildAbstractNetwork =
       let rec branches uhat =
         if uhat = n then emptyBranch
         else
-          let p = PInt uhat in
+          let p = PNode uhat in
           let u = getGroupRepresentativeId f uhat in
           let assertu = Hashtbl.find assertionMap u in
           let assertubody = (deconstructFun assertu).body in
-          addBranch p assertubody (branches (Integer.succ uhat))
+          addBranch p assertubody (branches (uhat + 1))
       in
 
       (* create a match on the node expression *)
       let match_exp =
         aexp (ematch (aexp (evar avertex_var, Some Typing.node_ty, Span.default))
-                (branches zero), mineu.ety, Span.default) in
+                (branches 0), mineu.ety, Span.default) in
       let assert_msg = efunc {arg=messageArg; argty=mineufun.argty;
                               resty=mineufun.resty; body=match_exp} in
       (*return fun uhat m -> assert_hat_body *)
@@ -962,7 +960,7 @@ module FailuresAbstraction =
                else (acc, AdjGraph.add_edge ag edge)
             | _ -> failwith "This should be a boolean variable") failVars
                      (EdgeSet.empty,
-                      AdjGraph.create (AbstractionMap.size f |> Integer.of_int))
+                      AdjGraph.create (AbstractionMap.size f))
       in
 
       (* number of concrete links failed in the network *)

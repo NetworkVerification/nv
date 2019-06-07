@@ -36,7 +36,9 @@ let rec unroll_type
   match (canonicalize_type ty2) with
   | TUnit
   | TBool
-  | TInt _ ->
+  | TInt _
+  | TNode
+  | TEdge ->
     ty2
   | TArrow (t1, t2) ->
     TArrow (unroll_type t1, unroll_type t2)
@@ -105,7 +107,9 @@ let rec unroll_exp
       | USub _, _
       | ULess _, _
       | ULeq _, _
-      | UEq, _ ->
+      | NLess, _
+      | NLeq, _
+      | Eq, _ ->
         eop op (BatList.map unroll_exp es)
       | MCreate, [e1] ->
         if not (has_target_type e) then

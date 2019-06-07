@@ -210,7 +210,7 @@ let symvar_assign info (net: Syntax.network) : value VarMap.t option =
   | UNSAT  | UNKNOWN -> None
   | SAT ->
     (* build model question *)
-    let model = eval_model env.symbolics (Integer.of_int 0) None (StringMap.empty, StringMap.empty) in
+    let model = eval_model env.symbolics 0 None (StringMap.empty, StringMap.empty) in
     let model_question = commands_to_smt smt_config.verbose info model in
     ask_solver solver model_question;
     (* get answer *)

@@ -89,7 +89,7 @@ let add_blocking_require info net map var_map =
         let var, ty = VarMap.find x var_map in
         let var = aexp(evar var, Some ty, Span.default) in
         let v = aexp(e_val (avalue (v, Some ty, Span.default)), Some ty, Span.default) in
-        let eq = aexp(eop UEq [var; v], Some TBool, Span.default) in
+        let eq = aexp(eop Eq [var; v], Some TBool, Span.default) in
         aexp(eop And [acc; eq], Some TBool, Span.default))
           map base
   in

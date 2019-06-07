@@ -26,13 +26,13 @@ let smt_config : smt_options =
 
 let get_requires_no_failures req =
   BatList.filter (fun e -> match e.e with
-                        | EOp (AtMost _, _) -> false
-                        | _ -> true) req
+      | EOp (AtMost _, _) -> false
+      | _ -> true) req
 
 let get_requires_failures req =
   BatList.filter (fun e -> match e.e with
-                        | EOp (AtMost _, _) -> true
-                        | _ -> false) req
+      | EOp (AtMost _, _) -> true
+      | _ -> false) req
   |> List.hd
 
 
@@ -95,6 +95,8 @@ let rec ty_to_sort (ty: ty) : sort =
   | TUnit -> UnitSort
   | TBool -> BoolSort
   | TInt _ -> IntSort
+  | TNode -> ty_to_sort (TInt 32)
+  | TEdge -> ty_to_sort (TTuple [TNode; TNode])
   | TTuple ts -> (
       match ts with
       | [t] -> ty_to_sort t
@@ -116,10 +118,10 @@ let rec ty_to_sort (ty: ty) : sort =
 (** * Utilities *)
 (** ** Naming convention of useful variables *)
 let label_var i =
-  Printf.sprintf "label-%d-" (Integer.to_int i)
+  Printf.sprintf "label-%d-" i
 
 let node_of_label_var s =
-  Integer.of_string
+  int_of_string
     (BatList.nth (BatString.split_on_char '-' s) 1)
 
 let proj_of_var s =
@@ -131,12 +133,12 @@ let proj_of_var s =
   with Not_found -> None
 
 let assert_var i =
-  Printf.sprintf "assert-%d" (Integer.to_int i)
+  Printf.sprintf "assert-%d" i
 
 (* this is flaky, the variable name used by SMT will be
    assert-n-result, we need to chop both ends *)
 let node_of_assert_var s =
-  Integer.of_string (BatString.chop ~l:7 ~r:7 s)
+  int_of_string (BatString.chop ~l:7 ~r:7 s)
 
 let symbolic_of_proj_var s =
   let (name, i) = Var.from_var @@ Var.of_var_string s in

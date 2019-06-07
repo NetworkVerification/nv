@@ -21,7 +21,7 @@ let trans edge x =
 
 let init node =
   match node with
-  | 0 -> Some 0
+  | 0n -> Some 0
   | _ -> None
 
 let assert n x =

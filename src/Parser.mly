@@ -14,6 +14,11 @@
     | Some (_, ty) -> ty
     | None -> failwith @@ "Unknown user-defined type " ^ (Var.name name)
 
+  let ensure_node_pattern p =
+    match p with
+    | PInt n -> PNode (Integer.to_int n)
+    | _ -> p
+
   let exp e span : exp = aexp (e, None, span)
 
   let value v span : value = avalue (v, None, span)
@@ -121,6 +126,7 @@
 
 %token <Span.t * Var.t> ID
 %token <Span.t * Integer.t> NUM
+%token <Span.t * int> NODE
 %token <Span.t> AND
 %token <Span.t> OR
 %token <Span.t> NOT
@@ -133,6 +139,10 @@
 %token <Span.t * int> GREATER
 %token <Span.t * int> LEQ
 %token <Span.t * int> GEQ
+%token <Span.t> NLESS
+%token <Span.t> NGREATER
+%token <Span.t> NLEQ
+%token <Span.t> NGEQ
 %token <Span.t> LET
 %token <Span.t> IN
 %token <Span.t> IF
@@ -154,6 +164,7 @@
 %token <Span.t> LBRACE
 %token <Span.t> RBRACE
 %token <Span.t> COMMA
+%token <Span.t> TILDE
 %token <Span.t> UNDERSCORE
 %token <Span.t> CREATEMAP
 %token <Span.t> MAP
@@ -165,6 +176,8 @@
 %token <Span.t> TYPE
 %token <Span.t> COLON
 %token <Span.t> TBOOL
+%token <Span.t> TNODE
+%token <Span.t> TEDGE
 %token <Span.t * int> TINT
 %token <Span.t> EDGES
 %token <Span.t> NODES
@@ -187,7 +200,7 @@
 %right ELSE IN     /* lowest precedence */
 %right ARROW
 %left AND OR
-%nonassoc GEQ GREATER LEQ LESS EQ
+%nonassoc GEQ GREATER LEQ LESS EQ NLEQ NGEQ NLESS NGREATER
 %left PLUS SUB UNION INTER MINUS
 %right NOT
 %right SOME
@@ -199,6 +212,8 @@
 ty:
    | ty ARROW ty                        { TArrow ($1,$3) }
    | TBOOL                              { TBool }
+   | TNODE                              { TNode }
+   | TEDGE                              { TEdge }
    | TINT                               { Syntax.TInt (snd $1) }
    | LPAREN tys RPAREN                  { if List.length $2 = 1 then List.hd $2 else TTuple $2 }
    | TOPTION LBRACKET ty RBRACKET       { TOption $3 }
@@ -246,7 +261,7 @@ component:
     | REQUIRE expr                      { DRequire $2 }
     | LET EDGES EQ LBRACE RBRACE        { DEdges [] }
     | LET EDGES EQ LBRACE edges RBRACE  { DEdges $5 }
-    | LET NODES EQ NUM                  { DNodes (snd $4) }
+    | LET NODES EQ NUM                  { DNodes (Integer.to_int (snd $4)) }
     | TYPE ATTRIBUTE EQ ty              { DATy $4 }
     | TYPE ID EQ ty                     { (add_user_type (snd $2) $4; DUserTy (snd $2, $4)) }
 
@@ -293,11 +308,15 @@ expr:
     | expr OR expr                      { exp (eop Or [$1;$3]) (Span.extend $1.espan $3.espan) }
     | expr PLUS expr                    { exp (eop (UAdd (snd $2)) [$1;$3]) (Span.extend $1.espan $3.espan) }
     | expr SUB expr                     { exp (eop (USub (snd $2)) [$1;$3]) (Span.extend $1.espan $3.espan) }
-    | expr EQ expr                      { exp (eop UEq [$1;$3]) (Span.extend $1.espan $3.espan) }
+    | expr EQ expr                      { exp (eop Eq [$1;$3]) (Span.extend $1.espan $3.espan) }
     | expr LESS expr                    { exp (eop (ULess (snd $2)) [$1;$3]) (Span.extend $1.espan $3.espan) }
     | expr GREATER expr                 { exp (eop (ULess (snd $2)) [$3;$1]) (Span.extend $1.espan $3.espan) }
     | expr LEQ expr                     { exp (eop (ULeq (snd $2)) [$1;$3]) (Span.extend $1.espan $3.espan) }
     | expr GEQ expr                     { exp (eop (ULeq (snd $2)) [$3;$1]) (Span.extend $1.espan $3.espan) }
+    | expr NLESS expr                   { exp (eop NLess [$1;$3]) (Span.extend $1.espan $3.espan) }
+    | expr NGREATER expr                { exp (eop NLess [$3;$1]) (Span.extend $1.espan $3.espan) }
+    | expr NLEQ expr                    { exp (eop NLeq [$1;$3]) (Span.extend $1.espan $3.espan) }
+    | expr NGEQ expr                    { exp (eop NLeq [$3;$1]) (Span.extend $1.espan $3.espan) }
     | LPAREN expr COLON ty RPAREN       { exp (ety $2 $4) (Span.extend $1 $5) }
     | expr LBRACKET expr RBRACKET               { exp (eop MGet [$1;$3]) (Span.extend $1.espan $4) }
     | expr LBRACKET expr COLON EQ expr RBRACKET { exp (eop MSet [$1;$3;$6]) (Span.extend $1.espan $7) }
@@ -364,13 +383,19 @@ expr2:
 
 expr3:
     | ID                                { exp (evar (snd $1)) (fst $1) }
-    | ID DOT ID                       { exp (eproject (evar (snd $1)) (Var.name (snd $3))) (Span.extend (fst $1) (fst $3)) }
+    | ID DOT ID                         { exp (eproject (evar (snd $1)) (Var.name (snd $3))) (Span.extend (fst $1) (fst $3)) }
     | NUM                               { to_value (vint (snd $1)) (fst $1) }
+    | NODE                              { to_value (vnode (snd $1)) (fst $1)}
+    | edge_arg TILDE edge_arg           { to_value (vedge (snd $1, snd $3)) (Span.extend (fst $1) (fst $3))}
     | TRUE                              { to_value (vbool true) $1 }
     | FALSE                             { to_value (vbool false) $1 }
     | NONE                              { to_value (voption None) $1 }
     | LPAREN exprs RPAREN               { tuple_it $2 (Span.extend $1 $3) }
 ;
+
+edge_arg:
+  | NUM                                 { (fst $1), (Integer.to_int (snd $1))}
+  | NODE                                { (fst $1), (snd $1) }
 
 exprs:
     | expr                              { [$1] }
@@ -382,9 +407,15 @@ exprsspace:
     | expr3 exprsspace                  { $1 :: $2 }
 ;
 
+edgenode:
+    | NUM                               { Integer.to_int (snd $1) }
+    | NODE                              { snd $1 }
+;
+
 edge:
-    | NUM SUB NUM SEMI                  { [(snd $1, snd $3)] }
-    | NUM EQ NUM SEMI                   { [(snd $1, snd $3); (snd $3, snd $1)] }
+    | edgenode TILDE edgenode SEMI      { [($1, $3)] }
+    | edgenode SUB edgenode SEMI        { [($1, $3)] }
+    | edgenode EQ edgenode SEMI         { [($1, $3); ($3, $1)] }
 ;
 
 edges:
@@ -398,6 +429,8 @@ pattern:
     | TRUE                              { PBool true }
     | FALSE                             { PBool false }
     | NUM                               { PInt (snd $1) }
+    | NODE                              { PNode (snd $1) }
+    | pattern TILDE pattern             { PEdge (ensure_node_pattern $1, ensure_node_pattern $3)}
     | LPAREN patterns RPAREN            { tuple_pattern $2 }
     | NONE                              { POption None }
     | SOME pattern                      { POption (Some $2) }
@@ -405,7 +438,6 @@ pattern:
                                           (if snd $2
                                            then fill_record (fst $2) (fun _ -> PWild)
                                            else fst $2)) }
-
 ;
 
 patterns:

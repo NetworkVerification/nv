@@ -117,7 +117,7 @@ let betterEqOption o1 o2 =
 let best c s o b =
   match (c,s,o,b) with
   | (None,None,None,None) -> None
-  | _ -> 
+  | _ ->
       let o = match o with | None -> None | Some (ad,_,_,_) -> Some ad in
       let b = match b with | None -> None | Some (ad,_,_,_) -> Some ad in
       let (x,p1) = if betterEqOption c s then (c,0) else (s,1) in
@@ -137,7 +137,7 @@ let merge node x y = mergeValues x y
 
 let init node =
   match node with
-  | 0 -> 
+  | 0n ->
      if (d = (1174405888, 32)) || (d = (167779840, 31)) || (d = (167779328, 31)) || (d = (167780096, 31)) || (d = (167779584, 31)) then
        let c = Some 0 in
        let s = None in
@@ -146,7 +146,7 @@ let init node =
        let fib = best c s o b in
         (c,s,o,b,fib)
      else (None,None,None,None,None)
-  | 1 -> 
+  | 1n ->
      if (d = (167772928, 31)) || (d = (167772672, 31)) || (d = (1174406400, 32)) || (d = (167778304, 31)) || (d = (167779328, 31)) then
        let c = Some 0 in
        let s = None in
@@ -155,7 +155,7 @@ let init node =
        let fib = best c s o b in
         (c,s,o,b,fib)
      else (None,None,None,None,None)
-  | 2 -> 
+  | 2n ->
      if (d = (1174405632, 32)) || (d = (167778304, 31)) || (d = (167778816, 31)) || (d = (167779072, 31)) || (d = (167778560, 31)) then
        let c = Some 0 in
        let s = None in
@@ -164,7 +164,7 @@ let init node =
        let fib = best c s o b in
         (c,s,o,b,fib)
      else (None,None,None,None,None)
-  | 3 -> 
+  | 3n ->
      if (d = (167772416, 31)) || (d = (167772160, 31)) || (d = (167776256, 31)) || (d = (1174406144, 32)) || (d = (167777280, 31)) then
        let c = Some 0 in
        let s = None in
@@ -173,7 +173,7 @@ let init node =
        let fib = best c s o b in
         (c,s,o,b,fib)
      else (None,None,None,None,None)
-  | 4 -> 
+  | 4n ->
      if (d = (1174409216, 32)) || (d = (167775488, 31)) || (d = (167775232, 31)) || (d = (167778048, 31)) || (d = (167777024, 31)) then
        let c = Some 0 in
        let s = None in
@@ -182,7 +182,7 @@ let init node =
        let fib = best c s o b in
         (c,s,o,b,fib)
      else (None,None,None,None,None)
-  | 5 -> 
+  | 5n ->
      if (d = (167773696, 31)) || (d = (167773184, 31)) then
        let c = Some 0 in
        let s = None in
@@ -198,7 +198,7 @@ let init node =
        let fib = best c s o b in
         (c,s,o,b,fib)
      else (None,None,None,None,None)
-  | 6 -> 
+  | 6n ->
      if (d = (1174405376, 32)) || (d = (167778048, 31)) || (d = (167777280, 31)) || (d = (167777792, 31)) || (d = (167777536, 31)) then
        let c = Some 0 in
        let s = None in
@@ -207,7 +207,7 @@ let init node =
        let fib = best c s o b in
         (c,s,o,b,fib)
      else (None,None,None,None,None)
-  | 7 -> 
+  | 7n ->
      if (d = (167773952, 31)) || (d = (167773440, 31)) then
        let c = Some 0 in
        let s = None in
@@ -223,7 +223,7 @@ let init node =
        let fib = best c s o b in
         (c,s,o,b,fib)
      else (None,None,None,None,None)
-  | 8 -> 
+  | 8n ->
      if (d = (167776256, 31)) || (d = (1174405120, 32)) || (d = (167777024, 31)) || (d = (167776768, 31)) || (d = (167776512, 31)) then
        let c = Some 0 in
        let s = None in
@@ -232,7 +232,7 @@ let init node =
        let fib = best c s o b in
         (c,s,o,b,fib)
      else (None,None,None,None,None)
-  | 9 -> 
+  | 9n ->
      if (d = (167774976, 31)) || (d = (167774464, 31)) then
        let c = Some 0 in
        let s = None in
@@ -248,7 +248,7 @@ let init node =
        let fib = best c s o b in
         (c,s,o,b,fib)
      else (None,None,None,None,None)
-  | 10 -> 
+  | 10n ->
      if (d = (167774208, 31)) || (d = (167774720, 31)) then
        let c = Some 0 in
        let s = None in
@@ -264,7 +264,7 @@ let init node =
        let fib = best c s o b in
         (c,s,o,b,fib)
      else (None,None,None,None,None)
-  | 11 -> 
+  | 11n ->
      if (d = (167774208, 31)) || (d = (1174408192, 32)) || (d = (167774464, 31)) || (d = (167777792, 31)) || (d = (167776768, 31)) then
        let c = Some 0 in
        let s = None in
@@ -273,7 +273,7 @@ let init node =
        let fib = best c s o b in
         (c,s,o,b,fib)
      else (None,None,None,None,None)
-  | 12 -> 
+  | 12n ->
      if (d = (1174408448, 32)) || (d = (167774976, 31)) || (d = (167774720, 31)) || (d = (167779840, 31)) || (d = (167778816, 31)) then
        let c = Some 0 in
        let s = None in
@@ -282,7 +282,7 @@ let init node =
        let fib = best c s o b in
         (c,s,o,b,fib)
      else (None,None,None,None,None)
-  | 13 -> 
+  | 13n ->
      if (d = (167775744, 31)) || (d = (167775232, 31)) then
        let c = Some 0 in
        let s = None in
@@ -298,7 +298,7 @@ let init node =
        let fib = best c s o b in
         (c,s,o,b,fib)
      else (None,None,None,None,None)
-  | 14 -> 
+  | 14n ->
      if (d = (167772928, 31)) || (d = (167772416, 31)) then
        let c = Some 0 in
        let s = None in
@@ -314,7 +314,7 @@ let init node =
        let fib = best c s o b in
         (c,s,o,b,fib)
      else (None,None,None,None,None)
-  | 15 -> 
+  | 15n ->
      if (d = (167773952, 31)) || (d = (167773696, 31)) || (d = (1174407424, 32)) || (d = (167778560, 31)) || (d = (167779584, 31)) then
        let c = Some 0 in
        let s = None in
@@ -323,7 +323,7 @@ let init node =
        let fib = best c s o b in
         (c,s,o,b,fib)
      else (None,None,None,None,None)
-  | 16 -> 
+  | 16n ->
      if (d = (167772672, 31)) || (d = (167772160, 31)) then
        let c = Some 0 in
        let s = None in
@@ -339,7 +339,7 @@ let init node =
        let fib = best c s o b in
         (c,s,o,b,fib)
      else (None,None,None,None,None)
-  | 17 -> 
+  | 17n ->
      if (d = (167776000, 31)) || (d = (167775744, 31)) || (d = (167779072, 31)) || (d = (167780096, 31)) || (d = (1174409472, 32)) then
        let c = Some 0 in
        let s = None in
@@ -348,7 +348,7 @@ let init node =
        let fib = best c s o b in
         (c,s,o,b,fib)
      else (None,None,None,None,None)
-  | 18 -> 
+  | 18n ->
      if (d = (167773440, 31)) || (d = (167773184, 31)) || (d = (1174407168, 32)) || (d = (167777536, 31)) || (d = (167776512, 31)) then
        let c = Some 0 in
        let s = None in
@@ -357,7 +357,7 @@ let init node =
        let fib = best c s o b in
         (c,s,o,b,fib)
      else (None,None,None,None,None)
-  | 19 -> 
+  | 19n ->
      if (d = (167776000, 31)) || (d = (167775488, 31)) then
        let c = Some 0 in
        let s = None in
@@ -382,73 +382,73 @@ let init node =
    | None -> None
    | Some (ad,lp,cost,med) -> (
    match edge with
-   | (4,8) -> Some (ad, lp+100, cost + 1, med)
-   | (6,3) -> Some (ad, lp, cost + 1, med)
-   | (5,15) -> Some (ad, lp, cost + 1, med)
-   | (4,13) -> Some (ad, lp, cost + 1, med)
-   | (4,19) -> Some (ad, lp, cost + 1, med)
-   | (9,11) -> Some (ad, lp, cost + 1, med)
-   | (11,6) -> Some (ad, lp, cost + 1, med)
-   | (2,12) -> Some (ad, lp, cost + 1, med)
-   | (6,4) -> Some (ad, lp, cost + 1, med)
-   | (16,1) -> Some (ad, lp, cost + 1, med)
-   | (1,0) -> Some (ad, lp, cost + 1, med)
-   | (6,11) -> Some (ad, lp, cost + 1, med)
-   | (3,8) -> Some (ad, lp, cost + 1, med)
-   | (14,1) -> Some (ad, lp, cost + 1, med)
-   | (8,4) -> Some (ad, lp, cost + 1, med)
-   | (16,3) -> Some (ad, lp, cost + 1, med)
-   | (2,17) -> Some (ad, lp, cost + 1, med)
-   | (11,8) -> Some (ad, lp, cost + 1, med)
-   | (13,4) -> Some (ad, lp, cost + 1, med)
-   | (18,5) -> Some (ad, lp, cost + 1, med)
-   | (2,15) -> Some (ad, lp, cost + 1, med)
-   | (4,6) -> Some (ad, lp, cost + 1, med)
-   | (14,3) -> Some (ad, lp, cost + 1, med)
-   | (17,19) -> Some (ad, lp, cost + 1, med)
-   | (15,5) -> Some (ad, lp, cost + 1, med)
-   | (18,7) -> Some (ad, lp, cost + 1, med)
-   | (19,17) -> Some (ad, lp, cost + 1, med)
-   | (19,4) -> Some (ad, lp, cost + 1, med)
-   | (1,16) -> Some (ad, lp, cost + 1, med)
-   | (1,2) -> Some (ad, lp, cost + 1, med)
-   | (17,2) -> Some (ad, lp, cost + 1, med)
-   | (17,0) -> Some (ad, lp, cost + 1, med)
-   | (3,16) -> Some (ad, lp, cost + 1, med)
-   | (11,9) -> Some (ad, lp, cost + 1, med)
-   | (1,14) -> Some (ad, lp, cost + 1, med)
-   | (5,18) -> Some (ad, lp, cost + 1, med)
-   | (12,2) -> Some (ad, lp, cost + 1, med)
-   | (8,3) -> Some (ad, lp, cost + 1, med)
-   | (15,7) -> Some (ad, lp, cost + 1, med)
-   | (7,15) -> Some (ad, lp, cost + 1, med)
-   | (15,0) -> Some (ad, lp, cost + 1, med)
-   | (0,17) -> Some (ad, lp, cost + 1, med)
-   | (13,17) -> Some (ad, lp, cost + 1, med)
-   | (15,2) -> Some (ad, lp, cost + 1, med)
-   | (0,15) -> Some (ad, lp, cost + 1, med)
-   | (3,14) -> Some (ad, lp, cost + 1, med)
-   | (7,18) -> Some (ad, lp, cost + 1, med)
-   | (10,12) -> Some (ad, lp, cost + 1, med)
-   | (8,11) -> Some (ad, lp, cost + 1, med)
-   | (18,6) -> Some (ad, lp, cost + 1, med)
-   | (2,1) -> Some (ad, lp, cost + 1, med)
-   | (12,0) -> Some (ad, lp, cost + 1, med)
-   | (12,10) -> Some (ad, lp, cost + 1, med)
-   | (6,18) -> Some (ad, lp, cost + 1, med)
-   | (17,13) -> Some (ad, lp, cost + 1, med)
-   | (3,6) -> Some (ad, lp, cost + 1, med)
-   | (9,12) -> Some (ad, lp, cost + 1, med)
-   | (0,1) -> Some (ad, lp, cost + 1, med)
-   | (10,11) -> Some (ad, lp, cost + 1, med)
-   | (11,10) -> Some (ad, lp, cost + 1, med)
-   | (18,8) -> Some (ad, lp, cost + 1, med)
-   | (8,18) -> Some (ad, lp, cost + 1, med)
-   | (12,9) -> Some (ad, lp, cost + 1, med)
-   | (0,12) -> Some (ad, lp, cost + 1, med)
+   | 4~8 -> Some (ad, lp+100, cost + 1, med)
+   | 6~3 -> Some (ad, lp, cost + 1, med)
+   | 5~15 -> Some (ad, lp, cost + 1, med)
+   | 4~13 -> Some (ad, lp, cost + 1, med)
+   | 4~19 -> Some (ad, lp, cost + 1, med)
+   | 9~11 -> Some (ad, lp, cost + 1, med)
+   | 11~6 -> Some (ad, lp, cost + 1, med)
+   | 2~12 -> Some (ad, lp, cost + 1, med)
+   | 6~4 -> Some (ad, lp, cost + 1, med)
+   | 16~1 -> Some (ad, lp, cost + 1, med)
+   | 1~0 -> Some (ad, lp, cost + 1, med)
+   | 6~11 -> Some (ad, lp, cost + 1, med)
+   | 3~8 -> Some (ad, lp, cost + 1, med)
+   | 14~1 -> Some (ad, lp, cost + 1, med)
+   | 8~4 -> Some (ad, lp, cost + 1, med)
+   | 16~3 -> Some (ad, lp, cost + 1, med)
+   | 2~17 -> Some (ad, lp, cost + 1, med)
+   | 11~8 -> Some (ad, lp, cost + 1, med)
+   | 13~4 -> Some (ad, lp, cost + 1, med)
+   | 18~5 -> Some (ad, lp, cost + 1, med)
+   | 2~15 -> Some (ad, lp, cost + 1, med)
+   | 4~6 -> Some (ad, lp, cost + 1, med)
+   | 14~3 -> Some (ad, lp, cost + 1, med)
+   | 17~19 -> Some (ad, lp, cost + 1, med)
+   | 15~5 -> Some (ad, lp, cost + 1, med)
+   | 18~7 -> Some (ad, lp, cost + 1, med)
+   | 19~17 -> Some (ad, lp, cost + 1, med)
+   | 19~4 -> Some (ad, lp, cost + 1, med)
+   | 1~16 -> Some (ad, lp, cost + 1, med)
+   | 1~2 -> Some (ad, lp, cost + 1, med)
+   | 17~2 -> Some (ad, lp, cost + 1, med)
+   | 17~0 -> Some (ad, lp, cost + 1, med)
+   | 3~16 -> Some (ad, lp, cost + 1, med)
+   | 11~9 -> Some (ad, lp, cost + 1, med)
+   | 1~14 -> Some (ad, lp, cost + 1, med)
+   | 5~18 -> Some (ad, lp, cost + 1, med)
+   | 12~2 -> Some (ad, lp, cost + 1, med)
+   | 8~3 -> Some (ad, lp, cost + 1, med)
+   | 15~7 -> Some (ad, lp, cost + 1, med)
+   | 7~15 -> Some (ad, lp, cost + 1, med)
+   | 15~0 -> Some (ad, lp, cost + 1, med)
+   | 0~17 -> Some (ad, lp, cost + 1, med)
+   | 13~17 -> Some (ad, lp, cost + 1, med)
+   | 15~2 -> Some (ad, lp, cost + 1, med)
+   | 0~15 -> Some (ad, lp, cost + 1, med)
+   | 3~14 -> Some (ad, lp, cost + 1, med)
+   | 7~18 -> Some (ad, lp, cost + 1, med)
+   | 10~12 -> Some (ad, lp, cost + 1, med)
+   | 8~11 -> Some (ad, lp, cost + 1, med)
+   | 18~6 -> Some (ad, lp, cost + 1, med)
+   | 2~1 -> Some (ad, lp, cost + 1, med)
+   | 12~0 -> Some (ad, lp, cost + 1, med)
+   | 12~10 -> Some (ad, lp, cost + 1, med)
+   | 6~18 -> Some (ad, lp, cost + 1, med)
+   | 17~13 -> Some (ad, lp, cost + 1, med)
+   | 3~6 -> Some (ad, lp, cost + 1, med)
+   | 9~12 -> Some (ad, lp, cost + 1, med)
+   | 0~1 -> Some (ad, lp, cost + 1, med)
+   | 10~11 -> Some (ad, lp, cost + 1, med)
+   | 11~10 -> Some (ad, lp, cost + 1, med)
+   | 18~8 -> Some (ad, lp, cost + 1, med)
+   | 8~18 -> Some (ad, lp, cost + 1, med)
+   | 12~9 -> Some (ad, lp, cost + 1, med)
+   | 0~12 -> Some (ad, lp, cost + 1, med)
 )
 
-let transferRoute edge x = 
+let transferRoute edge x =
   let (c,s,o,b,fib) = x in
   let o = transferOspf edge o in
   let b = transferBgp edge b in

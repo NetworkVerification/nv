@@ -4,6 +4,10 @@ open Batteries
 
 type index = int
 
+type node = int
+
+type edge = node * node
+
 type bitwidth = int
 
 type level = int
@@ -23,6 +27,8 @@ type ty =
   | TOption of ty
   | TMap of ty * ty
   | TRecord of ty StringMap.t
+  | TNode
+  | TEdge
 
 and tyvar = Unbound of tyname * level | Link of ty
 
@@ -30,11 +36,13 @@ type op =
   | And
   | Or
   | Not
+  | Eq
   | UAdd of bitwidth
   | USub of bitwidth
-  | UEq
   | ULess of bitwidth
   | ULeq of bitwidth
+  | NLess
+  | NLeq
   | AtMost of int
   | MCreate
   | MGet
@@ -52,6 +60,8 @@ type pattern =
   | PTuple of pattern list
   | POption of pattern option
   | PRecord of pattern StringMap.t
+  | PNode of node
+  | PEdge of pattern * pattern
 
 module Pat : Map.OrderedType with type t = pattern
 
@@ -66,6 +76,8 @@ type v = private
   | VOption of value option
   | VClosure of closure
   | VRecord of value StringMap.t
+  | VNode of node
+  | VEdge of edge
 
 and mtbdd = value Mtbdd.t * ty
 
@@ -126,8 +138,8 @@ type declaration =
   | DInit of exp
   | DAssert of exp
   | DRequire of exp
-  | DNodes of Integer.t
-  | DEdges of (Integer.t * Integer.t) list
+  | DNodes of int
+  | DEdges of (node * node) list
 
 type declarations = declaration list
 
@@ -158,6 +170,10 @@ type srp_unfold =
 val vunit : unit -> value
 
 val vbool : bool -> value
+
+val vnode : node -> value
+
+val vedge : edge -> value
 
 val vint : Integer.t -> value
 
@@ -265,9 +281,9 @@ val get_init : declarations -> exp option
 
 val get_assert : declarations -> exp option
 
-val get_edges : declarations -> (Integer.t * Integer.t) list option
+val get_edges : declarations -> (node * node) list option
 
-val get_nodes : declarations -> Integer.t option
+val get_nodes : declarations -> int option
 
 val get_symbolics : declarations -> (var * ty_or_exp) list
 

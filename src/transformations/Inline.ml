@@ -8,8 +8,9 @@ let is_function_ty e =
 
 let rec has_var p x =
   match p with
-  | PWild | PUnit | PBool _ | PInt _ -> false
+  | PWild | PUnit | PBool _ | PInt _ | PNode _ -> false
   | PVar y -> Var.equals x y
+  | PEdge (p1, p2) -> has_var p1 x || has_var p2 x
   | PTuple ps ->
       BatList.fold_left (fun acc p -> acc || has_var p x) false ps
   | POption None -> false
@@ -18,8 +19,9 @@ let rec has_var p x =
 
 let rec remove_all env p =
   match p with
-  | PWild | PUnit | PBool _ | PInt _ -> env
+  | PWild | PUnit | PBool _ | PInt _ | PNode _ -> env
   | PVar x -> Env.remove env x
+  | PEdge (p1, p2) -> remove_all env (PTuple [p1; p2])
   | PTuple ps ->
       BatList.fold_left (fun acc p -> remove_all acc p) env ps
   | POption None -> env

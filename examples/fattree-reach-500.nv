@@ -1,4 +1,4 @@
-type attribute = set[int]
+type attribute = set[tnode]
 
 let nodes = 500
 
@@ -4015,4 +4015,4 @@ let init node =
   let m = {} in
   m[(ip_of_node node) := true]
 
-let assert node x = x[19]
+let assert node x = x[19n]

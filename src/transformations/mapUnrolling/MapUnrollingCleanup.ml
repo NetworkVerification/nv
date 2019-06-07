@@ -11,7 +11,7 @@ let mapo f o =
 
 let rec replace_ty ty =
   match ty with
-  | TUnit | TBool | TInt _ | QVar _ -> ty
+  | TUnit | TBool | TInt _ | TNode | TEdge | QVar _ -> ty
   | TTuple [] -> TUnit
   | TTuple [ty'] -> replace_ty ty'
   | TTuple tys -> TTuple (List.map replace_ty tys)
@@ -28,7 +28,7 @@ let rec replace_ty ty =
 
 let rec replace_pattern p =
   match p with
-  | PWild | PUnit | PBool _ | PInt _ | PVar _ -> p
+  | PWild | PUnit | PBool _ | PInt _ | PVar _ | PNode _ | PEdge _ -> p
   | PTuple [] -> PUnit
   | PTuple [p] -> replace_pattern p
   | PTuple ps -> PTuple (List.map replace_pattern ps)
@@ -39,7 +39,7 @@ let rec replace_pattern p =
 let rec replace_val v =
   let new_v =
     match v.v with
-    | VUnit | VBool _ | VInt _ -> v
+    | VUnit | VBool _ | VInt _ | VNode _ | VEdge _ -> v
     | VTuple [] -> vunit ()
     | VTuple [v'] -> replace_val v'
     | VTuple vs -> vtuple (List.map replace_val vs)

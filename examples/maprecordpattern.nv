@@ -29,5 +29,5 @@ let trans edge x =
 let init node =
   let m = createDict ({ val = 0; isNone = true }) in
   match node with
-  | 0 -> m[3 := { val = 2; isNone = false }]
-  | 1 -> m[5 := { val = 7; isNone = false }]
+  | 0n -> m[3 := { val = 2; isNone = false }]
+  | 1n -> m[5 := { val = 7; isNone = false }]

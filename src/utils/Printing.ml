@@ -4,7 +4,7 @@ open Syntax
 
 let is_keyword_op op =
   match op with
-  | And | Or | Not | UAdd _ | USub _ | UEq | ULess _ | ULeq _ | MGet -> false
+  | And | Or | Not | UAdd _ | USub _ | Eq | ULess _ | ULeq _ | MGet | NLess | NLeq -> false
   | MCreate | MSet | MMap | MMerge | MMapFilter | AtMost _ -> true
 
 (* set to true if you want to print universal quanifiers explicitly *)
@@ -19,9 +19,11 @@ let prec_op op =
   | Not -> 6
   | UAdd _ -> 4
   | USub _ -> 4
-  | UEq -> 5
+  | Eq -> 5
   | ULess _ -> 5
   | ULeq _ -> 5
+  | NLess -> 5
+  | NLeq -> 5
   | MCreate -> 5
   | MGet -> 5
   | MSet -> 3
@@ -71,6 +73,8 @@ let ty_prec t =
   | QVar _ -> 0
   | TBool -> 0
   | TInt _ -> 0
+  | TNode -> 0
+  | TEdge -> 0
   | TArrow _ -> 8
   | TTuple _ -> 6
   | TOption _ -> 4
@@ -108,6 +112,8 @@ let rec ty_to_string_p prec t =
     | TUnit -> "unit"
     | TBool -> "bool"
     | TInt i -> "int" ^ string_of_int i
+    | TNode -> "node"
+    | TEdge -> "edge"
     | TArrow (t1, t2) ->
       ty_to_string_p p t1 ^ " -> " ^ ty_to_string_p prec t2
     | TTuple ts -> "(" ^ sep "*" (ty_to_string_p p) ts ^ ")"
@@ -135,9 +141,11 @@ let op_to_string op =
   | Not -> "!"
   | UAdd n -> "+" ^ "u" ^ (string_of_int n)
   | USub n -> "-" ^ "u" ^ (string_of_int n)
-  | UEq -> "="
+  | Eq -> "="
   | ULess n -> "<" ^ "u" ^ (string_of_int n)
   | ULeq n -> "<=" ^ "u" ^ (string_of_int n)
+  | NLess -> "<n"
+  | NLeq -> "<=n"
   | MCreate -> "createMap"
   | MGet -> "at"
   | MSet -> "set"
@@ -158,6 +166,8 @@ let rec pattern_to_string pattern =
   | POption None -> "None"
   | POption (Some p) -> "Some " ^ pattern_to_string p
   | PRecord map -> print_record "=" pattern_to_string map
+  | PNode n -> Printf.sprintf "%dn" n
+  | PEdge (p1, p2) -> Printf.sprintf "%s~%s" (pattern_to_string p1) (pattern_to_string p2)
 
 let ty_env_to_string env = Env.to_string ty_to_string env.ty
 
@@ -220,6 +230,8 @@ and value_to_string_p prec v =
     if max_prec > prec then "(" ^ s ^ ")" else s
   | VClosure cl -> closure_to_string_p prec cl
   | VRecord map -> print_record "=" (value_to_string_p prec) map
+  | VNode n -> Printf.sprintf "%dn" n
+  | VEdge (n1, n2) -> Printf.sprintf "%dn-%dn" n1 n2
 
 and exp_to_string_p prec e =
   let p = prec_exp e in
@@ -306,12 +318,12 @@ let rec declaration_to_string d =
   | DTrans e -> "let trans = " ^ exp_to_string e
   | DAssert e -> "let assert = " ^ exp_to_string e
   | DRequire e -> "require " ^ exp_to_string e
-  | DNodes n -> "let nodes = " ^ Integer.to_string n
+  | DNodes n -> "let nodes = " ^ string_of_int n
   | DEdges es ->
     "let edges = {"
     ^ List.fold_right
       (fun (u, v) s ->
-         s ^ Integer.to_string u ^ "=" ^ Integer.to_string v ^ ";"
+         Printf.sprintf "%s%dn-%dn;" s u v
       )
       es ""
     ^ "}"
@@ -340,11 +352,10 @@ let network_to_string ?(show_topology=false) (net : Syntax.network) =
   (** Topology -- hide unless specifically requested **)
   (if not show_topology then [] else
      [
-       Printf.sprintf "let nodes = %s\n\n" (Integer.to_string @@ AdjGraph.num_vertices net.graph);
+       Printf.sprintf "let nodes = %d\n\n" (AdjGraph.num_vertices net.graph);
 
        Printf.sprintf "let edges = {%s}\n\n" @@ list_to_string
-         (fun (i, j) ->
-            Printf.sprintf "%s-%s" (Integer.to_string i) (Integer.to_string j))
+         (fun (i, j) -> Printf.sprintf "%dn-%dn" i j)
          (AdjGraph.edges net.graph);
      ])
   @

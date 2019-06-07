@@ -27,19 +27,19 @@ type queue = AdjGraph.Vertex.t QueueSet.queue
 type state = solution * queue
 
 let create_state n cl : state =
-  let rec loop n (q: Integer.t QueueSet.queue) m =
-    if Integer.compare n (Integer.of_int 0) > 0 then
-      let next_n = Integer.pred n in
+  let rec loop n (q: queue) m =
+    if Pervasives.compare n 0 > 0 then
+      let next_n = n - 1 in
       let next_q = QueueSet.add q next_n in
       let next_m =
         AdjGraph.VertexMap.add next_n
-          (Interp.interp_closure cl [vint next_n])
+          (Interp.interp_closure cl [vnode next_n])
           m
       in
       loop next_n next_q next_m
     else (m, q)
   in
-  loop n (QueueSet.empty Integer.compare) AdjGraph.VertexMap.empty
+  loop n (QueueSet.empty Pervasives.compare) AdjGraph.VertexMap.empty
 
 type info =
   { mutable env: Syntax.env
@@ -50,9 +50,9 @@ type info =
   ; (* assert *)
     mutable a: Syntax.closure option
   ; (* trans *)
-    mutable ns: Integer.t option
+    mutable ns: Syntax.node option
   ; (* nodes *)
-    mutable es: (Integer.t * Integer.t) list option
+    mutable es: Syntax.edge list option
   ; (* edges *)
     mutable init: Syntax.closure option (* initial state *)
   ; mutable syms: value VarMap.t }
@@ -144,14 +144,14 @@ let get_attribute v s =
     try Some (AdjGraph.VertexMap.find v m) with Not_found -> None
   in
   match find_opt v s with
-  | None -> failwith ("no attribute at vertex " ^ Integer.to_string v)
+  | None -> failwith ("no attribute at vertex " ^ string_of_int v)
   | Some a -> a
 
 let simulate_step {graph= g; trans; merge} s x =
   let do_neighbor initial_attribute (s, todo) n =
-    let neighbor = vint n in
-    let origin = vint x in
-    let edge = vtuple [origin; neighbor] in
+    let neighbor = vnode n in
+    (* let origin = vnode x in *)
+    let edge = vedge (n, x) in
     let n_incoming_attribute =
       Interp.interp_closure trans [edge; initial_attribute]
     in
@@ -193,7 +193,7 @@ let check_assertion srp node v =
   match srp.assertion with
   | None -> true
   | Some a ->
-      let v = Interp.interp_closure a [vint node; v] in
+      let v = Interp.interp_closure a [vnode node; v] in
       match v.v with
       | VBool b -> b
       | _ -> failwith "internal error (check_assertion)"

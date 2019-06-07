@@ -7,7 +7,7 @@ open Batteries
 
 let rec has_map ty =
   match get_inner_type ty with
-  | TUnit | TBool | TInt _ | TVar _ | QVar _ -> false
+  | TUnit | TBool | TInt _ | TNode | TEdge | TVar _ | QVar _ -> false
   | TTuple ts -> List.exists has_map ts
   | TArrow (ty1, ty2) -> has_map ty1 || has_map ty2
   | TOption ty -> has_map ty
@@ -16,7 +16,7 @@ let rec has_map ty =
 
 let rec check_type ty : bool =
   match get_inner_type ty with
-  | TUnit | TBool | TInt _ | TVar _ | QVar _ -> true
+  | TUnit | TBool | TInt _  | TNode | TEdge | TVar _ | QVar _ -> true
   | TTuple ts -> List.for_all check_type ts
   | TOption ty -> check_type ty
   | TArrow (ty1, ty2) -> check_type ty1 && check_type ty2
@@ -46,7 +46,7 @@ let rec check_closure info (x: VarSet.t) (e: exp) =
   | EVal v -> ()
   | EOp (op, es) ->
     ( match op with
-      | And | Or | Not | UEq | UAdd _ | ULess _ | ULeq _ | USub _ -> ()
+      | And | Or | Not | Eq | UAdd _ | ULess _ | ULeq _ | USub _ | NLess | NLeq -> ()
       | _ ->
         let msg =
           Printf.sprintf
@@ -58,11 +58,11 @@ let rec check_closure info (x: VarSet.t) (e: exp) =
   | EFun _ ->
     (* Console.error_position info e.espan *)
     (* "function not allowed in mapIf closure" *)
-     ()
+    ()
   | EApp (e1, e2) ->
     (* Console.error_position info e.espan *)
     (* "function application allowed in mapIf closure" *)
-     ()
+    ()
   | EIf (e1, e2, e3) ->
     check_closure info x e1 ;
     check_closure info x e2 ;
@@ -86,8 +86,9 @@ let rec check_closure info (x: VarSet.t) (e: exp) =
 
 and pattern_vars (p: pattern) =
   match p with
-  | PWild | PUnit | PBool _ | PInt _ | POption None -> VarSet.empty
+  | PWild | PUnit | PBool _ | PInt _  | PNode _ | POption None -> VarSet.empty
   | PVar v -> VarSet.singleton v
+  | PEdge (p1, p2) -> VarSet.union (pattern_vars p1) (pattern_vars p2)
   | PTuple ps ->
     List.fold_left
       (fun acc p -> VarSet.union acc (pattern_vars p))
@@ -171,8 +172,37 @@ let check_keys info _ (e : exp) =
       Console.error_position info k.espan msg
   | _ -> ()
 
+(* Ensures every node/edge value in the program actually exists in the network *)
+let check_nodes_and_edges info num_nodes edges _ (e : exp) =
+  match e.e with
+  | EVal v ->
+    begin
+      match v.v with
+      | VNode n ->
+        if n < num_nodes then ()
+        else
+          let msg =
+            Printf.sprintf
+              "Node %d does not appear in the network! (The highest node value is %d)"
+              n (num_nodes - 1)
+          in
+          Console.error_position info v.vspan msg
+      | VEdge (n1, n2) ->
+        if List.mem (n1, n2) edges then ()
+        else
+          let msg =
+            Printf.sprintf
+              "Edge %d~%d does not appear in the network!" n1 n2
+          in
+          Console.error_position info v.vspan msg
+      | _ -> ()
+    end
+  | _ -> ()
+
 let check info (ds: declarations) : unit =
   check_record_label_uniqueness info ds ;
   Visitors.iter_exp_decls (check_types info) ds ;
-  Visitors.iter_exp_decls (check_closures info) ds ;
-  Visitors.iter_exp_decls (check_keys info) ds
+  (* Visitors.iter_exp_decls (check_closures info) ds ; *) (* Is this still necessary? *)
+  Visitors.iter_exp_decls (check_keys info) ds;
+  Visitors.iter_exp_decls (check_nodes_and_edges info (get_nodes ds |> oget) (get_edges ds |> oget)) ds;
+  ()

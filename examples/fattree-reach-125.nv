@@ -1,4 +1,4 @@
-type attribute = set[int]
+type attribute = set[tnode]
 
 let nodes = 125
 let edges = {
@@ -512,4 +512,4 @@ let ip_of_node node = node
 
 let init node = {ip_of_node node}
 
-let assert node x = x[19] 
+let assert node x = x[19n]

@@ -11,7 +11,9 @@ let canonicalize_type (ty : ty) : ty =
     match ty with
     | TUnit
     | TBool
-    | TInt _ ->
+    | TInt _
+    | TNode
+    | TEdge ->
       ty, map, count
     | TArrow (t1, t2) ->
       let t1', map, count = aux t1 map count in
@@ -76,7 +78,9 @@ let rec unroll_type
   | TUnit
   | TBool
   | TInt _
-  | QVar _ ->
+  | QVar _
+  | TNode
+  | TEdge ->
     ty
   | TArrow (t1, t2) ->
     TArrow (unroll_type t1, unroll_type t2)
@@ -99,7 +103,9 @@ let rec unroll_pattern p =
   | PInt _
   | PBool _
   | PVar _
-  | POption None -> p
+  | POption None
+  | PNode _
+  | PEdge _ -> p
   | PTuple ps ->
     PTuple (BatList.map unroll_pattern ps)
   | POption (Some p) ->
@@ -212,7 +218,9 @@ let rec convert_value
   (* TODO: Potentially add on span and type info *)
   match v.v, original_ty with
   | VBool _, TBool
-  | VInt _, TInt _ ->
+  | VInt _, TInt _
+  | VNode _, TNode
+  | VEdge _, TEdge ->
     v
   | VOption vo, TOption t ->
     begin
@@ -255,7 +263,7 @@ let convert_symbolics
   let convert_symbolic symb v =
     let _, toe =
       (* Printf.printf "Looking for symbolic %s with symbolics [%s]\n" symb @@
-      BatString.concat ("; ") @@ List.map (fun (s,_) -> Var.to_string s) symbolics; *)
+         BatString.concat ("; ") @@ List.map (fun (s,_) -> Var.to_string s) symbolics; *)
       BatList.find (fun (v, _) -> Var.equal v symb) symbolics
     in
     let oldty =
@@ -324,7 +332,6 @@ let unroll_net_aux
     requires = BatList.map unroll_exp net.requires;
     graph = net.graph
   }
-
 
 let unroll_net net =
   let rtys = net.utys in

@@ -1,8 +1,7 @@
 type prefix = (int,int)
-type edgeTy = (int,int)
 
 type bgp = { bgpad : int; lp : int; cost : int; }
-type ribEntry = option[(edgeTy,bgp)] (*edgeTy should maybe be an option for initial value*)
+type ribEntry = option[(tedge,bgp)]
 
 type packet = { srcIp: int; dstIp: int; volume: int; }
 type packets = set[packet]
@@ -36,19 +35,19 @@ let longestMatchingPrefix edge p rib =
 
 
 (* is that how you would filter a set? *)
-let transPackets edge rib ps = 
+let transPackets edge rib ps =
   mapIf (fun p -> !(longestMatchingPrefix edge p rib)) (fun b -> false) ps
 
 let initPackets node =
   match node with
-  | 3 -> {{ srcIp = 1; dstIp=0; volume=100; }}
+  | 3n -> {{ srcIp = 1; dstIp=0; volume=100; }}
   | _ -> {}
 
 (* Control Plane functions *)
 let flip edge =
   match edge with
-  | (u,v) -> (v,u)
-       
+  | a~b -> edge (* FIXME: This should be toEdge a b, with some handling for options *)
+
 let transRoute edge ps b =
     match b with
     | None -> None
@@ -58,10 +57,10 @@ let transRoute edge ps b =
 (* bgp attributes comparison *)
 let betterBgp o1 o2 =
   if o1.lp > o2.lp then true
-  else if o2.lp > o1.lp then false 
+  else if o2.lp > o1.lp then false
   else if o1.cost < o2.cost then true
   else false
-        
+
 let pickOption f x y =
   match (x,y) with
   | (None, None) -> None
@@ -70,16 +69,16 @@ let pickOption f x y =
     let (_,x) = a in
     let (_,y) = b in
     Some (if f x y then a else b)
-    
+
 let mergeRoute lab1 lab2 =
   pickOption (fun x y -> betterBgp x y) lab1 lab2
 
 let initRoute node =
   let d = createDict None in
   match node with
-  | 0 ->
+  | 0n ->
      let b0 = {bgpad=20; lp=100; cost=0;} in
-     d[(0,32) := Some ((0,0), b0)]
+     d[(0,32) := Some (0~0, b0)]
   | _ -> d
 
 (* Combined functions *)
@@ -88,17 +87,17 @@ let merge node x y =
   let (psx, labx) = x in
   let (psy, laby) = y in
   (mergePackets node psx psy, combine mergeRoute labx laby)
-    
+
 let trans edge x =
   let (ps, rib) = x in
   (transPackets edge rib ps, map (transRoute edge ps) rib)
 
 let init node =
   (initPackets node, initRoute node)
-  
+
 let assert node x =
   match node with
-  | 1 ->
+  | 1n ->
      (
        let (ps, rib) = x in
        match ps[{ srcIp = 1; dstIp=0; volume=100;}] with
@@ -106,4 +105,3 @@ let assert node x =
           true
        | false -> false)
   | _ -> true
-              

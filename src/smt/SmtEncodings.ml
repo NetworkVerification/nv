@@ -123,14 +123,14 @@ struct
     let aty = net.attr_type in
     (* map each node to the init result variable *)
     let init_map = ref AdjGraph.VertexMap.empty in
-    for i = 0 to Integer.to_int nodes - 1 do
-      let einit_i = Interp.interp_partial_fun einit [vint (Integer.of_int i)] in
+    for i = 0 to nodes - 1 do
+      let einit_i = Interp.interp_partial_fun einit [vnode i] in
       (* Printf.printf "%s\n" (Printing.exp_to_string einit); *)
       let init =
         encode_z3_init (Printf.sprintf "init-%d" i) env einit_i
       in
       (* add_constraint env (mk_term (mk_eq n.t (mk_int i))); *)
-      init_map := AdjGraph.VertexMap.add (Integer.of_int i) init !init_map
+      init_map := AdjGraph.VertexMap.add i init !init_map
     done ;
 
     (* Map each edge to transfer function result *)
@@ -152,17 +152,16 @@ struct
                AdjGraph.VertexMap.add j [(i, j)] !incoming_map ) ;
          let edge =
            if smt_config.unboxing then
-             [avalue ((vint i), Some Typing.node_ty, Span.default);
-              avalue ((vint j), Some Typing.node_ty, Span.default)]
+             [avalue ((vnode i), Some Typing.node_ty, Span.default);
+              avalue ((vnode j), Some Typing.node_ty, Span.default)]
            else
-             [avalue (vtuple [vint i; vint j],
+             [avalue (vedge (i, j),
                       Some Typing.edge_ty, Span.default)] in
          (* Printf.printf "etrans:%s\n" (Printing.exp_to_string etrans); *)
          let etrans_uv = Interp.interp_partial_fun etrans edge in
          let trans, x =
            encode_z3_trans
-             (Printf.sprintf "trans-%d-%d" (Integer.to_int i)
-                (Integer.to_int j))
+             (Printf.sprintf "trans-%d-%d" i j)
              env etrans_uv
          in
          trans_input_map := AdjGraph.EdgeMap.add (i, j) x !trans_input_map ;
@@ -171,13 +170,13 @@ struct
 
     (* Compute the labelling as the merge of all inputs *)
     let labelling = ref AdjGraph.VertexMap.empty in
-    for i = 0 to Integer.to_int nodes - 1 do
-      let init = AdjGraph.VertexMap.find (Integer.of_int i) !init_map in
+    for i = 0 to nodes - 1 do
+      let init = AdjGraph.VertexMap.find i !init_map in
       let in_edges =
-        try AdjGraph.VertexMap.find (Integer.of_int i) !incoming_map
+        try AdjGraph.VertexMap.find i !incoming_map
         with Not_found -> []
       in
-      let node = avalue (vint (Integer.of_int i), Some Typing.node_ty, Span.default) in
+      let node = avalue (vnode i, Some Typing.node_ty, Span.default) in
       let emerge_i = Interp.interp_partial_fun emerge [node] in
       let idx = ref 0 in
       let merged =
@@ -196,7 +195,7 @@ struct
              merge_result )
           init in_edges
       in
-      let lbl_i_name = label_var (Integer.of_int i) in
+      let lbl_i_name = label_var i in
       let lbl_i = create_strings lbl_i_name aty in
       let lbl_iv = lift1 Var.create lbl_i in
       add_symbolic env lbl_iv (Ty aty);
@@ -205,7 +204,7 @@ struct
       in
       ignore(lift2 (fun l merged ->
           add_constraint env (mk_term (mk_eq l.t merged.t))) l merged);
-      labelling := AdjGraph.VertexMap.add (Integer.of_int i) l !labelling
+      labelling := AdjGraph.VertexMap.add i l !labelling
     done ;
     (* Propagate labels across edges outputs *)
     AdjGraph.EdgeMap.iter
@@ -219,14 +218,14 @@ struct
       | None -> ()
       | Some eassert ->
         let all_good = ref (mk_bool true) in
-        for i = 0 to Integer.to_int nodes - 1 do
+        for i = 0 to nodes - 1 do
           let label =
-            AdjGraph.VertexMap.find (Integer.of_int i) !labelling
+            AdjGraph.VertexMap.find i !labelling
           in
-          let node = avalue (vint (Integer.of_int i), Some Typing.node_ty, Span.default) in
+          let node = avalue (vnode i, Some Typing.node_ty, Span.default) in
           let eassert_i = Interp.interp_partial_fun eassert [node] in
           let result, x =
-            encode_z3_assert (assert_var (Integer.of_int i)) env (Integer.of_int i) eassert_i
+            encode_z3_assert (assert_var i) env i eassert_i
           in
           BatList.iter2 (fun x label ->
               add_constraint env (mk_term (mk_eq x.t label.t))) x (to_list label);
@@ -322,7 +321,7 @@ struct
           else
             merged
         in
-        let str = Printf.sprintf "merge-%d" (Integer.to_int u) in
+        let str = Printf.sprintf "merge-%d" u in
         (* compute SMT encoding of label constraint*)
         let merged = encode_exp_z3 str env merged in
         ignore(lift2 (fun lblu merged ->
@@ -334,15 +333,14 @@ struct
       | None -> ()
       | Some eassert ->
         let all_good = ref (mk_bool true) in
-        let n = Integer.to_int nodes - 1 in
-        for i = 0 to n do
+        for i = 0 to nodes - 1 do
           let label =
-            AdjGraph.VertexMap.find (Integer.of_int i) smt_labels
+            AdjGraph.VertexMap.find i smt_labels
           in
           let node = avalue (vint (Integer.of_int i), Some Typing.node_ty, Span.default) in
           let eassert_i = Interp.interp_partial_fun eassert [node] in
           let result, x =
-            encode_z3_assert (assert_var (Integer.of_int i)) env (Integer.of_int i) eassert_i
+            encode_z3_assert (assert_var i) env (Integer.of_int i) eassert_i
           in
           BatList.iter2 (fun x label ->
               add_constraint env (mk_term (mk_eq x.t label.t))) x (to_list label);

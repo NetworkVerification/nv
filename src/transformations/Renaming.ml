@@ -12,10 +12,14 @@ let fresh x = Var.fresh (Var.name x)
 let rec update_pattern (env: Var.t Env.t) (p: pattern) :
   pattern * Var.t Env.t =
   match p with
-  | PWild | PUnit | PBool _ | PInt _ -> (p, env)
+  | PWild | PUnit | PBool _ | PInt _ | PNode _ -> (p, env)
   | PVar x ->
     let y = fresh x in
     (PVar y, Env.update env x y)
+  | PEdge (p1, p2) ->
+    let p1', env = update_pattern env p1 in
+    let p2', env = update_pattern env p2 in
+    PEdge (p1', p2'), env
   | PTuple ps ->
     let env, ps = BatList.fold_left add_pattern (env, []) ps in
     (PTuple (BatList.rev ps), env)

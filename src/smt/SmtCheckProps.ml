@@ -65,8 +65,8 @@ let checkMonotonicity info query chan net =
       let mergeExpr = Hashtbl.find mergeTable (snd edge) in
       let trans, x =
         encode_z3_trans
-          (Printf.sprintf "trans-%d-%d" (Integer.to_int (fst edge))
-             (Integer.to_int (snd edge)))
+          (Printf.sprintf "trans-%d-%d" (fst edge)
+             (snd edge))
           env trans
       in
       (* add transfer function constraints *)
@@ -96,10 +96,10 @@ let checkMonotonicity info query chan net =
         aexp(ematch (aexp(evar (unbox merge_var), Some net.attr_type, Span.default))
                (addBranch (PTuple [PWild; PWild; PVar ospf_var; PVar bgp_var; PWild])
                   (aexp (eop And
-                           [aexp(eop UEq [evar ospf_var; evar old_ospf_var],
+                           [aexp(eop Eq [evar ospf_var; evar old_ospf_var],
                                  Some TBool,
                                  Span.default);
-                            aexp(eop UEq [evar bgp_var; evar old_bgp_var],
+                            aexp(eop Eq [evar bgp_var; evar old_bgp_var],
                                  Some TBool,
                                  Span.default)],
                          Some TBool, Span.default)) emptyBranch),
