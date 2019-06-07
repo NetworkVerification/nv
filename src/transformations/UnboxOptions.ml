@@ -145,6 +145,7 @@ and unbox_branches bs ty =
        | TOption t -> p
        (* PTuple [PVar (proj_var 0 x); PVar (proj_var 1 x)] *)
        | _ -> p)
+    | PUnit -> PBool true
     | _ -> p
   in
   mapBranches (fun (p, e) -> (unbox_pattern p ty, unbox_exp e)) bs

@@ -303,14 +303,14 @@ let parse_input (args : string array)
       (Typing.infer_declarations info decls, f :: fs) (* TODO: is type inf necessary here?*)
     else decls, fs
   in
-  (* let decls = (\*TODO: Inline again after unrolling, is this necessary? *\)
-   *   if cfg.unroll then
-   *     time_profile "Inlining" (
-   *         fun () -> Inline.inline_declarations decls |>
-   *                     Typing.infer_declarations info)
-   *   else
-   *     decls
-   * in *)
+  let decls = (*TODO: Inline again after unrolling, is this necessary? *)
+    if cfg.unroll then
+      time_profile "Inlining" (
+          fun () -> Inline.inline_declarations decls |>
+                      Typing.infer_declarations info)
+    else
+      decls
+  in
   let net = Slicing.createNetwork decls in (* Create something of type network *)
   let net =
     if cfg.link_failures > 0 then

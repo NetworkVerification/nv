@@ -126,7 +126,8 @@ let mk_ite_fast t1 t2 t3 =
   | Bool false, Bool true -> Not t1
   | Bool true, Bool true -> Bool true
   | Bool false, Bool false -> Bool false
-  | _, _ -> mk_ite t1 t2 t3
+  | _, _ ->
+    mk_ite t1 t2 t3
 
 let mk_atMost t1 t2 t3 = AtMost (t1, t2, t3)
 
