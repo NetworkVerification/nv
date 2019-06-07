@@ -17,9 +17,11 @@ sig
   val lift1: ('a -> 'b) -> 'a t -> 'b t
   val lift2: ('a -> 'b -> 'c) -> 'a t -> 'b t -> 'c t
   val to_list : 'a t -> 'a list
+  val of_list : 'a list -> 'a t
   val combine_term: term t -> term
   val add_symbolic: smt_env -> Var.t t -> Syntax.ty_or_exp -> unit
-  val init_solver: (Var.t * Syntax.ty_or_exp) list -> smt_env
+  val init_solver: (Var.t * Syntax.ty_or_exp) list ->
+    labels:(Syntax.var * Syntax.ty) list -> smt_env
 end
 
 
@@ -41,13 +43,16 @@ struct
           if BatString.starts_with str "label-" then
             str
           else
-          "symbolic-" ^ str
+            "symbolic-" ^ str
         end
       else create_name descr x
     in
     name
 
   let to_list x = [x]
+
+  let of_list x =
+    BatList.hd x
 
   (** * Returns the SMT name of a datatype *)
   let rec datatype_name (ty : ty) : string option =
@@ -177,12 +182,13 @@ struct
   let ty_to_sorts = ty_to_sort
 
   let rec encode_exp_z3 descr env (e: exp) : term =
-    (* Printf.printf "expr: %s\n" (Printing.exp_to_string e) ; *)
+    Printf.printf "expr: %s\n" (Printing.exp_to_string e) ;
     match e.e with
     | EVar x ->
       let name =
         if is_symbolic env.symbolics x then
           begin
+            (*symbolic_var x*)
             let str = Var.to_string x in
             if BatString.starts_with str "label-" then
               str
@@ -480,7 +486,7 @@ struct
     | VMap map -> failwith "not doing maps yet"
     | VRecord _ -> failwith "Record in SMT encoding"
 
-  let init_solver symbs =
+  let init_solver symbs ~labels =
     Var.reset () ;
     let env = { ctx = [];
                 const_decls = ConstantSet.empty;
@@ -488,6 +494,7 @@ struct
                 symbolics = VarMap.empty}
     in
     BatList.iter (fun (v,e) -> add_symbolic env v e) symbs;
+    BatList.iter (fun (v,ty) -> add_symbolic env v (Ty ty)) labels;
     env
 
 end
@@ -531,6 +538,8 @@ struct
 
   let to_list x = x
 
+  let of_list x = x
+
   let add_symbolic (env : smt_env) (b: Var.t list) (ety: Syntax.ty_or_exp) =
     match ety with
     | Ty ty ->
@@ -551,14 +560,14 @@ struct
   let rec ty_to_sort (ty: ty) : sort =
     match ty with
     | TVar {contents= Link t} -> ty_to_sort t
-    | TUnit -> UnitSort
     | TBool -> BoolSort
     | TInt _ -> IntSort
     | TNode -> ty_to_sort (TInt 32)
     | TEdge
     | TTuple _
-    | TOption _
     | TMap _ -> failwith "Not a single sort"
+    | TOption _
+    | TUnit -> failwith "should be unboxed"
     (*       mk_array_sort ctx (ty_to_sort ctx ty1) (ty_to_sort ctx ty2)*)
     | TVar _ | QVar _ | TArrow _ | TRecord _ ->
       failwith
@@ -570,7 +579,6 @@ struct
     match ty with
     | TVar {contents= Link t} ->
       ty_to_sorts t
-    | TUnit -> [UnitSort]
     | TBool -> [BoolSort]
     | TInt _ -> [IntSort]
     | TNode -> ty_to_sorts (TInt 32)
@@ -581,16 +589,13 @@ struct
         | [t] -> ty_to_sorts t
         | ts -> BatList.map ty_to_sorts ts |> BatList.concat)
     | TOption _ -> failwith "options should be unboxed"
+    | TUnit -> failwith "Unit shoulds be unboxed"
     | TMap _ -> failwith "unimplemented"
     | TRecord _ -> failwith "Record type in SMT"
     | TVar _ | QVar _ | TArrow _ ->
       failwith
         (Printf.sprintf "internal error (ty_to_sort): %s"
            (Printing.ty_to_string ty))
-  let unit_decl =
-    let constr = { constr_name = "mkUnit"; constr_args = [] } in
-    { name = "Unit"; params = []; constructors = [constr] }
-  ;;
 
   let create_vars (env: smt_env) descr (x: Syntax.var) =
     let name =
@@ -781,13 +786,10 @@ struct
           mk_term ~tloc:e.espan) zes
         (encode_branches_aux_z3 descr env names bs t)
 
-
   and encode_pattern_z3 descr env znames p (t: ty) =
     let ty = get_inner_type t in
     match (p, ty) with
     | PWild, _ ->
-      [mk_bool true |> mk_term]
-    | PUnit, TUnit ->
       [mk_bool true |> mk_term]
     | PVar x, t ->
       let local_name = create_vars env descr x in
@@ -828,11 +830,6 @@ struct
 
   and encode_value_z3_single descr env (v: Syntax.value) : term =
     match v.v with
-    | VUnit ->
-      env.type_decls <- StringMap.add "Unit" unit_decl env.type_decls;
-      let f = (unit_decl |> get_constructors |> BatList.hd).constr_name in
-      let e = mk_app (mk_constructor f (ty_to_sort TUnit)) [] in
-      mk_term ~tloc:v.vspan e
     | VBool b ->
       mk_bool b |>
       mk_term ~tloc:v.vspan
@@ -842,6 +839,7 @@ struct
     | VNode n ->
       encode_value_z3_single descr env @@
       avalue (vint (Integer.create ~size:32 ~value:n), Some (TInt 32), v.vspan)
+    | VUnit -> failwith "units should have been unboxed"
     | VEdge _ -> failwith "internal error (tried to directly encode edge)"
     | VOption _ -> failwith "options should have been unboxed"
     | VTuple _ -> failwith "internal error (check that tuples are flat)"
@@ -849,15 +847,18 @@ struct
     | VMap map -> failwith "not doing maps yet"
     | VRecord _ -> failwith "Record in SMT encoding"
 
-  let init_solver symbs =
+  let init_solver symbs ~labels =
     Var.reset () ;
     let env = { ctx = [];
                 const_decls = ConstantSet.empty;
                 type_decls = StringMap.empty;
                 symbolics = VarMap.empty}
     in
-    (* assumes symbs are not of type tuple here *)
+    (* assumes symbs are not of type tuple here. This is not a weird assumption
+       to make. When unboxed, symbolics of type tuple are spread to multiple
+       symbolic variables*)
     BatList.iter (fun (v,e) -> add_symbolic env [v] e) symbs;
+    BatList.iter (fun (v,ty) -> add_symbolic env [v] (Ty ty)) labels;
     env
 
 end

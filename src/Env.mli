@@ -12,7 +12,7 @@ val bind : Var.t -> 'a -> 'a t
 
 (* look up binding, raising Unbound_var if the key is not found *)
 
-exception Unbound_var of Var.t
+exception Unbound_var of string
 
 val lookup : 'a t -> Var.t -> 'a
 

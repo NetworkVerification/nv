@@ -207,10 +207,10 @@ let flatten_symbolic (var, toe) =
        BatList.mapi (fun i ei -> (proj_var i var, Exp ei)) es
      | _ -> [(var, Exp e)])
   | Ty ty ->
-    (match flatten_ty ty with
-     | TTuple ts ->
-       BatList.mapi (fun i ty -> (proj_var i var, Ty ty)) ts
-     | ty -> [(var, Ty ty)])
+    match flatten_ty ty with
+    | TTuple ts ->
+      BatList.mapi (fun i ty -> (proj_var i var, Ty ty)) ts
+    | ty -> [(var, Ty ty)]
 
 let flatten_decl_single d =
   match d with
@@ -321,4 +321,29 @@ let flatten_net net =
   }, unflatten_sol net.attr_type
     (BatList.fold_left (fun acc (x,exp_ty) ->
          VarMap.add x (get_ty_from_tyexp exp_ty) acc)
-        VarMap.empty net.symbolics)
+       VarMap.empty net.symbolics)
+
+
+let flatten_srp srp =
+  let flatten_attr = flatten_ty srp.srp_attr in
+  { srp_attr = flatten_attr;
+    srp_constraints = AdjGraph.VertexMap.map flatten_exp srp.srp_constraints;
+    srp_labels =
+      AdjGraph.VertexMap.map
+        (fun xs -> let var, _ = BatList.hd xs in (* this will be a singleton list*)
+                   match flatten_attr with
+                   | TTuple ts ->
+                     BatList.mapi (fun i ty -> (proj_var i var, ty)) ts
+                   | ty -> [(var, ty)]
+        ) srp.srp_labels;
+    srp_assertion = (match srp.srp_assertion with
+                 | None -> None
+                 | Some e -> Some (flatten_exp e));
+    srp_symbolics =
+      BatList.map flatten_symbolic srp.srp_symbolics |> BatList.concat;
+    srp_requires = BatList.map (flatten_exp) srp.srp_requires;
+    srp_graph = srp.srp_graph
+  }, unflatten_sol srp.srp_attr
+       (BatList.fold_left (fun acc (x,exp_ty) ->
+            VarMap.add x (get_ty_from_tyexp exp_ty) acc)
+          VarMap.empty srp.srp_symbolics)

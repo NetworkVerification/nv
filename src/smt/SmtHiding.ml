@@ -451,18 +451,16 @@ let rec refineModel info verbose query partial_chan full_chan ask_for_nv_model p
   | _ -> failwith "refineModel: Unexpected answer from solver"
 ;;
 
-let solve_hiding info query partial_chan ~full_chan ?(sym_vars=[]) ?(params=[]) ?(starting_vars=[]) net =
+let solve_hiding info query partial_chan ~full_chan ?(params=[]) ?(starting_vars=[]) net =
   let module ExprEnc = (val expr_encoding smt_config) in
   let module Enc =
-    (val (if smt_config.encoding = Classic then
-            (module ClassicEncoding(ExprEnc) : Encoding)
-          else
-            (module FunctionalEncoding(ExprEnc) : Encoding)))
+    (val (module ClassicEncoding(ExprEnc) : ClassicEncodingSig))
+    (*ignoring FuncEnc for now*)
   in
   (* compute the encoding of the network *)
   let renaming, full_env =
     time_profile "Encoding network"
-      (fun () -> let env = Enc.encode_z3 net sym_vars in
+      (fun () -> let env = Enc.encode_z3 net in
         propagate_eqs_for_hiding env)
   in
   let partial_env, hiding_map = construct_starting_env full_env in
@@ -488,8 +486,9 @@ let solve_hiding info query partial_chan ~full_chan ?(sym_vars=[]) ?(params=[]) 
   ask_solver_blocking partial_solver partial_encoding;
   ask_solver_blocking full_solver full_encoding;
 
+  let nodes = AdjGraph.num_vertices net.graph in
   let ask_for_nv_model solver =
-    ask_for_model query partial_chan info full_env solver renaming net
+    ask_for_model query partial_chan info full_env solver renaming nodes net.assertion
   in
   time_profile_absolute "Solving with hiding"
     (fun () ->

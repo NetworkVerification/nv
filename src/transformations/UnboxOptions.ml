@@ -24,7 +24,8 @@ let rec empty_pattern ty =
 let rec unbox_ty ty =
   match Typing.canonicalize_type ty with
   | TVar {contents= Link t} -> unbox_ty t
-  | TUnit | TBool | TInt _ | TNode | TEdge -> ty
+  | TBool | TInt _ | TNode | TEdge -> ty
+  | TUnit -> TBool
   | TArrow (t1, t2) ->
     TArrow (unbox_ty t1, unbox_ty t2)
   | TTuple ts -> TTuple (BatList.map unbox_ty ts)
@@ -36,7 +37,8 @@ let rec unbox_ty ty =
 
 let rec unbox_val v =
   match v.v with
-  | VUnit | VBool _ | VInt _ | VNode _ | VEdge _->
+  | VUnit ->  aexp(vbool true |> exp_of_value, Some TBool, v.vspan)
+  | VBool _ | VInt _ | VNode _ | VEdge _->
     exp_of_value v
   | VOption None ->
     (match v.vty with
@@ -170,26 +172,6 @@ let unbox_decl d =
 
 let unbox ds = BatList.map unbox_decl ds
 
-let rec unbox_val v =
-  match v.v with
-  | VUnit | VBool _ | VInt _ | VNode _ | VEdge _ ->
-    exp_of_value v
-  | VOption None ->
-    (match v.vty with
-     | Some (TOption t) ->
-       aexp (etuple [(vbool false |> exp_of_value); (default_exp_value (Typing.canonicalize_type @@ get_inner_type t))],
-             Some (unbox_ty (TOption t)), v.vspan)
-     | _ -> failwith "expected option type")
-  | VOption (Some v1) ->
-    aexp (etuple [(vbool true |> exp_of_value); (unbox_val v1)],
-          Some (unbox_ty (oget v.vty)), v.vspan)
-  | VTuple vs ->
-    aexp (etuple (BatList.map unbox_val vs), Some (unbox_ty (oget v.vty)), v.vspan)
-  | VClosure _ -> failwith "Closures not yet implemented"
-  | VMap _ -> failwith "no map values"
-  | VRecord _ ->
-    failwith "Record operation in option unboxing"
-
 let rec box_val v ty =
   match v.v, ty with
   | VTuple [vflag; vval], TOption ty ->
@@ -206,8 +188,9 @@ let rec box_val v ty =
     Printf.printf "%s\n" (printList (Printing.value_to_string) vs "" "," "");
     Printf.printf "%s\n" (Printing.ty_to_string ty);
     failwith "mistyped value"
-  | VUnit, _ | VBool _, _ | VInt _, _ | VNode _, _ | VEdge _, _ -> v
-  | VOption _, _ | VClosure _, _ | VMap _, _ | VRecord _, _ -> failwith "no such values"
+  | VBool _, TUnit -> vunit ()
+  | VBool _, _ | VInt _, _ | VNode _, _ | VEdge _, _ -> v
+  | VUnit, _ | VOption _, _ | VClosure _, _ | VMap _, _ | VRecord _, _ -> failwith "no such values"
 
 let box_sol ty sol =
   {sol with
@@ -236,3 +219,20 @@ let unbox_net net =
     requires = BatList.map unbox_exp net.requires;
     graph = net.graph
   }, box_sol net.attr_type
+
+let unbox_srp (srp : Syntax.srp_unfold) =
+  let unboxed_attr = unbox_ty srp.srp_attr in
+  { srp_attr = unboxed_attr;
+    srp_constraints = AdjGraph.VertexMap.map unbox_exp srp.srp_constraints;
+    srp_labels = AdjGraph.VertexMap.map
+        (fun xs -> BatList.map (fun (x,ty) -> (x, unboxed_attr)) xs) srp.srp_labels;
+    srp_symbolics =  BatList.map (fun (x,e) ->
+        match e with
+        | Ty ty -> (x, Ty (unbox_ty ty))
+        | Exp e -> (x, Exp (unbox_exp e))) srp.srp_symbolics;
+    srp_assertion = (match srp.srp_assertion with
+        | None -> None
+        | Some e -> Some (unbox_exp e));
+    srp_requires = BatList.map unbox_exp srp.srp_requires;
+    srp_graph = srp.srp_graph
+  }, box_sol srp.srp_attr

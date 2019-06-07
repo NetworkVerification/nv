@@ -5,14 +5,18 @@ open SmtExprEncodings
 open SmtUtils
 
 module type Encoding =
-sig
-  val encode_z3: Syntax.network -> 'a list -> smt_env
- val add_symbolic_constraints: smt_env ->  Syntax.exp list -> Syntax.ty_or_exp Collections.VarMap.t -> unit
+  sig
+    type network_type
+    val encode_z3: network_type -> smt_env
+    val add_symbolic_constraints: smt_env ->  Syntax.exp list -> Syntax.ty_or_exp Collections.VarMap.t -> unit
 end
 
-module ClassicEncoding (E: ExprEncoding): Encoding =
+module type ClassicEncodingSig = Encoding with type network_type = Syntax.network
+module ClassicEncoding (E: ExprEncoding): ClassicEncodingSig =
 struct
   open E
+
+  type network_type = Syntax.network
 
   let add_symbolic_constraints env requires sym_vars =
     (* Declare the symbolic variables: ignore the expression in case of SMT *)
@@ -108,8 +112,8 @@ struct
     in
     loop assertion []
 
-  let encode_z3 (net: Syntax.network) sym_vars : smt_env =
-    let env = init_solver net.symbolics in
+  let encode_z3 (net: Syntax.network) : smt_env =
+    let env = init_solver net.symbolics ~labels:[] in
     let einit = net.init in
     let eassert = net.assertion in
     let emerge = net.merge in
@@ -238,10 +242,12 @@ struct
 end
 
 (** * Alternative SMT encoding *)
-module FunctionalEncoding (E: ExprEncoding) : Encoding =
+module type FunctionalEncodingSig = Encoding with type network_type = Syntax.srp_unfold
+module FunctionalEncoding (E: ExprEncoding) : FunctionalEncodingSig =
 struct
   open E
 
+  type network_type = Syntax.srp_unfold
   let add_symbolic_constraints env requires sym_vars =
     (* Declare the symbolic variables: ignore the expression in case of SMT *)
     VarMap.iter
@@ -264,11 +270,10 @@ struct
          | EFun _ ->
            loop exp ((x,xty) :: acc)
          | _ ->
-           let acc = BatList.rev acc in
-           let xs = BatList.map (fun (x,xty) -> create_vars env str x) acc in
-           let xstr = BatList.map (fun x -> mk_constant env x (ty_to_sort xty)
-                                      ~cdescr:"assert x argument" ~cloc:assertion.espan ) xs
-           in
+           let xstr = BatList.rev_map (fun (x,xty) ->
+               mk_constant env (create_vars env str x) (ty_to_sort xty)
+                 ~cdescr:"assert x argument" ~cloc:assertion.espan )
+               ((x,xty) :: acc) in
            let names = create_strings (Printf.sprintf "%s-result" str) (oget exp.ety) in
            let results =
              lift2 (mk_constant env) names (oget exp.ety |> ty_to_sorts) in
@@ -280,126 +285,62 @@ struct
     in
     loop assertion []
 
-  let node_exp (u: Syntax.node) : Syntax.exp =
-    aexp(e_val (vnode u), Some Typing.node_ty, Span.default)
-
-  let edge_exp (u: Syntax.node) (v: Syntax.node) : Syntax.exp list =
-    if smt_config.unboxing then
-      [aexp (e_val (vnode u), Some Typing.node_ty, Span.default);
-       aexp (e_val (vnode v), Some Typing.node_ty, Span.default)]
-    else
-      [aexp(e_val (vedge (u, v)),  Some Typing.edge_ty, Span.default)]
-
-  let init_exp einit u =
-    Interp.Full.interp_partial_fun einit [node_exp u] (* |>
-     * Tnf.tnf_exp *)
-
-  (* Reduces the transfer function, maybe a full reduction is not
-     necessary at this point, experiment to see if just reducing based
-     on the edge is better *)
-  let trans_exp etrans u v xs =
-    let args = (edge_exp u v) @ xs in
-    Syntax.apps etrans args
-    (* (Interp.Full.interp_partial_fun etrans args) (\* |> Tnf.tnf_exp *\) *)
-
-  let merge_exp emerge u xs ys =
-    (* let emerge = Interp.interp_partial_opt emerge in *)
-    let args = (node_exp u) :: (xs @ ys) in
-    let e = Syntax.apps emerge args in
-    (* let e = (Interp.Full.interp_partial_fun emerge args) in *)
-    (* Printf.printf "merge after interp:\n%s\n" (Printing.exp_to_string e); *)
-    e
-    (* Tnf.tnf_exp e *)
-
-  let unbox_args e =
-    if smt_config.unboxing then
-      tupleToListSafe e
-    else
-      [e]
-
   (** An alternative SMT encoding, where we build an NV expression for
       each label, partially evaluate it and then encode it *)
-  let encode_z3 (net: Syntax.network) sym_vars : smt_env =
-    let env = init_solver net.symbolics in
-    let einit = net.init in
-    let eassert = net.assertion in
-    let emerge = net.merge in
-    let etrans = net.trans in
-    let nodes = (AdjGraph.num_vertices net.graph) in
-    let edges = (AdjGraph.edges net.graph) in
-    let aty = net.attr_type in
-    (* Create a map from nodes to variables and smt variables denoting
-       the label of the node*)
-    let labelling =
-      AdjGraph.fold_vertices (fun u acc ->
-          (* the string name that corresponds to the label of node u*)
-          let lbl_u_name = label_var u in
-          (*create one or more string names depending on boxed/unboxed encoding*)
-          let lbl_u = create_strings lbl_u_name aty in
-          (* create SMT variables *)
-          let lblt = lift2 (mk_constant env) lbl_u (ty_to_sorts aty) in
-          (*create label vars *)
-          let lbl_vars = lift1 Var.create lbl_u in
-          (* declare the label variable as a symbolic variable *)
-          add_symbolic env lbl_vars (Ty aty);
-          AdjGraph.VertexMap.add u (lbl_vars, lblt) acc)
-        nodes AdjGraph.VertexMap.empty
+  let encode_z3 (srp: Syntax.srp_unfold) : smt_env =
+    let labels =
+      AdjGraph.VertexMap.fold (fun _ xs acc -> xs :: acc) srp.srp_labels [] |>
+        BatList.concat
     in
-    (* Map from nodes to incoming messages*)
-    let incoming_messages_map =
-      BatList.fold_left (fun acc (u,v) ->
-          (* Find the label variables associated with node u*)
-          let varu = fst (AdjGraph.VertexMap.find u labelling) in
-          let lblu =
-            BatList.map (fun v ->
-                (*find the type of each variable *)
-                let tyu = get_ty_from_tyexp (Collections.VarMap.find v env.symbolics) in
-                aexp (evar v, Some tyu, Span.default)) (to_list varu)
-          in
-          (*compute the incoming message through the transfer function *)
-          let transuv = trans_exp etrans u v lblu in
-          (* add them to the incoming messages of node v *)
-          AdjGraph.VertexMap.modify_def [] v (fun us -> transuv :: us) acc)
-        AdjGraph.VertexMap.empty edges
-    in
+    let env = init_solver srp.srp_symbolics ~labels:labels in
+    let aty = srp.srp_attr in
+    let nodes = (AdjGraph.num_vertices srp.srp_graph) in
 
-    (* map from nodes to the merged messages *)
-    let merged_messages_map =
-      AdjGraph.fold_vertices (fun u acc ->
-          let messages = AdjGraph.VertexMap.find_default [] u incoming_messages_map in
-          let best = BatList.fold_left (fun accm m ->
-                         let m = unbox_args m in
-                         let accm = unbox_args accm in
-                         merge_exp emerge u m accm)
-              (init_exp einit u) messages
-          in
-          let str = Printf.sprintf "merge-%d" u in
-          let best_eval = Interp.Full.interp_partial best in
-          let best_smt = encode_exp_z3 str env best_eval in
-          AdjGraph.VertexMap.add u best_smt acc) nodes AdjGraph.VertexMap.empty
+    let smt_labels =
+      AdjGraph.VertexMap.map
+        (fun lblu ->
+          let lblu_s = BatList.map (fun (var, _) -> symbolic_var var) lblu in
+          lift2 (mk_constant env) (of_list lblu_s) (ty_to_sorts aty)) srp.srp_labels
     in
+    (* Add appropriate SRP constraints*)
     AdjGraph.fold_vertices (fun u () ->
-        let (_,lblu) = try AdjGraph.VertexMap.find u labelling
+        let lblt = try AdjGraph.VertexMap.find u smt_labels
           with Not_found -> failwith "label variable not found"
         in
-        let merged = try AdjGraph.VertexMap.find u merged_messages_map
-          with Not_found -> failwith "merged variable not found"
+        let merged = try AdjGraph.VertexMap.find u srp.srp_constraints
+          with Not_found -> failwith "constraints not found"
         in
+        let merged =
+          if smt_config.unboxing then
+            begin
+              let merged = Interp.Full.interp_partial merged in
+              (* Printf.printf "merge after interp:\n%s\n" (Printing.exp_to_string merged);
+               * failwith "merged"; *)
+              merged
+            end
+          else
+            merged
+        in
+        let str = Printf.sprintf "merge-%d" u in
+        (* compute SMT encoding of label constraint*)
+        let merged = encode_exp_z3 str env merged in
         ignore(lift2 (fun lblu merged ->
-            add_constraint env (mk_term (mk_eq lblu.t merged.t))) lblu merged))
+            add_constraint env (mk_term (mk_eq lblu.t merged.t))) lblt merged))
       nodes ();
     (* add assertions at the end *)
     (* TODO: same as other encoding make it a function *)
-    ( match eassert with
+    ( match srp.srp_assertion with
       | None -> ()
       | Some eassert ->
         let all_good = ref (mk_bool true) in
         for i = 0 to nodes - 1 do
-          let _,label =
-            AdjGraph.VertexMap.find i labelling
+          let label =
+            AdjGraph.VertexMap.find i smt_labels
           in
+          let node = avalue (vint (Integer.of_int i), Some Typing.node_ty, Span.default) in
+          let eassert_i = Interp.interp_partial_fun eassert [node] in
           let result, x =
-            encode_z3_assert (assert_var i) env (Integer.of_int i) eassert
+            encode_z3_assert (assert_var i) env (Integer.of_int i) eassert_i
           in
           BatList.iter2 (fun x label ->
               add_constraint env (mk_term (mk_eq x.t label.t))) x (to_list label);
@@ -411,6 +352,6 @@ struct
         done ;
         add_constraint env (mk_term (mk_not !all_good)));
     (* add the symbolic variable constraints *)
-    add_symbolic_constraints env net.requires (env.symbolics (*@ sym_vars*));
+    add_symbolic_constraints env srp.srp_requires env.symbolics;
     env
 end

@@ -5,6 +5,8 @@ val flatten : Syntax.declarations -> Syntax.declarations
 
 val flatten_net : Syntax.network -> Syntax.network * (Solution.t -> Solution.t)
 
+val flatten_srp : Syntax.srp_unfold -> Syntax.srp_unfold * (Solution.t -> Solution.t)
+
 (* (\** [unflatten_val v ty] will unflatten the value [v] according to the type [ty] *\) 
  * val unflatten_val : Syntax.value -> Syntax.ty -> Syntax.value *)
 

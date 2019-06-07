@@ -42,9 +42,38 @@ let partialEvalNet net =
    merge = Interp.interp_partial_opt net.merge
   }
 
-let run_smt file cfg info (net : Syntax.network) fs =
-  if cfg.func then
-    smt_config.encoding <- Functional;
+let run_smt_func file cfg info net fs =
+  smt_config.encoding <- Functional;
+  let srp = SmtSrp.network_to_srp net in
+  let srp, f = Renaming.alpha_convert_srp srp in
+  let srp, fs =
+    if cfg.unbox then
+      begin
+        smt_config.unboxing <- true;
+        let srp, f1 = time_profile "Unbox options" (fun () -> UnboxOptions.unbox_srp srp) in
+        let srp, f2 =
+          time_profile "Flattening Tuples" (fun () -> TupleFlatten.flatten_srp srp)
+        in
+        srp, (f2 :: f1 :: f :: fs)
+      end
+    else
+      srp, f :: fs
+  in
+  let res = Smt.solveFunc info cfg.query (smt_query_file file) srp in
+  match res with
+  | Unsat ->
+    (Success None, [])
+  | Unknown -> Console.error "SMT returned unknown"
+  | Sat solution ->
+    match solution.assertions with
+    | None -> Success (Some solution), fs
+    | Some m ->
+      if AdjGraph.VertexMap.exists (fun _ b -> not b) m then
+        CounterExample solution, fs
+      else
+        Success (Some solution), fs
+
+let run_smt_classic file cfg info (net : Syntax.network) fs =
   let net, fs =
     if cfg.unbox || cfg.hiding then
       begin
@@ -63,16 +92,16 @@ let run_smt file cfg info (net : Syntax.network) fs =
     else net, fs
   in
 
-  let net, f = Renaming.alpha_convert_net net in
+  let net, f = Renaming.alpha_convert_net net in (*TODO: why are we renaming here?*)
   let fs = f :: fs in
   let solve_fun =
     if cfg.hiding then
       (SmtHiding.solve_hiding ~starting_vars:[] ~full_chan:(smt_query_file file))
     else
-      Smt.solve
+      Smt.solveClassic
   in
   let res =
-    solve_fun info cfg.query (smt_query_file file) net ~sym_vars:[]
+    solve_fun info cfg.query (smt_query_file file) net
   in
   match res with
   | Unsat ->
@@ -86,6 +115,12 @@ let run_smt file cfg info (net : Syntax.network) fs =
         CounterExample solution, fs
       else
         Success (Some solution), fs
+
+let run_smt file cfg info (net : Syntax.network) fs =
+  if cfg.func then
+    run_smt_func file cfg info net fs
+  else
+    run_smt_classic file cfg info net fs
 
 let run_test cfg info net fs =
   let (sol, stats), fs =
@@ -267,21 +302,22 @@ let parse_input (args : string array)
       let decls, f = (* unrolling maps *)
         time_profile "Map unrolling" (fun () -> MapUnrolling.unroll info decls)
       in
-      (Typing.infer_declarations info decls, f :: fs)
+      (Typing.infer_declarations info decls, f :: fs) (* TODO: is type inf necessary here?*)
     else decls, fs
   in
-  let decls = (*Inline again after unrolling, is this necessary? *)
-    if cfg.unroll || cfg.smt then
-      time_profile "Inlining" (
-          fun () -> Inline.inline_declarations decls |>
-                      Typing.infer_declarations info)
-    else
-      decls
-  in
+  (* let decls = (\*TODO: Inline again after unrolling, is this necessary? *\)
+   *   if cfg.unroll then
+   *     time_profile "Inlining" (
+   *         fun () -> Inline.inline_declarations decls |>
+   *                     Typing.infer_declarations info)
+   *   else
+   *     decls
+   * in *)
   let net = Slicing.createNetwork decls in (* Create something of type network *)
   let net =
     if cfg.link_failures > 0 then
       Failures.buildFailuresNet net cfg.link_failures
     else net
   in
+  print_endline @@ Printing.network_to_string net; failwith "AAAH";
   (cfg, info, file, net, fs)
