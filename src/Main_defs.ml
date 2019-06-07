@@ -300,16 +300,10 @@ let parse_input (args : string array)
       let decls, f = (* unrolling maps *)
         time_profile "Map unrolling" (fun () -> MapUnrolling.unroll info decls)
       in
+      (*TODO: Inline again after unrolling, is this necessary? *)
+      let decls = time_profile "Inlining" (fun () -> Inline.inline_declarations decls) in
       (Typing.infer_declarations info decls, f :: fs) (* TODO: is type inf necessary here?*)
     else decls, fs
-  in
-  let decls = (*TODO: Inline again after unrolling, is this necessary? *)
-    if cfg.unroll then
-      time_profile "Inlining" (
-          fun () -> Inline.inline_declarations decls |>
-                      Typing.infer_declarations info)
-    else
-      decls
   in
   let net = Slicing.createNetwork decls in (* Create something of type network *)
   let net =
