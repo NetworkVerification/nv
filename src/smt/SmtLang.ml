@@ -113,6 +113,10 @@ let mk_add t1 t2 = Add (t1, t2)
 let mk_sub t1 t2 = Sub (t1, t2)
 
 let mk_eq t1 t2 = Eq (t1, t2)
+  (* match t1, t2 with
+   * | Bool b1, Bool b2 -> mk_bool (b1 = b2)
+   * (\* | Int i1, Int i2 -> mk_bool (i1 = i2) *\)
+   * | _ ->  Eq (t1, t2) *)
 
 let mk_lt t1 t2 = Lt (t1, t2)
 
