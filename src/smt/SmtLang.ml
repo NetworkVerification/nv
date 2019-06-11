@@ -104,19 +104,40 @@ let mk_app f args =
 
 let mk_and t1 t2 = And (t1, t2)
 
+let mk_and_fast t1 t2 =
+  match t1,t2 with
+  | Bool true, _ -> t2
+  | Bool false, _ -> Bool false
+  | _, Bool true -> t1
+  | _, Bool false -> Bool false
+  | _, _ -> mk_and t1 t2
+
 let mk_or t1 t2 = Or (t1, t2)
 
+let mk_or_fast t1 t2 =
+  match t1, t2 with
+  | Bool true, _ -> Bool true
+  | Bool false, _ -> t2
+  | _, Bool true -> Bool true
+  | _, Bool false -> t1
+  | _, _ -> mk_or t1 t2
+
 let mk_not t1 = Not t1
+
+let mk_not_fast t1 =
+  match t1 with
+  | Bool b -> mk_bool (not b)
+  | _ -> mk_not t1
 
 let mk_add t1 t2 = Add (t1, t2)
 
 let mk_sub t1 t2 = Sub (t1, t2)
 
-let mk_eq t1 t2 = Eq (t1, t2)
-  (* match t1, t2 with
-   * | Bool b1, Bool b2 -> mk_bool (b1 = b2)
-   * (\* | Int i1, Int i2 -> mk_bool (i1 = i2) *\)
-   * | _ ->  Eq (t1, t2) *)
+let mk_eq t1 t2 =
+  match t1, t2 with
+  | Bool b1, Bool b2 -> mk_bool (b1 = b2)
+  | Int i1, Int i2 -> mk_bool (i1 = i2)
+  | _ ->  Eq (t1, t2)
 
 let mk_lt t1 t2 = Lt (t1, t2)
 
@@ -125,13 +146,18 @@ let mk_leq t1 t2 = Leq (t1, t2)
 let mk_ite t1 t2 t3 = Ite (t1, t2, t3)
 
 let mk_ite_fast t1 t2 t3 =
-  match t2,t3 with
-  | Bool true, Bool false -> t1
-  | Bool false, Bool true -> Not t1
-  | Bool true, Bool true -> Bool true
-  | Bool false, Bool false -> Bool false
-  | _, _ ->
-    mk_ite t1 t2 t3
+  match t1 with
+  | Bool b ->
+    if b then t2 else t3
+  | _ ->
+    (match t2,t3 with
+     | Bool true, Bool false -> t1
+     | Bool false, Bool true -> Not t1
+     | Bool true, Bool true -> Bool true
+     | Bool false, Bool false -> Bool false
+     | Int i1, Int i2 -> Bool (i1 = i2)
+     | _, _ ->
+       mk_ite t1 t2 t3)
 
 let mk_atMost t1 t2 t3 = AtMost (t1, t2, t3)
 
