@@ -12,6 +12,10 @@ type attribute = option[int]
    Node 3: output from node 0 to node 1.
    Node 4: output from node 0 to node 2.
 *)
+symbolic x : option[int]
+require match x with
+  | None -> false
+  | Some x -> x > 0 
 
 (* Transfer equivalence function:
    mapo (fun x -> x + 1) x
@@ -50,8 +54,8 @@ let trans edge x = x
 let init node =
   match node with
   | 0 -> Some 0
-  | 1 -> Some 1
-  | 2 -> Some 1
+  | 1 -> x
+  | 2 -> x
   | _ -> None
 
 let assert node x =
