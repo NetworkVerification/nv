@@ -142,18 +142,14 @@ type array_info =
 let is_symbolic syms x =
   List.exists (fun (y, e) -> Var.equals x y) syms
 
+  (* take a descr str to ensure variables are unique
+   * take an env (symbolic var) with z3 context
+   * take an arr array_info to deal with maps
+   *)
 let rec encode_exp_z3 descr env arr (e: exp) =
   (* Printf.printf "expr: %s\n" (Printing.exp_to_string e) ; *)
   match e.e with
   | EVar x ->
-<<<<<<< HEAD
-    let name =
-      if is_symbolic env.symbolics x then Var.to_string x
-      else create_name descr x
-    in
-    let sort = ty_to_sort env.ctx (oget e.ety) |> arr.f in
-    Z3.Expr.mk_const_s env.ctx name sort
-=======
       let name =
         if is_symbolic env.symbolics x then
           begin
@@ -164,7 +160,6 @@ let rec encode_exp_z3 descr env arr (e: exp) =
       in
       let sort = ty_to_sort env.ctx (oget e.ety) |> arr.f in
       Z3.Expr.mk_const_s env.ctx name sort
->>>>>>> smt-alt
   | EVal v -> encode_value_z3 descr env arr v
   | EOp (op, es) -> (
       match (op, es) with
@@ -1054,7 +1049,13 @@ let solve ?symbolic_vars ds =
   let q = Solver.check env.solver [] in
   match q with
   | UNSATISFIABLE -> Unsat
-  | UNKNOWN -> Unknown
+  | UNKNOWN -> Unknown (* don't know case *)
   | SATISFIABLE ->
+<<<<<<< HEAD
     let m = Solver.get_model env.solver in
     build_result m env aty num_nodes eassert
+=======
+      let m = Solver.get_model env.solver in
+      (* convert z3 exprs back to nv exprs *)
+      build_result m env aty num_nodes eassert
+>>>>>>> b5b7c4c530d2c9adf5460f0e8c7410b85dc50c0c
