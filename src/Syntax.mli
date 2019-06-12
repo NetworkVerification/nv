@@ -2,8 +2,6 @@ open Cudd
 open RecordUtils
 open Batteries
 
-type index = int
-
 type node = int
 
 type edge = node * node
@@ -344,16 +342,6 @@ val proj_var: int -> var -> var
 val unproj_var: var -> (int * var)
 
 val default_exp_value: ty -> exp
-
-module type MEMOIZER = sig
-  type t
-
-  val memoize : size:int -> (t -> 'a) -> t -> 'a
-end
-
-module MemoizeValue : MEMOIZER with type t = value
-
-module MemoizeExp : MEMOIZER with type t = exp
 
 module BddMap : sig
   type t = mtbdd

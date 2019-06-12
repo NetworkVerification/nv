@@ -3,9 +3,6 @@ open Cudd
 open Hashcons
 open RecordUtils
 
-(* indices into maps or map sizes must be static constants *)
-type index = int
-
 type node = int
 [@@deriving eq, ord, show]
 
@@ -1183,7 +1180,7 @@ and pattern_vars p =
   | PWild | PUnit | PBool _ | PInt _ | POption None | PNode _ ->
     PSet.create Var.compare
   | PVar v -> PSet.singleton ~cmp:Var.compare v
-  | PEdge (p1, p2) -> pattern_vars (PTuple [p1; p2]) 
+  | PEdge (p1, p2) -> pattern_vars (PTuple [p1; p2])
   | PTuple ps ->
     List.fold_left
       (fun set p -> PSet.union set (pattern_vars p))
@@ -1259,47 +1256,6 @@ let rec default_exp_value ty =
     default_exp_value t
   | TVar _ | QVar _ | TArrow _ ->
     failwith "internal error (default_value)"
-
-(* Memoization *)
-
-module type MEMOIZER = sig
-  type t
-
-  val memoize : size:int -> (t -> 'a) -> t -> 'a
-end
-
-module Memoize (K : Lru_cache.Key) :
-  MEMOIZER with type t = K.t =
-struct
-  module L = Lru_cache.Make (K)
-
-  type t = K.t
-
-  let memoize ~size (f: 'a -> 'b) : 'a -> 'b =
-    let map = L.init size in
-    fun x ->
-      let cfg = Cmdline.get_cfg () in
-      if cfg.hashcons && cfg.memoize then L.get map x f else f x
-end
-
-module VKey = struct
-  type t = value
-
-  let compare v1 v2 = v1.vtag - v2.vtag
-
-  let witness = vbool true
-end
-
-module EKey = struct
-  type t = exp
-
-  let compare e1 e2 = e1.etag - e2.etag
-
-  let witness = e_val (vbool true)
-end
-
-module MemoizeValue = Memoize (VKey)
-module MemoizeExp = Memoize (EKey)
 
 let compare_vs = compare_value
 let compare_es = compare_exp

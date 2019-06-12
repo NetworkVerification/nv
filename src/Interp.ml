@@ -1,4 +1,5 @@
 open Syntax
+open Memoization
 open Printing
 open Printf
 
