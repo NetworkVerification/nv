@@ -1,4 +1,5 @@
 open Syntax
+open Generators
 open Collections
 open MapUnrollingGuts
 open Typing

@@ -4,6 +4,8 @@ open Syntax
 open Slicing
 open Unsigned
 
+let default_value = BddMap.default_value
+
 let rec random_value ~hints ~max_map_size ty =
   let i = Random.int 10 in
   match (TypeMap.find_opt ty hints, i < 9) with

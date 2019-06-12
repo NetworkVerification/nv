@@ -6,6 +6,7 @@ open Srp
 open Hashtbl
 open Failures
 open Syntax
+open Generators
 open Slicing
 open BatSet
 

@@ -2,6 +2,7 @@ open Collections
 open Unsigned
 open Solution
 open Syntax
+open Generators
 open Slicing
 
 type srp =
