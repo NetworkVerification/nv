@@ -22,5 +22,5 @@ let trans edge x =
 let init node =
   let base = {dist = 0; even = false} in
   match node with
-  | 0 -> { base with even = true; }
+  | 0n -> { base with even = true; }
   | _ -> { base with dist = 10; }

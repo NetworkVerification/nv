@@ -4,6 +4,10 @@ open Batteries
 
 type index = int
 
+type node = int
+
+type edge = node * node
+
 type bitwidth = int
 
 type level = int
@@ -15,6 +19,7 @@ type tyname = Var.t
 type ty =
   | TVar of tyvar ref
   | QVar of tyname
+  | TUnit
   | TBool
   | TInt of bitwidth
   | TArrow of ty * ty
@@ -22,6 +27,8 @@ type ty =
   | TOption of ty
   | TMap of ty * ty
   | TRecord of ty StringMap.t
+  | TNode
+  | TEdge
 
 and tyvar = Unbound of tyname * level | Link of ty
 
@@ -29,11 +36,13 @@ type op =
   | And
   | Or
   | Not
+  | Eq
   | UAdd of bitwidth
   | USub of bitwidth
-  | UEq
   | ULess of bitwidth
   | ULeq of bitwidth
+  | NLess
+  | NLeq
   | AtMost of int
   | MCreate
   | MGet
@@ -45,13 +54,21 @@ type op =
 type pattern =
   | PWild
   | PVar of var
+  | PUnit
   | PBool of bool
   | PInt of Integer.t
   | PTuple of pattern list
   | POption of pattern option
   | PRecord of pattern StringMap.t
+  | PNode of node
+  | PEdge of pattern * pattern
+
+module Pat : Map.OrderedType with type t = pattern
+
+module PatMap : BatMap.S with type key = Pat.t
 
 type v = private
+  | VUnit
   | VBool of bool
   | VInt of Integer.t
   | VMap of mtbdd
@@ -59,6 +76,8 @@ type v = private
   | VOption of value option
   | VClosure of closure
   | VRecord of value StringMap.t
+  | VNode of node
+  | VEdge of edge
 
 and mtbdd = value Mtbdd.t * ty
 
@@ -83,7 +102,7 @@ and e = private
 and exp = private
   {e: e; ety: ty option; espan: Span.t; etag: int; ehkey: int}
 
-and branches = (pattern * exp) list
+and branches
 
 and func = {arg: var; argty: ty option; resty: ty option; body: exp}
 
@@ -92,6 +111,22 @@ and closure = env * func
 and env = {ty: ty Env.t; value: value Env.t}
 
 and ty_or_exp = Ty of ty | Exp of exp
+
+type branchLookup = Found of exp | Rest of (pattern * exp) list
+
+val addBranch: Pat.t -> exp -> branches -> branches
+val mapBranches: (Pat.t * exp -> Pat.t * exp) -> branches -> branches
+val iterBranches: (Pat.t * exp -> unit) -> branches -> unit
+val foldBranches: (PatMap.key * exp -> 'a -> 'a) -> 'a -> branches -> 'a
+val lookUpPat: PatMap.key -> branches -> branchLookup
+
+(** Raises not found *)
+val popBranch: branches -> ((Pat.t * exp) * branches)
+val emptyBranch : branches
+val isEmptyBranch: branches -> bool
+val optimizeBranches: branches -> branches
+val branchToList: branches -> (PatMap.key * exp) list
+val branchSize: branches -> unit
 
 type declaration =
   | DLet of var * ty option * exp
@@ -103,14 +138,42 @@ type declaration =
   | DInit of exp
   | DAssert of exp
   | DRequire of exp
-  | DNodes of Integer.t
-  | DEdges of (Integer.t * Integer.t) list
+  | DNodes of int
+  | DEdges of (node * node) list
 
 type declarations = declaration list
 
+type network =
+  { attr_type    : ty;
+    init         : exp;
+    trans        : exp;
+    merge        : exp;
+    assertion    : exp option;
+    symbolics    : (var * ty_or_exp) list;
+    defs         : (var * ty option * exp) list;
+    utys         : (ty StringMap.t) list;
+    requires     : exp list;
+    graph        : AdjGraph.t;
+  }
+
+type srp_unfold =
+  { srp_attr : ty;
+    srp_constraints : exp AdjGraph.VertexMap.t;
+    srp_labels : (var * ty) list AdjGraph.VertexMap.t;
+    srp_symbolics : (var * ty_or_exp) list;
+    srp_assertion : exp option;
+    srp_requires : exp list;
+    srp_graph : AdjGraph.t
+  }
+
 (* Constructors *)
+val vunit : unit -> value
 
 val vbool : bool -> value
+
+val vnode : node -> value
+
+val vedge : edge -> value
 
 val vint : Integer.t -> value
 
@@ -150,9 +213,17 @@ val ematch : exp -> branches -> exp
 
 val ety : exp -> ty -> exp
 
+val deconstructFun: exp -> func
+
+val exp_to_pattern: exp -> pattern
+
 (* Utilities *)
 
 val arity : op -> int
+
+val tupleToList : exp -> exp list
+
+val tupleToListSafe : exp -> exp list
 
 val tint_of_size : int -> ty
 
@@ -198,6 +269,8 @@ val apps : exp -> exp list -> exp
 
 val apply_closure : closure -> value list -> exp
 
+val get_lets : declarations ->  (var * ty option * exp) list
+
 val get_attr_type : declarations -> ty option
 
 val get_merge : declarations -> exp option
@@ -208,9 +281,9 @@ val get_init : declarations -> exp option
 
 val get_assert : declarations -> exp option
 
-val get_edges : declarations -> (Integer.t * Integer.t) list option
+val get_edges : declarations -> (node * node) list option
 
-val get_nodes : declarations -> Integer.t option
+val get_nodes : declarations -> int option
 
 val get_symbolics : declarations -> (var * ty_or_exp) list
 
@@ -219,6 +292,8 @@ val get_requires : declarations -> exp list
 val get_record_types : declarations -> (ty StringMap.t) list
 
 val equal_values : cmp_meta:bool -> value -> value -> bool
+
+val equal_exps : cmp_meta:bool -> exp -> exp -> bool
 
 val hash_value : hash_meta:bool -> value -> int
 
@@ -255,12 +330,20 @@ val show_value : show_meta:bool -> value -> string
 
 val show_span: Span.t -> string
 
+val show_ty: ty -> string
+
 (** [get_ty_from_tyexp t] @return the type wrapped by [Ty] or the type
-   of the expression wrapped by [Exp]. Fails if the expression has no
-   type. *)
+    of the expression wrapped by [Exp]. Fails if the expression has no
+    type. *)
 val get_ty_from_tyexp: ty_or_exp -> ty
 
 val bool_of_val: value -> bool option
+
+val proj_var: int -> var -> var
+
+val unproj_var: var -> (int * var)
+
+val default_exp_value: ty -> exp
 
 module type MEMOIZER = sig
   type t

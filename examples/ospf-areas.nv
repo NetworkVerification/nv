@@ -11,10 +11,10 @@ let edges = {
 }
 
 let area edge = match edge with
-  | (0,1) -> 1
-  | (1,0) -> 1
-  | (1,2) -> 0
-  | (2,1) -> 0
+  | 0~1 -> 1
+  | 1~0 -> 1
+  | 1~2 -> 0
+  | 2~1 -> 0
 
 let mapo f o =
   match o with
@@ -28,20 +28,26 @@ let mapbetter f o1 o2 =
   | (Some x, Some y) -> Some (f x y)
 
 let merge node x y =
-  let f = mapbetter (fun x y -> if x < y then x else y) in 
+  let f = mapbetter (fun x y -> if x < y then x else y) in
     combine (fun a b -> combine f a b) x y
 
 let trans edge x =
   let area = area edge in
+  match area with
+  | 0 ->
     let m = createDict (createDict None) in
-      let db = x[area] in
-        m[area := map (fun o -> mapo (fun c -> c + 1) o) db]
+      let db = x[0] in
+        m[0 := map (fun o -> mapo (fun c -> c + 1) o) db]
+  | 1 ->
+    let m = createDict (createDict None) in
+      let db = x[1] in
+        m[1 := map (fun o -> mapo (fun c -> c + 1) o) db]
 
 let init node =
   let m = createDict (createDict None) in
   match node with
-  | 0 -> let n = createDict None in
+  | 0n -> let n = createDict None in
     m[1 := n[3 := Some 0]]
-  | 1 -> m
-  | 2 -> let n = createDict None in
+  | 1n -> m
+  | 2n -> let n = createDict None in
     m[0 := n[5 := Some 0]]

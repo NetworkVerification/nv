@@ -1,0 +1,63 @@
+type prefix = (int,int)
+type edgeTy = (int,int)
+
+type bgp = { bgpad : int; lp : int; cost : int; }
+type rib = option[(edgeTy,bgp)] (*edgeTy should maybe be an option for initial value*)
+
+type attribute = dict[prefix,rib]
+
+let nodes = 4
+
+let edges = {
+  0=1;
+  0=2;
+  1=3;
+  2=3;
+ }
+
+let flip edge =
+  match edge with
+  | (u,v) -> (v,u)
+
+let transRoute edge ps b =
+    match b with
+    | None -> None
+    | Some (_, b) ->
+       Some ((flip edge), {b with cost = b.cost + 1})
+
+(* bgp attributes comparison *)
+let betterBgp o1 o2 =
+  if o1.lp > o2.lp then true
+  else if o2.lp > o1.lp then false
+  else if o1.cost < o2.cost then true
+  else false
+
+let pickOption f x y =
+  match (x,y) with
+  | (None, None) -> None
+  | (None, Some _) -> y  | (Some _, None) -> x
+  | (Some a, Some b) ->
+    let (_,x) = a in
+    let (_,y) = b in
+    Some (if f x y then a else b)
+
+let mergeRoute lab1 lab2 = lab1
+  (* pickOption (fun x y -> betterBgp x y) lab1 lab2 *)
+
+let initRoute node =
+  let d = createDict None in
+  match node with
+  | 0n ->
+     let b0 = {bgpad=20; lp=100; cost=0;} in
+     d[(0,0) := Some ((0,0), b0)]
+  | _ -> d
+
+(* Combined functions *)
+
+let merge node x y =
+  combine mergeRoute x y
+
+let trans edge x =
+  x
+
+let init node = initRoute node

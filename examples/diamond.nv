@@ -20,7 +20,7 @@ let mapbetter f o1 o2 =
   | (None, x) -> x
   | (x , None) -> x
   | (Some x, Some y) -> Some (f x y)
-     
+
 let min x y = if x < y then x else y
 
 let merge node x y =
@@ -31,5 +31,5 @@ let trans edge x =
 
 let init node =
   match node with
-  | 0 -> Some 0
+  | 0n -> Some 0
   | _ -> None

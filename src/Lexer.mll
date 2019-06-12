@@ -22,6 +22,7 @@ let symbol = ['~' '`' '!' '@' '#' '$' '%' '^' '&' '|' ':' '?' '>' '<' '[' ']' '=
 let num = ['0'-'9']+
 let width = "u"num
 let tid = ['\'']['a'-'z' 'A'-'Z']['a'-'z' 'A'-'Z' '_' '0'-'9']*
+let node = num"n"
 
 rule token = parse
   | "(*"              { comments 0 lexbuf }
@@ -55,9 +56,12 @@ rule token = parse
   | "int" num as s    { TINT (position lexbuf, int_of_string @@ String.lchop ~n:3 s) }
   | "int"             { TINT (position lexbuf, 32) }
   | "bool"            { TBOOL (position lexbuf) }
+  | "tnode"            { TNODE (position lexbuf) }
+  | "tedge"            { TEDGE (position lexbuf) }
   | "type"            { TYPE (position lexbuf) }
   | "attribute"       { ATTRIBUTE (position lexbuf) }
   | id as s           { ID (position lexbuf, Var.create s) }
+  | node as s         { NODE (position lexbuf, int_of_string (String.rchop ~n:1 s)) }
   | num width as n    { NUM (position lexbuf, Integer.of_string n) }
   | num as n          { NUM (position lexbuf, Integer.of_string n) }
   | "&&"              { AND (position lexbuf) }
@@ -66,17 +70,22 @@ rule token = parse
   | "->"              { ARROW (position lexbuf) }
   | "!"               { NOT (position lexbuf) }
   | ","               { COMMA (position lexbuf) }
+  | "~"               { TILDE (position lexbuf) }
   | "+" width as s    { PLUS (position lexbuf, int_of_string @@ String.lchop ~n:2 s) }
   | "+"               { PLUS (position lexbuf, 32) }
   | "-" width as s    { SUB (position lexbuf, int_of_string @@ String.lchop ~n:2 s) }
   | "-"               { SUB (position lexbuf, 32) }
+  | "<=n"             { NLEQ (position lexbuf) }
   | "<=" width as s   { LEQ (position lexbuf, int_of_string @@ String.lchop ~n:3 s) }
   | "<="              { LEQ (position lexbuf, 32) }
+  | ">=n"             { NGEQ (position lexbuf) }
   | ">=" width as s   { GEQ (position lexbuf, int_of_string @@ String.lchop ~n:3 s) }
   | ">="              { GEQ (position lexbuf, 32) }
   | "="               { EQ (position lexbuf) }
+  | "<n"              { NLESS (position lexbuf) }
   | "<" width as s    { LESS (position lexbuf, int_of_string @@ String.lchop ~n:2 s) }
   | "<"               { LESS (position lexbuf, 32) }
+  | ">n"              { NGREATER (position lexbuf) }
   | ">" width as s    { GREATER (position lexbuf, int_of_string @@ String.lchop ~n:2 s) }
   | ">"               { GREATER (position lexbuf, 32) }
   | ";"               { SEMI (position lexbuf) }

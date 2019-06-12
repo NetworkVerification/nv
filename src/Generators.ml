@@ -1,6 +1,7 @@
 open Collections
 open Random
 open Syntax
+open Slicing
 open Unsigned
 
 let rec random_value ~hints ~max_map_size ty =
@@ -11,6 +12,7 @@ let rec random_value ~hints ~max_map_size ty =
     List.nth (ValueSet.elements vs) x
   | _ ->
     match get_inner_type ty with
+    | TUnit -> vunit ()
     | TBool -> vbool (Random.bool ())
     | TInt size ->
       let x = Integer.create_64 ~value:(Random.int64 Int64.max_int) ~size:size in
@@ -35,20 +37,20 @@ let rec random_value ~hints ~max_map_size ty =
     | QVar _ | TVar _ -> failwith "internal error (random_value)"
     | TRecord _ -> failwith "random_value: found record"
     | TArrow (ty1, ty2) -> failwith "unimplemented"
+    | TNode | TEdge -> failwith "unimplemented (TODO)"
 
 let random_symbolic hints max_map_size d =
   match d with
-  | DSymbolic (x, te) ->
+  | (x, te) ->
     let ty = match te with Ty ty -> ty | Exp e -> oget e.ety in
     let e = e_val (random_value hints max_map_size ty) in
     (* Printf.printf "Random for %s is now %s\n" (Var.to_string x)
        (Printing.exp_to_string e) ; *)
-    DSymbolic (x, Exp e)
-  | _ -> d
+    (x, Exp e)
 
-let random_symbolics ?hints ?max_map_size ds =
+let random_symbolics ?hints ?max_map_size net =
   let hints =
     match hints with None -> TypeMap.empty | Some hs -> hs
   in
   let sz = match max_map_size with None -> 3 | Some x -> x in
-  List.map (random_symbolic hints sz) ds
+  {net with symbolics=BatList.map (random_symbolic hints sz) net.symbolics}

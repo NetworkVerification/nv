@@ -2,6 +2,7 @@ open Collections
 open Unsigned
 open Solution
 open Syntax
+open Slicing
 
 type srp =
   { graph: AdjGraph.t
@@ -26,19 +27,19 @@ type queue = AdjGraph.Vertex.t QueueSet.queue
 type state = solution * queue
 
 let create_state n cl : state =
-  let rec loop n (q: Integer.t QueueSet.queue) m =
-    if Integer.compare n (Integer.of_int 0) > 0 then
-      let next_n = Integer.pred n in
+  let rec loop n (q: queue) m =
+    if Pervasives.compare n 0 > 0 then
+      let next_n = n - 1 in
       let next_q = QueueSet.add q next_n in
       let next_m =
         AdjGraph.VertexMap.add next_n
-          (Interp.interp_closure cl [vint next_n])
+          (Interp.interp_closure cl [vnode next_n])
           m
       in
       loop next_n next_q next_m
     else (m, q)
   in
-  loop n (QueueSet.empty Integer.compare) AdjGraph.VertexMap.empty
+  loop n (QueueSet.empty Pervasives.compare) AdjGraph.VertexMap.empty
 
 type info =
   { mutable env: Syntax.env
@@ -49,16 +50,16 @@ type info =
   ; (* assert *)
     mutable a: Syntax.closure option
   ; (* trans *)
-    mutable ns: Integer.t option
+    mutable ns: Syntax.node option
   ; (* nodes *)
-    mutable es: (Integer.t * Integer.t) list option
+    mutable es: Syntax.edge list option
   ; (* edges *)
     mutable init: Syntax.closure option (* initial state *)
-  ; mutable syms: value StringMap.t }
+  ; mutable syms: value VarMap.t }
 
 exception Require_false
 
-let declarations_to_srp ds ~throw_requires =
+let net_to_srp net ~throw_requires =
   let info =
     { env= Interp.empty_env
     ; m= None
@@ -67,76 +68,48 @@ let declarations_to_srp ds ~throw_requires =
     ; ns= None
     ; es= None
     ; init= None
-    ; syms= StringMap.empty }
+    ; syms= VarMap.empty }
   in
-  let if_none opt f msg =
-    match opt with None -> f () | Some f -> Console.error msg
+  (* let if_none opt f msg = *)
+  (*   match opt with None -> f () | Some f -> Console.error msg *)
+  (* in *)
+  let get_func e =
+    match (Interp.interp_exp info.env e).v with
+    | VClosure cl -> Some cl
+    | _ -> failwith "must evaluate to a closure"
   in
-  let process_declaration d =
-    match d with
-    | DLet (x, _, e) ->
-        let env = info.env in
-        let v = Interp.interp_exp env e in
-        info.env <- Interp.update_value env x v
-    | DSymbolic (x, Exp e) ->
-        let env = info.env in
-        let v = Interp.interp_exp env e in
-        info.env <- Interp.update_value env x v ;
-        info.syms <- StringMap.add (Var.to_string x) v info.syms
-    | DSymbolic (x, Ty ty) ->
-        let env = info.env in
-        let e = e_val (default_value ty) in
-        let v = Interp.interp_exp env e in
-        info.env <- Interp.update_value env x v ;
-        info.syms <- StringMap.add (Var.to_string x) v info.syms
-    | DMerge e ->
-        let get_merge () =
-          match (Interp.interp_exp info.env e).v with
-          | VClosure cl -> info.m <- Some cl
-          | _ -> failwith "merge was not evaluated to a closure"
-        in
-        if_none info.m get_merge "multiple merge functions"
-    | DTrans e ->
-        let get_trans () =
-          match (Interp.interp_exp info.env e).v with
-          | VClosure cl -> info.t <- Some cl
-          | _ -> failwith "trans was not evaluated to a closure"
-        in
-        if_none info.t get_trans "multiple trans functions"
-    | DAssert e ->
-        let get_assert () =
-          match (Interp.interp_exp info.env e).v with
-          | VClosure cl -> info.a <- Some cl
-          | _ -> failwith "assert was not evaluated to a closure"
-        in
-        if_none info.a get_assert "multiple assert functions"
-    | DNodes n ->
-        if_none info.ns
-          (fun () -> info.ns <- Some n)
-          "multiple nodes declarations"
-    | DEdges es ->
-        if_none info.es
-          (fun () -> info.es <- Some es)
-          "multiple edges declarations"
-    | DInit e ->
-        let get_initializer () =
-          match (Interp.interp_exp info.env e).v with
-          | VClosure cl -> info.init <- Some cl
-          | _ -> failwith "init was not evaluated to a closure"
-        in
-        if_none info.init get_initializer
-          "multiple initialization declarations"
-    | DRequire e -> (
+  (* process symbolics *)
+  BatList.iter (fun (x, ty_exp) ->
+      let env = info.env in
+      let e = match ty_exp with
+        | Exp e -> e
+        | Ty ty -> e_val (default_value ty)
+      in
+      let v = Interp.interp_exp env e in
+      info.env <- Interp.update_value env x v ;
+      info.syms <- VarMap.add x v info.syms) Slicing.(net.symbolics);
+  (* process let definitions *)
+  BatList.iter (fun (x, _, e) ->
+      let env = info.env in
+      let v = Interp.interp_exp env e in
+      info.env <- Interp.update_value env x v) net.defs;
+  info.init <- get_func net.init;
+  info.m <- get_func net.merge;
+  info.t <- get_func net.trans;
+  info.a <- (match net.assertion with
+             | Some a -> get_func a
+             | None -> None);
+  info.ns <- Some (AdjGraph.num_vertices net.graph);
+  info.es <- Some (AdjGraph.edges net.graph);
+  (* process requires *)
+  BatList.iter (fun e ->
       match (Interp.interp_exp info.env e).v with
       | VBool true -> ()
       | _ ->
-          if throw_requires then raise Require_false
-          else
-            Console.warning
-              "requires condition not satisified by initial state" )
-    | DATy _ | DUserTy _ -> ()
-  in
-  List.iter process_declaration ds ;
+         if throw_requires then raise Require_false
+         else
+           Console.warning
+             "requires condition not satisified by initial state" ) net.requires;
   match info with
   | { env= _
     ; m= Some mf
@@ -158,8 +131,8 @@ let declarations_to_srp ds ~throw_requires =
   | {es= None} -> Console.error "missing edges declaration"
   | {init= None} -> Console.error "missing init declaration"
 
-let declarations_to_state ds ~throw_requires =
-  let srp, init, syms = declarations_to_srp ds ~throw_requires in
+let net_to_state net ~throw_requires =
+  let srp, init, syms = net_to_srp net ~throw_requires in
   let state = create_state (AdjGraph.num_vertices srp.graph) init in
   (srp, state, syms)
 
@@ -171,14 +144,14 @@ let get_attribute v s =
     try Some (AdjGraph.VertexMap.find v m) with Not_found -> None
   in
   match find_opt v s with
-  | None -> failwith ("no attribute at vertex " ^ Integer.to_string v)
+  | None -> failwith ("no attribute at vertex " ^ string_of_int v)
   | Some a -> a
 
 let simulate_step {graph= g; trans; merge} s x =
   let do_neighbor initial_attribute (s, todo) n =
-    let neighbor = vint n in
-    let origin = vint x in
-    let edge = vtuple [origin; neighbor] in
+    let neighbor = vnode n in
+    (* let origin = vnode x in *)
+    let edge = vedge (n, x) in
     let n_incoming_attribute =
       Interp.interp_closure trans [edge; initial_attribute]
     in
@@ -220,7 +193,7 @@ let check_assertion srp node v =
   match srp.assertion with
   | None -> true
   | Some a ->
-      let v = Interp.interp_closure a [vint node; v] in
+      let v = Interp.interp_closure a [vnode node; v] in
       match v.v with
       | VBool b -> b
       | _ -> failwith "internal error (check_assertion)"
@@ -228,17 +201,17 @@ let check_assertion srp node v =
 let check_assertions srp vals =
   AdjGraph.VertexMap.mapi (fun n v -> check_assertion srp n v) vals
 
-let simulate_declarations ds =
+let simulate_net net =
   let srp, state, syms =
-    declarations_to_state ds ~throw_requires:true
+    net_to_state net ~throw_requires:true
   in
   let vals = simulate_init srp state in
   let asserts = check_assertions srp vals in
   {labels= vals; symbolics= syms; assertions= Some asserts}
 
-let simulate_declarations_bound ds k =
+let simulate_net_bound net k =
   let srp, state, syms =
-    declarations_to_state ds ~throw_requires:true
+    net_to_state net ~throw_requires:true
   in
   let vals, q = simulate_init_bound srp state k in
   let asserts = check_assertions srp vals in

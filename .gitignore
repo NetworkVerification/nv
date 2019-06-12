@@ -24,3 +24,9 @@ setup.log
 
 # Mac DS_Store
 *.DS_Store
+
+# NV Query output
+*.nv-*-query
+
+# Testing output
+output/*

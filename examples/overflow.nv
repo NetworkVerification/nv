@@ -42,12 +42,12 @@ let trans edge x =
  *)
 let init node =
   match node with
-  | 0 -> Some (0u2)
+  | 0n -> Some (0u2)
   | _ -> None
 
 (* Ensure that only node 0 has distance 0 from itself.
    This will fail for node 4 only if we successfully detect overflow *)
 let assert node x =
   match x with
-  | Some (0u2) -> node = 0
+  | Some (0u2) -> node = 0n
   | _ -> true

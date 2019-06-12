@@ -1,0 +1,56 @@
+% highlighting in text and math modes
+
+\definecolor{marmalade}{RGB}{193,101,18}
+\newcommand{\highlight}[2][marmalade!30]{\mathchoice%
+  {{\setlength{\fboxsep}{2pt}\colorbox{#1}{$\displaystyle#2$}}}%
+  {{\setlength{\fboxsep}{0pt}\colorbox{#1}{$\textstyle#2$}}}%
+  {{\setlength{\fboxsep}{0pt}\colorbox{#1}{$\scriptstyle#2$}}}%
+  {{\setlength{\fboxsep}{0pt}\colorbox{#1}{$\scriptscriptstyle#2$}}}}
+
+\newcommand{\hl}[1]{\ensuremath{\highlight{#1}}}
+\newcommand{\hlt}[1]{\ensuremath{\highlight{\text{#1}}}}
+
+\setlength{\belowcaptionskip}{-3mm}
+
+% comments from authors
+
+\definecolor{princetonorange}{RGB}{255,143,0}
+\definecolor{tmlblue}{RGB}{0,58,120}
+
+\newcommand{\todo}[1]{\textcolor{red}{[TODO: #1]}}
+\newcommand{\ryan}[1]{\textcolor{green}{[ryan: #1]}}
+\newcommand{\dpw}[1]{\textcolor{tmlblue}{[dpw: #1]}}
+\newcommand{\devon}[1]{\textcolor{princetonorange}{[devon: #1]}}
+\newcommand{\nick}[1]{\textcolor{blue}{[nick: #1]}}
+
+% common abbreviations
+
+\newcommand{\EG}{\emph{e.g.}\xspace}
+\newcommand{\IE}{\emph{i.e.}\xspace}
+\newcommand{\ETC}{\emph{etc.}\xspace}
+\newcommand{\ETAL}{\emph{et al.}\xspace}
+\newcommand{\ifft}{iff\xspace}
+\newcommand{\sysname}{NV\xspace}
+
+% Nicely formatted paragraph with bold header
+
+\newcommand{\para}[1]{\vspace{1ex}\noindent\textbf{#1.}\xspace}
+
+% Theorem stuff
+
+\newtheoremstyle{mytheorem}% <name>
+  {3pt}% <Space above>
+  {3pt}% <Space below>
+  {\itshape}% <Body font>
+  {}% <Indent amount>
+  {\bfseries}% <Theorem head font>
+  {.}% <Punctuation after theorem head>
+  {.5em}% <Space after theorem heading>
+  {\thmname{#1}\thmnumber{\@ifnotempty{#1}{ }#2}%
+   \thmnote{ {\the\thm@notefont(#3)}}}% <Theorem head spec (can be left empty, meaning `normal')>
+\makeatother
+\theoremstyle{mytheorem}
+\newtheorem{thm}{Theorem}[section]
+\newtheorem{defn}{Definition}[section]
+\newtheorem{observation}{Observation}
+\newtheorem{lem}[thm]{Lemma}
