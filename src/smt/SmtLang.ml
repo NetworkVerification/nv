@@ -3,12 +3,12 @@ open SolverUtil
 
 let printVerbose (msg: string) (descr: string) (span: Span.t) info =
   let sl =
-    match Console.get_position_opt span.start info with
+    match Console.get_start_position span info with
     | Some (sl, _) -> sl
     | _ -> -1
   in
   let fl =
-    match Console.get_position_opt span.finish info with
+    match Console.get_end_position span info with
     | Some (fl, _) -> fl
     | _ -> -1
   in

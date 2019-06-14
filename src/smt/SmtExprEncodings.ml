@@ -182,7 +182,7 @@ struct
   let ty_to_sorts = ty_to_sort
 
   let rec encode_exp_z3 descr env (e: exp) : term =
-    Printf.printf "expr: %s\n" (Printing.exp_to_string e) ;
+    (* Printf.printf "expr: %s\n" (Printing.exp_to_string e) ; *)
     match e.e with
     | EVar x ->
       let name =

@@ -36,7 +36,10 @@ let process_includes (fname : string) : string list =
   let rec process_includes_aux (seen, imports) fname =
     if List.mem fname seen then (seen, imports) else
       (* Get any imports in this file *)
-      let lines = BatFile.lines_of fname in
+      let lines =
+        try BatFile.lines_of fname
+        with _ -> Console.error ("File not found: " ^ fname)
+      in
       let includes = BatEnum.take_while (fun s -> BatString.starts_with s "include") lines in
       let imported_fnames = BatEnum.map (fun s ->
           if Str.string_match (Str.regexp "include[ ]*\\\"\\(.+\\)\\\"") s 0 then
@@ -54,10 +57,12 @@ let process_includes (fname : string) : string list =
       (rec_seen, fname :: rec_imports)
   in
   let _, imports = process_includes_aux ([], []) fname in
-  List.rev (fname :: imports)
+  List.rev imports
 ;;
 
 let parse fname =
-  let t = Console.read_file fname in
-  let ds = read_from_file fname in
+  let files_to_parse = process_includes fname in
+  print_endline @@ Printf.sprintf "Files to parse: [%s]" @@ BatString.concat ";" files_to_parse;
+  let t = Console.read_files files_to_parse in
+  let ds = List.concat (List.map read_from_file files_to_parse) in
   (ds, t)
