@@ -30,6 +30,14 @@ let read_from_file fname =
   let res = read (Lexing.from_channel cin) in
   close_in cin ; res
 
+(* Make dest_fname relative to the current directory (or absolute),
+   instead of relative to the source_fname *)
+let adjust_filename source_fname dest_fname =
+  dest_fname
+  |> FilePath.concat (FilePath.dirname source_fname)
+  |> FilePath.reduce ~no_symlink:true
+;;
+
 (* Process include directives: return a list of filenames to be processesed
    in order. Do not include the same file more than once *)
 let process_includes (fname : string) : string list =
@@ -43,7 +51,7 @@ let process_includes (fname : string) : string list =
       let includes = BatEnum.take_while (fun s -> BatString.starts_with s "include") lines in
       let imported_fnames = BatEnum.map (fun s ->
           if Str.string_match (Str.regexp "include[ ]*\\\"\\(.+\\)\\\"") s 0 then
-            Str.matched_group 1 s
+            adjust_filename fname (Str.matched_group 1 s)
           else
             Console.error @@ "Bad include directive : " ^ s
         )
@@ -56,13 +64,12 @@ let process_includes (fname : string) : string list =
       in
       (rec_seen, fname :: rec_imports)
   in
-  let _, imports = process_includes_aux ([], []) fname in
+  let _, imports = process_includes_aux ([], []) (adjust_filename FilePath.current_dir fname) in
   List.rev imports
 ;;
 
 let parse fname =
   let files_to_parse = process_includes fname in
-  print_endline @@ Printf.sprintf "Files to parse: [%s]" @@ BatString.concat ";" files_to_parse;
   let t = Console.read_files files_to_parse in
   let ds = List.concat (List.map read_from_file files_to_parse) in
   (ds, t)

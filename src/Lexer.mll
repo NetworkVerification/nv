@@ -23,8 +23,11 @@ let num = ['0'-'9']+
 let width = "u"num
 let tid = ['\'']['a'-'z' 'A'-'Z']['a'-'z' 'A'-'Z' '_' '0'-'9']*
 let node = num"n"
+let wspace = [' ' '\t']
+let filename = "\""(id|['\\' '/' '.'])+"\""
 
 rule token = parse
+  | "include" wspace+ filename {token lexbuf} (* Include directives are processed separately *)
   | "(*"              { comments 0 lexbuf }
   | "false"           { FALSE (position lexbuf) }
   | "true"            { TRUE (position lexbuf) }
@@ -98,7 +101,7 @@ rule token = parse
   | "}"               { RBRACE (position lexbuf) }
   | "_"               { UNDERSCORE (position lexbuf) }
   | "."               { DOT (position lexbuf) }
-  | [' ' '\t']        { token lexbuf }
+  | wspace            { token lexbuf }
   | '\n'              { incr_linenum lexbuf; token lexbuf}
   | _ as c            { printf "[Parse Error] Unrecognized character: %c\n" c; token lexbuf }
   | eof		            { EOF }

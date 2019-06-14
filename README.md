@@ -23,6 +23,7 @@ opam install -y \
   lru-cache \
   zarith \
   ocamlgraph \
+  fileutils \
   z3
 ```
 
@@ -36,7 +37,7 @@ sudo apt install gcc g++ make m4 libgmp-dev python2.7 libz3-dev z3
 ```
 
 ## Running nv
-  
+
 In order to use the SMT solver, you must have the z3 executable on your PATH. It should have the name "z3".
 
 ## Troubleshooting

@@ -1,4 +1,4 @@
-PKGS = -package integers -package oUnit
+#PKGS = -package integers # New packages should probably go in the _tags file
 DIRS = src,src/smt,src/utils,src/datatypes,src/datastructures,src/transformations,src/transformations/mapUnrolling,src/records,src/BDD,test
 # BUILD = ocamlbuild -use-ocamlfind -use-menhir -r -Is $(DIRS) $(PKGS)
 BUILD = ocamlbuild -tag thread -use-ocamlfind -use-menhir -r -Is $(DIRS) $(PKGS)
