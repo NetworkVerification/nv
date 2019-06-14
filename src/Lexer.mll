@@ -27,7 +27,7 @@ let wspace = [' ' '\t']
 let filename = "\""(id|['\\' '/' '.'])+"\""
 
 rule token = parse
-  | "include" wspace+ filename {token lexbuf} (* Include directives are processed separately *)
+  | "include" wspace* filename {token lexbuf} (* Include directives are processed separately *)
   | "(*"              { comments 0 lexbuf }
   | "false"           { FALSE (position lexbuf) }
   | "true"            { TRUE (position lexbuf) }

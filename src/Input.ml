@@ -48,12 +48,16 @@ let process_includes (fname : string) : string list =
         try BatFile.lines_of fname
         with _ -> Console.error ("File not found: " ^ fname)
       in
-      let includes = BatEnum.take_while (fun s -> BatString.starts_with s "include") lines in
+      let includes =
+        BatEnum.take_while
+          (fun s -> BatString.starts_with s "include")
+          (BatEnum.filter (fun s -> String.trim s <> "") lines)
+      in
       let imported_fnames = BatEnum.map (fun s ->
           if Str.string_match (Str.regexp "include[ ]*\\\"\\(.+\\)\\\"") s 0 then
             adjust_filename fname (Str.matched_group 1 s)
           else
-            Console.error @@ "Bad include directive : " ^ s
+            Console.error @@ "Bad include directive (did you forget the quotes?): " ^ s
         )
           includes
       in
