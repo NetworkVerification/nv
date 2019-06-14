@@ -2,14 +2,6 @@ module T = ANSITerminal
 
 type info = {input: string array; linenums: (int * int) array}
 
-let get_position_opt idx info =
-  let position = ref None in
-  Array.iteri
-    (fun i (s, e) ->
-      if idx >= s && idx <= e then position := Some (i, idx - s) )
-    info.linenums ;
-  !position
-
 let show_message msg color label =
   T.print_string [] "\n" ;
   T.print_string [T.Foreground color; T.Bold] (label ^ ": ") ;
@@ -21,6 +13,37 @@ let error msg =
   exit 0
 
 let warning msg = show_message msg T.Yellow "warning"
+
+let read_file fname : info =
+  let lines = ref [] in
+  let indices = ref [] in
+  let index = ref 0 in
+  let chan =
+    try open_in fname with _ ->
+      error (Printf.sprintf "file '%s' not found" fname)
+  in
+  try
+    while true do
+      let line = input_line chan in
+      let len = String.length line in
+      let new_len = !index + len + 1 in
+      indices := (!index, new_len) :: !indices ;
+      index := new_len ;
+      lines := line :: !lines
+    done ;
+    {input= Array.of_list !lines; linenums= Array.of_list !indices}
+  with End_of_file ->
+    close_in chan ;
+    { input= Array.of_list (List.rev !lines)
+    ; linenums= Array.of_list (List.rev !indices) }
+
+let get_position_opt idx info =
+  let position = ref None in
+  Array.iteri
+    (fun i (s, e) ->
+      if idx >= s && idx <= e then position := Some (i, idx - s) )
+    info.linenums ;
+  !position
 
 let get_position idx info =
   match get_position_opt idx info with

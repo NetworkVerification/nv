@@ -30,29 +30,6 @@ let read_from_file fname =
   let res = read (Lexing.from_channel cin) in
   close_in cin ; res
 
-let read_file fname : Console.info =
-  let lines = ref [] in
-  let indices = ref [] in
-  let index = ref 0 in
-  let chan =
-    try open_in fname with _ ->
-      Console.error (Printf.sprintf "file '%s' not found" fname)
-  in
-  try
-    while true do
-      let line = input_line chan in
-      let len = String.length line in
-      let new_len = !index + len + 1 in
-      indices := (!index, new_len) :: !indices ;
-      index := new_len ;
-      lines := line :: !lines
-    done ;
-    {input= Array.of_list !lines; linenums= Array.of_list !indices}
-  with End_of_file ->
-    close_in chan ;
-    { input= Array.of_list (List.rev !lines)
-    ; linenums= Array.of_list (List.rev !indices) }
-
 (* Process include directives: return a list of filenames to be processesed
    in order. Do not include the same file more than once *)
 let process_includes (fname : string) : string list =
@@ -81,6 +58,6 @@ let process_includes (fname : string) : string list =
 ;;
 
 let parse fname =
-  let t = read_file fname in
+  let t = Console.read_file fname in
   let ds = read_from_file fname in
   (ds, t)

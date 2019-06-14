@@ -1,6 +1,8 @@
 module T = ANSITerminal
 
-type info = {input: string array; linenums: (int * int) array}
+type info
+
+val read_file : string -> info
 
 val error : string -> 'a
 
