@@ -253,6 +253,8 @@ struct
           failwith "not implemented yet"
         | MMapFilter, _
         | MMerge, _
+        | MFoldNode, _
+        | MFoldEdge, _
         | _ -> failwith "internal error (encode_exp_z3)" )
     | EIf (e1, e2, e3) ->
       let ze1 = encode_exp_z3 descr env e1 in
@@ -709,6 +711,8 @@ struct
           failwith "not implemented yet"
         | MMapFilter, _
         | MMerge, _
+        | MFoldNode, _
+        | MFoldEdge, _
         | _ -> failwith "internal error (encode_exp_z3)")
     | ETy (e, ty) -> encode_exp_z3_single descr env e
     | _ ->

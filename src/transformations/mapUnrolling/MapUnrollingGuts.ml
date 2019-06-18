@@ -208,7 +208,8 @@ let rec unroll_exp
             match ty (* Type of the map we're unrolling *) with
             | TMap (_, ty) -> ty
             | _ -> failwith "impossible"
-          in          let f' = unroll_exp f in
+          in
+          let f' = unroll_exp f in
           let freshvars =
             BatList.map (fun _ -> Var.fresh "UnrollingMapVar") keys
           in
@@ -270,8 +271,8 @@ let rec unroll_exp
             | _ -> failwith "impossible"
           in
           let freshvars1, freshvars2 =
-            BatList.map (fun _ -> Var.fresh "UnrollingMMergeVar1") keys,
-            BatList.map (fun _ -> Var.fresh "UnrollingMMergeVar2") keys
+            BatList.map (fun _ -> Var.fresh "UnrollingMergeVar1") keys,
+            BatList.map (fun _ -> Var.fresh "UnrollingMergeVar2") keys
           in
           let pattern =
             PTuple([
@@ -299,6 +300,42 @@ let rec unroll_exp
           ematch
             map_pair
             (addBranch pattern (aexp ((etuple result), Some (ty_unrolled), e.espan)) emptyBranch)
+      | MFoldNode, [f; map; acc]
+      | MFoldEdge, [f; map; acc] ->
+        if not (has_target_type map) then
+          eop op [unroll_exp f; unroll_exp acc; unroll_exp map]
+        else
+          (* fold f acc m ->
+             (f (f acc k1 v1) k2 v2)
+             *)
+          let key_ty, val_ty =
+            match ty (* Type of the map we're unrolling *) with
+            | TMap (kty, vty) -> kty, vty
+            | _ -> failwith "impossible"
+          in
+          let acc' = unroll_exp acc in
+          let acc_ty = oget acc'.ety in
+          let f' = unroll_exp f in
+          let freshvars =
+            BatList.map (fun k -> (k, Var.fresh "UnrollingFoldVar")) keys
+          in
+          let pattern =
+            PTuple (BatList.map (fun (_, var) -> PVar var) freshvars)
+          in
+          let fold_vars =
+            BatList.map (fun (k, v) -> k, aexp (evar v, Some (val_ty), e.espan)) freshvars
+          in
+          let result =
+            BatList.fold_left
+              (fun acc (k, v) ->
+                 let app1 = aexp (eapp f' k, Some (TArrow (val_ty, TArrow(acc_ty, acc_ty))), e.espan) in
+                 let app2 = aexp (eapp app1 v, Some (TArrow(acc_ty, acc_ty)), e.espan) in
+                 let app3 = aexp (eapp app2 acc, Some (acc_ty), e.espan) in
+                 app3)
+              acc'
+              fold_vars
+          in
+          ematch (unroll_exp map) (addBranch pattern result emptyBranch)
       | _ ->
         failwith @@ "Failed to unroll map: Incorrect number of arguments to map operation : "
                     ^ Printing.exp_to_string e

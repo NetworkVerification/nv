@@ -5,7 +5,7 @@ open Syntax
 let is_keyword_op op =
   match op with
   | And | Or | Not | UAdd _ | USub _ | Eq | ULess _ | ULeq _ | MGet | NLess | NLeq -> false
-  | MCreate | MSet | MMap | MMerge | MMapFilter | AtMost _ -> true
+  | MCreate | MSet | MMap | MMerge | MFoldNode | MFoldEdge | MMapFilter | AtMost _ -> true
 
 (* set to true if you want to print universal quanifiers explicitly *)
 let quantifiers = true
@@ -29,6 +29,8 @@ let prec_op op =
   | MSet -> 3
   | MMap -> 5
   | MMerge -> 5
+  | MFoldNode -> 5
+  | MFoldEdge -> 5
   | MMapFilter -> 5
   | AtMost _ -> 6
 
@@ -152,6 +154,8 @@ let op_to_string op =
   | MMap -> "map"
   | MMapFilter -> "mapIf"
   | MMerge -> "combine"
+  | MFoldNode -> "foldNodes"
+  | MFoldEdge -> "foldEdges"
   | AtMost _ -> "atMost"
 
 let rec pattern_to_string pattern =

@@ -57,6 +57,8 @@ type op =
   | MMap
   | MMapFilter
   | MMerge
+  | MFoldNode
+  | MFoldEdge
 [@@deriving show, ord, eq]
 
 type pattern =
@@ -791,6 +793,8 @@ and hash_op op =
   | AtMost n -> 12 + n
   | NLess -> 13
   | NLeq -> 14
+  | MFoldNode -> 15
+  | MFoldEdge -> 16
 (* hashconsing information/tables *)
 
 let meta_v : (v, value) meta =
@@ -838,6 +842,8 @@ let arity op =
   | MMap -> 2
   | MMapFilter -> 3
   | MMerge -> 3
+  | MFoldNode -> 3
+  | MFoldEdge -> 3
 
 (* Useful constructors *)
 
