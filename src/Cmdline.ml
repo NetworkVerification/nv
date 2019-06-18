@@ -14,6 +14,7 @@ type t =
   ; no_caching: bool                   (** disables mtbdd operation caching        *)
   ; no_cutoff: bool                    (** disables mtbdd early termination        *)
   ; inline: bool      [@short "-i"]    (** inline the policy before simulation     *)
+  ; compile: bool                      (** compile network to OCaml code before simulation *)
   ; compress: int                      (** compress the network for n failures     *)
   ; unroll: bool                       (** whether to unroll maps or not           *)
   ; unbox: bool                        (** unboxes options and flattens tuples     *)
@@ -21,8 +22,8 @@ type t =
   (* ; draw: bool                         (\** emits a .jpg file of the graph          *\) *)
   ; depth: int                         (** search depth for refinement procedure   *)
   ; check_monotonicity: bool           (** checks monotonicity of trans function   *)
-  ; link_failures: int                  (** adds at most k link failures to the network  *)
-  ; hiding: bool                        (** Use the hiding abstraction during SMT solving *)
+  ; link_failures: int                 (** adds at most k link failures to the network  *)
+  ; hiding: bool                       (** Use the hiding abstraction during SMT solving *)
   }
 [@@deriving
   show
@@ -45,6 +46,7 @@ let default =
   ; no_caching=false
   ; no_cutoff=false
   ; inline=false
+  ; compile=false
   ; compress= -1
   ; unroll= false
   ; unbox = false

@@ -284,6 +284,9 @@ let parse_input (args : string array)
   let decls = Typing.infer_declarations info decls in
   Typing.check_annot_decls decls ;
   Wellformed.check info decls ;
+  Printf.printf "%s\n" file;
+   Compile.compile_ocaml (Filename.remove_extension file) decls;
+  failwith "bla";
   let decls, f = RecordUnrolling.unroll decls in (* Unroll records done first *)
   let fs = [f] in
   let decls,fs = (* inlining definitions *)
