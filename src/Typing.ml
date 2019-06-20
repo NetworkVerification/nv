@@ -330,7 +330,7 @@ let op_typ op =
       TTuple (BatList.init n (fun _ -> TInt 32));
       (TInt 32)], TBool)
   (* Map operations *)
-  | MCreate | MGet | MSet | MMap | MMerge | MMapFilter | Eq ->
+  | MCreate | MGet | MSet | MMap | MMerge | MMapFilter | MFoldNode | MFoldEdge | Eq ->
     failwith "internal error (op_typ)"
 
 let texp (e, ty, span) = aexp (e, Some ty, span)
@@ -452,7 +452,33 @@ let rec infer_exp i info env (e: exp) : exp =
               [el0; el1; er0; er1]
           in
           texp (eop o ([e1; e2; e3] @ es), mapty1, e.espan)
-        | MGet, _ | MSet, _ | MCreate, _ | MMap, _ ->
+        | MFoldNode, [e1; e2; e3] ->
+          let e1, fty = infer_exp (i + 1) info env e1 |> textract in
+          let e2, mapty =
+            infer_exp (i + 1) info env e2 |> textract
+          in
+          let e3, accty =
+            infer_exp (i + 1) info env e3 |> textract
+          in
+          let keyty = TNode in
+          let valty = fresh_tyvar () in
+          unify info e mapty (TMap (keyty, valty)) ;
+          unify info e fty (TArrow (keyty, TArrow(valty, TArrow(accty, accty)))) ;
+          texp (eop o [e1; e2; e3], accty, e.espan)
+        | MFoldEdge, [e1; e2; e3] ->
+          let e1, fty = infer_exp (i + 1) info env e1 |> textract in
+          let e2, mapty =
+            infer_exp (i + 1) info env e2 |> textract
+          in
+          let e3, accty =
+            infer_exp (i + 1) info env e3 |> textract
+          in
+          let keyty = TEdge in
+          let valty = fresh_tyvar () in
+          unify info e mapty (TMap (keyty, valty)) ;
+          unify info e fty (TArrow (keyty, TArrow(valty, TArrow(accty, accty)))) ;
+          texp (eop o [e1; e2; e3], accty, e.espan)
+        | MGet, _ | MSet, _ | MCreate, _ | MMap, _ | MFoldNode, _ | MFoldEdge, _->
           Console.error_position info e.espan
             (Printf.sprintf "invalid number of parameters")
         | Eq, [e1; e2] ->

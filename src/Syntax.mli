@@ -48,6 +48,8 @@ type op =
   | MMap
   | MMapFilter
   | MMerge
+  | MFoldNode
+  | MFoldEdge
 
 type pattern =
   | PWild

@@ -46,6 +46,8 @@ rule token = parse
   | "with"            { WITH (position lexbuf) }
   | "require"         { REQUIRE (position lexbuf) }
   | "createDict"      { CREATEMAP (position lexbuf) }
+  | "foldNodes"       { FOLDNODE (position lexbuf) }
+  | "foldEdges"       { FOLDEDGE (position lexbuf) }
   | "map"             { MAP (position lexbuf) }
   | "mapIf"           { MAPIF (position lexbuf) }
   | "combine"         { COMBINE (position lexbuf) }
@@ -59,8 +61,8 @@ rule token = parse
   | "int" num as s    { TINT (position lexbuf, int_of_string @@ String.lchop ~n:3 s) }
   | "int"             { TINT (position lexbuf, 32) }
   | "bool"            { TBOOL (position lexbuf) }
-  | "tnode"            { TNODE (position lexbuf) }
-  | "tedge"            { TEDGE (position lexbuf) }
+  | "tnode"           { TNODE (position lexbuf) }
+  | "tedge"           { TEDGE (position lexbuf) }
   | "type"            { TYPE (position lexbuf) }
   | "attribute"       { ATTRIBUTE (position lexbuf) }
   | id as s           { ID (position lexbuf, Var.create s) }

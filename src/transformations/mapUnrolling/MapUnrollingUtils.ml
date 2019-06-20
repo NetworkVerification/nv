@@ -21,10 +21,10 @@ let rec add_to_maplist (ty, keys) lst : maplist =
   match lst with
   | [] -> [(ty, keys)]
   | (ty2, keys2) :: tl ->
-     (* why use equiv_tys here which uses canonicalize_type,
-        we are already only adding canonical types *)
-     (* if Typing.equiv_tys ty ty2 then *)
-     if Syntax.equal_tys ty ty2 then
+    (* why use equiv_tys here which uses canonicalize_type,
+       we are already only adding canonical types *)
+    (* if Typing.equiv_tys ty ty2 then *)
+    if Syntax.equal_tys ty ty2 then
       (ty, ExpSet.union keys keys2) :: tl
     else
       (ty2, keys2) :: add_to_maplist (ty, keys) tl
@@ -77,9 +77,9 @@ let rec collect_in_exp (exp : Syntax.exp) (acc : maplist) : maplist =
   | ESome e ->
     collect_in_exp e acc
   | EMatch (e, branches) ->
-     let acc = collect_in_exp e acc in
-     foldBranches (fun (_,e) acc -> collect_in_exp e acc)
-       acc branches
+    let acc = collect_in_exp e acc in
+    foldBranches (fun (_,e) acc -> collect_in_exp e acc)
+      acc branches
   | ETy (e, _) ->
     collect_in_exp e acc
 ;;
@@ -115,8 +115,37 @@ let collect_in_decl (d : declaration) (acc : maplist): maplist =
 let lookup_map_type ty lst =
   BatList.assoc ty lst
 
+(*
+  In order to make sure fold works properly, we require that when we unroll
+  maps whose keys are nodes or edges, we use all possible values for the keys,
+  instead of just the values which appear in the program
+*)
+let add_keys_for_nodes_and_edges decls maplist =
+  let nodes =
+    get_nodes decls
+    |> oget
+    |> BatEnum.(--^) 0 (* Enum of 0 to (num_nodes - 1) *)
+    |> BatEnum.map (fun n -> e_val (vnode n))
+    |> ExpSet.of_enum
+  in
+  let edges =
+    get_edges decls
+    |> oget
+    |> List.map (fun (n1, n2) -> e_val (vedge (n1, n2)))
+    |> ExpSet.of_list
+  in
+  List.map
+    (fun (mapty, keys) ->
+       match mapty with
+       | TMap (TNode, _) -> mapty, nodes
+       | TMap (TEdge, _) -> mapty, edges
+       | _ -> mapty, keys
+    ) maplist
+;;
+
 (* Given a program on which type inference has been run, goes through
    it and returns a list of each map type which appears in that program,
    combined with the set of keys used for that map type. *)
 let collect_map_types_and_keys (decls : declarations) : maplist =
   BatList.fold_left (BatPervasives.flip collect_in_decl) [] decls
+  |> add_keys_for_nodes_and_edges decls

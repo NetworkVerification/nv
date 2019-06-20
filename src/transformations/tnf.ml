@@ -71,7 +71,7 @@ let rec tnf_exp e : exp =
          | Not
          | UAdd _
          | USub _
-         | UEq
+         | Eq
          | ULess _
          | AtMost _
          | MCreate
@@ -80,7 +80,11 @@ let rec tnf_exp e : exp =
          | MMap
          | MMapFilter
          | MMerge
-         | ULeq _ ->
+         | MFoldNode
+         | MFoldEdge
+         | ULeq _
+         | NLess
+         | NLeq ->
           aexp (eop op (BatList.map tnf_exp es), e.ety, e.espan))
      | ERecord _ | EProject _ -> failwith "Record expression in tnf"
 
@@ -90,4 +94,3 @@ let tnf_net net =
              merge = tnf_exp net.merge;
              defs = BatList.map (fun (x, ty, e) -> (x, ty, tnf_exp e)) net.defs
   }
-
