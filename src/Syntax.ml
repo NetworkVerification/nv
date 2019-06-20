@@ -202,7 +202,7 @@ type network =
     assertion : exp option;
     symbolics : (var * ty_or_exp) list;
     defs : (var * ty option * exp) list;
-    utys : (ty StringMap.t) list;
+    utys : (ty StringMap.t) list; (* must support full user types here*)
     requires : exp list;
     graph : AdjGraph.t;
   }

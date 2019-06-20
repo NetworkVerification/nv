@@ -272,8 +272,7 @@ let checkPolicy info cfg file ds =
   let net = Slicing.createNetwork ds in
   SmtCheckProps.checkMonotonicity info cfg.query (smt_query_file file) net
 
-let parse_input (args : string array)
-  : Cmdline.t * Console.info * string * Syntax.network * ((Solution.t -> Solution.t) list) =
+let parse_input (args : string array) =
   let cfg, rest = argparse default "nv" args in
   Cmdline.set_cfg cfg ;
   if cfg.debug then Printexc.record_backtrace true ;
@@ -283,10 +282,14 @@ let parse_input (args : string array)
   let decls = ToEdge.toEdge_decl decls :: decls in
   let decls = Typing.infer_declarations info decls in
   Typing.check_annot_decls decls ;
-  Wellformed.check info decls ;
-  Printf.printf "%s\n" file;
-   Compile.compile_ocaml (Filename.remove_extension file) decls;
-  failwith "bla";
+  Wellformed.check info decls;
+  cfg, info, file, decls
+
+let process_input cfg info file decls :
+      Cmdline.t * Console.info * string * Syntax.network * ((Solution.t -> Solution.t) list) =
+  (* Printf.printf "%s\n" file;
+   *  Compile.compile_ocaml (Filename.remove_extension file) decls;
+   * failwith "bla"; *)
   let decls, f = RecordUnrolling.unroll decls in (* Unroll records done first *)
   let fs = [f] in
   let decls,fs = (* inlining definitions *)

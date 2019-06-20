@@ -154,7 +154,7 @@ and op_args_to_ocaml_string op es =
     | [e1] -> Printf.sprintf "(%s %s)" (op_to_ocaml_string op) (exp_to_ocaml_string e1)
     | [e1; e2] ->
        Printf.sprintf "(%s %s %s)" (exp_to_ocaml_string e1)
-         (op_to_ocaml_string op) (exp_to_ocaml_string e1)
+         (op_to_ocaml_string op) (exp_to_ocaml_string e2)
     | _ -> failwith "Should be a keyword op"
 
 and func_to_ocaml_string f =
@@ -189,12 +189,12 @@ let rec declaration_to_ocaml_string d =
   | DRequire e ->
      hasRequire := true;
      Printf.sprintf "let require = %s\n" (exp_to_ocaml_string e)
-  | DNodes n -> "let graph = AdjGraph.create n"
+  | DNodes n -> Printf.sprintf "let graph = AdjGraph.create %d" n
   | DEdges es ->
      Printf.sprintf
        "let graph = AdjGraph.add_edges graph\n %s"
        (Collections.printList (fun (u,v) ->
-            Printf.sprintf "(%d,%d)" u v) es "[" ";\n" "]")
+            Printf.sprintf "(%d,%d)" u v) es "[" ";\n" "]\n")
   | DInit e ->
      Printf.sprintf "let init = %s\n" (exp_to_ocaml_string e)
   | DATy t ->
@@ -206,22 +206,35 @@ let rec declarations_to_ocaml_string ds =
   Collections.printList declaration_to_ocaml_string ds "" "\n" "\n"
 
 let set_entry (name: string) =
-  Printf.sprintf "let () = p := Some (module %s:SrpNative.NATIVE_SRP)" name
+  Printf.sprintf "let () = SrpNative.srp := Some (module %s:SrpNative.NATIVE_SRP)" name
 
 let generate_ocaml (name : string) ds =
   let name = Filename.basename name |>
                String.mapi (fun i c -> if i = 0 then Char.uppercase_ascii c else c)
   in
-  let header = Printf.sprintf "module %s : NATIVE_SRP = struct\n" name in
+  let header = Printf.sprintf "module %s : SrpNative.NATIVE_SRP = struct\n" name in
   let ocaml_decls = declarations_to_ocaml_string ds in
   let s = if !hasRequire then ""
           else "let require = true\n"
   in
   let s = if !hasAssertion then s
-          else (s ^ "let assertion = fun _ _ -> None\n")
+          else (s ^ "let assertion = None \n")
   in
   Printf.sprintf "%s %s %s end\n %s" header ocaml_decls s (set_entry name)
 
+(* TODO: should use srcdir env. Or even better get rid of source all together,
+   find out how to generate and link cmxs files from build directory*)
+let compile_command_ocaml name =
+  let build_dir = Sys.getenv "NV_BUILD" in
+  let cmd = Printf.sprintf "ocamlbuild -build-dir %s -use-ocamlfind -Is \
+   src/datastructures,src/compile,src,src/datatypes,src/utils,src/transformations \
+             %s.ml %s.cmxs" build_dir name name
+  in
+  Sys.command cmd
+
 let compile_ocaml name ds =
   let program = generate_ocaml name ds in
-  Printf.printf "%s" program
+  let oc = open_out (name ^ ".ml") in
+  Printf.fprintf oc "%s" program;
+  close_out oc;
+  compile_command_ocaml name
