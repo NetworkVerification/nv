@@ -98,6 +98,8 @@ let alpha_convert_declaration bmap (env: Var.t Env.t)
   | DTrans e -> (env, DTrans (alpha_convert_exp env e))
   | DInit e -> (env, DInit (alpha_convert_exp env e))
   | DAssert e -> (env, DAssert (alpha_convert_exp env e))
+  | DPartition e -> (env, DPartition (alpha_convert_exp env e)) (* partitioning *)
+  | DInterface e -> (env, DInterface (alpha_convert_exp env e)) (* partitioning *)
   | DRequire e -> (env, DRequire (alpha_convert_exp env e))
   | DATy _ | DUserTy _ | DNodes _ | DEdges _ -> (env, d)
 
@@ -156,6 +158,14 @@ let alpha_convert_net net =
       assertion = (match net.assertion with
           | None -> None
           | Some e -> Some (alpha_convert_exp env e));
+      (* partitioning *)
+      partition = (match net.partition with
+          | None -> None
+          | Some e -> Some (alpha_convert_exp env e));
+      interface = (match net.interface with
+          | None -> None
+          | Some e -> Some (alpha_convert_exp env e));
+      (* end partitioning *)
       symbolics = symbolics;
       defs = defs;
       utys = net.utys;
@@ -186,6 +196,7 @@ let alpha_convert_srp (srp : Syntax.srp_unfold) =
                     Env.update env x x) xs env) srp.srp_labels env
   in
   let srp' =
+    (* TODO: add partitioning? *)
     { srp_attr = srp.srp_attr;
       srp_constraints = AdjGraph.VertexMap.map (alpha_convert_exp env) srp.srp_constraints;
       srp_labels = srp.srp_labels;

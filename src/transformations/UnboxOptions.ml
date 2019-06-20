@@ -164,6 +164,8 @@ let unbox_decl d =
     (* Printf.printf "init ty:%s\n" (Syntax.show_exp ~show_meta:true e); *)
     DInit (unbox_exp e)
   | DAssert e -> DAssert (unbox_exp e)
+  | DPartition e -> DPartition (unbox_exp e) (* partitioning *)
+  | DInterface e -> DInterface (unbox_exp e) (* partitioning *)
   | DRequire e -> DRequire (unbox_exp e)
   | DSymbolic (x, Exp e) -> DSymbolic (x, Exp (unbox_exp e))
   | DSymbolic (x, Ty ty) -> DSymbolic (x, Ty (unbox_ty ty))
@@ -209,6 +211,14 @@ let unbox_net net =
     assertion = (match net.assertion with
         | None -> None
         | Some e -> Some (unbox_exp e));
+    (* partitioning *)
+    partition = (match net.partition with
+        | None -> None
+        | Some e -> Some (unbox_exp e));
+    interface = (match net.interface with
+        | None -> None
+        | Some e -> Some (unbox_exp e));
+    (* end partitioning *)
     symbolics = BatList.map (fun (x,e) ->
         match e with
         | Ty ty -> (x, Ty (unbox_ty ty))
@@ -221,6 +231,7 @@ let unbox_net net =
     graph = net.graph
   }, box_sol net.attr_type
 
+(* TODO: partitioning *)
 let unbox_srp (srp : Syntax.srp_unfold) =
   let unboxed_attr = unbox_ty srp.srp_attr in
   { srp_attr = unboxed_attr;

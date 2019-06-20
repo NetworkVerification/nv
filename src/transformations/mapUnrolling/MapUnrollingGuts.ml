@@ -329,6 +329,8 @@ let unroll_decl
   | DTrans e -> DTrans (unroll_exp e)
   | DInit e -> DInit (unroll_exp e)
   | DAssert e -> DAssert (unroll_exp e)
+  | DPartition e -> DPartition (unroll_exp e) (* partitioning *)
+  | DInterface e -> DInterface (unroll_exp e) (* partitioning *)
   | DRequire e -> DRequire (unroll_exp e)
   | DNodes _
   | DEdges _ -> decl

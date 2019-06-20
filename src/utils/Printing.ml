@@ -301,6 +301,7 @@ let func_to_string f = func_to_string_p max_prec f
 
 let closure_to_string c = closure_to_string_p max_prec c
 
+(* TODO: should the let statements use the identifiers defined in Syntax instead? *)
 let rec declaration_to_string d =
   match d with
   | DLet (x, tyo, e) ->
@@ -317,6 +318,8 @@ let rec declaration_to_string d =
   | DMerge e -> "let merge = " ^ exp_to_string e
   | DTrans e -> "let trans = " ^ exp_to_string e
   | DAssert e -> "let assert = " ^ exp_to_string e
+  | DPartition e -> "let partition = " ^ exp_to_string e (* partitioning *)
+  | DInterface e -> "let interface = " ^ exp_to_string e (* partitioning *)
   | DRequire e -> "require " ^ exp_to_string e
   | DNodes n -> "let nodes = " ^ string_of_int n
   | DEdges es ->
@@ -389,3 +392,15 @@ let network_to_string ?(show_topology=false) (net : Syntax.network) =
    | None -> []
    | Some e -> [Printf.sprintf "let assert = %s\n\n" @@ exp_to_string e]
   )
+  (* partitioning *)
+  @
+  (match net.partition with
+   | None -> []
+   | Some e -> [Printf.sprintf "let partition = %s\n\n" @@ exp_to_string e]
+  )
+  @
+  (match net.interface with
+   | None -> []
+   | Some e -> [Printf.sprintf "let interface = %s\n\n" @@ exp_to_string e]
+  )
+ (* end partitioning *)

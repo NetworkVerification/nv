@@ -203,6 +203,8 @@ let rec unroll_decl
   | DTrans e -> DTrans (unroll_exp e)
   | DInit e -> DInit (unroll_exp e)
   | DAssert e -> DAssert (unroll_exp e)
+  | DPartition e -> DPartition (unroll_exp e) (* partitioning *)
+  | DInterface e -> DInterface (unroll_exp e) (* partitioning *)
   | DRequire e -> DRequire (unroll_exp e)
   | DNodes _
   | DEdges _ -> decl
@@ -329,6 +331,16 @@ let unroll_net_aux
         | None -> None
         | Some e ->
           Some (unroll_exp e));
+    (* partitioning *)
+    partition = (match net.partition with
+        | None -> None
+        | Some e ->
+          Some (unroll_exp e));
+    interface = (match net.interface with
+        | None -> None
+        | Some e ->
+          Some (unroll_exp e));
+    (* end partitioning *)
     requires = BatList.map unroll_exp net.requires;
     graph = net.graph
   }

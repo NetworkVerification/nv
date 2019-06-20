@@ -186,6 +186,8 @@ type declaration =
   | DInit of exp
   | DAssert of exp
   | DRequire of exp
+  | DPartition of exp (* partition ids *)
+  | DInterface of exp (* interface hypotheses *)
   | DNodes of int
   | DEdges of (node * node) list
 
@@ -197,6 +199,8 @@ type network =
     trans : exp;
     merge : exp;
     assertion : exp option;
+    partition : exp option; (* partitioning *)
+    interface : exp option; (* partitioning *)
     symbolics : (var * ty_or_exp) list;
     defs : (var * ty option * exp) list;
     utys : (ty StringMap.t) list;
@@ -204,6 +208,7 @@ type network =
     graph : AdjGraph.t;
   }
 
+(* TODO: add partitioning? *)
 type srp_unfold =
   { srp_attr : ty;
     srp_constraints : exp AdjGraph.VertexMap.t;
@@ -1059,6 +1064,8 @@ let get_decl ds f =
     f daty
   with _ -> None
 
+(* TODO: could this code be condensed further? all we need is the function name
+ * and the declaration variant *)
 let get_lets ds =
   BatList.filter_map (fun d -> match d with DLet (x,ty,e) -> Some (x,ty,e) | _ -> None) ds
 
@@ -1077,6 +1084,16 @@ let get_init ds =
 let get_assert ds =
   get_decl ds (fun d ->
       match d with DAssert e -> Some e | _ -> None )
+
+(* partitioning *)
+let get_partition ds =
+  get_decl ds (fun d ->
+      match d with DPartition e -> Some e | _ -> None )
+
+let get_interface ds =
+  get_decl ds (fun d ->
+      match d with DInterface e -> Some e | _ -> None )
+(* end partitioning *)
 
 let get_edges ds =
   get_decl ds (fun d ->

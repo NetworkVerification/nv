@@ -38,6 +38,8 @@ let optimizeNet net =
     trans = optimizeExp net.trans;
     merge = optimizeExp net.merge;
     assertion = BatOption.map optimizeExp net.assertion;
+    partition = BatOption.map optimizeExp net.partition; (* partitioning *)
+    interface = BatOption.map optimizeExp net.interface; (* partitioning *)
     symbolics = BatList.map (fun (x, tye) ->
                     (x, match tye with
                         | Exp e -> Exp (optimizeExp e)

@@ -136,6 +136,8 @@ type declaration =
   | DInit of exp
   | DAssert of exp
   | DRequire of exp
+  | DPartition of exp (* partition ids *)
+  | DInterface of exp (* interface hypotheses *)
   | DNodes of int
   | DEdges of (node * node) list
 
@@ -147,6 +149,8 @@ type network =
     trans        : exp;
     merge        : exp;
     assertion    : exp option;
+    partition    : exp option; (* partitioning *)
+    interface    : exp option; (* partitioning *)
     symbolics    : (var * ty_or_exp) list;
     defs         : (var * ty option * exp) list;
     utys         : (ty StringMap.t) list;
@@ -154,6 +158,7 @@ type network =
     graph        : AdjGraph.t;
   }
 
+(* TODO: add partitioning? *)
 type srp_unfold =
   { srp_attr : ty;
     srp_constraints : exp AdjGraph.VertexMap.t;
@@ -278,6 +283,10 @@ val get_trans : declarations -> exp option
 val get_init : declarations -> exp option
 
 val get_assert : declarations -> exp option
+
+val get_partition : declarations -> exp option
+
+val get_interface : declarations -> exp option
 
 val get_edges : declarations -> (node * node) list option
 

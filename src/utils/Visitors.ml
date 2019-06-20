@@ -25,6 +25,8 @@ let iter_exp_decl f d =
    |DTrans e
    |DInit e
    |DAssert e
+   |DPartition e (* partitioning *)
+   |DInterface e (* partitioning *)
    |DRequire e
    |DSymbolic (_, Exp e) ->
       iter_exp (f d) e

@@ -24,6 +24,13 @@ let trans_ty aty = TArrow (edge_ty, TArrow (aty, aty))
 
 let assert_ty aty = TArrow (node_ty, TArrow (aty, TBool))
 
+(* TODO: do we want a special partition ID type? is i8 a sensible number? *)
+(* partitioning *)
+let partition_ty = TArrow (node_ty, TInt 8)
+
+let interface_ty aty = TArrow (edge_ty, TOption aty)
+(* end partitioning *)
+
 (* Region-like levels for efficient implementation of type generalization *)
 let current_level = ref 1
 
@@ -103,6 +110,8 @@ let check_annot_decl (d: declaration) =
   |DTrans e
   |DInit e
   |DAssert e
+  |DPartition e (* partitioning *)
+  |DInterface e (* partitioning *)
   |DRequire e ->
     check_annot e
   | DNodes _ | DEdges _ | DATy _ | DSymbolic _ | DUserTy _ -> ()
@@ -781,6 +790,18 @@ and infer_declaration i info env aty d : ty Env.t * declaration =
     let ty = oget e'.ety in
     unify info e ty (assert_ty aty) ;
     (Env.update env (Var.create "assert") ty, DAssert e')
+  (* partitioning *)
+  | DPartition e ->
+    let e' = infer_exp (i + 1) info env e in
+    let ty = oget e'.ety in
+    unify info e ty partition_ty ;
+    (Env.update env (Var.create "partition") ty, DPartition e')
+  | DInterface e ->
+    let e' = infer_exp (i + 1) info env e in
+    let ty = oget e'.ety in
+    unify info e ty (interface_ty aty) ;
+    (Env.update env (Var.create "interface") ty, DInterface e')
+  (* end partitioning *)
   | DRequire e ->
     let e' = infer_exp (i + 1) info env e in
     let ty = oget e'.ety in

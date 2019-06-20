@@ -105,6 +105,8 @@ let collect_in_decl (d : declaration) (acc : maplist): maplist =
   | DTrans exp
   | DInit exp
   | DAssert exp
+  | DPartition exp (* partitioning *)
+  | DInterface exp (* partitioning *)
   | DRequire exp ->
     collect_in_exp exp acc
   | DNodes _

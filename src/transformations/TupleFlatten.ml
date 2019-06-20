@@ -219,6 +219,8 @@ let flatten_decl_single d =
   | DTrans e -> DTrans (flatten_exp e)
   | DInit e -> DInit (flatten_exp e)
   | DAssert e -> DAssert (flatten_exp e)
+  | DPartition e -> DPartition (flatten_exp e) (* partitioning *)
+  | DInterface e -> DInterface (flatten_exp e) (* partitioning *)
   | DRequire e -> DRequire (flatten_exp e)
   | DATy aty -> DATy (flatten_ty aty)
   | DUserTy (x,ty) -> DUserTy (x, flatten_ty ty)
@@ -308,6 +310,14 @@ let flatten_net net =
     assertion = (match net.assertion with
         | None -> None
         | Some e -> Some (flatten_exp e));
+    (* partitioning *)
+    partition = (match net.partition with
+        | None -> None
+        | Some e -> Some (flatten_exp e));
+    interface = (match net.interface with
+        | None -> None
+        | Some e -> Some (flatten_exp e));
+    (* end partitioning *)
     symbolics =
       BatList.map flatten_symbolic net.symbolics |> BatList.concat;
     defs =
@@ -324,6 +334,7 @@ let flatten_net net =
        VarMap.empty net.symbolics)
 
 
+(* TODO: partitioning *)
 let flatten_srp srp =
   let flatten_attr = flatten_ty srp.srp_attr in
   { srp_attr = flatten_attr;

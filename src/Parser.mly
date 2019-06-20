@@ -50,6 +50,9 @@
   let trans_identifier = "trans"
   let init_identifier = "init"
   let assert_identifier = "assert"
+  (* partitioning identifiers *)
+  let partition_identifier = "partition"
+  let interface_identifier = "interface"
 
   let global_let (id,params) body body_span span =
     let e = make_fun params body body_span span in
@@ -61,6 +64,12 @@
       DInit e
     else if Var.name id = assert_identifier then
       DAssert e
+    (* partitioning cases *)
+    else if Var.name id = partition_identifier then
+      DPartition e
+    else if Var.name id = interface_identifier then
+      DInterface e
+    (* end partitioning cases *)
     else
       DLet (id, None, e)
 
