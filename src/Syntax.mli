@@ -42,6 +42,8 @@ type op =
   | NLess
   | NLeq
   | AtMost of int
+  | TGet of int (* Tuple size *) * int (* lo index *) * int (* hi index *)
+  | TSet of int (* TUple size *) * int (* lo index *) * int (* hi index *)
   | MCreate
   | MGet
   | MSet

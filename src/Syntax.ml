@@ -51,6 +51,8 @@ type op =
   | NLess
   | NLeq
   | AtMost of int
+  | TGet of int (* Tuple size *) * int (* lo index *) * int (* hi index *)
+  | TSet of int (* TUple size *) * int (* lo index *) * int (* hi index *)
   | MCreate
   | MGet
   | MSet
@@ -795,6 +797,8 @@ and hash_op op =
   | NLeq -> 14
   | MFoldNode -> 15
   | MFoldEdge -> 16
+  | TGet (n1, n2, n3) -> 17 + n1 + n2 + n3 + 256 * 5
+  | TSet (n1, n2, n3) -> 17 + n1 + n2 + n3 + 256 * 6
 (* hashconsing information/tables *)
 
 let meta_v : (v, value) meta =
@@ -844,6 +848,8 @@ let arity op =
   | MMerge -> 3
   | MFoldNode -> 3
   | MFoldEdge -> 3
+  | TGet _ -> 1
+  | TSet _ -> 2
 
 (* Useful constructors *)
 

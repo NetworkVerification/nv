@@ -82,15 +82,11 @@ let run_smt_classic file cfg info (net : Syntax.network) fs =
         let net, f2 =
           time_profile "Flattening Tuples" (fun () -> TupleFlatten.flatten_net net)
         in
-        (*have two different partial evaluation techniques *)
-        (* Printf.printf "emerge %s\n" (Printing.exp_to_string net.merge); *)
-        (* let net = partialEvalNet net in *)
-        (* Printf.printf "emerge %s\n" (Printing.exp_to_string net.merge); *)
-        (* let net = time_profile "optimizing branches" (fun () -> OptimizeBranches.optimizeNet net) in *)
         net, (f2 :: f1 :: fs)
       end
     else net, fs
   in
+  print_endline @@ Printing.network_to_string net;
 
   let net, f = Renaming.alpha_convert_net net in (*TODO: why are we renaming here?*)
   let fs = f :: fs in

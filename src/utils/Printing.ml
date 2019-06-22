@@ -5,7 +5,7 @@ open Syntax
 let is_keyword_op op =
   match op with
   | And | Or | Not | UAdd _ | USub _ | Eq | ULess _ | ULeq _ | MGet | NLess | NLeq -> false
-  | MCreate | MSet | MMap | MMerge | MFoldNode | MFoldEdge | MMapFilter | AtMost _ -> true
+  | TGet _| TSet _| MCreate | MSet | MMap | MMerge | MFoldNode | MFoldEdge | MMapFilter | AtMost _ -> true
 
 (* set to true if you want to print universal quanifiers explicitly *)
 let quantifiers = true
@@ -24,6 +24,8 @@ let prec_op op =
   | ULeq _ -> 5
   | NLess -> 5
   | NLeq -> 5
+  | TGet _ -> 5
+  | TSet _ -> 5
   | MCreate -> 5
   | MGet -> 5
   | MSet -> 3
@@ -148,6 +150,8 @@ let op_to_string op =
   | ULeq n -> "<=" ^ "u" ^ (string_of_int n)
   | NLess -> "<n"
   | NLeq -> "<=n"
+  | TGet (n1, n2, n3) -> Printf.sprintf "tuple%dGet%d-%d" n1 n2 n3
+  | TSet (n1, n2, n3) -> Printf.sprintf "tuple%dSet%d-%d" n1 n2 n3
   | MCreate -> "createMap"
   | MGet -> "at"
   | MSet -> "set"

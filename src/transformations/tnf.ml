@@ -84,7 +84,9 @@ let rec tnf_exp e : exp =
          | MFoldEdge
          | ULeq _
          | NLess
-         | NLeq ->
+         | NLeq
+         | TGet _
+         | TSet _ ->
           aexp (eop op (BatList.map tnf_exp es), e.ety, e.espan))
      | ERecord _ | EProject _ -> failwith "Record expression in tnf"
 

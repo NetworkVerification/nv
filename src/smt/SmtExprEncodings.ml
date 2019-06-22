@@ -242,6 +242,42 @@ struct
           let ze2 = encode_exp_z3 descr env e2 in
           mk_leq ze1.t ze2.t |>
           mk_term ~tloc:e.espan
+        | TGet (size, lo, hi), [e1] ->
+          if lo <> hi then failwith "TGet should only have a range in unboxed encoding";
+          let proj, _ =
+            List.nth
+              (compute_decl env (oget e1.ety)
+               |> oget
+               |> get_constructors
+               |> List.hd
+               |> get_projections)
+              lo
+          in
+          let ze1 = encode_exp_z3 descr env e1 in
+          mk_app (mk_var proj) [ze1.t]
+          |> mk_term ~tloc:e.espan
+        | TSet (size, lo, hi), [e1; e2] ->
+          (* TODO: It would probably be better to unroll TSet to a match statement
+             before we do the unboxed SMT encoding, but I'm not sure where that fits
+             in our pipeline. This encoding duplicates the tuple expression once for
+             each projection; however, that's _probably_ fine, since if the expression
+             were anything complicated it probably would have been partial-evaluated
+             away. *)
+          if lo <> hi then failwith "TSet should only have a range in unboxed encoding";
+          let constr =
+            (compute_decl env (oget e1.ety)
+             |> oget
+             |> get_constructors
+             |> List.hd)
+          in
+          let ze1 = encode_exp_z3 descr env e1 in
+          let ze2 = encode_exp_z3 descr env e2 in
+          let elts =
+            List.map (fun (proj, _) -> mk_app (mk_var proj) [ze1.t]) constr.constr_args
+          in
+          let elts = BatList.modify_at lo (fun _ -> ze2.t) elts in
+          mk_app (mk_constructor constr.constr_name (ty_to_sort (oget e1.ety))) elts
+          |> mk_term ~tloc:e.espan
         | AtMost _, [e1;e2;e3] -> failwith "not bothering with boxed version for now"
         | MCreate, [e1] ->
           failwith "not implemented"
@@ -270,17 +306,14 @@ struct
       let ze2 = encode_exp_z3 descr env e2 in
       add_constraint env (mk_term (mk_eq za.t ze1.t));
       ze2
-    | ETuple es -> (
-        let ty = oget e.ety in
-        match ty with
-        | TTuple ts ->
-          let pair_decl = compute_decl env ty |> oget in
-          let pair_sort = ty_to_sort ty in
-          let zes = BatList.map (fun e -> (encode_exp_z3 descr env e).t) es in
-          let f = get_constructors pair_decl |> BatList.hd in
-          mk_app (mk_constructor f.constr_name pair_sort) zes |>
-          mk_term ~tloc:e.espan
-        | _ -> failwith "internal error (encode_exp_z3)" )
+    | ETuple es ->
+      let ty = oget e.ety in
+      let pair_decl = compute_decl env ty |> oget in
+      let pair_sort = ty_to_sort ty in
+      let zes = BatList.map (fun e -> (encode_exp_z3 descr env e).t) es in
+      let f = get_constructors pair_decl |> BatList.hd in
+      mk_app (mk_constructor f.constr_name pair_sort) zes |>
+      mk_term ~tloc:e.espan
     | ESome e1 ->
       let ty = oget e.ety in
       let decl = compute_decl env ty |> oget in
@@ -709,6 +742,9 @@ struct
           failwith "not implemented"
         | MMap, [{e= EFun {arg= x; argty= ty1; resty= ty2; body= e1}}; e2] ->
           failwith "not implemented yet"
+        | TGet _, _
+        | TSet _, _ ->
+          failwith "TGet and TSet should be partial-evaluated away"
         | MMapFilter, _
         | MMerge, _
         | MFoldNode, _

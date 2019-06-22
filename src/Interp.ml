@@ -194,6 +194,23 @@ and interp_op env ty op es =
     if n1 < n2 then vbool true else vbool false
   | NLeq, [{v= VNode n1}; {v= VNode n2}] ->
     if n1 <= n2 then vbool true else vbool false
+  | TGet (size, lo, hi), [{v= VTuple elts}] ->
+    assert (List.length elts = size) ; (* Sanity check *)
+    if lo = hi then List.nth elts lo
+    else vtuple (elts |> BatList.drop lo  |> BatList.take (hi - lo + 1))
+  | TSet (size, lo, hi), [{v= VTuple elts}; v] ->
+    assert (List.length elts = size) ; (* Sanity check *)
+    begin
+      if lo = hi then
+        vtuple (BatList.modify_at lo (fun _ -> v) elts)
+      else
+        match v.v with
+        | VTuple velts ->
+          let hd, rest = BatList.takedrop lo elts in
+          let _, tl = BatList.takedrop (hi - lo + 1) rest in
+          vtuple (hd @ velts @ tl)
+        | _ -> failwith "Bad TSet"
+    end
   | MCreate, [v] -> (
       match get_inner_type ty with
       | TMap (kty, _) -> vmap (BddMap.create ~key_ty:kty v)
@@ -293,33 +310,64 @@ let simplify_or v1 e2 =
   | VBool false -> e2
   | _ -> failwith "illegal value to boolean"
 
-let simplify_logic op pes =
+let simplify_exps op pes =
   match op with
   | And ->
-    (match pes with
-     | [e1; e2] when (is_value e1) ->
-       simplify_and (to_value e1) e2
-     | [e1; e2] when (is_value e2) ->
-       simplify_and (to_value e2) e1
-     | _ -> eop op pes)
+    begin
+      match pes with
+      | [e1; e2] when (is_value e1) ->
+        simplify_and (to_value e1) e2
+      | [e1; e2] when (is_value e2) ->
+        simplify_and (to_value e2) e1
+      | _ -> eop op pes
+    end
   | Or ->
-    (match pes with
-     | [e1; e2] when (is_value e1) ->
-       simplify_or (to_value e1) e2
-     | [e1; e2] when (is_value e2) ->
-       simplify_or (to_value e2) e1
-     | [e1; e2] when (equal_exps ~cmp_meta:false e1 e2) ->
-       e1
-     | [e1; e2] ->
-       (match e1.e with
-        | EOp (Not, [e1']) when equal_exps ~cmp_meta:false e1' e2 ->
-          exp_of_value (vbool true)
-        | _ ->
-          (match e2.e with
-           | EOp (Not, [e2']) when equal_exps ~cmp_meta:false e1 e2' ->
-             exp_of_value (vbool true)
-           | _ -> eop op pes))
-     | _ -> eop op pes)
+    begin
+      match pes with
+      | [e1; e2] when (is_value e1) ->
+        simplify_or (to_value e1) e2
+      | [e1; e2] when (is_value e2) ->
+        simplify_or (to_value e2) e1
+      | [e1; e2] when (equal_exps ~cmp_meta:false e1 e2) ->
+        e1
+      | [e1; e2] ->
+        (match e1.e with
+         | EOp (Not, [e1']) when equal_exps ~cmp_meta:false e1' e2 ->
+           exp_of_value (vbool true)
+         | _ ->
+           (match e2.e with
+            | EOp (Not, [e2']) when equal_exps ~cmp_meta:false e1 e2' ->
+              exp_of_value (vbool true)
+            | _ -> eop op pes))
+      | _ -> eop op pes
+    end
+  | TGet (size, lo, hi) ->
+    begin
+      match pes with
+      | [{e= ETuple lst}] ->
+        assert (List.length lst = size) ; (* Sanity check *)
+        if lo = hi then List.nth lst lo
+        else etuple (lst |> BatList.drop lo |> BatList.take (hi - lo + 1))
+      | _ -> eop op pes
+    end
+  | TSet (size, lo, hi) ->
+    begin
+      match pes with
+      | [{e= ETuple lst}; v] ->
+        assert (List.length lst = size) ; (* Sanity check *)
+        if lo = hi then
+          etuple @@ BatList.modify_at lo (fun _ -> v) lst
+        else
+          let hd, rest = BatList.takedrop lo lst in
+          let _, tl = BatList.takedrop (hi - lo + 1) rest in
+          begin
+            match v.e with
+            | ETuple mid ->
+              etuple (hd @ mid @ tl)
+            | _ -> eop op pes
+          end
+      | _ -> eop op pes
+    end
   | _ -> eop op pes
 
 let simplify_match e =
@@ -451,7 +499,7 @@ let rec interp_exp_partial_opt isapp env expEnv e =
 and interp_op_partial_opt env expEnv ty op es =
   let pes = BatList.map (interp_exp_partial_opt false env expEnv) es in
   if BatList.exists (fun pe -> not (is_value pe)) pes then
-    simplify_logic op pes
+    simplify_exps op pes
   else
   if isMapOp op then
     eop op pes
@@ -475,6 +523,23 @@ and interp_op_partial_opt env expEnv ty op es =
         if n1 < n2 then vbool true else vbool false
       | NLeq, [{v= VNode n1}; {v= VNode n2}] ->
         if n1 <= n2 then vbool true else vbool false
+      | TGet (size, lo, hi), [{v= VTuple lst}] ->
+        assert (List.length lst = size) ; (* Sanity check *)
+        if lo = hi then List.nth lst lo
+        else vtuple (lst |> BatList.drop lo |> BatList.take (hi - lo + 1))
+      | TSet (size, lo, hi), [{v= VTuple lst}; v] ->
+        assert (List.length lst = size) ; (* Sanity check *)
+        if lo = hi then
+          vtuple @@ BatList.modify_at lo (fun _ -> v) lst
+        else
+          let hd, rest = BatList.takedrop lo lst in
+          let _, tl = BatList.takedrop (hi - lo + 1) rest in
+          begin
+            match v.v with
+            | VTuple mid ->
+              vtuple (hd @ mid @ tl)
+            | _ -> failwith ""
+          end
       | _, _ ->
         failwith
           (Printf.sprintf "bad operator application: %s"
@@ -551,7 +616,7 @@ let rec interp_exp_partial isapp env e =
 and interp_op_partial env ty op es =
   let pes = BatList.map (interp_exp_partial false env) es in
   if BatList.exists (fun pe -> not (is_value pe)) pes then
-    simplify_logic op pes
+    simplify_exps op pes
   else
   if isMapOp op then
     eop op pes
@@ -575,6 +640,23 @@ and interp_op_partial env ty op es =
         if n1 < n2 then vbool true else vbool false
       | NLeq, [{v= VNode n1}; {v= VNode n2}] ->
         if n1 <= n2 then vbool true else vbool false
+      | TGet (size, lo, hi), [{v= VTuple lst}] ->
+        assert (List.length lst = size) ; (* Sanity check *)
+        if lo = hi then List.nth lst lo
+        else vtuple (lst |> BatList.drop lo |> BatList.take (hi - lo + 1))
+      | TSet (size, lo, hi), [{v= VTuple lst}; v] ->
+        assert (List.length lst = size) ; (* Sanity check *)
+        if lo = hi then
+          vtuple @@ BatList.modify_at lo (fun _ -> v) lst
+        else
+          let hd, rest = BatList.takedrop lo lst in
+          let _, tl = BatList.takedrop (hi - lo + 1) rest in
+          begin
+            match v.v with
+            | VTuple mid ->
+              vtuple (hd @ mid @ tl)
+            | _ -> failwith ""
+          end
       | _, _ ->
         failwith
           (Printf.sprintf "bad operator application: %s"
@@ -835,6 +917,23 @@ struct
           if n1 < n2 then vbool true else vbool false
         | NLeq, [{v= VNode n1}; {v= VNode n2}] ->
           if n1 <= n2 then vbool true else vbool false
+        | TGet (size, lo, hi), [{v= VTuple elts}] ->
+          assert (List.length elts = size) ; (* Sanity check *)
+          if lo = hi then List.nth elts lo
+          else vtuple (elts |> BatList.drop lo |> BatList.take (hi - lo + 1))
+        | TSet (size, lo, hi), [{v= VTuple elts}; v] ->
+          assert (List.length elts = size) ; (* Sanity check *)
+          begin
+            if lo = hi then
+              vtuple (BatList.modify_at lo (fun _ -> v) elts)
+            else
+              match v.v with
+              | VTuple velts ->
+                let hd, rest = BatList.takedrop lo elts in
+                let _, tl = BatList.takedrop (hi - lo + 1) rest in
+                vtuple (hd @ velts @ tl)
+              | _ -> failwith "Bad TSet"
+          end
         | MCreate, [v] -> (
             match get_inner_type ty with
             | TMap (kty, _) -> vmap (BddMap.create ~key_ty:kty v)

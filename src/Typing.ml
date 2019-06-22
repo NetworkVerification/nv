@@ -329,9 +329,11 @@ let op_typ op =
     ([TTuple (BatList.init n (fun _ -> TBool));
       TTuple (BatList.init n (fun _ -> TInt 32));
       (TInt 32)], TBool)
+  | TGet _ | TSet _ ->
+    failwith "internal error (op_typ): tuple op"
   (* Map operations *)
   | MCreate | MGet | MSet | MMap | MMerge | MMapFilter | MFoldNode | MFoldEdge | Eq ->
-    failwith "internal error (op_typ)"
+    failwith "internal error (op_typ): map op"
 
 let texp (e, ty, span) = aexp (e, Some ty, span)
 
@@ -478,7 +480,30 @@ let rec infer_exp i info env (e: exp) : exp =
           unify info e mapty (TMap (keyty, valty)) ;
           unify info e fty (TArrow (keyty, TArrow(valty, TArrow(accty, accty)))) ;
           texp (eop o [e1; e2; e3], accty, e.espan)
-        | MGet, _ | MSet, _ | MCreate, _ | MMap, _ | MFoldNode, _ | MFoldEdge, _->
+        | TGet (size, lo, hi), [e1] ->
+          let e1, tty = infer_exp (i + 1) info env e1 |> textract in
+          let elt_tyvars = (List.map (fun _ -> fresh_tyvar ()) (List.make size ())) in
+          unify info e tty (TTuple elt_tyvars) ;
+          let ret_ty =
+            if lo = hi then
+              List.nth elt_tyvars lo
+            else
+              TTuple (List.drop lo elt_tyvars |> List.take (hi - lo + 1))
+          in
+          texp (eop o [e1], ret_ty, e.espan)
+        | TSet (size, lo, hi), [e1; e2] ->
+          let e1, tty = infer_exp (i + 1) info env e1 |> textract in
+          let e2, vty = infer_exp (i + 1) info env e2 |> textract in
+          let elt_tyvars = (List.map (fun _ -> fresh_tyvar ()) (List.make size ())) in
+          unify info e tty (TTuple elt_tyvars) ;
+          (if lo = hi then
+             unify info e vty (List.nth elt_tyvars lo)
+           else
+             unify info e vty (TTuple (List.drop lo elt_tyvars |> List.take (hi - lo + 1)))
+          );
+          texp (eop o [e1], tty, e.espan)
+        | MGet, _ | MSet, _ | MCreate, _ | MMap, _ | MFoldNode, _ | MFoldEdge, _
+        | TGet _, _ | TSet _, _ ->
           Console.error_position info e.espan
             (Printf.sprintf "invalid number of parameters")
         | Eq, [e1; e2] ->
