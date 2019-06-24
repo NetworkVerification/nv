@@ -141,7 +141,7 @@ let check_record_label_uniqueness info decls =
     in
     Console.error_position info Span.default msg
 
-let rec is_literal (exp : Syntax.exp) : bool =
+(* let rec is_literal (exp : Syntax.exp) : bool =
   match exp.e with
   | EVar _
   | EOp _
@@ -170,7 +170,7 @@ let check_keys info _ (e : exp) =
         "Only literals may be used as keys into a map"
       in
       Console.error_position info k.espan msg
-  | _ -> ()
+  | _ -> () *)
 
 (* Ensures every node/edge value in the program actually exists in the network *)
 let check_nodes_and_edges info num_nodes edges _ (e : exp) =
@@ -203,6 +203,6 @@ let check info (ds: declarations) : unit =
   check_record_label_uniqueness info ds ;
   Visitors.iter_exp_decls (check_types info) ds ;
   (* Visitors.iter_exp_decls (check_closures info) ds ; *) (* Is this still necessary? *)
-  Visitors.iter_exp_decls (check_keys info) ds;
+  (* Visitors.iter_exp_decls (check_keys info) ds; *)
   Visitors.iter_exp_decls (check_nodes_and_edges info (get_nodes ds |> oget) (get_edges ds |> oget)) ds;
   ()

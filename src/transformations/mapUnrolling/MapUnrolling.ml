@@ -12,9 +12,10 @@ let unroll info decls =
   let unrolled_decls, map_back1 =
     BatList.fold_left
       (fun (decls, f) (mty, keys) ->
-         let keys = (Collections.ExpSet.elements keys) in
-         let new_decls = MapUnrollingGuts.unroll_one_map_type mty keys decls in
-         let f' = MapUnrollingConversion.convert_solution mty keys decls in
+         let const_keys = Collections.ExpSet.elements (fst keys) in
+         let symb_keys = Collections.VarSet.elements (snd keys) in
+         let new_decls = MapUnrollingGuts.unroll_one_map_type mty (const_keys, symb_keys) decls in
+         let f' = MapUnrollingConversion.convert_solution mty (const_keys, symb_keys) decls in
          (new_decls, (fun x -> f (f' x))))
       (decls, (fun x -> x)) maplist
   in
