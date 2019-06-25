@@ -369,7 +369,7 @@ let simplify_tset size lo hi tup v =
   let cont tup_es v_es =
     let hd, tl =
       let hd, rest = BatList.takedrop lo tup_es in
-      hd, BatList.drop (lo - hi + 1) rest
+      hd, BatList.drop (hi - lo + 1) rest
     in
     etuple (hd @ v_es @ tl) |> wrap tup
   in

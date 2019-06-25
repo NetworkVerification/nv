@@ -79,7 +79,6 @@ let run_smt_classic file cfg info (net : Syntax.network) fs =
       begin
         smt_config.unboxing <- true;
         let net, f1 = time_profile "Unbox options" (fun () -> UnboxOptions.unbox_net net) in
-        print_endline @@ Printing.exp_to_string net.trans;
         let net, f2 =
           time_profile "Flattening Tuples" (fun () -> TupleFlatten.flatten_net net)
         in

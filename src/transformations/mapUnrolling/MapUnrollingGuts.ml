@@ -98,7 +98,7 @@ let rec unroll_get_or_set
     | Some (TNode)
     | Some (TEdge) ->
       (* We know all possible node and edge values in advance, so just
-         match the variable with each of them *)
+         match the key with each of them *)
       ematch k const_branches
     | _ ->
       (* Otherwise, we require that the key be be a symbolic variable *)
