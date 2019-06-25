@@ -139,16 +139,35 @@ let rec flatten_exp e : exp =
           aexp (elet x e1 (flatten_exp e2), Some ty, e.espan)))
   | ETuple es ->
     let es = BatList.map flatten_exp es in
-    let es' = BatList.fold_right (fun e acc ->
-        match e.e with
-        | ETuple es -> es @ acc
-        | EVal v ->
-          (match v.v with
-           | VTuple vs -> (BatList.map e_val vs) @ acc
-           | _ -> e :: acc)
-        | _ -> e :: acc) es []
+    (* Dummy exp which is only used as an argument to wrap *)
+    let wrapper = aexp (etuple [], Some (flatten_ty (oget e.ety)), e.espan) in
+    (* Extract the elements of e, then call cont to move on to the next e.
+       Once we have all of them we'll put them together into one big tuple exp *)
+    let curry_elts e (cont : exp list -> exp) =
+      match e.e with
+      | ETuple es -> cont es
+      | EVal v ->
+        (match v.v with
+         | VTuple vs -> cont (BatList.map e_val vs)
+         | _ -> cont [e])
+      | _ ->
+        match oget e.ety with
+        | TTuple tys ->
+          (* Tuple type, but not directly a tuple expression. The only way to extract
+             its elements is via a match expression. *)
+          let freshvars = List.map (fun ty -> ty, Var.fresh "TupleFlattenVar") tys in
+          let freshvarexps = List.map (fun (ty, v) -> aexp (evar v, Some ty, e.espan)) freshvars in
+          let pat = PTuple (List.map (fun (_, v) -> PVar v) freshvars) in
+          let body = cont freshvarexps in
+          ematch e (addBranch pat body emptyBranch) |> wrap wrapper
+        | _ -> cont [e]
     in
-    aexp (etuple es', Some (flatten_ty (oget e.ety)), e.espan)
+    let rec build_exp lst acc =
+      match lst with
+      | [] -> etuple (List.rev acc) |> wrap wrapper
+      | hd::tl -> curry_elts hd (fun es -> build_exp tl (List.rev_append es acc))
+    in
+    build_exp es [] |> wrap wrapper
   | ESome e1 ->
     aexp (esome (flatten_exp e1), Some (flatten_ty (oget e.ety)), Span.default)
   | EMatch (e1, bs) ->
