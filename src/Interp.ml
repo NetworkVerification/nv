@@ -310,6 +310,74 @@ let simplify_or v1 e2 =
   | VBool false -> e2
   | _ -> failwith "illegal value to boolean"
 
+let rec simplify_tget size lo hi e =
+  match e.e with
+  | ETuple es ->
+    if lo = hi then List.nth es lo
+    else etuple (es |> BatList.drop lo |> BatList.take (hi - lo + 1))
+  | EMatch (e1, branches) ->
+    (* Push the TGet into the branches *)
+    let new_branches =
+      mapBranches (fun (p, body) -> p, simplify_tget size lo hi body) branches
+    in
+    ematch e1 new_branches
+  | _ ->
+    (* If all else fails, write a match statement *)
+    let tys = match e.ety with | Some (TTuple lst) -> lst | _ -> failwith "impossible" in
+    let get_ty =
+      if lo = hi then List.nth tys lo
+      else TTuple (tys |> BatList.drop lo |> BatList.take (hi - lo + 1))
+    in
+
+    let freshvars = List.map (fun ty -> ty, Var.fresh "TGetVar") tys in
+    let pat =
+      PTuple (
+        List.mapi
+          (fun i (_, v) -> if lo <= i && i <= hi then PVar v else PWild)
+          freshvars)
+    in
+
+    let get_exps =
+      freshvars
+      |> BatList.drop lo |> BatList.take (hi - lo + 1)
+      |> List.map (fun (ty, v) -> aexp (evar v, Some ty, e.espan))
+    in
+    let branch_body =
+      if lo = hi then List.hd get_exps
+      else aexp (etuple get_exps, Some get_ty, e.espan)
+    in
+
+    ematch e (addBranch pat branch_body emptyBranch)
+;;
+
+let simplify_tset size lo hi tup v =
+  (* If the expression is an actual tuple expression, we don't need a match
+     to unpack its elements. This function computes an expression list corresponding
+     the elements of exp (using a match only if needed) and calls cont on it. *)
+  let curry_elts exp (cont : exp list -> exp) =
+    match exp.e with
+    | ETuple es -> cont es
+    | _ ->
+      match oget exp.ety with
+      | TTuple tys ->
+        let freshvars = List.map (fun ty -> ty, Var.fresh "TSetVar") tys in
+        let freshvarexps = List.map (fun (ty, v) -> aexp (evar v, Some ty, exp.espan)) freshvars in
+        let pat = PTuple (List.map (fun (_, v) -> PVar v) freshvars) in
+        ematch exp (addBranch pat (cont freshvarexps) emptyBranch)
+      | _ -> failwith "Bad TSet"
+  in
+  let cont tup_es v_es =
+    let hd, tl =
+      let hd, rest = BatList.takedrop lo tup_es in
+      hd, BatList.drop (lo - hi + 1) rest
+    in
+    etuple (hd @ v_es @ tl) |> wrap tup
+  in
+  curry_elts tup
+    (fun tup_es ->
+       if lo = hi then cont tup_es [v]
+       else curry_elts v (cont tup_es))
+
 let simplify_exps op pes =
   match op with
   | And ->
@@ -344,29 +412,14 @@ let simplify_exps op pes =
   | TGet (size, lo, hi) ->
     begin
       match pes with
-      | [{e= ETuple lst}] ->
-        assert (List.length lst = size) ; (* Sanity check *)
-        if lo = hi then List.nth lst lo
-        else etuple (lst |> BatList.drop lo |> BatList.take (hi - lo + 1))
-      | _ -> eop op pes
+      | [e] -> simplify_tget size lo hi e
+      | _ -> failwith "Bad TGet"
     end
   | TSet (size, lo, hi) ->
     begin
       match pes with
-      | [{e= ETuple lst}; v] ->
-        assert (List.length lst = size) ; (* Sanity check *)
-        if lo = hi then
-          etuple @@ BatList.modify_at lo (fun _ -> v) lst
-        else
-          let hd, rest = BatList.takedrop lo lst in
-          let _, tl = BatList.takedrop (hi - lo + 1) rest in
-          begin
-            match v.e with
-            | ETuple mid ->
-              etuple (hd @ mid @ tl)
-            | _ -> eop op pes
-          end
-      | _ -> eop op pes
+      | [e1; e2] -> simplify_tset size lo hi e1 e2
+      | _ -> failwith "Bad TSet"
     end
   | _ -> eop op pes
 

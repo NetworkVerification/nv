@@ -187,7 +187,7 @@ let rec flatten_exp e : exp =
           eop (TSet (size, lo, hi)) (BatList.map flatten_exp es)
         in
         aexp (new_exp, Some (flatten_ty (oget e.ety)), e.espan)
-      | _ -> failwith "TODO: implement tupple flattening for more map operations")
+      | _ -> failwith "TODO: implement tuple flattening for more map operations")
   | ERecord _ | EProject _ -> failwith "Record expression in flattening"
 
 and flatten_branches bs ty =

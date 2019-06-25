@@ -242,42 +242,8 @@ struct
           let ze2 = encode_exp_z3 descr env e2 in
           mk_leq ze1.t ze2.t |>
           mk_term ~tloc:e.espan
-        | TGet (size, lo, hi), [e1] ->
-          if lo <> hi then failwith "TGet should only have a range in unboxed encoding";
-          let proj, _ =
-            List.nth
-              (compute_decl env (oget e1.ety)
-               |> oget
-               |> get_constructors
-               |> List.hd
-               |> get_projections)
-              lo
-          in
-          let ze1 = encode_exp_z3 descr env e1 in
-          mk_app (mk_var proj) [ze1.t]
-          |> mk_term ~tloc:e.espan
-        | TSet (size, lo, hi), [e1; e2] ->
-          (* TODO: It would probably be better to unroll TSet to a match statement
-             before we do the unboxed SMT encoding, but I'm not sure where that fits
-             in our pipeline. This encoding duplicates the tuple expression once for
-             each projection; however, that's _probably_ fine, since if the expression
-             were anything complicated it probably would have been partial-evaluated
-             away. *)
-          if lo <> hi then failwith "TSet should only have a range in unboxed encoding";
-          let constr =
-            (compute_decl env (oget e1.ety)
-             |> oget
-             |> get_constructors
-             |> List.hd)
-          in
-          let ze1 = encode_exp_z3 descr env e1 in
-          let ze2 = encode_exp_z3 descr env e2 in
-          let elts =
-            List.map (fun (proj, _) -> mk_app (mk_var proj) [ze1.t]) constr.constr_args
-          in
-          let elts = BatList.modify_at lo (fun _ -> ze2.t) elts in
-          mk_app (mk_constructor constr.constr_name (ty_to_sort (oget e1.ety))) elts
-          |> mk_term ~tloc:e.espan
+        | TGet _, _
+        | TSet _, _ -> failwith "TGet and TSet should be partially evaluated away"
         | AtMost _, [e1;e2;e3] -> failwith "not bothering with boxed version for now"
         | MCreate, [e1] ->
           failwith "not implemented"

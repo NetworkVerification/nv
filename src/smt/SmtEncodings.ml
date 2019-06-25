@@ -159,6 +159,7 @@ struct
                       Some Typing.edge_ty, Span.default)] in
          (* Printf.printf "etrans:%s\n" (Printing.exp_to_string etrans); *)
          let etrans_uv = Interp.interp_partial_fun etrans edge in
+         (* Printf.printf "etrans_uv:%s\n" (Printing.exp_to_string etrans_uv); *)
          let trans, x =
            encode_z3_trans
              (Printf.sprintf "trans-%d-%d" i j)

@@ -79,6 +79,7 @@ let run_smt_classic file cfg info (net : Syntax.network) fs =
       begin
         smt_config.unboxing <- true;
         let net, f1 = time_profile "Unbox options" (fun () -> UnboxOptions.unbox_net net) in
+        print_endline @@ Printing.exp_to_string net.trans;
         let net, f2 =
           time_profile "Flattening Tuples" (fun () -> TupleFlatten.flatten_net net)
         in
@@ -86,7 +87,6 @@ let run_smt_classic file cfg info (net : Syntax.network) fs =
       end
     else net, fs
   in
-  print_endline @@ Printing.network_to_string net;
 
   let net, f = Renaming.alpha_convert_net net in (*TODO: why are we renaming here?*)
   let fs = f :: fs in
@@ -298,9 +298,10 @@ let parse_input (args : string array)
       let decls, f = (* unrolling maps *)
         time_profile "Map unrolling" (fun () -> MapUnrolling.unroll info decls)
       in
-      (*TODO: Inline again after unrolling, is this necessary? *)
+      (* Inline again after unrolling. Could probably optimize this away during unrolling *)
       let decls = time_profile "Inlining" (fun () -> Inline.inline_declarations decls) in
-      (Typing.infer_declarations info decls, f :: fs) (* TODO: is type inf necessary here?*)
+      (* (Typing.infer_declarations info decls, f :: fs) (* TODO: is type inf necessary here?*) *)
+      (decls, f :: fs)
     else decls, fs
   in
   let net = Slicing.createNetwork decls in (* Create something of type network *)

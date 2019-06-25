@@ -501,7 +501,7 @@ let rec infer_exp i info env (e: exp) : exp =
            else
              unify info e vty (TTuple (List.drop lo elt_tyvars |> List.take (hi - lo + 1)))
           );
-          texp (eop o [e1], tty, e.espan)
+          texp (eop o [e1;e2], tty, e.espan)
         | MGet, _ | MSet, _ | MCreate, _ | MMap, _ | MFoldNode, _ | MFoldEdge, _
         | TGet _, _ | TSet _, _ ->
           Console.error_position info e.espan
