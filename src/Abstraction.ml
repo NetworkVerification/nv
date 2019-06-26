@@ -218,7 +218,7 @@ module BuildAbstractNetwork =
       (* code that implements check for a failed edge *)
       let failCheck fvar body =
         aexp(eif (aexp(evar fvar, Some TBool, Span.default))
-                 (Syntax.default_exp_value attrTy)
+                 (Generators.default_value_exp attrTy)
                  body, Some attrTy, Span.default)in
 
       (* inserting that code in the body of the transfer function *)
@@ -322,7 +322,7 @@ module BuildAbstractNetwork =
       let vinit = (Hashtbl.find initMap d) in
       (* This is the default initial value for all other nodes.
      Assuming default_value computes the value we want..*)
-      let default_attr = default_exp_value attrTy in
+      let default_attr = Generators.default_value_exp attrTy in
       (* compute the branches of the initial expression *)
       let branches =
         VertexSet.fold (fun u acc ->

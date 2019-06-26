@@ -44,7 +44,7 @@ let rec unbox_val v =
     (match v.vty with
      | Some (TOption t) ->
        aexp (etuple [(vbool false |> exp_of_value);
-                     (default_exp_value (Typing.canonicalize_type @@ unbox_ty t))],
+                     (Generators.default_value_exp (Typing.canonicalize_type @@ unbox_ty t))],
              Some (unbox_ty (TOption t)), v.vspan)
      | _ -> failwith "expected option type")
   | VOption (Some v1) ->
