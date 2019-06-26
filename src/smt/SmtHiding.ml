@@ -6,9 +6,7 @@ open Solution
 open SolverUtil
 open Profile
 open SmtLang
-open SmtExprEncodings
 open SmtUtils
-open SmtEncodings
 open SmtOptimizations
 open SmtModel
 open Smt
@@ -454,7 +452,7 @@ let rec refineModel info verbose query partial_chan full_chan ask_for_nv_model p
 let solve_hiding info query partial_chan ~full_chan ?(params=[]) ?(starting_vars=[]) net =
   let module ExprEnc = (val expr_encoding smt_config) in
   let module Enc =
-    (val (module ClassicEncoding(ExprEnc) : ClassicEncodingSig))
+    (val (module SmtClassicEncoding.ClassicEncoding(ExprEnc) : SmtClassicEncoding.ClassicEncodingSig))
     (*ignoring FuncEnc for now*)
   in
   (* compute the encoding of the network *)

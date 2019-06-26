@@ -32,7 +32,7 @@ let partialEvalOverNodes (n : AdjGraph.Vertex.t) (e: Syntax.exp) =
   let tbl = Hashtbl.create n in
   AdjGraph.fold_vertices
     (fun u _ ->
-        let initu = Interp.interp_partial (Syntax.apps e [e_val (vnode u)]) in
+        let initu = InterpPartial.interp_partial (Syntax.apps e [e_val (vnode u)]) in
         (* Printf.printf "exp1: %s\n" (Printing.exp_to_string initu); *)
       Hashtbl.add tbl u initu) n ();
   tbl
@@ -40,7 +40,7 @@ let partialEvalOverNodes (n : AdjGraph.Vertex.t) (e: Syntax.exp) =
 let partialEvalOverEdges (edges : AdjGraph.Edge.t list) (e: Syntax.exp) =
   let tbl = Hashtbl.create (BatList.length edges) in
   BatList.iter (fun edge ->
-      let ptrans = Interp.interp_partial_fun e [vedge edge] in
+      let ptrans = InterpPartial.interp_partial_fun e [vedge edge] in
       Hashtbl.add tbl edge ptrans) edges;
   tbl
 

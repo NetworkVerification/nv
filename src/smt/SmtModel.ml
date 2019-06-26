@@ -3,7 +3,6 @@ open Syntax
 open Solution
 open SmtLang
 open SmtUtils
-open SmtExprEncodings
 open SolverUtil
 
 let prefix_if_needed varname =
@@ -199,9 +198,9 @@ let refineModelMinimizeFailures (model: Solution.t) info query chan
        in
        let new_req =
          aexp (eop (AtMost n) [e1; arg2;e3], Some TBool, Span.default) in
-       let zes = Unboxed.encode_exp_z3 "" env new_req in
+       let zes = SmtUnboxed.Unboxed.encode_exp_z3 "" env new_req in
        let zes_smt =
-         Unboxed.(to_list (lift1 (fun ze -> mk_assert ze |> mk_command) zes))
+         SmtUnboxed.Unboxed.(to_list (lift1 (fun ze -> mk_assert ze |> mk_command) zes))
        in
        Some (commands_to_smt smt_config.verbose info zes_smt)
      | _ -> failwith "expected a tuple")

@@ -233,8 +233,9 @@ and flatten_branches bs ty =
        | _ -> failwith "expected tuple type")
     | PVar x ->
       (match ty with
-       | TTuple ts ->
-         (match flatten_ty (TTuple ts) with
+       | TEdge
+       | TTuple _ ->
+         (match flatten_ty ty with
           | TTuple ts ->
             let ps = BatList.mapi (fun i _ -> PVar (proj_var i x)) ts in
             PTuple ps

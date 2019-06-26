@@ -80,7 +80,7 @@ let buildFailTrans
   (* code that implements check for a failed edge *)
   let failCheck fvar body =
     aexp(eif (aexp(evar fvar, Some TBool, Span.default))
-             (Syntax.default_exp_value attrTy)
+             (Generators.default_value_exp attrTy)
              body, Some attrTy, Span.default)in
 
   (* inserting that code in the body of the transfer function *)

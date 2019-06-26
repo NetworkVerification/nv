@@ -52,6 +52,7 @@ type op =
   | MMerge
   | MFoldNode
   | MFoldEdge
+[@@deriving show]
 
 type pattern =
   | PWild
@@ -219,6 +220,8 @@ val deconstructFun: exp -> func
 
 val exp_to_pattern: exp -> pattern
 
+val empty_env: env
+
 (* Utilities *)
 
 val arity : op -> int
@@ -260,6 +263,8 @@ val lam : var -> exp -> exp
 val is_value : exp -> bool
 
 val to_value : exp -> value
+
+val update_value : env -> Var.t -> value -> env
 
 val oget : 'a option -> 'a
 
@@ -318,21 +323,11 @@ val compare_exps : exp -> exp -> int
    Typing.equiv_tys instead *)
 val equal_tys : ty -> ty -> bool
 
-val show_exp : exp -> string
-
 val get_inner_type : ty -> ty
 
 val free : Var.t BatSet.PSet.t -> exp -> Var.t BatSet.PSet.t
 
 val free_dead_vars : exp -> exp
-
-val show_exp : show_meta:bool -> exp -> string
-
-val show_value : show_meta:bool -> value -> string
-
-val show_span: Span.t -> string
-
-val show_ty: ty -> string
 
 (** [get_ty_from_tyexp t] @return the type wrapped by [Ty] or the type
     of the expression wrapped by [Exp]. Fails if the expression has no
@@ -344,5 +339,3 @@ val bool_of_val: value -> bool option
 val proj_var: int -> var -> var
 
 val unproj_var: var -> (int * var)
-
-val default_exp_value: ty -> exp

@@ -24,7 +24,7 @@ let rec ty_to_size ty =
   | TNode -> ty_to_size (TInt 32) (* Encode as int *)
   | TEdge -> ty_to_size (TTuple [TNode; TNode]) (* Encode as node pair *)
   | TArrow _ | TMap _ | TVar _ | QVar _ ->
-    failwith ("internal error (ty_to_size): " ^ (show_ty ty))
+    failwith ("internal error (ty_to_size): " ^ (PrintingRaw.show_ty ty))
 
 let tbl =
   Mtbdd.make_table

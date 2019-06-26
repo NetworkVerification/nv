@@ -1,6 +1,5 @@
 open Syntax
 open SmtUtils
-open SmtExprEncodings
 
 let node_exp (u: Syntax.node) : Syntax.exp =
   aexp(e_val (vnode u), Some Typing.node_ty, Span.default)
@@ -9,7 +8,7 @@ let edge_exp (u: Syntax.node) (v: Syntax.node) : Syntax.exp =
   aexp(e_val (vtuple [vnode u; vnode v]), Some Typing.edge_ty, Span.default)
 
 let init_exp einit u =
-  Interp.Full.interp_partial_fun einit [node_exp u]
+  InterpPartialFull.interp_partial_fun einit [node_exp u]
 
 (* Reduces the transfer function, maybe a full reduction is not
      necessary at this point, experiment to see if just reducing based
@@ -58,7 +57,7 @@ let network_to_srp net =
                        merge_exp net.merge u m accm)
                      (init_exp net.init u) messages
         in
-        let best_eval = Interp.Full.interp_partial best in
+        let best_eval = InterpPartialFull.interp_partial best in
         (* Printf.printf "merge after interp:\n%s\n" (Printing.exp_to_string best_eval); *)
         AdjGraph.VertexMap.add u best_eval acc)
       (AdjGraph.num_vertices net.graph) AdjGraph.VertexMap.empty

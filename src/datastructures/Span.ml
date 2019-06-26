@@ -7,3 +7,6 @@ let extend (x: t) (y: t) : t =
   {x with start= s; finish= f}
 
 let default = {fname = ""; start= -1; finish= -1}
+
+let show_span (span: t) =
+  Printf.sprintf "(%d,%d)" span.start span.finish
