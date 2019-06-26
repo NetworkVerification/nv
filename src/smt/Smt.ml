@@ -6,9 +6,8 @@ open Solution
 open SolverUtil
 open Profile
 open SmtLang
-open SmtExprEncodings
 open SmtUtils
-open SmtEncodings
+open SmtEncodingSigs
 open SmtOptimizations
 open SmtModel
 
@@ -63,8 +62,8 @@ let printQuery (chan: out_channel Lazy.t) (msg: string) =
 
 let expr_encoding smt_config =
   match smt_config.unboxing with
-  | true -> (module Unboxed : ExprEncoding)
-  | false -> (module Boxed : ExprEncoding)
+  | true -> (module SmtUnboxed.Unboxed : ExprEncoding)
+  | false -> (module SmtBoxed.Boxed : ExprEncoding)
 
 (* Asks the SMT solver to return a model and translates it to NV lang *)
 let ask_for_model query chan info env solver renaming nodes eassert =
@@ -180,7 +179,7 @@ let solve info query chan params net_or_srp nodes eassert requires =
 let solveClassic info query chan ?(params=[]) net =
   let module ExprEnc = (val expr_encoding smt_config) in
   let module Enc =
-    (val (module ClassicEncoding(ExprEnc) : ClassicEncodingSig))
+    (val (module SmtClassicEncoding.ClassicEncoding(ExprEnc) : SmtClassicEncoding.ClassicEncodingSig))
   in
   solve info query chan params (fun () -> Enc.encode_z3 net)
     (AdjGraph.num_vertices net.graph) net.assertion net.requires
@@ -188,7 +187,7 @@ let solveClassic info query chan ?(params=[]) net =
 let solveFunc info query chan ?(params=[]) srp =
   let module ExprEnc = (val expr_encoding smt_config) in
   let module Enc =
-    (val (module FunctionalEncoding(ExprEnc) : FunctionalEncodingSig))
+    (val (module SmtFunctionalEncoding.FunctionalEncoding(ExprEnc) : SmtFunctionalEncoding.FunctionalEncodingSig))
   in
   solve info query chan params (fun () -> Enc.encode_z3 srp)
     (AdjGraph.num_vertices srp.srp_graph) srp.srp_assertion srp.srp_requires
@@ -196,7 +195,7 @@ let solveFunc info query chan ?(params=[]) srp =
 (** For quickcheck smart value generation *)
 let symvar_assign info (net: Syntax.network) : value VarMap.t option =
   let module ExprEnc = (val expr_encoding smt_config) in
-  let module Enc = (val (module ClassicEncoding(ExprEnc) : Encoding)) in
+  let module Enc = (val (module SmtClassicEncoding.ClassicEncoding(ExprEnc) : Encoding)) in
   let env = ExprEnc.init_solver net.symbolics ~labels:[] in
   let requires = net.requires in
   Enc.add_symbolic_constraints env requires env.symbolics;

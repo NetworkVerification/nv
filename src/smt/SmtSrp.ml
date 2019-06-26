@@ -1,6 +1,5 @@
 open Syntax
 open SmtUtils
-open SmtExprEncodings
 
 let node_exp (u: Syntax.node) : Syntax.exp =
   aexp(e_val (vnode u), Some Typing.node_ty, Span.default)

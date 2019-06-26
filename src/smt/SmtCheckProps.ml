@@ -1,10 +1,10 @@
 open Syntax
 open SolverUtil
 open SmtLang
-open SmtExprEncodings
 open SmtUtils
 open Slicing
 open Smt
+module Boxed = SmtBoxed.Boxed
 
 let encode_z3_merge str env e =
   match e.e with
