@@ -1,3 +1,5 @@
+include "utils.nv"
+
 type attribute = option[int]
 
 let nodes = 4
@@ -16,25 +18,12 @@ let bool2int b = if b then 1 else 0
 
 require (foldEdges (fun e b acc -> acc + (bool2int b)) fail 0) <= 2
 
-let mapo f o =
-  match o with
-  | None -> None
-  | Some x -> Some (f x)
-
-let mapbetter f o1 o2 =
-  match (o1, o2) with
-  | (None, x) -> x
-  | (x , None) -> x
-  | (Some x, Some y) -> Some (f x y)
-
 let merge node x y =
   mapbetter (fun x y -> if x < y then x else y) x y
 
 let edge_failed edge =
-  match edge with
-  | a~b ->
   let flipped =
-    match toEdge b a with
+    match flipEdge edge with
     | Some e -> e
     | None -> 0~1 (* Impossible *)
   in

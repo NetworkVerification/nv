@@ -6,6 +6,10 @@ let mapo f o =
 let mapbetter f o1 o2 =
   match (o1, o2) with
   | (None, None) -> None
-  | (None, Some x2) -> Some x2
-  | (Some x1, None) -> Some x1
-  | (Some x1, Some x2) -> Some (f x1 x2)
+  | (None, x) -> x
+  | (x, None) -> x
+  | (Some x, Some y) -> Some (f x y)
+
+let flipEdge e =
+  match e with
+  | a~b -> toEdge b a
