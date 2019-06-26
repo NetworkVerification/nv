@@ -1,6 +1,6 @@
 open Console
 
-let read lexbuf =
+let read ?(filename : string option = None) lexbuf =
   let get_info () =
     let curr = lexbuf.Lexing.lex_curr_p in
     let line = curr.Lexing.pos_lnum in
@@ -8,13 +8,18 @@ let read lexbuf =
     let tok = Lexing.lexeme lexbuf in
     (tok, line, cnum)
   in
+  let err_header =
+    match filename with
+    | None -> "[Parser]"
+    | Some s -> Printf.sprintf "[Parser] %s:" s
+  in
   try Parser.prog Lexer.token lexbuf with
-  | Failure x -> Console.error (Printf.sprintf "[Parser] %s" x)
-  | End_of_file -> Console.error "[Parser] end of file in comment"
+  | Failure x -> Console.error (Printf.sprintf "%s %s" err_header x)
+  | End_of_file -> Console.error (Printf.sprintf "%s end of file in comment" err_header)
   | _ ->
     let tok, line, cnum = get_info () in
     let msg =
-      Printf.sprintf "[Parser] token: %s, line: %s, char: %s" tok
+      Printf.sprintf "%s token: %s, line: %s, char: %s" err_header tok
         (string_of_int line) (string_of_int cnum)
     in
     Console.error msg
@@ -27,7 +32,7 @@ let read_from_str str = Lexing.from_string str |> read
 
 let read_from_file fname =
   let cin = open_in fname in
-  let res = read (Lexing.from_channel cin) in
+  let res = read ~filename:(Some fname) (Lexing.from_channel cin) in
   close_in cin ; res
 
 (* Make dest_fname relative to the current directory (or absolute),

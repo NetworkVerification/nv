@@ -94,9 +94,9 @@ let rec unroll_get_or_set
       |> List.fold_left
         (fun acc (p,x) -> addBranch p x acc) emptyBranch
     in
-    match k.ety with
-    | Some (TNode)
-    | Some (TEdge) ->
+    match canonicalize_type (oget k.ety) with
+    | TNode
+    | TEdge ->
       (* We know all possible node and edge values in advance, so just
          match the key with each of them *)
       ematch k const_branches
@@ -110,7 +110,7 @@ let rec unroll_get_or_set
             | Some i -> v,i
             | None -> failwith @@
               "Encountered non-constant, non-symbolic variable key whose type is not TNode or TEdge: " ^
-              Printing.exp_to_string k
+              Printing.exp_to_string k ^ ", type: " ^ Printing.ty_to_string (oget k.ety)
           end
         | _ -> failwith @@
           "Encountered non-constant, non-variable key whose type is not TNode or TEdge: " ^

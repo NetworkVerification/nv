@@ -24,7 +24,7 @@ let width = "u"num
 let tid = ['\'']['a'-'z' 'A'-'Z']['a'-'z' 'A'-'Z' '_' '0'-'9']*
 let node = num"n"
 let wspace = [' ' '\t']
-let filename = "\""(id|['\\' '/' '.'])+"\""
+let filename = "\""(['a'-'z' 'A'-'Z' '0'-'9' '_' '\\' '/' '.' '-'])+"\""
 
 rule token = parse
   | "include" wspace* filename {token lexbuf} (* Include directives are processed separately *)

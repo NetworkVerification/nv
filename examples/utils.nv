@@ -1,0 +1,11 @@
+let mapo f o =
+  match o with
+  | None -> None
+  | Some x -> Some (f x)
+
+let mapbetter f o1 o2 =
+  match (o1, o2) with
+  | (None, None) -> None
+  | (None, Some x2) -> Some x2
+  | (Some x1, None) -> Some x1
+  | (Some x1, Some x2) -> Some (f x1 x2)

@@ -1,6 +1,6 @@
 open Syntax
 
-val read : Lexing.lexbuf -> declarations
+val read : ?filename:string option -> Lexing.lexbuf -> declarations
 
 val read_from_in : in_channel -> declarations
 
