@@ -151,8 +151,7 @@ let get_attribute v s =
 let simulate_step {graph= g; trans; merge} s x =
   let do_neighbor initial_attribute (s, todo) n =
     let neighbor = vnode n in
-    (* let origin = vnode x in *)
-    let edge = vedge (n, x) in
+    let edge = vedge (x, n) in
     let n_incoming_attribute =
       Interp.interp_closure trans [edge; initial_attribute]
     in
