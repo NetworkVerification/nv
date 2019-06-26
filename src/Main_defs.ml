@@ -37,9 +37,9 @@ let smt_query_file =
 
 let partialEvalNet net =
   {net with
-   init = Interp.interp_partial_opt net.init;
-   trans = Interp.interp_partial_opt net.trans;
-   merge = Interp.interp_partial_opt net.merge
+   init = InterpPartial.interp_partial_opt net.init;
+   trans = InterpPartial.interp_partial_opt net.trans;
+   merge = InterpPartial.interp_partial_opt net.merge
   }
 
 let run_smt_func file cfg info net fs =

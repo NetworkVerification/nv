@@ -124,7 +124,7 @@ struct
     (* map each node to the init result variable *)
     let init_map = ref AdjGraph.VertexMap.empty in
     for i = 0 to nodes - 1 do
-      let einit_i = Interp.interp_partial_fun einit [vnode i] in
+      let einit_i = InterpPartial.interp_partial_fun einit [vnode i] in
       (* Printf.printf "%s\n" (Printing.exp_to_string einit); *)
       let init =
         encode_z3_init (Printf.sprintf "init-%d" i) env einit_i
@@ -158,7 +158,7 @@ struct
              [avalue (vedge (i, j),
                       Some Typing.edge_ty, Span.default)] in
          (* Printf.printf "etrans:%s\n" (Printing.exp_to_string etrans); *)
-         let etrans_uv = Interp.interp_partial_fun etrans edge in
+         let etrans_uv = InterpPartial.interp_partial_fun etrans edge in
          let trans, x =
            encode_z3_trans
              (Printf.sprintf "trans-%d-%d" i j)
@@ -177,7 +177,7 @@ struct
         with Not_found -> []
       in
       let node = avalue (vnode i, Some Typing.node_ty, Span.default) in
-      let emerge_i = Interp.interp_partial_fun emerge [node] in
+      let emerge_i = InterpPartial.interp_partial_fun emerge [node] in
       let idx = ref 0 in
       let merged =
         BatList.fold_left
@@ -223,7 +223,7 @@ struct
             AdjGraph.VertexMap.find i !labelling
           in
           let node = avalue (vnode i, Some Typing.node_ty, Span.default) in
-          let eassert_i = Interp.interp_partial_fun eassert [node] in
+          let eassert_i = InterpPartial.interp_partial_fun eassert [node] in
           let result, x =
             encode_z3_assert (assert_var i) env i eassert_i
           in
@@ -313,7 +313,7 @@ struct
         let merged =
           if smt_config.unboxing then
             begin
-              let merged = Interp.Full.interp_partial merged in
+              let merged = InterpPartialFull.interp_partial merged in
               (* Printf.printf "merge after interp:\n%s\n" (Printing.exp_to_string merged);
                * failwith "merged"; *)
               merged
@@ -338,7 +338,7 @@ struct
             AdjGraph.VertexMap.find i smt_labels
           in
           let node = avalue (vint (Integer.of_int i), Some Typing.node_ty, Span.default) in
-          let eassert_i = Interp.interp_partial_fun eassert [node] in
+          let eassert_i = InterpPartial.interp_partial_fun eassert [node] in
           let result, x =
             encode_z3_assert (assert_var i) env (Integer.of_int i) eassert_i
           in

@@ -140,7 +140,7 @@ let partialEvalTrans (graph : AdjGraph.t)
   let es = AdjGraph.edges graph in
   let tbl = Hashtbl.create (BatList.length es) in
   BatList.iter (fun e ->
-      let ptrans = Interp.interp_partial_fun trans [vedge e] in
+      let ptrans = InterpPartial.interp_partial_fun trans [vedge e] in
       Hashtbl.add tbl e ((Syntax.hash_exp ~hash_meta:false ptrans), ptrans)) es;
   tbl
 
@@ -149,7 +149,7 @@ let partialEvalMerge (graph : AdjGraph.t)
   let ns = AdjGraph.get_vertices graph in
   let tbl = Hashtbl.create (VertexSet.cardinal ns) in
   VertexSet.iter (fun v ->
-      let pmerge = Interp.interp_partial_fun merge [vnode v] in
+      let pmerge = InterpPartial.interp_partial_fun merge [vnode v] in
       Hashtbl.add tbl v (Syntax.hash_exp ~hash_meta:false pmerge, pmerge)) ns;
   tbl
 

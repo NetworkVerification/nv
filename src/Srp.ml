@@ -62,7 +62,7 @@ exception Require_false
 
 let net_to_srp net ~throw_requires =
   let info =
-    { env= Interp.empty_env
+    { env= empty_env
     ; m= None
     ; t= None
     ; a= None
@@ -87,13 +87,13 @@ let net_to_srp net ~throw_requires =
         | Ty ty -> e_val (default_value ty)
       in
       let v = Interp.interp_exp env e in
-      info.env <- Interp.update_value env x v ;
+      info.env <- update_value env x v ;
       info.syms <- VarMap.add x v info.syms) Slicing.(net.symbolics);
   (* process let definitions *)
   BatList.iter (fun (x, _, e) ->
       let env = info.env in
       let v = Interp.interp_exp env e in
-      info.env <- Interp.update_value env x v) net.defs;
+      info.env <- update_value env x v) net.defs;
   info.init <- get_func net.init;
   info.m <- get_func net.merge;
   info.t <- get_func net.trans;

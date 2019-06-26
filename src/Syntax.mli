@@ -217,6 +217,8 @@ val deconstructFun: exp -> func
 
 val exp_to_pattern: exp -> pattern
 
+val empty_env: env
+
 (* Utilities *)
 
 val arity : op -> int
@@ -258,6 +260,8 @@ val lam : var -> exp -> exp
 val is_value : exp -> bool
 
 val to_value : exp -> value
+
+val update_value : env -> Var.t -> value -> env
 
 val oget : 'a option -> 'a
 

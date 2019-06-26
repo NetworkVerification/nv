@@ -477,6 +477,7 @@ let rec equal_values ~cmp_meta (v1: value) (v2: value) =
 
 and equal_vs ~cmp_meta v1 v2 =
   match (v1, v2) with
+  | VUnit, VUnit -> true
   | VBool b1, VBool b2 -> b1 = b2
   | VNode n1, VNode n2 -> n1 = n2
   | VEdge e1, VEdge e2 -> e1 = e2
@@ -498,7 +499,8 @@ and equal_vs ~cmp_meta v1 v2 =
     && equal_funcs ~cmp_meta f1 f2
   | VRecord map1, VRecord map2 ->
     StringMap.equal (equal_values ~cmp_meta) map1 map2
-  | _, _ -> false
+  | (VUnit | VBool _ | VNode _ | VEdge _ | VInt _ | VMap _
+    | VTuple _ | VOption _ | VClosure _ | VRecord _ ), _ -> false
 
 and equal_lists ~cmp_meta vs1 vs2 =
   match (vs1, vs2) with
@@ -914,6 +916,10 @@ let esome e = exp (ESome e)
 let ematch e bs = exp (EMatch (e, bs))
 
 let ety e ty = exp (ETy (e, ty))
+
+let empty_env = {ty= Env.empty; value= Env.empty}
+
+let update_value env x v = {env with value= Env.update env.value x v}
 
 let deconstructFun exp =
   match exp.e with
