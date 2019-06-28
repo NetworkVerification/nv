@@ -131,13 +131,22 @@ let map_vars_to_commands env : command list StringMap.t =
     match get_vars_in_command com with
     | [] -> map
     | lst ->
+      (* If this is true, then this is *definitely* a "require" clause *)
       if BatList.for_all (fun s -> BatString.starts_with s "symbolic-") lst
+      (* So unhide this clause when we unhide any of the symbolic variables *)
       then List.fold_left (update_map com) map lst
       else
+        (* Otherwise, it's probably a regular assert. Unhide it when we unhide
+           the primary variable *)
         match get_assert_var com with
-        | None -> map
-        | Some s1 ->
+        | Some s1 when not (BatString.starts_with s1 "symbolic-") ->
           update_map com map s1
+        | _ ->
+          (* This is a require clause which involves a non-symbolic variable.
+             This can be caused by defining a new variable inside the require. *)
+          (* Not entirely sure this is the best thing to do, but I think it
+             should at least be conservative *)
+          List.fold_left (update_map com) map lst
   in
   List.fold_left
     add_com
@@ -148,7 +157,9 @@ let map_vars_to_commands env : command list StringMap.t =
 (*
   This data structure represents the current state of a partially hidden network.
   For each variable:
-  The bool represents whether that variable is currently hidden
+  The bools represent whether that variable is currently hidden:
+    The first is true if it has been declared; the second is true if its constraint(s)
+    have been added. The second implies the first.
   The command list is the constraint(s) for that variable
   The constant is the declaration of that variable
 *)
