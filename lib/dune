@@ -1,0 +1,22 @@
+(library
+  (name lib)
+  (libraries
+    oUnit
+    integers
+    ANSITerminal
+    str
+    batteries
+    cudd
+    lru-cache
+    zarith
+    ocamlgraph
+    fileutils)
+  (preprocess
+    (pps ppx_deriving.std ppx_deriving_argparse))
+  (modules_without_implementation partition)
+  ; adjust warnings slightly (see https://dev.to/yawaramin/ocaml-reasonml-best-practice-warnings-and-errors-4mkm)
+  (flags (:standard -w +A-48 -warn-error +A-3-44))
+)
+
+; (dirs :standard \ partition)
+(include_subdirs unqualified)
