@@ -33,3 +33,8 @@ type hypothesis =
 
 (* get the input node's attribute for the specified hypothesis *)
 val hyp_to_opt_att : hypothesis -> t option
+
+(* Graph transformations *)
+val partition_edge : AdjGraph.t -> Interface.t -> AdjGraph.t
+
+val partition_graph : AdjGraph.t -> InterfaceSet.t -> AdjGraph.t
