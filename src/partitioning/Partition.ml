@@ -25,4 +25,4 @@ let hyp_to_opt_att hyp = function
 let partition_edge graph _interface = graph
 
 let partition_graph graph interfaces =
-  Set.iter (fun e -> partition_edge graph e) interfaces
+  Set.fold (fun e g -> partition_edge g e) interfaces graph
