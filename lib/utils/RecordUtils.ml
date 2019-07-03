@@ -31,7 +31,7 @@ let same_labels map1 map2 =
   in
   cmp = 0
 
-let get_type_with_label record_types (ferr : string -> 'a) label =
+let get_type_with_label record_types (ferr : string -> unit) label =
   let has_label map = StringMap.mem label map in
   match BatList.find_opt has_label record_types with
   | None ->
@@ -40,7 +40,7 @@ let get_type_with_label record_types (ferr : string -> 'a) label =
         "Label %s does not appear in any declared record type!"
         label
     in
-    ferr msg; failwith "Bad Label"
+    (ferr msg); failwith "Bad Label"
   | Some map -> map
 ;;
 

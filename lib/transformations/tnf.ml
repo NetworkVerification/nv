@@ -71,7 +71,7 @@ let rec tnf_exp e : exp =
          | Not
          | UAdd _
          | USub _
-         | UEq
+         | Eq
          | ULess _
          | AtMost _
          | MCreate

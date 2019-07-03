@@ -1,6 +1,6 @@
 open Cudd
 open RecordUtils
-open Batteries
+(* open Batteries *)
 
 type node = int
 
@@ -324,7 +324,7 @@ val compare_exps : exp -> exp -> int
 val equal_tys : ty -> ty -> bool
 
 (* never used *)
-val show_exp : exp -> string
+(* val show_exp : exp -> string *)
 
 val get_inner_type : ty -> ty
 

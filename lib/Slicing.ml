@@ -1,6 +1,7 @@
 open Syntax
-open Unsigned
-open BatSet
+(* open Unsigned *)
+(* use open! to hide shadowing warning *)
+open! Batteries
 
 module Prefix =
   struct
@@ -12,9 +13,9 @@ module Prefix =
       else Integer.compare x2 y2
   end
 
-module PrefixSet = BatSet.Make(Prefix)
-module PrefixSetSet = BatSet.Make(PrefixSet)
-module PrefixMap = BatMap.Make(Prefix)
+module PrefixSet = Set.Make(Prefix)
+module PrefixSetSet = Set.Make(PrefixSet)
+module PrefixMap = Map.Make(Prefix)
 
 type network_slice =
   { net : network;

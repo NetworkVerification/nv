@@ -15,6 +15,6 @@ val same_labels : 'a StringMap.t -> 'b StringMap.t -> bool
    error function with an error message *)
 val get_type_with_label :
   'a StringMap.t list ->
-  (string -> 'a) ->
+  (string -> unit) ->
   string ->
   'a StringMap.t

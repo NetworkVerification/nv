@@ -410,7 +410,7 @@ and show_v ~show_meta v =
   | VUnit -> "VUnit"
   | VBool b -> Printf.sprintf "VBool %b" b
   | VInt i -> Printf.sprintf "VInt %s" (Integer.to_string i)
-  | VMap m -> "VMap <opaque>"
+  | VMap _ -> "VMap <opaque>"
   | VTuple vs -> Printf.sprintf "VTuple %s" (show_list (show_value ~show_meta) vs)
   | VOption vo ->
     Printf.sprintf "VOption (%s)" (show_opt (show_value ~show_meta) vo)
@@ -467,7 +467,8 @@ let rec equal_tys ty1 ty2 =
   | _ -> false
 
 let rec equal_values ~cmp_meta (v1: value) (v2: value) =
-  let cfg = Cmdline.get_cfg () in
+  let open Cmdline in
+  let cfg = get_cfg () in
   let b =
     if cfg.hashcons then v1.vtag = v2.vtag
     else equal_vs ~cmp_meta v1.v v2.v
@@ -496,7 +497,7 @@ and equal_vs ~cmp_meta v1 v2 =
   | VClosure (e1, f1), VClosure (e2, f2) ->
     let {ty= ty1; value= value1} = e1 in
     let {ty= ty2; value= value2} = e2 in
-    Env.equal equal_tys ty1 ty1
+    Env.equal equal_tys ty1 ty2
     && Env.equal (equal_values ~cmp_meta) value1 value2
     && equal_funcs ~cmp_meta f1 f2
   | VRecord map1, VRecord map2 ->
@@ -511,7 +512,8 @@ and equal_lists ~cmp_meta vs1 vs2 =
     equal_values ~cmp_meta v1 v2 && equal_lists ~cmp_meta vs1 vs2
 
 and equal_exps ~cmp_meta (e1: exp) (e2: exp) =
-  let cfg = Cmdline.get_cfg () in
+  let open Cmdline in
+  let cfg = get_cfg () in
   let b =
     if cfg.hashcons then e1.etag = e2.etag
     else equal_es ~cmp_meta e1.e e2.e
@@ -641,7 +643,8 @@ let hash_opt h o =
   match o with None -> 1 | Some x -> (19 * h x) + 2
 
 let rec hash_value ~hash_meta v : int =
-  let cfg = Cmdline.get_cfg () in
+  let open Cmdline in
+  let cfg = get_cfg () in
   let m =
     if hash_meta then
       (19 * hash_opt hash_ty v.vty) + hash_span v.vspan
@@ -666,8 +669,8 @@ and hash_v ~hash_meta v =
       match vo with
       | None -> 4
       | Some x -> (19 * hash_value ~hash_meta x) + 4 )
-  | VClosure (e1, f1) ->
-    let {ty= ty1; value= v} = e1 in
+  | VClosure (e1, _f1) ->
+    let {ty= _; value= v} = e1 in
     let vs = Env.to_list v in
     let acc =
       List.fold_left
@@ -689,7 +692,8 @@ and hash_v ~hash_meta v =
   | VEdge (e1, e2) -> (19 * (e1 + 19 * e2)) + 10
 
 and hash_exp ~hash_meta e =
-  let cfg = Cmdline.get_cfg () in
+  let open Cmdline in
+  let cfg = get_cfg () in
   let m =
     if hash_meta then
       (19 * hash_opt hash_ty e.ety) + hash_span e.espan
@@ -851,12 +855,14 @@ let tint_of_size n = TInt n
 let tint_of_value n = TInt (Integer.size n)
 
 let exp e =
-  let cfg = Cmdline.get_cfg () in
+  let open Cmdline in
+  let cfg = get_cfg () in
   if cfg.hashcons then Hashcons.hashcons tbl_e e
   else {e; ety= None; espan= Span.default; etag= 0; ehkey= 0}
 
 let value v =
-  let cfg = Cmdline.get_cfg () in
+  let open Cmdline in
+  let cfg = get_cfg () in
   if cfg.hashcons then Hashcons.hashcons tbl_v v
   else {v; vty= None; vspan= Span.default; vtag= 0; vhkey= 0}
 
@@ -1278,11 +1284,13 @@ let compare_vs = compare_value
 let compare_es = compare_exp
 
 let compare_values v1 v2 =
-  let cfg = Cmdline.get_cfg () in
+  let open Cmdline in
+  let cfg = get_cfg () in
   if cfg.hashcons then v1.vtag - v2.vtag
   else Pervasives.compare v1 v2
 
 let compare_exps e1 e2 =
-  let cfg = Cmdline.get_cfg () in
+  let open Cmdline in
+  let cfg = get_cfg () in
   if cfg.hashcons then e1.etag - e2.etag
   else Pervasives.compare e1 e2

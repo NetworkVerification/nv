@@ -26,7 +26,7 @@ let update_tys env tvs tys =
 
 (* Equality of values *)
 (* ignores type annotations when checking for equality *)
-let rec equal_val v1 v2 =
+let [@warning "-8"] rec equal_val v1 v2 =
   match (v1.v, v2.v) with
   | VBool b1, VBool b2 -> b1 = b2
   | VInt i1, VInt i2 -> Integer.equal i1 i2
@@ -53,7 +53,7 @@ and equal_vals vs1 vs2 =
    no repeated variables in pattern *)
 let rec matches p (v: Syntax.value) env : Syntax.value Env.t option =
   match (p, v.v) with
-  | PWild, v -> Some env
+  | PWild, _ -> Some env
   | PVar x, _ -> Some (Env.update env x v)
   | PUnit, VUnit -> Some env
   | PBool true, VBool true
@@ -178,30 +178,30 @@ and interp_op env ty op es =
          (op_to_string op) (arity op) (List.length es)) ; *)
   let vs = BatList.map (interp_exp env) es in
   match (op, vs) with
-  | And, [{v= VBool b1}; {v= VBool b2}] -> vbool (b1 && b2)
-  | Or, [{v= VBool b1}; {v= VBool b2}] -> vbool (b1 || b2)
-  | Not, [{v= VBool b1}] -> vbool (not b1)
-  | UAdd _, [{v= VInt i1}; {v= VInt i2}] ->
+  | And, [{v= VBool b1; _}; {v= VBool b2; _}] -> vbool (b1 && b2)
+  | Or, [{v= VBool b1; _}; {v= VBool b2; _}] -> vbool (b1 || b2)
+  | Not, [{v= VBool b1; _}] -> vbool (not b1)
+  | UAdd _, [{v= VInt i1; _}; {v= VInt i2; _}] ->
     vint (Integer.add i1 i2)
   | Eq, [v1; v2] ->
     if equal_values ~cmp_meta:false v1 v2 then vbool true
     else vbool false
-  | ULess _, [{v= VInt i1}; {v= VInt i2}] ->
+  | ULess _, [{v= VInt i1; _}; {v= VInt i2; _}] ->
     if Integer.lt i1 i2 then vbool true else vbool false
-  | ULeq _, [{v= VInt i1}; {v= VInt i2}] ->
+  | ULeq _, [{v= VInt i1; _}; {v= VInt i2; _}] ->
     if Integer.leq i1 i2 then vbool true else vbool false
-  | NLess, [{v= VNode n1}; {v= VNode n2}] ->
+  | NLess, [{v= VNode n1; _}; {v= VNode n2; _}] ->
     if n1 < n2 then vbool true else vbool false
-  | NLeq, [{v= VNode n1}; {v= VNode n2}] ->
+  | NLeq, [{v= VNode n1; _}; {v= VNode n2; _}] ->
     if n1 <= n2 then vbool true else vbool false
   | MCreate, [v] -> (
       match get_inner_type ty with
       | TMap (kty, _) -> vmap (BddMap.create ~key_ty:kty v)
       | _ -> failwith "runtime error: missing map key type" )
-  | MGet, [{v= VMap m}; v] -> BddMap.find m v
-  | MSet, [{v= VMap m}; vkey; vval] ->
+  | MGet, [{v= VMap m; _}; v] -> BddMap.find m v
+  | MSet, [{v= VMap m; _}; vkey; vval] ->
     vmap (BddMap.update m vkey vval)
-  | MMap, [{v= VClosure (c_env, f)}; {v= VMap m}] ->
+  | MMap, [{v= VClosure (c_env, f); _}; {v= VMap m; _}] ->
     let seen = BatSet.PSet.singleton ~cmp:Var.compare f.arg in
     let free = Syntax.free seen f.body in
     let env = build_env c_env free in
@@ -210,15 +210,15 @@ and interp_op env ty op es =
          (fun v -> apply c_env f v)
          m)
   | ( MMerge
-    , {v= VClosure (c_env, f)}
-      :: {v= VMap m1} :: {v= VMap m2} :: rest )
+    , {v= VClosure (c_env, f); _}
+      :: {v= VMap m1; _} :: {v= VMap m2; _} :: rest )
     -> (
         let seen = BatSet.PSet.singleton ~cmp:Var.compare f.arg in
         let env = build_env c_env (Syntax.free seen f.body) in
         (* TO DO:  Need to preserve types in VOptions here ? *)
         let f_lifted v1 v2 =
           match apply c_env f v1 with
-          | {v= VClosure (c_env, f)} -> apply c_env f v2
+          | {v= VClosure (c_env, f); _} -> apply c_env f v2
           | _ -> failwith "internal error (interp_op)"
         in
         match rest with
@@ -229,12 +229,13 @@ and interp_op env ty op es =
         | _ -> vmap (BddMap.merge ~op_key:(f.body, env) f_lifted m1 m2)
       )
   | ( MMapFilter
-    , [ {v= VClosure (c_env1, f1)}
-      ; {v= VClosure (c_env2, f2)}
-      ; {v= VMap m} ] ) ->
+      , [ {v= VClosure (_c_env1, f1); _}
+      ; {v= VClosure (c_env2, f2); _}
+      ; {v= VMap m; _} ] ) ->
     let seen = BatSet.PSet.singleton ~cmp:Var.compare f2.arg in
     let env = build_env c_env2 (Syntax.free seen f2.body) in
     let mtbdd =
+      let open BddFunc in
       match ExpMap.find_opt f1.body !bddfunc_cache with
       | None -> (
           let bddf = BddFunc.create_value (oget f1.argty) in
@@ -368,7 +369,7 @@ let rec interp_exp_partial_opt isapp env expEnv e =
            aexp (evar y, e.ety, e.espan))
       | Some v ->
         aexp (e_val v, v.vty, v.vspan))
-  | EVal v -> e
+  | EVal _ -> e
   | EOp (op, es) ->
     aexp (interp_op_partial_opt env expEnv (oget e.ety) op es, e.ety, e.espan)
   | EFun f ->
@@ -433,7 +434,7 @@ let rec interp_exp_partial_opt isapp env expEnv e =
         | Some (penv, e) -> interp_exp_partial_opt false env penv e)
   | ERecord _ | EProject _ -> failwith "Record found during partial interpretation"
 
-and interp_op_partial_opt env expEnv ty op es =
+and interp_op_partial_opt env expEnv _ty op es =
   let pes = BatList.map (interp_exp_partial_opt false env expEnv) es in
   if BatList.exists (fun pe -> not (is_value pe)) pes then
     simplify_logic op pes
@@ -444,21 +445,21 @@ and interp_op_partial_opt env expEnv ty op es =
     begin
       exp_of_value @@
       match (op, BatList.map to_value pes) with
-      | And, [{v= VBool b1}; {v= VBool b2}] -> vbool (b1 && b2)
-      | Or, [{v= VBool b1}; {v= VBool b2}] -> vbool (b1 || b2)
-      | Not, [{v= VBool b1}] -> vbool (not b1)
-      | UAdd _, [{v= VInt i1}; {v= VInt i2}] ->
+      | And, [{v= VBool b1; _}; {v= VBool b2; _}] -> vbool (b1 && b2)
+      | Or, [{v= VBool b1; _}; {v= VBool b2; _}] -> vbool (b1 || b2)
+      | Not, [{v= VBool b1; _}] -> vbool (not b1)
+      | UAdd _, [{v= VInt i1; _}; {v= VInt i2; _}] ->
         vint (Integer.add i1 i2)
       | Eq, [v1; v2] ->
         if equal_values ~cmp_meta:false v1 v2 then vbool true
         else vbool false
-      | ULess _, [{v= VInt i1}; {v= VInt i2}] ->
+      | ULess _, [{v= VInt i1; _}; {v= VInt i2; _}] ->
         if Integer.lt i1 i2 then vbool true else vbool false
-      | ULeq _, [{v= VInt i1}; {v= VInt i2}] ->
+      | ULeq _, [{v= VInt i1; _}; {v= VInt i2; _}] ->
         if Integer.leq i1 i2 then vbool true else vbool false
-      | NLess, [{v= VNode n1}; {v= VNode n2}] ->
+      | NLess, [{v= VNode n1; _}; {v= VNode n2; _}] ->
         if n1 < n2 then vbool true else vbool false
-      | NLeq, [{v= VNode n1}; {v= VNode n2}] ->
+      | NLeq, [{v= VNode n1; _}; {v= VNode n2; _}] ->
         if n1 <= n2 then vbool true else vbool false
       | _, _ ->
         failwith
@@ -475,7 +476,7 @@ let rec interp_exp_partial isapp env e =
         e
       | Some v ->
         aexp (e_val v, v.vty, v.vspan))
-  | EVal v -> e
+  | EVal _ -> e
   | EOp (op, es) ->
     aexp (interp_op_partial env (oget e.ety) op es, e.ety, e.espan)
   | EFun f ->
@@ -533,7 +534,7 @@ let rec interp_exp_partial isapp env e =
 
   | ERecord _ | EProject _ -> failwith "Record found during partial interpretation"
 
-and interp_op_partial env ty op es =
+and interp_op_partial env _ty op es =
   let pes = BatList.map (interp_exp_partial false env) es in
   if BatList.exists (fun pe -> not (is_value pe)) pes then
     simplify_logic op pes
@@ -544,21 +545,21 @@ and interp_op_partial env ty op es =
     begin
       exp_of_value @@
       match (op, BatList.map to_value pes) with
-      | And, [{v= VBool b1}; {v= VBool b2}] -> vbool (b1 && b2)
-      | Or, [{v= VBool b1}; {v= VBool b2}] -> vbool (b1 || b2)
-      | Not, [{v= VBool b1}] -> vbool (not b1)
-      | UAdd _, [{v= VInt i1}; {v= VInt i2}] ->
+      | And, [{v= VBool b1; _}; {v= VBool b2; _}] -> vbool (b1 && b2)
+      | Or, [{v= VBool b1; _}; {v= VBool b2; _}] -> vbool (b1 || b2)
+      | Not, [{v= VBool b1; _}] -> vbool (not b1)
+      | UAdd _, [{v= VInt i1; _}; {v= VInt i2; _}] ->
         vint (Integer.add i1 i2)
       | Eq, [v1; v2] ->
         if equal_values ~cmp_meta:false v1 v2 then vbool true
         else vbool false
-      | ULess _, [{v= VInt i1}; {v= VInt i2}] ->
+      | ULess _, [{v= VInt i1; _}; {v= VInt i2; _}] ->
         if Integer.lt i1 i2 then vbool true else vbool false
-      | ULeq _, [{v= VInt i1}; {v= VInt i2}] ->
+      | ULeq _, [{v= VInt i1; _}; {v= VInt i2; _}] ->
         if Integer.leq i1 i2 then vbool true else vbool false
-      | NLess, [{v= VNode n1}; {v= VNode n2}] ->
+      | NLess, [{v= VNode n1; _}; {v= VNode n2; _}] ->
         if n1 < n2 then vbool true else vbool false
-      | NLeq, [{v= VNode n1}; {v= VNode n2}] ->
+      | NLeq, [{v= VNode n1; _}; {v= VNode n2; _}] ->
         if n1 <= n2 then vbool true else vbool false
       | _, _ ->
         failwith
@@ -698,7 +699,7 @@ struct
   let rec matchExpPat pat pe1 env =
     match pat, pe1.e with
     | PWild, _ -> Match env
-    | PVar x, EVar y ->
+    | PVar x, EVar _ ->
       Match (Env.update env x pe1)
     | PTuple ps, ETuple es ->
       (match ps, es with
@@ -746,10 +747,10 @@ struct
           (env, e)
         | Some e1 ->
           (env, e1))
-      | EVal v -> (env, e)
+      | EVal _ -> (env, e)
       | EOp (op, es) ->
          (env, aexp (interp_op_partial env (oget e.ety) op es, e.ety, e.espan))
-      | EFun f -> (env, e)
+      | EFun _ -> (env, e)
              (* either need to do the partial interpretation here, or return a pair
                 of the efun and the env at this point to be used, sort of like a closure.*)
       | EApp (e1, e2) ->
@@ -804,30 +805,30 @@ struct
       begin
         exp_of_value @@
         match (op, BatList.map to_value pes) with
-        | And, [{v= VBool b1}; {v= VBool b2}] -> vbool (b1 && b2)
-        | Or, [{v= VBool b1}; {v= VBool b2}] -> vbool (b1 || b2)
-        | Not, [{v= VBool b1}] -> vbool (not b1)
-        | UAdd _, [{v= VInt i1}; {v= VInt i2}] ->
+        | And, [{v= VBool b1; _}; {v= VBool b2; _}] -> vbool (b1 && b2)
+        | Or, [{v= VBool b1; _}; {v= VBool b2; _}] -> vbool (b1 || b2)
+        | Not, [{v= VBool b1; _}] -> vbool (not b1)
+        | UAdd _, [{v= VInt i1; _}; {v= VInt i2; _}] ->
           vint (Integer.add i1 i2)
         | Eq, [v1; v2] ->
           if equal_values ~cmp_meta:false v1 v2 then vbool true
           else vbool false
-        | ULess _, [{v= VInt i1}; {v= VInt i2}] ->
+        | ULess _, [{v= VInt i1; _}; {v= VInt i2; _}] ->
           if Integer.lt i1 i2 then vbool true else vbool false
-        | ULeq _, [{v= VInt i1}; {v= VInt i2}] ->
+        | ULeq _, [{v= VInt i1; _}; {v= VInt i2; _}] ->
           if Integer.leq i1 i2 then vbool true else vbool false
-        | NLess, [{v= VNode n1}; {v= VNode n2}] ->
+        | NLess, [{v= VNode n1; _}; {v= VNode n2; _}] ->
           if n1 < n2 then vbool true else vbool false
-        | NLeq, [{v= VNode n1}; {v= VNode n2}] ->
+        | NLeq, [{v= VNode n1; _}; {v= VNode n2; _}] ->
           if n1 <= n2 then vbool true else vbool false
         | MCreate, [v] -> (
             match get_inner_type ty with
             | TMap (kty, _) -> vmap (BddMap.create ~key_ty:kty v)
             | _ -> failwith "runtime error: missing map key type" )
-        | MGet, [{v= VMap m}; v] -> BddMap.find m v
-        | MSet, [{v= VMap m}; vkey; vval] ->
+        | MGet, [{v= VMap m; _}; v] -> BddMap.find m v
+        | MSet, [{v= VMap m; _}; vkey; vval] ->
           vmap (BddMap.update m vkey vval)
-        | MMap, [{v= VClosure (c_env, f)}; {v= VMap m}] ->
+        | MMap, [{v= VClosure (c_env, f); _}; {v= VMap m; _}] ->
           let seen = BatSet.PSet.singleton ~cmp:Var.compare f.arg in
           let free = Syntax.free seen f.body in
           let env = build_env c_env free in
@@ -836,15 +837,15 @@ struct
                (fun v -> apply c_env f v)
                m)
         | ( MMerge
-          , {v= VClosure (c_env, f)}
-            :: {v= VMap m1} :: {v= VMap m2} :: rest )
+          , {v= VClosure (c_env, f); _}
+            :: {v= VMap m1; _} :: {v= VMap m2; _} :: rest )
           -> (
               let seen = BatSet.PSet.singleton ~cmp:Var.compare f.arg in
               let env = build_env c_env (Syntax.free seen f.body) in
               (* TO DO:  Need to preserve types in VOptions here ? *)
               let f_lifted v1 v2 =
                 match apply c_env f v1 with
-                | {v= VClosure (c_env, f)} -> apply c_env f v2
+                | {v= VClosure (c_env, f); _} -> apply c_env f v2
                 | _ -> failwith "internal error (interp_op)"
               in
               match rest with
@@ -855,14 +856,15 @@ struct
               | _ -> vmap (BddMap.merge ~op_key:(f.body, env) f_lifted m1 m2)
             )
         | ( MMapFilter
-          , [ {v= VClosure (c_env1, f1)}
-            ; {v= VClosure (c_env2, f2)}
-            ; {v= VMap m} ] ) ->
+          , [ {v= VClosure (_c_env1, f1); _}
+            ; {v= VClosure (c_env2, f2); _}
+            ; {v= VMap m; _} ] ) ->
           let seen = BatSet.PSet.singleton ~cmp:Var.compare f2.arg in
           let env = build_env c_env2 (Syntax.free seen f2.body) in
           let mtbdd =
             match ExpMap.find_opt f1.body !bddfunc_cache with
             | None -> (
+              let open BddFunc in
                 let bddf = BddFunc.create_value (oget f1.argty) in
                 let env = Env.update Env.empty f1.arg bddf in
                 let bddf = BddFunc.eval env f1.body in
