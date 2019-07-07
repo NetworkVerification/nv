@@ -9,11 +9,11 @@ open Slicing
 
 let rec tnf_exp e : exp =
   match e.e with
-  | ETy (e, ty) -> tnf_exp e
-  | EVal v -> e
-  | EVar x -> e
+  | ETy (e, _ty) -> tnf_exp e
+  | EVal _ -> e
+  | EVar _ -> e
   | EFun f -> efun {f with body = tnf_exp f.body} |> wrap e
-  | EApp (e1, e2) ->
+  | EApp (_e1, _e2) ->
      failwith "ignore this case for now"
   | EIf (e1, e2, e3) ->
      let e1 = tnf_exp e1 in
@@ -66,21 +66,23 @@ let rec tnf_exp e : exp =
             aexp (ematch es1 bs, e.ety, e.espan))
      | EOp (op, es) -> (
        match op with
-       | And
+         | And
          | Or
          | Not
          | UAdd _
          | USub _
          | Eq
          | ULess _
+         | ULeq _
+         | NLess
+         | NLeq
          | AtMost _
          | MCreate
          | MGet
          | MSet
          | MMap
          | MMapFilter
-         | MMerge
-         | ULeq _ ->
+         | MMerge ->
           aexp (eop op (BatList.map tnf_exp es), e.ety, e.espan))
      | ERecord _ | EProject _ -> failwith "Record expression in tnf"
 

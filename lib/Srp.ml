@@ -1,9 +1,9 @@
 open Collections
 open Unsigned
 open Solution
-open Syntax
 open Generators
 open Slicing
+open Syntax
 
 type srp =
   { graph: AdjGraph.t
@@ -21,7 +21,7 @@ exception Simulation_error of string
 
 (* Simulation States *)
 (* Solution Invariant: All valid graph vertices are associated with an attribute initially (and always) *)
-type solution = value AdjGraph.VertexMap.t
+type solution = Syntax.value AdjGraph.VertexMap.t
 
 type queue = AdjGraph.Vertex.t QueueSet.queue
 
@@ -56,7 +56,7 @@ type info =
     mutable es: Syntax.edge list option
   ; (* edges *)
     mutable init: Syntax.closure option (* initial state *)
-  ; mutable syms: value VarMap.t }
+  ; mutable syms: Syntax.value VarMap.t }
 
 exception Require_false
 
@@ -81,6 +81,7 @@ let net_to_srp net ~throw_requires =
   in
   (* process symbolics *)
   BatList.iter (fun (x, ty_exp) ->
+      let open Syntax in
       let env = info.env in
       let e = match ty_exp with
         | Exp e -> e
@@ -113,6 +114,7 @@ let net_to_srp net ~throw_requires =
              "requires condition not satisified by initial state" ) net.requires;
   match info with
   | { env= _
+    ; syms = _
     ; m= Some mf
     ; t= Some tf
     ; a
@@ -126,11 +128,11 @@ let net_to_srp net ~throw_requires =
         ; assertion= a }
       in
       (srp, cl, info.syms)
-  | {m= None} -> Console.error "missing merge function"
-  | {t= None} -> Console.error "missing trans function"
-  | {ns= None} -> Console.error "missing nodes declaration"
-  | {es= None} -> Console.error "missing edges declaration"
-  | {init= None} -> Console.error "missing init declaration"
+  | {m= None; _} -> Console.error "missing merge function"
+  | {t= None; _} -> Console.error "missing trans function"
+  | {ns= None; _} -> Console.error "missing nodes declaration"
+  | {es= None; _} -> Console.error "missing edges declaration"
+  | {init= None; _} -> Console.error "missing init declaration"
 
 let net_to_state net ~throw_requires =
   let srp, init, syms = net_to_srp net ~throw_requires in

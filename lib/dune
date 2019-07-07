@@ -13,10 +13,14 @@
     fileutils)
   (preprocess
     (pps ppx_deriving.std ppx_deriving_argparse))
-  (modules_without_implementation partition)
   ; adjust warnings slightly (see https://dev.to/yawaramin/ocaml-reasonml-best-practice-warnings-and-errors-4mkm)
-  (flags (:standard -w +A-3-6-k-44-48 -warn-error -a))
+  (flags (:standard -w +A-3-4-6-k-44-48 -warn-error -a))
 )
 
-; (dirs :standard \ partition)
 (include_subdirs unqualified)
+
+(menhir
+  (modules Parser))
+
+(ocamllex
+  (modules Lexer))

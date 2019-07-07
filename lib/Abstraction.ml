@@ -21,7 +21,7 @@ module AbstractNodeMap = BatMap.Make(AbstractNode)
 (** Sets of Abstract Node Ids *)
 module AbsIdSet = BatSet.Make(UInts)
 module AbsIdSetMap = BatMap.Make(AbsIdSet)
-module AbsIdSetSet = BatSet.Make(AbsIdSet)
+(* module AbsIdSetSet = BatSet.Make(AbsIdSet) *)
 
 (** transfer hash, abstract id *)
 module TransAbsId =
@@ -48,7 +48,7 @@ module PolicyAbsId =
         TransAbsIdSet.compare x1 x2
       else Pervasives.compare m1 m2
   end
-module PolicyAbsIdSet = BatSet.Make(PolicyAbsId)
+(* module PolicyAbsIdSet = BatSet.Make(PolicyAbsId) *)
 module PolicyAbsIdMap = BatMap.Make(PolicyAbsId)
 
 let groupVerticesByAbsId (umap: (AbsIdSet.t) VertexMap.t) : VertexSetSet.t =
@@ -611,7 +611,7 @@ module FailuresAbstraction =
         if GroupMap.is_empty m then
           if acc = [] then raise Not_found else acc
         else
-          let (k,v), m = GroupMap.pop_min_binding m in
+          let (_,v), m = GroupMap.pop_min_binding m in
           if p v then
             if sz+1 = n then
               (v :: acc)
@@ -657,7 +657,7 @@ module FailuresAbstraction =
           let u, todo' = VertexSet.pop_min todo in
           if u <> d then
             begin
-              let (es, sset, tset) =  min_cut g d u in
+              let (es, _sset, tset) =  min_cut g d u in
               if EdgeSet.cardinal es > k then
                 loop todo' cuts new_todo
               else
@@ -934,7 +934,7 @@ module FailuresAbstraction =
           Not_found -> explored, minimum
       in
       match loop 0 None q with
-      | explored, Some f ->
+      | _explored, Some f ->
          (* Printf.printf "Explored refinements: %d\n" explored; *)
          f
       | _, _ ->
@@ -952,6 +952,7 @@ module FailuresAbstraction =
          splitting. Note that this code works if all edges can fail. *)
       let failures, agraph =
         EdgeMap.fold (fun edge fvar (acc, ag) ->
+            let open! Solution in
             let bv = Collections.VarMap.find fvar sol.symbolics in
             match bv.v with
             | VBool b ->
@@ -977,6 +978,7 @@ module FailuresAbstraction =
       else
         begin
           (* Find the set of unreachable nodes *)
+          let open! Solution in
           let unreachable =
             AdjGraph.fold_vertices (fun u acc ->
                 if not (validAttribute attrTy (VertexMap.find u sol.labels)) then
@@ -1379,7 +1381,7 @@ module FailuresAbstraction =
           Not_found -> explored, minimum
       in
       match loop 0 None q with
-      | explored, Some f ->
+      | _explored, Some f ->
          (* Printf.printf "Explored refinements: %d\n" explored; *)
          (* for statistics only *)
          (* let ag = BuildAbstractNetwork.buildAbstractAdjGraph g f in *)

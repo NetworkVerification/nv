@@ -44,7 +44,8 @@ module ValueSet = Set.Make (struct
   type t = value
 
   let compare v1 v2 =
-    let cfg = Cmdline.get_cfg () in
+    let open Cmdline in
+    let cfg = get_cfg () in
     if cfg.hashcons then v1.vtag - v2.vtag else compare v1 v2
 end)
 
@@ -52,7 +53,8 @@ module ValueMap = Map.Make (struct
   type t = value
 
   let compare v1 v2 =
-    let cfg = Cmdline.get_cfg () in
+    let open Cmdline in
+    let cfg = get_cfg () in
     if cfg.hashcons then v1.vtag - v2.vtag else compare v1 v2
                            end)
 
@@ -60,7 +62,8 @@ module ExpMap = Map.Make (struct
                            type t = exp
 
                            let compare e1 e2 =
-                             let cfg = Cmdline.get_cfg () in
+                             let open Cmdline in
+                             let cfg = get_cfg () in
                              if cfg.hashcons then e1.etag - e2.etag else
                                compare e1 e2
                          end)

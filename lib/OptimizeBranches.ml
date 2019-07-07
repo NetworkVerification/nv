@@ -43,7 +43,7 @@ let optimizeNet net =
     symbolics = BatList.map (fun (x, tye) ->
                     (x, match tye with
                         | Exp e -> Exp (optimizeExp e)
-                        | Ty ty -> tye)) net.symbolics;
+                        | Ty _ty -> tye)) net.symbolics;
     defs = BatList.map (fun (x, ty, e) ->
                (x, ty, optimizeExp e)) net.defs;
     utys = net.utys;
