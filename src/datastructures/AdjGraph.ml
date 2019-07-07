@@ -107,6 +107,9 @@ let good_graph g =
     (fun (v, w) -> good_vertex g v ; good_vertex g w)
     (edges g)
 
+(* add_vertices g n adds n vertices to g *)
+let add_vertices (m, i) n = (m, i + n)
+
 (* add_edge g e adds directed edge e to g *)
 let add_edge (m, i) (v, w) =
   good_vertex (m, i) v ;

@@ -52,6 +52,9 @@ val fold_vertices : (Vertex.t -> 'a -> 'a) -> Vertex.t -> 'a -> 'a
 (** Vertices in the adjacency graph *)
 val get_vertices : t -> VertexSet.t
 
+(* add_vertices g n adds n vertices to g *)
+val add_vertices : t -> int -> t
+
 (* edges in the graph *)
 
 val edges : t -> (Vertex.t * Vertex.t) list
