@@ -205,15 +205,60 @@ let rec declaration_to_ocaml_string d =
 let rec declarations_to_ocaml_string ds =
   Collections.printList declaration_to_ocaml_string ds "" "\n" "\n"
 
+let compile_net net =
+  let utys_s =
+    Collections.printList
+      (fun (x, ty) -> Printf.sprintf "type %s = %s" (Var.name x) (ty_to_ocaml_string ty))
+      net.utys "" "\n" "\n\n"
+  in
+  let attr_s = Printf.sprintf "type attribute = %s\n\n" (ty_to_ocaml_string net.attr_type) in
+  let symbs_s =
+    Collections.printList
+      (fun (x, tye) ->
+        Printf.sprintf "let %s = %s" (Var.name x)
+        (match tye with
+         | Ty ty -> (value_to_ocaml_string (default_value ty))
+         | Exp e -> (exp_to_ocaml_string e))) net.symbolics "" "\n" "\n\n"
+  in
+  let requires_s =
+    match net.requires with
+    | [] -> ""
+    | rs ->
+       Collections.printList (fun e -> Printf.sprintf "let () = assert %s" (exp_to_ocaml_string e))
+         rs "" "\n\n" "\n\n"
+  in
+  let graph_s =
+    Printf.sprintf
+      "let graph = AdjGraph.add_edges (AdjGraph.create %d)\n %s"
+      (AdjGraph.num_vertices net.graph)
+      (Collections.printList (fun (u,v) ->
+           Printf.sprintf "(%d,%d)" u v) (AdjGraph.edges net.graph) "[" ";\n" "]\n")
+  in
+  let defs_s =
+    Collections.printList
+      (fun (x, tyo, e) -> Printf.sprintf "let %s = %s"
+                            (Var.name x) (exp_to_ocaml_string e))
+      net.defs "" "\n\n" "\n\n"
+  in
+  let init_s = Printf.sprintf "let init = %s\n\n" (exp_to_ocaml_string net.init) in
+  let trans_s = Printf.sprintf "let trans = %s\n\n" (exp_to_ocaml_string net.trans) in
+  let merge_s = Printf.sprintf "let merge = %s\n\n" (exp_to_ocaml_string net.merge) in
+  let assert_s =
+    match net.assertion with
+    | None ->
+       "let assertion = None\n"
+    | Some e ->
+       Printf.sprintf "let assertion = %s\n" (exp_to_ocaml_string e)
+  in
+  Printf.sprintf "%s %s %s %s %s %s %s %s %s %s"
+    utys_s attr_s graph_s symbs_s defs_s init_s trans_s merge_s requires_s assert_s
+
 let set_entry (name: string) =
   Printf.sprintf "let () = SrpNative.srp := Some (module %s:SrpNative.NATIVE_SRP)" name
 
-let generate_ocaml (name : string) ds =
-  let name = Filename.basename name |>
-               String.mapi (fun i c -> if i = 0 then Char.uppercase_ascii c else c)
-  in
+let generate_ocaml (name : string) net =
   let header = Printf.sprintf "module %s : SrpNative.NATIVE_SRP = struct\n" name in
-  let ocaml_decls = declarations_to_ocaml_string ds in
+  let ocaml_decls = compile_net net in
   let s = if !hasRequire then ""
           else "let require = true\n"
   in
@@ -226,14 +271,23 @@ let generate_ocaml (name : string) ds =
    find out how to generate and link cmxs files from build directory*)
 let compile_command_ocaml name =
   let build_dir = Sys.getenv "NV_BUILD" in
-  let cmd = Printf.sprintf "ocamlbuild -build-dir %s -use-ocamlfind -Is \
-   src/datastructures,src/compile,src,src/datatypes,src/utils,src/transformations \
-             %s.ml %s.cmxs" build_dir name name
+  (* let cmd = Printf.sprintf "ocamlbuild -build-dir %s -use-ocamlfind -Is \
+   *  src/datastructures,src/compile,src,src/datatypes,src/utils,src/transformations \
+   *            %s.ml %s.cmxs" build_dir name name *)
+  let src_dir = "/Users/gian/Documents/Princeton/networks/davidnv/nv/src" in
+  let includes = ["datastructures";"compile";"datatypes";"utils";"transformations";""] in
+  let includes_s = Collections.printList (fun x -> "src/" ^ x) includes "" "," "" in
+  let cmd = Printf.sprintf "ocamlbuild -use-ocamlfind -Is \
+                            %s \
+             %s.ml %s.cmxs" includes_s name name
   in
+  Printf.printf "COMMAND: %s\n" cmd;
+  flush stdout;
   Sys.command cmd
 
-let compile_ocaml name ds =
-  let program = generate_ocaml name ds in
+let compile_ocaml name net =
+  let basename = Filename.basename name in
+  let program = generate_ocaml basename net in
   let oc = open_out (name ^ ".ml") in
   Printf.fprintf oc "%s" program;
   close_out oc;

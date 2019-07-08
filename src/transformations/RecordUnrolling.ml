@@ -324,7 +324,7 @@ let unroll_net_aux
         in
         (var, tyo', unroll_exp e)) net.defs;
     utys =
-      BatList.map (fun m -> Collections.StringMap.map unroll_type m) net.utys;
+      BatList.map (fun (x, ty) -> (x, unroll_type ty)) net.utys;
     assertion = (match net.assertion with
         | None -> None
         | Some e ->
@@ -333,8 +333,17 @@ let unroll_net_aux
     graph = net.graph
   }
 
+let get_record_types_from_utys uty =
+  BatList.fold_left
+    (fun acc (_, ty) ->
+      match ty with
+      | TRecord lst -> lst :: acc
+      | _ -> acc
+    )
+    [] uty
+
 let unroll_net net =
-  let rtys = net.utys in
+  let rtys = get_record_types_from_utys net.utys in
   let unrolled = unroll_net_aux rtys net in
   (* print_endline @@ Printing.declarations_to_string unrolled; *)
   let map_back sol =

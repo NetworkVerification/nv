@@ -339,53 +339,53 @@ let rec declarations_to_string ds =
     declaration_to_string d ^ "\n" ^ declarations_to_string ds
 
 let network_to_string ?(show_topology=false) (net : Syntax.network) =
-  BatString.concat "" @@
-
   (** User types **)
-  List.mapi (fun i map ->
-      Printf.sprintf "type record_%d = %s\n" i (RecordUtils.print_record ty_to_string map))
-    net.utys
-  @ ["\n"] @
+  let utypes =
+    Collections.printList (fun (x, ty) ->
+        Printf.sprintf "type %s = %s" (Var.name x) (ty_to_string ty)) net.utys "" "\n" "\n"
+  in
   (** Attr type **)
-  [ Printf.sprintf "type attribute = %s\n" (ty_to_string net.attr_type) ]
-  @ ["\n"] @
+  let attr = Printf.sprintf "type attribute = %s\n" (ty_to_string net.attr_type) in
   (** Topology -- hide unless specifically requested **)
-  (if not show_topology then [] else
-     [
-       Printf.sprintf "let nodes = %d\n\n" (AdjGraph.num_vertices net.graph);
-
-       Printf.sprintf "let edges = {%s}\n\n" @@ list_to_string
-         (fun (i, j) -> Printf.sprintf "%dn-%dn" i j)
-         (AdjGraph.edges net.graph);
-     ])
-  @
+  let top =
+    if not show_topology then "" else
+      Printf.sprintf "let nodes = %d\n let edges = {%s}\n"
+        (AdjGraph.num_vertices net.graph)
+        (list_to_string (fun (i, j) -> Printf.sprintf "%dn-%dn" i j)
+           (AdjGraph.edges net.graph))
+  in
   (** Symbolic Variables **)
-  List.map (fun (var, toe) ->
-      Printf.sprintf "symbolic %s %s\n" (Var.to_string var) @@
-      match toe with
-      | Ty ty -> ": " ^ ty_to_string ty
-      | Exp e -> "= " ^ exp_to_string e)
-    net.symbolics
-  @ ["\n"] @
+  let symbs =
+    Collections.printList
+      (fun (var, toe) ->
+        Printf.sprintf "symbolic %s %s" (Var.to_string var)
+          (match toe with
+           | Ty ty -> ": " ^ ty_to_string ty
+           | Exp e -> "= " ^ exp_to_string e))
+      net.symbolics "" "\n" "\n"
+  in
   (** Requires **)
-  List.map (fun e -> Printf.sprintf "require %s\n" (exp_to_string e)) net.requires
-  @ ["\n"] @
+  let reqs =
+    Collections.printList
+      (fun e -> Printf.sprintf "require %s\n" (exp_to_string e)) net.requires "" "" ""
+  in
   (** Additional declarations **)
-  List.map
+  let udefs =
+    Collections.printList
     (fun (var, tyo, e) ->
-       Printf.sprintf "let %s%s = %s\n\n"
+       Printf.sprintf "let %s%s = %s"
          (Var.to_string var)
          (match tyo with None -> "" | Some ty -> " : " ^ ty_to_string ty)
          (exp_to_string e))
-    net.defs
-  @
-  [
-    Printf.sprintf "let init = %s\n\n" @@ exp_to_string net.init;
-    Printf.sprintf "let trans = %s\n\n" @@ exp_to_string net.trans;
-    Printf.sprintf "let merge = %s\n\n" @@ exp_to_string net.merge;
-  ]
-  @
-  (match net.assertion with
-   | None -> []
-   | Some e -> [Printf.sprintf "let assert = %s\n\n" @@ exp_to_string e]
-  )
+    net.defs "" "\n" "\n"
+  in
+  Printf.sprintf "%s %s %s %s %s %s \
+                  let init = %s\n \
+                  let trans = %s\n \
+                  let merge = %s\n \
+                  %s"
+    utypes attr top symbs reqs udefs (exp_to_string net.init)
+    (exp_to_string net.trans) (exp_to_string net.merge)
+    (match net.assertion with
+     | None -> ""
+     | Some e -> Printf.sprintf "let assert = %s\n" (exp_to_string e))

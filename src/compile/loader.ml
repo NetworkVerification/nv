@@ -1,10 +1,15 @@
 open SrpNative
 
 let load_srp name =
+  Printf.printf "reaches1\n";
   let name = Dynlink.adapt_filename name in
-  if Sys.file_exists name then
+    Printf.printf "%s\n" name;
+    flush_all ();
+  if true (* Sys.file_exists name  *)then
     try
-      Dynlink.loadfile name
+      Printf.printf "reaches\n";
+      Dynlink.loadfile name;
+        Printf.printf "crashes\n";
     with
     | (Dynlink.Error err) as e ->
        Printf.printf "ERROR loading plugin: %s" (Dynlink.error_message err);
@@ -14,7 +19,11 @@ let load_srp name =
     failwith "Could not find SRP file"
 
 let simulate name =
-  load_srp name;
-  let module Srp = (val get_srp () : NATIVE_SRP) in
-  let module SrpSimulator = (val SrpSimulation (SRP)) in
-  SrpSimulator.simulate_srp ()
+  let build_dir = Sys.getenv "NV_BUILD" in
+    Printf.printf "reaches0\n";
+    load_srp (Printf.sprintf "%s/%s.cmxs" build_dir name);
+    Printf.printf "loaded\n";
+    (* let module Srp = (val get_srp () : NATIVE_SRP) in *)
+      failwith "error"
+  (* let module SrpSimulator = (val (module SrpSimulation(Srp) : SrpSimulationSig)) in
+   * SrpSimulator.simulate_srp () *)

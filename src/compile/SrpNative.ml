@@ -14,7 +14,7 @@ module type NATIVE_SRP =
     val trans: int * int -> attribute -> attribute
     val merge: int -> attribute -> attribute -> attribute
     val assertion: (int -> attribute -> bool) option
-    val require: bool
+    (* val require: bool *)
   end
 
 (* TODO: probably move in the compiler file*)
@@ -32,8 +32,14 @@ let get_srp () : (module NATIVE_SRP) =
 (******************)
 (* SRP Simulation *)
 (******************)
+
+module type SrpSimulationSig =
+sig
+  val simulate_srp: unit -> unit
+end
+
 module S = Map.Make (Integer)
-module SrpSimulation (Srp : NATIVE_SRP) =
+module SrpSimulation (Srp : NATIVE_SRP) : SrpSimulationSig =
   struct
     open Srp
     exception Simulation_error of string

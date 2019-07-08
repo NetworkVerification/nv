@@ -287,12 +287,14 @@ let parse_input (args : string array) =
 
 let process_input cfg info file decls :
       Cmdline.t * Console.info * string * Syntax.network * ((Solution.t -> Solution.t) list) =
-  (* Printf.printf "%s\n" file;
-   *  Compile.compile_ocaml (Filename.remove_extension file) decls;
-   * failwith "bla"; *)
-  let decls, f = RecordUnrolling.unroll decls in (* Unroll records done first *)
-  let fs = [f] in
-  let decls,fs = (* inlining definitions *)
+  let decls, fs = (* Unroll records done first *)
+    if cfg.compile then
+      decls, []
+    else
+      let decls, f = RecordUnrolling.unroll decls in
+      decls, [f]
+  in
+  let decls, fs = (* inlining definitions *)
     if cfg.inline || cfg.unroll || cfg.smt || cfg.check_monotonicity || cfg.smart_gen then
       (* Note! Must rename before inling otherwise inling is unsound *)
       let decls, f = Renaming.alpha_convert_declarations decls in

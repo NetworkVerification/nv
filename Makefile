@@ -1,7 +1,7 @@
 PKGS = -package integers -package oUnit
 DIRS = src,src/smt,src/utils,src/datatypes,src/datastructures,src/compile,src/transformations,src/transformations/mapUnrolling,src/records,test
 # BUILD = ocamlbuild -use-ocamlfind -use-menhir -r -Is $(DIRS) $(PKGS)
-BUILD = ocamlbuild -tag thread -use-ocamlfind -use-menhir -r -Is $(DIRS) $(PKGS)
+BUILD = ocamlbuild -lib dynlink -tag thread -use-ocamlfind -use-menhir -r -Is $(DIRS) $(PKGS)
 MLFILES= src/*.ml src/*.mli test/*.ml
 FORMATFILES=$(shell find src/ -name "*.ml" | grep -v Cmdline.ml)
 FORMATFILES+=$(shell find src/ -name "*.mli")

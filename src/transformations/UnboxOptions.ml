@@ -215,8 +215,7 @@ let unbox_net net =
         | Exp e -> (x, Exp (unbox_exp e))) net.symbolics;
     defs = BatList.map (fun (x, oty, e) -> (x, Some (unbox_ty (oget oty)), unbox_exp e))
         net.defs;
-    utys = BatList.map (fun m ->
-        Collections.StringMap.map unbox_ty m) net.utys;
+    utys = BatList.map (fun (x, ty) -> (x, unbox_ty ty)) net.utys;
     requires = BatList.map unbox_exp net.requires;
     graph = net.graph
   }, box_sol net.attr_type

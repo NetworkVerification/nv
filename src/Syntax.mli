@@ -151,7 +151,7 @@ type network =
     assertion    : exp option;
     symbolics    : (var * ty_or_exp) list;
     defs         : (var * ty option * exp) list;
-    utys         : (ty StringMap.t) list;
+    utys         : (var * ty) list;
     requires     : exp list;
     graph        : AdjGraph.t;
   }
@@ -288,6 +288,8 @@ val get_nodes : declarations -> int option
 val get_symbolics : declarations -> (var * ty_or_exp) list
 
 val get_requires : declarations -> exp list
+
+val get_types : declarations -> (var * ty) list
 
 val get_record_types : declarations -> (ty StringMap.t) list
 
