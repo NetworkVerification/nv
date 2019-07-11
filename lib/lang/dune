@@ -1,0 +1,19 @@
+(library
+  (name nv_lang)
+  ; (public_name nv.lang)
+  (libraries
+    batteries
+    cudd
+    integers
+    nv_utils
+    nv_datastructures
+    nv_datatypes)
+  (preprocess
+    (pps ppx_deriving.std ppx_deriving_argparse))
+)
+
+(menhir
+  (modules Parser))
+
+(ocamllex
+  (modules Lexer))

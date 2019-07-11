@@ -1,12 +1,9 @@
 (library
-  (name nv)
-  ; (public_name nv)
+  (name nv_smt)
+  ; (public_name nv.smt)
   (libraries
-    nv_lang
-    nv_smt
     nv_datastructures
-    nv_datatypes
-    nv_utils
+    nv_lang
     oUnit
     integers
     ANSITerminal
@@ -19,8 +16,11 @@
     fileutils)
   (preprocess
     (pps ppx_deriving.std ppx_deriving_argparse))
-  ; adjust warnings slightly (see https://dev.to/yawaramin/ocaml-reasonml-best-practice-warnings-and-errors-4mkm)
   (flags (:standard -w +A-3-4-6-k-44-48 -warn-error -a))
 )
 
-(include_subdirs no)
+(menhir
+  (modules SMTParser))
+
+(ocamllex
+  (modules SMTLexer))

@@ -1,5 +1,5 @@
 module StringMap: BatMap.S with type key = string
-module VarMap: BatMap.S with type key = Var.t
+module VarMap: BatMap.S with type key = Nv_datatypes.Var.t
 
 val print_record : ('a -> string) -> 'a StringMap.t -> string
 

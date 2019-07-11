@@ -1,13 +1,10 @@
-open Collections
-open Syntax
-
-val default_value : ty -> value
+val default_value : Nv_lang.Syntax.ty -> value
 
 val random_value :
-  hints:ValueSet.t TypeMap.t -> max_map_size:int -> ty -> value
+  hints:ValueSet.t Nv_lang.Collections.TypeMap.t -> max_map_size:int -> ty -> value
 
 val random_symbolics :
-     ?hints:ValueSet.t TypeMap.t
+     ?hints:ValueSet.t Nv_lang.Collections.TypeMap.t
   -> ?max_map_size:int
   -> network
   -> network
