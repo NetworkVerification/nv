@@ -27,6 +27,7 @@ type ty =
   | TRecord of ty StringMap.t
   | TNode
   | TEdge
+  (* | THyp of ty *)
 
 and tyvar = Unbound of tyname * level | Link of ty
 
@@ -60,6 +61,7 @@ type pattern =
   | PRecord of pattern StringMap.t
   | PNode of node
   | PEdge of pattern * pattern
+  (* | PHyp of pattern Partition.Hyp.t *)
 
 module Pat : Map.OrderedType with type t = pattern
 

@@ -55,6 +55,12 @@ val get_vertices : t -> VertexSet.t
 (* add_vertices g n adds n vertices to g *)
 val add_vertices : t -> int -> t
 
+(* add_new_in g v creates a new graph with a new node u with an edge u~v *)
+val add_new_in : t -> Vertex.t -> t
+
+(* add_new_out g v creates a new graph with a new node u with an edge v~u *)
+val add_new_out : t -> Vertex.t -> t
+
 (* edges in the graph *)
 
 val edges : t -> (Vertex.t * Vertex.t) list

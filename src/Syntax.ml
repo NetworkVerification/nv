@@ -35,6 +35,7 @@ type ty =
   | TRecord of ty StringMap.t
   | TNode
   | TEdge
+  (* | THyp of ty *)
 [@@deriving ord, eq]
 
 and tyvar = Unbound of tyname * level | Link of ty
@@ -70,6 +71,7 @@ type pattern =
   | PRecord of pattern StringMap.t
   | PNode of node
   | PEdge of pattern * pattern
+  (* | PHyp of pattern Partition.Hyp.t *)
 [@@deriving ord, eq]
 
 module Pat =
@@ -288,6 +290,7 @@ let branchSize b =
 (* TODO: This should probably be its own file *)
 
 let show_span (span: Span.t) =
+  let open Span in
   Printf.sprintf "(%d,%d)" span.start span.finish
 
 let show_opt s o =
@@ -327,6 +330,7 @@ let rec show_ty ty =
   | TUnit -> "TUnit"
   | TNode -> "TNode"
   | TEdge -> "TEdge"
+  (* | THyp t -> Printf.sprintf "THyp (%s)" (show_ty t) *)
 
 
 let rec show_exp ~show_meta e =
@@ -394,6 +398,9 @@ and show_pattern p =
     Printf.sprintf "PNode %d" node
   | PEdge (p1, p2) ->
     Printf.sprintf "PEdge %s~%s" (show_pattern p1) (show_pattern p2)
+  (* | PHyp Partition.Hyp.None -> "PHyp None" *)
+  (* | PHyp Partition.Hyp.Infer -> "PHyp Infer" *)
+  (* | PHyp (Partition.Hyp.Annotate p) -> Printf.sprintf "PHyp (Annotate %s)" (show_pattern p) *)
 
 and show_value ~show_meta v =
   if show_meta then
@@ -430,7 +437,8 @@ and show_env ~show_meta e =
 (* equality / hashing *)
 
 let equal_spans (s1: Span.t) (s2: Span.t) =
-  s1.start = s2.start && s1.finish = s2.finish
+  let open Span in
+    s1.start = s2.start && s1.finish = s2.finish
 
 let equal_opt e o1 o2 =
   match (o1, o2) with
@@ -467,7 +475,8 @@ let rec equal_tys ty1 ty2 =
   | _ -> false
 
 let rec equal_values ~cmp_meta (v1: value) (v2: value) =
-  let cfg = Cmdline.get_cfg () in
+  let open Cmdline in
+  let cfg = get_cfg () in
   let b =
     if cfg.hashcons then v1.vtag = v2.vtag
     else equal_vs ~cmp_meta v1.v v2.v
@@ -511,7 +520,8 @@ and equal_lists ~cmp_meta vs1 vs2 =
     equal_values ~cmp_meta v1 v2 && equal_lists ~cmp_meta vs1 vs2
 
 and equal_exps ~cmp_meta (e1: exp) (e2: exp) =
-  let cfg = Cmdline.get_cfg () in
+  let open Cmdline in
+  let cfg = get_cfg () in
   let b =
     if cfg.hashcons then e1.etag = e2.etag
     else equal_es ~cmp_meta e1.e e2.e
@@ -634,14 +644,16 @@ let rec hash_ty ty =
   | TUnit -> 11
   | TNode -> 12
   | TEdge -> 13
+  (* | THyp t -> 14 + hash_ty t *)
 
-let hash_span (span: Span.t) = (19 * span.start) + span.finish
+let hash_span (span: Span.t) = let open Span in (19 * span.start) + span.finish
 
 let hash_opt h o =
   match o with None -> 1 | Some x -> (19 * h x) + 2
 
 let rec hash_value ~hash_meta v : int =
-  let cfg = Cmdline.get_cfg () in
+  let open Cmdline in
+  let cfg = get_cfg () in
   let m =
     if hash_meta then
       (19 * hash_opt hash_ty v.vty) + hash_span v.vspan
@@ -689,7 +701,8 @@ and hash_v ~hash_meta v =
   | VEdge (e1, e2) -> (19 * (e1 + 19 * e2)) + 10
 
 and hash_exp ~hash_meta e =
-  let cfg = Cmdline.get_cfg () in
+  let open Cmdline in
+  let cfg = get_cfg () in
   let m =
     if hash_meta then
       (19 * hash_opt hash_ty e.ety) + hash_span e.espan
@@ -773,6 +786,9 @@ and hash_pattern p =
      + 8)
   | PNode n -> (19 * n) + 9
   | PEdge (p1, p2) -> (19 * (hash_pattern p1 + 19 * hash_pattern p2)) + 10
+  (* | PHyp Partition.Hyp.None -> 11 *)
+  (* | PHyp Partition.Hyp.Infer -> 12 *)
+  (* | PHyp (Partition.Hyp.Annotate p) -> (19 * hash_pattern p) + 13 *)
 
 and hash_patterns ps =
   List.fold_left (fun acc p -> acc + hash_pattern p) 0 ps
@@ -851,12 +867,14 @@ let tint_of_size n = TInt n
 let tint_of_value n = TInt (Integer.size n)
 
 let exp e =
-  let cfg = Cmdline.get_cfg () in
+  let open Cmdline in
+  let cfg = get_cfg () in
   if cfg.hashcons then Hashcons.hashcons tbl_e e
   else {e; ety= None; espan= Span.default; etag= 0; ehkey= 0}
 
 let value v =
-  let cfg = Cmdline.get_cfg () in
+  let open Cmdline in
+  let cfg = get_cfg () in
   if cfg.hashcons then Hashcons.hashcons tbl_v v
   else {v; vty= None; vspan= Span.default; vtag= 0; vhkey= 0}
 
@@ -1194,7 +1212,9 @@ let rec free (seen: Var.t PSet.t) (e: exp) : Var.t PSet.t =
 
 and pattern_vars p =
   match p with
-  | PWild | PUnit | PBool _ | PInt _ | POption None | PNode _ ->
+  | PWild | PUnit | PBool _ | PInt _ | POption None | PNode _
+    (* | PHyp Partition.Hyp.None | PHyp Partition.Hyp.Infer *)
+    ->
     PSet.create Var.compare
   | PVar v -> PSet.singleton ~cmp:Var.compare v
   | PEdge (p1, p2) -> pattern_vars (PTuple [p1; p2])
@@ -1209,6 +1229,7 @@ and pattern_vars p =
       map
       (PSet.create Var.compare)
   | POption (Some p) -> pattern_vars p
+  (* | PHyp (Partition.Hyp.Annotate p) -> pattern_vars p *)
 
 let rec free_dead_vars (e : exp) =
   match e.e with
@@ -1273,16 +1294,19 @@ let rec default_exp_value ty =
     default_exp_value t
   | TVar _ | QVar _ | TArrow _ ->
     failwith "internal error (default_value)"
+  (* | THyp _ -> failwith "TODO" (1* TODO *1) *)
 
 let compare_vs = compare_value
 let compare_es = compare_exp
 
 let compare_values v1 v2 =
-  let cfg = Cmdline.get_cfg () in
+  let open Cmdline in
+  let cfg = get_cfg () in
   if cfg.hashcons then v1.vtag - v2.vtag
   else Pervasives.compare v1 v2
 
 let compare_exps e1 e2 =
-  let cfg = Cmdline.get_cfg () in
+  let open Cmdline in
+  let cfg = get_cfg () in
   if cfg.hashcons then e1.etag - e2.etag
   else Pervasives.compare e1 e2

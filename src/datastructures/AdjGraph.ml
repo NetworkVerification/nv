@@ -121,6 +121,16 @@ let add_edge (m, i) (v, w) =
   in
   (update v f m, i)
 
+let add_new_in (m, i) v =
+  good_vertex (m, i) v ;
+  add_vertices (m, i) 1 |>
+  (fun g -> add_edge g (i, v))
+
+let add_new_out (m, i) v =
+  good_vertex (m, i) v ;
+  add_vertices (m, i) 1 |>
+  (fun g -> add_edge g (v, i))
+
 let rec add_edges g edges =
   match edges with
   | [] -> g

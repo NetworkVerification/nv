@@ -9,7 +9,7 @@ open Syntax
    To avoid adding another primitive to the language grammar, we implement toEdge
    by automatically generating a function definition and adding it to the program.
    In essence, it is as if the user defined the function toEdge themselves at the
-   beginning of each program, but we od it ourselves to ensure it's correct.
+   beginning of each program, but we do it ourselves to ensure it's correct.
 
    For example, if the graph contains 3 edges 0~1, 1~0, and 1~2, we generate the
    following declaration:
