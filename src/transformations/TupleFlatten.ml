@@ -212,6 +212,9 @@ let rec flatten_exp e : exp =
 and flatten_branches bs ty =
   let rec flatten_pattern p ty =
     let ty = get_inner_type ty in
+    (* Something of a kludge to account for the fact that edges disappear
+       during flattening *)
+    let ty = if ty = TEdge then TTuple [TNode; TNode] else ty in
     match p with
     | POption (Some p) ->
       (match ty with
