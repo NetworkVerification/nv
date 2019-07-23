@@ -185,7 +185,8 @@ let rec declaration_to_ocaml_string d =
      Printf.sprintf "let trans = %s\n" (exp_to_ocaml_string e)
   | DAssert e ->
      hasAssertion := true;
-     Printf.sprintf "let assertion = %s\n" (exp_to_ocaml_string e)
+     (* Printf.sprintf "let assertion = %s\n" (exp_to_ocaml_string e) *)
+     "let assertion = None\n"
   | DRequire e ->
      hasRequire := true;
      Printf.sprintf "let require = %s\n" (exp_to_ocaml_string e)
@@ -259,11 +260,11 @@ let set_entry (name: string) =
 let generate_ocaml (name : string) net =
   let header = Printf.sprintf "module %s : SrpNative.NATIVE_SRP = struct\n" name in
   let ocaml_decls = compile_net net in
-  let s = if !hasRequire then ""
-          else "let require = true\n"
-  in
-  let s = if !hasAssertion then s
-          else (s ^ "let assertion = None \n")
+  (* let s = if !hasRequire then ""
+   *         else "let require = true\n"
+   * in *)
+  let s = if !hasAssertion then ""
+          else ("let assertion = None \n")
   in
   Printf.sprintf "%s %s %s end\n %s" header ocaml_decls s (set_entry name)
 

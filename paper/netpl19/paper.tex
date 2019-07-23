@@ -41,12 +41,87 @@
 %\hypersetup{draft}
 
 % reclaim the copyright space for the draft
-\settopmatter{printacmref=false}
-\renewcommand\footnotetextcopyrightpermission[1]{}
-\pagestyle{plain}
+%\settopmatter{printacmref=false}
+%\renewcommand\footnotetextcopyrightpermission[1]{}
+%\pagestyle{plain}
+
+\acmConference[NetPL'19]{5th SIGCOMM Workshop on Networking and Programming Languages}{August 2019}{Beijing, China}
+\acmYear{2019}
+\copyrightyear{2019}
 
 \begin{document}
 \title{NV: An intermediate language for network verification}
+
+\author{Ryan Beckett}
+\affiliation{%
+  \institution{Microsoft Research}
+  \city{Redmond}
+  \state{WA}
+  \postcode{98052}
+}
+\email{ryan.beckett@microsoft.com}
+
+\author{Nick Giannarakis}
+\affiliation{%
+  \institution{Princeton University}
+  \city{Princeton}
+  \state{NJ}
+  \postcode{08542}
+}
+\email{nick.giannarakis@princeton.edu}
+
+\author{Devon Loher}
+\affiliation{%
+  \institution{Princeton University}
+  \city{Princeton}
+  \state{NJ}
+  \postcode{08542}
+}
+\email{devon.loehr@gmail.com}
+
+\author{David Walker}
+\affiliation{%
+  \institution{Princeton University}
+  \city{Princeton}
+  \state{NJ}
+  \postcode{08542}
+}
+\email{dpw@princeton.edu}
+
+\renewcommand{\shortauthors}{R. Beckett et al.}
+
+
+\begin{CCSXML}
+<ccs2012>
+ <concept>
+  <concept_id>10010520.10010553.10010562</concept_id>
+  <concept_desc>Computer systems organization~Embedded systems</concept_desc>
+  <concept_significance>500</concept_significance>
+ </concept>
+ <concept>
+  <concept_id>10010520.10010575.10010755</concept_id>
+  <concept_desc>Computer systems organization~Redundancy</concept_desc>
+  <concept_significance>300</concept_significance>
+ </concept>
+ <concept>
+  <concept_id>10010520.10010553.10010554</concept_id>
+  <concept_desc>Computer systems organization~Robotics</concept_desc>
+  <concept_significance>100</concept_significance>
+ </concept>
+ <concept>
+  <concept_id>10003033.10003083.10003095</concept_id>
+  <concept_desc>Networks~Network reliability</concept_desc>
+  <concept_significance>100</concept_significance>
+ </concept>
+</ccs2012>
+\end{CCSXML}
+
+\ccsdesc[500]{Computer systems organization~Embedded systems}
+\ccsdesc[300]{Computer systems organization~Redundancy}
+\ccsdesc{Computer systems organization~Robotics}
+\ccsdesc[100]{Networks~Network reliability}
+
+\keywords{ACM proceedings}
 
 
 \maketitle
@@ -170,7 +245,7 @@ the simulation is an important future direction.
 
 
 
-\bibliographystyle{abbrv}
+\bibliographystyle{acm}
 \bibliography{references}
 
 \end{document}

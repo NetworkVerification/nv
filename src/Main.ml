@@ -7,7 +7,7 @@ let compile_and_simulate cfg info file net fs =
    let dir = Filename.dirname path in
    let name = String.mapi (fun i c -> if i = 0 then Char.uppercase_ascii c else c) name in
    let newpath = dir ^ "/" ^ name in
-     Compile.compile_ocaml newpath net;
+     (*Compile.compile_ocaml newpath net;*)
      Loader.simulate newpath
 
 let main =
