@@ -5,7 +5,7 @@ module StringMap = BatMap.Make (struct
   end)
 
 module VarMap = BatMap.Make (struct
-    type t = Nv_datatypes.Var.t
+    type t = Var.t
 
     let compare = compare
   end)

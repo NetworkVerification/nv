@@ -5,7 +5,7 @@
 open Syntax
 open Printing
 open Unsigned
-open RecordUtils
+open Nv_datatypes.RecordUtils
 open Batteries
 
 let debug = true

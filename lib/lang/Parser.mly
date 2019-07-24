@@ -1,7 +1,8 @@
 %{
   open Syntax
-  open RecordUtils
-  (* open Batteries *)
+  open Nv_datatypes.RecordUtils
+  open Nv_datastructures
+  open Batteries
 
   type user_type = Var.t (* name *) * ty (* type *)
   let user_types : user_type list ref = ref []

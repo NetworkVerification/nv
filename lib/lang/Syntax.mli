@@ -1,6 +1,8 @@
 open Cudd
-open RecordUtils
-(* open Batteries *)
+open Nv_datatypes
+open Nv_datatypes.RecordUtils
+open Nv_datastructures
+open Batteries
 
 type node = int
 

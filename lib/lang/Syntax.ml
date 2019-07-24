@@ -1,7 +1,8 @@
 (* Abstract syntax of SRP attribute processing expressions *)
 open Cudd
 open Hashcons
-open RecordUtils
+open Nv_datatypes
+open Nv_datatypes.RecordUtils
 
 type node = int
 [@@deriving eq, ord, show]
