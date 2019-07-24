@@ -1,9 +1,9 @@
-open Collections
+open Nv_lang.Collections
 module T = ANSITerminal
 
 type file_info = {input: string array; linenums: (int * int) array}
 
-type info = file_info StringMap.t
+type info = file_info Nv_lang.Collections.StringMap.t
 
 let show_message msg color label =
   T.print_string [] "\n" ;
