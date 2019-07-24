@@ -31,6 +31,38 @@ let extract_dbase depresult =
   | _ -> failwith "extract_dtuple: Not a DBase"
 ;;
 
+let transitive_closure (m : attrdepmap) : attrdepmap =
+  let seen = ref IntSet.empty in
+  let computed = ref IntMap.empty in
+  let rec compute_one_index index =
+    (* Memoization: see if we've already fully computed index's dependencies *)
+    match IntMap.Exceptionless.find index !computed with
+    | None ->
+      (* Avoid infinite loops *)
+      if IntSet.mem index !seen then IntSet.empty else
+        begin
+          seen := IntSet.add index !seen;
+          let immediate_dependencies = IntMap.find index m in
+          let transitive_dependencies =
+            immediate_dependencies
+            |> IntSet.elements
+            |> List.map (fun n -> compute_one_index n)
+            |> List.fold_left IntSet.union immediate_dependencies
+          in
+          computed := IntMap.add index transitive_dependencies !computed;
+          transitive_dependencies
+        end
+    | Some s -> s
+  in
+  IntMap.iter
+    (fun index _ ->
+       seen := IntSet.empty;
+       ignore @@ compute_one_index index)
+    m
+  ;
+  !computed
+;;
+
 (* Given a map of argument numbers to attribute elements and dependencies of
    attribute elements on arguments, construct the dependencies of attribute
    elements on each other. *)
@@ -81,6 +113,7 @@ let attribute_dependencies (net : Syntax.network) : attrdepmap =
       init_deps trans_deps merge_deps
   in
   List.fold_left (fun acc (i, s) -> IntMap.add i s acc) IntMap.empty all_deps
+  |> transitive_closure
 ;;
 
 (* Given a network, we first break down its assert function into its smallest
@@ -109,3 +142,9 @@ let assert_dependencies (net : Syntax.network) =
 
   in
   List.map (fun c -> c, compute_final_dependencies c) (get_conjuncts [] body)
+;;
+
+let slice (net : Syntax.network) : Syntax.network list =
+  (* let attr_deps = attribute_dependencies net in
+     let assert_deps = assert_dependencies net in *)
+  failwith ""
