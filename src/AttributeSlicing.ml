@@ -145,6 +145,23 @@ let assert_dependencies (net : Syntax.network) =
 ;;
 
 let slice (net : Syntax.network) : Syntax.network list =
-  (* let attr_deps = attribute_dependencies net in
-     let assert_deps = assert_dependencies net in *)
-  failwith ""
+  let attr_deps = attribute_dependencies net in
+  let assert_deps = assert_dependencies net in
+  let assert_deps_transitive =
+    List.map
+      (fun (e, immdeps) ->
+         e,
+         immdeps
+         |> IntSet.elements
+         |> List.map (fun k -> IntMap.find k attr_deps)
+         |> List.fold_left IntSet.union immdeps
+      )
+      assert_deps
+  in
+  print_endline @@ "Transitive:\n" ^ BatString.concat "\n" @@
+  List.map (fun (e, s) -> Printf.sprintf "%s:{ %s }" (Printing.exp_to_string e)
+               (Collections.IntSet.fold
+                  (fun n acc ->
+                     Printf.sprintf "%s; %d" acc n) s "")) @@
+  assert_deps_transitive;
+  []
