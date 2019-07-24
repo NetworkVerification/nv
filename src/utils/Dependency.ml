@@ -108,7 +108,7 @@ let rec compute_dependency_exp (acc : depmap) (e : exp) : depresult =
   | ERecord _ | EProject _ -> failwith "Must unroll records before doing dependency analysis"
 
 and compute_dependency_branch acc test_deps (pat, body) : depresult =
-  Printf.printf "On branch %s -> %s\n" (Printing.pattern_to_string pat) (Printing.exp_to_string body);
+  (* Printf.printf "On branch %s -> %s\n" (Printing.pattern_to_string pat) (Printing.exp_to_string body); *)
   (* Global deps represent parts of the input which all parts of the branch result
      depend on *)
   let rec get_deps_from_pat (acc, global_deps) test_deps p =
@@ -133,10 +133,10 @@ and compute_dependency_branch acc test_deps (pat, body) : depresult =
         | DTuple ts -> ts
         | _ -> failwith "internal error (compute_dependency_branch)"
       in
-      Printf.printf "Combining lists: [%s] [%s]\n"
+      (* Printf.printf "Combining lists: [%s] [%s]\n"
         (BatString.concat ";" @@ List.map depresult_to_string deps)
         (BatString.concat ";" @@ List.map Printing.pattern_to_string ps)
-    ;
+    ; *)
       let lst = List.combine deps ps in
       List.fold_left (fun acc' (tdep, p) -> get_deps_from_pat acc' tdep p) (acc, global_deps) lst
     | POption _

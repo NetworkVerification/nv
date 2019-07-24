@@ -9,6 +9,7 @@ module IntMap = BatMap.Make (struct
 
   let compare = compare
 end)
+[@@deriving show]
 
 module IntSet = BatSet.Make (struct
     type t = int
