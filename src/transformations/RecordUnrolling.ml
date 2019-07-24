@@ -1,5 +1,6 @@
 open Syntax
 open RecordUtils
+open OCamlUtils
 
 (* Re-copying that here, to turn Unbound tvars into unbound tvars instead of TBool.
    We do the TBool thing, such that the SMT can handle those values (e.g. unused None).

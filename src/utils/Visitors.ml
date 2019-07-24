@@ -1,5 +1,5 @@
 open Syntax
-   
+
 let rec iter_exp f (e: exp) =
   f e ;
   match e.e with
@@ -45,4 +45,3 @@ let iter_exp_net f (net : Syntax.network) =
    | Some e -> iter_exp f e
    | None -> ());
   BatList.iter (fun e -> iter_exp f e) net.requires
-  

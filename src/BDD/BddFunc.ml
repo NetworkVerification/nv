@@ -1,5 +1,6 @@
 open Cudd
 open Syntax
+open OCamlUtils
 
 module B = BddUtils
 

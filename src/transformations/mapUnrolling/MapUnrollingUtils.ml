@@ -1,5 +1,6 @@
 open Syntax
 open Collections
+open OCamlUtils
 
 type maplist = (Syntax.ty * (ExpSet.t * VarSet.t)) list;;
 

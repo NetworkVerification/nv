@@ -2,6 +2,7 @@ open Syntax
 open Collections
 open SmtUtils
 open SmtLang
+open OCamlUtils
 
 module type ClassicEncodingSig = SmtEncodingSigs.Encoding with type network_type = Syntax.network
 module ClassicEncoding (E: SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =

@@ -2,6 +2,7 @@ open Syntax
 open Collections
 open SmtUtils
 open SmtLang
+open OCamlUtils
 
 (** * Alternative SMT encoding *)
 module type FunctionalEncodingSig = SmtEncodingSigs.Encoding with type network_type = Syntax.srp_unfold

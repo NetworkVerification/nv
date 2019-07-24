@@ -4,6 +4,7 @@ open Solution
 open SmtLang
 open SmtUtils
 open SolverUtil
+open OCamlUtils
 
 let prefix_if_needed varname =
   if

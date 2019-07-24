@@ -1,4 +1,5 @@
 open Syntax
+open OCamlUtils
 
 (***
    Simple implementation of the toEdge primitive in NV.

@@ -4,6 +4,7 @@ open Printing
 open Printf
 open Collections
 open InterpUtils
+open OCamlUtils
 
 (* Interpreter Errors *)
 (* Interpreter Environments *)

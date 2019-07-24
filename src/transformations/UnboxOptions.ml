@@ -2,6 +2,7 @@ open Collections
 open Syntax
 open Slicing
 open Solution
+open OCamlUtils
 
 let rec empty_pattern ty =
   match Typing.canonicalize_type ty with

@@ -4,6 +4,9 @@ open SmtLang
 open SmtUtils
 open Slicing
 open Smt
+open OCamlUtils
+
+
 module Boxed = SmtBoxed.Boxed
 
 let encode_z3_merge str env e =

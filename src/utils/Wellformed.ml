@@ -1,6 +1,7 @@
 open Collections
 open Syntax
 open Batteries
+open OCamlUtils
 
 (* Check a variety of other requirements for a well-
    formed program. Assumes the program is well-typed *)

@@ -9,6 +9,7 @@ open Syntax
 open Generators
 open Slicing
 open BatSet
+open OCamlUtils
 
 let debugAbstraction = ref false
 

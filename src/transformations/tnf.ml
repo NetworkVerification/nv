@@ -3,6 +3,7 @@
 open Collections
 open Syntax
 open Slicing
+open OCamlUtils
 
 (** For now, assume it only applies to unboxed and inlined NV
    programs. It seems like a reasonable assumption *)

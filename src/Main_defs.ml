@@ -17,6 +17,7 @@ open Abstraction
 open BuildAbstractNetwork
 open Lazy
 open Profile
+open OCamlUtils
 
 type answer =
   | Success of (Solution.t option)

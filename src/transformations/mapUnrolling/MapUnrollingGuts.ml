@@ -1,6 +1,7 @@
 open Syntax
 open Collections
 open Typing
+open OCamlUtils
 
 let has_target_type (target : ty) (e : exp) : bool =
   match e.ety with

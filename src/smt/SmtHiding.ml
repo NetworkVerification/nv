@@ -10,6 +10,7 @@ open SmtUtils
 open SmtOptimizations
 open SmtModel
 open Smt
+open OCamlUtils
 
 (** Removes all variable equalities *)
 (** Modified from propagate_eqs in SmtOptimizations.ml. It has the following

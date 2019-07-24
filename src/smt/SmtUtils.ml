@@ -1,6 +1,7 @@
 open Syntax
 open Collections
 open SmtLang
+open OCamlUtils
 
 (* Classic encodes the SRP as an SMT expression, Functional encodes
    the problem as an NV term which is then translated to SMT *)

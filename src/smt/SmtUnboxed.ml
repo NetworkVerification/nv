@@ -2,6 +2,7 @@ open Syntax
 open Collections
 open SmtLang
 open SmtUtils
+open OCamlUtils
 
 (** * SMT encoding without SMT-datatypes *)
 module Unboxed : SmtEncodingSigs.ExprEncoding =

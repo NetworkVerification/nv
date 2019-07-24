@@ -266,10 +266,6 @@ val to_value : exp -> value
 
 val update_value : env -> Var.t -> value -> env
 
-val oget : 'a option -> 'a
-
-val omap : ('a -> 'b) -> 'a option -> 'b option
-
 val lams : var list -> exp -> exp
 
 val apps : exp -> exp list -> exp

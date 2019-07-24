@@ -3,6 +3,7 @@ open Generators
 open Collections
 open MapUnrollingGuts
 open Typing
+open OCamlUtils
 
 (* e must be a literal *)
 let rec exp_to_value (e : exp) : value =

@@ -2,6 +2,7 @@ open Syntax
 open Collections
 open SmtLang
 open SmtUtils
+open OCamlUtils
 
 module Boxed: SmtEncodingSigs.ExprEncoding =
 struct

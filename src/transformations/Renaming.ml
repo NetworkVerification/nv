@@ -1,6 +1,7 @@
 open Collections
 open Syntax
 open Slicing
+open OCamlUtils
 
 (* Maps fresh names back to the original names *)
 let map_back bmap new_name old_name =

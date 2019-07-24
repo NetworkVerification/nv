@@ -1,4 +1,5 @@
 open Syntax
+open OCamlUtils
 
 (** * Simplifications *)
 let simplify_and v1 e2 =

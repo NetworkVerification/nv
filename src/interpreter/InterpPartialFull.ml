@@ -2,6 +2,7 @@ open Syntax
 open InterpUtils
 open Interp
 open Collections
+open OCamlUtils
 
 (* This ludicrously named file contains a Full reduction partial interpreter.
    Not sure how it differs from the regular one. *)

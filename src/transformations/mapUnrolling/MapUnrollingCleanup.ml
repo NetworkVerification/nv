@@ -2,6 +2,7 @@
    and all 1-element tuples with their only element *)
 
 open Syntax
+open OCamlUtils
 
 let mapo f o =
   match o with

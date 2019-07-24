@@ -2,6 +2,7 @@
 open Cudd
 open Hashcons
 open RecordUtils
+open OCamlUtils
 
 type node = int
 [@@deriving eq, ord]
@@ -881,16 +882,6 @@ let lam x body = exp (EFun (func x body))
 let annot ty e = {e with ety= Some ty; espan= e.espan}
 
 let annotv ty v = {v with vty= Some ty; vspan= v.vspan}
-
-let oget (x: 'a option) : 'a =
-  match x with
-  | None -> failwith "internal error (oget)"
-  | Some y -> y
-
-let omap (f : 'a -> 'b) (x: 'a option): 'b option =
-  match x with
-  | None -> None
-  | Some y -> Some(f y)
 
 let rec lams params body =
   match params with

@@ -3,6 +3,7 @@
 *)
 
 open Syntax
+open OCamlUtils
 open Printing
 open Unsigned
 open RecordUtils
