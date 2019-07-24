@@ -1,6 +1,4 @@
 open Syntax
-open Unsigned
-open BatSet
 open OCamlUtils
 
 module Prefix =

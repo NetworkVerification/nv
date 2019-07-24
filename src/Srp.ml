@@ -1,9 +1,7 @@
 open Collections
-open Unsigned
 open Solution
 open Syntax
 open Generators
-open Slicing
 
 type srp =
   { graph: AdjGraph.t
@@ -88,7 +86,7 @@ let net_to_srp net ~throw_requires =
       in
       let v = Interp.interp_exp env e in
       info.env <- update_value env x v ;
-      info.syms <- VarMap.add x v info.syms) Slicing.(net.symbolics);
+      info.syms <- VarMap.add x v info.syms) (net.symbolics);
   (* process let definitions *)
   BatList.iter (fun (x, _, e) ->
       let env = info.env in

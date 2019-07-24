@@ -1,7 +1,7 @@
 #PKGS = -package integers # New packages should probably go in the _tags file
 DIRS = src,src/smt,src/utils,src/datatypes,src/datastructures,src/interpreter,src/transformations,src/transformations/mapUnrolling,src/records,src/BDD,test
 # BUILD = ocamlbuild -use-ocamlfind -use-menhir -r -Is $(DIRS) $(PKGS)
-BUILD = ocamlbuild -tag thread -use-ocamlfind -use-menhir -r -Is $(DIRS) $(PKGS)
+BUILD = ocamlbuild -cflags "-w +33" -tag thread -use-ocamlfind -use-menhir -r -Is $(DIRS) $(PKGS)
 MLFILES= src/*.ml src/*.mli test/*.ml
 FORMATFILES=$(shell find src/ -name "*.ml" | grep -v Cmdline.ml)
 FORMATFILES+=$(shell find src/ -name "*.mli")

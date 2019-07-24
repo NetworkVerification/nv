@@ -1,5 +1,4 @@
 open Syntax
-open Typing
 open OCamlUtils
 
 let is_function_ty e =

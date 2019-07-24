@@ -1,12 +1,12 @@
 open Batteries
 
-module StringMap = BatMap.Make (struct
+module StringMap = Map.Make (struct
     type t = string
 
     let compare = String.compare
   end)
 
-module VarMap = BatMap.Make (struct
+module VarMap = Map.Make (struct
     type t = Var.t
 
     let compare = compare
@@ -48,7 +48,7 @@ let get_type_with_label record_types (ferr : string -> 'a) label =
 
 let print_record f map =
   Printf.sprintf "{%s}" @@
-  BatString.concat "; " @@
+  String.concat "; " @@
   List.map (fun (label, v) -> Printf.sprintf "%s:%s" label (f v)) @@
   StringMap.bindings map
 ;;

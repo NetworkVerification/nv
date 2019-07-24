@@ -1,7 +1,3 @@
-open Collections
-open Generators
-open Syntax
-
 type check_stats = {iterations: int; num_rejected: int}
 
 val check_random :

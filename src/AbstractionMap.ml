@@ -1,5 +1,4 @@
 open AdjGraph
-open Unsigned
 open Vertex
 
 module AbstractNode =

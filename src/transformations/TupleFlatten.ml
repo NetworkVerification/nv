@@ -1,6 +1,5 @@
 open Collections
 open Syntax
-open Slicing
 open OCamlUtils
 
 let rec flatten_ty ty =

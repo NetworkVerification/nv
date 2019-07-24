@@ -4,7 +4,6 @@
    Returns an equivalent set of decls where all map types have been
    replaced with tuple types, and a function which converts a Solution
    to the new decls into a solution for the old decls. *)
-open Syntax
 let unroll info decls =
   let maplist =
     MapUnrollingUtils.collect_map_types_and_keys decls

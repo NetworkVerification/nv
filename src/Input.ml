@@ -1,5 +1,3 @@
-open Console
-
 let read ?(filename : string option = None) lexbuf =
   let get_info () =
     let curr = lexbuf.Lexing.lex_curr_p in

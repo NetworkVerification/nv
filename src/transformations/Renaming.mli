@@ -1,5 +1,4 @@
 open Syntax
-open Solution
 
 val alpha_convert_exp : Var.t Env.t -> exp -> exp
 

@@ -1,4 +1,3 @@
-open Collections
 open Syntax
 open SmtLang
 open SmtUtils

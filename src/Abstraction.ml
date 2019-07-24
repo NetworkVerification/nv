@@ -1,14 +1,10 @@
 open AdjGraph
 open AbstractionMap
-open Unsigned
 open Console
-open Srp
-open Hashtbl
 open Failures
 open Syntax
 open Generators
 open Slicing
-open BatSet
 open OCamlUtils
 
 let debugAbstraction = ref false

@@ -1,21 +1,13 @@
 open ANSITerminal
 open Cmdline
-open Inline
-open Interp
-open Hashcons
-open Printing
 open Quickcheck
-open Renaming
 open Smt
-open SmtHiding
 open SmtUtils
 open Solution
 open Slicing
 open Syntax
-open Typing
 open Abstraction
 open BuildAbstractNetwork
-open Lazy
 open Profile
 open OCamlUtils
 

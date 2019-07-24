@@ -1,7 +1,6 @@
 (* Printing utilities for abstract syntax *)
 
 open Syntax
-open OCamlUtils
 
 let is_keyword_op op =
   match op with

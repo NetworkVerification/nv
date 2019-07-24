@@ -1,6 +1,5 @@
 open Collections
 open Syntax
-open Slicing
 open Solution
 open OCamlUtils
 

@@ -1,7 +1,6 @@
 open Collections
 open Generators
 open Syntax
-open Slicing
 open OCamlUtils
 
 let default_max_map_size = 4

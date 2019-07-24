@@ -2,13 +2,11 @@
 
 open Collections
 open Syntax
-open Solution
 open SolverUtil
 open Profile
 open SmtLang
 open SmtUtils
 open SmtOptimizations
-open SmtModel
 open Smt
 open OCamlUtils
 

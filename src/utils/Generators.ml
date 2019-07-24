@@ -1,8 +1,5 @@
 open Collections
-open Random
 open Syntax
-open Slicing
-open Unsigned
 open OCamlUtils
 
 let default_value = BddMap.default_value

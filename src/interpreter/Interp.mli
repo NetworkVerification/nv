@@ -1,5 +1,4 @@
 open Syntax
-open Memoization
 
 val interp_exp : env -> exp -> value
 

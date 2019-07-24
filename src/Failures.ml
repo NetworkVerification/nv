@@ -1,7 +1,6 @@
 (** * Adds link failures to a network *)
 open AdjGraph
 open Syntax
-open Integer
 
 let zero = Integer.create ~value:0 ~size:32
 let one = Integer.create ~value:1 ~size:32

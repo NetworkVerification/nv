@@ -1,7 +1,6 @@
 open Syntax
 open Memoization
 open Printing
-open Printf
 open Collections
 open InterpUtils
 open OCamlUtils

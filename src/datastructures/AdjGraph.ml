@@ -258,8 +258,6 @@ let min_cut g s t =
   in
   (cut, visited, VertexSet.diff (get_vertices g) visited)
 
-open Graph
-
 module BoolOrdered = struct
   type t = bool
   let default = false
