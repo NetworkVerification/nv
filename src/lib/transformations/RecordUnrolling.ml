@@ -1,13 +1,12 @@
-open Syntax
-open RecordUtils
-open OCamlUtils
+open Nv_core
+open Nv_datatypes.RecordUtils
 
 (* Re-copying that here, to turn Unbound tvars into unbound tvars instead of TBool.
    We do the TBool thing, such that the SMT can handle those values (e.g. unused None).
    In general, I think we shouldn't have unbound Tvars... they should have been generalized
    to qvars *)
-let canonicalize_type (ty : ty) : ty =
-  let open Collections in
+let canonicalize_type (ty : Syntax.ty) : Syntax.ty =
+  let open Syntax in
   let rec aux ty map count =
     match ty with
     | TUnit
@@ -51,7 +50,7 @@ let canonicalize_type (ty : ty) : ty =
       begin
         match VarMap.Exceptionless.find tyname map with
         | None ->
-          let new_var = Var.to_var ("a", count) in
+          let new_var = Nv_datatypes.Var.to_var ("a", count) in
           ( QVar (new_var),
             (VarMap.add tyname new_var map),
             count + 1)
@@ -68,9 +67,9 @@ let canonicalize_type (ty : ty) : ty =
   result
 
 let rec unroll_type
-    (rtys : ty StringMap.t list)
-    (ty : ty)
-  : ty
+    (rtys : Syntax.ty StringMap.t list)
+    (ty : Syntax.ty)
+  : Syntax.ty
   =
   (* print_endline @@  "Unrolling type: " ^ Printing.ty_to_string ty; *)
   let unroll_type = unroll_type rtys in
@@ -98,6 +97,7 @@ let rec unroll_type
 ;;
 
 let rec unroll_pattern p =
+  let open Syntax in
   match p with
   | PWild
   | PUnit
@@ -116,10 +116,12 @@ let rec unroll_pattern p =
 ;;
 
 let rec unroll_exp
-    (rtys : ty StringMap.t list)
-    (e : exp)
-  : exp
+    (rtys : Syntax.ty StringMap.t list)
+    (e : Syntax.exp)
+  : Syntax.exp
   =
+    let open Nv_datastructures.OCamlUtils in
+    let open Syntax in
   let unroll_exp e = unroll_exp rtys e in
   let unroll_type ty = unroll_type rtys ty in
   match e.e with
@@ -164,7 +166,7 @@ let rec unroll_exp
     let idx = oget @@ BatList.index_of l labels in
     let ty = BatList.nth types idx in
     (* Extract tuple element at index idx *)
-    let var = Var.fresh "recordUnrolling" in
+    let var = Nv_datatypes.Var.fresh "recordUnrolling" in
     let ps =
       BatList.mapi
         (fun i _ -> if i = idx then PVar var else PWild)
@@ -177,9 +179,9 @@ let rec unroll_exp
 ;;
 
 let rec unroll_decl
-    (rtys : ty StringMap.t list)
-    (decl : declaration)
-  : declaration
+    (rtys : Syntax.ty StringMap.t list)
+    (decl : Syntax.declaration)
+  : Syntax.declaration
   =
   let unroll_exp = unroll_exp rtys in
   let unroll_type = unroll_type rtys in
@@ -194,8 +196,8 @@ let rec unroll_decl
   | DSymbolic (var, toe) ->
     let toe' =
       match toe with
-      | Ty t -> Ty(unroll_type t)
-      | Exp e -> Exp(unroll_exp e)
+      | Ty t -> Syntax.Ty(unroll_type t)
+      | Exp e -> Syntax.Exp(unroll_exp e)
     in
     DSymbolic (var, toe')
   | DATy t -> DATy (unroll_type t)
@@ -214,10 +216,11 @@ let rec unroll_decl
 (* Conversion functions for translating tupleized types back into
    record types *)
 let rec convert_value
-    (original_ty : ty)
-    (v : value)
-  : value
+    (original_ty : Syntax.ty)
+    (v : Syntax.value)
+  : Syntax.value
   =
+    let open Syntax in
   (* TODO: Potentially add on span and type info *)
   match v.v, original_ty with
   | VBool _, TBool
@@ -261,18 +264,19 @@ let rec convert_value
 
 let convert_symbolics
     symbolics
-    (sol : Solution.t)
+    (sol : Nv_solution.Solution.t)
   =
+    let open Syntax in
   let convert_symbolic symb v =
     let _, toe =
       (* Printf.printf "Looking for symbolic %s with symbolics [%s]\n" symb @@
          BatString.concat ("; ") @@ List.map (fun (s,_) -> Var.to_string s) symbolics; *)
-      BatList.find (fun (v, _) -> Var.equal v symb) symbolics
+      BatList.find (fun (v, _) -> Nv_datatypes.Var.equal v symb) symbolics
     in
     let oldty =
       match toe with
       | Ty ty -> ty
-      | Exp e -> oget e.ety
+      | Exp e -> Nv_datastructures.OCamlUtils.oget e.ety
     in
     convert_value oldty v
   in
@@ -284,31 +288,31 @@ let convert_symbolics
 
 let convert_attrs
     attr_ty
-    (sol : Solution.t)
+    (sol : Nv_solution.Solution.t)
   =
-  AdjGraph.VertexMap.map
+  Nv_datastructures.AdjGraph.VertexMap.map
     (fun v -> convert_value attr_ty v)
     sol.labels
 ;;
 
 let unroll decls =
-  let rtys = get_record_types decls in
+  let rtys = Syntax.get_record_types decls in
   let unrolled = BatList.map (unroll_decl rtys) decls in
   (* print_endline @@ Printing.declarations_to_string unrolled; *)
   let map_back sol =
-    let new_symbolics = convert_symbolics (get_symbolics decls) sol in
-    let new_labels = convert_attrs (oget (get_attr_type decls)) sol in
+    let new_symbolics = convert_symbolics (Syntax.get_symbolics decls) sol in
+    let new_labels = convert_attrs (Nv_datastructures.OCamlUtils.oget (Syntax.get_attr_type decls)) sol in
     {sol with symbolics = new_symbolics; labels = new_labels}
   in
   unrolled, map_back
 
 let unroll_net_aux
-    (rtys : ty StringMap.t list)
-    net
+    (rtys : Syntax.ty StringMap.t list)
+    (net : Syntax.network)
   =
   let unroll_exp = unroll_exp rtys in
   let unroll_type = unroll_type rtys in
-  { attr_type = unroll_type net.attr_type;
+  Syntax.{ attr_type = unroll_type net.attr_type;
     init = unroll_exp net.init;
     merge = unroll_exp net.merge;
     trans = unroll_exp net.trans;
@@ -346,7 +350,7 @@ let unroll_net_aux
     graph = net.graph
   }
 
-let unroll_net net =
+let unroll_net (net : Syntax.network) =
   let rtys = net.utys in
   let unrolled = unroll_net_aux rtys net in
   (* print_endline @@ Printing.declarations_to_string unrolled; *)

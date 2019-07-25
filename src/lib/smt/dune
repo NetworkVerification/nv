@@ -6,6 +6,8 @@
     nv_interpreter
     nv_core
     nv_utils
+    nv_solution
+    nv_slicing
     integers
     str
     batteries

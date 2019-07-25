@@ -1,3 +1,4 @@
+open Nv_core
 (* Unroll all map types contained in decls. Cannot handle polymorphism,
    so requires that inlining has been run first.
 

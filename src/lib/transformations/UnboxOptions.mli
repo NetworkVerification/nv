@@ -1,3 +1,6 @@
+open Nv_core
+open Nv_solution
+
 val unbox_ty : Syntax.ty -> Syntax.ty
 
 (** [unbox ds] converts options in an NV program to a tuple of the form (bool,val)

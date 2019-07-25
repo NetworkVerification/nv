@@ -1,0 +1,3 @@
+(library
+  (name nv_slicing)
+  (libraries nv_datastructures nv_datatypes nv_transformations nv_core nv_utils))

@@ -1,7 +1,7 @@
-open Collections
-open Generators
-open Syntax
-open OCamlUtils
+open Nv_datastructures
+open Nv_core
+open Nv_core.Collections
+open Nv_core.Syntax
 
 let default_max_map_size = 4
 
@@ -13,7 +13,7 @@ type check_info =
 
 let update_value map v =
   try
-    let ty = Typing.strip_ty (oget v.vty) in
+    let ty = Typing.strip_ty (OCamlUtils.oget v.vty) in
     let vs =
       match TypeMap.find_opt ty !map with
       | None -> ValueSet.empty
@@ -24,7 +24,7 @@ let update_value map v =
 
 let collect_all_values net : ValueSet.t TypeMap.t =
   let map = ref TypeMap.empty in
-  Visitors.iter_exp_net
+  Nv_utils.Visitors.iter_exp_net
     (fun e ->
       if Syntax.is_value e then
         let v = Syntax.to_value e in
@@ -33,8 +33,8 @@ let collect_all_values net : ValueSet.t TypeMap.t =
     net ;
   !map
 
-let check_assertions (sol: Solution.t) =
-  match sol.assertions with
+let check_assertions (sol: Nv_solution.Solution.t) =
+  match sol.Nv_solution.Solution.assertions with
   | None -> true
   | Some ass -> AdjGraph.VertexMap.for_all (fun _ b -> b) ass
 
@@ -62,10 +62,10 @@ let rec check_aux info iters acc =
 
 let smart_symbolic prog_constants map symb =
   let (x, te) = symb in
-  let ty = match te with Exp e -> oget e.ety | Ty ty -> ty in
+  let ty = match te with Exp e -> OCamlUtils.oget e.ety | Ty ty -> ty in
   let v =
     match VarMap.Exceptionless.find x map with
-    | None -> random_value prog_constants default_max_map_size ty
+    | None -> Nv_utils.Generators.random_value prog_constants default_max_map_size ty
     | Some v -> v
   in
   (x, Exp (aexp(e_val v, Some ty, Span.default)))
@@ -76,12 +76,12 @@ let var_map net =
   BatList.iter
     (fun (x,te) ->
       let ty =
-        match te with Exp e -> oget e.ety | Ty ty -> ty
+        match te with Exp e -> OCamlUtils.oget e.ety | Ty ty -> ty
       in
       map := VarMap.add x (x, ty) !map) net.symbolics ;
   !map
 
-let add_blocking_require info net map var_map =
+let add_blocking_require _info net map var_map =
   let base = aexp(e_val (avalue (vbool true, Some TBool, Span.default)), Some TBool, Span.default) in
   let e =
     VarMap.fold
@@ -98,7 +98,7 @@ let add_blocking_require info net map var_map =
 
 let smart_symbolics info prog_constants var_map net =
   (* print_endline (Printing.declarations_to_string ds) ; *)
-  let map = Smt.symvar_assign info net in
+  let map = Nv_smt.Smt.symvar_assign info net in
   match map with
   | None -> (net, None)
   | Some map ->
@@ -119,7 +119,7 @@ let check_random net ~iterations =
   let num_rejected = ref 0 in
   let generator net =
     let net' =
-      random_symbolics ~max_map_size:default_max_map_size
+      Nv_utils.Generators.random_symbolics ~max_map_size:default_max_map_size
         ~hints:prog_constants net
     in
     (net, Some net')

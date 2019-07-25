@@ -204,9 +204,9 @@ let check_nodes_and_edges info num_nodes edges _ (e : exp) =
 
 let check info (ds: declarations) : unit =
   check_record_label_uniqueness info ds ;
-  Visitors.iter_exp_decls (check_types info) ds ;
+  Nv_utils.Visitors.iter_exp_decls (check_types info) ds ;
   (* Visitors.iter_exp_decls (check_closures info) ds ; *) (* Is this still necessary? *)
   (* Visitors.iter_exp_decls (check_keys info) ds; *)
-  Visitors.iter_exp_decls (check_nodes_and_edges info 
+  Nv_utils.Visitors.iter_exp_decls (check_nodes_and_edges info 
     (get_nodes ds |> OCamlUtils.oget) (get_edges ds |> OCamlUtils.oget)) ds;
   ()

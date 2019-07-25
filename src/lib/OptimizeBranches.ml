@@ -1,4 +1,4 @@
-open Syntax
+open Nv_core.Syntax
 
 let rec optimizeExp e =
   match e.e with
@@ -29,7 +29,7 @@ let rec optimizeExp e =
          |> wrap e
       | _ -> e)
   | ERecord es ->
-     erecord (Collections.StringMap.map optimizeExp es) |> wrap e
+     erecord (Nv_core.Collections.StringMap.map optimizeExp es) |> wrap e
   | EProject (e1, s) -> eproject (optimizeExp e1) s |> wrap e
           
 let optimizeNet net =
@@ -43,7 +43,7 @@ let optimizeNet net =
     symbolics = BatList.map (fun (x, tye) ->
                     (x, match tye with
                         | Exp e -> Exp (optimizeExp e)
-                        | Ty ty -> tye)) net.symbolics;
+                        | Ty _ -> tye)) net.symbolics;
     defs = BatList.map (fun (x, ty, e) ->
                (x, ty, optimizeExp e)) net.defs;
     utys = net.utys;

@@ -1,8 +1,9 @@
-open Syntax
-open OCamlUtils
+open Nv_core.Syntax
+open Nv_datastructures
+open Nv_datatypes
 
 let is_function_ty e =
-  match get_inner_type (oget e.ety) with
+  match get_inner_type (OCamlUtils.oget e.ety) with
   | TArrow _ -> true
   | _ -> false
 
@@ -89,7 +90,7 @@ let rec inline_app env e1 e2 : exp =
     | ESome _ | ETuple _ | EOp _ | EVal _ | ERecord _ | EProject _->
         failwith
           (Printf.sprintf "inline_app: %s"
-             (Printing.exp_to_string e1))
+             (Nv_core.Printing.exp_to_string e1))
   in
   (* Printf.printf "inline_app e1: %s\ninline_app e2: %s)\n"
     (Printing.exp_to_string e1)

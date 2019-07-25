@@ -1,14 +1,13 @@
 (** * SMT encoding of network *)
 
-open Collections
-open Syntax
+open Nv_core.Collections
+open Nv_core.Syntax
 open SolverUtil
 open Profile
 open SmtLang
 open SmtUtils
 open SmtOptimizations
 open Smt
-open OCamlUtils
 
 (** Removes all variable equalities *)
 (** Modified from propagate_eqs in SmtOptimizations.ml. It has the following
@@ -173,7 +172,7 @@ let hiding_map_to_string hm : string =
     | _ -> failwith "hiding_map_to_string failure"
   in
   StringMap.fold
-    (fun var (b1, b2, coms, decl) acc ->
+    (fun _var (b1, b2, coms, decl) acc ->
        let str =
          Printf.sprintf "(%b, %b, [%s], %s)" b1 b2
            (BatString.concat ", " @@ List.map com_to_str coms)
@@ -277,7 +276,7 @@ let construct_starting_env (full_env : smt_env) : smt_env * hiding_map =
        they're probably important, and so should probably not be hidden. *)
     | _ -> true
   in
-  let active_coms, hidden_coms = BatList.partition must_keep full_env.ctx in
+  let active_coms, _hidden_coms = BatList.partition must_keep full_env.ctx in
 
   (*** Step 2: Unhide all the variables which appear in the remaining commands.
        This will probably mean unhiding all the assert-result variables. ***)
@@ -324,7 +323,7 @@ let construct_starting_env (full_env : smt_env) : smt_env * hiding_map =
 
 (* Gets a different kind of model than the code in Smt.ml: here, we want values
    for each _SMT_ variable, rather than for the corresponding NV variables *)
-let get_model verbose info query chan solver =
+let get_model verbose info _query _chan solver =
   let q =
     Printf.sprintf "%s\n" (GetModel |> mk_command |> command_to_smt verbose info)
   in
@@ -375,7 +374,7 @@ let get_variables_to_unhide query chan solver =
   in
   (* TODO: Z3 doesn't minimize cores by default; we may want it to do so *)
   print_and_ask solver "(get-unsat-core)\n";
-  let raw_core = oget @@ get_reply solver in
+  let raw_core = Nv_datastructures.OCamlUtils.oget @@ get_reply solver in
   (* Chop off leading and trailing parens *)
   let chopped_core = BatString.chop ~l:1 ~r:1 raw_core in
   let assertion_names = String.split_on_char ' ' chopped_core in
@@ -494,7 +493,7 @@ let solve_hiding info query partial_chan ~full_chan ?(params=[]) ?(starting_vars
   ask_solver_blocking partial_solver partial_encoding;
   ask_solver_blocking full_solver full_encoding;
 
-  let nodes = AdjGraph.num_vertices net.graph in
+  let nodes = Nv_datastructures.AdjGraph.num_vertices net.graph in
   let ask_for_nv_model solver =
     ask_for_model query partial_chan info full_env solver renaming nodes net.assertion
   in

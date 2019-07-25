@@ -1,9 +1,9 @@
-open AdjGraph
-open Vertex
+open Nv_datastructures
+open Nv_datastructures.AdjGraph
 
 module AbstractNode =
   struct
-    include AdjGraph.VertexSet
+    include Nv_datastructures.AdjGraph.VertexSet
 
     let toSet x = x
     let fromSet x = x
@@ -12,8 +12,8 @@ module AbstractNode =
       let rec printAux lst acc =
         match lst with
         | [] -> "}" :: acc
-        | [u] -> printAux [] ((Printf.sprintf "%s" (printVertex u)) :: acc)
-        | u :: lst -> printAux lst ((Printf.sprintf "%s," (printVertex u)) :: acc)
+        | [u] -> printAux [] ((Printf.sprintf "%s" (Vertex.printVertex u)) :: acc)
+        | u :: lst -> printAux lst ((Printf.sprintf "%s," (Vertex.printVertex u)) :: acc)
       in
       String.concat "" (BatList.rev (printAux (VertexSet.elements us) ["{"]))
 

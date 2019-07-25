@@ -1,11 +1,10 @@
-open Syntax
+open Nv_datatypes
+open Nv_datastructures
+open Nv_core.Syntax
 open SolverUtil
 open SmtLang
 open SmtUtils
-open Slicing
 open Smt
-open OCamlUtils
-
 
 module Boxed = SmtBoxed.Boxed
 
@@ -13,19 +12,19 @@ let encode_z3_merge str env e =
   match e.e with
   | EFun { arg= x
          ; argty= xty
-         ; body= {e= EFun {arg= y; argty= yty; body= exp}} } ->
+         ; body= {e= EFun {arg= y; argty= yty; body= exp; _}; _}; _ } ->
     let xstr =
       mk_constant env (create_name str x)
-        (ty_to_sort (oget xty))
+        (ty_to_sort (OCamlUtils.oget xty))
     in
     let ystr =
       mk_constant env (create_name str y)
-        (ty_to_sort (oget yty))
+        (ty_to_sort (OCamlUtils.oget yty))
     in
     let name = Printf.sprintf "%s-result" str in
     let result =
       mk_constant env name
-        (oget exp.ety |> ty_to_sort)
+        (OCamlUtils.oget exp.ety |> ty_to_sort)
     in
     let e = Boxed.encode_exp_z3 str env exp in
     add_constraint env (mk_term (mk_eq result.t ((Boxed.to_list e) |> List.hd).t));
@@ -35,15 +34,15 @@ let encode_z3_merge str env e =
 let encode_z3_trans str env e =
   match e.e with
   | EFun
-      {arg= x; argty= xty; body= exp} ->
+      {arg= x; argty= xty; body= exp; _} ->
     let xstr =
       mk_constant env (create_name str x)
-        (ty_to_sort (oget xty))
+        (ty_to_sort (OCamlUtils.oget xty))
     in
     let name = Printf.sprintf "%s-result" str in
     let result =
       mk_constant env name
-        (oget exp.ety |> ty_to_sort)
+        (OCamlUtils.oget exp.ety |> ty_to_sort)
     in
     let e = Boxed.encode_exp_z3 str env exp in
     add_constraint env (mk_term (mk_eq result.t ((Boxed.to_list e) |> List.hd).t));
@@ -53,12 +52,12 @@ let encode_z3_trans str env e =
 let checkMonotonicity info query chan net =
   let checka = Boxed.create_strings "checka" net.attr_type in
   let checka_var = Boxed.lift1 Var.create checka in
-  let transTable = partialEvalOverEdges (AdjGraph.edges net.graph) net.trans in
-  let mergeTable = partialEvalOverNodes (AdjGraph.num_vertices net.graph) net.merge in
+  let transTable = Nv_slicing.Slicing.partialEvalOverEdges (AdjGraph.edges net.graph) net.trans in
+  let mergeTable = Nv_slicing.Slicing.partialEvalOverNodes (AdjGraph.num_vertices net.graph) net.merge in
   let solver = start_solver [] in
   let unbox x = Boxed.to_list x |> List.hd in
   Hashtbl.iter (fun edge trans ->
-      let env = Boxed.init_solver net.symbolics [] in
+      let env = Boxed.init_solver net.Nv_core.Syntax.symbolics [] in
       Boxed.add_symbolic env checka_var (Ty net.attr_type);
       let checka =
         Boxed.lift2 (fun checka s -> mk_constant env (Boxed.create_vars env "" checka) s)
@@ -98,11 +97,11 @@ let checkMonotonicity info query chan net =
       let property_exp =
         aexp(ematch (aexp(evar (unbox merge_var), Some net.attr_type, Span.default))
                (addBranch (PTuple [PWild; PWild; PVar ospf_var; PVar bgp_var; PWild])
-                  (aexp (eop And
-                           [aexp(eop Eq [evar ospf_var; evar old_ospf_var],
+                  (aexp (eop Nv_core.Syntax.And
+                           [aexp(eop Nv_core.Syntax.Eq [evar ospf_var; evar old_ospf_var],
                                  Some TBool,
                                  Span.default);
-                            aexp(eop Eq [evar bgp_var; evar old_bgp_var],
+                            aexp(eop Nv_core.Syntax.Eq [evar bgp_var; evar old_bgp_var],
                                  Some TBool,
                                  Span.default)],
                          Some TBool, Span.default)) emptyBranch),
@@ -140,7 +139,7 @@ let checkMonotonicity info query chan net =
         printQuery chan "(pop)\n";
       match reply with
       | SAT ->
-        Console.warning (Printf.sprintf "Policy on edge %s is non-monotonic"
+        Nv_core.Console.warning (Printf.sprintf "Policy on edge %s is non-monotonic"
                            (AdjGraph.printEdge edge))
       | UNSAT -> ()
       | _ -> failwith "unknown answer") transTable

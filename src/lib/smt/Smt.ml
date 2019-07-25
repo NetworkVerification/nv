@@ -1,8 +1,7 @@
 (** * SMT encoding of network *)
 
 open Nv_core.Collections
-open Nv_core.Syntax
-open Solution
+open Nv_solution.Solution
 open SolverUtil
 open Profile
 open SmtLang
@@ -19,7 +18,7 @@ open SmtModel
    * Don't hardcode tactics, try psmt (preliminary results were bad),
      consider par-and/par-or once we have multiple problems to solve.*)
 
-type smt_result = Unsat | Unknown | Sat of Solution.t
+type smt_result = Unsat | Unknown | Sat of Nv_solution.Solution.t
 
 (** ** Translate the environment to SMT-LIB2 *)
 
@@ -68,7 +67,7 @@ let expr_encoding smt_config =
 (* Asks the SMT solver to return a model and translates it to NV lang *)
 let ask_for_model query chan info env solver renaming nodes eassert =
   (* build a counterexample based on the model provided by Z3 *)
-  let model = eval_model env.symbolics nodes eassert renaming in
+  let model = eval_model env.SmtUtils.symbolics nodes eassert renaming in
   let model_question = commands_to_smt smt_config.verbose info model in
   ask_solver solver model_question;
   if query then
@@ -106,15 +105,15 @@ let get_sat query chan info env solver renaming nodes eassert reply =
     Unknown
   | _ -> failwith "unexpected answer from solver\n"
 
-let refineModel (model : Solution.t) info query chan env solver renaming
+let refineModel (model : Nv_solution.Solution.t) info query chan env solver renaming
   nodes eassert requires =
   let refiner = refineModelMinimizeFailures in
   match refiner model info query chan solver renaming env requires with
   | None ->
-    (* Console.warning "Model was not refined\n"; *)
+    (* Nv_core.Console.warning "Model was not refined\n"; *)
     Sat model (* no refinement can occur *)
   | Some q ->
-    Console.warning "Refining the model...\n";
+    Nv_core.Console.warning "Refining the model...\n";
     let checkSat = CheckSat |> mk_command |> command_to_smt smt_config.verbose info in
     let q = Printf.sprintf "%s%s\n" q checkSat in
     if query then
@@ -124,8 +123,8 @@ let refineModel (model : Solution.t) info query chan env solver renaming
     let isSat = get_sat query chan info env solver renaming nodes eassert reply in
     (* if the second query was unsat, return the first counterexample *)
     match isSat with
-    | Sat newModel ->
-      Console.warning "Refined the model";
+    | Sat _newModel ->
+      Nv_core.Console.warning "Refined the model";
       isSat
     | _ -> Sat model
 
@@ -156,7 +155,7 @@ let solve info query chan params net_or_srp nodes eassert requires =
      ask_solver solver q;
      let reply = solver |> parse_reply in
      get_sat query chan info env solver renaming nodes eassert reply
-  | Some k ->
+  | Some _ ->
      let q = check_sat info in
      if query then
        printQuery chan q;
@@ -177,27 +176,29 @@ let solve info query chan params net_or_srp nodes eassert requires =
        refineModel model1 info query chan env solver renaming nodes eassert requires
 
 let solveClassic info query chan ?(params=[]) net =
+  let open Nv_core.Syntax in
   let module ExprEnc = (val expr_encoding smt_config) in
   let module Enc =
     (val (module SmtClassicEncoding.ClassicEncoding(ExprEnc) : SmtClassicEncoding.ClassicEncodingSig))
   in
   solve info query chan params (fun () -> Enc.encode_z3 net)
-    (AdjGraph.num_vertices net.graph) net.assertion net.requires
+    (Nv_datastructures.AdjGraph.num_vertices net.graph) net.assertion net.requires
 
 let solveFunc info query chan ?(params=[]) srp =
+  let open Nv_core.Syntax in
   let module ExprEnc = (val expr_encoding smt_config) in
   let module Enc =
     (val (module SmtFunctionalEncoding.FunctionalEncoding(ExprEnc) : SmtFunctionalEncoding.FunctionalEncodingSig))
   in
   solve info query chan params (fun () -> Enc.encode_z3 srp)
-    (AdjGraph.num_vertices srp.srp_graph) srp.srp_assertion srp.srp_requires
+    (Nv_datastructures.AdjGraph.num_vertices srp.srp_graph) srp.srp_assertion srp.srp_requires
 
 (** For quickcheck smart value generation *)
-let symvar_assign info (net: Syntax.network) : value VarMap.t option =
+let symvar_assign info (net: Nv_core.Syntax.network) : Nv_core.Syntax.value VarMap.t option =
   let module ExprEnc = (val expr_encoding smt_config) in
   let module Enc = (val (module SmtClassicEncoding.ClassicEncoding(ExprEnc) : Encoding)) in
-  let env = ExprEnc.init_solver net.symbolics ~labels:[] in
-  let requires = net.requires in
+  let env = ExprEnc.init_solver net.Nv_core.Syntax.symbolics ~labels:[] in
+  let requires = net.Nv_core.Syntax.requires in
   Enc.add_symbolic_constraints env requires env.symbolics;
   let smt_encoding = env_to_smt ~verbose:smt_config.verbose info env in
   let solver = start_solver [] in
@@ -226,5 +227,5 @@ let symvar_assign info (net: Syntax.network) : value VarMap.t option =
         failwith "failed to parse a model"
       | _ -> failwith "failed to parse a model"
     in
-    Some model.symbolics
+    Some model.Nv_solution.Solution.symbolics
   | _ -> failwith "Unexpected reply from SMT solver"

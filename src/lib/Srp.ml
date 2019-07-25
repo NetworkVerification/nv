@@ -1,7 +1,10 @@
-open Collections
-open Solution
-open Syntax
-open Generators
+open Nv_core
+open Nv_datastructures
+open Nv_solution
+open Nv_utils
+open Nv_interpreter
+open Nv_core.Syntax
+open Nv_core.Collections
 
 type srp =
   { graph: AdjGraph.t
@@ -13,7 +16,7 @@ type srp =
 (* SRP Simulation *)
 (******************)
 
-module S = Map.Make (Integer)
+module S = Map.Make (Nv_datatypes.Integer)
 
 exception Simulation_error of string
 
@@ -82,7 +85,7 @@ let net_to_srp net ~throw_requires =
       let env = info.env in
       let e = match ty_exp with
         | Exp e -> e
-        | Ty ty -> e_val (default_value ty)
+        | Ty ty -> e_val (Generators.default_value ty)
       in
       let v = Interp.interp_exp env e in
       info.env <- update_value env x v ;
@@ -92,14 +95,14 @@ let net_to_srp net ~throw_requires =
       let env = info.env in
       let v = Interp.interp_exp env e in
       info.env <- update_value env x v) net.defs;
-  info.init <- get_func net.init;
-  info.m <- get_func net.merge;
-  info.t <- get_func net.trans;
-  info.a <- (match net.assertion with
+  info.init <- get_func net.Syntax.init;
+  info.m <- get_func net.Syntax.merge;
+  info.t <- get_func net.Syntax.trans;
+  info.a <- (match net.Syntax.assertion with
              | Some a -> get_func a
              | None -> None);
-  info.ns <- Some (AdjGraph.num_vertices net.graph);
-  info.es <- Some (AdjGraph.edges net.graph);
+  info.ns <- Some (AdjGraph.num_vertices net.Syntax.graph);
+  info.es <- Some (AdjGraph.edges net.Syntax.graph);
   (* process requires *)
   BatList.iter (fun e ->
       match (Interp.interp_exp info.env e).v with
@@ -116,7 +119,8 @@ let net_to_srp net ~throw_requires =
     ; a
     ; ns= Some n
     ; es= Some es
-    ; init= Some cl } ->
+    ; init= Some cl 
+    ; _ } ->
       let srp =
         { graph= AdjGraph.add_edges (AdjGraph.create n) es
         ; trans= tf
@@ -124,11 +128,11 @@ let net_to_srp net ~throw_requires =
         ; assertion= a }
       in
       (srp, cl, info.syms)
-  | {m= None} -> Console.error "missing merge function"
-  | {t= None} -> Console.error "missing trans function"
-  | {ns= None} -> Console.error "missing nodes declaration"
-  | {es= None} -> Console.error "missing edges declaration"
-  | {init= None} -> Console.error "missing init declaration"
+  | {m= None; _} -> Console.error "missing merge function"
+  | {t= None; _} -> Console.error "missing trans function"
+  | {ns= None; _} -> Console.error "missing nodes declaration"
+  | {es= None; _} -> Console.error "missing edges declaration"
+  | {init= None; _} -> Console.error "missing init declaration"
 
 let net_to_state net ~throw_requires =
   let srp, init, syms = net_to_srp net ~throw_requires in
@@ -146,7 +150,7 @@ let get_attribute v s =
   | None -> failwith ("no attribute at vertex " ^ string_of_int v)
   | Some a -> a
 
-let simulate_step {graph= g; trans; merge} s x =
+let simulate_step ({graph= g; trans; merge; _} : srp) s x =
   let do_neighbor initial_attribute (s, todo) n =
     let neighbor = vnode n in
     let edge = vedge (x, n) in
@@ -187,7 +191,7 @@ let simulate_init_bound srp ((s, q): state) k =
   in
   loop s q k
 
-let check_assertion srp node v =
+let check_assertion (srp : srp) node v =
   match srp.assertion with
   | None -> true
   | Some a ->
@@ -199,7 +203,7 @@ let check_assertion srp node v =
 let check_assertions srp vals =
   AdjGraph.VertexMap.mapi (fun n v -> check_assertion srp n v) vals
 
-let simulate_net net =
+let simulate_net (net: Syntax.network) : Nv_solution.Solution.t =
   let srp, state, syms =
     net_to_state net ~throw_requires:true
   in
@@ -207,7 +211,7 @@ let simulate_net net =
   let asserts = check_assertions srp vals in
   {labels= vals; symbolics= syms; assertions= Some asserts}
 
-let simulate_net_bound net k =
+let simulate_net_bound net k : (Nv_solution.Solution.t * queue) =
   let srp, state, syms =
     net_to_state net ~throw_requires:true
   in

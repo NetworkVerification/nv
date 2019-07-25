@@ -1,3 +1,6 @@
+open Nv_core
+open Nv_solution
+
 val flatten_ty : Syntax.ty -> Syntax.ty
 
 (** [flatten ds] flattens nested tuples *)

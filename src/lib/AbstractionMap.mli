@@ -1,3 +1,6 @@
+open Nv_datastructures
+open Nv_core
+
 module AbstractNode :
 sig
   include module type of AdjGraph.VertexSet

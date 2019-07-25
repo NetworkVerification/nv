@@ -1,5 +1,8 @@
-open Syntax
-open OCamlUtils
+open Nv_utils
+open Nv_interpreter
+open Nv_datastructures
+open Nv_datatypes
+open Nv_core
 
 module Prefix =
   struct
@@ -16,7 +19,7 @@ module PrefixSetSet = BatSet.Make(PrefixSet)
 module PrefixMap = BatMap.Make(Prefix)
 
 type network_slice =
-  { net : network;
+  { net : Syntax.network;
     prefixes : PrefixSet.t;
     destinations : AdjGraph.VertexSet.t
   }
@@ -31,7 +34,7 @@ let partialEvalOverNodes (n : AdjGraph.Vertex.t) (e: Syntax.exp) =
   let tbl = Hashtbl.create n in
   AdjGraph.fold_vertices
     (fun u _ ->
-        let initu = InterpPartial.interp_partial (Syntax.apps e [e_val (vnode u)]) in
+        let initu = InterpPartial.interp_partial (Syntax.apps e [Syntax.e_val (Syntax.vnode u)]) in
         (* Printf.printf "exp1: %s\n" (Printing.exp_to_string initu); *)
       Hashtbl.add tbl u initu) n ();
   tbl
@@ -39,7 +42,7 @@ let partialEvalOverNodes (n : AdjGraph.Vertex.t) (e: Syntax.exp) =
 let partialEvalOverEdges (edges : AdjGraph.Edge.t list) (e: Syntax.exp) =
   let tbl = Hashtbl.create (BatList.length edges) in
   BatList.iter (fun edge ->
-      let ptrans = InterpPartial.interp_partial_fun e [vedge edge] in
+      let ptrans = InterpPartial.interp_partial_fun e [Syntax.vedge edge] in
       Hashtbl.add tbl edge ptrans) edges;
   tbl
 
@@ -56,16 +59,16 @@ let build_prefix_map (u : AdjGraph.Vertex.t)
 let get_prefixes_from_expr (expr: Syntax.exp) : PrefixSet.t =
   let prefixes = ref PrefixSet.empty in
   Visitors.iter_exp (fun e ->
-      match e.e with
-      | EOp (Eq, [var; pre]) when is_value pre ->
-         (match var.e with
-          | EVar x ->
+      match e.Syntax.e with
+      | Syntax.EOp (Syntax.Eq, [var; pre]) when Syntax.is_value pre ->
+         (match var.Syntax.e with
+          | Syntax.EVar x ->
              if (Var.name x) = "d" then
                begin
-                 match (Syntax.to_value pre).v with
-                 | VTuple [v1;v2] ->
-                    (match v1.v, v2.v with
-                     | VInt ip, VInt p ->
+                 match (Syntax.to_value pre).Syntax.v with
+                 | Syntax.VTuple [v1;v2] ->
+                    (match v1.Syntax.v, v2.Syntax.v with
+                     | Syntax.VInt ip, Syntax.VInt p ->
                         prefixes := PrefixSet.add (ip, p) !prefixes
                      | _ -> ())
                  | _ -> ()
@@ -84,12 +87,12 @@ let relevantPrefixes (assertionTable : (AdjGraph.Vertex.t, Syntax.exp) Hashtbl.t
    in the given query. Over-approximates, this should also be per prefix as well.*)
 let findRelevantNodes (assertionTable : (Syntax.node, Syntax.exp) Hashtbl.t) =
   Hashtbl.fold (fun u eu acc ->
-      match eu.e with
-      | EFun f ->
-         (match f.body.e with
-          | EVal v ->
-             (match v.v with
-              | VBool true -> acc
+      match eu.Syntax.e with
+      | Syntax.EFun f ->
+         (match f.Syntax.body.Syntax.e with
+          | Syntax.EVal v ->
+             (match v.Syntax.v with
+              | Syntax.VBool true -> acc
               | _ -> AdjGraph.VertexSet.add u acc)
           | _ -> AdjGraph.VertexSet.add u acc)
       | _ -> AdjGraph.VertexSet.add u acc) assertionTable AdjGraph.VertexSet.empty
@@ -113,7 +116,8 @@ let groupPrefixesByVertices (umap: AdjGraph.VertexSet.t PrefixMap.t) : PrefixSet
                        reverseMap PrefixSetSet.empty
 
 let sliceDestination symb (pre: Prefix.t) =
-  let ls1, ls2 = BatList.partition (fun (x, tye) ->
+  let open Syntax in
+  let ls1, ls2 = BatList.partition (fun (x, _) ->
                      if Var.name x = "d" then
                        true
                      else
@@ -124,6 +128,7 @@ let sliceDestination symb (pre: Prefix.t) =
    BatList.map (fun (s,v) -> DSymbolic (s,v)) ls2)
 
 let createNetwork decls =
+  let open Syntax in
   match
     ( get_merge decls
     , get_trans decls
@@ -157,10 +162,11 @@ let createNetwork decls =
 
 
 (* Need to have inlined definitions before calling this *)
-let createSlices info net =
+let createSlices _info net =
+  let open Syntax in
   let n = AdjGraph.num_vertices net.graph in
   let initMap = partialEvalOverNodes n net.init in
-  let assertMap = partialEvalOverNodes n (oget net.assertion) in
+  let assertMap = partialEvalOverNodes n (OCamlUtils.oget net.assertion) in
   (* find the prefixes that are relevant to the assertions *)
   let assertionPrefixes = relevantPrefixes assertMap in
   (* find where each prefix is announced from *)
@@ -177,17 +183,17 @@ let createSlices info net =
       let ds = PrefixMap.find pre relevantSlices in
       let dstPre, symb = sliceDestination net.symbolics pre in
       let decls =
-        Inline.inline_declarations ((DATy net.attr_type) :: dstPre :: (DNodes n)
+        Nv_transformations.Inline.inline_declarations ((DATy net.attr_type) :: dstPre :: (DNodes n)
                                     :: (DEdges (AdjGraph.edges (net.graph))) :: symb @
                                       [(DInit net.init);
                                        (DMerge net.merge); (DTrans net.trans);
-                                       (DAssert (oget net.assertion))]) (* |> *)
+                                       (DAssert (OCamlUtils.oget net.assertion))]) (* |> *)
           (* Typing.infer_declarations info *) in
       { net =
           { attr_type = net.attr_type;
-            init = oget (get_init decls);
-            trans = oget (get_trans decls);
-            merge = oget (get_merge decls);
+            init = OCamlUtils.oget (get_init decls);
+            trans = OCamlUtils.oget (get_trans decls);
+            merge = OCamlUtils.oget (get_merge decls);
             assertion = (get_assert decls);
             partition = (get_partition decls); (* partitioning *)
             interface = (get_interface decls); (* partitioning *)

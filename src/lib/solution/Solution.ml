@@ -1,25 +1,25 @@
-open AdjGraph
+open Nv_datastructures
 open ANSITerminal
-open Collections
+open Nv_core.Collections
 
 type t =
-  { symbolics: Syntax.value VarMap.t
-  ; labels: Syntax.value VertexMap.t
-  ; assertions: bool VertexMap.t option }
+  { symbolics: Nv_core.Syntax.value VarMap.t
+  ; labels: Nv_core.Syntax.value AdjGraph.VertexMap.t
+  ; assertions: bool AdjGraph.VertexMap.t option }
 
 let print_solution solution =
-  let cfg = Cmdline.get_cfg () in
+  let cfg = Nv_core.Cmdline.get_cfg () in
   print_newline () ;
   if cfg.verbose then (
     VarMap.iter
       (fun k v ->
-         Printf.printf "%s:%s\n" (Var.name k) (Printing.value_to_string v) )
+         Printf.printf "%s:%s\n" (Nv_datatypes.Var.name k) (Nv_core.Printing.value_to_string v) )
       solution.symbolics ;
     AdjGraph.VertexMap.iter
       (fun k v ->
         Printf.printf "Label(%d):%s\n"
           k
-          (Printing.value_to_string v) )
+          (Nv_core.Printing.value_to_string v) )
       solution.labels ) ;
   ( match solution.assertions with
   | None ->

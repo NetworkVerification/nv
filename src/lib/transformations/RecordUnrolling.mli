@@ -1,10 +1,10 @@
-open Syntax
+open Nv_solution
 
 val unroll :
-  declarations -> 
-  declarations * (Solution.t -> Solution.t)
+  Nv_core.Syntax.declarations -> 
+  Nv_core.Syntax.declarations * (Solution.t -> Solution.t)
 
 
 val unroll_net :
-  network -> 
-  network * (Solution.t -> Solution.t)
+  Nv_core.Syntax.network -> 
+  Nv_core.Syntax.network * (Solution.t -> Solution.t)

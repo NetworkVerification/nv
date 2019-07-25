@@ -1,11 +1,12 @@
+open Nv_datatypes
+open Nv_datastructures
+open Nv_core
 open AdjGraph
 open AbstractionMap
-open Console
 open Failures
-open Syntax
-open Generators
-open Slicing
-open OCamlUtils
+open Nv_core.Syntax
+open Nv_utils
+open Nv_slicing
 
 let debugAbstraction = ref false
 
@@ -137,7 +138,7 @@ let partialEvalTrans (graph : AdjGraph.t)
   let es = AdjGraph.edges graph in
   let tbl = Hashtbl.create (BatList.length es) in
   BatList.iter (fun e ->
-      let ptrans = InterpPartial.interp_partial_fun trans [vedge e] in
+      let ptrans = Nv_interpreter.InterpPartial.interp_partial_fun trans [vedge e] in
       Hashtbl.add tbl e ((Syntax.hash_exp ~hash_meta:false ptrans), ptrans)) es;
   tbl
 
@@ -146,7 +147,7 @@ let partialEvalMerge (graph : AdjGraph.t)
   let ns = AdjGraph.get_vertices graph in
   let tbl = Hashtbl.create (VertexSet.cardinal ns) in
   VertexSet.iter (fun v ->
-      let pmerge = InterpPartial.interp_partial_fun merge [vnode v] in
+      let pmerge = Nv_interpreter.InterpPartial.interp_partial_fun merge [vnode v] in
       Hashtbl.add tbl v (Syntax.hash_exp ~hash_meta:false pmerge, pmerge)) ns;
   tbl
 
@@ -314,7 +315,7 @@ module BuildAbstractNetwork =
       let avertex_var = Var.create "node" in
 
       (* Grab one of the destination nodes *)
-      let (d, dst') = VertexSet.pop_min dst in
+      let (d, _dst') = VertexSet.pop_min dst in
       (* Grab its initial value *)
       let vinit = (Hashtbl.find initMap d) in
       (* This is the default initial value for all other nodes.
@@ -384,6 +385,7 @@ module BuildAbstractNetwork =
                              (slice: Slicing.network_slice)
                              (k: int) =
       (* build the abstract graph based on the abstraction function *)
+      let open Slicing in
       let absGraph= buildAbstractAdjGraph slice.net.graph f in
       let edgeshat = AdjGraph.edges absGraph in
       let n = AdjGraph.num_vertices absGraph in
@@ -404,7 +406,7 @@ module BuildAbstractNetwork =
       let inithat = buildAbstractInit slice.destinations initMap slice.net.attr_type f in
       (* build the abstract assert function *)
       let assertMap =
-        Slicing.partialEvalOverNodes (num_vertices slice.net.graph) (oget slice.net.assertion)
+        Slicing.partialEvalOverNodes (num_vertices slice.net.graph) (OCamlUtils.oget slice.net.assertion)
       in
       let asserthat = buildAbstractAssert assertMap f in
       if !debugAbstraction then
@@ -519,7 +521,7 @@ module FailuresAbstraction =
        given attribute type. A non-default value indicates that this
        message has a path to the destination *)
     let validAttribute (attrTy: Syntax.ty) (m : Syntax.value) : bool =
-      not (equal_values ~cmp_meta:false (default_value attrTy) m)
+      not (equal_values ~cmp_meta:false (Generators.default_value attrTy) m)
 
     let splitSet_debug us =
       if !debugAbstraction then
@@ -532,7 +534,7 @@ module FailuresAbstraction =
 
     let refineForFailures_debug (f: abstractionMap) =
       if !debugAbstraction then
-        show_message (printAbstractGroups f "\n") T.Blue
+        Console.show_message (printAbstractGroups f "\n") ANSITerminal.Blue
                      "Abstract groups after refine for failures "
 
     let compare_refinements f f' =
@@ -939,7 +941,7 @@ module FailuresAbstraction =
 
     let refineCounterExample (file: string) (g: AdjGraph.t)
                           (fbonsai: abstractionMap) (f: abstractionMap)
-                          (failVars: Var.t EdgeMap.t) (sol: Solution.t) (k: int)
+                          (failVars: Var.t EdgeMap.t) (sol: Nv_solution.Solution.t) (k: int)
                           (* (unused_edges: EdgeSet.t) *)
                           (todo: VertexSet.t)
                           (dst: VertexSet.t) (attrTy : Syntax.ty)

@@ -1,6 +1,7 @@
+open Nv_core
 open Syntax
 open Collections
-open OCamlUtils
+open Nv_datastructures
 
 type maplist = (Syntax.ty * (ExpSet.t * VarSet.t)) list;;
 
@@ -11,7 +12,7 @@ let maplist_to_string (lst : maplist) =
          (fun e s -> s ^ Printing.exp_to_string e ^ "; ")
          const_keys "")
       (VarSet.fold
-         (fun v s -> s ^ Var.to_string v ^ "; ")
+         (fun v s -> s ^ Nv_datatypes.Var.to_string v ^ "; ")
          symb_keys "")
   in
   Printf.sprintf "[%s]"
@@ -22,7 +23,7 @@ let maplist_to_string (lst : maplist) =
 let add_key mty symbolics (const_keys, symb_keys) keyo =
   match keyo with
   | None -> const_keys, symb_keys
-  | Some ({e=EVar var}) when BatList.mem_cmp Var.compare var symbolics ->
+  | Some ({e=EVar var}) when BatList.mem_cmp Nv_datatypes.Var.compare var symbolics ->
     const_keys, (VarSet.add var symb_keys)
   | Some key ->
     if is_value key then ExpSet.add key const_keys, symb_keys
@@ -57,7 +58,7 @@ let add_if_map_type symbolics (ty, keyo) lst : maplist =
 
 let rec collect_in_exp (symbolics : var list) (exp : Syntax.exp) (acc : maplist) : maplist =
   (* print_endline @@ "Collecting in expr " ^ Printing.exp_to_string exp; *)
-  let curr_ty = oget exp.ety in
+  let curr_ty = OCamlUtils.oget exp.ety in
   let collect_in_exp = collect_in_exp symbolics in
   let add_if_map_type = add_if_map_type symbolics in
   (* If our current expression has map type, add that to our list *)
@@ -72,7 +73,7 @@ let rec collect_in_exp (symbolics : var list) (exp : Syntax.exp) (acc : maplist)
         match op, es with
         | MGet, [m; key]
         | MSet, [m; key; _] ->
-          add_if_map_type ((oget m.ety), Some key) acc
+          add_if_map_type ((OCamlUtils.oget m.ety), Some key) acc
         | _ -> acc
       in
       BatList.fold_left (BatPervasives.flip collect_in_exp) acc es
@@ -110,7 +111,7 @@ let collect_in_decl (symbolics : var list) (d : declaration) (acc : maplist) : m
   let collect_in_exp = collect_in_exp symbolics in
   match d with
   | DLet (_, tyo, exp) ->
-    add_if_map_type (oget tyo, None) acc
+    add_if_map_type (OCamlUtils.oget tyo, None) acc
     |> collect_in_exp exp
   | DSymbolic (_, toe) ->
     begin
@@ -147,14 +148,14 @@ let lookup_map_type ty lst =
 let add_keys_for_nodes_and_edges decls maplist =
   let nodes =
     get_nodes decls
-    |> oget
+    |> OCamlUtils.oget
     |> BatEnum.(--^) 0 (* Enum of 0 to (num_nodes - 1) *)
     |> BatEnum.map (fun n -> e_val (vnode n))
     |> ExpSet.of_enum
   in
   let edges =
     get_edges decls
-    |> oget
+    |> OCamlUtils.oget
     |> List.map (fun (n1, n2) -> e_val (vedge (n1, n2)))
     |> ExpSet.of_list
   in

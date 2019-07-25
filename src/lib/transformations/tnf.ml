@@ -1,9 +1,9 @@
 (** * Tuple normal form transformation*)
 (* need a proper name for this *)
+open Nv_core
 open Collections
 open Syntax
-open Slicing
-open OCamlUtils
+open Nv_datastructures.OCamlUtils
 
 (** For now, assume it only applies to unboxed and inlined NV
    programs. It seems like a reasonable assumption *)
@@ -60,7 +60,7 @@ let rec tnf_exp e : exp =
                           (mapBranches (fun (p,b) ->
                                (* Printf.printf "%d,%d:%s\n\n" i (List.length (tupleToList b)) (Printing.exp_to_string b); *)
                                (p, BatList.nth (tupleToList b) i)) bs),
-                        Some ty, Span.default)) ts
+                        Some ty, Nv_datastructures.Span.default)) ts
              in
              aexp(etuple es, e.ety, e.espan)
          | _ ->

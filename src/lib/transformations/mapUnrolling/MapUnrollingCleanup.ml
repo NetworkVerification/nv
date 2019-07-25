@@ -1,8 +1,7 @@
 (* Replaces all 0-element tuples in the program with unit,
    and all 1-element tuples with their only element *)
 
-open Syntax
-open OCamlUtils
+open Nv_core
 
 let mapo f o =
   match o with
@@ -11,6 +10,7 @@ let mapo f o =
 ;;
 
 let rec replace_ty ty =
+  let open Syntax in
   match ty with
   | TUnit | TBool | TInt _ | TNode | TEdge | QVar _ -> ty
   | TTuple [] -> TUnit
@@ -28,6 +28,7 @@ let rec replace_ty ty =
 ;;
 
 let rec replace_pattern p =
+  let open Syntax in
   match p with
   | PWild | PUnit | PBool _ | PInt _ | PVar _ | PNode _ | PEdge _ -> p
   | PTuple [] -> PUnit
@@ -38,6 +39,7 @@ let rec replace_pattern p =
 ;;
 
 let rec replace_val v =
+  let open Syntax in
   let new_v =
     match v.v with
     | VUnit | VBool _ | VInt _ | VNode _ | VEdge _ -> v
@@ -52,6 +54,7 @@ let rec replace_val v =
 ;;
 
 let rec replace_exp e =
+  let open Syntax in
   let new_e =
     match e.e with
     | ETuple [] -> e_val (vunit ())
@@ -90,12 +93,14 @@ let rec replace_exp e =
 ;;
 
 let replace_toe toe =
+  let open Syntax in
   match toe with
   | Ty ty -> Ty (replace_ty ty)
   | Exp e -> Exp (replace_exp e)
 ;;
 
 let rec replace_decl d =
+  let open Syntax in
   match d with
   | DNodes _ | DEdges _ -> d
   | DInit e -> DInit (replace_exp e)
@@ -107,12 +112,14 @@ let rec replace_decl d =
   | DRequire e -> DRequire (replace_exp e)
   | DATy aty -> DATy (replace_ty aty)
   | DUserTy (x, ty) -> DUserTy (x, replace_ty ty)
+  | _ -> failwith "not yet implemented!"
 ;;
 
 (** Functions to convert a solution to the replaced version to a solution
     to the original version **)
 
 let rec unreplace_value v oldty =
+  let open Syntax in
   let unreplaced_v =
     match v.v, oldty with
     | VUnit, TUnit
@@ -129,12 +136,12 @@ let rec unreplace_value v oldty =
   avalue (unreplaced_v, Some oldty, v.vspan)
 ;;
 
-let map_back_symbolics decls (sol : Solution.t) =
-  let symbolics = get_symbolics decls in
+let map_back_symbolics decls (sol : Nv_solution.Solution.t) =
+  let symbolics = Syntax.get_symbolics decls in
   let symbolics_to_convert =
     BatList.filter_map
       (fun (v, e) ->
-         let oldty = match e with Ty ty -> ty | Exp e -> oget e.ety in
+         let oldty = match e with Syntax.Ty ty -> ty | Exp e -> Nv_datastructures.OCamlUtils.oget e.ety in
          let newty = replace_ty oldty in
          if Typing.equiv_tys oldty newty then None
          else Some (v, oldty))
@@ -143,7 +150,7 @@ let map_back_symbolics decls (sol : Solution.t) =
   let convert_symbolic var v =
     let symb =
       List.find_opt
-        (fun (var', _) -> Var.equal var var')
+        (fun (var', _) -> Nv_datatypes.Var.equal var var')
         symbolics_to_convert
     in
     match symb with
@@ -156,17 +163,17 @@ let map_back_symbolics decls (sol : Solution.t) =
   in
   new_symbolics
 
-let map_back_attrs decls (sol : Solution.t) =
-  let attr_ty = oget (get_attr_type decls) in
+let map_back_attrs decls (sol : Nv_solution.Solution.t) =
+  let attr_ty = Nv_datastructures.OCamlUtils.oget (Syntax.get_attr_type decls) in
   let unrolled_attr_ty = replace_ty attr_ty in
   if Typing.equiv_tys attr_ty unrolled_attr_ty then sol.labels
   else (* Attribute type involved a map, so transform all attributes *)
-    AdjGraph.VertexMap.map
+    Nv_datastructures.AdjGraph.VertexMap.map
       (fun v -> unreplace_value v attr_ty)
       sol.labels
 ;;
 
-let map_back decls (sol : Solution.t) =
+let map_back decls (sol : Nv_solution.Solution.t) =
   {sol with
    symbolics = map_back_symbolics decls sol;
    labels = map_back_attrs decls sol}

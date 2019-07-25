@@ -233,7 +233,7 @@ struct
           failwith "not implemented"
         | Syntax.MSet, [_e1; _e2; _e3] ->
           failwith "not implemented"
-        | MMap, [{e= EFun {arg= x; argty= ty1; resty= ty2; body= e1}}; e2] ->
+        | MMap, [{e= EFun {arg= _x; argty= _ty1; resty= _ty2; body= _e1}; _}; _e2] ->
           failwith "not implemented yet"
         | MMapFilter, _
         | MMerge, _
@@ -447,7 +447,7 @@ struct
       avalue (vtuple [n1; n2], Some (TTuple [TNode; TNode]), v.vspan)
     | VTuple vs -> (
         match oget v.vty with
-        | TTuple ts ->
+        | TTuple _ ->
           let pair_decl = compute_decl env (oget v.vty) in
           let zes = BatList.map (fun v -> (encode_value_z3 descr env v).t) vs in
           let f = (pair_decl |> oget |> get_constructors |> BatList.hd).constr_name in

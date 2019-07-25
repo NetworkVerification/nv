@@ -1,10 +1,10 @@
-open Collections
-open Syntax
-open Solution
+open Nv_core
+open Nv_datatypes
+open Nv_core.Collections
+open Nv_core.Syntax
+open Nv_solution.Solution
 open SmtLang
-open SmtUtils
 open SolverUtil
-open OCamlUtils
 
 let prefix_if_needed varname =
   if
@@ -50,8 +50,8 @@ let eval_model (symbolics: Syntax.ty_or_exp VarMap.t)
     match eassert with
     | None -> base
     | Some _ ->
-      AdjGraph.fold_vertices (fun u acc ->
-          let assu = (assert_var u) ^ "-result" in
+      Nv_datastructures.AdjGraph.fold_vertices (fun u acc ->
+          let assu = (SmtUtils.assert_var u) ^ "-result" in
           let tm = find_renamed_term assu in
           let ev = mk_eval tm |> mk_command in
           let ec = mk_echo ("\"" ^ (var assu) ^ "\"")
@@ -61,7 +61,7 @@ let eval_model (symbolics: Syntax.ty_or_exp VarMap.t)
   (* Compute eval statements for symbolic variables *)
   let symbols =
     VarMap.fold (fun sv _ acc ->
-        let sv = symbolic_var sv in
+        let sv = SmtUtils.symbolic_var sv in
         let z3name = prefix_if_needed sv in
         let tm = find_renamed_term z3name in
         let ev = mk_eval tm |> mk_command in
@@ -95,28 +95,29 @@ let parse_val (s : string) : Syntax.value =
   let lexbuf = Lexing.from_string s
   in
   try SMTParser.smtlib SMTLexer.token lexbuf
-  with exn ->
+  with _exn ->
     begin
       let tok = Lexing.lexeme lexbuf in
       failwith (Printf.sprintf "failed to parse string %s on %s" s tok)
     end
 
-let translate_model (m : (string, string) BatMap.t) : Solution.t =
+let translate_model (m : (string, string) BatMap.t) : Nv_solution.Solution.t =
+  let open Nv_datastructures in
   BatMap.foldi (fun k v sol ->
       let nvval = parse_val v in
       match k with
       | k when BatString.starts_with k "label" ->
-        {sol with labels= AdjGraph.VertexMap.add (node_of_label_var k) nvval sol.labels}
+        {sol with labels= AdjGraph.VertexMap.add (SmtUtils.node_of_label_var k) nvval sol.labels}
       | k when BatString.starts_with k "assert-" ->
         {sol with assertions=
                     match sol.assertions with
                     | None ->
-                      Some (AdjGraph.VertexMap.add (node_of_assert_var k)
-                              (nvval |> Syntax.bool_of_val |> oget)
+                      Some (AdjGraph.VertexMap.add (SmtUtils.node_of_assert_var k)
+                              (nvval |> Syntax.bool_of_val |> OCamlUtils.oget)
                               AdjGraph.VertexMap.empty)
                     | Some m ->
-                      Some (AdjGraph.VertexMap.add (node_of_assert_var k)
-                              (nvval |> Syntax.bool_of_val |> oget) m)
+                      Some (AdjGraph.VertexMap.add (SmtUtils.node_of_assert_var k)
+                              (nvval |> Syntax.bool_of_val |> OCamlUtils.oget) m)
         }
       | k ->
         let k_var = Var.of_var_string k in
@@ -129,36 +130,37 @@ let box_vals (xs : (int * Syntax.value) list) =
   match xs with
   | [(_,v)] -> v
   | _ ->
-    vtuple (BatList.sort (fun (x1,x2) (y1,y2) -> compare x1 y1) xs
-            |> BatList.map (fun (x,y) -> y))
+    vtuple (BatList.sort (fun (x1,_x2) (y1,_y2) -> compare x1 y1) xs
+            |> BatList.map (fun (_,y) -> y))
 
-let translate_model_unboxed (m : (string, string) BatMap.t) : Solution.t =
+let translate_model_unboxed (m : (string, string) BatMap.t) : Nv_solution.Solution.t =
+  let open Nv_datastructures in
   let (symbolics, labels, assertions) =
     BatMap.foldi (fun k v (symbolics, labels, assertions) ->
         let nvval = parse_val v in
         match k with
         | k when BatString.starts_with k "label" ->
-          (match proj_of_var k with
+          (match SmtUtils.proj_of_var k with
            | None ->
              ( symbolics,
-               AdjGraph.VertexMap.add (node_of_label_var k) [(0,nvval)] labels,
+               AdjGraph.VertexMap.add (SmtUtils.node_of_label_var k) [(0,nvval)] labels,
                assertions )
            | Some i ->
              ( symbolics,
                AdjGraph.VertexMap.modify_def
-                 [] (node_of_label_var k) (fun xs -> (i,nvval) :: xs) labels,
+                 [] (SmtUtils.node_of_label_var k) (fun xs -> (i,nvval) :: xs) labels,
                assertions ))
         | k when BatString.starts_with k "assert-" ->
           ( symbolics,
             labels,
             match assertions with
             | None ->
-              Some (AdjGraph.VertexMap.add (node_of_assert_var k)
-                      (nvval |> Syntax.bool_of_val |> oget)
+              Some (AdjGraph.VertexMap.add (SmtUtils.node_of_assert_var k)
+                      (nvval |> Syntax.bool_of_val |> OCamlUtils.oget)
                       AdjGraph.VertexMap.empty)
             | Some m ->
-              Some (AdjGraph.VertexMap.add (node_of_assert_var k)
-                      (nvval |> Syntax.bool_of_val |> oget) m) )
+              Some (AdjGraph.VertexMap.add (SmtUtils.node_of_assert_var k)
+                      (nvval |> Syntax.bool_of_val |> OCamlUtils.oget) m) )
         | k ->
           ( let new_symbolics = VarMap.add (Var.of_var_string k) nvval symbolics in
             new_symbolics, labels, assertions )
@@ -170,10 +172,11 @@ let translate_model_unboxed (m : (string, string) BatMap.t) : Solution.t =
 
 
 (* Model Refiners *)
-let refineModelMinimizeFailures (model: Solution.t) info query chan
-    solve renaming env requires =
-  match (get_requires_failures requires).e with
-  | EOp(AtMost n, [e1;e2;e3]) ->
+let refineModelMinimizeFailures (model: Nv_solution.Solution.t) info _query _chan
+    _solve _renaming env requires =
+      let open Nv_datastructures in
+  match (SmtUtils.get_requires_failures requires).e with
+  | Syntax.EOp(Syntax.AtMost n, [e1;e2;e3]) ->
     (match e1.e with
      | ETuple es ->
        VarMap.iter (fun fvar fval ->
@@ -182,7 +185,7 @@ let refineModelMinimizeFailures (model: Solution.t) info query chan
              if b then
                Printf.printf "Initial model failed: %s\n" (Var.to_string fvar);
            | _ -> failwith "This should be a boolean variable") model.symbolics;
-       let mult = smt_config.multiplicities in
+       let mult = SmtUtils.smt_config.SmtUtils.multiplicities in
        let arg2 =
          aexp(etuple (BatList.map (fun evar ->
              match evar.e with
@@ -198,12 +201,12 @@ let refineModelMinimizeFailures (model: Solution.t) info query chan
               Span.default)
        in
        let new_req =
-         aexp (eop (AtMost n) [e1; arg2;e3], Some TBool, Span.default) in
+         aexp (eop (Syntax.AtMost n) [e1; arg2;e3], Some TBool, Span.default) in
        let zes = SmtUnboxed.Unboxed.encode_exp_z3 "" env new_req in
        let zes_smt =
          SmtUnboxed.Unboxed.(to_list (lift1 (fun ze -> mk_assert ze |> mk_command) zes))
        in
-       Some (commands_to_smt smt_config.verbose info zes_smt)
+       Some (commands_to_smt SmtUtils.smt_config.SmtUtils.verbose info zes_smt)
      | _ -> failwith "expected a tuple")
   | _ -> failwith "expected at most"
 
@@ -211,7 +214,7 @@ let refineModelMinimizeFailures (model: Solution.t) info query chan
     the counter example still holds when failing only the single
     links *)
 (* TODO: Avoid using this until we have support for source nodes in min-cut *)
-let refineModelWithSingles (model : Solution.t) info query chan solve renaming _ ds =
+let refineModelWithSingles (model : Nv_solution.Solution.t) info _query _chan _solve _renaming _ _ds =
   (* Find and separate the single link failures from the rest *)
   let (failed, notFailed) =
     VarMap.fold (fun fvar fval (accFailed, accNotFailed) ->
@@ -222,7 +225,7 @@ let refineModelWithSingles (model : Solution.t) info query chan solve renaming _
               (* FIXME: I have no idea if Var.name is sufficient here.
                  A better option is probably to change smt_config.multiplicities
                  to be a VarMap. *)
-              let fmult = StringMap.find (Var.name fvar) smt_config.multiplicities in
+              let fmult = StringMap.find (Var.name fvar) SmtUtils.smt_config.SmtUtils.multiplicities in
               if fmult > 1 then
                 (accFailed, fvar :: accNotFailed)
               else
@@ -237,11 +240,11 @@ let refineModelWithSingles (model : Solution.t) info query chan solve renaming _
     let failed =
       BatList.map (fun fvar -> (mk_eq (mk_var (Var.to_string fvar)) (mk_bool true))
                                |> mk_term |> mk_assert |> mk_command) failed
-      |> commands_to_smt smt_config.verbose info
+      |> commands_to_smt SmtUtils.smt_config.SmtUtils.verbose info
     in
     let notFailed =
       BatList.map (fun fvar -> (mk_eq (mk_var (Var.to_string fvar)) (mk_bool false))
                                |> mk_term |> mk_assert |> mk_command) notFailed
-      |> commands_to_smt smt_config.verbose info
+      |> commands_to_smt SmtUtils.smt_config.SmtUtils.verbose info
     in
     Some (failed ^ notFailed)

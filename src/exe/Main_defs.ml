@@ -1,15 +1,17 @@
+open Nv_datastructures
 open ANSITerminal
-open Cmdline
-open Quickcheck
-open Smt
-open SmtUtils
-open Solution
-open Slicing
-open Syntax
-open Abstraction
+open Nv_core
+open Nv_core.Cmdline
+open Nvlib
+open Nv_smt
+open Nv_solution
+open Nv_slicing
+open Nv_core.Syntax
+open Nv_interpreter
+open Nv_transformations
+open Nvlib.Abstraction
 open BuildAbstractNetwork
-open Profile
-open OCamlUtils
+open Nv_datastructures.OCamlUtils
 
 type answer =
   | Success of (Solution.t option)
@@ -36,16 +38,16 @@ let partialEvalNet net =
   }
 
 let run_smt_func file cfg info net fs =
-  smt_config.encoding <- Functional;
+  SmtUtils.smt_config.encoding <- Functional;
   let srp = SmtSrp.network_to_srp net in
   let srp, f = Renaming.alpha_convert_srp srp in
   let srp, fs =
     if cfg.unbox then
       begin
-        smt_config.unboxing <- true;
-        let srp, f1 = time_profile "Unbox options" (fun () -> UnboxOptions.unbox_srp srp) in
+        SmtUtils.smt_config.unboxing <- true;
+        let srp, f1 = Profile.time_profile "Unbox options" (fun () -> UnboxOptions.unbox_srp srp) in
         let srp, f2 =
-          time_profile "Flattening Tuples" (fun () -> TupleFlatten.flatten_srp srp)
+          Profile.time_profile "Flattening Tuples" (fun () -> TupleFlatten.flatten_srp srp)
         in
         srp, (f2 :: f1 :: f :: fs)
       end
@@ -66,14 +68,14 @@ let run_smt_func file cfg info net fs =
       else
         Success (Some solution), fs
 
-let run_smt_classic file cfg info (net : Syntax.network) fs =
+let run_smt_classic file cfg info (net : Nv_core.Syntax.network) fs =
   let net, fs =
     if cfg.unbox || cfg.hiding then
       begin
-        smt_config.unboxing <- true;
-        let net, f1 = time_profile "Unbox options" (fun () -> UnboxOptions.unbox_net net) in
+        SmtUtils.smt_config.unboxing <- true;
+        let net, f1 = Profile.time_profile "Unbox options" (fun () -> UnboxOptions.unbox_net net) in
         let net, f2 =
-          time_profile "Flattening Tuples" (fun () -> TupleFlatten.flatten_net net)
+          Profile.time_profile "Flattening Tuples" (fun () -> TupleFlatten.flatten_net net)
         in
         net, (f2 :: f1 :: fs)
       end
@@ -161,7 +163,7 @@ let compress file info net cfg fs networkOp =
   (* Printf.printf "Number of concrete edges:%d\n" (List.length (oget (get_edges decls))); *)
   let k = cfg.compress in
   if cfg.smt then
-    smt_config.failures <- Some k;
+    SmtUtils.smt_config.failures <- Some k;
 
   FailuresAbstraction.refinement_breadth := cfg.depth;
   FailuresAbstraction.counterexample_refinement_breadth := cfg.depth;
@@ -177,9 +179,9 @@ let compress file info net cfg fs networkOp =
       (i: int) =
     (* build abstract network *)
     let failVars, absNet =
-      time_profile "Build abstract network"
+      Profile.time_profile "Build abstract network"
         (fun () -> buildAbstractNetwork f mergeMap transMap slice k) in
-    smt_config.multiplicities <- getEdgeMultiplicities slice.net.graph f failVars;
+    SmtUtils.smt_config.multiplicities <- getEdgeMultiplicities slice.net.graph f failVars;
     (* let groups = AbstractionMap.printAbstractGroups f "\n" in *)
     let aedges = BatList.length (AdjGraph.edges absNet.graph) in
     let groups = Printf.sprintf "%d/%d" (AbstractionMap.normalized_size f) aedges in
@@ -196,26 +198,26 @@ let compress file info net cfg fs networkOp =
       in
       Console.show_message (Printf.sprintf "%d" i) Console.T.Green "Refinement Iteration";
       let f' =
-        time_profile "Refining abstraction after failures"
+        Profile.time_profile "Refining abstraction after failures"
           (fun () ->
              FailuresAbstraction.refineCounterExample
                file slice.net.graph finit f failVars sol
                k sources slice.destinations aty i)
       in
       match f' with
-      | None -> print_solution sol;
+      | None -> Solution.print_solution sol;
       | Some f' ->
         loop finit f' slice sources mergeMap transMap k (i+1)
   in
   (* Iterate over each network slice *)
   BatList.iter
     (fun slice ->
-       Console.show_message (Slicing.printPrefixes slice.prefixes)
+       Console.show_message (Slicing.printPrefixes slice.Slicing.prefixes)
          Console.T.Green "Checking SRP for prefixes";
        (* find source nodes *)
        let n = AdjGraph.num_vertices slice.net.graph in
        let sources =
-         Slicing.findRelevantNodes (partialEvalOverNodes n (oget slice.net.assertion)) in
+         Slicing.findRelevantNodes (Slicing.partialEvalOverNodes n (oget slice.net.assertion)) in
        (* partially evaluate the functions of the network. *)
        (* TODO, this should be done outside of this loop, maybe just redone here *)
        (* Printf.printf "Just before opt\n"; *)
@@ -239,7 +241,7 @@ let compress file info net cfg fs networkOp =
        (* compute the bonsai abstraction *)
 
        let fbonsai, f =
-         time_profile "Computing Abstraction"
+         Profile.time_profile "Computing Abstraction"
            (fun () ->
               let fbonsai =
                 Abstraction.findAbstraction slice.net.graph transMap
@@ -278,7 +280,7 @@ let parse_input (args : string array)
     if cfg.inline || cfg.unroll || cfg.smt || cfg.check_monotonicity || cfg.smart_gen then
       (* Note! Must rename before inling otherwise inling is unsound *)
       let decls, f = Renaming.alpha_convert_declarations decls in
-      (time_profile "Inlining" (
+      (Profile.time_profile "Inlining" (
            fun () ->
            Inline.inline_declarations decls |>
              Typing.infer_declarations info), f :: fs)
@@ -288,10 +290,10 @@ let parse_input (args : string array)
   let decls, fs =
     if cfg.unroll || cfg.smt then
       let decls, f = (* unrolling maps *)
-        time_profile "Map unrolling" (fun () -> MapUnrolling.unroll info decls)
+        Profile.time_profile "Map unrolling" (fun () -> MapUnrolling.unroll info decls)
       in
       (* Inline again after unrolling. Could probably optimize this away during unrolling *)
-      let decls = time_profile "Inlining" (fun () -> Inline.inline_declarations decls) in
+      let decls = Profile.time_profile "Inlining" (fun () -> Inline.inline_declarations decls) in
       (* (Typing.infer_declarations info decls, f :: fs) (* TODO: is type inf necessary here?*) *)
       (decls, f :: fs)
     else decls, fs

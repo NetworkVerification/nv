@@ -1,5 +1,4 @@
-open Syntax
-open OCamlUtils
+open Nv_core.Syntax
 
 (***
    Simple implementation of the toEdge primitive in NV.
@@ -24,7 +23,8 @@ open OCamlUtils
  ***)
 
 let toEdge_decl decls =
-  let edges = get_edges decls |> oget in
+  let open Nv_datatypes in
+  let edges = get_edges decls |> Nv_datastructures.OCamlUtils.oget in
   let default_branch =
     addBranch PWild (e_val (voption None)) emptyBranch
   in

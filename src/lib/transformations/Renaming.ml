@@ -1,9 +1,12 @@
-open Collections
+open Nv_core
+open Nv_core.Syntax
+open Nv_datatypes
+open Nv_datastructures
 open Syntax
 
 (* Maps fresh names back to the original names *)
 let map_back bmap new_name old_name =
-  bmap := VarMap.add new_name old_name !bmap
+  bmap := Collections.VarMap.add new_name old_name !bmap
 
 (* TODO: Make sure this doesn't have to be Var.to_string *)
 let fresh x = Var.fresh (Var.name x)
@@ -110,6 +113,7 @@ let rec alpha_convert_aux bmap env (ds: declarations) : declarations =
     d' :: alpha_convert_aux bmap env' ds'
 
 let update_symbolics bmap smap =
+  let open Collections in
   VarMap.fold
     (fun s v acc ->
        match VarMap.Exceptionless.find s bmap with
@@ -117,17 +121,17 @@ let update_symbolics bmap smap =
        | Some k -> VarMap.add k v acc )
     smap VarMap.empty
 
-let adjust_solution bmap (s: Solution.t) =
+let adjust_solution bmap (s: Nv_solution.Solution.t) =
   {s with symbolics= update_symbolics bmap s.symbolics}
 
 let rec alpha_convert_declarations (ds: declarations) =
   (* Var.reset () ; *)
-  let bmap = ref VarMap.empty in
+  let bmap = ref Collections.VarMap.empty in
   let prog = alpha_convert_aux bmap Env.empty ds in
   (prog, adjust_solution !bmap)
 
 let alpha_convert_net net =
-  let bmap = ref VarMap.empty in
+  let bmap = ref Collections.VarMap.empty in
   let env = Env.empty in
   let env, symbolics =
     BatList.fold_right (fun (x, ty_exp) (env, acc) ->
@@ -175,7 +179,7 @@ let alpha_convert_net net =
   (net', adjust_solution !bmap)
 
 let alpha_convert_srp (srp : Syntax.srp_unfold) =
-  let bmap = ref VarMap.empty in
+  let bmap = ref Collections.VarMap.empty in
   let env = Env.empty in
   let env, symbolics =
     BatList.fold_right (fun (x, ty_exp) (env, acc) ->
@@ -223,7 +227,7 @@ struct
       else
         vars := BatSet.add x !vars
     in
-    Visitors.iter_exp (fun e ->
+    Nv_utils.Visitors.iter_exp (fun e ->
         match e.e with
         | EVar x -> checkCollect x
         | EFun f -> checkCollect f.arg
@@ -233,7 +237,7 @@ struct
 
   let collect_vars e =
     let vars = ref [] in
-    Visitors.iter_exp (fun e ->
+    Nv_utils.Visitors.iter_exp (fun e ->
         match e.e with
         | EVar x -> vars := x :: !vars
         | EFun f -> vars := f.arg :: !vars

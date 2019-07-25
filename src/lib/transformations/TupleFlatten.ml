@@ -1,6 +1,6 @@
+open Nv_core
 open Collections
 open Syntax
-open OCamlUtils
 
 let rec flatten_ty ty =
   match ty with
@@ -53,6 +53,7 @@ let size_and_index_after_flattening ty lo hi =
 ;;
 
 let rec flatten_val v =
+  let open Nv_datastructures.OCamlUtils in
   match v.v with
   | VUnit | VBool _ | VInt _ | VNode _ | VOption None -> v
   | VOption (Some v) ->
@@ -74,6 +75,7 @@ let rec flatten_val v =
   | VMap _ -> failwith "Map value found during flattening"
 
 let rec flatten_exp e : exp =
+  let open Nv_datastructures.OCamlUtils in
   match e.e with
   | ETy (e, ty) -> flatten_exp e
   | EVal v ->
@@ -86,7 +88,7 @@ let rec flatten_exp e : exp =
      | TTuple ts ->
        let es =
          BatList.mapi (fun i ty ->
-             aexp(evar (proj_var i x), Some ty, Span.default)) ts
+             aexp(evar (proj_var i x), Some ty, Nv_datastructures.Span.default)) ts
        in
        aexp(etuple es, Some ty, e.espan)
      | _ ->
@@ -155,7 +157,7 @@ let rec flatten_exp e : exp =
         | TTuple tys ->
           (* Tuple type, but not directly a tuple expression. The only way to extract
              its elements is via a match expression. *)
-          let freshvars = List.map (fun ty -> ty, Var.fresh "TupleFlattenVar") tys in
+          let freshvars = List.map (fun ty -> ty, Nv_datatypes.Var.fresh "TupleFlattenVar") tys in
           let freshvarexps = List.map (fun (ty, v) -> aexp (evar v, Some ty, e.espan)) freshvars in
           let pat = PTuple (List.map (fun (_, v) -> PVar v) freshvars) in
           let body = cont freshvarexps in
@@ -169,7 +171,7 @@ let rec flatten_exp e : exp =
     in
     build_exp es [] |> wrap wrapper
   | ESome e1 ->
-    aexp (esome (flatten_exp e1), Some (flatten_ty (oget e.ety)), Span.default)
+    aexp (esome (flatten_exp e1), Some (flatten_ty (oget e.ety)), Nv_datastructures.Span.default)
   | EMatch (e1, bs) ->
     aexp (ematch (flatten_exp e1) (flatten_branches bs ((oget e1.ety))),
           Some (flatten_ty (oget e.ety)),
@@ -274,7 +276,7 @@ let flatten_symbolic (var, toe) =
 
 let flatten_decl_single d =
   match d with
-  | DLet (x, oty, e) -> DLet (x, Some (flatten_ty (oget oty)), flatten_exp e)
+  | DLet (x, oty, e) -> DLet (x, Some (flatten_ty (Nv_datastructures.OCamlUtils.oget oty)), flatten_exp e)
   | DMerge e -> DMerge (flatten_exp e)
   | DTrans e -> DTrans (flatten_exp e)
   | DInit e -> DInit (flatten_exp e)
@@ -355,9 +357,9 @@ let unproj_symbolics (symbs : value VarMap.t) : value VarMap.t=
 let unflatten_sol
     (orig_attr: Syntax.ty)
     (sym_types: Syntax.ty VarMap.t)
-    (sol : Solution.t) =
+    (sol : Nv_solution.Solution.t) =
   { sol with
-    labels = AdjGraph.VertexMap.map (fun v -> unflatten_val v orig_attr) sol.labels;
+    labels = Nv_datastructures.AdjGraph.VertexMap.map (fun v -> unflatten_val v orig_attr) sol.labels;
     symbolics = VarMap.mapi (fun x v ->
         unflatten_val v (VarMap.find x sym_types)) (unproj_symbolics sol.symbolics)
   }
@@ -383,7 +385,7 @@ let flatten_net net =
       BatList.map flatten_symbolic net.symbolics |> BatList.concat;
     defs =
       BatList.map (fun (x, oty, e) ->
-          (x, Some (flatten_ty (oget oty)), flatten_exp e)) net.defs;
+          (x, Some (flatten_ty (Nv_datastructures.OCamlUtils.oget oty)), flatten_exp e)) net.defs;
     utys =
       BatList.map (fun m ->
           Collections.StringMap.map flatten_ty m) net.utys;
@@ -399,9 +401,9 @@ let flatten_net net =
 let flatten_srp srp =
   let flatten_attr = flatten_ty srp.srp_attr in
   { srp_attr = flatten_attr;
-    srp_constraints = AdjGraph.VertexMap.map flatten_exp srp.srp_constraints;
+    srp_constraints = Nv_datastructures.AdjGraph.VertexMap.map flatten_exp srp.srp_constraints;
     srp_labels =
-      AdjGraph.VertexMap.map
+      Nv_datastructures.AdjGraph.VertexMap.map
         (fun xs -> let var, _ = BatList.hd xs in (* this will be a singleton list*)
           match flatten_attr with
           | TTuple ts ->

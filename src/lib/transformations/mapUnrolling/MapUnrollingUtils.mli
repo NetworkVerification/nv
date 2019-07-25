@@ -6,7 +6,7 @@
 
    Note the nested tuple type.
 *)
-type maplist = (Syntax.ty * (Collections.ExpSet.t * Collections.VarSet.t)) list
+type maplist = (Nv_core.Syntax.ty * (Nv_core.Collections.ExpSet.t * Nv_core.Collections.VarSet.t)) list
 
 val maplist_to_string : maplist -> string
 
@@ -14,4 +14,4 @@ val maplist_to_string : maplist -> string
    it and returns a list of each map type which appears in that program,
    combined with the set of keys used for that map type.
 *)
-val collect_map_types_and_keys : Syntax.declarations -> maplist
+val collect_map_types_and_keys : Nv_core.Syntax.declarations -> maplist

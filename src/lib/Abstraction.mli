@@ -1,3 +1,6 @@
+open Nv_datastructures
+open Nv_core
+
 exception Cutoff
 
 (** [partialEvalTrans g trans] partially evaluates the transfer
@@ -28,8 +31,8 @@ module FailuresAbstraction :
       AdjGraph.t ->
       AbstractionMap.abstractionMap ->
       AbstractionMap.abstractionMap ->
-      Var.t AdjGraph.EdgeMap.t ->
-      Solution.t ->
+      Nv_datatypes.Var.t AdjGraph.EdgeMap.t ->
+      Nv_solution.Solution.t ->
       int ->
       AdjGraph.VertexSet.t ->
       AdjGraph.VertexSet.t ->
@@ -54,8 +57,8 @@ sig
   val buildAbstractNetwork : AbstractionMap.abstractionMap ->
                              (AdjGraph.Vertex.t, int * Syntax.exp) Hashtbl.t ->
                              (AdjGraph.Edge.t, int * Syntax.exp) Hashtbl.t ->
-                             Slicing.network_slice ->
-                             int -> (Var.t AdjGraph.EdgeMap.t) * Syntax.network
+                             Nv_slicing.Slicing.network_slice ->
+                             int -> (Nv_datatypes.Var.t AdjGraph.EdgeMap.t) * Syntax.network
 
   (** [buildAbstractNetwork f g mergeMap transMap initMap assertMap dst attrTy k] builds the
    declarations of the abstract network *)
@@ -83,6 +86,6 @@ sig
   (** [getEdgeMultiplicities g f ehat] returns the number of concrete
    edges that map to the abstract edge [ehat] *)  
   val getEdgeMultiplicities: AdjGraph.t -> AbstractionMap.abstractionMap ->
-                           Var.t AdjGraph.EdgeMap.t -> int Collections.StringMap.t
+                           Nv_datatypes.Var.t AdjGraph.EdgeMap.t -> int Collections.StringMap.t
     
 end

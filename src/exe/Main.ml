@@ -1,5 +1,5 @@
 open Main_defs
-open Solution
+open Nv_solution.Solution
 
 let main =
   Printexc.record_backtrace true;

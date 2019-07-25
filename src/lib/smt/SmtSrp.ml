@@ -30,7 +30,7 @@ let merge_exp emerge u x y =
   (* Printf.printf "merge after interp:\n%s\n" (Printing.exp_to_string e); *)
   e
 
-let network_to_srp net =
+let network_to_srp (net : Syntax.network) =
   (* Create a map from nodes to variables denoting
        the label of the node*)
   let labelling =
@@ -39,8 +39,8 @@ let network_to_srp net =
           let lbl_u_name = label_var u in
           (*create label var *)
           let lbl_var = Var.create lbl_u_name in
-          AdjGraph.VertexMap.add u [(lbl_var, net.attr_type)] acc)
-        (AdjGraph.num_vertices net.graph) AdjGraph.VertexMap.empty
+          AdjGraph.VertexMap.add u [(lbl_var, net.Syntax.attr_type)] acc)
+        (AdjGraph.num_vertices net.Syntax.graph) AdjGraph.VertexMap.empty
   in
   (* Map from nodes to incoming messages*)
   let incoming_messages_map =
@@ -49,28 +49,28 @@ let network_to_srp net =
         let varu, ty = AdjGraph.VertexMap.find u labelling |> BatList.hd in
         let lblu = Syntax.aexp(Syntax.evar varu, Some ty, Span.default) in
         (*compute the incoming message through the transfer function *)
-        let transuv = trans_exp net.trans u v lblu in
+        let transuv = trans_exp net.Syntax.trans u v lblu in
         (* add them to the incoming messages of node v *)
         AdjGraph.VertexMap.modify_def [] v (fun us -> transuv :: us) acc)
-      AdjGraph.VertexMap.empty (AdjGraph.edges net.graph)
+      AdjGraph.VertexMap.empty (AdjGraph.edges net.Syntax.graph)
   in
   (* map from nodes to the merged messages *)
   let merged_messages_map =
     AdjGraph.fold_vertices (fun u acc ->
         let messages = AdjGraph.VertexMap.find_default [] u incoming_messages_map in
         let best = BatList.fold_left (fun accm m ->
-                       merge_exp net.merge u m accm)
-                     (init_exp net.init u) messages
+                       merge_exp net.Syntax.merge u m accm)
+                     (init_exp net.Syntax.init u) messages
         in
         let best_eval = InterpPartialFull.interp_partial best in
         (* Printf.printf "merge after interp:\n%s\n" (Printing.exp_to_string best_eval); *)
         AdjGraph.VertexMap.add u best_eval acc)
-      (AdjGraph.num_vertices net.graph) AdjGraph.VertexMap.empty
+      (AdjGraph.num_vertices net.Syntax.graph) AdjGraph.VertexMap.empty
   in
-  { srp_attr = net.attr_type;
+  Syntax.{ srp_attr = net.attr_type;
     srp_constraints = merged_messages_map;
     srp_labels = labelling;
-    srp_symbolics = net.symbolics;
+    srp_symbolics = net.Syntax.symbolics;
     srp_assertion = net.assertion;
     srp_requires = net.requires;
     srp_graph = net.graph;

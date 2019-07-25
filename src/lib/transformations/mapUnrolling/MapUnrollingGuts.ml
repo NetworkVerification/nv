@@ -1,12 +1,10 @@
-open Syntax
-open Collections
+open Nv_core
 open Typing
-open OCamlUtils
 
-let has_target_type (target : ty) (e : exp) : bool =
+let has_target_type (target : Syntax.ty) (e : Syntax.exp) : bool =
   match e.ety with
   | Some (ty) ->
-    equiv_tys target ty
+    Typing.equiv_tys target ty
   | None ->
     failwith "Found expression with no ety during map unrolling"
 ;;
@@ -15,7 +13,7 @@ let get_index_const keys k =
   let const_keys, _ = keys in
   try
     let index, _ =
-      BatList.findi (fun _ e -> compare_es e k = 0) const_keys
+      BatList.findi (fun _ e -> Syntax.compare_es e k = 0) const_keys
     in
     Some(index)
   with
@@ -26,7 +24,7 @@ let get_index_symb keys symb =
   let const_keys, symb_keys = keys in
   try
     let index, _ =
-      BatList.findi (fun _ s -> Var.equal s symb) symb_keys
+      BatList.findi (fun _ s -> Nv_datatypes.Var.equal s symb) symb_keys
     in
     Some(index + List.length const_keys)
   with
@@ -40,10 +38,10 @@ let mapo f o =
 ;;
 
 let rec unroll_type
-    (ty : ty)
-    (keys : exp list * var list)
-    (ty2 : ty)
-  : ty
+    (ty : Syntax.ty)
+    (keys : Syntax.exp list * Syntax.var list)
+    (ty2 : Syntax.ty)
+  : Syntax.ty
   =
   let unroll_type = unroll_type ty keys in
   match (canonicalize_type ty2) with
@@ -66,7 +64,7 @@ let rec unroll_type
       TTuple (BatList.make (BatList.length const_keys + BatList.length symb_keys) (canonicalize_type val_ty))
     else
       TMap (unroll_type key_ty, unroll_type val_ty)
-  | TRecord map -> TRecord (StringMap.map unroll_type map)
+  | TRecord map -> TRecord (Collections.StringMap.map unroll_type map)
   | QVar tyname -> QVar tyname
   (* failwith "Cannot unroll a type containing a QVar!"; *)
   | TVar _ ->
@@ -74,11 +72,12 @@ let rec unroll_type
 ;;
 
 let rec unroll_get_or_set
-    (keys : exp list * var list)
-    (mk_op : int -> exp)
-    (ety : ty option)
-    (espan : Span.t)
-    (k : exp) =
+    (keys : Syntax.exp list * Syntax.var list)
+    (mk_op : int -> Syntax.exp)
+    (etype : Syntax.ty option)
+    (espan : Nv_datastructures.Span.t)
+    (k : Syntax.exp) =
+  let open Syntax in
   let get_index_const = get_index_const keys in
   let get_index_symb = get_index_symb keys in
   match get_index_const k with
@@ -95,7 +94,7 @@ let rec unroll_get_or_set
       |> List.fold_left
         (fun acc (p,x) -> addBranch p x acc) emptyBranch
     in
-    match canonicalize_type (oget k.ety) with
+    match canonicalize_type (Nv_datastructures.OCamlUtils.oget k.ety) with
     | TNode
     | TEdge ->
       (* We know all possible node and edge values in advance, so just
@@ -111,7 +110,7 @@ let rec unroll_get_or_set
             | Some i -> v,i
             | None -> failwith @@
               "Encountered non-constant, non-symbolic variable key whose type is not TNode or TEdge: " ^
-              Printing.exp_to_string k ^ ", type: " ^ Printing.ty_to_string (oget k.ety)
+              Printing.exp_to_string k ^ ", type: " ^ Printing.ty_to_string (Nv_datastructures.OCamlUtils.oget k.ety)
           end
         | _ -> failwith @@
           "Encountered non-constant, non-variable key whose type is not TNode or TEdge: " ^
@@ -130,9 +129,9 @@ let rec unroll_get_or_set
              in
              let ethen =
                (* If they're the same value, use v's index instead of k's *)
-               v |> get_index_symb |> oget |> mk_op
+               v |> get_index_symb |> Nv_datastructures.OCamlUtils.oget |> mk_op
              in
-             aexp (eif cmp ethen acc, ety, espan)
+             aexp (eif cmp ethen acc, etype, espan)
           )
           (* If we have a different value from all the lower-index symbolics,
              use our own index *)
@@ -144,11 +143,12 @@ let rec unroll_get_or_set
 ;;
 
 let rec unroll_exp
-    (ty : ty)
-    (keys : exp list * var list)
-    (e : exp)
-  : exp
+    (ty : Syntax.ty)
+    (keys : Syntax.exp list * Syntax.var list)
+    (e : Syntax.exp)
+  : Syntax.exp
   =
+    let open Syntax in
   let unroll_type = unroll_type ty keys in
   let unroll_exp e = unroll_exp ty keys e in
   let has_target_type e = has_target_type ty e in
@@ -175,7 +175,7 @@ let rec unroll_exp
     | ETuple es ->
       etuple (BatList.map unroll_exp es)
     | ERecord map ->
-      erecord (StringMap.map unroll_exp map)
+      erecord (Collections.StringMap.map unroll_exp map)
     | EProject (e1, l) -> eproject (unroll_exp e1) l
     | ESome e1 ->
       esome (unroll_exp e1)
@@ -240,8 +240,8 @@ let rec unroll_exp
           in
           let f' = unroll_exp f in
           let freshvars =
-            BatList.map (fun _ -> Var.fresh "UnrollingMapVar") symb_keys @
-            BatList.map (fun _ -> Var.fresh "UnrollingMapVar") const_keys
+            BatList.map (fun _ -> Nv_datatypes.Var.fresh "UnrollingMapVar") symb_keys @
+            BatList.map (fun _ -> Nv_datatypes.Var.fresh "UnrollingMapVar") const_keys
           in
           let pattern =
             PTuple (BatList.map (fun var -> PVar var) freshvars)
@@ -271,7 +271,7 @@ let rec unroll_exp
             const_keys
           in
           let freshvars =
-            BatList.map (fun _ -> Var.fresh "UnrollingMapFilterVar") all_keys
+            BatList.map (fun _ -> Nv_datatypes.Var.fresh "UnrollingMapFilterVar") all_keys
           in
           let pattern =
             PTuple (BatList.map (fun var -> PVar var) freshvars)
@@ -313,8 +313,8 @@ let rec unroll_exp
             let lst =
               BatList.make (List.length symb_keys + List.length const_keys) ()
             in
-            BatList.map (fun _ -> Var.fresh "UnrollingMergeVar1") lst,
-            BatList.map (fun _ -> Var.fresh "UnrollingMergeVar2") lst
+            BatList.map (fun _ -> Nv_datatypes.Var.fresh "UnrollingMergeVar1") lst,
+            BatList.map (fun _ -> Nv_datatypes.Var.fresh "UnrollingMergeVar2") lst
           in
           let pattern =
             PTuple([
@@ -356,13 +356,13 @@ let rec unroll_exp
             | _ -> failwith "impossible"
           in
           let acc' = unroll_exp acc in
-          let acc_ty = oget acc'.ety in
+          let acc_ty = Nv_datastructures.OCamlUtils.oget acc'.ety in
           let f' = unroll_exp f in
           let symb_var_keys =
             List.map (fun v -> aexp (evar v, Some key_ty, e.espan)) symb_keys
           in
           let freshvars =
-            BatList.map (fun k -> (k, Var.fresh "UnrollingFoldVar")) (symb_var_keys @ const_keys)
+            BatList.map (fun k -> (k, Nv_datatypes.Var.fresh "UnrollingFoldVar")) (symb_var_keys @ const_keys)
           in
           let pattern =
             PTuple (BatList.map (fun (_, var) -> PVar var) freshvars)
@@ -389,11 +389,12 @@ let rec unroll_exp
 ;;
 
 let unroll_decl
-    (ty : ty)
-    (keys : exp list * var list)
-    (decl : declaration)
-  : declaration
+    (ty : Syntax.ty)
+    (keys : Syntax.exp list * Syntax.var list)
+    (decl : Syntax.declaration)
+  : Syntax.declaration
   =
+    let open Syntax in
   let unroll_exp = unroll_exp ty keys in
   let unroll_type = unroll_type ty keys in
   match decl with
@@ -419,10 +420,10 @@ let unroll_decl
 ;;
 
 let unroll_one_map_type
-    (ty : ty)
-    (keys : exp list * var list)
-    (decls : declarations)
-  : declarations
+    (ty : Syntax.ty)
+    (keys : Syntax.exp list * Syntax.var list)
+    (decls : Syntax.declarations)
+  : Syntax.declarations
   =
   (* According to the docs, ExpSet.elements returns a sorted list.
      This is important because we need a consistent numbering for

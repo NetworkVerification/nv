@@ -1,6 +1,7 @@
-open Syntax
+open Nv_core
+open Nv_solution
 
-val alpha_convert_exp : Var.t Env.t -> exp -> exp
+val alpha_convert_exp : Nv_datatypes.Var.t Nv_datastructures.Env.t -> Syntax.exp -> Syntax.exp
 
 val alpha_convert_declarations :
      Syntax.declarations
