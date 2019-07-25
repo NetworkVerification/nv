@@ -1,0 +1,27 @@
+(library
+  (name nv_smt)
+  ; (public_name nv.smt)
+  (libraries
+    nv_datastructures
+    nv_core
+    nv_utils
+    oUnit
+    integers
+    ANSITerminal
+    str
+    batteries
+    cudd
+    lru-cache
+    zarith
+    ocamlgraph
+    fileutils)
+  (preprocess
+    (pps ppx_deriving.std ppx_deriving_argparse))
+  (flags (:standard -w +A-3-4-6-k-44-48 -warn-error -a))
+)
+
+(menhir
+  (modules SMTParser))
+
+(ocamllex
+  (modules SMTLexer))

@@ -1,0 +1,21 @@
+(library
+  (name nv_core)
+  (libraries
+    fileutils
+    ANSITerminal
+    cudd
+    integers
+    nv_datatypes
+    nv_datastructures
+    batteries)
+  (preprocess
+    (pps ppx_deriving.std ppx_deriving_argparse))
+)
+
+(menhir
+  (modules Parser))
+
+(ocamllex
+  (modules Lexer))
+
+(include_subdirs unqualified)

@@ -1,0 +1,11 @@
+(library
+  (name nv_interpreter)
+  (libraries
+    batteries
+    lru-cache
+    integers
+    nv_datastructures
+    nv_datatypes
+    nv_core
+    cudd)
+)

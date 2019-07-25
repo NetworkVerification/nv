@@ -1,0 +1,13 @@
+(library
+  (name nv_utils)
+  ; (public_name nv.utils)
+  (libraries
+    batteries
+    lru-cache
+    integers
+    nv_core
+    nv_datatypes
+    nv_datastructures)
+  (preprocess
+    (pps ppx_deriving.std ppx_deriving_argparse))
+)
