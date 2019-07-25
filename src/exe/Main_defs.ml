@@ -270,6 +270,7 @@ let parse_input (args : string array)
   let file = rest.(0) in
   let ds, info = Input.parse file in (* Parse nv file *)
   let decls = ds in
+  (* print_endline @@ Printing.declarations_to_string decls ; *)
   let decls = ToEdge.toEdge_decl decls :: decls in
   let decls = Typing.infer_declarations info decls in
   Typing.check_annot_decls decls ;

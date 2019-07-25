@@ -922,7 +922,7 @@ let tupleToListSafe (e : exp) =
 let get_decl ds f =
   try
     let daty : declaration =
-      List.find
+      BatList.find
         (fun d -> match f d with None -> false | Some _ -> true)
         ds
     in
@@ -961,8 +961,10 @@ let get_interface ds =
 (* end partitioning *)
 
 let get_edges ds =
-  get_decl ds (fun d ->
-      match d with DEdges es -> Some es | _ -> None )
+  try 
+    Some (BatList.find_map (fun d ->
+        match d with DEdges es -> Some es | _ -> None ) ds)
+  with Not_found -> None
 
 let get_nodes ds =
   get_decl ds (fun d -> match d with DNodes i -> Some i | _ -> None)

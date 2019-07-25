@@ -1,13 +1,13 @@
 (*** Option utilities ***)
-let oget (x: 'a option) : 'a = BatOption.get_exn x (failwith "internal error (oget)")
-  (* match x with *)
-  (* | None -> failwith "internal error (oget)" *)
-  (* | Some y -> y *)
+let oget (x: 'a option) : 'a = (* BatOption.get_exn x (failwith "internal error (oget)") *)
+  match x with
+  | None -> failwith "internal error (oget)"
+  | Some y -> y
 
-let omap (f : 'a -> 'b) (x: 'a option): 'b option = BatOption.map f x
-  (* match x with *)
-  (* | None -> None *)
-  (* | Some y -> Some(f y) *)
+let omap (f : 'a -> 'b) (x: 'a option): 'b option = (* BatOption.map f x *)
+  match x with
+  | None -> None
+  | Some y -> Some(f y)
 
 (*** List Utilities ***)
 let rec map3 f lst1 lst2 lst3 =

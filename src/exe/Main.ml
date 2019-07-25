@@ -1,5 +1,4 @@
 open Main_defs
-open Nv_solution.Solution
 
 let main =
   Printexc.record_backtrace true;
@@ -19,10 +18,10 @@ let main =
   else
     begin
       match networkOp cfg info net fs with
-      | CounterExample sol, fs -> print_solution (apply_all sol fs)
+      | CounterExample sol, fs -> Nv_solution.Solution.print_solution (apply_all sol fs)
       | Success (Some sol), fs ->
          Printf.printf "No counterexamples found\n";
-         print_solution (apply_all sol fs)
+         Nv_solution.Solution.print_solution (apply_all sol fs)
       | Success None, _ ->
          Printf.printf "No counterexamples found\n"
     end
