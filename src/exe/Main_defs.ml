@@ -1,8 +1,8 @@
+open Nvlib
 open Nv_datastructures
 open ANSITerminal
 open Nv_core
 open Nv_core.Cmdline
-open Nvlib
 open Nv_smt
 open Nv_solution
 open Nv_slicing
@@ -68,7 +68,7 @@ let run_smt_func file cfg info net fs =
       else
         Success (Some solution), fs
 
-let run_smt_classic file cfg info (net : Nv_core.Syntax.network) fs =
+let run_smt_classic file cfg info (net : Syntax.network) fs =
   let net, fs =
     if cfg.unbox || cfg.hiding then
       begin

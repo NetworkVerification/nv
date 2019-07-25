@@ -1,6 +1,7 @@
 open Nv_core
 open Nv_datatypes
 open Nv_datastructures
+open Nv_utils
 open Collections
 open Syntax
 open Batteries
@@ -204,9 +205,9 @@ let check_nodes_and_edges info num_nodes edges _ (e : exp) =
 
 let check info (ds: declarations) : unit =
   check_record_label_uniqueness info ds ;
-  Nv_utils.Visitors.iter_exp_decls (check_types info) ds ;
+  Visitors.iter_exp_decls (check_types info) ds ;
   (* Visitors.iter_exp_decls (check_closures info) ds ; *) (* Is this still necessary? *)
   (* Visitors.iter_exp_decls (check_keys info) ds; *)
-  Nv_utils.Visitors.iter_exp_decls (check_nodes_and_edges info 
+  Visitors.iter_exp_decls (check_nodes_and_edges info 
     (get_nodes ds |> OCamlUtils.oget) (get_edges ds |> OCamlUtils.oget)) ds;
   ()
