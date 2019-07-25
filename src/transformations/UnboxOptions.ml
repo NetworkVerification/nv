@@ -1,7 +1,7 @@
 open Collections
 open Syntax
-open Slicing
 open Solution
+open OCamlUtils
 
 let rec empty_pattern ty =
   match Typing.canonicalize_type ty with
@@ -44,7 +44,7 @@ let rec unbox_val v =
     (match v.vty with
      | Some (TOption t) ->
        aexp (etuple [(vbool false |> exp_of_value);
-                     (default_exp_value (Typing.canonicalize_type @@ unbox_ty t))],
+                     (Generators.default_value_exp (Typing.canonicalize_type @@ unbox_ty t))],
              Some (unbox_ty (TOption t)), v.vspan)
      | _ -> failwith "expected option type")
   | VOption (Some v1) ->
@@ -114,7 +114,9 @@ let rec unbox_exp e : exp =
       | MGet, _
       | MSet, _
       | NLess, _
-      | NLeq, _ ->
+      | NLeq, _
+      | TGet _, _
+      | TSet _, _ ->
         aexp (eop op (BatList.map unbox_exp es),
               Some (unbox_ty (oget e.ety)), e.espan)
       | _ -> failwith "TODO: implement option unboxing for rest of map operations")

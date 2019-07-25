@@ -1,5 +1,5 @@
 open Syntax
-open Typing
+open OCamlUtils
 
 let is_function_ty e =
   match get_inner_type (oget e.ety) with

@@ -1,7 +1,12 @@
-(* Each entry in this list is a pair of a map type, as well as
-   the set of keys which appear in any MGet expression for that
-   map type. *)
-type maplist = (Syntax.ty * Collections.ExpSet.t) list
+(*
+   Each entry in this list is:
+   * A map type
+   * The set of constant keys that are used for the map
+   * The set of symbolic variable keys that are used for the map
+
+   Note the nested tuple type.
+*)
+type maplist = (Syntax.ty * (Collections.ExpSet.t * Collections.VarSet.t)) list
 
 val maplist_to_string : maplist -> string
 

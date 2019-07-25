@@ -1,5 +1,3 @@
-open Unsigned
-
 module AbstractNode :
 sig
   include module type of AdjGraph.VertexSet

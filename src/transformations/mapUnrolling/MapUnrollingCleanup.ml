@@ -2,6 +2,7 @@
    and all 1-element tuples with their only element *)
 
 open Syntax
+open OCamlUtils
 
 let mapo f o =
   match o with
@@ -57,7 +58,20 @@ let rec replace_exp e =
     | ETuple [e] -> e
     | ETuple es -> etuple (List.map replace_exp es)
     | EVar _ -> e
-    | EOp _ -> e (* No ops take tuples as arguments, so no need to recurse *)
+    | EOp (op, es) ->
+      begin
+        match op, es with
+        | TGet (size, _, _), [e1] ->
+          if size = 0 then e_val (avalue (vunit (), Some TUnit, e1.espan))
+          else if size = 1 then replace_exp e1
+          else eop op (List.map replace_exp es)
+        | TSet (size, _, _), [e1; e2] ->
+          if size = 0 then e_val (avalue (vunit (), Some TUnit, e1.espan))
+          else if size = 1 then replace_exp e2
+          else eop op (List.map replace_exp es)
+        | (TGet _ | TSet _), _ -> failwith "Bad TGet/TSet"
+        | _ -> e (* No other ops take tuples as arguments, so no need to recurse *)
+      end
     | ETy (e, ty) -> ety (replace_exp e) (replace_ty ty)
     | EVal v -> e_val (replace_val v)
     | ESome e -> esome (replace_exp e)

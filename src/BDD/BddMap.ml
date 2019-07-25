@@ -2,6 +2,7 @@ open Syntax
 open Cudd
 open BatSet
 open RecordUtils
+open OCamlUtils
 
 module B = BddUtils
 

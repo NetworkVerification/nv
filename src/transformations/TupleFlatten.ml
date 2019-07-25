@@ -1,6 +1,6 @@
 open Collections
 open Syntax
-open Slicing
+open OCamlUtils
 
 let rec flatten_ty ty =
   match ty with
@@ -26,8 +26,31 @@ let rec flatten_ty ty =
   | TOption ty -> TOption (flatten_ty ty)
   | TMap (ty1, ty2) ->
     TMap (flatten_ty ty1, flatten_ty ty2)
-  | TRecord ty -> failwith "record's should be unrolled first"
+  | TRecord ty -> failwith "records should be unrolled first"
   | QVar _ | TVar _ -> failwith "internal error (flatten_ty)"
+
+(*
+Given a tuple type and an index into that tuple, return:
+  * The size of the flattened tuple
+  * A range of indices in the flattened tuple that correspond to the input index
+*)
+let size_and_index_after_flattening ty lo hi =
+  let flattened_size ty =
+    match flatten_ty ty with
+    | TTuple lst -> List.length lst
+    | _ -> 1
+  in
+  match ty with
+  | TTuple elts ->
+    let sizes = List.map (fun ty -> flattened_size ty) elts in
+    let hd, rest = BatList.takedrop lo sizes in
+    let mid, tl = BatList.takedrop (hi - lo + 1) rest in
+    let offset = List.fold_left (+) 0 hd in
+    let diff = List.fold_left (+) 0 mid in
+    let total_size = offset + diff + List.fold_left (+) 0 tl in
+    total_size, offset, offset + diff - 1
+  | _ -> failwith "Called size_and_index_after_flattening without tuple type"
+;;
 
 let rec flatten_val v =
   match v.v with
@@ -116,16 +139,35 @@ let rec flatten_exp e : exp =
           aexp (elet x e1 (flatten_exp e2), Some ty, e.espan)))
   | ETuple es ->
     let es = BatList.map flatten_exp es in
-    let es' = BatList.fold_right (fun e acc ->
-        match e.e with
-        | ETuple es -> es @ acc
-        | EVal v ->
-          (match v.v with
-           | VTuple vs -> (BatList.map e_val vs) @ acc
-           | _ -> e :: acc)
-        | _ -> e :: acc) es []
+    (* Dummy exp which is only used as an argument to wrap *)
+    let wrapper = aexp (etuple [], Some (flatten_ty (oget e.ety)), e.espan) in
+    (* Extract the elements of e, then call cont to move on to the next e.
+       Once we have all of them we'll put them together into one big tuple exp *)
+    let curry_elts e (cont : exp list -> exp) =
+      match e.e with
+      | ETuple es -> cont es
+      | EVal v ->
+        (match v.v with
+         | VTuple vs -> cont (BatList.map e_val vs)
+         | _ -> cont [e])
+      | _ ->
+        match oget e.ety with
+        | TTuple tys ->
+          (* Tuple type, but not directly a tuple expression. The only way to extract
+             its elements is via a match expression. *)
+          let freshvars = List.map (fun ty -> ty, Var.fresh "TupleFlattenVar") tys in
+          let freshvarexps = List.map (fun (ty, v) -> aexp (evar v, Some ty, e.espan)) freshvars in
+          let pat = PTuple (List.map (fun (_, v) -> PVar v) freshvars) in
+          let body = cont freshvarexps in
+          ematch e (addBranch pat body emptyBranch) |> wrap wrapper
+        | _ -> cont [e]
     in
-    aexp (etuple es', Some (flatten_ty (oget e.ety)), e.espan)
+    let rec build_exp lst acc =
+      match lst with
+      | [] -> etuple (List.rev acc) |> wrap wrapper
+      | hd::tl -> curry_elts hd (fun es -> build_exp tl (List.rev_append es acc))
+    in
+    build_exp es [] |> wrap wrapper
   | ESome e1 ->
     aexp (esome (flatten_exp e1), Some (flatten_ty (oget e.ety)), Span.default)
   | EMatch (e1, bs) ->
@@ -150,12 +192,29 @@ let rec flatten_exp e : exp =
       | NLeq ->
         aexp (eop op (BatList.map flatten_exp es),
               Some (flatten_ty (oget e.ety)), e.espan)
-      | _ -> failwith "TODO: implement tupple flattening for more map operations")
+      | TGet (_, lo, hi) ->
+        let tup =  match es with | [e] -> e | _ -> failwith "Bad TGet" in
+        let size, lo, hi = size_and_index_after_flattening (oget tup.ety) lo hi in
+        let new_exp =
+          eop (TGet (size, lo, hi)) (BatList.map flatten_exp es)
+        in
+        aexp (new_exp, Some (flatten_ty (oget e.ety)), e.espan)
+      | TSet (_, lo, hi) ->
+        let tup =  match es with | [e1;_] -> e1 | _ -> failwith "Bad TSet" in
+        let size, lo, hi = size_and_index_after_flattening (oget tup.ety) lo hi in
+        let new_exp =
+          eop (TSet (size, lo, hi)) (BatList.map flatten_exp es)
+        in
+        aexp (new_exp, Some (flatten_ty (oget e.ety)), e.espan)
+      | _ -> failwith "TODO: implement tuple flattening for more map operations")
   | ERecord _ | EProject _ -> failwith "Record expression in flattening"
 
 and flatten_branches bs ty =
   let rec flatten_pattern p ty =
     let ty = get_inner_type ty in
+    (* Something of a kludge to account for the fact that edges disappear
+       during flattening *)
+    let ty = if ty = TEdge then TTuple [TNode; TNode] else ty in
     match p with
     | POption (Some p) ->
       (match ty with
@@ -177,8 +236,9 @@ and flatten_branches bs ty =
        | _ -> failwith "expected tuple type")
     | PVar x ->
       (match ty with
-       | TTuple ts ->
-         (match flatten_ty (TTuple ts) with
+       | TEdge
+       | TTuple _ ->
+         (match flatten_ty ty with
           | TTuple ts ->
             let ps = BatList.mapi (fun i _ -> PVar (proj_var i x)) ts in
             PTuple ps
@@ -303,6 +363,7 @@ let unflatten_sol
   }
 
 let flatten_net net =
+  print_endline "";
   { attr_type = flatten_ty net.attr_type;
     init = flatten_exp net.init;
     trans = flatten_exp net.trans;
@@ -331,7 +392,7 @@ let flatten_net net =
   }, unflatten_sol net.attr_type
     (BatList.fold_left (fun acc (x,exp_ty) ->
          VarMap.add x (get_ty_from_tyexp exp_ty) acc)
-       VarMap.empty net.symbolics)
+        VarMap.empty net.symbolics)
 
 
 (* TODO: partitioning *)
@@ -342,19 +403,19 @@ let flatten_srp srp =
     srp_labels =
       AdjGraph.VertexMap.map
         (fun xs -> let var, _ = BatList.hd xs in (* this will be a singleton list*)
-                   match flatten_attr with
-                   | TTuple ts ->
-                     BatList.mapi (fun i ty -> (proj_var i var, ty)) ts
-                   | ty -> [(var, ty)]
+          match flatten_attr with
+          | TTuple ts ->
+            BatList.mapi (fun i ty -> (proj_var i var, ty)) ts
+          | ty -> [(var, ty)]
         ) srp.srp_labels;
     srp_assertion = (match srp.srp_assertion with
-                 | None -> None
-                 | Some e -> Some (flatten_exp e));
+        | None -> None
+        | Some e -> Some (flatten_exp e));
     srp_symbolics =
       BatList.map flatten_symbolic srp.srp_symbolics |> BatList.concat;
     srp_requires = BatList.map (flatten_exp) srp.srp_requires;
     srp_graph = srp.srp_graph
   }, unflatten_sol srp.srp_attr
-       (BatList.fold_left (fun acc (x,exp_ty) ->
-            VarMap.add x (get_ty_from_tyexp exp_ty) acc)
-          VarMap.empty srp.srp_symbolics)
+    (BatList.fold_left (fun acc (x,exp_ty) ->
+         VarMap.add x (get_ty_from_tyexp exp_ty) acc)
+        VarMap.empty srp.srp_symbolics)

@@ -1,6 +1,5 @@
 %{
   open Syntax
-  open Unsigned
 
 %}
 

@@ -1,9 +1,7 @@
 open Collections
-open Unsigned
 open Solution
 open Syntax
 open Generators
-open Slicing
 
 type srp =
   { graph: AdjGraph.t
@@ -62,7 +60,7 @@ exception Require_false
 
 let net_to_srp net ~throw_requires =
   let info =
-    { env= Interp.empty_env
+    { env= empty_env
     ; m= None
     ; t= None
     ; a= None
@@ -87,13 +85,13 @@ let net_to_srp net ~throw_requires =
         | Ty ty -> e_val (default_value ty)
       in
       let v = Interp.interp_exp env e in
-      info.env <- Interp.update_value env x v ;
-      info.syms <- VarMap.add x v info.syms) Slicing.(net.symbolics);
+      info.env <- update_value env x v ;
+      info.syms <- VarMap.add x v info.syms) (net.symbolics);
   (* process let definitions *)
   BatList.iter (fun (x, _, e) ->
       let env = info.env in
       let v = Interp.interp_exp env e in
-      info.env <- Interp.update_value env x v) net.defs;
+      info.env <- update_value env x v) net.defs;
   info.init <- get_func net.init;
   info.m <- get_func net.merge;
   info.t <- get_func net.trans;
@@ -151,8 +149,7 @@ let get_attribute v s =
 let simulate_step {graph= g; trans; merge} s x =
   let do_neighbor initial_attribute (s, todo) n =
     let neighbor = vnode n in
-    (* let origin = vnode x in *)
-    let edge = vedge (n, x) in
+    let edge = vedge (x, n) in
     let n_incoming_attribute =
       Interp.interp_closure trans [edge; initial_attribute]
     in

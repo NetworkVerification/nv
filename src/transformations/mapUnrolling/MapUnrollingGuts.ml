@@ -1,6 +1,7 @@
 open Syntax
 open Collections
 open Typing
+open OCamlUtils
 
 let has_target_type (target : ty) (e : exp) : bool =
   match e.ety with
@@ -10,12 +11,24 @@ let has_target_type (target : ty) (e : exp) : bool =
     failwith "Found expression with no ety during map unrolling"
 ;;
 
-let get_index keys k =
+let get_index_const keys k =
+  let const_keys, _ = keys in
   try
     let index, _ =
-      BatList.findi (fun _ e -> compare_es e k = 0) keys
+      BatList.findi (fun _ e -> compare_es e k = 0) const_keys
     in
     Some(index)
+  with
+  | _ -> None
+;;
+
+let get_index_symb keys symb =
+  let const_keys, symb_keys = keys in
+  try
+    let index, _ =
+      BatList.findi (fun _ s -> Var.equal s symb) symb_keys
+    in
+    Some(index + List.length const_keys)
   with
   | _ -> None
 ;;
@@ -28,7 +41,7 @@ let mapo f o =
 
 let rec unroll_type
     (ty : ty)
-    (keys : exp list)
+    (keys : exp list * var list)
     (ty2 : ty)
   : ty
   =
@@ -48,8 +61,9 @@ let rec unroll_type
     TOption (unroll_type ty)
   | TMap (key_ty, val_ty) ->
     if equiv_tys ty ty2 then
+      let const_keys, symb_keys = keys in
       (* Don't need to recurse since types cannot contain themselves *)
-      TTuple (BatList.make (BatList.length keys) (canonicalize_type val_ty))
+      TTuple (BatList.make (BatList.length const_keys + BatList.length symb_keys) (canonicalize_type val_ty))
     else
       TMap (unroll_type key_ty, unroll_type val_ty)
   | TRecord map -> TRecord (StringMap.map unroll_type map)
@@ -59,17 +73,89 @@ let rec unroll_type
     failwith "Encountered TVar after canonicalization"
 ;;
 
+let rec unroll_get_or_set
+    (keys : exp list * var list)
+    (mk_op : int -> exp)
+    (ety : ty option)
+    (espan : Span.t)
+    (k : exp) =
+  let get_index_const = get_index_const keys in
+  let get_index_symb = get_index_symb keys in
+  match get_index_const k with
+  | Some n ->
+    (* Constant key - no need to write a match *)
+    mk_op n
+  | None ->
+    let const_keys, symb_keys = keys in
+    let const_branches =
+      const_keys
+      |> List.mapi
+        (fun i k ->
+           (exp_to_pattern k, mk_op i))
+      |> List.fold_left
+        (fun acc (p,x) -> addBranch p x acc) emptyBranch
+    in
+    match canonicalize_type (oget k.ety) with
+    | TNode
+    | TEdge ->
+      (* We know all possible node and edge values in advance, so just
+         match the key with each of them *)
+      ematch k const_branches
+    | _ ->
+      (* Otherwise, we require that the key be be a symbolic variable *)
+      let _, index =
+        match k.e with
+        | EVar v ->
+          begin
+            match get_index_symb v with
+            | Some i -> v,i
+            | None -> failwith @@
+              "Encountered non-constant, non-symbolic variable key whose type is not TNode or TEdge: " ^
+              Printing.exp_to_string k ^ ", type: " ^ Printing.ty_to_string (oget k.ety)
+          end
+        | _ -> failwith @@
+          "Encountered non-constant, non-variable key whose type is not TNode or TEdge: " ^
+          Printing.exp_to_string k
+      in
+      (* List of symbolics with a strictly lower index *)
+      let preceding_symb_keys =
+        BatList.take index symb_keys
+      in
+      let big_if =
+        List.fold_left
+          (fun acc v ->
+             let cmp =
+               (* Compare our key to the symbolic variable v *)
+               aexp (eop Eq [k; aexp (evar v, k.ety, k.espan)], Some TBool, espan)
+             in
+             let ethen =
+               (* If they're the same value, use v's index instead of k's *)
+               v |> get_index_symb |> oget |> mk_op
+             in
+             aexp (eif cmp ethen acc, ety, espan)
+          )
+          (* If we have a different value from all the lower-index symbolics,
+             use our own index *)
+          (mk_op index)
+          preceding_symb_keys
+      in
+      let final_branches = addBranch PWild big_if const_branches in
+      ematch k final_branches
+;;
+
 let rec unroll_exp
     (ty : ty)
-    (keys : exp list)
+    (keys : exp list * var list)
     (e : exp)
   : exp
   =
   let unroll_type = unroll_type ty keys in
   let unroll_exp e = unroll_exp ty keys e in
   let has_target_type e = has_target_type ty e in
-  let get_index k = get_index keys k in
+
   let ty_unrolled = unroll_type ty in
+  let const_keys, symb_keys = keys in
+  let unrolled_size = List.length const_keys + List.length symb_keys in
   let unrolled_exp =
     match e.e with
     | EVal v ->
@@ -109,97 +195,40 @@ let rec unroll_exp
       | ULeq _, _
       | NLess, _
       | NLeq, _
-      | Eq, _ ->
+      | Eq, _
+      | TGet _, _
+      | TSet _, _->
         eop op (BatList.map unroll_exp es)
       | MCreate, [e1] ->
         if not (has_target_type e) then
           eop MCreate [unroll_exp e1]
         else
-          etuple (BatList.make (BatList.length keys) (unroll_exp e1))
+          etuple (BatList.make unrolled_size (unroll_exp e1))
       | MGet, [map; k] ->
         if not (has_target_type map) then
           eop MGet [unroll_exp map; unroll_exp k]
         else
-          begin
-            (* Distinguish between constant and variable keys *)
-            if is_value k then
-              begin
-                let val_ty =
-                  match ty with
-                  | TMap (_, ty) -> ty
-                  | _ -> failwith "impossible"
-                in
-                let index =
-                  match get_index k with
-                  | Some n -> n
-                  | None ->
-                    failwith "Encountered unrecognized key during map unrolling"
-                in
-                let x = Var.fresh "UnrollingGetVar" in
-                let plist =
-                  BatList.mapi (fun i _ -> if i = index then PVar x else PWild) keys
-                in
-                let pattern = PTuple plist in
-                ematch (unroll_exp map) (addBranch pattern (aexp (evar x, Some (val_ty), e.espan)) emptyBranch)
-              end
-            else
-              begin
-                let pvars = BatList.mapi (fun i _ ->
-                    PVar (Var.fresh (Printf.sprintf "MapGet-%d" i)))
-                    keys
-                in
-                let tyv = match e.ety with
-                  | Some (TMap (_, tyv)) -> Some tyv
-                  | _ -> None
-                in
-                (* need expression to pattern function
-                   s.t. k1 -> p1, etc.
-                *)
-                let branches = BatList.map2i (fun i pvi ki ->
-                    match pvi with
-                    | PVar x ->
-                      (exp_to_pattern ki,
-                       aexp (evar x, tyv, e.espan))
-                    | _ -> failwith "impossible") pvars keys
-                in
-                let inner_match =
-                  aexp(ematch k (BatList.fold_left (fun acc (p,x) ->
-                      addBranch p x acc) emptyBranch branches),
-                       tyv, e.espan)
-                in
-                let m = unroll_exp map in
-                aexp(ematch m (addBranch (PTuple pvars) inner_match emptyBranch),
-                     tyv, e.espan)
-              end
-          end
+          let unrolled_map = unroll_exp map in
+          let unrolled_ety = mapo unroll_type e.ety in
+          let mk_op =
+            (fun index ->
+               aexp (eop (TGet (unrolled_size, index, index)) [unrolled_map],
+                     unrolled_ety, e.espan))
+          in
+          unroll_get_or_set keys mk_op unrolled_ety e.espan k
       | MSet, [map; k; setval] ->
         if not (has_target_type map) then
           eop MSet [unroll_exp map; unroll_exp k; unroll_exp setval]
         else
-          begin
-            match get_index k with
-            | None -> unroll_exp map
-            | Some index ->
-              let freshvars =
-                BatList.map (fun _ -> Var.fresh "UnrollingSetVar") keys
-              in
-              let pattern =
-                PTuple (BatList.map (fun var -> PVar var) freshvars)
-              in
-              let val_ty =
-                match ty (* Type of the map we're unrolling *) with
-                | TMap (_, ty) -> ty
-                | _ -> failwith "impossible"
-              in
-              let result =
-                BatList.mapi
-                  (fun i var ->
-                     if i <> index then (aexp (evar var, Some (val_ty), e.espan))
-                     else unroll_exp setval)
-                  freshvars
-              in
-              ematch (unroll_exp map) (addBranch pattern (aexp ((etuple result), Some (ty_unrolled), e.espan)) emptyBranch)
-          end
+          let unrolled_map = unroll_exp map in
+          let unrolled_setval = unroll_exp setval in
+          let unrolled_ety = mapo unroll_type e.ety in
+          let mk_op =
+            (fun index ->
+               aexp (eop (TSet (unrolled_size, index, index)) [unrolled_map; unrolled_setval],
+                     unrolled_ety, e.espan))
+          in
+          unroll_get_or_set keys mk_op unrolled_ety e.espan k
       | MMap, [f; map] ->
         if not (has_target_type map) then
           eop MMap [unroll_exp f; unroll_exp map]
@@ -208,9 +237,11 @@ let rec unroll_exp
             match ty (* Type of the map we're unrolling *) with
             | TMap (_, ty) -> ty
             | _ -> failwith "impossible"
-          in          let f' = unroll_exp f in
+          in
+          let f' = unroll_exp f in
           let freshvars =
-            BatList.map (fun _ -> Var.fresh "UnrollingMapVar") keys
+            BatList.map (fun _ -> Var.fresh "UnrollingMapVar") symb_keys @
+            BatList.map (fun _ -> Var.fresh "UnrollingMapVar") const_keys
           in
           let pattern =
             PTuple (BatList.map (fun var -> PVar var) freshvars)
@@ -228,10 +259,19 @@ let rec unroll_exp
         if not (has_target_type map) then
           eop MMapFilter [unroll_exp p; unroll_exp f; unroll_exp map]
         else
+          let key_ty =
+            match ty (* Type of the map we're unrolling *) with
+            | TMap (ty, _) -> ty
+            | _ -> failwith "impossible"
+          in
           let f' = unroll_exp f in
           let p' = unroll_exp p in
+          let all_keys =
+            List.map (fun v -> aexp (evar v, Some key_ty, e.espan)) symb_keys @
+            const_keys
+          in
           let freshvars =
-            BatList.map (fun _ -> Var.fresh "UnrollingMapFilterVar") keys
+            BatList.map (fun _ -> Var.fresh "UnrollingMapFilterVar") all_keys
           in
           let pattern =
             PTuple (BatList.map (fun var -> PVar var) freshvars)
@@ -254,7 +294,7 @@ let rec unroll_exp
             BatList.map (fun var -> aexp (evar var, Some (val_ty), e.espan)) freshvars
           in
           let result =
-            BatList.map2 make_result keys freshvars
+            BatList.map2 make_result all_keys freshvars
           in
           ematch (unroll_exp map) (addBranch pattern (aexp ((etuple result), Some (ty_unrolled), e.espan)) emptyBranch)
       | MMerge, f :: map1 :: map2 :: _ ->
@@ -270,8 +310,11 @@ let rec unroll_exp
             | _ -> failwith "impossible"
           in
           let freshvars1, freshvars2 =
-            BatList.map (fun _ -> Var.fresh "UnrollingMMergeVar1") keys,
-            BatList.map (fun _ -> Var.fresh "UnrollingMMergeVar2") keys
+            let lst =
+              BatList.make (List.length symb_keys + List.length const_keys) ()
+            in
+            BatList.map (fun _ -> Var.fresh "UnrollingMergeVar1") lst,
+            BatList.map (fun _ -> Var.fresh "UnrollingMergeVar2") lst
           in
           let pattern =
             PTuple([
@@ -299,6 +342,45 @@ let rec unroll_exp
           ematch
             map_pair
             (addBranch pattern (aexp ((etuple result), Some (ty_unrolled), e.espan)) emptyBranch)
+      | MFoldNode, [f; map; acc]
+      | MFoldEdge, [f; map; acc] ->
+        if not (has_target_type map) then
+          eop op [unroll_exp f; unroll_exp acc; unroll_exp map]
+        else
+          (* fold f acc m ->
+             (f (f acc k1 v1) k2 v2)
+          *)
+          let key_ty, val_ty =
+            match ty (* Type of the map we're unrolling *) with
+            | TMap (kty, vty) -> kty, vty
+            | _ -> failwith "impossible"
+          in
+          let acc' = unroll_exp acc in
+          let acc_ty = oget acc'.ety in
+          let f' = unroll_exp f in
+          let symb_var_keys =
+            List.map (fun v -> aexp (evar v, Some key_ty, e.espan)) symb_keys
+          in
+          let freshvars =
+            BatList.map (fun k -> (k, Var.fresh "UnrollingFoldVar")) (symb_var_keys @ const_keys)
+          in
+          let pattern =
+            PTuple (BatList.map (fun (_, var) -> PVar var) freshvars)
+          in
+          let fold_vars =
+            BatList.map (fun (k, v) -> k, aexp (evar v, Some (val_ty), e.espan)) freshvars
+          in
+          let result =
+            BatList.fold_left
+              (fun acc (k, v) ->
+                 let app1 = aexp (eapp f' k, Some (TArrow (val_ty, TArrow(acc_ty, acc_ty))), e.espan) in
+                 let app2 = aexp (eapp app1 v, Some (TArrow(acc_ty, acc_ty)), e.espan) in
+                 let app3 = aexp (eapp app2 acc, Some (acc_ty), e.espan) in
+                 app3)
+              acc'
+              fold_vars
+          in
+          ematch (unroll_exp map) (addBranch pattern result emptyBranch)
       | _ ->
         failwith @@ "Failed to unroll map: Incorrect number of arguments to map operation : "
                     ^ Printing.exp_to_string e
@@ -308,7 +390,7 @@ let rec unroll_exp
 
 let unroll_decl
     (ty : ty)
-    (keys : exp list)
+    (keys : exp list * var list)
     (decl : declaration)
   : declaration
   =
@@ -338,7 +420,7 @@ let unroll_decl
 
 let unroll_one_map_type
     (ty : ty)
-    (keys : exp list)
+    (keys : exp list * var list)
     (decls : declarations)
   : declarations
   =

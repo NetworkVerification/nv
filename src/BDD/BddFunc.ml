@@ -1,5 +1,6 @@
 open Cudd
 open Syntax
+open OCamlUtils
 
 module B = BddUtils
 
@@ -190,7 +191,7 @@ let rec eval (env: t Env.t) (e: exp) : t =
     BTuple vs
   | ESome e -> BOption (Bdd.dtrue B.mgr, eval env e)
   | EMatch (e1, branches) -> (
-      Printf.printf "Ematch e1: %s\n" (show_exp ~show_meta:false e1);
+      Printf.printf "Ematch e1: %s\n" (PrintingRaw.show_exp ~show_meta:false e1);
       let bddf = eval env e1 in
       let ((p,e), bs) = popBranch branches in
       let env, _ = eval_branch env bddf p in

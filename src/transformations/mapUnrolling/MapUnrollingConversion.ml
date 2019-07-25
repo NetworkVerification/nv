@@ -3,6 +3,7 @@ open Generators
 open Collections
 open MapUnrollingGuts
 open Typing
+open OCamlUtils
 
 (* e must be a literal *)
 let rec exp_to_value (e : exp) : value =
@@ -28,13 +29,14 @@ let rec exp_to_value (e : exp) : value =
 
 let rec convert_value
     (ty : ty)
-    (keys : exp list)
+    (keys : exp list * var list)
+    (sol : Solution.t)
     (v : value)
     (original_ty : ty)
   : value
   =
   (* TODO: Potentially add on span and type info *)
-  let convert_value = convert_value ty keys in
+  let convert_value = convert_value ty keys sol in
   match v.v, (canonicalize_type original_ty) with
   | VBool _, TBool
   | VInt _, TInt _ ->
@@ -49,8 +51,12 @@ let rec convert_value
     vtuple (List.map2 convert_value vs ts)
   | VTuple vs, TMap (kty, vty) ->
     (* We found a converted map; convert it back *)
+    let const_keys, symb_keys = keys in
     let default = default_value vty in
-    let bindings = List.combine (List.map exp_to_value keys) vs in
+    let e_vs, symb_vs = BatList.takedrop (List.length const_keys) vs in
+    let e_bindings = List.combine (List.map exp_to_value const_keys) e_vs in
+    let v_bindings = List.combine (List.map (fun v -> VarMap.find v sol.symbolics) symb_keys) symb_vs in
+    let bindings = List.rev_append v_bindings e_bindings in
     let newmap = BddMap.from_bindings ~key_ty:kty (bindings, default) in
     vmap newmap
   | VMap m, TMap (kty, vty) ->
@@ -60,9 +66,10 @@ let rec convert_value
     if Typing.equiv_tys vty unrolled_vty
     then v (* No change to value type *)
     else (* value type contains our map type *)
-      let bindings, default = BddMap.bindings m in
-      let newmap = BddMap.from_bindings ~key_ty:kty (bindings, default) in
-      vmap newmap
+      (* This op_key should be different on each call, and not used in the NV
+         program. I think this value achieves that *)
+      let op_key = e_val v, BatSet.PSet.empty in
+      vmap (BddMap.map op_key (fun v -> convert_value v vty) m)
   | VClosure _, TArrow _ ->
     failwith "convert_value: Cannot convert function value"
   | VRecord _, TRecord _ -> failwith "convert_value: encountered record value"
@@ -72,12 +79,12 @@ let rec convert_value
 
 let convert_symbolics
     (ty : ty)
-    (keys : exp list)
+    (keys : exp list * var list)
     (decls : declarations)
     (sol : Solution.t)
   =
   let symbolics = get_symbolics decls in
-  let convert_value = convert_value ty keys in
+  let convert_value = convert_value ty keys sol in
   let symbolics_to_convert =
     BatList.filter_map
       (fun (v, e) ->
@@ -105,7 +112,7 @@ let convert_symbolics
 
 let convert_attrs
     (ty : ty)
-    (keys : exp list)
+    (keys : exp list * var list)
     (decls : declarations)
     (sol : Solution.t)
   =
@@ -114,7 +121,7 @@ let convert_attrs
   if Typing.equiv_tys attr_ty unrolled_attr_ty then sol.labels
   else (* Attribute type involved a map, so transform all attributes *)
     AdjGraph.VertexMap.map
-      (fun v -> convert_value ty keys v attr_ty)
+      (fun v -> convert_value ty keys sol v attr_ty)
       sol.labels
 ;;
 
@@ -122,7 +129,7 @@ let convert_attrs
    solution to the unrolled version into a solution to the original *)
 let convert_solution
     (ty : ty)
-    (keys : exp list)
+    (keys : exp list * var list)
     (decls : declarations)
     (sol : Solution.t)
   : Solution.t

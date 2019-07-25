@@ -1,7 +1,7 @@
 %{
   open Syntax
   open RecordUtils
-  (* open Batteries *)
+  open Batteries
 
   type user_type = Var.t (* name *) * ty (* type *)
   let user_types : user_type list ref = ref []
@@ -176,6 +176,8 @@
 %token <Span.t> TILDE
 %token <Span.t> UNDERSCORE
 %token <Span.t> CREATEMAP
+%token <Span.t> FOLDNODE
+%token <Span.t> FOLDEDGE
 %token <Span.t> MAP
 %token <Span.t> MAPIF
 %token <Span.t> COMBINE
@@ -307,6 +309,8 @@ expr:
     (* TODO: span does not include the branches here *)
     | MATCH expr WITH branches          { exp (ematch $2 $4) (Span.extend $1 $3) }
     | FUN params ARROW expr             { make_fun $2 $4 $4.espan (Span.extend $1 $4.espan) }
+    | FOLDNODE exprsspace               { exp (eop MFoldNode $2) $1 }
+    | FOLDEDGE exprsspace               { exp (eop MFoldEdge $2) $1 }
     | MAP exprsspace                    { exp (eop MMap $2) $1 }
     | MAPIF exprsspace                  { exp (eop MMapFilter $2) $1 }
     | COMBINE exprsspace                { exp (eop MMerge $2) $1 }

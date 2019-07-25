@@ -1,0 +1,10 @@
+type attribute = bool
+
+let trans e x = x
+
+let merge n x1 x2 = x1 || x2
+
+let init n =
+  match n with
+  | 0n -> true
+  | _ -> false

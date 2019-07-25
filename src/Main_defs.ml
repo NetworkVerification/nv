@@ -1,22 +1,15 @@
 open ANSITerminal
 open Cmdline
-open Inline
-open Interp
-open Hashcons
-open Printing
 open Quickcheck
-open Renaming
 open Smt
-open SmtHiding
 open SmtUtils
 open Solution
 open Slicing
 open Syntax
-open Typing
 open Abstraction
 open BuildAbstractNetwork
-open Lazy
 open Profile
+open OCamlUtils
 
 type answer =
   | Success of (Solution.t option)
@@ -37,9 +30,9 @@ let smt_query_file =
 
 let partialEvalNet net =
   {net with
-   init = Interp.interp_partial_opt net.init;
-   trans = Interp.interp_partial_opt net.trans;
-   merge = Interp.interp_partial_opt net.merge
+   init = InterpPartial.interp_partial_opt net.init;
+   trans = InterpPartial.interp_partial_opt net.trans;
+   merge = InterpPartial.interp_partial_opt net.merge
   }
 
 let run_smt_func file cfg info net fs =
@@ -82,11 +75,6 @@ let run_smt_classic file cfg info (net : Syntax.network) fs =
         let net, f2 =
           time_profile "Flattening Tuples" (fun () -> TupleFlatten.flatten_net net)
         in
-        (*have two different partial evaluation techniques *)
-        (* Printf.printf "emerge %s\n" (Printing.exp_to_string net.merge); *)
-        (* let net = partialEvalNet net in *)
-        (* Printf.printf "emerge %s\n" (Printing.exp_to_string net.merge); *)
-        (* let net = time_profile "optimizing branches" (fun () -> OptimizeBranches.optimizeNet net) in *)
         net, (f2 :: f1 :: fs)
       end
     else net, fs
@@ -302,9 +290,10 @@ let parse_input (args : string array)
       let decls, f = (* unrolling maps *)
         time_profile "Map unrolling" (fun () -> MapUnrolling.unroll info decls)
       in
-      (*TODO: Inline again after unrolling, is this necessary? *)
+      (* Inline again after unrolling. Could probably optimize this away during unrolling *)
       let decls = time_profile "Inlining" (fun () -> Inline.inline_declarations decls) in
-      (Typing.infer_declarations info decls, f :: fs) (* TODO: is type inf necessary here?*)
+      (* (Typing.infer_declarations info decls, f :: fs) (* TODO: is type inf necessary here?*) *)
+      (decls, f :: fs)
     else decls, fs
   in
   let net = Slicing.createNetwork decls in (* Create something of type network *)

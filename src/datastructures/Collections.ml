@@ -10,6 +10,12 @@ module IntMap = BatMap.Make (struct
   let compare = compare
 end)
 
+module IntSet = BatSet.Make (struct
+    type t = int
+
+    let compare = compare
+  end)
+
 module StringSet = BatSet.Make (struct
   type t = String.t
 
@@ -28,7 +34,7 @@ module VarSet = BatSet.Make (struct
   let compare = Var.compare
 end)
 
-module ExpSet = Set.Make (struct
+module ExpSet = BatSet.Make (struct
     type t = exp
 
     let compare = compare_es
