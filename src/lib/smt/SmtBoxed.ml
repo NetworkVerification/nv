@@ -1,3 +1,6 @@
+open Nv_core
+open Nv_datastructures
+open Nv_datatypes
 open Syntax
 open Collections
 open SmtLang
@@ -12,11 +15,11 @@ struct
   let lift2 f x y = f x y
   let combine_term t = t
 
-  let create_strings str ty = str
+  let create_strings str _ = str
 
   let create_vars env descr x =
     let name =
-      if is_symbolic env.symbolics x then
+      if is_symbolic env.SmtUtils.symbolics x then
         begin
           let str = Var.to_string x in
           if BatString.starts_with str "label-" then
@@ -40,11 +43,11 @@ struct
     | TTuple ts -> (
         match ts with
         | [] -> failwith "0-element tuples not allowed"
-        | [t] -> failwith "1-element tuples not allowed"
+        | [_] -> failwith "1-element tuples not allowed"
         | ts ->
           let len = BatList.length ts in
           Some (Printf.sprintf "Pair%d" len))
-    | TOption ty -> Some "Option"
+    | TOption _ -> Some "Option"
     | TUnit -> Some "Unit"
     | _ -> None
 
@@ -55,11 +58,11 @@ struct
     | TTuple ts -> (
         match ts with
         | [] -> failwith "0-element tuples not allowed"
-        | [t] -> failwith "1-element tuples not allowed"
+        | [_] -> failwith "1-element tuples not allowed"
         | ts ->
           let len = BatList.length ts in
           Printf.sprintf "Pair%d" len)
-    | TOption ty -> "Option"
+    | TOption _ -> "Option"
     | TUnit -> "Unit"
     | TBool -> "Bool"
     | TInt _ -> "Int"
@@ -165,7 +168,7 @@ struct
     match e.e with
     | EVar x ->
       let name =
-        if is_symbolic env.symbolics x then
+        if is_symbolic env.SmtUtils.symbolics x then
           begin
             (*symbolic_var x*)
             let str = Var.to_string x in
@@ -190,7 +193,7 @@ struct
           let ze2 = encode_exp_z3 descr env e2 in
           mk_or ze1.t ze2.t |>
           mk_term ~tloc:e.espan
-        | Not, _ ->
+        | Syntax.Not, _ ->
           let ze = BatList.hd es |> encode_exp_z3 descr env in
           mk_not ze.t |>
           mk_term ~tloc:e.espan
@@ -204,31 +207,31 @@ struct
           let ze2 = encode_exp_z3 descr env e2 in
           mk_sub ze1.t ze2.t |>
           mk_term ~tloc:e.espan
-        | Eq, [e1;e2] ->
+        | Syntax.Eq, [e1;e2] ->
           let ze1 = encode_exp_z3 descr env e1 in
           let ze2 = encode_exp_z3 descr env e2 in
           mk_eq ze1.t ze2.t |>
           mk_term ~tloc:e.espan
-        | NLess, [e1;e2]
-        | ULess _, [e1;e2] ->
+        | Syntax.NLess, [e1;e2]
+        | Syntax.ULess _, [e1;e2] ->
           let ze1 = encode_exp_z3 descr env e1 in
           let ze2 = encode_exp_z3 descr env e2 in
           mk_lt ze1.t ze2.t |>
           mk_term ~tloc:e.espan
-        | NLeq, [e1;e2]
-        | ULeq _, [e1;e2] ->
+        | Syntax.NLeq, [e1;e2]
+        | Syntax.ULeq _, [e1;e2] ->
           let ze1 = encode_exp_z3 descr env e1 in
           let ze2 = encode_exp_z3 descr env e2 in
           mk_leq ze1.t ze2.t |>
           mk_term ~tloc:e.espan
-        | TGet _, _
-        | TSet _, _ -> failwith "TGet and TSet should be partially evaluated away"
-        | AtMost _, [e1;e2;e3] -> failwith "not bothering with boxed version for now"
-        | MCreate, [e1] ->
+        | Syntax.TGet _, _
+        | Syntax.TSet _, _ -> failwith "TGet and TSet should be partially evaluated away"
+        | Syntax.AtMost _, [_e1;_e2;_e3] -> failwith "not bothering with boxed version for now"
+        | Syntax.MCreate, [_e1] ->
           failwith "not implemented"
-        | MGet, [e1; e2] ->
+        | Syntax.MGet, [_e1; _e2] ->
           failwith "not implemented"
-        | MSet, [e1; e2; e3] ->
+        | Syntax.MSet, [_e1; _e2; _e3] ->
           failwith "not implemented"
         | MMap, [{e= EFun {arg= x; argty= ty1; resty= ty2; body= e1}}; e2] ->
           failwith "not implemented yet"
@@ -280,7 +283,7 @@ struct
           add_constraint env (mk_term ~tloc:e.espan (mk_eq za.t ze1.t));
           encode_branches_z3 descr env za bs (oget e.ety)
         end
-    | ETy (e, ty) -> encode_exp_z3 descr env e
+    | ETy (e, _) -> encode_exp_z3 descr env e
     | EFun _ | EApp _ -> failwith "function in smt encoding"
     | ERecord _ | EProject _ -> failwith "record or projection in smt encoding"
 
@@ -372,7 +375,7 @@ struct
               BatList.map
                 (fun (p, (zname, _, ty)) ->
                    match p with
-                   | PVar x -> mk_bool true |> mk_term
+                   | PVar _ -> mk_bool true |> mk_term
                    | _ -> encode_pattern_z3 descr env zname p ty )
                 (BatList.combine ps znames)
                 (* let matches = *)
@@ -383,7 +386,7 @@ struct
             else
               let znames =
                 BatList.map2i
-                  (fun i t p ->  p, t ) ts ps
+                  (fun _ t p ->  p, t ) ts ps
               in
               let tup_decl = compute_decl env ty |> oget in
               let fs = tup_decl |> get_constructors |> BatList.hd |> get_projections in
@@ -463,7 +466,7 @@ struct
       mk_app (mk_constructor f (ty_to_sort (oget v.vty))) [zv.t] |>
       mk_term ~tloc:v.vspan
     | VClosure _ -> failwith "internal error (closure in smt)"
-    | VMap map -> failwith "not doing maps yet"
+    | VMap _ -> failwith "not doing maps yet"
     | VRecord _ -> failwith "Record in SMT encoding"
 
   let init_solver symbs ~labels =

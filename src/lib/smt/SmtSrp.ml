@@ -1,11 +1,16 @@
-open Syntax
+open Nv_datatypes
+open Nv_datastructures
+open Nv_core
+open Nv_interpreter
 open SmtUtils
 
 let node_exp (u: Syntax.node) : Syntax.exp =
-  aexp(e_val (vnode u), Some Typing.node_ty, Span.default)
+  let open Syntax in
+  aexp (e_val (vnode u), Some Typing.node_ty, Span.default)
 
 let edge_exp (u: Syntax.node) (v: Syntax.node) : Syntax.exp =
-  aexp(e_val (vtuple [vnode u; vnode v]), Some Typing.edge_ty, Span.default)
+  let open Syntax in
+  aexp (e_val (vtuple [vnode u; vnode v]), Some Typing.edge_ty, Span.default)
 
 let init_exp einit u =
   InterpPartialFull.interp_partial_fun einit [node_exp u]
@@ -42,7 +47,7 @@ let network_to_srp net =
     BatList.fold_left (fun acc (u,v) ->
         (* Find the label variables associated with node u*)
         let varu, ty = AdjGraph.VertexMap.find u labelling |> BatList.hd in
-        let lblu = aexp(evar varu, Some ty, Span.default) in
+        let lblu = Syntax.aexp(Syntax.evar varu, Some ty, Span.default) in
         (*compute the incoming message through the transfer function *)
         let transuv = trans_exp net.trans u v lblu in
         (* add them to the incoming messages of node v *)

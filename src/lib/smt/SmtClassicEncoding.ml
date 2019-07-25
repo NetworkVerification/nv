@@ -1,8 +1,8 @@
+open Nv_datastructures
+open Nv_core
 open Syntax
 open Collections
-open SmtUtils
 open SmtLang
-open OCamlUtils
 
 module type ClassicEncodingSig = SmtEncodingSigs.Encoding with type network_type = Syntax.network
 module ClassicEncoding (E: SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
@@ -16,33 +16,33 @@ struct
     VarMap.iter
       (fun v e ->
          let names = create_vars env "" v in
-         mk_constant env names (ty_to_sort (Syntax.get_ty_from_tyexp e))
+         mk_constant env names (SmtUtils.ty_to_sort (Syntax.get_ty_from_tyexp e))
            ~cdescr:"Symbolic variable decl"
          |> ignore ) sym_vars ;
     (* add the require clauses *)
     BatList.iter
       (fun e ->
          let es = encode_exp_z3 "" env e in
-         ignore (lift1 (fun e -> add_constraint env e) es)) requires
+         ignore (lift1 (fun e -> SmtUtils.add_constraint env e) es)) requires
 
   let encode_z3_merge str env merge =
     let rec loop merge acc =
       match merge.e with
-      | EFun {arg= x; argty= Some xty; body= exp} ->
+      | EFun {arg= x; argty= Some xty; body= exp; _} ->
         (match exp.e with
          | EFun _ ->
            loop exp ((x,xty) :: acc)
          | _ ->
            let xstr = BatList.rev_map (fun (x,xty) ->
-               mk_constant env (create_vars env str x) (ty_to_sort xty)
+               mk_constant env (create_vars env str x) (SmtUtils.ty_to_sort xty)
                  ~cdescr:"" ~cloc:merge.espan )
                ((x,xty) :: acc) in
-           let names = create_strings (Printf.sprintf "%s-result" str) (oget exp.ety) in
+           let names = create_strings (Printf.sprintf "%s-result" str) (OCamlUtils.oget exp.ety) in
            let results =
-             lift2 (mk_constant env) names (oget exp.ety |> ty_to_sorts) in
+             lift2 (mk_constant env) names (OCamlUtils.oget exp.ety |> ty_to_sorts) in
            let es = encode_exp_z3 str env exp in
            ignore(lift2 (fun e result ->
-               add_constraint env (mk_term (mk_eq result.t e.t))) es results);
+               SmtUtils.add_constraint env (mk_term (mk_eq result.t e.t))) es results);
            (results, xstr))
       | _ -> failwith "internal error"
     in
@@ -51,21 +51,21 @@ struct
   let encode_z3_trans str env trans =
     let rec loop trans acc =
       match trans.e with
-      | EFun {arg= x; argty= Some xty; body= exp} ->
+      | EFun {arg= x; argty= Some xty; body= exp; _} ->
         (match exp.e with
          | EFun _ ->
            loop exp ((x,xty) :: acc)
          | _ ->
            let xstr = BatList.rev_map (fun (x,xty) ->
-               mk_constant env (create_vars env str x) (ty_to_sort xty)
+               mk_constant env (create_vars env str x) (SmtUtils.ty_to_sort xty)
                  ~cdescr:"transfer x argument" ~cloc:trans.espan)
                ((x,xty) :: acc) in
-           let names = create_strings (Printf.sprintf "%s-result" str) (oget exp.ety) in
+           let names = create_strings (Printf.sprintf "%s-result" str) (OCamlUtils.oget exp.ety) in
            let results =
-             lift2 (mk_constant env) names (oget exp.ety |> ty_to_sorts) in
+             lift2 (mk_constant env) names (OCamlUtils.oget exp.ety |> ty_to_sorts) in
            let es = encode_exp_z3 str env exp in
            ignore(lift2 (fun e result ->
-               add_constraint env (mk_term (mk_eq result.t e.t))) es results);
+               SmtUtils.add_constraint env (mk_term (mk_eq result.t e.t))) es results);
            (results, xstr))
       | _ -> failwith "internal error"
     in
@@ -74,38 +74,39 @@ struct
   let encode_z3_init str env e =
     (* Printf.printf "%s\n" (Printing.exp_to_string e); *)
     (* Printf.printf "%s\n" (Syntax.show_exp ~show_meta:false e); *)
-    let names = create_strings (Printf.sprintf "%s-result" str) (oget e.ety) in
+    let names = create_strings (Printf.sprintf "%s-result" str) (OCamlUtils.oget e.ety) in
     let results =
-      lift2 (mk_constant env) names (oget e.ety |> ty_to_sorts) in
+      lift2 (mk_constant env) names (OCamlUtils.oget e.ety |> ty_to_sorts) in
     let es = encode_exp_z3 str env e in
     ignore(lift2 (fun e result ->
-        add_constraint env (mk_term (mk_eq result.t e.t))) es results);
+        SmtUtils.add_constraint env (mk_term (mk_eq result.t e.t))) es results);
     results
 
-  let encode_z3_assert str env node assertion =
+  let encode_z3_assert str env _node assertion =
     let rec loop assertion acc =
       match assertion.e with
-      | EFun {arg= x; argty= Some xty; body= exp} ->
+      | EFun {arg= x; argty= Some xty; body= exp; _} ->
         (match exp.e with
          | EFun _ ->
            loop exp ((x,xty) :: acc)
          | _ ->
            let xstr = BatList.rev_map (fun (x,xty) ->
-               mk_constant env (create_vars env str x) (ty_to_sort xty)
+               mk_constant env (create_vars env str x) (SmtUtils.ty_to_sort xty)
                  ~cdescr:"assert x argument" ~cloc:assertion.espan )
                ((x,xty) :: acc) in
-           let names = create_strings (Printf.sprintf "%s-result" str) (oget exp.ety) in
+           let names = create_strings (Printf.sprintf "%s-result" str) (OCamlUtils.oget exp.ety) in
            let results =
-             lift2 (mk_constant env) names (oget exp.ety |> ty_to_sorts) in
+             lift2 (mk_constant env) names (OCamlUtils.oget exp.ety |> ty_to_sorts) in
            let es = encode_exp_z3 str env exp in
            ignore(lift2 (fun e result ->
-               add_constraint env (mk_term (mk_eq result.t e.t))) es results);
+               SmtUtils.add_constraint env (mk_term (mk_eq result.t e.t))) es results);
            (results, xstr))
       | _ -> failwith "internal error"
     in
     loop assertion []
 
-  let encode_z3 (net: Syntax.network) : smt_env =
+  let encode_z3 (net: Syntax.network) : SmtUtils.smt_env =
+    let open Nv_interpreter in
     let env = init_solver net.symbolics ~labels:[] in
     let einit = net.init in
     let eassert = net.assertion in
@@ -117,7 +118,7 @@ struct
     (* map each node to the init result variable *)
     let init_map = ref AdjGraph.VertexMap.empty in
     for i = 0 to nodes - 1 do
-      let einit_i = InterpPartial.interp_partial_fun einit [vnode i] in
+      let einit_i = Nv_interpreter.InterpPartial.interp_partial_fun einit [vnode i] in
       (* Printf.printf "%s\n" (Printing.exp_to_string einit); *)
       let init =
         encode_z3_init (Printf.sprintf "init-%d" i) env einit_i
@@ -144,7 +145,7 @@ struct
              incoming_map :=
                AdjGraph.VertexMap.add j [(i, j)] !incoming_map ) ;
          let edge =
-           if smt_config.unboxing then
+           if SmtUtils.smt_config.unboxing then
              [avalue ((vnode i), Some Typing.node_ty, Span.default);
               avalue ((vnode j), Some Typing.node_ty, Span.default)]
            else
@@ -184,27 +185,27 @@ struct
              let trans_list = to_list trans in
              let acc_list = to_list acc in
              BatList.iter2 (fun y x ->
-                 add_constraint env (mk_term (mk_eq y.t x.t))) (trans_list @ acc_list) x;
+                 SmtUtils.add_constraint env (mk_term (mk_eq y.t x.t))) (trans_list @ acc_list) x;
              merge_result )
           init in_edges
       in
-      let lbl_i_name = label_var i in
+      let lbl_i_name = SmtUtils.label_var i in
       let lbl_i = create_strings lbl_i_name aty in
-      let lbl_iv = lift1 Var.create lbl_i in
+      let lbl_iv = lift1 Nv_datatypes.Var.create lbl_i in
       add_symbolic env lbl_iv (Ty aty);
       let l = lift2 (fun lbl s -> mk_constant env (create_vars env "" lbl) s)
           lbl_iv (ty_to_sorts aty)
       in
       ignore(lift2 (fun l merged ->
-          add_constraint env (mk_term (mk_eq l.t merged.t))) l merged);
+          SmtUtils.add_constraint env (mk_term (mk_eq l.t merged.t))) l merged);
       labelling := AdjGraph.VertexMap.add i l !labelling
     done ;
     (* Propagate labels across edges outputs *)
     AdjGraph.EdgeMap.iter
-      (fun (i, j) x ->
+      (fun (i, _) x ->
          let label = AdjGraph.VertexMap.find i !labelling in
          BatList.iter2 (fun label x ->
-             add_constraint env (mk_term (mk_eq label.t x.t))) (to_list label) x)
+             SmtUtils.add_constraint env (mk_term (mk_eq label.t x.t))) (to_list label) x)
       !trans_input_map ;
     (* add assertions at the end *)
     ( match eassert with
@@ -218,17 +219,17 @@ struct
           let node = avalue (vnode i, Some Typing.node_ty, Span.default) in
           let eassert_i = InterpPartial.interp_partial_fun eassert [node] in
           let result, x =
-            encode_z3_assert (assert_var i) env i eassert_i
+            encode_z3_assert (SmtUtils.assert_var i) env i eassert_i
           in
           BatList.iter2 (fun x label ->
-              add_constraint env (mk_term (mk_eq x.t label.t))) x (to_list label);
+              SmtUtils.add_constraint env (mk_term (mk_eq x.t label.t))) x (to_list label);
           let assertion_holds =
             lift1 (fun result -> mk_eq result.t (mk_bool true) |> mk_term) result
             |> combine_term in
           all_good :=
             mk_and !all_good assertion_holds.t
         done ;
-        add_constraint env (mk_term (mk_not !all_good)));
+        SmtUtils.add_constraint env (mk_term (mk_not !all_good)));
     (* add the symbolic variable constraints *)
     add_symbolic_constraints env net.requires (env.symbolics (*@ sym_vars*));
     env

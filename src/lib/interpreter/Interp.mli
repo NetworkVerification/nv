@@ -1,4 +1,4 @@
-open Syntax
+open Nv_core.Syntax
 
 val interp_exp : env -> exp -> value
 

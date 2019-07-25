@@ -1,3 +1,6 @@
+open Nv_datatypes
+open Nv_datastructures
+open Nv_core
 open Syntax
 open Collections
 open SmtLang

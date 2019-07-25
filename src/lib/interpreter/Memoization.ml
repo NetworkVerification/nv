@@ -1,4 +1,4 @@
-open Syntax
+open Nv_core.Syntax
 
 module type MEMOIZER = sig
   type t
@@ -16,7 +16,7 @@ struct
   let memoize ~size (f: 'a -> 'b) : 'a -> 'b =
     let map = L.init size in
     fun x ->
-      let cfg = Cmdline.get_cfg () in
+      let cfg = Nv_core.Cmdline.get_cfg () in
       if cfg.hashcons && cfg.memoize then L.get map x f else f x
 end
 

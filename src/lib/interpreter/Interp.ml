@@ -1,9 +1,11 @@
+open Nv_core
+open Nv_datastructures
+open Nv_datatypes
 open Syntax
 open Memoization
 open Printing
 open Collections
 open InterpUtils
-open OCamlUtils
 
 (* Interpreter Errors *)
 (* Interpreter Environments *)
@@ -41,7 +43,7 @@ let rec interp_exp env e =
       | Some v -> v )
   | EVal v -> v
   | EOp (op, es) ->
-    interp_op env (oget e.ety) op es
+    interp_op env (OCamlUtils.oget e.ety) op es
   | EFun f -> vclosure (env, f)
   | EApp (e1, e2) -> (
       let v1 = interp_exp env e1 in
@@ -168,7 +170,7 @@ and interp_op env ty op es =
     let mtbdd =
       match ExpMap.find_opt f1.body !bddfunc_cache with
       | None -> (
-          let bddf = BddFunc.create_value (oget f1.argty) in
+          let bddf = BddFunc.create_value (OCamlUtils.oget f1.argty) in
           let env = Env.update Env.empty f1.arg bddf in
           let bddf = BddFunc.eval env f1.body in
           match bddf with

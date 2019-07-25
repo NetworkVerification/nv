@@ -1,6 +1,6 @@
 open Nv_datatypes
 open Nv_datastructures
-open Nv_core
+open Nv_core.Collections
 open SmtLang
 
 (* Classic encodes the SRP as an SMT expression, Functional encodes
@@ -13,7 +13,7 @@ type smt_options =
     mutable encoding       : encoding_style;
     mutable unboxing       : bool;
     mutable failures       : int option;
-    mutable multiplicities : int Collections.StringMap.t
+    mutable multiplicities : int StringMap.t
   }
 
 let smt_config : smt_options =
@@ -22,17 +22,17 @@ let smt_config : smt_options =
     encoding = Classic;
     unboxing = false;
     failures = None;
-    multiplicities = Collections.StringMap.empty
+    multiplicities = StringMap.empty
   }
 
 let get_requires_no_failures req =
-  let open Syntax in
+  let open Nv_core.Syntax in
   BatList.filter (fun e -> match e.e with
       | EOp (AtMost _, _) -> false
       | _ -> true) req
 
 let get_requires_failures req =
-  let open Syntax in
+  let open Nv_core.Syntax in
   BatList.filter (fun e -> match e.e with
       | EOp (AtMost _, _) -> true
       | _ -> false) req
@@ -51,8 +51,8 @@ module ConstantSet = BatSet.Make(Constant)
 type smt_env =
   { mutable ctx: command list
   ; mutable const_decls: ConstantSet.t (** named constant and its sort *)
-  ; mutable type_decls: datatype_decl Collections.StringMap.t
-  ; mutable symbolics: Syntax.ty_or_exp Collections.VarMap.t }
+  ; mutable type_decls: datatype_decl StringMap.t
+  ; mutable symbolics: Nv_core.Syntax.ty_or_exp VarMap.t }
 
 let create_fresh descr s =
   Printf.sprintf "%s-%s" descr (Var.fresh s |> Var.to_string)
@@ -62,8 +62,8 @@ let create_name descr n =
   else Printf.sprintf "%s-%s" descr (Var.to_string n)
 
 (** * Returns the SMT name of a datatype *)
-let rec datatype_name (ty : Syntax.ty) : string option =
-  let open Syntax in
+let rec datatype_name (ty : Nv_core.Syntax.ty) : string option =
+  let open Nv_core.Syntax in
   match ty with
   | TVar {contents= Link t} -> datatype_name t
   | TTuple ts -> (
@@ -86,15 +86,15 @@ let add_constraint (env : smt_env) (c : term) =
   env.ctx <- (mk_assert c |> mk_command) :: env.ctx
 
 let is_symbolic syms x =
-  Collections.VarMap.mem x syms
+  VarMap.mem x syms
 
 let is_var (tm: SmtLang.term) =
   match tm.t with
   | Var _ -> true
   | _ -> false
 
-let rec ty_to_sort (ty: Syntax.ty) : sort =
-  let open Syntax in
+let rec ty_to_sort (ty: Nv_core.Syntax.ty) : sort =
+  let open Nv_core.Syntax in
   match ty with
   | TVar {contents= Link t} -> ty_to_sort t
   | TUnit -> UnitSort
@@ -116,7 +116,7 @@ let rec ty_to_sort (ty: Syntax.ty) : sort =
   | TVar _ | QVar _ | TArrow _ | TRecord _ ->
     failwith
       (Printf.sprintf "internal error (ty_to_sort): %s"
-         (Nv_utils.Printing.ty_to_string ty))
+         (Nv_core.Printing.ty_to_string ty))
 
 
 
@@ -130,7 +130,7 @@ let node_of_label_var s =
     (BatList.nth (BatString.split_on_char '-' s) 1)
 
 let proj_of_var s =
-  let (name, i) = Var.from_var @@ Var.of_var_string s in
+  let (name, _i) = Var.from_var @@ Var.of_var_string s in
   try
     let _, s2 = BatString.split name "-proj-" in
     let s2 = List.hd @@ BatString.split_on_char '-' s2 in

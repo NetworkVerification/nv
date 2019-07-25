@@ -1,9 +1,11 @@
-open Syntax
+open Nv_datastructures
+open Nv_core
 
 (* Expression and operator interpreters *)
 (* matches p b is Some env if v matches p and None otherwise; assumes
    no repeated variables in pattern *)
 let rec matches p (v: Syntax.value) env : Syntax.value Env.t option =
+  let open Syntax in
   match (p, v.v) with
   | PWild, v -> Some env
   | PVar x, _ -> Some (Env.update env x v)
@@ -11,7 +13,7 @@ let rec matches p (v: Syntax.value) env : Syntax.value Env.t option =
   | PBool true, VBool true
   | PBool false, VBool false -> Some env
   | PInt i1, VInt i2 ->
-    if Integer.equal i1 i2 then Some env else None
+    if Nv_datatypes.Integer.equal i1 i2 then Some env else None
   | PNode n1, VNode n2 ->
     if n1 = n2 then Some env else None
   | PEdge (p1, p2), VEdge (n1, n2) ->
@@ -43,6 +45,7 @@ let rec match_branches_lst branches v env =
     | None -> match_branches_lst branches v env
 
 let rec val_to_pat v =
+  let open Syntax in
   match v.v with
   | VInt i -> PInt i
   | VBool b -> PBool b
@@ -50,7 +53,7 @@ let rec val_to_pat v =
   | VOption None -> POption None
   | VTuple vs ->
     PTuple (BatList.map val_to_pat vs)
-  | VRecord map -> PRecord (RecordUtils.StringMap.map val_to_pat map)
+  | VRecord map -> PRecord (Nv_datatypes.RecordUtils.StringMap.map val_to_pat map)
   | VNode n -> PNode n
   | VEdge (n1, n2) -> PEdge (PNode n1, PNode n2)
   | VUnit -> PUnit
@@ -60,7 +63,7 @@ let rec val_to_pat v =
 let rec match_branches branches v env =
   (* iterBranches (fun (p,e) ->  Printf.printf "%s\n" (Printing.pattern_to_string p)) branches;
    * Printf.printf "val: %s\n" (Printing.value_to_string v); *)
-  match lookUpPat (val_to_pat v) branches with
+  match Syntax.lookUpPat (val_to_pat v) branches with
   | Found e -> Some (env, e)
   | Rest ls -> match_branches_lst ls v env
 
@@ -74,9 +77,9 @@ let rec match_branches branches v env =
     let compare = Pervasives.compare
    end) *)
 
-let build_env (env: env) (free_vars: Var.t BatSet.PSet.t) :
-  value BatSet.PSet.t =
-  let base = BatSet.PSet.create compare_values in
+let build_env (env: Syntax.env) (free_vars: Nv_datatypes.Var.t BatSet.PSet.t) :
+  Syntax.value BatSet.PSet.t =
+  let base = BatSet.PSet.create Syntax.compare_values in
   BatSet.PSet.fold
     (fun v acc ->
        match Env.lookup_opt env.value v with

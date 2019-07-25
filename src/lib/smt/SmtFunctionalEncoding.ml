@@ -1,8 +1,10 @@
+open Nv_core
+open Nv_datastructures
+open Nv_datatypes
 open Syntax
 open Collections
 open SmtUtils
 open SmtLang
-open OCamlUtils
 
 (** * Alternative SMT encoding *)
 module type FunctionalEncodingSig = SmtEncodingSigs.Encoding with type network_type = Syntax.srp_unfold
@@ -25,10 +27,10 @@ struct
          let es = encode_exp_z3 "" env e in
          ignore (lift1 (fun e -> add_constraint env e) es)) requires
 
-  let encode_z3_assert str env node assertion =
+  let encode_z3_assert str env _node assertion =
     let rec loop assertion acc =
       match assertion.e with
-      | EFun {arg= x; argty= Some xty; body= exp} ->
+      | EFun {arg= x; argty= Some xty; body= exp; _} ->
         (match exp.e with
          | EFun _ ->
            loop exp ((x,xty) :: acc)
@@ -37,9 +39,9 @@ struct
                mk_constant env (create_vars env str x) (ty_to_sort xty)
                  ~cdescr:"assert x argument" ~cloc:assertion.espan )
                ((x,xty) :: acc) in
-           let names = create_strings (Printf.sprintf "%s-result" str) (oget exp.ety) in
+           let names = create_strings (Printf.sprintf "%s-result" str) (OCamlUtils.oget exp.ety) in
            let results =
-             lift2 (mk_constant env) names (oget exp.ety |> ty_to_sorts) in
+             lift2 (mk_constant env) names (OCamlUtils.oget exp.ety |> ty_to_sorts) in
            let es = encode_exp_z3 str env exp in
            ignore(lift2 (fun e result ->
                add_constraint env (mk_term (mk_eq result.t e.t))) es results);
@@ -76,7 +78,7 @@ struct
         let merged =
           if smt_config.unboxing then
             begin
-              let merged = InterpPartialFull.interp_partial merged in
+              let merged = Nv_interpreter.InterpPartialFull.interp_partial merged in
               (* Printf.printf "merge after interp:\n%s\n" (Printing.exp_to_string merged);
                * failwith "merged"; *)
               merged
@@ -101,7 +103,7 @@ struct
             AdjGraph.VertexMap.find i smt_labels
           in
           let node = avalue (vint (Integer.of_int i), Some Typing.node_ty, Span.default) in
-          let eassert_i = InterpPartial.interp_partial_fun eassert [node] in
+          let eassert_i = Nv_interpreter.InterpPartial.interp_partial_fun eassert [node] in
           let result, x =
             encode_z3_assert (assert_var i) env (Integer.of_int i) eassert_i
           in

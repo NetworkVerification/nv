@@ -1,7 +1,6 @@
 (* Printing utilities for abstract syntax *)
 
-open Nv_core
-open Nv_core.Syntax
+open Syntax
 open Nv_datatypes
 
 let is_keyword_op op =

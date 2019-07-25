@@ -1,4 +1,4 @@
-open Syntax
+open Nv_core.Syntax
 
 val interp_partial : exp -> exp
 val interp_partial_fun: exp -> exp list -> exp
