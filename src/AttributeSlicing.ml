@@ -144,7 +144,108 @@ let assert_dependencies (net : Syntax.network) =
   List.map (fun c -> c, compute_final_dependencies c) (get_conjuncts [] body)
 ;;
 
-let slice (net : Syntax.network) : Syntax.network list =
+let rewrite_fun (attr_ty : ty) (elts_to_keep : IntSet.t) (assertion : exp) (leading_args : int) (f : exp) =
+  (* Types of the elements of the original attribute *)
+  let attr_tys =
+    match attr_ty with | TTuple lst -> lst | _ -> failwith "impossible"
+  in
+  let attr_size = List.length attr_tys in
+  (* Types of the elements of the sliced attribute *)
+  let rec rewrite_fun_aux
+      (e : exp)
+      (count : int)
+      (args : (var * ty option * bool) list) (* Bool is true iff we kept this argument *)
+      (cont : exp -> exp) =
+    match e.e with
+    | EFun func ->
+      if (count < leading_args) || (* This arg doesn't correspond to an attribute element *)
+         IntSet.mem ((count - leading_args) mod attr_size) elts_to_keep (* This arg corresponds to an element that we're keeping *)
+      then
+        rewrite_fun_aux func.body (count + 1) ((func.arg, func.argty, true)::args)
+          (fun e ->
+             let ety = Some (TArrow (func.argty |> oget, e.ety |> oget)) in
+             let result = aexp (efun {func with body=e; resty=e.ety}, ety, e.espan) in
+             cont result)
+      else
+        rewrite_fun_aux func.body (count + 1) ((func.arg, func.argty, false)::args)
+          (fun e -> cont e)
+    | _ ->
+      match e.ety with
+      | Some TBool -> (* This is the assert function. Return the input assert body *)
+        cont assertion
+      | _ ->
+        (* Not the assert function. Replace the input arguments with dummy variables
+           and extract only the relevant elements of the result. *)
+        let body_with_dummy_args =
+          args
+          |> List.filter (fun (_,_,b) -> not b)
+          |> List.fold_left
+            (fun acc (arg, argty, _) ->
+               aexp
+                 (elet
+                    arg
+                    (aexp (e_val (Generators.default_value (oget argty)), argty, e.espan))
+                    acc,
+                  acc.ety,
+                  acc.espan)
+            )
+            e
+        in
+        (* Pattern that we match the result of the original function with in order
+           to extract the relevant elements *)
+        let pat =
+          List.mapi
+            (fun n _ -> if IntSet.mem n elts_to_keep then PVar (Var.fresh "SlicingVar") else PWild)
+            attr_tys
+        in
+        let final_vars =
+          List.filter_map (function | PVar v -> Some v | _ -> None) pat
+        in
+        (* The types of the elements of the attribute after slicing *)
+        let sliced_attr_tys =
+          List.filteri (fun n _ -> IntSet.mem n elts_to_keep) attr_tys
+        in
+        (* The actual tuple expression that the overall function returns *)
+        let final_output =
+          aexp
+            ((etuple (List.rev_map2 (fun v ty -> aexp (evar v, Some ty, e.espan)) final_vars sliced_attr_tys)),
+             Some (TTuple sliced_attr_tys),
+             e.espan)
+        in
+        let final_match =
+          ematch
+            body_with_dummy_args
+            (addBranch (PTuple pat) final_output emptyBranch)
+        in
+        (aexp (final_match, Some (TTuple sliced_attr_tys), e.espan))
+        |> InterpPartialFull.interp_partial
+        |> cont
+  in
+  rewrite_fun_aux f 0 [] (fun e -> e)
+;;
+
+(* Create a new network whose attribute is a tuple whose elements correspond
+   to those indicated by the IntSet.t, and which has asn as the body of
+   its assert function. *)
+let slice (net : Syntax.network) (asn_slice : exp) (elements : IntSet.t) =
+  let slice_fun = rewrite_fun (net.attr_type) elements asn_slice in
+  let sliced_init = slice_fun 1 (* First arg is node *) net.init in
+  let sliced_trans = slice_fun 2 (* First two args are edge nodes *) net.trans in
+  let sliced_merge = slice_fun 1 (* First arg is node *) net.merge in
+  let sliced_aty =
+    match net.attr_type with
+    | TTuple lst -> TTuple (List.filteri (fun i _ -> IntSet.mem i elements) lst)
+    | _ -> failwith "impossible"
+  in
+  let sliced_assert = slice_fun 1 (* First arg is node *) (net.assertion |> oget) in
+  {net with attr_type=sliced_aty;
+            init=sliced_init;
+            trans=sliced_trans;
+            merge=sliced_merge;
+            assertion=Some(sliced_assert)}
+;;
+
+let slice_network (net : Syntax.network) : Syntax.network list =
   let attr_deps = attribute_dependencies net in
   let assert_deps = assert_dependencies net in
   let assert_deps_transitive =
@@ -164,4 +265,4 @@ let slice (net : Syntax.network) : Syntax.network list =
                   (fun n acc ->
                      Printf.sprintf "%s; %d" acc n) s "")) @@
   assert_deps_transitive;
-  []
+  List.map (fun (a,es) -> slice net a es) assert_deps_transitive

@@ -119,7 +119,8 @@ let rec match_branches_lst branches v =
 let rec matchExpPat pat pe1 env =
   match pat, pe1.e with
   | PWild, _ -> Match env
-  | PVar x, EVar y ->
+(* | PVar x, EVar y -> *)
+  | PVar x, _ ->
     Match (Env.update env x pe1)
   | PTuple ps, ETuple es ->
     (match ps, es with
@@ -141,7 +142,7 @@ let rec matchExp branches pe1 =
       | Match env -> Match (env, e)
       | NoMatch -> failwith "No match?"
     else
-      Delayed
+      Delayed (* I guess this means we only try to match supposedly-irrefutable patterns *)
 
 let rec match_branches branches v =
   if is_value v then

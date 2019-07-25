@@ -12,7 +12,7 @@ type dependency =
   | VarDep of var (* Variable name *)
 ;;
 
-module DepSet : BatSet.S with type elt = dependency
+module DepSet : Set.S with type elt = dependency
 
 type depresult =
   | DBase of DepSet.t
