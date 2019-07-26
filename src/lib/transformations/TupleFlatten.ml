@@ -53,7 +53,7 @@ let size_and_index_after_flattening ty lo hi =
 ;;
 
 let rec flatten_val v =
-  let open Nv_datastructures.OCamlUtils in
+  let open Nv_utils.OCamlUtils in
   match v.v with
   | VUnit | VBool _ | VInt _ | VNode _ | VOption None -> v
   | VOption (Some v) ->
@@ -75,7 +75,7 @@ let rec flatten_val v =
   | VMap _ -> failwith "Map value found during flattening"
 
 let rec flatten_exp e : exp =
-  let open Nv_datastructures.OCamlUtils in
+  let open Nv_utils.OCamlUtils in
   match e.e with
   | ETy (e, ty) -> flatten_exp e
   | EVal v ->
@@ -276,7 +276,7 @@ let flatten_symbolic (var, toe) =
 
 let flatten_decl_single d =
   match d with
-  | DLet (x, oty, e) -> DLet (x, Some (flatten_ty (Nv_datastructures.OCamlUtils.oget oty)), flatten_exp e)
+  | DLet (x, oty, e) -> DLet (x, Some (flatten_ty (Nv_utils.OCamlUtils.oget oty)), flatten_exp e)
   | DMerge e -> DMerge (flatten_exp e)
   | DTrans e -> DTrans (flatten_exp e)
   | DInit e -> DInit (flatten_exp e)
@@ -385,10 +385,10 @@ let flatten_net net =
       BatList.map flatten_symbolic net.symbolics |> BatList.concat;
     defs =
       BatList.map (fun (x, oty, e) ->
-          (x, Some (flatten_ty (Nv_datastructures.OCamlUtils.oget oty)), flatten_exp e)) net.defs;
+          (x, Some (flatten_ty (Nv_utils.OCamlUtils.oget oty)), flatten_exp e)) net.defs;
     utys =
       BatList.map (fun m ->
-          Collections.StringMap.map flatten_ty m) net.utys;
+          Nv_utils.PrimitiveCollections.StringMap.map flatten_ty m) net.utys;
     requires = BatList.map (flatten_exp) net.requires;
     graph = net.graph
   }, unflatten_sol net.attr_type

@@ -43,7 +43,7 @@ let rec interp_exp env e =
       | Some v -> v )
   | EVal v -> v
   | EOp (op, es) ->
-    interp_op env (OCamlUtils.oget e.ety) op es
+    interp_op env (Nv_utils.OCamlUtils.oget e.ety) op es
   | EFun f -> vclosure (env, f)
   | EApp (e1, e2) -> (
       let v1 = interp_exp env e1 in
@@ -168,9 +168,9 @@ and interp_op env ty op es =
     let seen = BatSet.PSet.singleton ~cmp:Var.compare f2.arg in
     let env = build_env c_env2 (Syntax.free seen f2.body) in
     let mtbdd =
-      match ExpMap.find_opt f1.body !bddfunc_cache with
+      match ExpMap.Exceptionless.find f1.body !bddfunc_cache with
       | None -> (
-          let bddf = BddFunc.create_value (OCamlUtils.oget f1.argty) in
+          let bddf = BddFunc.create_value (Nv_utils.OCamlUtils.oget f1.argty) in
           let env = Env.update Env.empty f1.arg bddf in
           let bddf = BddFunc.eval env f1.body in
           match bddf with

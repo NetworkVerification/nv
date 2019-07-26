@@ -1,13 +1,14 @@
 (library
   (name nv_lang)
   (libraries
+    batteries
     fileutils
     ANSITerminal
     cudd
     integers
     nv_datatypes
     nv_datastructures
-    batteries)
+    nv_utils)
   (preprocess
     (pps ppx_deriving.std ppx_deriving_argparse))
 )

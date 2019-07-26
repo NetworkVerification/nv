@@ -1,16 +1,5 @@
 open Batteries
-
-module StringMap = Map.Make (struct
-    type t = string
-
-    let compare = String.compare
-  end)
-
-module VarMap = Map.Make (struct
-    type t = Var.t
-
-    let compare = compare
-  end)
+open PrimitiveCollections
 
 (* It's probably that most of this module is unnecessary.
    These utility functions primarily make sure that everything is
@@ -35,7 +24,7 @@ let same_labels map1 map2 =
 
 let get_type_with_label record_types (ferr : string -> unit) label =
   let has_label map = StringMap.mem label map in
-  match List.find_opt has_label record_types with
+  match List.Exceptionless.find has_label record_types with
   | None ->
     let msg =
       Printf.sprintf
@@ -46,9 +35,17 @@ let get_type_with_label record_types (ferr : string -> unit) label =
   | Some map -> map
 ;;
 
-let print_record f map =
-  Printf.sprintf "{%s}" @@
-  String.concat "; " @@
-  List.map (fun (label, v) -> Printf.sprintf "%s:%s" label (f v)) @@
-  StringMap.bindings map
-;;
+let print_record
+    ~(sep:string)
+    (f : 'a -> string)
+    (map : 'a StringMap.t)
+  : string
+  =
+  let entries =
+    StringMap.fold
+      (fun l e acc ->
+         Printf.sprintf "%s %s%s %s;" acc l sep (f e)
+      )
+      map ""
+  in
+  Printf.sprintf "{ %s }" entries

@@ -3,7 +3,7 @@
 open Nv_lang
 open Collections
 open Syntax
-open Nv_datastructures.OCamlUtils
+open Nv_utils.OCamlUtils
 
 (** For now, assume it only applies to unboxed and inlined NV
    programs. It seems like a reasonable assumption *)

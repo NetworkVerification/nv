@@ -1,6 +1,7 @@
 open Nv_datatypes
 open Nv_datastructures
 open Nv_lang.Collections
+open Nv_utils.PrimitiveCollections
 open SmtLang
 
 (* Classic encodes the SRP as an SMT expression, Functional encodes
@@ -106,10 +107,10 @@ let rec ty_to_sort (ty: Nv_lang.Syntax.ty) : sort =
       match ts with
       | [t] -> ty_to_sort t
       | ts ->
-        let name = OCamlUtils.oget (datatype_name ty) in
+        let name = Nv_utils.OCamlUtils.oget (datatype_name ty) in
         DataTypeSort (name, BatList.map ty_to_sort ts))
   | TOption ty' ->
-    let name = OCamlUtils.oget (datatype_name ty) in
+    let name = Nv_utils.OCamlUtils.oget (datatype_name ty) in
     DataTypeSort (name, [ty_to_sort ty'])
   | TMap _ -> failwith "unimplemented"
   (*       mk_array_sort ctx (ty_to_sort ctx ty1) (ty_to_sort ctx ty2)*)

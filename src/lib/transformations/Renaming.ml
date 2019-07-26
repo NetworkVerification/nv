@@ -227,7 +227,7 @@ struct
       else
         vars := BatSet.add x !vars
     in
-    Nv_utils.Visitors.iter_exp (fun e ->
+    Visitors.iter_exp (fun e ->
         match e.e with
         | EVar x -> checkCollect x
         | EFun f -> checkCollect f.arg
@@ -237,7 +237,7 @@ struct
 
   let collect_vars e =
     let vars = ref [] in
-    Nv_utils.Visitors.iter_exp (fun e ->
+    Visitors.iter_exp (fun e ->
         match e.e with
         | EVar x -> vars := x :: !vars
         | EFun f -> vars := f.arg :: !vars

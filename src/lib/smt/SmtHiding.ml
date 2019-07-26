@@ -2,6 +2,7 @@
 
 open Nv_lang.Collections
 open Nv_lang.Syntax
+open Nv_utils.PrimitiveCollections
 open SolverUtil
 open Profile
 open SmtLang
@@ -374,7 +375,7 @@ let get_variables_to_unhide query chan solver =
   in
   (* TODO: Z3 doesn't minimize cores by default; we may want it to do so *)
   print_and_ask solver "(get-unsat-core)\n";
-  let raw_core = Nv_datastructures.OCamlUtils.oget @@ get_reply solver in
+  let raw_core = Nv_utils.OCamlUtils.oget @@ get_reply solver in
   (* Chop off leading and trailing parens *)
   let chopped_core = BatString.chop ~l:1 ~r:1 raw_core in
   let assertion_names = String.split_on_char ' ' chopped_core in

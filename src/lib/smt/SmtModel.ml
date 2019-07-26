@@ -3,6 +3,7 @@ open Nv_datatypes
 open Nv_lang.Collections
 open Nv_lang.Syntax
 open Nv_solution.Solution
+open Nv_utils.PrimitiveCollections
 open SmtLang
 open SolverUtil
 
@@ -113,11 +114,11 @@ let translate_model (m : (string, string) BatMap.t) : Nv_solution.Solution.t =
                     match sol.assertions with
                     | None ->
                       Some (AdjGraph.VertexMap.add (SmtUtils.node_of_assert_var k)
-                              (nvval |> Syntax.bool_of_val |> OCamlUtils.oget)
+                              (nvval |> Syntax.bool_of_val |> Nv_utils.OCamlUtils.oget)
                               AdjGraph.VertexMap.empty)
                     | Some m ->
                       Some (AdjGraph.VertexMap.add (SmtUtils.node_of_assert_var k)
-                              (nvval |> Syntax.bool_of_val |> OCamlUtils.oget) m)
+                              (nvval |> Syntax.bool_of_val |> Nv_utils.OCamlUtils.oget) m)
         }
       | k ->
         let k_var = Var.of_var_string k in
@@ -156,11 +157,11 @@ let translate_model_unboxed (m : (string, string) BatMap.t) : Nv_solution.Soluti
             match assertions with
             | None ->
               Some (AdjGraph.VertexMap.add (SmtUtils.node_of_assert_var k)
-                      (nvval |> Syntax.bool_of_val |> OCamlUtils.oget)
+                      (nvval |> Syntax.bool_of_val |> Nv_utils.OCamlUtils.oget)
                       AdjGraph.VertexMap.empty)
             | Some m ->
               Some (AdjGraph.VertexMap.add (SmtUtils.node_of_assert_var k)
-                      (nvval |> Syntax.bool_of_val |> OCamlUtils.oget) m) )
+                      (nvval |> Syntax.bool_of_val |> Nv_utils.OCamlUtils.oget) m) )
         | k ->
           ( let new_symbolics = VarMap.add (Var.of_var_string k) nvval symbolics in
             new_symbolics, labels, assertions )

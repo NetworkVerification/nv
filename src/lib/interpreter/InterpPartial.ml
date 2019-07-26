@@ -63,7 +63,7 @@ let simplify_or v1 e2 =
       match exp.e with
       | ETuple es -> cont es
       | _ ->
-        match OCamlUtils.oget exp.ety with
+        match Nv_utils.OCamlUtils.oget exp.ety with
         | TTuple tys ->
           let freshvars = List.map (fun ty -> ty, Var.fresh "TSetVar") tys in
           let freshvarexps = List.map (fun (ty, v) -> aexp (evar v, Some ty, exp.espan)) freshvars in
@@ -191,7 +191,7 @@ let rec interp_exp_partial_opt isapp env expEnv e =
         aexp (e_val v, v.vty, v.vspan))
   | EVal v -> e
   | EOp (op, es) ->
-    aexp (interp_op_partial_opt env expEnv (OCamlUtils.oget e.ety) op es, e.ety, e.espan)
+    aexp (interp_op_partial_opt env expEnv (Nv_utils.OCamlUtils.oget e.ety) op es, e.ety, e.espan)
   | EFun f ->
     (*Also note that we avoid using closures for our comfort, and
        since they are not needed for inlined functions *)
@@ -315,7 +315,7 @@ let rec interp_exp_partial isapp env e =
         aexp (e_val v, v.vty, v.vspan))
   | EVal v -> e
   | EOp (op, es) ->
-    aexp (interp_op_partial env (OCamlUtils.oget e.ety) op es, e.ety, e.espan)
+    aexp (interp_op_partial env (Nv_utils.OCamlUtils.oget e.ety) op es, e.ety, e.espan)
   | EFun f ->
     (*Also note that we avoid using closures for our comfort, and
        since they are not needed for inlined functions *)

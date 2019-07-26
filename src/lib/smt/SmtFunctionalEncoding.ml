@@ -2,6 +2,7 @@ open Nv_lang
 open Nv_datastructures
 open Nv_datatypes
 open Syntax
+open Nv_utils.PrimitiveCollections
 open Collections
 open SmtUtils
 open SmtLang
@@ -39,9 +40,9 @@ struct
                mk_constant env (create_vars env str x) (ty_to_sort xty)
                  ~cdescr:"assert x argument" ~cloc:assertion.espan )
                ((x,xty) :: acc) in
-           let names = create_strings (Printf.sprintf "%s-result" str) (OCamlUtils.oget exp.ety) in
+           let names = create_strings (Printf.sprintf "%s-result" str) (Nv_utils.OCamlUtils.oget exp.ety) in
            let results =
-             lift2 (mk_constant env) names (OCamlUtils.oget exp.ety |> ty_to_sorts) in
+             lift2 (mk_constant env) names (Nv_utils.OCamlUtils.oget exp.ety |> ty_to_sorts) in
            let es = encode_exp_z3 str env exp in
            ignore(lift2 (fun e result ->
                add_constraint env (mk_term (mk_eq result.t e.t))) es results);

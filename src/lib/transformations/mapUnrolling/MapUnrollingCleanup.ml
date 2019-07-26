@@ -141,7 +141,7 @@ let map_back_symbolics decls (sol : Nv_solution.Solution.t) =
   let symbolics_to_convert =
     BatList.filter_map
       (fun (v, e) ->
-         let oldty = match e with Syntax.Ty ty -> ty | Exp e -> Nv_datastructures.OCamlUtils.oget e.ety in
+         let oldty = match e with Syntax.Ty ty -> ty | Exp e -> Nv_utils.OCamlUtils.oget e.ety in
          let newty = replace_ty oldty in
          if Typing.equiv_tys oldty newty then None
          else Some (v, oldty))
@@ -164,7 +164,7 @@ let map_back_symbolics decls (sol : Nv_solution.Solution.t) =
   new_symbolics
 
 let map_back_attrs decls (sol : Nv_solution.Solution.t) =
-  let attr_ty = Nv_datastructures.OCamlUtils.oget (Syntax.get_attr_type decls) in
+  let attr_ty = Nv_utils.OCamlUtils.oget (Syntax.get_attr_type decls) in
   let unrolled_attr_ty = replace_ty attr_ty in
   if Typing.equiv_tys attr_ty unrolled_attr_ty then sol.labels
   else (* Attribute type involved a map, so transform all attributes *)

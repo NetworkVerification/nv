@@ -1,5 +1,3 @@
-open Nv_lang
-
 val default_value : Syntax.ty -> Syntax.value
 
 val default_value_exp : Syntax.ty -> Syntax.exp

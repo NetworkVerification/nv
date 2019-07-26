@@ -166,7 +166,7 @@ let createSlices _info net =
   let open Syntax in
   let n = AdjGraph.num_vertices net.graph in
   let initMap = partialEvalOverNodes n net.init in
-  let assertMap = partialEvalOverNodes n (OCamlUtils.oget net.assertion) in
+  let assertMap = partialEvalOverNodes n (Nv_utils.OCamlUtils.oget net.assertion) in
   (* find the prefixes that are relevant to the assertions *)
   let assertionPrefixes = relevantPrefixes assertMap in
   (* find where each prefix is announced from *)
@@ -187,13 +187,13 @@ let createSlices _info net =
                                     :: (DEdges (AdjGraph.edges (net.graph))) :: symb @
                                       [(DInit net.init);
                                        (DMerge net.merge); (DTrans net.trans);
-                                       (DAssert (OCamlUtils.oget net.assertion))]) (* |> *)
+                                       (DAssert (Nv_utils.OCamlUtils.oget net.assertion))]) (* |> *)
           (* Typing.infer_declarations info *) in
       { net =
           { attr_type = net.attr_type;
-            init = OCamlUtils.oget (get_init decls);
-            trans = OCamlUtils.oget (get_trans decls);
-            merge = OCamlUtils.oget (get_merge decls);
+            init = Nv_utils.OCamlUtils.oget (get_init decls);
+            trans = Nv_utils.OCamlUtils.oget (get_trans decls);
+            merge = Nv_utils.OCamlUtils.oget (get_merge decls);
             assertion = (get_assert decls);
             partition = (get_partition decls); (* partitioning *)
             interface = (get_interface decls); (* partitioning *)

@@ -6,6 +6,8 @@ open Syntax
 open Printing
 open Nv_datatypes
 open Nv_datastructures
+open Nv_utils
+open PrimitiveCollections
 open Batteries
 
 let debug = true
@@ -100,7 +102,7 @@ let rec check_annot (e: exp) =
     check_annot e ;
     iterBranches (fun (_, e) -> check_annot e) bs
   | ETy (e, _) | EProject (e, _) -> check_annot e
-  | ERecord map -> RecordUtils.StringMap.iter (fun _ -> check_annot) map
+  | ERecord map -> StringMap.iter (fun _ -> check_annot) map
 
 let check_annot_decl (d: declaration) =
   match d with
@@ -131,7 +133,7 @@ let rec strip_ty ty =
   | TTuple ts -> TTuple (BatList.map strip_ty ts)
   | TOption t -> TOption (strip_ty t)
   | TMap (ty1, ty2) -> TMap (strip_ty ty1, strip_ty ty2)
-  | TRecord map -> TRecord (RecordUtils.StringMap.map strip_ty map)
+  | TRecord map -> TRecord (StringMap.map strip_ty map)
   | QVar _ | TVar _ -> raise Invalid_type
 
 let tyname () = Var.fresh "a"
@@ -154,7 +156,7 @@ let occurs tvr ty =
       ()
     | TArrow (t1, t2) -> occ tvr t1 ; occ tvr t2
     | TUnit | TBool | TInt _ | TNode | TEdge -> ()
-    | TRecord map -> RecordUtils.StringMap.iter (fun _ -> occ tvr) map
+    | TRecord map -> StringMap.iter (fun _ -> occ tvr) map
     | TTuple ts -> BatList.iter (occ tvr) ts
     | TOption t -> occ tvr t
     | TMap (t1, t2) -> occ tvr t1 ; occ tvr t2
@@ -241,7 +243,7 @@ let generalize ty =
       let ty1 = gen ty1 in
       let ty2 = gen ty2 in
       TArrow (ty1, ty2)
-    | TRecord map -> TRecord (RecordUtils.StringMap.map gen map)
+    | TRecord map -> TRecord (StringMap.map gen map)
     | TTuple ts -> TTuple (BatList.map gen ts)
     | TOption t ->
       let ty = gen t in
@@ -274,7 +276,7 @@ let inst subst ty =
       let ts = loops subst ts in
       TTuple ts
     | TRecord map ->
-      TRecord (RecordUtils.StringMap.map (loop subst) map)
+      TRecord (StringMap.map (loop subst) map)
     | TOption t ->
       let t = loop subst t in
       TOption t
@@ -316,7 +318,7 @@ let substitute (ty: ty) : ty =
     | TVar _ | TUnit | TBool | TInt _ | TNode | TEdge -> ty
     | TArrow (ty1, ty2) ->
       TArrow (substitute_aux ty1, substitute_aux ty2)
-    | TRecord map -> TRecord (RecordUtils.StringMap.map substitute_aux map)
+    | TRecord map -> TRecord (StringMap.map substitute_aux map)
     | TTuple ts -> TTuple (BatList.map substitute_aux ts)
     | TOption t -> TOption (substitute_aux t)
     | TMap (ty1, ty2) -> TMap (substitute_aux ty1, substitute_aux ty2)
@@ -581,14 +583,14 @@ let rec infer_exp i info env (e: exp) : exp =
          Console.error_position info e.espan
            "Record does not match any declared record type!");
 
-      let emap = RecordUtils.StringMap.map (infer_exp (i+1) info env) emap in
+      let emap = StringMap.map (infer_exp (i+1) info env) emap in
 
       BatEnum.iter
         (fun l ->
-           let e, t1 = RecordUtils.StringMap.find l emap |> textract in
-           let t2 = RecordUtils.StringMap.find l tmap in
+           let e, t1 = StringMap.find l emap |> textract in
+           let t2 = StringMap.find l tmap in
            unify info e t1 t2)
-        (RecordUtils.StringMap.keys emap);
+        (StringMap.keys emap);
 
       texp (erecord emap, TRecord tmap, e.espan)
     | EProject (e1, label) ->
@@ -690,8 +692,8 @@ and infer_value info env (v: Syntax.value) : Syntax.value =
     | VRecord vmap ->
       (* All VRecords are constructed via ERecords, so shouldn't need
          to check that the record type has been properly declared *)
-      let vmap = RecordUtils.StringMap.map (infer_value info env) vmap in
-      let tmap = RecordUtils.StringMap.map (fun v -> OCamlUtils.oget v.vty) vmap in
+      let vmap = StringMap.map (infer_value info env) vmap in
+      let tmap = StringMap.map (fun v -> Nv_utils.OCamlUtils.oget v.vty) vmap in
       tvalue (vrecord vmap, TRecord tmap, v.vspan)
     | VOption None ->
       let tv = fresh_tyvar () in
@@ -771,11 +773,11 @@ and infer_pattern i info env e tmatch p =
     unify info e tmatch ty ;
     infer_patterns (i + 1) info env e ts ps
   | PRecord pmap ->
-    let ptmap = RecordUtils.StringMap.map (fun p -> p, fresh_tyvar ()) pmap in
-    let tmap = RecordUtils.StringMap.map snd ptmap in
+    let ptmap = StringMap.map (fun p -> p, fresh_tyvar ()) pmap in
+    let tmap = StringMap.map snd ptmap in
     let ty = TRecord (tmap) in
     unify info e tmatch ty ;
-    RecordUtils.StringMap.fold
+    StringMap.fold
       (fun _ (p, t) env ->
          infer_pattern (i + 1) info env e t p)
       ptmap env
@@ -811,7 +813,7 @@ and infer_declarations_aux i info env aty (ds: declarations) :
     d' :: infer_declarations_aux (i + 1) info env' aty ds'
 
 and infer_declaration i info env aty d : ty Env.t * declaration =
-  let open OCamlUtils in
+  let open Nv_utils.OCamlUtils in
   match d with
   | DLet (x, _, e1) ->
     enter_level () ;
@@ -884,7 +886,7 @@ and valid_pattern env p =
   | PEdge (p1, p2) -> valid_patterns env [p1; p2]
   | PTuple ps -> valid_patterns env ps
   | PRecord map ->
-    RecordUtils.StringMap.fold (fun _ p env -> valid_pattern env p) map env
+    StringMap.fold (fun _ p env -> valid_pattern env p) map env
   | POption None -> env
   | POption (Some p) -> valid_pattern env p
 

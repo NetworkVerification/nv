@@ -11,7 +11,7 @@ open Nv_interpreter
 open Nv_transformations
 open Nvlib.Abstraction
 open BuildAbstractNetwork
-open Nv_datastructures.OCamlUtils
+open Nv_utils.OCamlUtils
 
 type answer =
   | Success of (Solution.t option)

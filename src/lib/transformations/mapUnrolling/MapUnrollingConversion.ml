@@ -1,4 +1,5 @@
 open Nv_lang
+open Nv_utils.PrimitiveCollections
 open Collections
 open MapUnrollingGuts
 open Typing
@@ -51,7 +52,7 @@ let rec convert_value
   | VTuple vs, TMap (kty, vty) ->
     (* We found a converted map; convert it back *)
     let const_keys, symb_keys = keys in
-    let default = Nv_utils.Generators.default_value vty in
+    let default = Nv_lang.Generators.default_value vty in
     let e_vs, symb_vs = BatList.takedrop (List.length const_keys) vs in
     let e_bindings = List.combine (List.map exp_to_value const_keys) e_vs in
     let v_bindings = List.combine (List.map (fun v -> VarMap.find v sol.symbolics) symb_keys) symb_vs in
@@ -87,7 +88,7 @@ let convert_symbolics
   let symbolics_to_convert =
     BatList.filter_map
       (fun (v, e) ->
-         let oldty = match e with Syntax.Ty ty -> ty | Syntax.Exp e -> Nv_datastructures.OCamlUtils.oget e.ety in
+         let oldty = match e with Syntax.Ty ty -> ty | Syntax.Exp e -> Nv_utils.OCamlUtils.oget e.ety in
          let newty = unroll_type ty keys oldty in
          if Typing.equiv_tys oldty newty then None
          else Some (v, oldty))
@@ -116,7 +117,7 @@ let convert_attrs
     (sol : Nv_solution.Solution.t)
   =
     let open Nv_datastructures in
-  let attr_ty = OCamlUtils.oget (Syntax.get_attr_type decls) in
+  let attr_ty = Nv_utils.OCamlUtils.oget (Syntax.get_attr_type decls) in
   let unrolled_attr_ty = unroll_type ty keys attr_ty in
   if Typing.equiv_tys attr_ty unrolled_attr_ty then sol.labels
   else (* Attribute type involved a map, so transform all attributes *)

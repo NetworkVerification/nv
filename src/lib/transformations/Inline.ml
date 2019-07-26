@@ -3,7 +3,7 @@ open Nv_datastructures
 open Nv_datatypes
 
 let is_function_ty e =
-  match get_inner_type (OCamlUtils.oget e.ety) with
+  match get_inner_type (Nv_utils.OCamlUtils.oget e.ety) with
   | TArrow _ -> true
   | _ -> false
 

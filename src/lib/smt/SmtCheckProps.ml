@@ -15,16 +15,16 @@ let encode_z3_merge str env e =
          ; body= {e= EFun {arg= y; argty= yty; body= exp; _}; _}; _ } ->
     let xstr =
       mk_constant env (create_name str x)
-        (ty_to_sort (OCamlUtils.oget xty))
+        (ty_to_sort (Nv_utils.OCamlUtils.oget xty))
     in
     let ystr =
       mk_constant env (create_name str y)
-        (ty_to_sort (OCamlUtils.oget yty))
+        (ty_to_sort (Nv_utils.OCamlUtils.oget yty))
     in
     let name = Printf.sprintf "%s-result" str in
     let result =
       mk_constant env name
-        (OCamlUtils.oget exp.ety |> ty_to_sort)
+        (Nv_utils.OCamlUtils.oget exp.ety |> ty_to_sort)
     in
     let e = Boxed.encode_exp_z3 str env exp in
     add_constraint env (mk_term (mk_eq result.t ((Boxed.to_list e) |> List.hd).t));
@@ -37,12 +37,12 @@ let encode_z3_trans str env e =
       {arg= x; argty= xty; body= exp; _} ->
     let xstr =
       mk_constant env (create_name str x)
-        (ty_to_sort (OCamlUtils.oget xty))
+        (ty_to_sort (Nv_utils.OCamlUtils.oget xty))
     in
     let name = Printf.sprintf "%s-result" str in
     let result =
       mk_constant env name
-        (OCamlUtils.oget exp.ety |> ty_to_sort)
+        (Nv_utils.OCamlUtils.oget exp.ety |> ty_to_sort)
     in
     let e = Boxed.encode_exp_z3 str env exp in
     add_constraint env (mk_term (mk_eq result.t ((Boxed.to_list e) |> List.hd).t));

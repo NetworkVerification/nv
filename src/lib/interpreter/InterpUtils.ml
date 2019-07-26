@@ -53,7 +53,7 @@ let rec val_to_pat v =
   | VOption None -> POption None
   | VTuple vs ->
     PTuple (BatList.map val_to_pat vs)
-  | VRecord map -> PRecord (Nv_datatypes.RecordUtils.StringMap.map val_to_pat map)
+  | VRecord map -> PRecord (Nv_utils.PrimitiveCollections.StringMap.map val_to_pat map)
   | VNode n -> PNode n
   | VEdge (n1, n2) -> PEdge (PNode n1, PNode n2)
   | VUnit -> PUnit

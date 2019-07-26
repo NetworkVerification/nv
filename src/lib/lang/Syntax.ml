@@ -2,6 +2,7 @@
 open Cudd
 open Nv_datatypes
 open Nv_datastructures
+open Nv_utils.PrimitiveCollections
 
 type node = int
 [@@deriving eq, ord]
@@ -32,7 +33,7 @@ type ty =
   | TTuple of ty list
   | TOption of ty
   | TMap of ty * ty
-  | TRecord of ty RecordUtils.StringMap.t
+  | TRecord of ty StringMap.t
   | TNode
   | TEdge
 [@@deriving ord, eq]
@@ -71,7 +72,7 @@ type pattern =
   | PInt of Integer.t
   | PTuple of pattern list
   | POption of pattern option
-  | PRecord of pattern RecordUtils.StringMap.t
+  | PRecord of pattern StringMap.t
   | PNode of node
   | PEdge of pattern * pattern
 [@@deriving ord, eq]
@@ -123,7 +124,7 @@ type v =
   | VTuple of value list
   | VOption of value option
   | VClosure of closure
-  | VRecord of value RecordUtils.StringMap.t
+  | VRecord of value StringMap.t
   | VNode of node
   | VEdge of edge
 [@@deriving ord]
@@ -153,7 +154,7 @@ and e =
   | ESome of exp
   | EMatch of exp * branches
   | ETy of exp * ty
-  | ERecord of exp RecordUtils.StringMap.t
+  | ERecord of exp StringMap.t
   | EProject of exp * string
 [@@deriving ord]
 
@@ -207,7 +208,7 @@ type network =
     interface : exp option; (* partitioning *)
     symbolics : (var * ty_or_exp) list;
     defs : (var * ty option * exp) list;
-    utys : (ty RecordUtils.StringMap.t) list;
+    utys : (ty StringMap.t) list;
     requires : exp list;
     graph : AdjGraph.t;
   }
@@ -321,7 +322,7 @@ let rec equal_tys ty1 ty2 =
   | TArrow (t1, t2), TArrow (s1, s2) ->
     equal_tys t1 s1 && equal_tys t2 s2
   | TTuple ts1, TTuple ts2 -> equal_lists equal_tys ts1 ts2
-  | TRecord map1, TRecord map2 -> RecordUtils.StringMap.equal equal_tys map1 map2
+  | TRecord map1, TRecord map2 -> StringMap.equal equal_tys map1 map2
   | TOption t1, TOption t2 -> equal_tys t1 t2
   | TMap (t1, t2), TMap (s1, s2) ->
     equal_tys t1 s1 && equal_tys t2 s2
@@ -362,7 +363,7 @@ and equal_vs ~cmp_meta v1 v2 =
     && Env.equal (equal_values ~cmp_meta) value1 value2
     && equal_funcs ~cmp_meta f1 f2
   | VRecord map1, VRecord map2 ->
-    RecordUtils.StringMap.equal (equal_values ~cmp_meta) map1 map2
+    StringMap.equal (equal_values ~cmp_meta) map1 map2
   | (VUnit | VBool _ | VNode _ | VEdge _ | VInt _ | VMap _
     | VTuple _ | VOption _ | VClosure _ | VRecord _ ), _ -> false
 
@@ -409,7 +410,7 @@ and equal_es ~cmp_meta e1 e2 =
   | ETy (e1, ty1), ETy (e2, ty2) ->
     equal_exps ~cmp_meta e1 e2 && ty1 = ty2
   | ERecord map1, ERecord map2 ->
-    RecordUtils.StringMap.equal (equal_exps ~cmp_meta) map1 map2
+    StringMap.equal (equal_exps ~cmp_meta) map1 map2
   | EProject (e1, label1), EProject (e2, label2) ->
     String.equal label1 label2 && equal_exps ~cmp_meta e1 e2
   | _, _ -> false
@@ -448,7 +449,7 @@ and equal_patterns p1 p2 =
   | PTuple ps1, PTuple ps2 -> equal_patterns_list ps1 ps2
   | POption None, POption None -> true
   | POption (Some p1), POption (Some p2) -> equal_patterns p1 p2
-  | PRecord map1, PRecord map2 -> RecordUtils.StringMap.equal equal_patterns map1 map2
+  | PRecord map1, PRecord map2 -> StringMap.equal equal_patterns map1 map2
   | PNode n1, PNode n2 -> n1 = n2
   | PEdge (p1, p2), PEdge (p1', p2') -> equal_patterns p1 p1' && equal_patterns p2 p2'
   | _ -> false
@@ -493,7 +494,7 @@ let rec hash_ty ty =
   | TOption t -> 8 + hash_ty t
   | TMap (ty1, ty2) -> 9 + hash_ty ty1 + hash_ty ty2
   | TRecord map ->
-    RecordUtils.StringMap.fold (fun l t acc -> acc + + hash_string l + hash_ty t) map 0 + 10
+    StringMap.fold (fun l t acc -> acc + + hash_string l + hash_ty t) map 0 + 10
   | TUnit -> 11
   | TNode -> 12
   | TEdge -> 13
@@ -542,7 +543,7 @@ and hash_v ~hash_meta v =
     (19 * acc) + 5
   | VRecord map ->
     let acc =
-      RecordUtils.StringMap.fold
+      StringMap.fold
         (fun l v acc -> acc + + hash_string l + hash_value ~hash_meta v)
         map 0
     in
@@ -601,7 +602,7 @@ and hash_e ~hash_meta e =
     (19 * ((19 * hash_exp ~hash_meta e) + hash_ty ty)) + 10
   | ERecord map ->
     (19 *
-     RecordUtils.StringMap.fold
+     StringMap.fold
        (fun l e acc -> acc + + hash_string l + hash_exp ~hash_meta e) map 0
      + 11)
   | EProject (e, label) ->
@@ -632,7 +633,7 @@ and hash_pattern p =
   | POption (Some p) -> (19 * hash_pattern p) + 7
   | PRecord map ->
     (19 *
-     RecordUtils.StringMap.fold (fun l p acc -> acc + + hash_string l + hash_pattern p) map 0
+     StringMap.fold (fun l p acc -> acc + + hash_string l + hash_pattern p) map 0
      + 8)
   | PNode n -> (19 * n) + 9
   | PEdge (p1, p2) -> (19 * (hash_pattern p1 + 19 * hash_pattern p2)) + 10
@@ -799,7 +800,7 @@ let rec is_value e =
   match e.e with
   | EVal _ -> true
   | ETuple es -> BatList.for_all is_value es
-  | ERecord map -> RecordUtils.StringMap.for_all (fun _ e -> is_value e) map
+  | ERecord map -> StringMap.for_all (fun _ e -> is_value e) map
   | ESome e -> is_value e
   | ETy (e, _) -> is_value e
   | EVar _
@@ -833,7 +834,7 @@ let rec exp_of_value v =
     let e = etuple (BatList.map exp_of_value vs) in
     {e with ety= v.vty; espan=v.vspan}
   | VRecord map ->
-    let e = erecord (RecordUtils.StringMap.map exp_of_value map) in
+    let e = erecord (StringMap.map exp_of_value map) in
     {e with ety= v.vty; espan=v.vspan}
   | VOption (Some v1) ->
     let e = esome (exp_of_value v1) in
@@ -849,7 +850,7 @@ let rec val_to_pattern v =
   | VTuple vs -> PTuple (BatList.map val_to_pattern vs)
   | VOption None -> POption None
   | VOption (Some v) -> POption (Some (val_to_pattern v))
-  | VRecord rs -> PRecord (RecordUtils.StringMap.map val_to_pattern rs)
+  | VRecord rs -> PRecord (StringMap.map val_to_pattern rs)
   | VClosure _ | VMap _ -> failwith "can't use these type of values as patterns"
 
 let rec exp_to_pattern e =
@@ -860,7 +861,7 @@ let rec exp_to_pattern e =
   | ESome e -> POption (Some (exp_to_pattern e))
   | ETy (e, _) -> exp_to_pattern e
   | EVar x -> PVar x
-  | ERecord rs -> PRecord (RecordUtils.StringMap.map exp_to_pattern rs)
+  | ERecord rs -> PRecord (StringMap.map exp_to_pattern rs)
   | EProject _
   | EOp _
   | EFun _
@@ -961,7 +962,7 @@ let get_interface ds =
 (* end partitioning *)
 
 let get_edges ds =
-  try 
+  try
     Some (BatList.find_map (fun d ->
         match d with DEdges es -> Some es | _ -> None ) ds)
   with Not_found -> None
@@ -997,7 +998,7 @@ let rec get_inner_type t : ty =
 let get_ty_from_tyexp (et : ty_or_exp) : ty =
   match et with
   | Ty t -> t
-  | Exp e -> OCamlUtils.oget (e.ety)
+  | Exp e -> Nv_utils.OCamlUtils.oget (e.ety)
 
 let bool_of_val (v : value) : bool option =
   match v.v with
@@ -1027,7 +1028,7 @@ let rec free (seen: Var.t PSet.t) (e: exp) : Var.t PSet.t =
       (PSet.create Var.compare)
       es
   | ERecord map ->
-    RecordUtils.StringMap.fold
+    StringMap.fold
       (fun _ e set -> PSet.union set (free seen e))
       map
       (PSet.create Var.compare)
@@ -1071,7 +1072,7 @@ and pattern_vars p =
       (PSet.create Var.compare)
       ps
   | PRecord map ->
-    RecordUtils.StringMap.fold
+    StringMap.fold
       (fun _ p set -> PSet.union set (pattern_vars p))
       map
       (PSet.create Var.compare)
@@ -1108,7 +1109,7 @@ let rec free_dead_vars (e : exp) =
   | ETuple es ->
     etuple (List.map free_dead_vars es)
   | ERecord map ->
-    erecord (RecordUtils.StringMap.map free_dead_vars map)
+    erecord (StringMap.map free_dead_vars map)
   | ESome e -> esome (free_dead_vars e)
   | EMatch (e1, branches) ->
     let e1 = free_dead_vars e1 in

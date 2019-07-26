@@ -171,7 +171,7 @@ let rec interp_exp_partial (env: Syntax.exp Env.t) e =
         (env, e1))
   | EVal v -> (env, e)
   | EOp (op, es) ->
-    (env, aexp (interp_op_partial env (OCamlUtils.oget e.ety) op es, e.ety, e.espan))
+    (env, aexp (interp_op_partial env (Nv_utils.OCamlUtils.oget e.ety) op es, e.ety, e.espan))
   | EFun f -> (env, e)
   (* either need to do the partial interpretation here, or return a pair
      of the efun and the env at this point to be used, sort of like a closure.*)
@@ -316,9 +316,9 @@ and interp_op_partial env ty op es =
         let seen = BatSet.PSet.singleton ~cmp:Var.compare f2.arg in
         let env = build_env c_env2 (Syntax.free seen f2.body) in
         let mtbdd =
-          match ExpMap.find_opt f1.body !bddfunc_cache with
+          match ExpMap.Exceptionless.find f1.body !bddfunc_cache with
           | None -> (
-              let bddf = BddFunc.create_value (OCamlUtils.oget f1.argty) in
+              let bddf = BddFunc.create_value (Nv_utils.OCamlUtils.oget f1.argty) in
               let env = Env.update Env.empty f1.arg bddf in
               let bddf = BddFunc.eval env f1.body in
               match bddf with

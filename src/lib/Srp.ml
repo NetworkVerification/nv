@@ -119,7 +119,7 @@ let net_to_srp net ~throw_requires =
     ; a
     ; ns= Some n
     ; es= Some es
-    ; init= Some cl 
+    ; init= Some cl
     ; _ } ->
       let srp =
         { graph= AdjGraph.add_edges (AdjGraph.create n) es

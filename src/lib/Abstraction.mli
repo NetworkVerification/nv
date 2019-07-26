@@ -6,13 +6,13 @@ exception Cutoff
 (** [partialEvalTrans g trans] partially evaluates the transfer
    function for each edge on the graph g and returns a table from
    edges to expressions and their hash *)
-val partialEvalTrans: AdjGraph.t -> Syntax.exp -> (AdjGraph.Edge.t, int * Syntax.exp) Hashtbl.t 
+val partialEvalTrans: AdjGraph.t -> Syntax.exp -> (AdjGraph.Edge.t, int * Syntax.exp) Hashtbl.t
 
 (** [partialEvalMerge g trans] partially evaluates the merge function
    for each vertex on the graph g and returns a table from vertices to
    expressions and their hash *)
 val partialEvalMerge: AdjGraph.t -> Syntax.exp -> (AdjGraph.Vertex.t, int * Syntax.exp) Hashtbl.t
-  
+
 (** [findAbstraction g trans merge ds] computes an abstraction function
     for the network *)
 val findAbstraction :
@@ -21,8 +21,8 @@ val findAbstraction :
   AdjGraph.VertexSet.t -> AbstractionMap.abstractionMap
 
 module FailuresAbstraction :
-  sig  
-    (** [refineCounterExample file g finit f failVars sol k 
+  sig
+    (** [refineCounterExample file g finit f failVars sol k
                               unused_edges sources dst attr iteration]
        decides whether there is need to further refine the
        abstraction. *)
@@ -40,7 +40,7 @@ module FailuresAbstraction :
       int ->
     (* (AbstractionMap.abstractionMap * AdjGraph.EdgeSet.t) option *)
       AbstractionMap.abstractionMap option
-      
+
     val counterexample_refinement_breadth : int ref
     val refinement_breadth : int ref
 
@@ -49,7 +49,7 @@ module FailuresAbstraction :
                   int -> AbstractionMap.abstractionMap
   end
 
-     
+
 module BuildAbstractNetwork :
 sig
   (** [buildAbstractNetwork f mergeMap transMap slice k] builds the
@@ -79,13 +79,14 @@ sig
                               AdjGraph.Edge.t -> AdjGraph.EdgeSet.t
 
   (** [getEdgeMultiplicity g f ehat] returns the number of concrete
-   edges that map to the abstract edge [ehat] *)  
+   edges that map to the abstract edge [ehat] *)
   val getEdgeMultiplicity: AdjGraph.t -> AbstractionMap.abstractionMap ->
                            AdjGraph.Edge.t -> int
 
   (** [getEdgeMultiplicities g f ehat] returns the number of concrete
-   edges that map to the abstract edge [ehat] *)  
+   edges that map to the abstract edge [ehat] *)
   val getEdgeMultiplicities: AdjGraph.t -> AbstractionMap.abstractionMap ->
-                           Nv_datatypes.Var.t AdjGraph.EdgeMap.t -> int Collections.StringMap.t
-    
+                             Nv_datatypes.Var.t AdjGraph.EdgeMap.t ->
+                             int Nv_utils.PrimitiveCollections.StringMap.t
+
 end

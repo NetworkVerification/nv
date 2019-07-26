@@ -1,41 +1,20 @@
 open Syntax
 open Nv_datatypes
+open Batteries
 
-module StringMap = RecordUtils.StringMap
-
-module VarMap = RecordUtils.VarMap
-
-module IntMap = BatMap.Make (struct
-  type t = int
-
-  let compare = compare
-end)
-
-module IntSet = BatSet.Make (struct
-    type t = int
+module VarMap = Map.Make (struct
+    type t = Var.t
 
     let compare = compare
   end)
 
-module StringSet = BatSet.Make (struct
-  type t = String.t
-
-  let compare = String.compare
-end)
-
-module StringSetSet = BatSet.Make (struct
-  type t = StringSet.t
-
-  let compare = StringSet.compare
-end)
-
-module VarSet = BatSet.Make (struct
+module VarSet = Set.Make (struct
   type t = Var.t
 
   let compare = Var.compare
 end)
 
-module ExpSet = BatSet.Make (struct
+module ExpSet = Set.Make (struct
     type t = exp
 
     let compare = compare_es

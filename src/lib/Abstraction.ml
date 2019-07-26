@@ -5,7 +5,7 @@ open AdjGraph
 open AbstractionMap
 open Failures
 open Nv_lang.Syntax
-open Nv_utils
+open Nv_utils.PrimitiveCollections
 open Nv_slicing
 
 let debugAbstraction = ref false
@@ -406,7 +406,7 @@ module BuildAbstractNetwork =
       let inithat = buildAbstractInit slice.destinations initMap slice.net.attr_type f in
       (* build the abstract assert function *)
       let assertMap =
-        Slicing.partialEvalOverNodes (num_vertices slice.net.graph) (OCamlUtils.oget slice.net.assertion)
+        Slicing.partialEvalOverNodes (num_vertices slice.net.graph) (Nv_utils.OCamlUtils.oget slice.net.assertion)
       in
       let asserthat = buildAbstractAssert assertMap f in
       if !debugAbstraction then
@@ -442,8 +442,8 @@ module BuildAbstractNetwork =
     let getEdgeMultiplicities (g: AdjGraph.t) (f: abstractionMap)
                               (fvars: Var.t AdjGraph.EdgeMap.t) =
       EdgeMap.fold (fun ehat var acc ->
-          Collections.StringMap.add (Var.name var) (getEdgeMultiplicity g f ehat) acc)
-                   fvars Collections.StringMap.empty
+          StringMap.add (Var.name var) (getEdgeMultiplicity g f ehat) acc)
+                   fvars StringMap.empty
 
   end
 

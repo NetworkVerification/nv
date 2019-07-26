@@ -1,5 +1,6 @@
 open Nv_lang
 open Syntax
+open Nv_utils.PrimitiveCollections
 open Collections
 open Nv_datastructures
 
@@ -58,7 +59,7 @@ let add_if_map_type symbolics (ty, keyo) lst : maplist =
 
 let rec collect_in_exp (symbolics : var list) (exp : Syntax.exp) (acc : maplist) : maplist =
   (* print_endline @@ "Collecting in expr " ^ Printing.exp_to_string exp; *)
-  let curr_ty = OCamlUtils.oget exp.ety in
+  let curr_ty = Nv_utils.OCamlUtils.oget exp.ety in
   let collect_in_exp = collect_in_exp symbolics in
   let add_if_map_type = add_if_map_type symbolics in
   (* If our current expression has map type, add that to our list *)
@@ -73,7 +74,7 @@ let rec collect_in_exp (symbolics : var list) (exp : Syntax.exp) (acc : maplist)
         match op, es with
         | MGet, [m; key]
         | MSet, [m; key; _] ->
-          add_if_map_type ((OCamlUtils.oget m.ety), Some key) acc
+          add_if_map_type ((Nv_utils.OCamlUtils.oget m.ety), Some key) acc
         | _ -> acc
       in
       BatList.fold_left (BatPervasives.flip collect_in_exp) acc es
@@ -111,7 +112,7 @@ let collect_in_decl (symbolics : var list) (d : declaration) (acc : maplist) : m
   let collect_in_exp = collect_in_exp symbolics in
   match d with
   | DLet (_, tyo, exp) ->
-    add_if_map_type (OCamlUtils.oget tyo, None) acc
+    add_if_map_type (Nv_utils.OCamlUtils.oget tyo, None) acc
     |> collect_in_exp exp
   | DSymbolic (_, toe) ->
     begin
@@ -148,14 +149,14 @@ let lookup_map_type ty lst =
 let add_keys_for_nodes_and_edges decls maplist =
   let nodes =
     get_nodes decls
-    |> OCamlUtils.oget
+    |> Nv_utils.OCamlUtils.oget
     |> BatEnum.(--^) 0 (* Enum of 0 to (num_nodes - 1) *)
     |> BatEnum.map (fun n -> e_val (vnode n))
     |> ExpSet.of_enum
   in
   let edges =
     get_edges decls
-    |> OCamlUtils.oget
+    |> Nv_utils.OCamlUtils.oget
     |> List.map (fun (n1, n2) -> e_val (vedge (n1, n2)))
     |> ExpSet.of_list
   in

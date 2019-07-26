@@ -1,6 +1,7 @@
 open Syntax
 open Cudd
 open Nv_datatypes
+open Nv_utils
 
 let mgr = Man.make_v ()
 

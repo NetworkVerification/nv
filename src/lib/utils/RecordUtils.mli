@@ -1,9 +1,7 @@
 open Batteries
+open PrimitiveCollections
 
-module StringMap: Map.S with type key = string
-module VarMap: Map.S with type key = Var.t
-
-val print_record : ('a -> string) -> 'a StringMap.t -> string
+val print_record : sep:string -> ('a -> string) -> 'a StringMap.t -> string
 
 (* Returns record entries/labels in their canonical order *)
 val get_record_labels: 'a StringMap.t -> string list

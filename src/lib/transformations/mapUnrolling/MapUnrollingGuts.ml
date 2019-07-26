@@ -1,5 +1,6 @@
 open Nv_lang
 open Typing
+open Nv_utils.PrimitiveCollections
 
 let has_target_type (target : Syntax.ty) (e : Syntax.exp) : bool =
   match e.ety with
@@ -64,7 +65,7 @@ let rec unroll_type
       TTuple (BatList.make (BatList.length const_keys + BatList.length symb_keys) (canonicalize_type val_ty))
     else
       TMap (unroll_type key_ty, unroll_type val_ty)
-  | TRecord map -> TRecord (Collections.StringMap.map unroll_type map)
+  | TRecord map -> TRecord (StringMap.map unroll_type map)
   | QVar tyname -> QVar tyname
   (* failwith "Cannot unroll a type containing a QVar!"; *)
   | TVar _ ->
@@ -94,7 +95,7 @@ let rec unroll_get_or_set
       |> List.fold_left
         (fun acc (p,x) -> addBranch p x acc) emptyBranch
     in
-    match canonicalize_type (Nv_datastructures.OCamlUtils.oget k.ety) with
+    match canonicalize_type (Nv_utils.OCamlUtils.oget k.ety) with
     | TNode
     | TEdge ->
       (* We know all possible node and edge values in advance, so just
@@ -110,7 +111,7 @@ let rec unroll_get_or_set
             | Some i -> v,i
             | None -> failwith @@
               "Encountered non-constant, non-symbolic variable key whose type is not TNode or TEdge: " ^
-              Printing.exp_to_string k ^ ", type: " ^ Printing.ty_to_string (Nv_datastructures.OCamlUtils.oget k.ety)
+              Printing.exp_to_string k ^ ", type: " ^ Printing.ty_to_string (Nv_utils.OCamlUtils.oget k.ety)
           end
         | _ -> failwith @@
           "Encountered non-constant, non-variable key whose type is not TNode or TEdge: " ^
@@ -129,7 +130,7 @@ let rec unroll_get_or_set
              in
              let ethen =
                (* If they're the same value, use v's index instead of k's *)
-               v |> get_index_symb |> Nv_datastructures.OCamlUtils.oget |> mk_op
+               v |> get_index_symb |> Nv_utils.OCamlUtils.oget |> mk_op
              in
              aexp (eif cmp ethen acc, etype, espan)
           )
@@ -175,7 +176,7 @@ let rec unroll_exp
     | ETuple es ->
       etuple (BatList.map unroll_exp es)
     | ERecord map ->
-      erecord (Collections.StringMap.map unroll_exp map)
+      erecord (StringMap.map unroll_exp map)
     | EProject (e1, l) -> eproject (unroll_exp e1) l
     | ESome e1 ->
       esome (unroll_exp e1)
@@ -356,7 +357,7 @@ let rec unroll_exp
             | _ -> failwith "impossible"
           in
           let acc' = unroll_exp acc in
-          let acc_ty = Nv_datastructures.OCamlUtils.oget acc'.ety in
+          let acc_ty = Nv_utils.OCamlUtils.oget acc'.ety in
           let f' = unroll_exp f in
           let symb_var_keys =
             List.map (fun v -> aexp (evar v, Some key_ty, e.espan)) symb_keys

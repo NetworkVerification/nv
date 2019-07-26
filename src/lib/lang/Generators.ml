@@ -1,5 +1,5 @@
-open Nv_lang
 open Nv_datatypes
+open Nv_utils
 open Collections
 open Syntax
 
@@ -28,7 +28,7 @@ let rec default_value_exp ty =
 
 let rec random_value ~hints ~max_map_size ty =
   let i = Random.int 10 in
-  match (TypeMap.find_opt ty hints, i < 9) with
+  match (TypeMap.Exceptionless.find ty hints, i < 9) with
   | Some vs, true ->
     let x = Random.int (ValueSet.cardinal vs) in
     List.nth (ValueSet.elements vs) x
@@ -64,7 +64,7 @@ let rec random_value ~hints ~max_map_size ty =
 let random_symbolic hints max_map_size d =
   match d with
   | (x, te) ->
-    let ty = match te with Ty ty -> ty | Exp e -> Nv_datastructures.OCamlUtils.oget e.ety in
+    let ty = match te with Ty ty -> ty | Exp e -> Nv_utils.OCamlUtils.oget e.ety in
     let e = e_val (random_value hints max_map_size ty) in
     (* Printf.printf "Random for %s is now %s\n" (Var.to_string x)
        (Printing.exp_to_string e) ; *)

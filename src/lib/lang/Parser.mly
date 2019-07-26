@@ -1,6 +1,7 @@
 %{
   open Syntax
   open Nv_datatypes
+  open Nv_utils.PrimitiveCollections
   open Batteries
 
   type user_type = Var.t (* name *) * ty (* type *)
@@ -86,14 +87,14 @@
     let e = exp (eop MCreate [e]) span in
     updates e exprs
 
-  let find_record_type (lab : string) : 'a RecordUtils.StringMap.t =
+  let find_record_type (lab : string) : 'a StringMap.t =
     let rec aux lst =
       match lst with
       | [] -> failwith @@ "No record type using label " ^ lab
       | (_, t) :: tl ->
         match t with
         | TRecord tmap ->
-          if RecordUtils.StringMap.mem lab tmap then tmap else aux tl
+          if StringMap.mem lab tmap then tmap else aux tl
         | _ -> aux tl
     in
     aux !user_types
@@ -106,7 +107,7 @@
     let record_type = find_record_type (List.hd lst |> fst |> Var.name) in
     (* FIXME: Strictly speaking, we should make sure that the elements of keys
        are a strict subset of the elements of record_type *)
-    let keys = RecordUtils.StringMap.keys record_type in
+    let keys = StringMap.keys record_type in
     BatEnum.fold
       (fun acc lab ->
         let lab = Var.create lab in
@@ -115,7 +116,7 @@
         | Some elt -> elt :: acc
       ) [] keys
 
-  let make_record_map (lst : (Var.t * 'a) list) : 'a RecordUtils.StringMap.t =
+  let make_record_map (lst : (Var.t * 'a) list) : 'a StringMap.t =
     (* Ensure that no labels were used more than once *)
     let sorted =
       List.sort (fun (l1,_) (l2, _)-> Var.compare l1 l2) lst
@@ -125,11 +126,11 @@
       | [] -> map
       | (l,x)::tl ->
         let l = Var.name l in
-        if RecordUtils.StringMap.mem l map
+        if StringMap.mem l map
         then failwith @@ "Label used more than once in a record: " ^ l
-        else build_map (RecordUtils.StringMap.add l x map) tl
+        else build_map (StringMap.add l x map) tl
     in
-    build_map RecordUtils.StringMap.empty sorted
+    build_map StringMap.empty sorted
 
 %}
 

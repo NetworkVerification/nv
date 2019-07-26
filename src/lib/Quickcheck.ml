@@ -13,9 +13,9 @@ type check_info =
 
 let update_value map v =
   try
-    let ty = Typing.strip_ty (OCamlUtils.oget v.vty) in
+    let ty = Typing.strip_ty (Nv_utils.OCamlUtils.oget v.vty) in
     let vs =
-      match TypeMap.find_opt ty !map with
+      match TypeMap.Exceptionless.find ty !map with
       | None -> ValueSet.empty
       | Some vs -> vs
     in
@@ -24,7 +24,7 @@ let update_value map v =
 
 let collect_all_values net : ValueSet.t TypeMap.t =
   let map = ref TypeMap.empty in
-  Nv_utils.Visitors.iter_exp_net
+  Nv_lang.Visitors.iter_exp_net
     (fun e ->
       if Syntax.is_value e then
         let v = Syntax.to_value e in
@@ -62,10 +62,10 @@ let rec check_aux info iters acc =
 
 let smart_symbolic prog_constants map symb =
   let (x, te) = symb in
-  let ty = match te with Exp e -> OCamlUtils.oget e.ety | Ty ty -> ty in
+  let ty = match te with Exp e -> Nv_utils.OCamlUtils.oget e.ety | Ty ty -> ty in
   let v =
     match VarMap.Exceptionless.find x map with
-    | None -> Nv_utils.Generators.random_value prog_constants default_max_map_size ty
+    | None -> Nv_lang.Generators.random_value prog_constants default_max_map_size ty
     | Some v -> v
   in
   (x, Exp (aexp(e_val v, Some ty, Span.default)))
@@ -76,7 +76,7 @@ let var_map net =
   BatList.iter
     (fun (x,te) ->
       let ty =
-        match te with Exp e -> OCamlUtils.oget e.ety | Ty ty -> ty
+        match te with Exp e -> Nv_utils.OCamlUtils.oget e.ety | Ty ty -> ty
       in
       map := VarMap.add x (x, ty) !map) net.symbolics ;
   !map
@@ -119,7 +119,7 @@ let check_random net ~iterations =
   let num_rejected = ref 0 in
   let generator net =
     let net' =
-      Nv_utils.Generators.random_symbolics ~max_map_size:default_max_map_size
+      Nv_lang.Generators.random_symbolics ~max_map_size:default_max_map_size
         ~hints:prog_constants net
     in
     (net, Some net')

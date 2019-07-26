@@ -1,6 +1,7 @@
 open Nv_lang.Collections
 open SmtLang
 open SmtUtils
+open Nv_utils.PrimitiveCollections
 
 (** ** SMT query optimization *)
 let rec alpha_rename_smt_term (renaming: string StringMap.t)

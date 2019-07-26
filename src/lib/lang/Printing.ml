@@ -2,6 +2,8 @@
 
 open Syntax
 open Nv_datatypes
+open Nv_utils.PrimitiveCollections
+open Nv_utils.RecordUtils
 
 let is_keyword_op op =
   match op with
@@ -87,22 +89,6 @@ let ty_prec t =
   | TOption _ -> 4
   | TMap _ -> 4
   | TRecord _ -> 6
-
-let print_record
-    (sep : string)
-    (f : 'a -> string)
-    (map : 'a RecordUtils.StringMap.t)
-  : string
-  =
-  let open RecordUtils in
-  let entries =
-    StringMap.fold
-      (fun l e acc ->
-         Printf.sprintf "%s %s%s %s;" acc l sep (f e)
-      )
-      map ""
-  in
-  Printf.sprintf "{ %s }" entries
 
 let list_to_string f lst =
   "[ " ^
@@ -360,7 +346,7 @@ let network_to_string ?(show_topology=false) (net : Syntax.network) =
 
   (** User types **)
   List.mapi (fun i map ->
-      Printf.sprintf "type record_%d = %s\n" i (RecordUtils.print_record ty_to_string map))
+      Printf.sprintf "type record_%d = %s\n" i (print_record ":" ty_to_string map))
     net.utys
   @ ["\n"] @
   (** Attr type **)

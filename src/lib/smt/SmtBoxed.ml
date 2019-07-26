@@ -1,11 +1,12 @@
 open Nv_lang
 open Nv_datastructures
 open Nv_datatypes
+open Nv_utils.PrimitiveCollections
 open Syntax
 open Collections
 open SmtLang
 open SmtUtils
-open OCamlUtils
+open Nv_utils.OCamlUtils
 
 module Boxed: SmtEncodingSigs.ExprEncoding =
 struct

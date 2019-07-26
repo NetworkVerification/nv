@@ -29,9 +29,9 @@ let rec optimizeExp e =
          |> wrap e
       | _ -> e)
   | ERecord es ->
-     erecord (Nv_lang.Collections.StringMap.map optimizeExp es) |> wrap e
+     erecord (Nv_utils.PrimitiveCollections.StringMap.map optimizeExp es) |> wrap e
   | EProject (e1, s) -> eproject (optimizeExp e1) s |> wrap e
-          
+
 let optimizeNet net =
   { attr_type = net.attr_type;
     init = optimizeExp net.init;

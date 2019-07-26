@@ -1,4 +1,4 @@
-module M = Map.Make (Nv_datatypes.Var)
+module M = BatMap.Make (Nv_datatypes.Var)
 
 type 'a t = 'a M.t
 
@@ -9,14 +9,14 @@ exception Unbound_var of string
 let lookup env x =
   try M.find x env with Not_found -> raise (Unbound_var (Nv_datatypes.Var.to_string x))
 
-let lookup_opt env x = M.find_opt x env
+let lookup_opt env x = M.Exceptionless.find x env
 
 let remove env x = M.remove x env
 
 let update env x entry = M.add x entry env
 
 (* update env1 with the bindings of env2.  If both environments have the same key, env2 shadows env1 *)
-let updates env1 env2 = M.union (fun k v1 v2 -> Some v2) env1 env2
+let updates env1 env2 = M.merge (fun k v1 v2 -> v2) env1 env2
 
 let bind x entry = M.add x entry empty
 

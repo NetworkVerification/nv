@@ -1,6 +1,7 @@
 open Cudd
 open Nv_datatypes
 open Nv_datastructures
+open Nv_utils.PrimitiveCollections
 open Batteries
 
 type node = int
@@ -25,7 +26,7 @@ type ty =
   | TTuple of ty list
   | TOption of ty
   | TMap of ty * ty
-  | TRecord of ty RecordUtils.StringMap.t
+  | TRecord of ty StringMap.t
   | TNode
   | TEdge
 
@@ -63,7 +64,7 @@ type pattern =
   | PInt of Integer.t
   | PTuple of pattern list
   | POption of pattern option
-  | PRecord of pattern RecordUtils.StringMap.t
+  | PRecord of pattern StringMap.t
   | PNode of node
   | PEdge of pattern * pattern
 
@@ -79,7 +80,7 @@ type v = private
   | VTuple of value list
   | VOption of value option
   | VClosure of closure
-  | VRecord of value RecordUtils.StringMap.t
+  | VRecord of value StringMap.t
   | VNode of node
   | VEdge of edge
 
@@ -100,7 +101,7 @@ and e = private
   | ESome of exp
   | EMatch of exp * branches
   | ETy of exp * ty
-  | ERecord of exp RecordUtils.StringMap.t
+  | ERecord of exp StringMap.t
   | EProject of exp * string
 
 and exp = private
@@ -159,7 +160,7 @@ type network =
     interface    : exp option; (* partitioning *)
     symbolics    : (var * ty_or_exp) list;
     defs         : (var * ty option * exp) list;
-    utys         : (ty RecordUtils.StringMap.t) list;
+    utys         : (ty StringMap.t) list;
     requires     : exp list;
     graph        : AdjGraph.t;
   }
@@ -190,7 +191,7 @@ val vmap : mtbdd -> value
 
 val vtuple : value list -> value
 
-val vrecord : value RecordUtils.StringMap.t -> value
+val vrecord : value StringMap.t -> value
 
 val voption : value option -> value
 
@@ -212,7 +213,7 @@ val elet : Var.t -> exp -> exp -> exp
 
 val etuple : exp list -> exp
 
-val erecord : exp RecordUtils.StringMap.t -> exp
+val erecord : exp StringMap.t -> exp
 
 val eproject : exp -> string -> exp
 
@@ -302,7 +303,7 @@ val get_symbolics : declarations -> (var * ty_or_exp) list
 
 val get_requires : declarations -> exp list
 
-val get_record_types : declarations -> (ty RecordUtils.StringMap.t) list
+val get_record_types : declarations -> (ty StringMap.t) list
 
 val equal_values : cmp_meta:bool -> value -> value -> bool
 

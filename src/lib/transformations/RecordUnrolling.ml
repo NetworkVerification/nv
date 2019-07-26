@@ -1,5 +1,8 @@
 open Nv_lang
-open Nv_datatypes.RecordUtils
+open Nv_utils
+open RecordUtils
+open PrimitiveCollections
+open Collections
 
 (* Re-copying that here, to turn Unbound tvars into unbound tvars instead of TBool.
    We do the TBool thing, such that the SMT can handle those values (e.g. unused None).
@@ -120,7 +123,7 @@ let rec unroll_exp
     (e : Syntax.exp)
   : Syntax.exp
   =
-    let open Nv_datastructures.OCamlUtils in
+    let open Nv_utils.OCamlUtils in
     let open Syntax in
   let unroll_exp e = unroll_exp rtys e in
   let unroll_type ty = unroll_type rtys ty in
@@ -276,7 +279,7 @@ let convert_symbolics
     let oldty =
       match toe with
       | Ty ty -> ty
-      | Exp e -> Nv_datastructures.OCamlUtils.oget e.ety
+      | Exp e -> Nv_utils.OCamlUtils.oget e.ety
     in
     convert_value oldty v
   in
@@ -301,7 +304,7 @@ let unroll decls =
   (* print_endline @@ Printing.declarations_to_string unrolled; *)
   let map_back sol =
     let new_symbolics = convert_symbolics (Syntax.get_symbolics decls) sol in
-    let new_labels = convert_attrs (Nv_datastructures.OCamlUtils.oget (Syntax.get_attr_type decls)) sol in
+    let new_labels = convert_attrs (Nv_utils.OCamlUtils.oget (Syntax.get_attr_type decls)) sol in
     {sol with symbolics = new_symbolics; labels = new_labels}
   in
   unrolled, map_back
@@ -331,7 +334,7 @@ let unroll_net_aux
         in
         (var, tyo', unroll_exp e)) net.defs;
     utys =
-      BatList.map (fun m -> Collections.StringMap.map unroll_type m) net.utys;
+      BatList.map (fun m -> StringMap.map unroll_type m) net.utys;
     assertion = (match net.assertion with
         | None -> None
         | Some e ->

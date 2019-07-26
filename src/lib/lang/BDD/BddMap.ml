@@ -3,6 +3,7 @@ open Cudd
 open BatSet
 open Nv_datatypes
 open Nv_datastructures
+open Nv_utils
 
 module B = BddUtils
 
@@ -74,7 +75,7 @@ let value_to_bdd (v: value) : Bdd.vt =
     | VOption None ->
       let var = B.ithvar idx in
       let tag = Bdd.eq var (Bdd.dfalse B.mgr) in
-      let dv = default_value (OCamlUtils.oget v.vty) in
+      let dv = default_value (Nv_utils.OCamlUtils.oget v.vty) in
       let value, idx = aux dv (idx + 1) in
       (Bdd.dand tag value, idx)
     | VOption (Some dv) ->
@@ -145,7 +146,7 @@ let vars_to_value vars ty =
   in
   fst (aux 0 ty)
 
-module ExpMap = Map.Make (struct
+module ExpMap = BatMap.Make (struct
     type t = exp * value PSet.t
 
     let compare = Pervasives.compare
@@ -159,7 +160,7 @@ let map ~op_key (f: value -> value) ((vdd, ty): t) : t =
   if cfg.no_caching then (Mapleaf.mapleaf1 g vdd, ty)
   else
     let op =
-      match ExpMap.find_opt op_key !map_cache with
+      match ExpMap.Exceptionless.find op_key !map_cache with
       | None ->
         let o =
           User.make_op1 ~memo:(Memo.Cache (Cache.create1 ())) g
@@ -199,7 +200,7 @@ let pick_default_value (map, ty) =
        if c > !count then count := c ;
        value := Some v )
     map ;
-  OCamlUtils.oget !value
+  Nv_utils.OCamlUtils.oget !value
 
 let rec expand (vars: Man.tbool list) sz : Man.tbool list list =
   if sz = 0 then [[]]
@@ -246,7 +247,7 @@ let map_when ~op_key (pred: bool Mtbdd.t) (f: value -> value)
   if cfg.no_caching then (Mapleaf.mapleaf2 g pred vdd, ty)
   else
     let op =
-      match ExpMap.find_opt op_key !mapw_op_cache with
+      match ExpMap.Exceptionless.find op_key !mapw_op_cache with
       | None ->
         let special =
           if cfg.no_cutoff then fun _ _ -> None
@@ -266,7 +267,7 @@ let map_when ~op_key (pred: bool Mtbdd.t) (f: value -> value)
     in
     (User.apply_op2 op pred vdd, ty)
 
-module MergeMap = Map.Make (struct
+module MergeMap = BatMap.Make (struct
     type t =
       (exp * value PSet.t) * (value * value * value * value) option
 
@@ -290,7 +291,7 @@ let merge ?opt ~op_key (f: value -> value -> value) ((x, tyx): t)
   else
     let key = (op_key, opt) in
     let op =
-      match MergeMap.find_opt key !merge_op_cache with
+      match MergeMap.Exceptionless.find key !merge_op_cache with
       | None ->
         let special =
           match (opt, cfg.no_cutoff) with

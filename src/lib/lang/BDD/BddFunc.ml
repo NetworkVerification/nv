@@ -2,7 +2,8 @@ open Cudd
 open Syntax
 open Nv_datatypes
 open Nv_datastructures
-open OCamlUtils
+open Nv_utils
+open Nv_utils.OCamlUtils
 
 module B = BddUtils
 
