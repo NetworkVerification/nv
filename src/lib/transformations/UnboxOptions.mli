@@ -1,4 +1,4 @@
-open Nv_core
+open Nv_lang
 open Nv_solution
 
 val unbox_ty : Syntax.ty -> Syntax.ty

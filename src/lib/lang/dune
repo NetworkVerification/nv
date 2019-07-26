@@ -1,5 +1,5 @@
 (library
-  (name nv_core)
+  (name nv_lang)
   (libraries
     fileutils
     ANSITerminal

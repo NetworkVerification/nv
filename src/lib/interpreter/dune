@@ -6,6 +6,6 @@
     integers
     nv_datastructures
     nv_datatypes
-    nv_core
+    nv_lang
     cudd)
 )

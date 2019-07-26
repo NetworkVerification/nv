@@ -1,3 +1,3 @@
-val tnf_exp : Nv_core.Syntax.exp -> Nv_core.Syntax.exp
+val tnf_exp : Nv_lang.Syntax.exp -> Nv_lang.Syntax.exp
 
-val tnf_net : Nv_core.Syntax.network -> Nv_core.Syntax.network
+val tnf_net : Nv_lang.Syntax.network -> Nv_lang.Syntax.network

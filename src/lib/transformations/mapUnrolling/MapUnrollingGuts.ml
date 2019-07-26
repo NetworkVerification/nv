@@ -1,4 +1,4 @@
-open Nv_core
+open Nv_lang
 open Typing
 
 let has_target_type (target : Syntax.ty) (e : Syntax.exp) : bool =

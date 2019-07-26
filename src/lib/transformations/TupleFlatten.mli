@@ -1,4 +1,4 @@
-open Nv_core
+open Nv_lang
 open Nv_solution
 
 val flatten_ty : Syntax.ty -> Syntax.ty

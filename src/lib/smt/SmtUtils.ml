@@ -1,6 +1,6 @@
 open Nv_datatypes
 open Nv_datastructures
-open Nv_core.Collections
+open Nv_lang.Collections
 open SmtLang
 
 (* Classic encodes the SRP as an SMT expression, Functional encodes
@@ -26,13 +26,13 @@ let smt_config : smt_options =
   }
 
 let get_requires_no_failures req =
-  let open Nv_core.Syntax in
+  let open Nv_lang.Syntax in
   BatList.filter (fun e -> match e.e with
       | EOp (AtMost _, _) -> false
       | _ -> true) req
 
 let get_requires_failures req =
-  let open Nv_core.Syntax in
+  let open Nv_lang.Syntax in
   BatList.filter (fun e -> match e.e with
       | EOp (AtMost _, _) -> true
       | _ -> false) req
@@ -52,7 +52,7 @@ type smt_env =
   { mutable ctx: command list
   ; mutable const_decls: ConstantSet.t (** named constant and its sort *)
   ; mutable type_decls: datatype_decl StringMap.t
-  ; mutable symbolics: Nv_core.Syntax.ty_or_exp VarMap.t }
+  ; mutable symbolics: Nv_lang.Syntax.ty_or_exp VarMap.t }
 
 let create_fresh descr s =
   Printf.sprintf "%s-%s" descr (Var.fresh s |> Var.to_string)
@@ -62,8 +62,8 @@ let create_name descr n =
   else Printf.sprintf "%s-%s" descr (Var.to_string n)
 
 (** * Returns the SMT name of a datatype *)
-let rec datatype_name (ty : Nv_core.Syntax.ty) : string option =
-  let open Nv_core.Syntax in
+let rec datatype_name (ty : Nv_lang.Syntax.ty) : string option =
+  let open Nv_lang.Syntax in
   match ty with
   | TVar {contents= Link t} -> datatype_name t
   | TTuple ts -> (
@@ -93,8 +93,8 @@ let is_var (tm: SmtLang.term) =
   | Var _ -> true
   | _ -> false
 
-let rec ty_to_sort (ty: Nv_core.Syntax.ty) : sort =
-  let open Nv_core.Syntax in
+let rec ty_to_sort (ty: Nv_lang.Syntax.ty) : sort =
+  let open Nv_lang.Syntax in
   match ty with
   | TVar {contents= Link t} -> ty_to_sort t
   | TUnit -> UnitSort
@@ -116,7 +116,7 @@ let rec ty_to_sort (ty: Nv_core.Syntax.ty) : sort =
   | TVar _ | QVar _ | TArrow _ | TRecord _ ->
     failwith
       (Printf.sprintf "internal error (ty_to_sort): %s"
-         (Nv_core.Printing.ty_to_string ty))
+         (Nv_lang.Printing.ty_to_string ty))
 
 
 

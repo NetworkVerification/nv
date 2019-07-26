@@ -1,12 +1,12 @@
 open Nvlib
 open Nv_datastructures
 open ANSITerminal
-open Nv_core
-open Nv_core.Cmdline
+open Nv_lang
+open Nv_lang.Cmdline
 open Nv_smt
 open Nv_solution
 open Nv_slicing
-open Nv_core.Syntax
+open Nv_lang.Syntax
 open Nv_interpreter
 open Nv_transformations
 open Nvlib.Abstraction

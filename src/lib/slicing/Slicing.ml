@@ -2,7 +2,7 @@ open Nv_utils
 open Nv_interpreter
 open Nv_datastructures
 open Nv_datatypes
-open Nv_core
+open Nv_lang
 
 module Prefix =
   struct

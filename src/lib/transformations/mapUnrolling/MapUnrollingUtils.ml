@@ -1,4 +1,4 @@
-open Nv_core
+open Nv_lang
 open Syntax
 open Collections
 open Nv_datastructures

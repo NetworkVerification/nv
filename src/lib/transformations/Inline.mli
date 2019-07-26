@@ -1,4 +1,4 @@
-open Nv_core.Syntax
+open Nv_lang.Syntax
 
 val substitute : Nv_datatypes.Var.t -> exp -> exp -> exp
 

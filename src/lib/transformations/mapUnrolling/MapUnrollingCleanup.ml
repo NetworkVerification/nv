@@ -1,7 +1,7 @@
 (* Replaces all 0-element tuples in the program with unit,
    and all 1-element tuples with their only element *)
 
-open Nv_core
+open Nv_lang
 
 let mapo f o =
   match o with

@@ -1,10 +1,10 @@
 open Nv_datatypes
 open Nv_datastructures
-open Nv_core
+open Nv_lang
 open AdjGraph
 open AbstractionMap
 open Failures
-open Nv_core.Syntax
+open Nv_lang.Syntax
 open Nv_utils
 open Nv_slicing
 

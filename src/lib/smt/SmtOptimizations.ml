@@ -1,4 +1,4 @@
-open Nv_core.Collections
+open Nv_lang.Collections
 open SmtLang
 open SmtUtils
 

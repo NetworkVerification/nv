@@ -1,6 +1,6 @@
 (** * Tuple normal form transformation*)
 (* need a proper name for this *)
-open Nv_core
+open Nv_lang
 open Collections
 open Syntax
 open Nv_datastructures.OCamlUtils

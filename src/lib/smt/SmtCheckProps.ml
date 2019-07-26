@@ -1,6 +1,6 @@
 open Nv_datatypes
 open Nv_datastructures
-open Nv_core.Syntax
+open Nv_lang.Syntax
 open SolverUtil
 open SmtLang
 open SmtUtils
@@ -57,7 +57,7 @@ let checkMonotonicity info query chan net =
   let solver = start_solver [] in
   let unbox x = Boxed.to_list x |> List.hd in
   Hashtbl.iter (fun edge trans ->
-      let env = Boxed.init_solver net.Nv_core.Syntax.symbolics [] in
+      let env = Boxed.init_solver net.Nv_lang.Syntax.symbolics [] in
       Boxed.add_symbolic env checka_var (Ty net.attr_type);
       let checka =
         Boxed.lift2 (fun checka s -> mk_constant env (Boxed.create_vars env "" checka) s)
@@ -97,11 +97,11 @@ let checkMonotonicity info query chan net =
       let property_exp =
         aexp(ematch (aexp(evar (unbox merge_var), Some net.attr_type, Span.default))
                (addBranch (PTuple [PWild; PWild; PVar ospf_var; PVar bgp_var; PWild])
-                  (aexp (eop Nv_core.Syntax.And
-                           [aexp(eop Nv_core.Syntax.Eq [evar ospf_var; evar old_ospf_var],
+                  (aexp (eop Nv_lang.Syntax.And
+                           [aexp(eop Nv_lang.Syntax.Eq [evar ospf_var; evar old_ospf_var],
                                  Some TBool,
                                  Span.default);
-                            aexp(eop Nv_core.Syntax.Eq [evar bgp_var; evar old_bgp_var],
+                            aexp(eop Nv_lang.Syntax.Eq [evar bgp_var; evar old_bgp_var],
                                  Some TBool,
                                  Span.default)],
                          Some TBool, Span.default)) emptyBranch),
@@ -139,7 +139,7 @@ let checkMonotonicity info query chan net =
         printQuery chan "(pop)\n";
       match reply with
       | SAT ->
-        Nv_core.Console.warning (Printf.sprintf "Policy on edge %s is non-monotonic"
+        Nv_lang.Console.warning (Printf.sprintf "Policy on edge %s is non-monotonic"
                            (AdjGraph.printEdge edge))
       | UNSAT -> ()
       | _ -> failwith "unknown answer") transTable

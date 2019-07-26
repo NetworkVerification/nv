@@ -1,4 +1,4 @@
-open Nv_core
+open Nv_lang
 open Nv_datatypes
 open Nv_datastructures
 open Nv_utils

@@ -1,4 +1,4 @@
-open Nv_core
+open Nv_lang
 open Nv_datatypes.RecordUtils
 
 (* Re-copying that here, to turn Unbound tvars into unbound tvars instead of TBool.

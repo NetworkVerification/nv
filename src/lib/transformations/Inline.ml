@@ -1,4 +1,4 @@
-open Nv_core.Syntax
+open Nv_lang.Syntax
 open Nv_datastructures
 open Nv_datatypes
 
@@ -90,7 +90,7 @@ let rec inline_app env e1 e2 : exp =
     | ESome _ | ETuple _ | EOp _ | EVal _ | ERecord _ | EProject _->
         failwith
           (Printf.sprintf "inline_app: %s"
-             (Nv_core.Printing.exp_to_string e1))
+             (Nv_lang.Printing.exp_to_string e1))
   in
   (* Printf.printf "inline_app e1: %s\ninline_app e2: %s)\n"
     (Printing.exp_to_string e1)

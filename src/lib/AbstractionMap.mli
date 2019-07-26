@@ -1,5 +1,5 @@
 open Nv_datastructures
-open Nv_core
+open Nv_lang
 
 module AbstractNode :
 sig

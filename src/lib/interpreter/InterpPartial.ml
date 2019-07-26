@@ -1,6 +1,6 @@
 open Nv_datatypes
 open Nv_datastructures
-open Nv_core.Syntax
+open Nv_lang.Syntax
 
 (** * Simplifications *)
 let simplify_and v1 e2 =
@@ -241,7 +241,7 @@ let rec interp_exp_partial_opt isapp env expEnv e =
        | Some (env2, e) -> interp_exp_partial_opt false {env with value=env2} expEnv e
        | None ->
          failwith
-           ( "value " ^ Nv_core.Printing.value_to_string (to_value pe1)
+           ( "value " ^ Nv_lang.Printing.value_to_string (to_value pe1)
              ^ " did not match any pattern in match statement"))
     else
       (
@@ -301,7 +301,7 @@ and interp_op_partial_opt env expEnv ty op es =
       | _, _ ->
         failwith
           (Printf.sprintf "bad operator application: %s"
-             (Nv_core.Printing.op_to_string op))
+             (Nv_lang.Printing.op_to_string op))
     end
 
 let rec interp_exp_partial isapp env e =
@@ -362,7 +362,7 @@ let rec interp_exp_partial isapp env e =
          interp_exp_partial false {env with value=env2} e
        | None ->
          failwith
-           ( "value " ^ Nv_core.Printing.value_to_string (to_value pe1)
+           ( "value " ^ Nv_lang.Printing.value_to_string (to_value pe1)
              ^ " did not match any pattern in match statement"))
     else
       aexp (ematch pe1 (mapBranches (fun (p,e) ->
@@ -418,7 +418,7 @@ and interp_op_partial env ty op es =
       | _, _ ->
         failwith
           (Printf.sprintf "bad operator application: %s"
-             (Nv_core.Printing.op_to_string op))
+             (Nv_lang.Printing.op_to_string op))
     end
 
 let interp_partial = fun e -> interp_exp_partial false empty_env e
@@ -431,6 +431,6 @@ let interp_partial_opt =
 let interp_partial = Memoization.MemoizeExp.memoize ~size:1000 interp_partial
 (* let interp_partial_opt = MemoizeExp.memoize ~size:1000 interp_partial_opt *)
 
-let interp_partial_fun (fn : Nv_core.Syntax.exp) (args: value list) =
-  Nv_core.Syntax.apps fn (List.map (fun a -> e_val a) args) |>
+let interp_partial_fun (fn : Nv_lang.Syntax.exp) (args: value list) =
+  Nv_lang.Syntax.apps fn (List.map (fun a -> e_val a) args) |>
   interp_partial

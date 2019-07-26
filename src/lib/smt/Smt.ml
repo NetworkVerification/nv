@@ -1,6 +1,6 @@
 (** * SMT encoding of network *)
 
-open Nv_core.Collections
+open Nv_lang.Collections
 open Nv_solution.Solution
 open SolverUtil
 open Profile
@@ -110,10 +110,10 @@ let refineModel (model : Nv_solution.Solution.t) info query chan env solver rena
   let refiner = refineModelMinimizeFailures in
   match refiner model info query chan solver renaming env requires with
   | None ->
-    (* Nv_core.Console.warning "Model was not refined\n"; *)
+    (* Nv_lang.Console.warning "Model was not refined\n"; *)
     Sat model (* no refinement can occur *)
   | Some q ->
-    Nv_core.Console.warning "Refining the model...\n";
+    Nv_lang.Console.warning "Refining the model...\n";
     let checkSat = CheckSat |> mk_command |> command_to_smt smt_config.verbose info in
     let q = Printf.sprintf "%s%s\n" q checkSat in
     if query then
@@ -124,7 +124,7 @@ let refineModel (model : Nv_solution.Solution.t) info query chan env solver rena
     (* if the second query was unsat, return the first counterexample *)
     match isSat with
     | Sat _newModel ->
-      Nv_core.Console.warning "Refined the model";
+      Nv_lang.Console.warning "Refined the model";
       isSat
     | _ -> Sat model
 
@@ -176,7 +176,7 @@ let solve info query chan params net_or_srp nodes eassert requires =
        refineModel model1 info query chan env solver renaming nodes eassert requires
 
 let solveClassic info query chan ?(params=[]) net =
-  let open Nv_core.Syntax in
+  let open Nv_lang.Syntax in
   let module ExprEnc = (val expr_encoding smt_config) in
   let module Enc =
     (val (module SmtClassicEncoding.ClassicEncoding(ExprEnc) : SmtClassicEncoding.ClassicEncodingSig))
@@ -185,7 +185,7 @@ let solveClassic info query chan ?(params=[]) net =
     (Nv_datastructures.AdjGraph.num_vertices net.graph) net.assertion net.requires
 
 let solveFunc info query chan ?(params=[]) srp =
-  let open Nv_core.Syntax in
+  let open Nv_lang.Syntax in
   let module ExprEnc = (val expr_encoding smt_config) in
   let module Enc =
     (val (module SmtFunctionalEncoding.FunctionalEncoding(ExprEnc) : SmtFunctionalEncoding.FunctionalEncodingSig))
@@ -194,11 +194,11 @@ let solveFunc info query chan ?(params=[]) srp =
     (Nv_datastructures.AdjGraph.num_vertices srp.srp_graph) srp.srp_assertion srp.srp_requires
 
 (** For quickcheck smart value generation *)
-let symvar_assign info (net: Nv_core.Syntax.network) : Nv_core.Syntax.value VarMap.t option =
+let symvar_assign info (net: Nv_lang.Syntax.network) : Nv_lang.Syntax.value VarMap.t option =
   let module ExprEnc = (val expr_encoding smt_config) in
   let module Enc = (val (module SmtClassicEncoding.ClassicEncoding(ExprEnc) : Encoding)) in
-  let env = ExprEnc.init_solver net.Nv_core.Syntax.symbolics ~labels:[] in
-  let requires = net.Nv_core.Syntax.requires in
+  let env = ExprEnc.init_solver net.Nv_lang.Syntax.symbolics ~labels:[] in
+  let requires = net.Nv_lang.Syntax.requires in
   Enc.add_symbolic_constraints env requires env.symbolics;
   let smt_encoding = env_to_smt ~verbose:smt_config.verbose info env in
   let solver = start_solver [] in

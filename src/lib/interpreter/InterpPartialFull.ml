@@ -1,8 +1,8 @@
 open Nv_datastructures
 open Nv_datatypes
-open Nv_core
-open Nv_core.Syntax
-open Nv_core.Collections
+open Nv_lang
+open Nv_lang.Syntax
+open Nv_lang.Collections
 open InterpUtils
 open Interp
 

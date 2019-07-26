@@ -2,8 +2,8 @@
 
 open Nv_datastructures
 open Nv_datatypes
-open Nv_core
-open Nv_core.Syntax
+open Nv_lang
+open Nv_lang.Syntax
 
 let zero = Integer.create ~value:0 ~size:32
 let one = Integer.create ~value:1 ~size:32

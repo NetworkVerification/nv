@@ -5,7 +5,7 @@
     batteries
     lru-cache
     integers
-    nv_core
+    nv_lang
     nv_datatypes
     nv_datastructures)
   (preprocess

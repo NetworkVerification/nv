@@ -1,6 +1,6 @@
 open Nv_datatypes
 open Nv_datastructures
-open Nv_core
+open Nv_lang
 open Nv_interpreter
 open SmtUtils
 

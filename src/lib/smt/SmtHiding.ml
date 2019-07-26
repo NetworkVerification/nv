@@ -1,7 +1,7 @@
 (** * SMT encoding of network *)
 
-open Nv_core.Collections
-open Nv_core.Syntax
+open Nv_lang.Collections
+open Nv_lang.Syntax
 open SolverUtil
 open Profile
 open SmtLang

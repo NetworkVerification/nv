@@ -1,5 +1,5 @@
 %{
-  open Nv_core.Syntax
+  open Nv_lang.Syntax
 
 %}
 
@@ -19,7 +19,7 @@
 %token EOF
 
 %start smtlib
-%type <Nv_core.Syntax.value> smtlib
+%type <Nv_lang.Syntax.value> smtlib
 
 
 %%

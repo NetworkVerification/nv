@@ -2,7 +2,7 @@
   (name nvlib)
   ; (public_name nvlib)
   (libraries
-    nv_core
+    nv_lang
     nv_smt
     nv_datastructures
     nv_datatypes

@@ -1,5 +1,5 @@
 open Nv_datastructures
-open Nv_core
+open Nv_lang
 open Syntax
 open Collections
 open SmtLang

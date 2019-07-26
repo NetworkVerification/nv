@@ -1,4 +1,4 @@
-open Nv_core.Syntax
+open Nv_lang.Syntax
 
 val iter_exp : (exp -> unit) -> exp -> unit
 

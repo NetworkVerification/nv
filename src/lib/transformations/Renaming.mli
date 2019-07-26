@@ -1,4 +1,4 @@
-open Nv_core
+open Nv_lang
 open Nv_solution
 
 val alpha_convert_exp : Nv_datatypes.Var.t Nv_datastructures.Env.t -> Syntax.exp -> Syntax.exp

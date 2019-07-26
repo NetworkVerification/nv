@@ -1,5 +1,5 @@
 open Nv_datatypes
-open Nv_core
+open Nv_lang
 open SolverUtil
 
 let printVerbose (msg: string) (descr: string) (span: Nv_datastructures.Span.t) info =

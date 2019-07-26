@@ -1,4 +1,4 @@
-open Nv_core
+open Nv_lang
 
 val default_value : Syntax.ty -> Syntax.value
 

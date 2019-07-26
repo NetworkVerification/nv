@@ -1,5 +1,5 @@
 open Nv_datastructures
-open Nv_core
+open Nv_lang
 
 (* Expression and operator interpreters *)
 (* matches p b is Some env if v matches p and None otherwise; assumes

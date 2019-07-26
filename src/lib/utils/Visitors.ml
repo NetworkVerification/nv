@@ -1,4 +1,4 @@
-open Nv_core.Syntax
+open Nv_lang.Syntax
 
 let rec iter_exp f (e: exp) =
   f e ;
