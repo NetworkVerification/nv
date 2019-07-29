@@ -1,5 +1,5 @@
-open Nv_datatypes
 open Nv_utils
+open Nv_datastructures
 open Collections
 open Syntax
 
@@ -7,20 +7,20 @@ let default_value = BddMap.default_value
 
 let rec default_value_exp ty =
   match ty with
-  | TUnit -> exp_of_value (avalue (vunit (), Some ty, Nv_datastructures.Span.default))
-  | TBool -> exp_of_value (avalue (vbool false, Some ty, Nv_datastructures.Span.default))
-  | TNode -> exp_of_value (avalue (vnode 0, Some TNode, Nv_datastructures.Span.default))
-  | TEdge -> exp_of_value (avalue (vedge (0, 1), Some TEdge, Nv_datastructures.Span.default))
+  | TUnit -> exp_of_value (avalue (vunit (), Some ty, Span.default))
+  | TBool -> exp_of_value (avalue (vbool false, Some ty, Span.default))
+  | TNode -> exp_of_value (avalue (vnode 0, Some TNode, Span.default))
+  | TEdge -> exp_of_value (avalue (vedge (0, 1), Some TEdge, Span.default))
   | TInt size ->
-    exp_of_value (avalue (vint (Integer.create ~value:0 ~size:size), Some ty, Nv_datastructures.Span.default))
+    exp_of_value (avalue (vint (Integer.create ~value:0 ~size:size), Some ty, Span.default))
   | TTuple ts ->
-    aexp (etuple (BatList.map default_value_exp ts), Some ty, Nv_datastructures.Span.default)
+    aexp (etuple (BatList.map default_value_exp ts), Some ty, Span.default)
   | TRecord map -> aexp (etuple (BatList.map default_value_exp @@ RecordUtils.get_record_entries map),
-                         Some ty, Nv_datastructures.Span.default)
+                         Some ty, Span.default)
   | TOption _ ->
-    exp_of_value (avalue (voption None, Some ty, Nv_datastructures.Span.default))
+    exp_of_value (avalue (voption None, Some ty, Span.default))
   | TMap (ty1, ty2) ->
-    aexp(eop MCreate [default_value_exp ty2], Some ty, Nv_datastructures.Span.default)
+    aexp(eop MCreate [default_value_exp ty2], Some ty, Span.default)
   | TVar {contents= Link t} ->
     default_value_exp t
   | TVar _ | QVar _ | TArrow _ ->

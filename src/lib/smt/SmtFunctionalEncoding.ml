@@ -1,6 +1,5 @@
 open Nv_lang
 open Nv_datastructures
-open Nv_datatypes
 open Syntax
 open Nv_utils.PrimitiveCollections
 open Collections

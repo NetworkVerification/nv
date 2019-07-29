@@ -1,6 +1,5 @@
 open Nv_lang
 open Nv_datastructures
-open Nv_datatypes
 open Syntax
 open Memoization
 open Printing

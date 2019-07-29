@@ -18,7 +18,7 @@ rule token = parse
   | "mkSome"     { SOME }
   | "mkPair"num  { PAIR }
   | "as"         { AS }
-  | num as n     { NUM (Nv_datatypes.Integer.of_string n) }
+  | num as n     { NUM (Nv_datastructures.Integer.of_string n) }
   | id as n      { ID n }
   | "("          { LPAREN }
   | ")"          { RPAREN }

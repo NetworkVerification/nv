@@ -18,8 +18,8 @@ sig
   val to_list : 'a t -> 'a list
   val of_list : 'a list -> 'a t
   val combine_term: term t -> term
-  val add_symbolic: smt_env -> Nv_datatypes.Var.t t -> Syntax.ty_or_exp -> unit
-  val init_solver: (Nv_datatypes.Var.t * Syntax.ty_or_exp) list ->
+  val add_symbolic: smt_env -> Nv_datastructures.Var.t t -> Syntax.ty_or_exp -> unit
+  val init_solver: (Nv_datastructures.Var.t * Syntax.ty_or_exp) list ->
     labels:(Syntax.var * Syntax.ty) list -> smt_env
 end
 

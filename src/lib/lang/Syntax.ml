@@ -1,6 +1,5 @@
 (* Abstract syntax of SRP attribute processing expressions *)
 open Cudd
-open Nv_datatypes
 open Nv_datastructures
 open Nv_utils.PrimitiveCollections
 

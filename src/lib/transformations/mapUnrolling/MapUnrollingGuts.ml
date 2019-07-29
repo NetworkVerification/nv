@@ -25,7 +25,7 @@ let get_index_symb keys symb =
   let const_keys, symb_keys = keys in
   try
     let index, _ =
-      BatList.findi (fun _ s -> Nv_datatypes.Var.equal s symb) symb_keys
+      BatList.findi (fun _ s -> Nv_datastructures.Var.equal s symb) symb_keys
     in
     Some(index + List.length const_keys)
   with
@@ -241,8 +241,8 @@ let rec unroll_exp
           in
           let f' = unroll_exp f in
           let freshvars =
-            BatList.map (fun _ -> Nv_datatypes.Var.fresh "UnrollingMapVar") symb_keys @
-            BatList.map (fun _ -> Nv_datatypes.Var.fresh "UnrollingMapVar") const_keys
+            BatList.map (fun _ -> Nv_datastructures.Var.fresh "UnrollingMapVar") symb_keys @
+            BatList.map (fun _ -> Nv_datastructures.Var.fresh "UnrollingMapVar") const_keys
           in
           let pattern =
             PTuple (BatList.map (fun var -> PVar var) freshvars)
@@ -272,7 +272,7 @@ let rec unroll_exp
             const_keys
           in
           let freshvars =
-            BatList.map (fun _ -> Nv_datatypes.Var.fresh "UnrollingMapFilterVar") all_keys
+            BatList.map (fun _ -> Nv_datastructures.Var.fresh "UnrollingMapFilterVar") all_keys
           in
           let pattern =
             PTuple (BatList.map (fun var -> PVar var) freshvars)
@@ -314,8 +314,8 @@ let rec unroll_exp
             let lst =
               BatList.make (List.length symb_keys + List.length const_keys) ()
             in
-            BatList.map (fun _ -> Nv_datatypes.Var.fresh "UnrollingMergeVar1") lst,
-            BatList.map (fun _ -> Nv_datatypes.Var.fresh "UnrollingMergeVar2") lst
+            BatList.map (fun _ -> Nv_datastructures.Var.fresh "UnrollingMergeVar1") lst,
+            BatList.map (fun _ -> Nv_datastructures.Var.fresh "UnrollingMergeVar2") lst
           in
           let pattern =
             PTuple([
@@ -363,7 +363,7 @@ let rec unroll_exp
             List.map (fun v -> aexp (evar v, Some key_ty, e.espan)) symb_keys
           in
           let freshvars =
-            BatList.map (fun k -> (k, Nv_datatypes.Var.fresh "UnrollingFoldVar")) (symb_var_keys @ const_keys)
+            BatList.map (fun k -> (k, Nv_datastructures.Var.fresh "UnrollingFoldVar")) (symb_var_keys @ const_keys)
           in
           let pattern =
             PTuple (BatList.map (fun (_, var) -> PVar var) freshvars)

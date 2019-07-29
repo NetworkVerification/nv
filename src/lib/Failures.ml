@@ -1,7 +1,6 @@
 (** * Adds link failures to a network *)
 
 open Nv_datastructures
-open Nv_datatypes
 open Nv_lang
 open Nv_lang.Syntax
 

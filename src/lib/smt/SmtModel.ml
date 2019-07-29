@@ -1,9 +1,9 @@
 open Nv_lang
-open Nv_datatypes
 open Nv_lang.Collections
 open Nv_lang.Syntax
 open Nv_solution.Solution
 open Nv_utils.PrimitiveCollections
+open Nv_datastructures
 open SmtLang
 open SolverUtil
 
@@ -51,7 +51,7 @@ let eval_model (symbolics: Syntax.ty_or_exp VarMap.t)
     match eassert with
     | None -> base
     | Some _ ->
-      Nv_datastructures.AdjGraph.fold_vertices (fun u acc ->
+      AdjGraph.fold_vertices (fun u acc ->
           let assu = (SmtUtils.assert_var u) ^ "-result" in
           let tm = find_renamed_term assu in
           let ev = mk_eval tm |> mk_command in
@@ -103,7 +103,6 @@ let parse_val (s : string) : Syntax.value =
     end
 
 let translate_model (m : (string, string) BatMap.t) : Nv_solution.Solution.t =
-  let open Nv_datastructures in
   BatMap.foldi (fun k v sol ->
       let nvval = parse_val v in
       match k with
@@ -135,7 +134,6 @@ let box_vals (xs : (int * Syntax.value) list) =
             |> BatList.map (fun (_,y) -> y))
 
 let translate_model_unboxed (m : (string, string) BatMap.t) : Nv_solution.Solution.t =
-  let open Nv_datastructures in
   let (symbolics, labels, assertions) =
     BatMap.foldi (fun k v (symbolics, labels, assertions) ->
         let nvval = parse_val v in
@@ -175,7 +173,6 @@ let translate_model_unboxed (m : (string, string) BatMap.t) : Nv_solution.Soluti
 (* Model Refiners *)
 let refineModelMinimizeFailures (model: Nv_solution.Solution.t) info _query _chan
     _solve _renaming env requires =
-      let open Nv_datastructures in
   match (SmtUtils.get_requires_failures requires).e with
   | Syntax.EOp(Syntax.AtMost n, [e1;e2;e3]) ->
     (match e1.e with

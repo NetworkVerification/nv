@@ -1,7 +1,6 @@
 open Syntax
 open Cudd
 open BatSet
-open Nv_datatypes
 open Nv_datastructures
 open Nv_utils
 

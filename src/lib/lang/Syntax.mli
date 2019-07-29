@@ -1,5 +1,4 @@
 open Cudd
-open Nv_datatypes
 open Nv_datastructures
 open Nv_utils.PrimitiveCollections
 open Batteries

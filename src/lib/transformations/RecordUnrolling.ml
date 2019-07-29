@@ -53,7 +53,7 @@ let canonicalize_type (ty : Syntax.ty) : Syntax.ty =
       begin
         match VarMap.Exceptionless.find tyname map with
         | None ->
-          let new_var = Nv_datatypes.Var.to_var ("a", count) in
+          let new_var = Nv_datastructures.Var.to_var ("a", count) in
           ( QVar (new_var),
             (VarMap.add tyname new_var map),
             count + 1)
@@ -169,7 +169,7 @@ let rec unroll_exp
     let idx = oget @@ BatList.index_of l labels in
     let ty = BatList.nth types idx in
     (* Extract tuple element at index idx *)
-    let var = Nv_datatypes.Var.fresh "recordUnrolling" in
+    let var = Nv_datastructures.Var.fresh "recordUnrolling" in
     let ps =
       BatList.mapi
         (fun i _ -> if i = idx then PVar var else PWild)
@@ -274,7 +274,7 @@ let convert_symbolics
     let _, toe =
       (* Printf.printf "Looking for symbolic %s with symbolics [%s]\n" symb @@
          BatString.concat ("; ") @@ List.map (fun (s,_) -> Var.to_string s) symbolics; *)
-      BatList.find (fun (v, _) -> Nv_datatypes.Var.equal v symb) symbolics
+      BatList.find (fun (v, _) -> Nv_datastructures.Var.equal v symb) symbolics
     in
     let oldty =
       match toe with

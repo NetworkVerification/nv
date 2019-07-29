@@ -97,7 +97,7 @@ let convert_symbolics
   let convert_symbolic var v =
     let symb =
       List.find_opt
-        (fun (var', _) -> Nv_datatypes.Var.equal var var')
+        (fun (var', _) -> Nv_datastructures.Var.equal var var')
         symbolics_to_convert
     in
     match symb with

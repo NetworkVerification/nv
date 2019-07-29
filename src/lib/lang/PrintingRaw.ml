@@ -1,5 +1,4 @@
 open Syntax
-open Nv_datatypes
 open Nv_datastructures
 
 let show_opt s o =

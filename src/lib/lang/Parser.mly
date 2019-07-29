@@ -1,6 +1,6 @@
 %{
   open Syntax
-  open Nv_datatypes
+  open Nv_datastructures
   open Nv_utils.PrimitiveCollections
   open Batteries
 
@@ -17,7 +17,7 @@
 
   let ensure_node_pattern p =
     match p with
-    | PInt n -> PNode (Nv_datatypes.Integer.to_int n)
+    | PInt n -> PNode (Nv_datastructures.Integer.to_int n)
     | _ -> p
 
   let exp e span : exp = aexp (e, None, span)
@@ -26,7 +26,7 @@
 
   let to_value v span : exp = exp (e_val (value v span)) span
 
-  let tuple_it es (span : Nv_datastructures.Span.t) : exp =
+  let tuple_it es (span : Span.t) : exp =
     match es with
     | [e] -> exp e span
     | es -> exp (etuple es) span
@@ -37,7 +37,7 @@
     | ps -> PTuple ps
 
   (* TODO: span not calculated correctly here? *)
-  let rec make_fun params (body : exp) (body_span: Nv_datastructures.Span.t) (span : Nv_datastructures.Span.t) : exp =
+  let rec make_fun params (body : exp) (body_span: Span.t) (span : Span.t) : exp =
     match params with
 	| [] -> body
 	| (x,tyopt)::rest ->
@@ -134,8 +134,8 @@
 
 %}
 
-%token <Nv_datastructures.Span.t * Nv_datatypes.Var.t> ID
-%token <Nv_datastructures.Span.t * Nv_datatypes.Integer.t> NUM
+%token <Nv_datastructures.Span.t * Nv_datastructures.Var.t> ID
+%token <Nv_datastructures.Span.t * Nv_datastructures.Integer.t> NUM
 %token <Nv_datastructures.Span.t * int> NODE
 %token <Nv_datastructures.Span.t> AND
 %token <Nv_datastructures.Span.t> OR
@@ -265,7 +265,7 @@ letvars:
 ;
 
 component:
-    | LET letvars EQ expr               { global_let $2 $4 $4.espan (Nv_datastructures.Span.extend $1 $4.espan) }
+    | LET letvars EQ expr               { global_let $2 $4 $4.espan (Span.extend $1 $4.espan) }
     | SYMBOLIC ID EQ expr               { DSymbolic (snd $2, Exp $4) }
     | SYMBOLIC ID COLON ty              { DSymbolic (snd $2, Ty $4) }
     | SYMBOLIC ID COLON ty EQ expr      { let ety = exp (ety $6 $4) $6.espan in
@@ -273,7 +273,7 @@ component:
     | REQUIRE expr                      { DRequire $2 }
     | LET EDGES EQ LBRACE RBRACE        { DEdges [] }
     | LET EDGES EQ LBRACE edges RBRACE  { DEdges $5 }
-    | LET NODES EQ NUM                  { DNodes (Nv_datatypes.Integer.to_int (snd $4)) }
+    | LET NODES EQ NUM                  { DNodes (Nv_datastructures.Integer.to_int (snd $4)) }
     | TYPE ATTRIBUTE EQ ty              { DATy $4 }
     | TYPE ID EQ ty                     { (add_user_type (snd $2) $4; DUserTy (snd $2, $4)) }
 
@@ -298,117 +298,117 @@ expreof:
 ;
 
 expr:
-    | LET letvars EQ expr IN expr       { let span = (Nv_datastructures.Span.extend $1 $6.espan) in
+    | LET letvars EQ expr IN expr       { let span = (Span.extend $1 $6.espan) in
                                           let (id, e) = local_let $2 $4 $4.espan span in
                                           exp (elet id e $6) span }
     | LET LPAREN patterns RPAREN EQ expr IN expr
                                         { let p = tuple_pattern $3 in
                                           let e = ematch $6 (addBranch p $8 emptyBranch) in
-                                          let span = Nv_datastructures.Span.extend $1 $8.espan in
+                                          let span = Span.extend $1 $8.espan in
                                           exp e span }
-    | IF expr THEN expr ELSE expr       { exp (eif $2 $4 $6) (Nv_datastructures.Span.extend $1 $6.espan) }
+    | IF expr THEN expr ELSE expr       { exp (eif $2 $4 $6) (Span.extend $1 $6.espan) }
     (* TODO: span does not include the branches here *)
-    | MATCH expr WITH branches          { exp (ematch $2 $4) (Nv_datastructures.Span.extend $1 $3) }
-    | FUN params ARROW expr             { make_fun $2 $4 $4.espan (Nv_datastructures.Span.extend $1 $4.espan) }
+    | MATCH expr WITH branches          { exp (ematch $2 $4) (Span.extend $1 $3) }
+    | FUN params ARROW expr             { make_fun $2 $4 $4.espan (Span.extend $1 $4.espan) }
     | FOLDNODE exprsspace               { exp (eop MFoldNode $2) $1 }
     | FOLDEDGE exprsspace               { exp (eop MFoldEdge $2) $1 }
     | MAP exprsspace                    { exp (eop MMap $2) $1 }
     | MAPIF exprsspace                  { exp (eop MMapFilter $2) $1 }
     | COMBINE exprsspace                { exp (eop MMerge $2) $1 }
     | CREATEMAP exprsspace              { exp (eop MCreate $2) $1 }
-    | SOME expr                         { exp (esome $2) (Nv_datastructures.Span.extend $1 $2.espan) }
-    | NOT expr                          { exp (eop Not [$2]) (Nv_datastructures.Span.extend $1 $2.espan) }
-    | expr AND expr                     { exp (eop And [$1;$3]) (Nv_datastructures.Span.extend $1.espan $3.espan) }
-    | expr OR expr                      { exp (eop Or [$1;$3]) (Nv_datastructures.Span.extend $1.espan $3.espan) }
-    | expr PLUS expr                    { exp (eop (UAdd (snd $2)) [$1;$3]) (Nv_datastructures.Span.extend $1.espan $3.espan) }
-    | expr SUB expr                     { exp (eop (USub (snd $2)) [$1;$3]) (Nv_datastructures.Span.extend $1.espan $3.espan) }
-    | expr EQ expr                      { exp (eop Eq [$1;$3]) (Nv_datastructures.Span.extend $1.espan $3.espan) }
-    | expr LESS expr                    { exp (eop (ULess (snd $2)) [$1;$3]) (Nv_datastructures.Span.extend $1.espan $3.espan) }
-    | expr GREATER expr                 { exp (eop (ULess (snd $2)) [$3;$1]) (Nv_datastructures.Span.extend $1.espan $3.espan) }
-    | expr LEQ expr                     { exp (eop (ULeq (snd $2)) [$1;$3]) (Nv_datastructures.Span.extend $1.espan $3.espan) }
-    | expr GEQ expr                     { exp (eop (ULeq (snd $2)) [$3;$1]) (Nv_datastructures.Span.extend $1.espan $3.espan) }
-    | expr NLESS expr                   { exp (eop NLess [$1;$3]) (Nv_datastructures.Span.extend $1.espan $3.espan) }
-    | expr NGREATER expr                { exp (eop NLess [$3;$1]) (Nv_datastructures.Span.extend $1.espan $3.espan) }
-    | expr NLEQ expr                    { exp (eop NLeq [$1;$3]) (Nv_datastructures.Span.extend $1.espan $3.espan) }
-    | expr NGEQ expr                    { exp (eop NLeq [$3;$1]) (Nv_datastructures.Span.extend $1.espan $3.espan) }
-    | LPAREN expr COLON ty RPAREN       { exp (ety $2 $4) (Nv_datastructures.Span.extend $1 $5) }
-    | expr LBRACKET expr RBRACKET               { exp (eop MGet [$1;$3]) (Nv_datastructures.Span.extend $1.espan $4) }
-    | expr LBRACKET expr COLON EQ expr RBRACKET { exp (eop MSet [$1;$3;$6]) (Nv_datastructures.Span.extend $1.espan $7) }
+    | SOME expr                         { exp (esome $2) (Span.extend $1 $2.espan) }
+    | NOT expr                          { exp (eop Not [$2]) (Span.extend $1 $2.espan) }
+    | expr AND expr                     { exp (eop And [$1;$3]) (Span.extend $1.espan $3.espan) }
+    | expr OR expr                      { exp (eop Or [$1;$3]) (Span.extend $1.espan $3.espan) }
+    | expr PLUS expr                    { exp (eop (UAdd (snd $2)) [$1;$3]) (Span.extend $1.espan $3.espan) }
+    | expr SUB expr                     { exp (eop (USub (snd $2)) [$1;$3]) (Span.extend $1.espan $3.espan) }
+    | expr EQ expr                      { exp (eop Eq [$1;$3]) (Span.extend $1.espan $3.espan) }
+    | expr LESS expr                    { exp (eop (ULess (snd $2)) [$1;$3]) (Span.extend $1.espan $3.espan) }
+    | expr GREATER expr                 { exp (eop (ULess (snd $2)) [$3;$1]) (Span.extend $1.espan $3.espan) }
+    | expr LEQ expr                     { exp (eop (ULeq (snd $2)) [$1;$3]) (Span.extend $1.espan $3.espan) }
+    | expr GEQ expr                     { exp (eop (ULeq (snd $2)) [$3;$1]) (Span.extend $1.espan $3.espan) }
+    | expr NLESS expr                   { exp (eop NLess [$1;$3]) (Span.extend $1.espan $3.espan) }
+    | expr NGREATER expr                { exp (eop NLess [$3;$1]) (Span.extend $1.espan $3.espan) }
+    | expr NLEQ expr                    { exp (eop NLeq [$1;$3]) (Span.extend $1.espan $3.espan) }
+    | expr NGEQ expr                    { exp (eop NLeq [$3;$1]) (Span.extend $1.espan $3.espan) }
+    | LPAREN expr COLON ty RPAREN       { exp (ety $2 $4) (Span.extend $1 $5) }
+    | expr LBRACKET expr RBRACKET               { exp (eop MGet [$1;$3]) (Span.extend $1.espan $4) }
+    | expr LBRACKET expr COLON EQ expr RBRACKET { exp (eop MSet [$1;$3;$6]) (Span.extend $1.espan $7) }
     | expr UNION expr                   { let el0 = exp (e_val (voption (Some (vbool false)))) $2 in
                                           let el1 = exp (e_val (voption (Some (vbool true)))) $2 in
                                           let er0 = el0 in
                                           let er1 = el1 in
-                                          let varx = Nv_datatypes.Var.fresh "x" in
-                                          let vary = Nv_datatypes.Var.fresh "y" in
+                                          let varx = Nv_datastructures.Var.fresh "x" in
+                                          let vary = Nv_datastructures.Var.fresh "y" in
                                           let x = exp (evar varx) $2 in
                                           let y = exp (evar vary) $2 in
                                           let e = exp (eop Or [x;y]) $2 in
                                           let e = exp (efun {arg=vary;argty=None;resty=None;body=e}) $2 in
                                           let e = exp (efun {arg=varx;argty=None;resty=None;body=e}) $2 in
-                                          exp (eop MMerge [e;$1;$3;el0;el1;er0;er1]) (Nv_datastructures.Span.extend $1.espan $3.espan) }
+                                          exp (eop MMerge [e;$1;$3;el0;el1;er0;er1]) (Span.extend $1.espan $3.espan) }
     | expr INTER expr                   { let el0 = exp (e_val (voption (Some (vbool true)))) $2 in
                                           let el1 = exp (e_val (voption (Some (vbool false)))) $2 in
                                           let er0 = el0 in
                                           let er1 = el1 in
-                                          let varx = Nv_datatypes.Var.create "x" in
-                                          let vary = Nv_datatypes.Var.create "y" in
+                                          let varx = Nv_datastructures.Var.create "x" in
+                                          let vary = Nv_datastructures.Var.create "y" in
                                           let x = exp (evar varx) $2 in
                                           let y = exp (evar vary) $2 in
                                           let e = exp (eop And [x;y]) $2 in
                                           let e = exp (efun {arg=vary;argty=None;resty=None;body=e}) $2 in
                                           let e = exp (efun {arg=varx;argty=None;resty=None;body=e}) $2 in
-                                          exp (eop MMerge [e;$1;$3;el0;el1;er0;er1]) (Nv_datastructures.Span.extend $1.espan $3.espan) }
+                                          exp (eop MMerge [e;$1;$3;el0;el1;er0;er1]) (Span.extend $1.espan $3.espan) }
     | expr MINUS expr                   { let el0 = exp (e_val (voption None)) $2 in
                                           let el1 = exp (e_val (voption (Some (vbool false)))) $2 in
                                           let er0 = exp (e_val (voption (Some (vbool false)))) $2 in
                                           let er1 = el0 in
-                                          let varx = Nv_datatypes.Var.create "x" in
-                                          let vary = Nv_datatypes.Var.create "y" in
+                                          let varx = Nv_datastructures.Var.create "x" in
+                                          let vary = Nv_datastructures.Var.create "y" in
                                           let x = exp (evar varx) $2 in
                                           let y = exp (evar vary) $2 in
                                           let e = exp (eop Not [y]) $2 in
                                           let e = exp (eop And [x;e]) $2 in
                                           let e = exp (efun {arg=vary;argty=None;resty=None;body=e}) $2 in
                                           let e = exp (efun {arg=varx;argty=None;resty=None;body=e}) $2 in
-                                          exp (eop MMerge [e;$1;$3;el0;el1;er0;er1]) (Nv_datastructures.Span.extend $1.espan $3.espan) }
+                                          exp (eop MMerge [e;$1;$3;el0;el1;er0;er1]) (Span.extend $1.espan $3.espan) }
     | FILTER exprsspace                 { let span = $1 in
-                                          let vark = Nv_datatypes.Var.create "k" in
+                                          let vark = Nv_datastructures.Var.create "k" in
                                           let e = exp (e_val (value (vbool false) span)) span in
                                           let e = exp (efun {arg=vark;argty=None;resty=None;body=e}) span in
                                           let args = match $2 with hd :: tl -> hd::e::tl | _ -> [e] in
                                           exp (eop MMapFilter args) $1 }
-    | expr DOT ID                       { exp (eproject $1 (Nv_datatypes.Var.name (snd $3))) (Nv_datastructures.Span.extend ($1.espan) (fst $3)) }
-    | LBRACE record_entry_exprs RBRACE  { exp (erecord (make_record_map $2)) (Nv_datastructures.Span.extend $1 $3) }
+    | expr DOT ID                       { exp (eproject $1 (Nv_datastructures.Var.name (snd $3))) (Span.extend ($1.espan) (fst $3)) }
+    | LBRACE record_entry_exprs RBRACE  { exp (erecord (make_record_map $2)) (Span.extend $1 $3) }
     | LBRACE expr WITH record_entry_exprs RBRACE {
                                           let mk_project v =
-                                          exp (eproject $2 (Nv_datatypes.Var.name v)) (Nv_datastructures.Span.extend $1 $3) in
+                                          exp (eproject $2 (Nv_datastructures.Var.name v)) (Span.extend $1 $3) in
                                           let lst = fill_record $4 mk_project in
-                                          exp (erecord (make_record_map lst)) (Nv_datastructures.Span.extend $1 $3)
+                                          exp (erecord (make_record_map lst)) (Span.extend $1 $3)
                                         }
-    | LBRACE exprs RBRACE               { make_set $2 (Nv_datastructures.Span.extend $1 $3) }
-    | LBRACE RBRACE                     { make_set [] (Nv_datastructures.Span.extend $1 $2) }
+    | LBRACE exprs RBRACE               { make_set $2 (Span.extend $1 $3) }
+    | LBRACE RBRACE                     { make_set [] (Span.extend $1 $2) }
     | expr2                             { $1 }
 ;
 
 expr2:
-    | expr2 expr3                       { exp (eapp $1 $2) (Nv_datastructures.Span.extend $1.espan $2.espan) }
+    | expr2 expr3                       { exp (eapp $1 $2) (Span.extend $1.espan $2.espan) }
     | expr3                             { $1 }
 ;
 
 expr3:
     | ID                                { exp (evar (snd $1)) (fst $1) }
-    | ID DOT ID                         { exp (eproject (evar (snd $1)) (Nv_datatypes.Var.name (snd $3))) (Nv_datastructures.Span.extend (fst $1) (fst $3)) }
+    | ID DOT ID                         { exp (eproject (evar (snd $1)) (Nv_datastructures.Var.name (snd $3))) (Span.extend (fst $1) (fst $3)) }
     | NUM                               { to_value (vint (snd $1)) (fst $1) }
     | NODE                              { to_value (vnode (snd $1)) (fst $1)}
-    | edge_arg TILDE edge_arg           { to_value (vedge (snd $1, snd $3)) (Nv_datastructures.Span.extend (fst $1) (fst $3))}
+    | edge_arg TILDE edge_arg           { to_value (vedge (snd $1, snd $3)) (Span.extend (fst $1) (fst $3))}
     | TRUE                              { to_value (vbool true) $1 }
     | FALSE                             { to_value (vbool false) $1 }
     | NONE                              { to_value (voption None) $1 }
-    | LPAREN exprs RPAREN               { tuple_it $2 (Nv_datastructures.Span.extend $1 $3) }
+    | LPAREN exprs RPAREN               { tuple_it $2 (Span.extend $1 $3) }
 ;
 
 edge_arg:
-  | NUM                                 { (fst $1), (Nv_datatypes.Integer.to_int (snd $1))}
+  | NUM                                 { (fst $1), (Nv_datastructures.Integer.to_int (snd $1))}
   | NODE                                { (fst $1), (snd $1) }
 
 exprs:
@@ -422,7 +422,7 @@ exprsspace:
 ;
 
 edgenode:
-    | NUM                               { Nv_datatypes.Integer.to_int (snd $1) }
+    | NUM                               { Nv_datastructures.Integer.to_int (snd $1) }
     | NODE                              { snd $1 }
 ;
 

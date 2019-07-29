@@ -5,7 +5,6 @@
     nv_lang
     nv_smt
     nv_datastructures
-    nv_datatypes
     nv_utils
     nv_transformations
     integers

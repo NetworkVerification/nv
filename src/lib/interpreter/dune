@@ -5,7 +5,6 @@
     lru-cache
     integers
     nv_datastructures
-    nv_datatypes
     nv_lang
     cudd)
 )

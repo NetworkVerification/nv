@@ -1,7 +1,7 @@
 (* Printing utilities for abstract syntax *)
 
 open Syntax
-open Nv_datatypes
+open Nv_datastructures
 open Nv_utils.PrimitiveCollections
 open Nv_utils.RecordUtils
 

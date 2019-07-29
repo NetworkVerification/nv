@@ -157,7 +157,7 @@ let rec flatten_exp e : exp =
         | TTuple tys ->
           (* Tuple type, but not directly a tuple expression. The only way to extract
              its elements is via a match expression. *)
-          let freshvars = List.map (fun ty -> ty, Nv_datatypes.Var.fresh "TupleFlattenVar") tys in
+          let freshvars = List.map (fun ty -> ty, Nv_datastructures.Var.fresh "TupleFlattenVar") tys in
           let freshvarexps = List.map (fun (ty, v) -> aexp (evar v, Some ty, e.espan)) freshvars in
           let pat = PTuple (List.map (fun (_, v) -> PVar v) freshvars) in
           let body = cont freshvarexps in

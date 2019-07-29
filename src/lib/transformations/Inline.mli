@@ -1,6 +1,6 @@
 open Nv_lang.Syntax
 
-val substitute : Nv_datatypes.Var.t -> exp -> exp -> exp
+val substitute : Nv_datastructures.Var.t -> exp -> exp -> exp
 
 val inline_exp : exp Nv_datastructures.Env.t -> exp -> exp
 

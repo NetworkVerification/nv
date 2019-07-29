@@ -3,7 +3,7 @@
 
 %}
 
-%token <Nv_datatypes.Integer.t> NUM
+%token <Nv_datastructures.Integer.t> NUM
 %token <string> ID
 %token TRUE
 %token FALSE

@@ -4,7 +4,6 @@
 
 open Syntax
 open Printing
-open Nv_datatypes
 open Nv_datastructures
 open Nv_utils
 open PrimitiveCollections

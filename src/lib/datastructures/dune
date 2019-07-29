@@ -3,9 +3,9 @@
  ; (public_name nv.datastructures)
  (libraries
     integers
-    nv_datatypes
     ocamlgraph
-    batteries)
+    batteries
+    zarith)
   (preprocess
     (pps ppx_deriving.std ppx_deriving_argparse))
 )

@@ -1,5 +1,4 @@
 open Nv_datastructures
-open Nv_datatypes
 open Nv_lang
 open Nv_lang.Syntax
 open Nv_lang.Collections

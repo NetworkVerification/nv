@@ -1,6 +1,5 @@
 open Cudd
 open Syntax
-open Nv_datatypes
 open Nv_datastructures
 open Nv_utils
 open Nv_utils.OCamlUtils

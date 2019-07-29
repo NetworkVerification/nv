@@ -1,4 +1,4 @@
-module M = BatMap.Make (Nv_datatypes.Var)
+module M = BatMap.Make (Var)
 
 type 'a t = 'a M.t
 
@@ -7,7 +7,7 @@ let empty = M.empty
 exception Unbound_var of string
 
 let lookup env x =
-  try M.find x env with Not_found -> raise (Unbound_var (Nv_datatypes.Var.to_string x))
+  try M.find x env with Not_found -> raise (Unbound_var (Var.to_string x))
 
 let lookup_opt env x = M.Exceptionless.find x env
 
@@ -24,7 +24,7 @@ let filter env f = M.filter f env
 
 let to_string entry_to_string env =
   M.fold
-    (fun k v s -> Nv_datatypes.Var.to_string k ^ "=" ^ entry_to_string v ^ ";" ^ s)
+    (fun k v s -> Var.to_string k ^ "=" ^ entry_to_string v ^ ";" ^ s)
     env ""
 
 let to_list env = M.bindings env

@@ -13,7 +13,7 @@ let print_solution solution =
   if cfg.verbose then (
     VarMap.iter
       (fun k v ->
-         Printf.printf "%s:%s\n" (Nv_datatypes.Var.name k) (Nv_lang.Printing.value_to_string v) )
+         Printf.printf "%s:%s\n" (Nv_datastructures.Var.name k) (Nv_lang.Printing.value_to_string v) )
       solution.symbolics ;
     AdjGraph.VertexMap.iter
       (fun k v ->

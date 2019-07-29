@@ -65,10 +65,10 @@ rule token = parse
   | "tedge"           { TEDGE (position lexbuf) }
   | "type"            { TYPE (position lexbuf) }
   | "attribute"       { ATTRIBUTE (position lexbuf) }
-  | id as s           { ID (position lexbuf, Nv_datatypes.Var.create s) }
+  | id as s           { ID (position lexbuf, Nv_datastructures.Var.create s) }
   | node as s         { NODE (position lexbuf, int_of_string (String.rchop ~n:1 s)) }
-  | num width as n    { NUM (position lexbuf, Nv_datatypes.Integer.of_string n) }
-  | num as n          { NUM (position lexbuf, Nv_datatypes.Integer.of_string n) }
+  | num width as n    { NUM (position lexbuf, Nv_datastructures.Integer.of_string n) }
+  | num as n          { NUM (position lexbuf, Nv_datastructures.Integer.of_string n) }
   | "&&"              { AND (position lexbuf) }
   | "||"              { OR (position lexbuf) }
   | "|"               { BAR (position lexbuf) }

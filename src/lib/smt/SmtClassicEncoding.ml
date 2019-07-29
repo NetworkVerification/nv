@@ -191,7 +191,7 @@ struct
       in
       let lbl_i_name = SmtUtils.label_var i in
       let lbl_i = create_strings lbl_i_name aty in
-      let lbl_iv = lift1 Nv_datatypes.Var.create lbl_i in
+      let lbl_iv = lift1 Nv_datastructures.Var.create lbl_i in
       add_symbolic env lbl_iv (Ty aty);
       let l = lift2 (fun lbl s -> mk_constant env (create_vars env "" lbl) s)
           lbl_iv (ty_to_sorts aty)

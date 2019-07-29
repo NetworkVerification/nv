@@ -1,6 +1,6 @@
 open Syntax
-open Nv_datatypes
 open Batteries
+open Nv_datastructures
 
 module VarMap = Map.Make (struct
     type t = Var.t

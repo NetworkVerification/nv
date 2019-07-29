@@ -31,7 +31,7 @@ module FailuresAbstraction :
       AdjGraph.t ->
       AbstractionMap.abstractionMap ->
       AbstractionMap.abstractionMap ->
-      Nv_datatypes.Var.t AdjGraph.EdgeMap.t ->
+      Nv_datastructures.Var.t AdjGraph.EdgeMap.t ->
       Nv_solution.Solution.t ->
       int ->
       AdjGraph.VertexSet.t ->
@@ -58,7 +58,7 @@ sig
                              (AdjGraph.Vertex.t, int * Syntax.exp) Hashtbl.t ->
                              (AdjGraph.Edge.t, int * Syntax.exp) Hashtbl.t ->
                              Nv_slicing.Slicing.network_slice ->
-                             int -> (Nv_datatypes.Var.t AdjGraph.EdgeMap.t) * Syntax.network
+                             int -> (Nv_datastructures.Var.t AdjGraph.EdgeMap.t) * Syntax.network
 
   (** [buildAbstractNetwork f g mergeMap transMap initMap assertMap dst attrTy k] builds the
    declarations of the abstract network *)
@@ -86,7 +86,7 @@ sig
   (** [getEdgeMultiplicities g f ehat] returns the number of concrete
    edges that map to the abstract edge [ehat] *)
   val getEdgeMultiplicities: AdjGraph.t -> AbstractionMap.abstractionMap ->
-                             Nv_datatypes.Var.t AdjGraph.EdgeMap.t ->
+                             Nv_datastructures.Var.t AdjGraph.EdgeMap.t ->
                              int Nv_utils.PrimitiveCollections.StringMap.t
 
 end

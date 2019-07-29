@@ -1,7 +1,7 @@
 open Nv_datastructures
 
 (** The type of network prefixes *)
-module Prefix : Map.OrderedType with type t = Nv_datatypes.Integer.t * Nv_datatypes.Integer.t
+module Prefix : Map.OrderedType with type t = Integer.t * Integer.t
 
 module PrefixSet : BatSet.S with type elt = Prefix.t
 

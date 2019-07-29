@@ -6,7 +6,6 @@
     ANSITerminal
     cudd
     integers
-    nv_datatypes
     nv_datastructures
     nv_utils)
   (preprocess

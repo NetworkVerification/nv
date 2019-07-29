@@ -1,8 +1,8 @@
-open Nv_datatypes
 open Nv_lang
+open Nv_datastructures
 open SolverUtil
 
-let printVerbose (msg: string) (descr: string) (span: Nv_datastructures.Span.t) info =
+let printVerbose (msg: string) (descr: string) (span: Span.t) info =
   let sl =
     match Console.get_start_position span info with
     | Some (sl, _) -> sl
@@ -58,14 +58,14 @@ type smt_term =
 type term =
   { t      : smt_term;
     tdescr : string;
-    tloc   : Nv_datastructures.Span.t
+    tloc   : Span.t
   }
 
 type constant =
   { cname  : string;
     csort  : sort;
     cdescr : string;
-    cloc   : Nv_datastructures.Span.t
+    cloc   : Span.t
   }
 
 (* NOTE: Do we want to have constants as commands? Ordering issues
@@ -82,7 +82,7 @@ type smt_command =
 type command =
   { com      : smt_command;
     comdescr : string;
-    comloc   : Nv_datastructures.Span.t
+    comloc   : Span.t
   }
 
 (** ** Constructors for SMT terms *)
@@ -132,7 +132,7 @@ let mk_ite_fast t1 t2 t3 =
 
 let mk_atMost t1 t2 t3 = AtMost (t1, t2, t3)
 
-let mk_term ?(tdescr="") ?(tloc= Nv_datastructures.Span.default) (t: smt_term) =
+let mk_term ?(tdescr="") ?(tloc= Span.default) (t: smt_term) =
   {t; tdescr; tloc}
 
 (** ** Constructors for SMT commands *)
@@ -143,7 +143,7 @@ let mk_eval tm = Eval tm
 
 let mk_assert tm = Assert tm
 
-let mk_command ?(comdescr ="") ?(comloc=Nv_datastructures.Span.default) (com : smt_command) =
+let mk_command ?(comdescr ="") ?(comloc=Span.default) (com : smt_command) =
   {com; comdescr; comloc}
 
 (** ** Functions related to datatype constructors *)

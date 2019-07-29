@@ -1,6 +1,5 @@
 open Nv_lang
 open Nv_lang.Syntax
-open Nv_datatypes
 open Nv_datastructures
 open Syntax
 

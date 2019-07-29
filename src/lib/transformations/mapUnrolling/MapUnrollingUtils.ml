@@ -13,7 +13,7 @@ let maplist_to_string (lst : maplist) =
          (fun e s -> s ^ Printing.exp_to_string e ^ "; ")
          const_keys "")
       (VarSet.fold
-         (fun v s -> s ^ Nv_datatypes.Var.to_string v ^ "; ")
+         (fun v s -> s ^ Nv_datastructures.Var.to_string v ^ "; ")
          symb_keys "")
   in
   Printf.sprintf "[%s]"
@@ -24,7 +24,7 @@ let maplist_to_string (lst : maplist) =
 let add_key mty symbolics (const_keys, symb_keys) keyo =
   match keyo with
   | None -> const_keys, symb_keys
-  | Some ({e=EVar var}) when BatList.mem_cmp Nv_datatypes.Var.compare var symbolics ->
+  | Some ({e=EVar var}) when BatList.mem_cmp Nv_datastructures.Var.compare var symbolics ->
     const_keys, (VarSet.add var symb_keys)
   | Some key ->
     if is_value key then ExpSet.add key const_keys, symb_keys

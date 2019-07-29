@@ -1,6 +1,5 @@
 open Nv_lang.Syntax
 open Nv_datastructures
-open Nv_datatypes
 
 let is_function_ty e =
   match get_inner_type (Nv_utils.OCamlUtils.oget e.ety) with

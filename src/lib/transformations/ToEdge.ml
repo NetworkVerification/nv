@@ -23,7 +23,7 @@ open Nv_lang.Syntax
  ***)
 
 let toEdge_decl decls =
-  let open Nv_datatypes in
+  let open Nv_datastructures in
   (* print_endline @@ Nv_lang.Printing.declarations_to_string decls ; *)
   let edges = get_edges decls |> Nv_utils.OCamlUtils.oget in
   let default_branch =

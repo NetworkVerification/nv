@@ -13,7 +13,7 @@ let rec matches p (v: Syntax.value) env : Syntax.value Env.t option =
   | PBool true, VBool true
   | PBool false, VBool false -> Some env
   | PInt i1, VInt i2 ->
-    if Nv_datatypes.Integer.equal i1 i2 then Some env else None
+    if Nv_datastructures.Integer.equal i1 i2 then Some env else None
   | PNode n1, VNode n2 ->
     if n1 = n2 then Some env else None
   | PEdge (p1, p2), VEdge (n1, n2) ->
@@ -77,7 +77,7 @@ let rec match_branches branches v env =
     let compare = Pervasives.compare
    end) *)
 
-let build_env (env: Syntax.env) (free_vars: Nv_datatypes.Var.t BatSet.PSet.t) :
+let build_env (env: Syntax.env) (free_vars: Nv_datastructures.Var.t BatSet.PSet.t) :
   Syntax.value BatSet.PSet.t =
   let base = BatSet.PSet.create Syntax.compare_values in
   BatSet.PSet.fold

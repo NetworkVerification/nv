@@ -1,9 +1,0 @@
-(library
- (name nv_datatypes)
- ; (public_name nv.datatypes)
- (libraries
-    batteries
-    zarith)
-  (preprocess
-    (pps ppx_deriving.std ppx_deriving_argparse))
-)
