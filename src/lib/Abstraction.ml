@@ -1,11 +1,11 @@
 open Nv_datastructures
 open Nv_lang
+open Nv_slicing
 open AdjGraph
 open AbstractionMap
 open Failures
-open Nv_lang.Syntax
-open Nv_utils.PrimitiveCollections
-open Nv_slicing
+open Syntax
+open Collections
 
 let debugAbstraction = ref false
 

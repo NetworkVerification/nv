@@ -1,7 +1,7 @@
 %{
   open Syntax
   open Nv_datastructures
-  open Nv_utils.PrimitiveCollections
+  open Collections
   open Batteries
 
   type user_type = Var.t (* name *) * ty (* type *)

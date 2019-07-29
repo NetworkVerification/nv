@@ -2,7 +2,7 @@
 
 open Syntax
 open Nv_datastructures
-open Nv_utils.PrimitiveCollections
+open Collections
 open Nv_utils.RecordUtils
 
 let is_keyword_op op =

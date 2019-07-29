@@ -1,3 +1,5 @@
+open Nv_lang.Collections
+
 (*
    Each entry in this list is:
    * A map type
@@ -6,7 +8,7 @@
 
    Note the nested tuple type.
 *)
-type maplist = (Nv_lang.Syntax.ty * (Nv_lang.Collections.ExpSet.t * Nv_lang.Collections.VarSet.t)) list
+type maplist = (Nv_lang.Syntax.ty * (ExpSet.t * VarSet.t)) list
 
 val maplist_to_string : maplist -> string
 

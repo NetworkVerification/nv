@@ -6,7 +6,7 @@ open Syntax
 open Printing
 open Nv_datastructures
 open Nv_utils
-open PrimitiveCollections
+open Collections
 open Batteries
 
 let debug = true
@@ -895,7 +895,6 @@ and valid_patterns env p =
   | p :: ps -> valid_patterns (valid_pattern env p) ps
 
 let canonicalize_type (ty : ty) : ty =
-  let open Collections in
   let rec aux ty map count =
     match ty with
     | TUnit

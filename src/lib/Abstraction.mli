@@ -87,6 +87,6 @@ sig
    edges that map to the abstract edge [ehat] *)
   val getEdgeMultiplicities: AdjGraph.t -> AbstractionMap.abstractionMap ->
                              Nv_datastructures.Var.t AdjGraph.EdgeMap.t ->
-                             int Nv_utils.PrimitiveCollections.StringMap.t
+                             int Collections.StringMap.t
 
 end

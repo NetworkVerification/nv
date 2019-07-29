@@ -2,6 +2,12 @@ open Syntax
 open Batteries
 open Nv_datastructures
 
+module IntMap = Nv_utils.PrimitiveCollections.IntMap
+module IntSet = Nv_utils.PrimitiveCollections.IntSet
+module StringMap = Nv_utils.PrimitiveCollections.StringMap
+module StringSet = Nv_utils.PrimitiveCollections.StringSet
+module StringSetSet = Nv_utils.PrimitiveCollections.StringSetSet
+
 module VarMap = Map.Make (struct
     type t = Var.t
 

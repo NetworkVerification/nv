@@ -1,6 +1,5 @@
 open Nv_datastructures
 open Nv_lang.Collections
-open Nv_utils.PrimitiveCollections
 open SmtLang
 
 (* Classic encodes the SRP as an SMT expression, Functional encodes

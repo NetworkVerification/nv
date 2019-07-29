@@ -1,6 +1,6 @@
 open Nv_lang
 open Typing
-open Nv_utils.PrimitiveCollections
+open Collections
 
 let has_target_type (target : Syntax.ty) (e : Syntax.exp) : bool =
   match e.ety with

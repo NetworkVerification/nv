@@ -1,5 +1,4 @@
 open Nv_lang
-open Nv_utils.PrimitiveCollections
 open Collections
 open MapUnrollingGuts
 open Typing

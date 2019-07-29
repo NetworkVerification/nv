@@ -1,4 +1,5 @@
-open Nv_utils.PrimitiveCollections
+open Collections
+
 module T = ANSITerminal
 
 type file_info = {input: string array; linenums: (int * int) array}

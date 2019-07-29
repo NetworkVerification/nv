@@ -1,7 +1,6 @@
 open Nv_lang
 open Nv_datastructures
 open Syntax
-open Nv_utils.PrimitiveCollections
 open Collections
 open SmtUtils
 open SmtLang

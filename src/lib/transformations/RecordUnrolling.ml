@@ -1,7 +1,6 @@
 open Nv_lang
 open Nv_utils
 open RecordUtils
-open PrimitiveCollections
 open Collections
 
 (* Re-copying that here, to turn Unbound tvars into unbound tvars instead of TBool.

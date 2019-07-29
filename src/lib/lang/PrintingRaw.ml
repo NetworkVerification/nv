@@ -10,7 +10,7 @@ let show_list s ls =
   "[" ^ List.fold_left (fun acc x -> acc ^ "," ^ s x) "" ls ^ "]"
 
 let show_record f prefix map =
-  let str = Nv_utils.PrimitiveCollections.StringMap.fold
+  let str = Collections.StringMap.fold
       (fun l elt acc -> Printf.sprintf "%s; %s: %s" acc l (f elt))
       map ""
   in

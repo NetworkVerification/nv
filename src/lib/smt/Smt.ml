@@ -2,7 +2,6 @@
 
 open Nv_lang.Collections
 open Nv_solution.Solution
-open Nv_utils.PrimitiveCollections
 open Nv_utils.Profile
 open SolverUtil
 open SmtLang

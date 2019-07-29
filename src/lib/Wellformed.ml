@@ -1,7 +1,6 @@
 open Nv_lang
 open Nv_datastructures
 open Nv_utils
-open PrimitiveCollections
 open Collections
 open Syntax
 open Batteries

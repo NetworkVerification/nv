@@ -1,4 +1,5 @@
 open Nv_lang.Syntax
+open Nv_lang.Collections
 
 let rec optimizeExp e =
   match e.e with
@@ -29,7 +30,7 @@ let rec optimizeExp e =
          |> wrap e
       | _ -> e)
   | ERecord es ->
-     erecord (Nv_utils.PrimitiveCollections.StringMap.map optimizeExp es) |> wrap e
+     erecord (StringMap.map optimizeExp es) |> wrap e
   | EProject (e1, s) -> eproject (optimizeExp e1) s |> wrap e
 
 let optimizeNet net =

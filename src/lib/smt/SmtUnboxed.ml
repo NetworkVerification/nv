@@ -2,7 +2,6 @@ open Nv_datastructures
 open Nv_lang
 open Syntax
 open Collections
-open Nv_utils.PrimitiveCollections
 open SmtLang
 open SmtUtils
 open Nv_utils.OCamlUtils

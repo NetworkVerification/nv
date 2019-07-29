@@ -15,7 +15,7 @@ let rec iter_exp f (e: exp) =
      iter_exp f e ;
      iterBranches (fun (_, e) -> iter_exp f e) bs
   | ETy (e, _) -> iter_exp f e
-  | ERecord map -> Nv_utils.PrimitiveCollections.StringMap.iter (fun _ -> f) map
+  | ERecord map -> Collections.StringMap.iter (fun _ -> f) map
   | EProject (e,_) -> iter_exp f e
 
 let iter_exp_decl f d =
