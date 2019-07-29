@@ -59,7 +59,7 @@ let rec convert_value
     let bindings = List.rev_append v_bindings e_bindings in
     let newmap = BddMap.from_bindings ~key_ty:kty (bindings, default) in
     vmap newmap
-  | VMap m, TMap (kty, vty) ->
+  | VMap m, TMap (_, vty) ->
     (* Non-converted map; recurse on its values. Don't have to look at
        key type since we can't have key types involving maps *)
     let unrolled_vty = unroll_type ty keys vty in

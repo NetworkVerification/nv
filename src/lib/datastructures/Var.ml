@@ -15,7 +15,7 @@ let fresh s = (s, next ())
 
 let create s = (s, 0)
 
-let name (s, i) = s
+let name (s, _) = s
 
 let to_var (s, i) = (s, i)
 
@@ -35,7 +35,7 @@ let equal (s1, i1) (s2, i2) = s1 = s2 && i1 = i2
 
 let equals = equal
 
-let equal_names (s1, i1) (s2, i2) = s1 = s2
+let equal_names (s1, _) (s2, _) = s1 = s2
 
 let compare (s1, i1) (s2, i2) =
   if s1 < s2 then -1

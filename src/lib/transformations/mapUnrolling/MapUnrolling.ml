@@ -5,7 +5,7 @@ open Nv_lang
    Returns an equivalent set of decls where all map types have been
    replaced with tuple types, and a function which converts a Solution
    to the new decls into a solution for the old decls. *)
-let unroll info decls =
+let unroll _ decls =
   let maplist =
     MapUnrollingUtils.collect_map_types_and_keys decls
   in

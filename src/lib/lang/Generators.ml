@@ -19,7 +19,7 @@ let rec default_value_exp ty =
                          Some ty, Span.default)
   | TOption _ ->
     exp_of_value (avalue (voption None, Some ty, Span.default))
-  | TMap (ty1, ty2) ->
+  | TMap (_, ty2) ->
     aexp(eop MCreate [default_value_exp ty2], Some ty, Span.default)
   | TVar {contents= Link t} ->
     default_value_exp t
@@ -58,7 +58,7 @@ let rec random_value ~hints ~max_map_size ty =
       vmap !map
     | QVar _ | TVar _ -> failwith "internal error (random_value)"
     | TRecord _ -> failwith "random_value: found record"
-    | TArrow (ty1, ty2) -> failwith "unimplemented"
+    | TArrow (_, _) -> failwith "unimplemented"
     | TNode | TEdge -> failwith "unimplemented (TODO)"
 
 let random_symbolic hints max_map_size d =

@@ -8,7 +8,7 @@ let rec iter_exp f (e: exp) =
   | EFun {body= e} -> iter_exp f e
   | EApp (e1, e2) -> iter_exp f e1 ; iter_exp f e2
   | EIf (e1, e2, e3) -> iter_exp f e1 ; iter_exp f e2 ; iter_exp f e3
-  | ELet (x, e1, e2) -> iter_exp f e1 ; iter_exp f e2
+  | ELet (_, e1, e2) -> iter_exp f e1 ; iter_exp f e2
   | ETuple es -> BatList.iter (iter_exp f) es
   | ESome e -> iter_exp f e
   | EMatch (e, bs) ->

@@ -358,7 +358,7 @@ and equal_vs ~cmp_meta v1 v2 =
   | VClosure (e1, f1), VClosure (e2, f2) ->
     let {ty= ty1; value= value1} = e1 in
     let {ty= ty2; value= value2} = e2 in
-    Env.equal equal_tys ty1 ty1
+    Env.equal equal_tys ty1 ty2
     && Env.equal (equal_values ~cmp_meta) value1 value2
     && equal_funcs ~cmp_meta f1 f2
   | VRecord map1, VRecord map2 ->
@@ -529,8 +529,8 @@ and hash_v ~hash_meta v =
       match vo with
       | None -> 4
       | Some x -> (19 * hash_value ~hash_meta x) + 4 )
-  | VClosure (e1, f1) ->
-    let {ty= ty1; value= v} = e1 in
+  | VClosure (e1, _) ->
+    let {ty= _; value= v} = e1 in
     let vs = Env.to_list v in
     let acc =
       List.fold_left

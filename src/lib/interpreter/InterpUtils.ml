@@ -7,7 +7,7 @@ open Nv_lang
 let rec matches p (v: Syntax.value) env : Syntax.value Env.t option =
   let open Syntax in
   match (p, v.v) with
-  | PWild, v -> Some env
+  | PWild, _ -> Some env
   | PVar x, _ -> Some (Env.update env x v)
   | PUnit, VUnit -> Some env
   | PBool true, VBool true

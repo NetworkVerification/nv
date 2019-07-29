@@ -1,5 +1,6 @@
 open Nv_datastructures
 open Nv_lang.Syntax
+open Nv_utils.OCamlUtils
 
 (** * Simplifications *)
 let simplify_and v1 e2 =
@@ -14,7 +15,7 @@ let simplify_or v1 e2 =
   | VBool false -> e2
   | _ -> failwith "illegal value to boolean"
 
-  let rec simplify_tget size lo hi e =
+  let rec simplify_tget lo hi e =
     match e.e with
     | ETuple es ->
       if lo = hi then List.nth es lo
@@ -22,7 +23,7 @@ let simplify_or v1 e2 =
     | EMatch (e1, branches) ->
       (* Push the TGet into the branches *)
       let new_branches =
-        mapBranches (fun (p, body) -> p, simplify_tget size lo hi body) branches
+        mapBranches (fun (p, body) -> p, simplify_tget lo hi body) branches
       in
       ematch e1 new_branches
     | _ ->
@@ -54,7 +55,7 @@ let simplify_or v1 e2 =
       ematch e (addBranch pat branch_body emptyBranch)
   ;;
 
-  let simplify_tset size lo hi tup v =
+  let simplify_tset lo hi tup v =
     (* If the expression is an actual tuple expression, we don't need a match
        to unpack its elements. This function computes an expression list corresponding
        the elements of exp (using a match only if needed) and calls cont on it. *)
@@ -62,7 +63,7 @@ let simplify_or v1 e2 =
       match exp.e with
       | ETuple es -> cont es
       | _ ->
-        match Nv_utils.OCamlUtils.oget exp.ety with
+        match oget exp.ety with
         | TTuple tys ->
           let freshvars = List.map (fun ty -> ty, Var.fresh "TSetVar") tys in
           let freshvarexps = List.map (fun (ty, v) -> aexp (evar v, Some ty, exp.espan)) freshvars in
@@ -113,16 +114,16 @@ let simplify_or v1 e2 =
               | _ -> eop op pes))
         | _ -> eop op pes
       end
-    | TGet (size, lo, hi) ->
+    | TGet (_, lo, hi) ->
       begin
         match pes with
-        | [e] -> simplify_tget size lo hi e
+        | [e] -> simplify_tget lo hi e
         | _ -> failwith "Bad TGet"
       end
-    | TSet (size, lo, hi) ->
+    | TSet (_, lo, hi) ->
       begin
         match pes with
-        | [e1; e2] -> simplify_tset size lo hi e1 e2
+        | [e1; e2] -> simplify_tset lo hi e1 e2
         | _ -> failwith "Bad TSet"
       end
     | _ -> eop op pes
@@ -188,9 +189,9 @@ let rec interp_exp_partial_opt isapp env expEnv e =
            aexp (evar y, e.ety, e.espan))
       | Some v ->
         aexp (e_val v, v.vty, v.vspan))
-  | EVal v -> e
+  | EVal _ -> e
   | EOp (op, es) ->
-    aexp (interp_op_partial_opt env expEnv (Nv_utils.OCamlUtils.oget e.ety) op es, e.ety, e.espan)
+    aexp (interp_op_partial_opt env expEnv (oget e.ety) op es, e.ety, e.espan)
   | EFun f ->
     (*Also note that we avoid using closures for our comfort, and
        since they are not needed for inlined functions *)
@@ -253,7 +254,7 @@ let rec interp_exp_partial_opt isapp env expEnv e =
         | Some (penv, e) -> interp_exp_partial_opt false env penv e)
   | ERecord _ | EProject _ -> failwith "Record found during partial interpretation"
 
-and interp_op_partial_opt env expEnv ty op es =
+and interp_op_partial_opt env expEnv _ op es =
   let pes = BatList.map (interp_exp_partial_opt false env expEnv) es in
   if BatList.exists (fun pe -> not (is_value pe)) pes then
     simplify_exps op pes
@@ -312,9 +313,9 @@ let rec interp_exp_partial isapp env e =
         e
       | Some v ->
         aexp (e_val v, v.vty, v.vspan))
-  | EVal v -> e
+  | EVal _ -> e
   | EOp (op, es) ->
-    aexp (interp_op_partial env (Nv_utils.OCamlUtils.oget e.ety) op es, e.ety, e.espan)
+    aexp (interp_op_partial env (oget e.ety) op es, e.ety, e.espan)
   | EFun f ->
     (*Also note that we avoid using closures for our comfort, and
        since they are not needed for inlined functions *)
@@ -370,7 +371,7 @@ let rec interp_exp_partial isapp env e =
 
   | ERecord _ | EProject _ -> failwith "Record found during partial interpretation"
 
-and interp_op_partial env ty op es =
+and interp_op_partial env _ op es =
   let pes = BatList.map (interp_exp_partial false env) es in
   if BatList.exists (fun pe -> not (is_value pe)) pes then
     simplify_exps op pes

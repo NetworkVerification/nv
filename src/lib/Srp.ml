@@ -16,7 +16,7 @@ type srp =
 (* SRP Simulation *)
 (******************)
 
-module S = Map.Make (Nv_datastructures.Integer)
+(* module S = Map.Make (Integer) *)
 
 exception Simulation_error of string
 

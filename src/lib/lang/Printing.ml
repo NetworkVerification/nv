@@ -180,7 +180,7 @@ and env_to_string env =
   else
     "[" ^ ty_env_to_string env ^ "|" ^ value_env_to_string env ^ "] "
 
-and func_to_string_p prec {arg= x; argty= argt; resty= rest; body} =
+and func_to_string_p prec {arg= x; argty= _; resty= _; body} =
   let s_arg = Var.to_string x in
   let s = "fun " ^ s_arg ^ " -> " ^ exp_to_string_p max_prec body in
   if prec < max_prec then "(" ^ s ^ ")" else s

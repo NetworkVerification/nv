@@ -10,11 +10,11 @@ open Nv_utils.OCamlUtils
 
 let rec tnf_exp e : exp =
   match e.e with
-  | ETy (e, ty) -> tnf_exp e
-  | EVal v -> e
-  | EVar x -> e
+  | ETy (e, _) -> tnf_exp e
+  | EVal _
+  | EVar _ -> e
   | EFun f -> efun {f with body = tnf_exp f.body} |> wrap e
-  | EApp (e1, e2) ->
+  | EApp (_, _) ->
      failwith "ignore this case for now"
   | EIf (e1, e2, e3) ->
      let e1 = tnf_exp e1 in

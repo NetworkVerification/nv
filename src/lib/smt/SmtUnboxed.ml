@@ -207,20 +207,21 @@ struct
               | _ -> failwith "AtMost requires a list of integers as second arg"
              )
            | _ -> failwith "AtMost operator requires a list of boolean variables")
-        | MCreate, [e1] ->
+        | MCreate, [_] ->
           failwith "not implemented"
-        | MGet, [e1; e2] ->
+        | MGet, [_; _] ->
           failwith "not implemented"
-        | MSet, [e1; e2; e3] ->
+        | MSet, [_; _; _] ->
           failwith "not implemented"
-        | MMap, [{e= EFun {arg= x; argty= ty1; resty= ty2; body= e1}}; e2] ->
+        | MMap, [{e = EFun _}; _] ->
+          (* | MMap, [{e= EFun {arg= x; argty= ty1; resty= ty2; body= e1}}; e2] -> *)
           failwith "not implemented yet"
         | MMapFilter, _
         | MMerge, _
         | MFoldNode, _
         | MFoldEdge, _
         | _ -> failwith "internal error (encode_exp_z3)")
-    | ETy (e, ty) -> encode_exp_z3_single descr env e
+    | ETy (e, _) -> encode_exp_z3_single descr env e
     | _ ->
       (* we always know this is going to be a singleton list *)
       let es = encode_exp_z3 descr env e in
@@ -259,14 +260,14 @@ struct
       (*     (encode_exp_z3 descr env e) @ acc) [] es *)
       lift1 (fun e -> encode_exp_z3 descr env e) es |>
       BatList.concat
-    | ESome e1 ->
+    | ESome _ ->
       failwith "Some should be unboxed"
     | EMatch (e1, bs) ->
       let zes1 = encode_exp_z3 descr env e1 in
       (* intermediate variables no longer help here, probably
          because the expressions are pretty simple in this encoding *)
       encode_branches_z3 descr env zes1 bs (oget e1.ety)
-    | ETy (e, ty) -> encode_exp_z3 descr env e
+    | ETy (e, _) -> encode_exp_z3 descr env e
     | EFun _ | EApp _ ->
       failwith "function in smt encoding"
     | ERecord _ | EProject _ -> failwith "record in smt encoding"
@@ -354,7 +355,7 @@ struct
     | VOption _ -> failwith "options should have been unboxed"
     | VTuple _ -> failwith "internal error (check that tuples are flat)"
     | VClosure _ -> failwith "internal error (closure in smt)"
-    | VMap map -> failwith "not doing maps yet"
+    | VMap _ -> failwith "not doing maps yet"
     | VRecord _ -> failwith "Record in SMT encoding"
 
   let init_solver symbs ~labels =

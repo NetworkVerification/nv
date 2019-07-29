@@ -18,7 +18,7 @@ module AbstractNodeMap = BatMap.Make(AbstractNode)
 (** Sets of Abstract Node Ids *)
 module AbsIdSet = BatSet.Make(UInts)
 module AbsIdSetMap = BatMap.Make(AbsIdSet)
-module AbsIdSetSet = BatSet.Make(AbsIdSet)
+(* module AbsIdSetSet = BatSet.Make(AbsIdSet) *)
 
 (** transfer hash, abstract id *)
 module TransAbsId =
@@ -45,7 +45,7 @@ module PolicyAbsId =
         TransAbsIdSet.compare x1 x2
       else Pervasives.compare m1 m2
   end
-module PolicyAbsIdSet = BatSet.Make(PolicyAbsId)
+(* module PolicyAbsIdSet = BatSet.Make(PolicyAbsId) *)
 module PolicyAbsIdMap = BatMap.Make(PolicyAbsId)
 
 let groupVerticesByAbsId (umap: (AbsIdSet.t) VertexMap.t) : VertexSetSet.t =
@@ -548,7 +548,7 @@ module FailuresAbstraction =
       let repr = getGroupRepresentativeId f uhat in
       getId forig repr
 
-    module VertexFreq =
+    (* module VertexFreq =
       struct
         type t = int * Vertex.t
         let compare (f1, u1) (f2, u2) =
@@ -559,7 +559,7 @@ module FailuresAbstraction =
             fcmp
       end
 
-    module VertexFreqSet = BatSet.Make(VertexFreq)
+    module VertexFreqSet = BatSet.Make(VertexFreq) *)
 
     let rec updateList (u: 'a) (f: 'b option -> 'b) (xs: ('a*'b) list) =
       match xs with
@@ -609,7 +609,7 @@ module FailuresAbstraction =
         if GroupMap.is_empty m then
           if acc = [] then raise Not_found else acc
         else
-          let (k,v), m = GroupMap.pop_min_binding m in
+          let (_,v), m = GroupMap.pop_min_binding m in
           if p v then
             if sz+1 = n then
               (v :: acc)
@@ -712,7 +712,7 @@ module FailuresAbstraction =
                 false) s
       end
 
-    module QueueSet : SearchStruct =
+    (* module QueueSet : SearchStruct =
       struct
         type elt = SearchElt.t
         type t = elt Queue.t
@@ -726,7 +726,7 @@ module FailuresAbstraction =
                              f x acc) v s
         let length q = Queue.length q
         let prune q = q (*not yet implemented for queues*)
-      end
+      end *)
 
     let counterexample_refinement_breadth = ref 20
 
@@ -932,19 +932,19 @@ module FailuresAbstraction =
           Not_found -> explored, minimum
       in
       match loop 0 None q with
-      | explored, Some f ->
+      | _, Some f ->
          (* Printf.printf "Explored refinements: %d\n" explored; *)
          f
       | _, _ ->
          failwith "found no refinement"
 
-    let refineCounterExample (file: string) (g: AdjGraph.t)
+    let refineCounterExample (_: string) (g: AdjGraph.t)
                           (fbonsai: abstractionMap) (f: abstractionMap)
                           (failVars: Var.t EdgeMap.t) (sol: Nv_solution.Solution.t) (k: int)
                           (* (unused_edges: EdgeSet.t) *)
                           (todo: VertexSet.t)
                           (dst: VertexSet.t) (attrTy : Syntax.ty)
-                          (iteration: int): abstractionMap option =
+                          (_: int): abstractionMap option =
 
       (* get set of failures, and also build abstract graph useful for
          splitting. Note that this code works if all edges can fail. *)
@@ -1377,7 +1377,7 @@ module FailuresAbstraction =
           Not_found -> explored, minimum
       in
       match loop 0 None q with
-      | explored, Some f ->
+      | _, Some f ->
          (* Printf.printf "Explored refinements: %d\n" explored; *)
          (* for statistics only *)
          (* let ag = BuildAbstractNetwork.buildAbstractAdjGraph g f in *)

@@ -15,7 +15,7 @@ let map f (m, default) = (PMap.map f m, f default)
 (*('a -> 'b -> 'c) -> 'a t -> 'b t -> 'c t *)
 let merge f (m1, default1) (m2, default2) =
   let default = f default1 default2 in
-  let f_checked k m1v m2v =
+  let f_checked _ m1v m2v =
     match (m1v, m2v) with
     | Some x, Some y -> Some (f x y)
     | Some x, None -> Some (f x default2)

@@ -26,7 +26,7 @@ let rec flatten_ty ty =
   | TOption ty -> TOption (flatten_ty ty)
   | TMap (ty1, ty2) ->
     TMap (flatten_ty ty1, flatten_ty ty2)
-  | TRecord ty -> failwith "records should be unrolled first"
+  | TRecord _ -> failwith "records should be unrolled first"
   | QVar _ | TVar _ -> failwith "internal error (flatten_ty)"
 
 (*
@@ -77,7 +77,7 @@ let rec flatten_val v =
 let rec flatten_exp e : exp =
   let open Nv_utils.OCamlUtils in
   match e.e with
-  | ETy (e, ty) -> flatten_exp e
+  | ETy (e, _) -> flatten_exp e
   | EVal v ->
     let v = flatten_val v in
     (* Printf.printf "%s\n" (Syntax.show_value ~show_meta:false v); *)
@@ -93,7 +93,7 @@ let rec flatten_exp e : exp =
        aexp(etuple es, Some ty, e.espan)
      | _ ->
        aexp(e, Some ty, e.espan))
-  | EFun {arg = x; argty = Some xty; resty= Some resty; body= body} ->
+  | EFun {arg = x; argty = Some xty; resty= Some _; body= body} ->
     let body = flatten_exp body in
     let xty = flatten_ty xty in
     (match xty with
@@ -111,7 +111,7 @@ let rec flatten_exp e : exp =
                  argty = Some xty;
                  resty = body.ety;
                  body = body}, Some (TArrow (xty,oget body.ety)), e.espan))
-  | EFun {arg = x; argty = _; resty= _; body= body} ->
+  | EFun _ ->
     failwith "missing types in function declaration"
   | EApp (e1, e2) ->
     let e2 = flatten_exp e2 in

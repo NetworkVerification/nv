@@ -120,7 +120,7 @@ let rec match_branches_lst branches v =
 let rec matchExpPat pat pe1 env =
   match pat, pe1.e with
   | PWild, _ -> Match env
-  | PVar x, EVar y ->
+  | PVar x, EVar _ ->
     Match (Env.update env x pe1)
   | PTuple ps, ETuple es ->
     (match ps, es with
@@ -168,10 +168,10 @@ let rec interp_exp_partial (env: Syntax.exp Env.t) e =
         (env, e)
       | Some e1 ->
         (env, e1))
-  | EVal v -> (env, e)
+  | EVal _ -> (env, e)
   | EOp (op, es) ->
     (env, aexp (interp_op_partial env (Nv_utils.OCamlUtils.oget e.ety) op es, e.ety, e.espan))
-  | EFun f -> (env, e)
+  | EFun _ -> (env, e)
   (* either need to do the partial interpretation here, or return a pair
      of the efun and the env at this point to be used, sort of like a closure.*)
   | EApp (e1, e2) ->
@@ -309,7 +309,7 @@ and interp_op_partial env ty op es =
             | _ -> vmap (BddMap.merge ~op_key:(f.body, env) f_lifted m1 m2)
           )
       | ( MMapFilter
-        , [ {v= VClosure (c_env1, f1)}
+        , [ {v= VClosure (_, f1)}
           ; {v= VClosure (c_env2, f2)}
           ; {v= VMap m} ] ) ->
         let seen = BatSet.PSet.singleton ~cmp:Var.compare f2.arg in

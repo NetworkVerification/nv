@@ -71,7 +71,7 @@ let buildSymbolicFailures (aedges : AdjGraph.Edge.t list) (k : int) =
 (* Given a transfer function, constructs a transfer function that
    models link failures. *)
 let buildFailTrans
-      (g : AdjGraph.t)
+      (_ : AdjGraph.t)
       (trans: (AdjGraph.Edge.t, Syntax.exp) Hashtbl.t)
       (attrTy: Syntax.ty)
       (failuresMap : Var.t AdjGraph.EdgeMap.t)

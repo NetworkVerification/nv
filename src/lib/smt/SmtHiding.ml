@@ -1,7 +1,6 @@
 (** * SMT encoding of network *)
 
 open Nv_lang.Collections
-open Nv_lang.Syntax
 open Nv_utils.PrimitiveCollections
 open Nv_utils.Profile
 open SolverUtil
@@ -460,6 +459,7 @@ let rec refineModel info verbose query partial_chan full_chan ask_for_nv_model p
 ;;
 
 let solve_hiding info query partial_chan ~full_chan ?(params=[]) ?(starting_vars=[]) net =
+  ignore starting_vars;
   let module ExprEnc = (val expr_encoding smt_config) in
   let module Enc =
     (val (module SmtClassicEncoding.ClassicEncoding(ExprEnc) : SmtClassicEncoding.ClassicEncodingSig))

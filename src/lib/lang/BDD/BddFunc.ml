@@ -173,7 +173,7 @@ let rec eval (env: t Env.t) (e: exp) : t =
       | UAdd _, [e1; e2] -> add (eval env e1) (eval env e2)
       | ULess _, [e1; e2] -> lt (eval env e1) (eval env e2)
       | ULeq _, [e1; e2] -> leq (eval env e1) (eval env e2)
-      | USub _, [e1; e2] -> failwith "subtraction not implemented"
+      | USub _, [_; _] -> failwith "subtraction not implemented"
       | NLess, [e1; e2] -> lt (eval env e1) (eval env e2)
       | NLeq, [e1; e2] -> leq (eval env e1) (eval env e2)
       | _ -> failwith "unimplemented" )
@@ -193,12 +193,12 @@ let rec eval (env: t Env.t) (e: exp) : t =
     BTuple vs
   | ESome e -> BOption (Bdd.dtrue B.mgr, eval env e)
   | EMatch (e1, branches) -> (
-      Printf.printf "Ematch e1: %s\n" (PrintingRaw.show_exp ~show_meta:false e1);
+      Printf.printf "EMatch e1: %s\n" (PrintingRaw.show_exp ~show_meta:false e1);
       let bddf = eval env e1 in
       let ((p,e), bs) = popBranch branches in
       let env, _ = eval_branch env bddf p in
       let x = eval env e in
-      let env, x =
+      let _, x =
         foldBranches (fun (p,e) (env, x) ->
             let env, cond = eval_branch env bddf p in
             (env, ite cond (eval env e) x))
@@ -233,7 +233,7 @@ and eval_branch env bddf p : t Env.t * Bdd.vt =
          (env', Bdd.dand pred pred') )
       (env, Bdd.dtrue B.mgr)
       zip
-  | POption None, BOption (tag, bo) -> (env, Bdd.dnot tag)
+  | POption None, BOption (tag, _) -> (env, Bdd.dnot tag)
   | POption (Some p), BOption (tag, bo) ->
     let env, cond = eval_branch env bo p in
     (env, Bdd.dand tag cond)

@@ -39,7 +39,7 @@ let rec alpha_convert_exp (env: Var.t Env.t) (e: exp) =
      Printf.printf "type: %s\n" (Printing.ty_to_string (oget e.ety)); *)
   match e.e with
   | EVar x -> evar (Env.lookup env x) |> wrap e
-  | EVal v -> e
+  | EVal _ -> e
   | EOp (op, es) ->
     eop op (BatList.map (fun e -> alpha_convert_exp env e) es)
     |> wrap e
@@ -212,7 +212,7 @@ let alpha_convert_srp (srp : Syntax.srp_unfold) =
   in
   (srp', adjust_solution !bmap)
 
-
+(*
 module Tests =
 struct
 
@@ -261,4 +261,4 @@ struct
       end
     with | Duplicate -> false
 
-end
+end *)

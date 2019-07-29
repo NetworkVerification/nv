@@ -161,11 +161,12 @@ and interp_op env ty op es =
         | _ -> vmap (BddMap.merge ~op_key:(f.body, env) f_lifted m1 m2)
       )
   | ( MMapFilter
-    , [ {v= VClosure (c_env1, f1)}
+    , [ {v= VClosure (_, f1)}
       ; {v= VClosure (c_env2, f2)}
       ; {v= VMap m} ] ) ->
     let seen = BatSet.PSet.singleton ~cmp:Var.compare f2.arg in
     let env = build_env c_env2 (Syntax.free seen f2.body) in
+    (* FIXME: Do we need to do something with the env for f1? *)
     let mtbdd =
       match ExpMap.Exceptionless.find f1.body !bddfunc_cache with
       | None -> (

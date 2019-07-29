@@ -120,7 +120,7 @@ and show_v ~show_meta v =
   | VUnit -> "VUnit"
   | VBool b -> Printf.sprintf "VBool %b" b
   | VInt i -> Printf.sprintf "VInt %s" (Integer.to_string i)
-  | VMap m -> "VMap <opaque>"
+  | VMap _ -> "VMap <opaque>"
   | VTuple vs -> Printf.sprintf "VTuple %s" (show_list (show_value ~show_meta) vs)
   | VOption vo ->
     Printf.sprintf "VOption (%s)" (show_opt (show_value ~show_meta) vo)

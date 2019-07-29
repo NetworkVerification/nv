@@ -89,7 +89,7 @@ let rec check_annot (e: exp) =
   match e.e with
   | EVar _ -> ()
   | EVal v -> check_annot_val v
-  | EOp (op, es) -> BatList.iter check_annot es
+  | EOp (_, es) -> BatList.iter check_annot es
   | EFun f -> check_annot f.body
   | EApp (e1, e2) -> check_annot e1 ; check_annot e2
   | EIf (e1, e2, e3) ->
@@ -664,8 +664,8 @@ and infer_value info env (v: Syntax.value) : Syntax.value =
         (*     let map = BddMap.create ~key_ty:ty default in *)
         (*     tvalue (vmap map, TMap (ty, dty), v.vspan)) *)
         | (kv, vv) :: _ ->
-          let kv, kvty = infer_value info env kv |> textractv in
-          let vv, vvty = infer_value info env vv |> textractv in
+          let _, kvty = infer_value info env kv |> textractv in
+          let _, vvty = infer_value info env vv |> textractv in
           unify info (exp_of_value v) vvty dty ;
           let vs =
             BatList.map
@@ -702,7 +702,7 @@ and infer_value info env (v: Syntax.value) : Syntax.value =
       let tv = fresh_tyvar () in
       unify info (exp_of_value v) t tv ;
       tvalue (voption (Some v), TOption tv, v.vspan)
-    | VClosure cl -> failwith "internal error (infer_value)"
+    | VClosure _ -> failwith "internal error (infer_value)"
   in
   (* Printf.printf "Type: %s\n" (Printing.ty_to_string (oget ret.vty)) ; *)
   ret
@@ -767,7 +767,7 @@ and infer_pattern i info env e tmatch p =
     unify info e tmatch TEdge ;
     infer_patterns (i + 1) info env e [TNode; TNode] [p1; p2]
   | PTuple ps ->
-    let ts = BatList.map (fun p -> fresh_tyvar ()) ps in
+    let ts = BatList.map (fun _ -> fresh_tyvar ()) ps in
     let ty = TTuple ts in
     unify info e tmatch ty ;
     infer_patterns (i + 1) info env e ts ps

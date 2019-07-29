@@ -59,7 +59,7 @@ let rec unbox_val v =
 
 let rec unbox_exp e : exp =
   match e.e with
-  | ETy (e, ty) -> unbox_exp e
+  | ETy (e, _) -> unbox_exp e
   | EVal v ->
     unbox_val v
   | EVar _ -> aexp(e, Some (unbox_ty (Nv_utils.OCamlUtils.oget e.ety)), e.espan)
@@ -147,11 +147,11 @@ and unbox_branches bs ty =
          PTuple (BatList.map2 unbox_pattern ps ts)
        | _ ->
          failwith "must match on a tuple type")
-    | PVar x ->
-      (match ty with
-       | TOption t -> p
-       (* PTuple [PVar (proj_var 0 x); PVar (proj_var 1 x)] *)
-       | _ -> p)
+    | PVar _ -> p
+      (* (match ty with
+       | TOption t ->
+         PTuple [PVar (proj_var 0 x); PVar (proj_var 1 x)]
+       | _ -> p) *)
     | PUnit -> PBool true
     | _ -> p
   in
@@ -240,7 +240,7 @@ let unbox_srp (srp : Syntax.srp_unfold) =
   { srp_attr = unboxed_attr;
     srp_constraints = AdjGraph.VertexMap.map unbox_exp srp.srp_constraints;
     srp_labels = AdjGraph.VertexMap.map
-        (fun xs -> BatList.map (fun (x,ty) -> (x, unboxed_attr)) xs) srp.srp_labels;
+        (fun xs -> BatList.map (fun (x,_) -> (x, unboxed_attr)) xs) srp.srp_labels;
     srp_symbolics =  BatList.map (fun (x,e) ->
         match e with
         | Ty ty -> (x, Ty (unbox_ty ty))

@@ -56,7 +56,7 @@ type t = Vertex.t list VertexMap.t * int
 let create i = (VertexMap.empty, i)
 
 (* vertices and edges *)
-let num_vertices (m, i) = i
+let num_vertices (_, i) = i
 
 (* let get_vertices (m, i) = *)
 (*   VertexMap.fold (fun k _ acc -> VertexSet.add k acc) *)
@@ -71,14 +71,10 @@ let fold_vertices (f: Vertex.t -> 'a -> 'a) i (acc: 'a) : 'a =
 
 (* get_vertices now returns all the vertices in the graph, not just
    the ones that have an outgoing edge.*)
-let get_vertices (m, i) =
-  let rec loop j =
-    if i = j then VertexSet.empty
-    else VertexSet.add j (loop (j+1))
-  in
-  loop 0
+let get_vertices (_, i) =
+  VertexSet.of_enum (BatEnum.(--) 0 i)
 
-let edges (m, i) =
+let edges (m, _) =
   let my_edges v neighbors acc =
     BatList.fold_left (fun a w -> (v, w) :: a) acc neighbors
   in
@@ -87,7 +83,7 @@ let edges (m, i) =
        (fun v neighbors a -> my_edges v neighbors a)
        m [])
 
-let edges_map (m, i) (f: Edge.t -> 'a) =
+let edges_map (m, _) (f: Edge.t -> 'a) =
   let my_edges v neighbors a =
     BatList.fold_left (fun a w -> EdgeMap.add (v, w) (f (v,w)) a) a neighbors
   in
@@ -98,7 +94,7 @@ let edges_map (m, i) (f: Edge.t -> 'a) =
 (* a vertex v does not belong to a graph's set of vertices *)
 exception BadVertex of Vertex.t
 
-let good_vertex (m, i) v =
+let good_vertex (_, i) v =
   if Pervasives.compare v 0 < 0 || not (Pervasives.compare i v > 0)
   then (Printf.printf "bad: %s" (Vertex.printVertex v); raise (BadVertex v))
 
@@ -257,12 +253,12 @@ let min_cut g s t =
                   cutset) !rg EdgeSet.empty
   in
   (cut, visited, VertexSet.diff (get_vertices g) visited)
-
+(*
 module BoolOrdered = struct
   type t = bool
   let default = false
   let compare = compare
-end
+end *)
 
 module DrawableGraph = struct
 
@@ -274,14 +270,15 @@ module DrawableGraph = struct
 
   module G = Graph.Persistent.Graph.Concrete (Vertex)
 
-  let createGraph ((m,i): t)  =
+  let createGraph ((m,_): t)  =
+    (* Assume no vertices of degree 0 *)
     VertexMap.fold (fun u es acc ->
         BatList.fold_left (fun acc v ->
             G.add_edge_e acc (G.E.create u () v)) acc es) m G.empty
 
   module Dot = Graph.Graphviz.Dot(struct
                    include G
-                   let edge_attributes e =
+                   let edge_attributes _ =
                        [`Color 3711; `Dir `None]
                    let default_edge_attributes _ = []
                    let get_subgraph _ = None

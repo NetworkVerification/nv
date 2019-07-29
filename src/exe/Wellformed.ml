@@ -47,7 +47,7 @@ let rec check_closure info (x: VarSet.t) (e: exp) =
           (Var.name v)
       in
       Console.error_position info e.espan msg
-  | EVal v -> ()
+  | EVal _ -> ()
   | EOp (op, es) ->
     ( match op with
       | And | Or | Not | Eq | UAdd _ | ULess _ | ULeq _ | USub _ | NLess | NLeq -> ()
@@ -63,7 +63,7 @@ let rec check_closure info (x: VarSet.t) (e: exp) =
     (* Console.error_position info e.espan *)
     (* "function not allowed in mapIf closure" *)
     ()
-  | EApp (e1, e2) ->
+  | EApp (_, _) ->
     (* Console.error_position info e.espan *)
     (* "function application allowed in mapIf closure" *)
     ()
@@ -77,7 +77,7 @@ let rec check_closure info (x: VarSet.t) (e: exp) =
     check_closure info set e2
   | ETuple es -> List.iter (check_closure info x) es
   | ERecord map -> StringMap.iter (fun _ -> check_closure info x) map
-  | EProject (e, label) -> check_closure info x e
+  | EProject (e, _) -> check_closure info x e
   | ESome e -> check_closure info x e
   | EMatch (e, bs) ->
     check_closure info x e ;
@@ -105,7 +105,7 @@ and pattern_vars (p: pattern) =
 
 let check_closures info _ (e: exp) =
   match e.e with
-  | EOp (MMapFilter, [e1; e2; e3]) -> (
+  | EOp (MMapFilter, [e1; _; _]) -> (
       match e1.e with
       | EFun {arg= x; body= be} ->
         check_closure info (VarSet.singleton x) be
