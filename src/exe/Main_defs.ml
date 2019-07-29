@@ -11,7 +11,8 @@ open Nv_interpreter
 open Nv_transformations
 open Nvlib.Abstraction
 open BuildAbstractNetwork
-open Nv_utils.OCamlUtils
+open Nv_utils
+open OCamlUtils
 
 type answer =
   | Success of (Solution.t option)
