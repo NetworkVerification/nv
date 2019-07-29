@@ -229,7 +229,7 @@ module BuildAbstractNetwork =
             let p = PEdge (PNode uhat, PNode vhat) in
             let u = getGroupRepresentativeId f uhat in
             match getNeighborsInVhat f g u vhat with
-            | [] -> failwith "There must be a concrete edge
+            | [] -> failwith "There must be a concrete edge \
                               corresponding to the abstract edge"
             | uv :: _ ->
                let (_, transuv) = Hashtbl.find trans uv in
@@ -245,7 +245,7 @@ module BuildAbstractNetwork =
         | (uhat, vhat) :: _ ->
            let u = getGroupRepresentativeId f uhat in
            match getNeighborsInVhat f g u vhat with
-           | [] -> failwith "There must be a concrete edge
+           | [] -> failwith "There must be a concrete edge \
                              corresponding to the abstract edge"
            | uv :: _ ->
               let (_, transuv) = Hashtbl.find trans uv in
