@@ -7,7 +7,7 @@ install: default
 	cp _build/default/src/exe/main.exe nv
 
 test:
-	dune runtest --no-buffer
+	dune runtest -f --no-buffer
 
 clean:
 	dune clean
