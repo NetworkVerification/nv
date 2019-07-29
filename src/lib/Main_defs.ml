@@ -1,4 +1,3 @@
-open Nvlib
 open Nv_datastructures
 open ANSITerminal
 open Nv_lang
@@ -9,7 +8,7 @@ open Nv_slicing
 open Nv_lang.Syntax
 open Nv_interpreter
 open Nv_transformations
-open Nvlib.Abstraction
+open Abstraction
 open BuildAbstractNetwork
 open Nv_utils
 open OCamlUtils
