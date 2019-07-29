@@ -1,5 +1,5 @@
-open Nv_datastructures
 open ANSITerminal
+open Nv_datastructures
 open Nv_lang
 open Nv_lang.Cmdline
 open Nv_smt
@@ -7,7 +7,7 @@ open Nv_solution
 open Nv_lang.Syntax
 open Nv_interpreter
 open Nv_transformations
-open Abstraction
+open Nv_compression.Abstraction
 open BuildAbstractNetwork
 open Nv_utils
 open OCamlUtils
@@ -160,6 +160,7 @@ let run_simulator cfg _ net fs =
 
 let compress file info net cfg fs networkOp =
   (* Printf.printf "Number of concrete edges:%d\n" (List.length (oget (get_edges decls))); *)
+  let open Nv_compression in
   let k = cfg.compress in
   if cfg.smt then
     SmtUtils.smt_config.failures <- Some k;
