@@ -1,6 +1,6 @@
 open Nv_datastructures
 open Nv_lang
-open Nv_slicing
+open Nv_transformations
 open AdjGraph
 open AbstractionMap
 open Failures

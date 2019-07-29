@@ -120,7 +120,7 @@ let buildFailuresNet net k =
     buildSymbolicFailures (AdjGraph.edges net.graph) k
   in
   let transMap =
-    Nv_slicing.Slicing.partialEvalOverEdges (AdjGraph.edges net.graph) net.trans
+    Slicing.partialEvalOverEdges (AdjGraph.edges net.graph) net.trans
   in
   {net with trans = buildFailTrans net.graph transMap net.attr_type failuresMap;
             requires = failuresConstraint :: net.requires;

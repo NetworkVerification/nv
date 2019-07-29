@@ -7,7 +7,7 @@
     nv_lang
     nv_utils
     nv_solution
-    nv_slicing
+    nv_transformations
     integers
     str
     batteries

@@ -57,7 +57,7 @@ sig
   val buildAbstractNetwork : AbstractionMap.abstractionMap ->
                              (AdjGraph.Vertex.t, int * Syntax.exp) Hashtbl.t ->
                              (AdjGraph.Edge.t, int * Syntax.exp) Hashtbl.t ->
-                             Nv_slicing.Slicing.network_slice ->
+                             Nv_transformations.Slicing.network_slice ->
                              int -> (Nv_datastructures.Var.t AdjGraph.EdgeMap.t) * Syntax.network
 
   (** [buildAbstractNetwork f g mergeMap transMap initMap assertMap dst attrTy k] builds the

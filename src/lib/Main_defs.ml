@@ -4,7 +4,6 @@ open Nv_lang
 open Nv_lang.Cmdline
 open Nv_smt
 open Nv_solution
-open Nv_slicing
 open Nv_lang.Syntax
 open Nv_interpreter
 open Nv_transformations

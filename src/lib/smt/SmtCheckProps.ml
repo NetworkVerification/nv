@@ -51,8 +51,8 @@ let encode_z3_trans str env e =
 let checkMonotonicity info query chan net =
   let checka = Boxed.create_strings "checka" net.attr_type in
   let checka_var = Boxed.lift1 Var.create checka in
-  let transTable = Nv_slicing.Slicing.partialEvalOverEdges (AdjGraph.edges net.graph) net.trans in
-  let mergeTable = Nv_slicing.Slicing.partialEvalOverNodes (AdjGraph.num_vertices net.graph) net.merge in
+  let transTable = Nv_transformations.Slicing.partialEvalOverEdges (AdjGraph.edges net.graph) net.trans in
+  let mergeTable = Nv_transformations.Slicing.partialEvalOverNodes (AdjGraph.num_vertices net.graph) net.merge in
   let solver = start_solver [] in
   let unbox x = Boxed.to_list x |> List.hd in
   Hashtbl.iter (fun edge trans ->

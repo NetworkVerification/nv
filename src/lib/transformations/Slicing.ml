@@ -4,14 +4,14 @@ open Nv_datastructures
 open Nv_lang
 
 module Prefix =
-  struct
-    type t = Integer.t * Integer.t
-    let compare (x1,x2) (y1,y2) =
-      let xcmp = Integer.compare x1 y1 in
-      if xcmp = -1 then -1
-      else if xcmp=1 then 1
-      else Integer.compare x2 y2
-  end
+struct
+  type t = Integer.t * Integer.t
+  let compare (x1,x2) (y1,y2) =
+    let xcmp = Integer.compare x1 y1 in
+    if xcmp = -1 then -1
+    else if xcmp=1 then 1
+    else Integer.compare x2 y2
+end
 
 module PrefixSet = BatSet.Make(Prefix)
 module PrefixSetSet = BatSet.Make(PrefixSet)
@@ -33,9 +33,9 @@ let partialEvalOverNodes (n : AdjGraph.Vertex.t) (e: Syntax.exp) =
   let tbl = Hashtbl.create n in
   AdjGraph.fold_vertices
     (fun u _ ->
-        let initu = InterpPartial.interp_partial (Syntax.apps e [Syntax.e_val (Syntax.vnode u)]) in
-        (* Printf.printf "exp1: %s\n" (Printing.exp_to_string initu); *)
-      Hashtbl.add tbl u initu) n ();
+       let initu = InterpPartial.interp_partial (Syntax.apps e [Syntax.e_val (Syntax.vnode u)]) in
+       (* Printf.printf "exp1: %s\n" (Printing.exp_to_string initu); *)
+       Hashtbl.add tbl u initu) n ();
   tbl
 
 let partialEvalOverEdges (edges : AdjGraph.Edge.t list) (e: Syntax.exp) =
@@ -46,13 +46,13 @@ let partialEvalOverEdges (edges : AdjGraph.Edge.t list) (e: Syntax.exp) =
   tbl
 
 let build_prefix_map (u : AdjGraph.Vertex.t)
-                     (prefixes: PrefixSet.t)
-                     (acc : AdjGraph.VertexSet.t PrefixMap.t):
-      AdjGraph.VertexSet.t PrefixMap.t =
+    (prefixes: PrefixSet.t)
+    (acc : AdjGraph.VertexSet.t PrefixMap.t):
+  AdjGraph.VertexSet.t PrefixMap.t =
   PrefixSet.fold (fun pre acc ->
       PrefixMap.modify_def AdjGraph.VertexSet.empty pre
-                           (fun us -> AdjGraph.VertexSet.add u us) acc)
-                 prefixes acc
+        (fun us -> AdjGraph.VertexSet.add u us) acc)
+    prefixes acc
 
 (* Finds the prefixes used by an expression *)
 let get_prefixes_from_expr (expr: Syntax.exp) : PrefixSet.t =
@@ -60,20 +60,20 @@ let get_prefixes_from_expr (expr: Syntax.exp) : PrefixSet.t =
   Visitors.iter_exp (fun e ->
       match e.Syntax.e with
       | Syntax.EOp (Syntax.Eq, [var; pre]) when Syntax.is_value pre ->
-         (match var.Syntax.e with
-          | Syntax.EVar x ->
-             if (Var.name x) = "d" then
-               begin
-                 match (Syntax.to_value pre).Syntax.v with
-                 | Syntax.VTuple [v1;v2] ->
-                    (match v1.Syntax.v, v2.Syntax.v with
-                     | Syntax.VInt ip, Syntax.VInt p ->
-                        prefixes := PrefixSet.add (ip, p) !prefixes
-                     | _ -> ())
-                 | _ -> ()
-               end
-             else ()
-          | _ -> ())
+        (match var.Syntax.e with
+         | Syntax.EVar x ->
+           if (Var.name x) = "d" then
+             begin
+               match (Syntax.to_value pre).Syntax.v with
+               | Syntax.VTuple [v1;v2] ->
+                 (match v1.Syntax.v, v2.Syntax.v with
+                  | Syntax.VInt ip, Syntax.VInt p ->
+                    prefixes := PrefixSet.add (ip, p) !prefixes
+                  | _ -> ())
+               | _ -> ()
+             end
+           else ()
+         | _ -> ())
       | _ -> ()) expr;
   !prefixes
 
@@ -88,12 +88,12 @@ let findRelevantNodes (assertionTable : (Syntax.node, Syntax.exp) Hashtbl.t) =
   Hashtbl.fold (fun u eu acc ->
       match eu.Syntax.e with
       | Syntax.EFun f ->
-         (match f.Syntax.body.Syntax.e with
-          | Syntax.EVal v ->
-             (match v.Syntax.v with
-              | Syntax.VBool true -> acc
-              | _ -> AdjGraph.VertexSet.add u acc)
-          | _ -> AdjGraph.VertexSet.add u acc)
+        (match f.Syntax.body.Syntax.e with
+         | Syntax.EVal v ->
+           (match v.Syntax.v with
+            | Syntax.VBool true -> acc
+            | _ -> AdjGraph.VertexSet.add u acc)
+         | _ -> AdjGraph.VertexSet.add u acc)
       | _ -> AdjGraph.VertexSet.add u acc) assertionTable AdjGraph.VertexSet.empty
 
 
@@ -101,29 +101,29 @@ let findRelevantNodes (assertionTable : (Syntax.node, Syntax.exp) Hashtbl.t) =
 let findInitialSlices initTbl =
   Hashtbl.fold
     (fun u initu acc ->
-      let prefixes = get_prefixes_from_expr initu in
-      build_prefix_map u prefixes acc) initTbl PrefixMap.empty
+       let prefixes = get_prefixes_from_expr initu in
+       build_prefix_map u prefixes acc) initTbl PrefixMap.empty
 
 let groupPrefixesByVertices (umap: AdjGraph.VertexSet.t PrefixMap.t) : PrefixSetSet.t =
   let reverseMap : PrefixSet.t AdjGraph.VertexSetMap.t =
     PrefixMap.fold (fun u vhat acc ->
         AdjGraph.VertexSetMap.modify_opt vhat (fun us -> match us with
-                                          | None -> Some (PrefixSet.singleton u)
-                                          | Some us -> Some (PrefixSet.add u us)) acc)
-                 umap AdjGraph.VertexSetMap.empty in
+            | None -> Some (PrefixSet.singleton u)
+            | Some us -> Some (PrefixSet.add u us)) acc)
+      umap AdjGraph.VertexSetMap.empty in
   AdjGraph.VertexSetMap.fold (fun _ v acc -> PrefixSetSet.add v acc)
-                       reverseMap PrefixSetSet.empty
+    reverseMap PrefixSetSet.empty
 
 let sliceDestination symb (pre: Prefix.t) =
   let open Syntax in
   let ls1, ls2 = BatList.partition (fun (x, _) ->
-                     if Var.name x = "d" then
-                       true
-                     else
-                       false) symb
+      if Var.name x = "d" then
+        true
+      else
+        false) symb
   in
   (DLet ((fst (List.hd ls1),Some (TTuple [TInt 32; TInt 32]),
-             e_val (vtuple [vint (fst pre); vint (snd pre)]))),
+          e_val (vtuple [vint (fst pre); vint (snd pre)]))),
    BatList.map (fun (s,v) -> DSymbolic (s,v)) ls2)
 
 let createNetwork decls =
@@ -142,22 +142,22 @@ let createNetwork decls =
   with
   | Some emerge, Some etrans, Some einit, Some n, Some es,
     Some aty, symb, defs, utys, erequires ->
-     { attr_type = aty;
-       init = einit;
-       trans = etrans;
-       merge = emerge;
-       assertion = get_assert decls;
-       partition = get_partition decls; (* partitioning *)
-       interface = get_interface decls; (* partitioning *)
-       symbolics = symb;
-       defs = defs;
-       requires = erequires;
-       utys = utys;
-       graph = AdjGraph.add_edges (AdjGraph.create n) es
-     }
+    { attr_type = aty;
+      init = einit;
+      trans = etrans;
+      merge = emerge;
+      assertion = get_assert decls;
+      partition = get_partition decls; (* partitioning *)
+      interface = get_interface decls; (* partitioning *)
+      symbolics = symb;
+      defs = defs;
+      requires = erequires;
+      utys = utys;
+      graph = AdjGraph.add_edges (AdjGraph.create n) es
+    }
   | _ ->
-     Console.error
-       "missing definition of nodes, edges, merge, trans, or init"
+    Console.error
+      "missing definition of nodes, edges, merge, trans, or init"
 
 
 (* Need to have inlined definitions before calling this *)
@@ -182,12 +182,12 @@ let createSlices _info net =
       let ds = PrefixMap.find pre relevantSlices in
       let dstPre, symb = sliceDestination net.symbolics pre in
       let decls =
-        Nv_transformations.Inline.inline_declarations ((DATy net.attr_type) :: dstPre :: (DNodes n)
+        Inline.inline_declarations ((DATy net.attr_type) :: dstPre :: (DNodes n)
                                     :: (DEdges (AdjGraph.edges (net.graph))) :: symb @
-                                      [(DInit net.init);
-                                       (DMerge net.merge); (DTrans net.trans);
-                                       (DAssert (Nv_utils.OCamlUtils.oget net.assertion))]) (* |> *)
-          (* Typing.infer_declarations info *) in
+                                    [(DInit net.init);
+                                     (DMerge net.merge); (DTrans net.trans);
+                                     (DAssert (Nv_utils.OCamlUtils.oget net.assertion))]) (* |> *)
+        (* Typing.infer_declarations info *) in
       { net =
           { attr_type = net.attr_type;
             init = Nv_utils.OCamlUtils.oget (get_init decls);
