@@ -30,3 +30,6 @@ setup.log
 
 # Testing output
 output/*
+
+# NV executable
+nv
