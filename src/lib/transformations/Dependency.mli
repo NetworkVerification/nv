@@ -26,6 +26,7 @@ type depmap = depresult VarMap.t
 
 val dependency_to_string : dependency -> string
 val depresult_to_string : depresult -> string
+val depmap_to_string : depmap -> string
 
 (* Expects to be given a function definition, presumably that of trans/merge/init.
    But it should work for any built-in functions. *)

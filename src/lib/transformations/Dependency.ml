@@ -44,6 +44,14 @@ let rec depresult_to_string r =
       (BatString.concat "; " @@ BatList.map depresult_to_string lst)
 ;;
 
+let depmap_to_string m =
+  Printf.sprintf "{ %s }" @@
+  VarMap.fold
+    (fun v r acc ->
+       Printf.sprintf "%s;\n %s -> %s " acc (Var.to_string v) (depresult_to_string r))
+    m ""
+;;
+
 let rec add_to_depresult (newdeps : DepSet.t) (r : depresult) =
   match r with
   | DBase s -> DBase (DepSet.union newdeps s)

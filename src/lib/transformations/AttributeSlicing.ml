@@ -13,6 +13,15 @@ type attrdepmap = IntSet.t IntMap.t
 (* Maps function arguments to the attribute element they correspond to *)
 type argmap = int IntMap.t
 
+let attrdepmap_to_string m =
+  Printf.sprintf "{ %s }" @@
+  IntMap.fold
+    (fun d deps acc ->
+       Printf.sprintf "%s\n %d : { %s } " acc d @@
+       IntSet.fold (fun d acc -> acc ^ "; " ^ string_of_int d) deps "")
+    m ""
+;;
+
 let get_attr_size net =
   match net.attr_type with
   | TTuple lst -> List.length lst
