@@ -3,6 +3,7 @@ open Collections
 open Syntax
 open Nv_solution
 open Nv_datastructures
+open Nv_utils.OCamlUtils
 
 let rec empty_pattern ty =
   match Typing.canonicalize_type ty with
@@ -148,9 +149,9 @@ and unbox_branches bs ty =
        | _ ->
          failwith "must match on a tuple type")
     | PVar _ -> p
-      (* (match ty with
+    (* (match ty with
        | TOption t ->
-         PTuple [PVar (proj_var 0 x); PVar (proj_var 1 x)]
+       PTuple [PVar (proj_var 0 x); PVar (proj_var 1 x)]
        | _ -> p) *)
     | PUnit -> PBool true
     | _ -> p
@@ -200,10 +201,12 @@ let rec box_val v ty =
 
 let box_sol ty (sol : Solution.t) =
   {sol with
+   (* FIXME: Shouldn't this update sol.symbolics as well? *)
    labels = AdjGraph.VertexMap.map (fun v ->
        (* Printf.printf "%s\n" (Printing.value_to_string v); *)
        (* Printf.printf "%s\n" (Printing.ty_to_string ty); *)
-       box_val v ty) sol.labels
+       box_val v ty) sol.labels;
+   mask = omap (fun v -> box_val v (Solution.mask_type_ty ty)) sol.mask;
   }
 
 let unbox_net net =

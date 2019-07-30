@@ -123,7 +123,8 @@ let translate_model (m : (string, string) BatMap.t) : Nv_solution.Solution.t =
         {sol with symbolics= VarMap.add k_var nvval sol.symbolics}) m
     {symbolics = VarMap.empty;
      labels = AdjGraph.VertexMap.empty;
-     assertions= None}
+     assertions= None;
+     mask = None}
 
 let box_vals (xs : (int * Syntax.value) list) =
   match xs with
@@ -166,7 +167,8 @@ let translate_model_unboxed (m : (string, string) BatMap.t) : Nv_solution.Soluti
   in
   { symbolics = symbolics;
     labels = AdjGraph.VertexMap.map box_vals labels;
-    assertions = assertions }
+    assertions = assertions;
+    mask = None; }
 
 
 (* Model Refiners *)

@@ -4,6 +4,7 @@
 
 open Nv_lang
 open Nv_utils.OCamlUtils
+open Nv_solution
 
 let mapo f o =
   match o with
@@ -182,18 +183,17 @@ let map_back_symbolics symbolics (sol : Nv_solution.Solution.t) =
   new_symbolics
 
 let map_back_attrs attr_ty (sol : Nv_solution.Solution.t) =
-  let unrolled_attr_ty = cleanup_ty attr_ty in
-  if Typing.equiv_tys attr_ty unrolled_attr_ty then sol.labels
-  else (* Attribute type involved a map, so transform all attributes *)
-    Nv_datastructures.AdjGraph.VertexMap.map
-      (fun v -> map_back_value v attr_ty)
-      sol.labels
+  Nv_datastructures.AdjGraph.VertexMap.map
+    (fun v -> map_back_value v attr_ty)
+    sol.labels
 ;;
 
 let map_back symbolics attr_ty (sol : Nv_solution.Solution.t) =
   {sol with
    symbolics = map_back_symbolics symbolics sol;
-   labels = map_back_attrs attr_ty sol}
+   labels = map_back_attrs attr_ty sol;
+   mask = omap (fun v -> map_back_value v (Solution.mask_type_sol sol)) sol.mask
+  }
 ;;
 
 let cleanup_declarations decls =

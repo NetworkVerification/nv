@@ -2,6 +2,8 @@ open Nv_lang
 open Nv_utils
 open RecordUtils
 open Collections
+open OCamlUtils
+open Nv_solution
 
 (* Re-copying that here, to turn Unbound tvars into unbound tvars instead of TBool.
    We do the TBool thing, such that the SMT can handle those values (e.g. unused None).
@@ -297,16 +299,20 @@ let convert_attrs
     sol.labels
 ;;
 
+let map_back symbolics attr_type (sol : Solution.t) =
+  {sol with
+   symbolics = convert_symbolics symbolics sol;
+   labels = convert_attrs attr_type sol;
+   mask = omap (fun v -> convert_value (Solution.mask_type_ty attr_type) v) sol.mask;
+  }
+;;
+
 let unroll decls =
   let rtys = Syntax.get_record_types decls in
   let unrolled = BatList.map (unroll_decl rtys) decls in
   (* print_endline @@ Printing.declarations_to_string unrolled; *)
-  let map_back sol =
-    let new_symbolics = convert_symbolics (Syntax.get_symbolics decls) sol in
-    let new_labels = convert_attrs (Nv_utils.OCamlUtils.oget (Syntax.get_attr_type decls)) sol in
-    {sol with symbolics = new_symbolics; labels = new_labels}
-  in
-  unrolled, map_back
+  unrolled, map_back (Syntax.get_symbolics decls) (Syntax.get_attr_type decls |> oget)
+;;
 
 let unroll_net_aux
     (rtys : Syntax.ty StringMap.t list)
@@ -356,9 +362,4 @@ let unroll_net (net : Syntax.network) =
   let rtys = net.utys in
   let unrolled = unroll_net_aux rtys net in
   (* print_endline @@ Printing.declarations_to_string unrolled; *)
-  let map_back sol =
-    let new_symbolics = convert_symbolics net.symbolics sol in
-    let new_labels = convert_attrs net.attr_type sol in
-    {sol with symbolics = new_symbolics; labels = new_labels}
-  in
-  unrolled, map_back
+  unrolled, map_back net.symbolics net.attr_type
