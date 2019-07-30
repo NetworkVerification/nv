@@ -20,7 +20,7 @@ let unroll _ decls =
       (decls, (fun x -> x)) maplist
   in
   let final_decls, map_back2 =
-    MapUnrollingCleanup.replace_declarations unrolled_decls
+    CleanupTuples.cleanup_declarations unrolled_decls
   in
   final_decls, (fun x -> map_back1 (map_back2 x))
 ;;

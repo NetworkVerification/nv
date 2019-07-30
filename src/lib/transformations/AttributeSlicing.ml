@@ -255,6 +255,7 @@ let slice (net : Syntax.network) (asn_slice : exp) (elements : IntSet.t) =
             trans=sliced_trans;
             merge=sliced_merge;
             assertion=Some(sliced_assert)}
+  |> CleanupTuples.cleanup_net
 ;;
 
 let slice_network (net : Syntax.network) : Syntax.network list =
@@ -277,4 +278,4 @@ let slice_network (net : Syntax.network) : Syntax.network list =
                   (fun n acc ->
                      Printf.sprintf "%s; %d" acc n) s "")) @@
   assert_deps_transitive;
-  List.map (fun (a,es) -> slice net a es) assert_deps_transitive
+  List.map (fun (a,es) -> fst @@ slice net a es) assert_deps_transitive
