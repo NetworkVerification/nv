@@ -17,13 +17,7 @@ type 'a isMatch =
 let rec matches p (e: Syntax.exp) : Syntax.exp Env.t isMatch =
   match p with
   | PWild -> Match Env.empty
-  | PUnit ->
-    if is_value e then
-      match (to_value e).v with
-      | VUnit -> Match Env.empty
-      | _ -> NoMatch
-    else
-      Delayed
+  | PUnit -> Match Env.empty
   | PVar x -> Match (Env.bind x e)
   | PBool true ->
     if is_value e then
@@ -120,7 +114,7 @@ let rec match_branches_lst branches v =
 let rec matchExpPat pat pe1 env =
   match pat, pe1.e with
   | PWild, _ -> Match env
-(* | PVar x, EVar y -> *)
+  | PUnit, _ -> Match env
   | PVar x, _ ->
     Match (Env.update env x pe1)
   | PTuple ps, ETuple es ->
@@ -206,16 +200,42 @@ let rec interp_exp_partial (env: Syntax.exp Env.t) e =
   | ESome e' -> (env, aexp (esome (snd (interp_exp_partial env e')), e.ety, e.espan))
   | EMatch (e1, branches) ->
     let _, pe1 = interp_exp_partial env e1 in
-    (match match_branches branches pe1 with
-     | Match (env2, e) -> interp_exp_partial (Env.updates env env2) e
-     | NoMatch ->
-       failwith
-         ( "exp " ^ (Printing.exp_to_string pe1)
-           ^ " did not match any pattern in match statement")
-     | Delayed ->
-       (env, aexp (ematch pe1 (mapBranches (fun (p,e) ->
-            (p, snd (interp_exp_partial env e))) branches),
-                   e.ety, e.espan)))
+    begin
+      match match_branches branches pe1 with
+      | Match (env2, e) -> interp_exp_partial (Env.updates env env2) e
+      | NoMatch ->
+        failwith
+          ( "exp " ^ (Printing.exp_to_string pe1)
+            ^ " did not match any pattern in match statement")
+      | Delayed ->
+        let pat = popBranch branches |> fst |> fst in
+        (* If our pattern is irrefutable, then we probably have something of the
+           form "match (match e with <branches1>) with <branches2>", and we weren't
+           able to fully evaluate the inner match. In this case we can reverse
+           the order of the matches to hopefully allow further simplification.
+           This duplicates the contents of <branches2> (once for each element of
+           <branches1>), but it will _usually_ give us a significant code decrease.
+           TODO: It would be nice to have a heuristic for determining when this
+           match permutation is likely to actually be helpful. *)
+        match is_irrefutable pat, pe1.e with
+        | true, EMatch (e2, branches2) ->
+          let permuted_match =
+            ematch e2
+              (mapBranches
+                 (fun (p,e) ->
+                    (p,
+                     ematch e branches |> wrap e))
+                 branches2)
+            |> wrap e
+          in
+          interp_exp_partial env permuted_match
+        | _ ->
+          (* Permutation won't help us, just recurse the branches *)
+          (env,
+           ematch pe1 (mapBranches (fun (p,e) ->
+               (p, snd (interp_exp_partial env e))) branches)
+           |> wrap e)
+    end
   | ERecord _ | EProject _ -> failwith "Record found during partial interpretation"
 
 (* this is same as above, minus the app boolean. see again if we can get rid of that? *)

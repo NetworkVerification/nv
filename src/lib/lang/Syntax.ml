@@ -225,6 +225,14 @@ type srp_unfold =
 
 (** * Handling branches *)
 
+let rec is_irrefutable pat =
+  match pat with
+  | PWild | PUnit | PVar _ -> true
+  | PBool _ | PInt _ | PNode _ | PEdge _ | POption _ -> false
+  | PTuple pats -> List.for_all is_irrefutable pats
+  | PRecord map -> StringMap.for_all (fun _ p -> is_irrefutable p) map
+;;
+
 type branchLookup = Found of exp | Rest of (pattern * exp) list
 (* adding to the right place won't really work.. *)
 let addBranch p e b =
