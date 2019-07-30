@@ -182,27 +182,31 @@ let rewrite_fun (attr_ty : ty) (elts_to_keep : IntSet.t) (assertion : exp) (lead
         rewrite_fun_aux func.body (count + 1) ((func.arg, func.argty, false)::args)
           (fun e -> cont e)
     | _ ->
+      let body_with_dummy_args e =
+        args
+        |> List.filter (fun (_,_,b) -> not b)
+        |> List.fold_left
+          (fun acc (arg, argty, _) ->
+             aexp
+               (elet
+                  arg
+                  (aexp (e_val (Generators.default_value (oget argty)), argty, e.espan))
+                  acc,
+                acc.ety,
+                acc.espan)
+          )
+          e
+      in
       match e.ety with
       | Some TBool -> (* This is the assert function. Return the input assert body *)
-        cont assertion
+        assertion
+        |> body_with_dummy_args
+        |> Nv_interpreter.InterpPartialFull.interp_partial
+        |> cont
       | _ ->
         (* Not the assert function. Replace the input arguments with dummy variables
            and extract only the relevant elements of the result. *)
-        let body_with_dummy_args =
-          args
-          |> List.filter (fun (_,_,b) -> not b)
-          |> List.fold_left
-            (fun acc (arg, argty, _) ->
-               aexp
-                 (elet
-                    arg
-                    (aexp (e_val (Generators.default_value (oget argty)), argty, e.espan))
-                    acc,
-                  acc.ety,
-                  acc.espan)
-            )
-            e
-        in
+
         (* Pattern that we match the result of the original function with in order
            to extract the relevant elements *)
         let pat =
@@ -226,7 +230,7 @@ let rewrite_fun (attr_ty : ty) (elts_to_keep : IntSet.t) (assertion : exp) (lead
         in
         let final_match =
           ematch
-            body_with_dummy_args
+            (body_with_dummy_args e)
             (addBranch (PTuple pat) final_output emptyBranch)
         in
         (aexp (final_match, Some (TTuple sliced_attr_tys), e.espan))
