@@ -8,7 +8,13 @@ Use `opam` to install the `ocaml` dependencies.
 If you don't have `opam` yet, see the [OPAM install instructions](https://opam.ocaml.org/doc/Install.html).
 This is the best way to set up `ocaml`.
 
-Execute the following to install required packages once `opam` is up:
+You can see which `ocaml` packages you're missing to run `nv` using `dune`:
+
+```
+dune external-lib-deps --missing @all
+```
+
+Alternatively, execute the following to install required packages once `opam` is up:
 
 ```
 opam install -y \
@@ -24,10 +30,11 @@ opam install -y \
   zarith \
   ocamlgraph \
   fileutils \
-  z3
+  z3 \
+  dune
 ```
 
-Then clone the repo and run `make`.
+Then clone the repo and run `dune build src/exe/main.exe`.
 
 ### Ubuntu (16.04+)
 
