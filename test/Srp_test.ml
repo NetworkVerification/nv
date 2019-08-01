@@ -1,11 +1,13 @@
 (* Testing for SRP *)
 
+open Nv_lib
+open Nv_lang
+open Nv_datastructures
 open Syntax
 open OUnit
 open Unsigned
 open Printf
 open Srp
-module Env = Interp.Env
 
 (* variables *)
 
@@ -121,8 +123,8 @@ let main = all_tests ()
 let do_test (s, i, d) l () =
   let final = simulate s i d in
   assert_equal ~printer:Printing.value_to_string
-    
-    
+
+
 (* utilties *)
 
 let test_all tests =
@@ -133,10 +135,10 @@ let test_all tests =
       name >::test) tests
 
 let t_interp (e, result) =
-  assert_equal ~printer:Printing.value_to_string (Interp.interp e) result 
-    
+  assert_equal ~printer:Printing.value_to_string (Interp.interp e) result
+
 let expression_suite = "interpreting expressions">:::
   test_all t_interp expression_tests
-  
+
 let _ = run_test_tt_main expression_suite
     *)

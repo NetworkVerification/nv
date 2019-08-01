@@ -1,5 +1,8 @@
 (* Testing for SRP interpreter *)
 
+open Nv_lib
+open Nv_lang
+open Nv_datastructures
 open Syntax
 open OUnit
 open Unsigned

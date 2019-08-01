@@ -1,0 +1,8 @@
+(library
+  (name nv_compression)
+  (libraries
+    nv_lang
+    nv_solution
+    nv_transformations
+    )
+)

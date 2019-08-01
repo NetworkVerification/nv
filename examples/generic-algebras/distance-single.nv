@@ -1,0 +1,12 @@
+include "../utils.nv"
+
+type attribute = option[int]
+
+let trans e x = mapo (fun n -> n + 1) x
+
+let merge n x1 x2 = mapbetter (fun n1 n2 -> if n1 < n2 then n1 else n2) x1 x2
+
+let init n =
+  match n with
+  | 0n -> Some 0
+  | _ -> None

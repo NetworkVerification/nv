@@ -1,0 +1,7 @@
+(library
+  (name nv_solution)
+  (libraries
+    ANSITerminal
+    nv_datastructures
+    nv_interpreter
+    nv_lang))
