@@ -304,6 +304,9 @@ let flatten ds =
 
 let rec unflatten_list (vs : Syntax.value list) (ty : Syntax.ty) =
   match ty with
+  (* FIXME: Should TEdge always be returning an empty list as its second
+     component? Or should it be returning the tail of vs? My hunch is the
+     latter, but I'm not 100% sure. I'm not sure it ever comes up in practice *)
   | TEdge ->
     begin
       match vs with
