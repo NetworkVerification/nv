@@ -3,6 +3,7 @@ open Nv_lang
 open Syntax
 open Collections
 open SmtLang
+open Nv_utils.OCamlUtils
 
 module type ClassicEncodingSig = SmtEncodingSigs.Encoding with type network_type = Syntax.network
 module ClassicEncoding (E: SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
@@ -37,9 +38,9 @@ struct
                mk_constant env (create_vars env str x) (SmtUtils.ty_to_sort xty)
                  ~cdescr:"" ~cloc:merge.espan )
                ((x,xty) :: acc) in
-           let names = create_strings (Printf.sprintf "%s-result" str) (Nv_utils.OCamlUtils.oget exp.ety) in
+           let names = create_strings (Printf.sprintf "%s-result" str) (oget exp.ety) in
            let results =
-             lift2 (mk_constant env) names (Nv_utils.OCamlUtils.oget exp.ety |> ty_to_sorts) in
+             lift2 (mk_constant env) names (oget exp.ety |> ty_to_sorts) in
            let es = encode_exp_z3 str env exp in
            ignore(lift2 (fun e result ->
                SmtUtils.add_constraint env (mk_term (mk_eq result.t e.t))) es results);
@@ -60,9 +61,9 @@ struct
                mk_constant env (create_vars env str x) (SmtUtils.ty_to_sort xty)
                  ~cdescr:"transfer x argument" ~cloc:trans.espan)
                ((x,xty) :: acc) in
-           let names = create_strings (Printf.sprintf "%s-result" str) (Nv_utils.OCamlUtils.oget exp.ety) in
+           let names = create_strings (Printf.sprintf "%s-result" str) (oget exp.ety) in
            let results =
-             lift2 (mk_constant env) names (Nv_utils.OCamlUtils.oget exp.ety |> ty_to_sorts) in
+             lift2 (mk_constant env) names (oget exp.ety |> ty_to_sorts) in
            let es = encode_exp_z3 str env exp in
            ignore(lift2 (fun e result ->
                SmtUtils.add_constraint env (mk_term (mk_eq result.t e.t))) es results);
@@ -74,9 +75,9 @@ struct
   let encode_z3_init str env e =
     (* Printf.printf "%s\n" (Printing.exp_to_string e); *)
     (* Printf.printf "%s\n" (Syntax.show_exp ~show_meta:false e); *)
-    let names = create_strings (Printf.sprintf "%s-result" str) (Nv_utils.OCamlUtils.oget e.ety) in
+    let names = create_strings (Printf.sprintf "%s-result" str) (oget e.ety) in
     let results =
-      lift2 (mk_constant env) names (Nv_utils.OCamlUtils.oget e.ety |> ty_to_sorts) in
+      lift2 (mk_constant env) names (oget e.ety |> ty_to_sorts) in
     let es = encode_exp_z3 str env e in
     ignore(lift2 (fun e result ->
         SmtUtils.add_constraint env (mk_term (mk_eq result.t e.t))) es results);
@@ -94,9 +95,9 @@ struct
                mk_constant env (create_vars env str x) (SmtUtils.ty_to_sort xty)
                  ~cdescr:"assert x argument" ~cloc:assertion.espan )
                ((x,xty) :: acc) in
-           let names = create_strings (Printf.sprintf "%s-result" str) (Nv_utils.OCamlUtils.oget exp.ety) in
+           let names = create_strings (Printf.sprintf "%s-result" str) (oget exp.ety) in
            let results =
-             lift2 (mk_constant env) names (Nv_utils.OCamlUtils.oget exp.ety |> ty_to_sorts) in
+             lift2 (mk_constant env) names (oget exp.ety |> ty_to_sorts) in
            let es = encode_exp_z3 str env exp in
            ignore(lift2 (fun e result ->
                SmtUtils.add_constraint env (mk_term (mk_eq result.t e.t))) es results);

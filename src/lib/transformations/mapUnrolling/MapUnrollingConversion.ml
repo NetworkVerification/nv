@@ -3,6 +3,8 @@ open Collections
 open MapUnrollingGuts
 open Typing
 open Nv_utils.OCamlUtils
+open Nv_solution
+open Nv_datastructures
 
 (* e must be a literal *)
 let rec exp_to_value (e : Syntax.exp) : Syntax.value =
@@ -27,16 +29,17 @@ let rec exp_to_value (e : Syntax.exp) : Syntax.value =
   | ERecord map -> Syntax.vrecord (StringMap.map exp_to_value map)
 
 let rec convert_value
+    ?(mask:bool=false)
     (ty : Syntax.ty)
     (keys : Syntax.exp list * Syntax.var list)
-    (sol : Nv_solution.Solution.t)
+    (sol : Solution.t)
     (v : Syntax.value)
     (original_ty : Syntax.ty)
   : Syntax.value
   =
   let open Syntax in
   (* TODO: Potentially add on span and type info *)
-  let convert_value = convert_value ty keys sol in
+  let convert_value = convert_value ~mask:mask ty keys sol in
   match v.v, (canonicalize_type original_ty) with
   | VBool _, TBool
   | VInt _, TInt _ ->
@@ -81,7 +84,7 @@ let convert_symbolics
     (ty : Syntax.ty)
     (keys : Syntax.exp list * Syntax.var list)
     (decls : Syntax.declarations)
-    (sol : Nv_solution.Solution.t)
+    (sol : Solution.t)
   =
   let symbolics = Syntax.get_symbolics decls in
   let convert_value = convert_value ty keys sol in
@@ -114,10 +117,10 @@ let convert_attrs
     (ty : Syntax.ty)
     (keys : Syntax.exp list * Syntax.var list)
     (decls : Syntax.declarations)
-    (sol : Nv_solution.Solution.t)
+    (sol : Solution.t)
   =
   let open Nv_datastructures in
-  let attr_ty = Nv_utils.OCamlUtils.oget (Syntax.get_attr_type decls) in
+  let attr_ty = oget (Syntax.get_attr_type decls) in
   let unrolled_attr_ty = unroll_type ty keys attr_ty in
   if Typing.equiv_tys attr_ty unrolled_attr_ty then sol.labels
   else (* Attribute type involved a map, so transform all attributes *)
@@ -130,23 +133,26 @@ let convert_mask
     (ty : Syntax.ty)
     (keys : Syntax.exp list * Syntax.var list)
     (decls : Syntax.declarations)
-    (sol : Nv_solution.Solution.t)
+    (sol : Solution.t)
   =
   let open Nv_datastructures in
   let attr_ty = oget (Syntax.get_attr_type decls) in
   let unrolled_attr_ty = unroll_type ty keys attr_ty in
   if Typing.equiv_tys attr_ty unrolled_attr_ty then sol.mask
   else (* Attribute type involved a map, so transform the mask *)
-    omap (fun v -> convert_value ty keys sol v attr_ty) sol.mask
+    omap
+      (fun v -> convert_value ~mask:true ty keys sol v (Solution.mask_type_ty attr_ty))
+      sol.mask
 ;;
+
 (* Given the map type and keys, return a function which will convert a
    solution to the unrolled version into a solution to the original *)
 let convert_solution
     (ty : Syntax.ty)
     (keys : Syntax.exp list * Syntax.var list)
     (decls : Syntax.declarations)
-    (sol : Nv_solution.Solution.t)
-  : Nv_solution.Solution.t
+    (sol : Solution.t)
+  : Solution.t
   =
   {sol with
    symbolics = convert_symbolics ty keys decls sol;

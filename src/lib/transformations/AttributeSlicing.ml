@@ -313,10 +313,4 @@ let slice_network (net : Syntax.network) : (Syntax.network * (Solution.t -> Solu
       )
       assert_deps
   in
-  print_endline @@ "Transitive:\n" ^ BatString.concat "\n" @@
-  List.map (fun (e, s) -> Printf.sprintf "%s:{ %s }" (Printing.exp_to_string e)
-               (Collections.IntSet.fold
-                  (fun n acc ->
-                     Printf.sprintf "%s; %d" acc n) s "")) @@
-  assert_deps_transitive;
   List.map (fun (a,es) -> slice net a es) assert_deps_transitive

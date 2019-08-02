@@ -2,11 +2,139 @@ open Nv_datastructures
 open Nv_lang
 open Nv_lang.Syntax
 open Nv_lang.Collections
+open Nv_utils.OCamlUtils
 open InterpUtils
 open Interp
 
 (* This ludicrously named file contains a Full reduction partial interpreter.
    Not sure how it differs from the regular one. *)
+
+
+(** * Simplifications *)
+let simplify_and v1 e2 =
+  match v1.v with
+  | VBool true -> e2
+  | VBool false -> exp_of_value (vbool false)
+  | _ -> failwith "illegal value to boolean"
+
+let simplify_or v1 e2 =
+  match v1.v with
+  | VBool true -> exp_of_value (vbool true)
+  | VBool false -> e2
+  | _ -> failwith "illegal value to boolean"
+
+let rec simplify_tget lo hi e =
+  match e.e with
+  | ETuple es ->
+    if lo = hi then List.nth es lo
+    else etuple (es |> BatList.drop lo |> BatList.take (hi - lo + 1))
+  | EMatch (e1, branches) ->
+    (* Push the TGet into the branches *)
+    let new_branches =
+      mapBranches (fun (p, body) -> p, simplify_tget lo hi body) branches
+    in
+    ematch e1 new_branches
+  | _ ->
+    (* If all else fails, write a match statement *)
+    let tys = match e.ety with | Some (TTuple lst) -> lst | _ -> failwith "impossible" in
+    let get_ty =
+      if lo = hi then List.nth tys lo
+      else TTuple (tys |> BatList.drop lo |> BatList.take (hi - lo + 1))
+    in
+
+    let freshvars = List.map (fun ty -> ty, Var.fresh "TGetVar") tys in
+    let pat =
+      PTuple (
+        List.mapi
+          (fun i (_, v) -> if lo <= i && i <= hi then PVar v else PWild)
+          freshvars)
+    in
+
+    let get_exps =
+      freshvars
+      |> BatList.drop lo |> BatList.take (hi - lo + 1)
+      |> List.map (fun (ty, v) -> aexp (evar v, Some ty, e.espan))
+    in
+    let branch_body =
+      if lo = hi then List.hd get_exps
+      else aexp (etuple get_exps, Some get_ty, e.espan)
+    in
+
+    ematch e (addBranch pat branch_body emptyBranch)
+;;
+
+let simplify_tset lo hi tup v =
+  (* If the expression is an actual tuple expression, we don't need a match
+     to unpack its elements. This function computes an expression list corresponding
+     the elements of exp (using a match only if needed) and calls cont on it. *)
+  let curry_elts exp (cont : exp list -> exp) =
+    match exp.e with
+    | ETuple es -> cont es
+    | _ ->
+      match oget exp.ety with
+      | TTuple tys ->
+        let freshvars = List.map (fun ty -> ty, Var.fresh "TSetVar") tys in
+        let freshvarexps = List.map (fun (ty, v) -> aexp (evar v, Some ty, exp.espan)) freshvars in
+        let pat = PTuple (List.map (fun (_, v) -> PVar v) freshvars) in
+        ematch exp (addBranch pat (cont freshvarexps) emptyBranch)
+      | _ -> failwith "Bad TSet"
+  in
+  let cont tup_es v_es =
+    let hd, tl =
+      let hd, rest = BatList.takedrop lo tup_es in
+      hd, BatList.drop (hi - lo + 1) rest
+    in
+    etuple (hd @ v_es @ tl) |> wrap tup
+  in
+  curry_elts tup
+    (fun tup_es ->
+       if lo = hi then cont tup_es [v]
+       else curry_elts v (cont tup_es))
+
+let simplify_exps op pes =
+  match op with
+  | And ->
+    begin
+      match pes with
+      | [e1; e2] when (is_value e1) ->
+        simplify_and (to_value e1) e2
+      | [e1; e2] when (is_value e2) ->
+        simplify_and (to_value e2) e1
+      | _ -> eop op pes
+    end
+  | Or ->
+    begin
+      match pes with
+      | [e1; e2] when (is_value e1) ->
+        simplify_or (to_value e1) e2
+      | [e1; e2] when (is_value e2) ->
+        simplify_or (to_value e2) e1
+      | [e1; e2] when (equal_exps ~cmp_meta:false e1 e2) ->
+        e1
+      | [e1; e2] ->
+        (match e1.e with
+         | EOp (Not, [e1']) when equal_exps ~cmp_meta:false e1' e2 ->
+           exp_of_value (vbool true)
+         | _ ->
+           (match e2.e with
+            | EOp (Not, [e2']) when equal_exps ~cmp_meta:false e1 e2' ->
+              exp_of_value (vbool true)
+            | _ -> eop op pes))
+      | _ -> eop op pes
+    end
+  | TGet (_, lo, hi) ->
+    begin
+      match pes with
+      | [e] -> simplify_tget lo hi e
+      | _ -> failwith "Bad TGet"
+    end
+  | TSet (_, lo, hi) ->
+    begin
+      match pes with
+      | [e1; e2] -> simplify_tset lo hi e1 e2
+      | _ -> failwith "Bad TSet"
+    end
+  | _ -> eop op pes
 
 type 'a isMatch =
     Match of 'a
@@ -165,7 +293,7 @@ let rec interp_exp_partial (env: Syntax.exp Env.t) e =
         (env, e1))
   | EVal _ -> (env, e)
   | EOp (op, es) ->
-    (env, aexp (interp_op_partial env (Nv_utils.OCamlUtils.oget e.ety) op es, e.ety, e.espan))
+    (env, aexp (interp_op_partial env (oget e.ety) op es, e.ety, e.espan))
   | EFun _ -> (env, e)
   (* either need to do the partial interpretation here, or return a pair
      of the efun and the env at this point to be used, sort of like a closure.*)
@@ -222,9 +350,9 @@ let rec interp_exp_partial (env: Syntax.exp Env.t) e =
           let permuted_match =
             ematch e2
               (mapBranches
-                 (fun (p,e) ->
+                 (fun (p,inner_branch) ->
                     (p,
-                     ematch e branches |> wrap e))
+                     ematch inner_branch branches |> wrap e))
                  branches2)
             |> wrap e
           in
@@ -242,7 +370,7 @@ let rec interp_exp_partial (env: Syntax.exp Env.t) e =
 and interp_op_partial env ty op es =
   let pes = BatList.map (fun e -> snd (interp_exp_partial env e)) es in
   if BatList.exists (fun pe -> not (is_value pe)) pes then
-    eop op pes
+    simplify_exps op pes
   else
     begin
       exp_of_value @@

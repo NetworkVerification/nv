@@ -18,21 +18,6 @@ type t =
   ; assertions: bool VertexMap.t option
   ; mask: value option }
 
-let rec mask_type_ty ty =
-  match ty with
-  | TBool | TInt _ | TNode | TUnit -> TBool
-  | TEdge -> TTuple [TBool; TBool]
-  | TOption ty -> TOption (mask_type_ty ty)
-  | TRecord map -> TRecord (StringMap.map mask_type_ty map)
-  | TTuple tys -> TTuple (List.map mask_type_ty tys)
-  | TMap (kty, vty) -> TMap (kty, mask_type_ty vty)
-  | TVar {contents = Link ty} -> mask_type_ty ty
-  | TVar _ | QVar _ | TArrow _ -> failwith "internal error (mask_ty)"
-
-let mask_type_sol sol =
-  let one_attr = VertexMap.choose sol.labels |> snd in
-  mask_type_ty (oget one_attr.vty)
-
 let rec value_to_mask v =
   let true_val = avalue (vbool true, Some TBool, v.vspan) in
   match v.v with
@@ -54,6 +39,21 @@ let rec value_to_mask v =
   | VMap _ -> failwith "Not yet implemented"
   | VClosure _ -> failwith "Closures not allowed as attributes"
 ;;
+
+let rec mask_type_ty ty =
+  match ty with
+  | TBool | TInt _ | TNode | TUnit -> TBool
+  | TEdge -> TTuple [TBool; TBool]
+  | TOption ty -> TOption (mask_type_ty ty)
+  | TRecord map -> TRecord (StringMap.map mask_type_ty map)
+  | TTuple tys -> TTuple (List.map mask_type_ty tys)
+  | TMap (kty, vty) -> TMap (kty, mask_type_ty vty)
+  | TVar {contents = Link ty} -> mask_type_ty ty
+  | TVar _ | QVar _ | TArrow _ -> failwith "internal error (mask_ty)"
+
+let mask_type_sol sol =
+  let one_attr = VertexMap.choose sol.labels |> snd in
+  (value_to_mask one_attr).vty |> oget
 
 (* Print a value with only the parts where the mask is true. *)
 let rec print_masked mask v =

@@ -81,6 +81,21 @@ let run_smt_classic file cfg info (net : Syntax.network) fs =
     else net, fs
   in
 
+  (* print_endline @@ Printing.network_to_string net;
+  print_endline "\nAttribute dependencies:";
+  print_endline @@ AttributeSlicing.attrdepmap_to_string @@ AttributeSlicing.attribute_dependencies net;
+  print_endline "\nAssert conjuncts and dependencies:";
+  print_endline @@ BatString.concat "\n" @@
+  List.map (fun (e, s) -> Printf.sprintf "%s:{ %s }" (Printing.exp_to_string e)
+               (Collections.IntSet.fold
+                  (fun n acc ->
+                     Printf.sprintf "%s; %d" acc n) s "")) @@
+  AttributeSlicing.assert_dependencies net;
+  List.iter
+    (fun (n, _) -> print_endline (BatString.make 80 '-');
+      print_endline @@ Printing.network_to_string n) @@
+  AttributeSlicing.slice_network net; *)
+
   let net, f = Renaming.alpha_convert_net net in (*TODO: why are we renaming here?*)
   let fs = f :: fs in
   let solve_fun =
@@ -89,21 +104,48 @@ let run_smt_classic file cfg info (net : Syntax.network) fs =
     else
       Smt.solveClassic
   in
-  let res =
+  let solve_smt net =
     solve_fun info cfg.query (smt_query_file file) net
   in
-  match res with
-  | Unsat ->
-    (Success None, [])
-  | Unknown -> Console.error "SMT returned unknown"
-  | Sat solution ->
-    match solution.assertions with
-    | None -> Success (Some solution), fs
-    | Some m ->
-      if AdjGraph.VertexMap.exists (fun _ b -> not b) m then
-        CounterExample solution, fs
-      else
-        Success (Some solution), fs
+
+  let smt_result_to_answer fs (result : Smt.smt_result) =
+    match result with
+    | Unsat ->
+      (Success None, [])
+    | Unknown -> Console.error "SMT returned unknown"
+    | Sat solution ->
+      match solution.assertions with
+      | None -> Success (Some solution), fs
+      | Some m ->
+        if AdjGraph.VertexMap.exists (fun _ b -> not b) m then
+          CounterExample solution, fs
+        else
+          Success (Some solution), fs
+  in
+
+  (* Attribute Slicing requires the net to have an assertion and for its attribute
+     to be a tuple type. TODO: Add a command-line flag as well *)
+  let slices =
+    match net.assertion, net.attr_type with
+    | Some _, TTuple _ ->
+      AttributeSlicing.slice_network net
+    | _ ->
+      [net, (fun x -> x)]
+  in
+  (* Return the first slice that returns a counterexample, or the result of the
+     last slice if all of them succeed *)
+  let rec solve_slices slices =
+    match slices with
+    | [] -> failwith "impossible"
+    | (net, f)::tl ->
+      let answer = smt_result_to_answer (f::fs) (solve_smt net) in
+      match answer with
+      | CounterExample _, _ -> answer
+      | Success _, _ ->
+        if BatList.is_empty tl then answer else solve_slices tl
+  in
+  solve_slices slices
+;;
 
 let run_smt file cfg info (net : Syntax.network) fs =
   if cfg.func then
@@ -282,9 +324,9 @@ let parse_input (args : string array)
       (* Note! Must rename before inling otherwise inling is unsound *)
       let decls, f = Renaming.alpha_convert_declarations decls in
       (Profile.time_profile "Inlining" (
-           fun () ->
-           Inline.inline_declarations decls |>
-             Typing.infer_declarations info), f :: fs)
+          fun () ->
+            Inline.inline_declarations decls |>
+            Typing.infer_declarations info), f :: fs)
     else
       (decls,fs)
   in
