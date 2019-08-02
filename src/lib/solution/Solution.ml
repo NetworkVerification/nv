@@ -20,10 +20,7 @@ type t =
 
 let rec mask_type_ty ty =
   match ty with
-  | TBool
-  | TInt _
-  | TNode
-  | TUnit -> TBool
+  | TBool | TInt _ | TNode | TUnit -> TBool
   | TEdge -> TTuple [TBool; TBool]
   | TOption ty -> TOption (mask_type_ty ty)
   | TRecord map -> TRecord (StringMap.map mask_type_ty map)
@@ -35,6 +32,28 @@ let rec mask_type_ty ty =
 let mask_type_sol sol =
   let one_attr = VertexMap.choose sol.labels |> snd in
   mask_type_ty (oget one_attr.vty)
+
+let rec value_to_mask v =
+  let true_val = avalue (vbool true, Some TBool, v.vspan) in
+  match v.v with
+  | VBool _ | VInt _ | VNode _ | VUnit -> true_val
+  | VEdge _ -> avalue (vtuple [true_val; true_val], Some (TTuple [TBool; TBool]), v.vspan)
+  | VOption None -> avalue (voption (Some true_val), Some (TOption TBool), v.vspan)
+  | VOption Some v' ->
+    let rec_val = value_to_mask v' in
+    let rec_val_ty = rec_val.vty |> oget in
+    avalue (voption (Some (value_to_mask v')), Some (TOption rec_val_ty), v.vspan)
+  | VTuple vs ->
+    let rec_vals = List.map value_to_mask vs in
+    let rec_val_tys = List.map (fun v -> v.vty |> oget) rec_vals in
+    avalue (vtuple rec_vals, Some (TTuple (rec_val_tys)), v.vspan)
+  | VRecord map ->
+    let rec_val = StringMap.map value_to_mask map in
+    let rec_val_map = StringMap.map (fun v -> v.vty |> oget) rec_val in
+    avalue (vrecord rec_val, Some (TRecord rec_val_map), v.vspan)
+  | VMap _ -> failwith "Not yet implemented"
+  | VClosure _ -> failwith "Closures not allowed as attributes"
+;;
 
 (* Print a value with only the parts where the mask is true. *)
 let rec print_masked mask v =
@@ -99,20 +118,20 @@ let print_solution (solution : t) =
            k
            (print_fun v) )
       solution.labels ) ;
-( match solution.assertions with
-  | None ->
-    print_string [green; Bold] "Success: " ;
-    Printf.printf "No assertions provided, so none failed\n"
-  | Some m ->
-    let all_pass = AdjGraph.VertexMap.for_all (fun _ b -> b) m in
-    if all_pass then (
+  ( match solution.assertions with
+    | None ->
       print_string [green; Bold] "Success: " ;
-      Printf.printf "all assertions passed\n" )
-    else
-      AdjGraph.VertexMap.iter
-        (fun k v ->
-           if not v then (
-             print_string [red; Bold] "Failed: " ;
-             Printf.printf "assertion for node %d\n" k ) )
-        m ) ;
-print_newline ()
+      Printf.printf "No assertions provided, so none failed\n"
+    | Some m ->
+      let all_pass = AdjGraph.VertexMap.for_all (fun _ b -> b) m in
+      if all_pass then (
+        print_string [green; Bold] "Success: " ;
+        Printf.printf "all assertions passed\n" )
+      else
+        AdjGraph.VertexMap.iter
+          (fun k v ->
+             if not v then (
+               print_string [red; Bold] "Failed: " ;
+               Printf.printf "assertion for node %d\n" k ) )
+          m ) ;
+  print_newline ()

@@ -6,6 +6,7 @@ open Nv_lang
 open Syntax
 open Collections
 open Dependency
+open Nv_solution
 
 (* Maps attribute elements to the set of other elements they depend on *)
 type attrdepmap = IntSet.t IntMap.t
@@ -240,6 +241,39 @@ let rewrite_fun (attr_ty : ty) (elts_to_keep : IntSet.t) (assertion : exp) (lead
   rewrite_fun_aux f 0 [] (fun e -> e)
 ;;
 
+let map_back_val old_aty elements v =
+  let old_aty_elts, v_elts =
+    match old_aty, v.v with
+    | TTuple tlst, VTuple vlst-> tlst, vlst
+    | _ -> failwith "impossible"
+  in
+  let count = ref (-1) in
+  (* Turn the smaller tuple (v) into a larger tuple of type old_aty elts by
+     filling in every element we sliced out with a dummy value, and every
+     element we didn't slice out with the corresponding element of v *)
+  let new_val_elts =
+    List.mapi
+      (fun i ty ->
+         if IntSet.mem i elements
+         then (incr count; List.nth v_elts !count)
+         else Generators.default_value ty)
+      old_aty_elts
+  in
+  avalue (vtuple new_val_elts, Some old_aty, v.vspan)
+;;
+
+let map_back old_aty elements (sol : Solution.t) =
+  let mask_type = Solution.mask_type_ty old_aty in
+  let _, some_label = AdjGraph.VertexMap.choose sol.labels in
+  {
+    sol with
+    labels = AdjGraph.VertexMap.map (map_back_val old_aty elements) sol.labels;
+    (* Take advantage of the fact that the default bool value is false, and the
+       values we want to mask are precisely those which use a default value *)
+    mask = Some (map_back_val mask_type elements (Solution.value_to_mask some_label));
+  }
+;;
+
 (* Create a new network whose attribute is a tuple whose elements correspond
    to those indicated by the IntSet.t, and which has asn as the body of
    its assert function. *)
@@ -254,15 +288,18 @@ let slice (net : Syntax.network) (asn_slice : exp) (elements : IntSet.t) =
     | _ -> failwith "impossible"
   in
   let sliced_assert = slice_fun 1 (* First arg is node *) (net.assertion |> oget) in
-  {net with attr_type=sliced_aty;
-            init=sliced_init;
-            trans=sliced_trans;
-            merge=sliced_merge;
-            assertion=Some(sliced_assert)}
-  |> CleanupTuples.cleanup_net
+  let sliced_net, cleanup_map_back =
+    {net with attr_type=sliced_aty;
+              init=sliced_init;
+              trans=sliced_trans;
+              merge=sliced_merge;
+              assertion=Some(sliced_assert)}
+    |> CleanupTuples.cleanup_net
+  in
+  sliced_net, (map_back net.attr_type elements) % cleanup_map_back
 ;;
 
-let slice_network (net : Syntax.network) : Syntax.network list =
+let slice_network (net : Syntax.network) : (Syntax.network * (Solution.t -> Solution.t)) list =
   let attr_deps = attribute_dependencies net in
   let assert_deps = assert_dependencies net in
   let assert_deps_transitive =
@@ -282,4 +319,4 @@ let slice_network (net : Syntax.network) : Syntax.network list =
                   (fun n acc ->
                      Printf.sprintf "%s; %d" acc n) s "")) @@
   assert_deps_transitive;
-  List.map (fun (a,es) -> fst @@ slice net a es) assert_deps_transitive
+  List.map (fun (a,es) -> slice net a es) assert_deps_transitive
