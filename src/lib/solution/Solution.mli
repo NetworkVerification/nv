@@ -8,6 +8,8 @@ type t =
   ; assertions: bool VertexMap.t option
   ; mask: value option  }
 
+type map_back = t -> t
+
 val print_solution : t -> unit
 
 val mask_type_ty : ty -> ty
