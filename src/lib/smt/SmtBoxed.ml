@@ -439,11 +439,6 @@ struct
     | VNode n ->
       encode_value_z3 descr env @@
       avalue (vint (Integer.create ~size: 32 ~value:n), Some (TInt 32), v.vspan)
-    | VEdge (n1, n2) ->
-      let n1 = avalue (vnode n1, Some TNode, v.vspan) in
-      let n2 = avalue (vnode n2, Some TNode, v.vspan) in
-      encode_value_z3 descr env @@
-      avalue (vtuple [n1; n2], Some (TTuple [TNode; TNode]), v.vspan)
     | VTuple vs -> (
         match oget v.vty with
         | TTuple _ ->
@@ -464,6 +459,7 @@ struct
       let zv = encode_value_z3 descr env v1 in
       mk_app (mk_constructor f (ty_to_sort (oget v.vty))) [zv.t] |>
       mk_term ~tloc:v.vspan
+    | VEdge _ -> failwith "edges should have been unboxed"
     | VClosure _ -> failwith "internal error (closure in smt)"
     | VMap _ -> failwith "not doing maps yet"
     | VRecord _ -> failwith "Record in SMT encoding"

@@ -351,6 +351,13 @@ let parse_input (args : string array)
       (decls, f :: fs)
     else decls, fs
   in
+  let decls, fs =
+    if cfg.smt then
+      let decls, f = UnboxEdges.unbox_declarations decls in
+      decls, f :: fs
+    else
+      decls, fs
+  in
   let net = Slicing.createNetwork decls in (* Create something of type network *)
   let net =
     if cfg.link_failures > 0 then
