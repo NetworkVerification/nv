@@ -1,0 +1,7 @@
+type attribute = dict[tnode, bool]
+
+let trans e x = x
+
+let merge n x1 x2 = x1 union x2
+
+let init n = {n}

@@ -1,4 +1,7 @@
 open OUnit2
+open Nv_lib
+open Nv_lang
+open Nv_solution
 open Main_defs
 
 type testfun =
@@ -9,10 +12,17 @@ type testfun =
   (Solution.t -> Solution.t) list ->
   Main_defs.answer * ((Solution.t -> Solution.t) list)
 
-type test = { testname: string; args: string array; testfun: testfun; expected: bool }
+type test = { testname: string;
+              args: string array;
+              testfun: testfun;
+              expected: bool }
+
+(* To account for the fact that all the filenames are relative to the nv
+   directory, and dune runs the tests from a subdirectory of _build *)
+let filename_prefix = "../../../"
 
 (* Expected results should correspond to this function *)
-let bool_of_answer (a : Main_defs.answer * ((Solution.t -> Solution.t) list)) =
+let bool_of_answer (a : answer * ((Solution.t -> Solution.t) list)) =
   (* Print the final result to make sure we don't crash in the process,
      then return a bool *)
   begin
@@ -33,7 +43,7 @@ let bool_of_answer (a : Main_defs.answer * ((Solution.t -> Solution.t) list)) =
 let simulator_test filename expected: test =
   {
     testname = filename ^ "_simulator";
-    args = Array.of_list ["nv"; "-s"; filename];
+    args = Array.of_list ["nv"; "-s"; filename_prefix ^ filename];
     testfun = (fun _ cfg info decls fs -> run_simulator cfg info decls fs);
     expected;
   }
@@ -42,7 +52,7 @@ let simulator_test filename expected: test =
 let smt_test filename expected: test =
   {
     testname = filename ^ "_smt";
-    args= Array.of_list ["nv"; "-m"; filename];
+    args= Array.of_list ["nv"; "-m"; filename_prefix ^ filename];
     testfun = run_smt;
     expected;
   }
@@ -51,7 +61,7 @@ let smt_test filename expected: test =
 let unboxed_test filename expected: test =
   {
     testname = filename ^ "_unboxed";
-    args = Array.of_list ["nv"; "-m"; "-unbox"; filename];
+    args = Array.of_list ["nv"; "-m"; "-unbox"; filename_prefix ^ filename];
     testfun = run_smt;
     expected;
   }
@@ -60,7 +70,7 @@ let unboxed_test filename expected: test =
 let hiding_test filename expected: test =
   {
     testname = filename ^ "_hiding";
-    args = Array.of_list ["nv"; "-m"; "-hiding"; filename];
+    args = Array.of_list ["nv"; "-m"; "-hiding"; filename_prefix ^ filename];
     testfun = run_smt;
     expected;
   }

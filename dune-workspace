@@ -1,0 +1,4 @@
+(lang dune 1.10)
+(env
+  (dev (flags -w +A-3-4-6-k-44-48-42-40-9-45 -warn-error -a))
+)
