@@ -3,5 +3,5 @@
 open Nv_lang.Syntax
 open Nv_solution
 
-val unbox_declarations : declarations -> declarations * (Solution.t -> Solution.t)
-val unbox_net : network -> network * (Solution.t -> Solution.t)
+val unbox_declarations : declarations -> declarations * Solution.map_back
+val unbox_net : network -> network * Solution.map_back

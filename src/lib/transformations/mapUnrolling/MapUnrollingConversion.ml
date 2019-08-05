@@ -29,7 +29,6 @@ let rec exp_to_value (e : Syntax.exp) : Syntax.value =
   | ERecord map -> Syntax.vrecord (StringMap.map exp_to_value map)
 
 let rec convert_value
-    ?(mask:bool=false)
     (ty : Syntax.ty)
     (keys : Syntax.exp list * Syntax.var list)
     (sol : Solution.t)
@@ -39,7 +38,7 @@ let rec convert_value
   =
   let open Syntax in
   (* TODO: Potentially add on span and type info *)
-  let convert_value = convert_value ~mask:mask ty keys sol in
+  let convert_value = convert_value ty keys sol in
   match v.v, (canonicalize_type original_ty) with
   | VBool _, TBool
   | VInt _, TInt _ ->
@@ -141,7 +140,7 @@ let convert_mask
   if Typing.equiv_tys attr_ty unrolled_attr_ty then sol.mask
   else (* Attribute type involved a map, so transform the mask *)
     omap
-      (fun v -> convert_value ~mask:true ty keys sol v (Solution.mask_type_ty attr_ty))
+      (fun v -> convert_value ty keys sol v (Solution.mask_type_ty attr_ty))
       sol.mask
 ;;
 
