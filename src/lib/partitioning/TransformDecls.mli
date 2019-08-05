@@ -1,4 +1,5 @@
-open Syntax
+open Nv_datastructures
+open Nv_lang
 
 (***
  * Functions to rewrite Syntax.network declarations to include cases added by partitioning.

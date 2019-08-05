@@ -1,21 +1,13 @@
 (library
-  (name nv_lib)
-  ; (public_name nv_lib)
+  (name nv_kirigami)
   (libraries
-    nv_kirigami
     nv_lang
     nv_smt
     nv_datastructures
     nv_utils
-    nv_transformations
-    nv_compression
     integers
     str
-    batteries
-    lru-cache
-    zarith)
+    batteries)
   (preprocess
     (pps ppx_deriving.std ppx_deriving_argparse))
 )
-
-(include_subdirs no)

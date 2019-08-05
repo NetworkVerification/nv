@@ -1,5 +1,6 @@
 (* Partitioning utilities and partition interface definitions *)
 open Batteries
+open Nv_datastructures
 
 (* Possible hypotheses used when annotating interface edges *)
 module Hyp : sig

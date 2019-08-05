@@ -1,3 +1,4 @@
+open Nv_lang
 
 let transform_init e graph =
   (* TODO: extract the in-out pairs *)
