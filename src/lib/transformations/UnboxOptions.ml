@@ -26,8 +26,7 @@ let rec empty_pattern ty =
 let rec unbox_ty ty =
   match Typing.canonicalize_type ty with
   | TVar {contents= Link t} -> unbox_ty t
-  | TBool | TInt _ | TNode | TEdge -> ty
-  | TUnit -> TBool
+  | TBool | TInt _ | TNode | TEdge | TUnit -> ty
   | TArrow (t1, t2) ->
     TArrow (unbox_ty t1, unbox_ty t2)
   | TTuple ts -> TTuple (BatList.map unbox_ty ts)
@@ -39,8 +38,7 @@ let rec unbox_ty ty =
 
 let rec unbox_val v =
   match v.v with
-  | VUnit ->  aexp(vbool true |> exp_of_value, Some TBool, v.vspan)
-  | VBool _ | VInt _ | VNode _ | VEdge _->
+  | VUnit | VBool _ | VInt _ | VNode _ | VEdge _->
     exp_of_value v
   | VOption None ->
     (match v.vty with
@@ -153,7 +151,6 @@ and unbox_branches bs ty =
        | TOption t ->
        PTuple [PVar (proj_var 0 x); PVar (proj_var 1 x)]
        | _ -> p) *)
-    | PUnit -> PBool true
     | _ -> p
   in
   mapBranches (fun (p, e) -> (unbox_pattern p ty, unbox_exp e)) bs
@@ -189,15 +186,15 @@ let rec box_val v ty =
        Printf.printf "%s\n" (Printing.value_to_string vflag);
        failwith "mistyped optional value")
   | VTuple vs, TTuple ts ->
+    Printf.printf "Tuples: %s, %s\n" (Printing.value_to_string v) (Printing.ty_to_string ty);
     vtuple (BatList.map2 (box_val) vs ts)
   | VTuple vs, _ ->
     (* Printf.printf "%s\n" (printList (Printing.ty_to_string) ts "" "," ""); *)
     Printf.printf "%s\n" (printList (Printing.value_to_string) vs "" "," "");
     Printf.printf "%s\n" (Printing.ty_to_string ty);
     failwith "mistyped value"
-  | VBool _, TUnit -> vunit ()
-  | VBool _, _ | VInt _, _ | VNode _, _ | VEdge _, _ -> v
-  | VUnit, _ | VOption _, _ | VClosure _, _ | VMap _, _ | VRecord _, _ -> failwith "no such values"
+  | VUnit, _ | VBool _, _ | VInt _, _ | VNode _, _ | VEdge _, _ -> v
+  | VOption _, _ | VClosure _, _ | VMap _, _ | VRecord _, _ -> failwith "no such values"
 
 let box_sol ty (sol : Solution.t) =
   {sol with

@@ -82,19 +82,19 @@ let run_smt_classic file cfg info (net : Syntax.network) fs =
   in
 
   (* print_endline @@ Printing.network_to_string net;
-  print_endline "\nAttribute dependencies:";
-  print_endline @@ AttributeSlicing.attrdepmap_to_string @@ AttributeSlicing.attribute_dependencies net;
-  print_endline "\nAssert conjuncts and dependencies:";
-  print_endline @@ BatString.concat "\n" @@
-  List.map (fun (e, s) -> Printf.sprintf "%s:{ %s }" (Printing.exp_to_string e)
+     print_endline "\nAttribute dependencies:";
+     print_endline @@ AttributeSlicing.attrdepmap_to_string @@ AttributeSlicing.attribute_dependencies net;
+     print_endline "\nAssert conjuncts and dependencies:";
+     print_endline @@ BatString.concat "\n" @@
+     List.map (fun (e, s) -> Printf.sprintf "%s:{ %s }" (Printing.exp_to_string e)
                (Collections.IntSet.fold
                   (fun n acc ->
                      Printf.sprintf "%s; %d" acc n) s "")) @@
-  AttributeSlicing.assert_dependencies net;
-  List.iter
-    (fun (n, _) -> print_endline (BatString.make 80 '-');
+     AttributeSlicing.assert_dependencies net;
+     List.iter
+     (fun (n, _) -> print_endline (BatString.make 80 '-');
       print_endline @@ Printing.network_to_string n) @@
-  AttributeSlicing.slice_network net; *)
+     AttributeSlicing.slice_network net; *)
 
   let net, f = Renaming.alpha_convert_net net in (*TODO: why are we renaming here?*)
   let fs = f :: fs in
@@ -129,16 +129,26 @@ let run_smt_classic file cfg info (net : Syntax.network) fs =
     match net.assertion, net.attr_type with
     | Some _, TTuple _ ->
       AttributeSlicing.slice_network net
+      |> List.map (fun (net, f) -> net, f :: fs)
     | _ ->
-      [net, (fun x -> x)]
+      [net, fs]
+  in
+  let slices =
+    List.map
+      (fun (net, fs) ->
+         let net, f = UnboxUnits.unbox_net net in
+         net, f :: fs)
+      slices
   in
   (* Return the first slice that returns a counterexample, or the result of the
      last slice if all of them succeed *)
+  (* print_endline @@ Printing.exp_to_string @@ ((List.hd slices |> fst).assertion |> oget); *)
+  (* List.iter (fun (net, _) -> print_endline @@ Printing.network_to_string net) slices; *)
   let rec solve_slices slices =
     match slices with
     | [] -> failwith "impossible"
-    | (net, f)::tl ->
-      let answer = smt_result_to_answer (f::fs) (solve_smt net) in
+    | (net, fs)::tl ->
+      let answer = smt_result_to_answer fs (solve_smt net) in
       match answer with
       | CounterExample _, _ -> answer
       | Success _, _ ->
