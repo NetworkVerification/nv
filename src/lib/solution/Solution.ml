@@ -18,6 +18,8 @@ type t =
   ; assertions: bool VertexMap.t option
   ; mask: value option }
 
+type map_back = t -> t
+
 let rec value_to_mask v =
   let true_val = avalue (vbool true, Some TBool, v.vspan) in
   match v.v with
