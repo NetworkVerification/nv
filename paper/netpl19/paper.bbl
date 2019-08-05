@@ -1,36 +1,36 @@
 \begin{thebibliography}{1}
 
 \bibitem{minesweeper}
-R.~Beckett, A.~Gupta, R.~Mahajan, and D.~Walker.
+{\sc Beckett, R., Gupta, A., Mahajan, R., and Walker, D.}
 \newblock A general approach to network configuration verification.
-\newblock In {\em SIGCOMM}, August 2017.
+\newblock In {\em SIGCOMM\/} (August 2017).
 
 \bibitem{bonsai}
-R.~Beckett, A.~Gupta, R.~Mahajan, and D.~Walker.
+{\sc Beckett, R., Gupta, A., Mahajan, R., and Walker, D.}
 \newblock Control plane compression.
-\newblock SIGCOMM '18, pages 476--489, 2018.
+\newblock SIGCOMM '18, pp.~476--489.
 
 \bibitem{batfish}
-A.~Fogel, S.~Fung, L.~Pedrosa, M.~Walraed-Sullivan, R.~Govindan, R.~Mahajan,
-  and T.~Millstein.
+{\sc Fogel, A., Fung, S., Pedrosa, L., Walraed-Sullivan, M., Govindan, R.,
+  Mahajan, R., and Millstein, T.}
 \newblock A general approach to network configuration analysis.
-\newblock In {\em NSDI}, 2015.
+\newblock In {\em NSDI\/} (2015).
 
 \bibitem{arc}
-A.~Gember-Jacobson, R.~Viswanathan, A.~Akella, and R.~Mahajan.
+{\sc Gember-Jacobson, A., Viswanathan, R., Akella, A., and Mahajan, R.}
 \newblock Fast control plane analysis using an abstract representation.
-\newblock In {\em SIGCOMM}, 2016.
+\newblock In {\em SIGCOMM\/} (2016).
 
 \bibitem{metarouting}
-T.~G. Griffin and J.~L. Sobrinho.
+{\sc Griffin, T.~G., and Sobrinho, J.~L.}
 \newblock Metarouting.
 \newblock In {\em Proceedings of the 2005 Conference on Applications,
-  Technologies, Architectures, and Protocols for Computer Communications},
-  SIGCOMM '05, pages 1--12, August 2005.
+  Technologies, Architectures, and Protocols for Computer Communications\/}
+  (August 2005), SIGCOMM '05, pp.~1--12.
 
 \bibitem{routingalgebra}
-J.~a.~L. Sobrinho.
+{\sc Sobrinho, J.~a.~L.}
 \newblock An algebraic theory of dynamic network routing.
-\newblock {\em IEEE/ACM Trans. Netw.}, 13(5):1160--1173, October 2005.
+\newblock {\em IEEE/ACM Trans. Netw. 13}, 5 (October 2005), 1160--1173.
 
 \end{thebibliography}

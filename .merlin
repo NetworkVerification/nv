@@ -1,4 +1,4 @@
-PKG integers oUnit z3 ANSITerminal str batteries cudd ppx_deriving.std ppx_deriving_argparse lru-cache zarith
+PKG integers oUnit z3 ANSITerminal str batteries cudd ppx_deriving.std ppx_deriving_argparse lru-cache zarith fileutils
 S src/**
 S test/**
 B _build/src/**

@@ -1,0 +1,9 @@
+(library
+  (name nv_transformations)
+  (libraries
+    nv_datastructures
+    nv_lang
+    nv_utils
+    nv_solution))
+
+(include_subdirs unqualified)

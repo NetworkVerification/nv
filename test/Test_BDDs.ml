@@ -1,5 +1,8 @@
 open BatSet
 open OUnit2
+open Nv_lib
+open Nv_lang
+open Nv_datastructures
 open Syntax
 
 (* Unit tests for the BddMap data structure *)
@@ -61,7 +64,7 @@ let test1 _ =
   assert_equal_values y bf ;
   let e = new_key () in
   let set = PSet.create Pervasives.compare in
-  let map = BddMap.map ~op_key:(e, set) (fun v -> vbool true) map in
+  let map = BddMap.map ~op_key:(e, set) (fun _ -> vbool true) map in
   let x = BddMap.find map v2 in
   let y = BddMap.find map v1 in
   assert_equal_values x bt ;

@@ -1,0 +1,15 @@
+let mapo f o =
+  match o with
+  | None -> None
+  | Some x -> Some (f x)
+
+let mapbetter f o1 o2 =
+  match (o1, o2) with
+  | (None, None) -> None
+  | (None, x) -> x
+  | (x, None) -> x
+  | (Some x, Some y) -> Some (f x y)
+
+let flipEdge e =
+  match e with
+  | a~b -> toEdge b a
