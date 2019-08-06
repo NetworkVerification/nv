@@ -17,14 +17,14 @@ let rec map3 f lst1 lst2 lst3 =
   match lst1, lst2, lst3 with
   | [], [], [] -> []
   | hd1::tl1, hd2::tl2, hd3::tl3 -> (f hd1 hd2 hd3)::map3 f tl1 tl2 tl3
-  | _ -> raise (Invalid_argument "combine3: lists have different lengths")
+  | _ -> raise (Invalid_argument "map3: lists have different lengths")
 
 let map3i f lst1 lst2 lst3 =
   let rec aux count lst1 lst2 lst3 =
     match lst1, lst2, lst3 with
     | [], [], [] -> []
     | hd1::tl1, hd2::tl2, hd3::tl3 -> (f count hd1 hd2 hd3)::aux (count+1) tl1 tl2 tl3
-    | _ -> raise (Invalid_argument "combine3: lists have different lengths")
+    | _ -> raise (Invalid_argument "map3i: lists have different lengths")
   in aux 0 lst1 lst2 lst3
 
 let rec combine3 lst1 lst2 lst3 =

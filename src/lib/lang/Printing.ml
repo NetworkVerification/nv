@@ -238,7 +238,8 @@ and exp_to_string_p prec e =
       ^ exp_to_string_p max_prec e1
       ^ " in \n" ^ exp_to_string_p prec e2
     | ETuple es ->
-      "(" ^ comma_sep (exp_to_string_p max_prec) es ^ ")"
+      if BatList.is_empty es then "EEmptyTuple" else
+        "(" ^ comma_sep (exp_to_string_p max_prec) es ^ ")"
     | ESome e -> "Some(" ^ exp_to_string_p prec e ^ ")"
     | EMatch (e1, bs) ->
       "(match "
