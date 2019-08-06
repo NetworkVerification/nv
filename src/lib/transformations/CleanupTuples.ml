@@ -3,6 +3,7 @@
    assumes maps have already been unrolled *)
 
 open Nv_lang
+open Syntax
 open Nv_utils.OCamlUtils
 open Nv_solution
 
@@ -13,8 +14,7 @@ let mapo f o =
 ;;
 
 let rec cleanup_ty ty =
-  let open Syntax in
-  match ty with
+    match ty with
   | TUnit | TBool | TInt _ | TNode | TEdge | QVar _ -> ty
   | TTuple [] -> TUnit
   | TTuple [ty'] -> cleanup_ty ty'
@@ -31,8 +31,7 @@ let rec cleanup_ty ty =
 ;;
 
 let rec cleanup_pattern p =
-  let open Syntax in
-  match p with
+    match p with
   | PWild | PUnit | PBool _ | PInt _ | PVar _ | PNode _ | PEdge _ -> p
   | PTuple [] -> PUnit
   | PTuple [p] -> cleanup_pattern p
@@ -42,8 +41,7 @@ let rec cleanup_pattern p =
 ;;
 
 let rec cleanup_val v =
-  let open Syntax in
-  let new_v =
+    let new_v =
     match v.v with
     | VUnit | VBool _ | VInt _ | VNode _ | VEdge _ -> v
     | VTuple [] -> vunit ()
@@ -57,8 +55,7 @@ let rec cleanup_val v =
 ;;
 
 let rec cleanup_exp e =
-  let open Syntax in
-  let new_e =
+    let new_e =
     match e.e with
     | ETuple [] -> e_val (vunit ())
     | ETuple [e] -> e
@@ -96,15 +93,13 @@ let rec cleanup_exp e =
 ;;
 
 let cleanup_toe toe =
-  let open Syntax in
-  match toe with
+    match toe with
   | Ty ty -> Ty (cleanup_ty ty)
   | Exp e -> Exp (cleanup_exp e)
 ;;
 
 let rec cleanup_decl d =
-  let open Syntax in
-  match d with
+    match d with
   | DNodes _ | DEdges _ -> d
   | DInit e -> DInit (cleanup_exp e)
   | DTrans e -> DTrans (cleanup_exp e)
@@ -139,15 +134,14 @@ let rec cleanup_net_aux (n : Syntax.network) : Syntax.network =
     to the original version **)
 
 let rec map_back_value v oldty =
-  let open Syntax in
   let uncleanupd_v =
     match v.v, oldty with
     | VUnit, TUnit
-    | VBool _, (TBool | TTuple []) (* Hack to handle mask conversion *)
+    | VBool _, TBool
     | VInt _, TInt _ -> v
-    | VTuple tys, TTuple oldtys -> vtuple (List.map2 map_back_value tys oldtys)
-    | VUnit, TTuple [] -> vtuple []
+    | _, TTuple [] -> vtuple []
     | _, TTuple [ty] -> vtuple [map_back_value v ty]
+    | VTuple tys, TTuple oldtys -> vtuple (List.map2 map_back_value tys oldtys)
     | VOption vo, TOption ty -> voption (mapo (fun vo -> map_back_value vo ty) vo)
     | VRecord _, _ | VMap _, _ | VClosure _, _ -> failwith "Should be unrolled"
     | _ -> failwith @@ Printf.sprintf "Type and value do not match: (%s, %s)"

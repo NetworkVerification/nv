@@ -10,6 +10,9 @@ let omap (f : 'a -> 'b) (x: 'a option): 'b option = (* BatOption.map f x *)
   | Some y -> Some(f y)
 
 (*** List Utilities ***)
+let rec list_to_string f lst =
+  Printf.sprintf "[%s]" @@ BatString.concat ";" @@ List.map f lst
+
 let rec map3 f lst1 lst2 lst3 =
   match lst1, lst2, lst3 with
   | [], [], [] -> []
