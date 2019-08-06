@@ -1,13 +1,22 @@
+include "utils.nv"
+
 type attribute = dict[int,option[int]]
 
-let nodes = 1
+let nodes = 2
 
-let edges = { }
+let edges = {
+  0=1;
+}
 
-let merge node x y = x
+let merge node x y =
+  let f = mapbetter (fun x y -> if x < y then x else y) in
+  combine f x y
 
-let trans edge x = x
+let trans edge x =
+  map (fun x -> mapo (fun x -> x + 1) x) x
 
-let init node = createDict None
-
-let assert n x = x[3] = None
+let init node =
+  let m = createDict None in
+  match node with
+  | 0n -> m[3 := Some 0]
+  | 1n -> m[5 := Some 0]

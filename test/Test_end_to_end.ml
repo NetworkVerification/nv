@@ -80,7 +80,7 @@ let hiding_test filename expected: test =
 let simulator_tests =
   List.map (fun (f,b) -> simulator_test f b)
     [
-      ("examples/debug-combine.nv", true);
+      ("examples/debugging/debug-combine.nv", true);
       ("examples/batfish.nv", false);
       ("examples/diamond.nv", true);
       ("examples/diamond-ospf.nv", true);
@@ -111,7 +111,7 @@ let simulator_tests =
 let smt_tests =
   List.map (fun (f,b) -> smt_test f b)
     [
-      ("examples/debug-combine.nv", true);
+      ("examples/debugging/debug-combine.nv", true);
       (* Takes forever? *)
       (* ("examples/batfish.nv", false); *)
       ("examples/diamond.nv", true);
@@ -143,8 +143,8 @@ let smt_tests =
 let unboxed_tests =
   List.map (fun (f,b) -> unboxed_test f b)
     [
-      ("examples/debug-combine.nv", true);
-      ("examples/batfish.nv", false);
+      ("examples/debugging/debug-combine.nv", true);
+      (* ("examples/batfish.nv", false); *)
       ("examples/diamond.nv", true);
       ("examples/diamond-ospf.nv", true);
       ("examples/env.nv", true);
@@ -174,8 +174,8 @@ let unboxed_tests =
 let hiding_tests =
   List.map (fun (f,b) -> hiding_test f b)
     [
-      ("examples/debug-combine.nv", true);
-      ("examples/batfish.nv", false);
+      ("examples/debugging/debug-combine.nv", true);
+      (* ("examples/batfish.nv", false); *)
       ("examples/diamond.nv", true);
       ("examples/diamond-ospf.nv", true);
       ("examples/env.nv", true);
