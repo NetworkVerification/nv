@@ -56,7 +56,16 @@ NV is great
 \section{Introduction} 
 \label{sec:introduction}
 
-Stuff
+\begin{enumerate}
+  \item Introduce the problem: buggy networks, network verification to the rescue.
+  \item Existing tools (Batfish, Minesweeper, etc.) have made huge leaps to alleviate the problem but as they operate (almost) directly on top of the complicated configuration languages they suffer from a wide range of problems:
+    \begin{itemize}
+      \item[Lack of trust] Configuration languages span hundreds of expressions and statements. Faithfully and consistently modeling their only informally defined semantics is a difficult task.
+      \item[Inflexible] The used expressions are not compositional. Adding new language features often requires adding new expressions and updating all analyses backends.
+      \item[Non-transparent semantics] Requires network expertise and peeking into the large codebase of the backends to understand the semantics of commands.
+    \end{itemize}
+  \item PL community has tackled these problems before: translate configurations to an intermediate language and build analyses tools on top of the intermediate language.
+\end{enumerate}
 
 %=====================================================
 %
@@ -69,7 +78,8 @@ Stuff
 \section{Motivating Examples} 
 \label{sec:motivation}
 
-Key ideas
+Perhaps a small BGP configuration nicely demonstrates the key points: route-map complexity, implicit semantics, required network expertise.
+And then the corresponding NV program nicely demonstrates NV strong points.
 
 %=====================================================
 %
@@ -82,33 +92,77 @@ Key ideas
 \section{Language} 
 \label{sec:language}
 
+When designing an intermediate language there is a tension between the language
+constructs needed to faithfully model the source language and the constructs
+that verification techniques can efficiently reason about.
 \begin{enumerate}
-  \item Syntax and overview
-  \item Features, \EG, symbolic variables, requires, types, fixed point etc.
-  \item Semantics: (1) Asychronous semantics (simulation), and (2) Stable path semantics (SMT)
+  \item Syntax, types, standard lambda-calculus semantics.
+  \item Discuss about no recursion, our approach to modeling maps in order to retain completeness in first-order logic, etc.
+  \item Verification features, \EG, symbolic variables, requires.
+  \item Message exchange semantics and SPP?
+  \item Modules.
 \end{enumerate}
 
 %=====================================================
 %
 %
-%  **Tools**
+%  **Translation from configurations**
 %
 %
 %=====================================================
 
-\section{Tools}
-\label{sec:tools}
+\section{Translating real networks}
+\label{sec:translation}
 
+Batfish to NV translation. Define how we map devices/interfaces to nodes/edges,
+policy to expressions and show how OSPF/eBGP is translated.
+
+dataplane and iBGP are going to need a little subsection of their own, even if we don't translate them from Batfish now (or by submission time).
+
+%=====================================================
+%
+%
+%  **Transformations**
+%
+%
+%=====================================================
+\section{Transformations}
+\label{sec:transformations}
+
+Working with a small language with well-studied semantics we can apply many
+transformations to improve verification performance. Moreover, arguing about their correctness is much easier.
+\begin{itemize}
+  \item Partial Evaluation. This is probably the most important transformation for the SMT verifier. Minesweeper does some partial evaluation but presumably more limited.
+  \item Data structures such as options and maps, are convenient for the user to express his routing protocol, but tend to make verification harder. We eliminate most of them, reducing a program to a program that only uses base types and flat/unrolled tuples by a set of transformations: record unrolling, map unrolling, option unboxing, tuple flatenning/unrolling.
+  \item Also renaming and inlining.
+  \item Other transformations, slicing based on assertion and compression?
+\end{itemize}
+
+\todo{It's a must that we have proofs of correctness for the transformations of functional expressions on paper. It's a nice bonus if we have them on Coq. Proof assistants tend to work well for this kind of reasoning, variable naming aside.}
+
+
+%=====================================================
+%
+%
+%  **Backends**
+%
+%
+%=====================================================
+
+\section{Backends}
+\label{sec:backends}
+
+\subsection{Simulation}
+\begin{itemize}
+  \item Simulator.
+  \item Randomized testing / Fuzzing? This is like the simulator but it does a smarter instantiation of symbolic variables. Would be interesting if we gave that a bit more thought, but maybe it is too much to ask.
+  \item Native simulator - This is pushing my OCaml engineering skills to the limits, but I should get it done. It's an interesting new backend enabled by our research and should deliver much better performance, especially for networks with complex routing policy.
+\end{itemize}
+
+\subsection{SMT-based verification}
 \begin{enumerate}
-  \item Simulator
-  \item SMT encoding (stable)
-  \item SMT encoding (bounded model checker)
-  \item Randomized testing / Fuzzing?
-  \item Symbolic execution 
-  \item Abstraction / symmetries
-  \item Abstraction refinement for failures
-  \item Compiler to P4
-  \item Convergence checking?
+  \item SMT encoding (a few different flavors, we can probably very quickly brush off the boxed version and just discuss classic vs functional encoding).
+  \item Convergence checking? \nick{Is that monotonicity check?}. We can/do have those. An alternative is to make a backend to a proof assistant such as F* (because it uses z3 in the backend and can automatically prove properties such as isotonicity). This is almost like a printer for our language, so it should be easy (it's similar to what we did with Vale an assembly DSL for crypto). We can go a step further and augment the NV-lang to support specs on functions through some special syntax. Then monotonicity/isotonicity is just a spec that the user can write.
 \end{enumerate}
 
 %=====================================================
@@ -122,10 +176,12 @@ Key ideas
 \section{Evaluation}
 \label{sec:evaluation}
 
-\begin{enumerate}
-  \item comparison to Batfish?
-  \item run the tool on real networks to find bugs?
-\end{enumerate}
+\begin{itemize}
+  \item Compare SMT verifier's performance, functional vs classic. Maybe the one with datatypes too?
+  \item Simulator vs compiled simulator.
+  \item Comparisons to Batfish/MineSweeper are going to be difficult to make. Especially Batfish, it's much more mature than NV and models more features. Minesweeper vs SMT verifier would make more sense. We don't have to necessarily beat Minesweeper.
+  \item Non-performance evaluations would also be interesting but difficult to make too.
+\end{itemize}
 
 %=====================================================
 %
