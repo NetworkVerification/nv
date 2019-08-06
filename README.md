@@ -36,6 +36,10 @@ opam install -y \
 
 Then clone the repo and run `dune build src/exe/main.exe`.
 
+### MacOS
+
+See Issue [#7](https://github.com/princedpw/nv/issues/7).
+
 ### Ubuntu (16.04+)
 
 ```
