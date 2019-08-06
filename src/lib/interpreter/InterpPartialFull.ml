@@ -345,8 +345,10 @@ let rec interp_exp_partial (env: Syntax.exp Env.t) e =
            <branches1>), but it will _usually_ give us a significant code decrease.
            TODO: It would be nice to have a heuristic for determining when this
            match permutation is likely to actually be helpful. *)
-        match is_irrefutable pat, pe1.e with
-        | true, EMatch (e2, branches2) ->
+           (* Note: since this potentially duplicates code, we need to rename afterwards.
+              For the moment I'm disabling it to avoid that. *)
+           match is_irrefutable pat, pe1.e, false with
+           | true, EMatch (e2, branches2), true ->
           let permuted_match =
             ematch e2
               (mapBranches
