@@ -53,9 +53,11 @@ let rec mask_type_ty ty =
   | TVar {contents = Link ty} -> mask_type_ty ty
   | TVar _ | QVar _ | TArrow _ -> failwith "internal error (mask_ty)"
 
-let mask_type_sol sol =
+(* This function works correctly, but I think it's almost always a
+   mistake to use it. Use mask_type_ty instead. *)
+(* let mask_type_sol sol =
   let one_attr = VertexMap.choose sol.labels |> snd in
-  (value_to_mask one_attr).vty |> oget
+  (value_to_mask one_attr).vty |> oget *)
 
 (* Print a value with only the parts where the mask is true. *)
 let rec print_masked mask v =

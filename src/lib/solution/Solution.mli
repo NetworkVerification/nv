@@ -13,6 +13,6 @@ type map_back = t -> t
 val print_solution : t -> unit
 
 val mask_type_ty : ty -> ty
-val mask_type_sol : t -> ty
+(* val mask_type_sol : t -> ty *)
 (* Given a value, creates a mask where every part of the value is displayed *)
 val value_to_mask : value -> value

@@ -186,7 +186,6 @@ let rec box_val v ty =
        Printf.printf "%s\n" (Printing.value_to_string vflag);
        failwith "mistyped optional value")
   | VTuple vs, TTuple ts ->
-    Printf.printf "Tuples: %s, %s\n" (Printing.value_to_string v) (Printing.ty_to_string ty);
     vtuple (BatList.map2 (box_val) vs ts)
   | VTuple vs, _ ->
     (* Printf.printf "%s\n" (printList (Printing.ty_to_string) ts "" "," ""); *)

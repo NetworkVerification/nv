@@ -348,7 +348,7 @@ let unflatten_sol
     labels = Nv_datastructures.AdjGraph.VertexMap.map (fun v -> unflatten_val v orig_attr) sol.labels;
     symbolics = VarMap.mapi (fun x v ->
         unflatten_val v (VarMap.find x sym_types)) (unproj_symbolics sol.symbolics);
-    mask = omap (fun v -> unflatten_val v (Nv_solution.Solution.mask_type_sol sol)) sol.mask;
+    mask = omap (fun v -> unflatten_val v (Nv_solution.Solution.mask_type_ty orig_attr)) sol.mask;
   }
 
 let flatten_net net =

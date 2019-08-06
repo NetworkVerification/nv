@@ -143,7 +143,7 @@ let rec map_back_value v oldty =
   let uncleanupd_v =
     match v.v, oldty with
     | VUnit, TUnit
-    | VBool _, TBool
+    | VBool _, (TBool | TTuple []) (* Hack to handle mask conversion *)
     | VInt _, TInt _ -> v
     | VTuple tys, TTuple oldtys -> vtuple (List.map2 map_back_value tys oldtys)
     | VUnit, TTuple [] -> vtuple []
@@ -192,7 +192,7 @@ let map_back symbolics attr_ty (sol : Nv_solution.Solution.t) =
   {sol with
    symbolics = map_back_symbolics symbolics sol;
    labels = map_back_attrs attr_ty sol;
-   mask = omap (fun v -> map_back_value v (Solution.mask_type_sol sol)) sol.mask
+   mask = omap (fun v -> map_back_value v (Solution.mask_type_ty attr_ty)) sol.mask
   }
 ;;
 
