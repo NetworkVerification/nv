@@ -333,7 +333,7 @@ let unroll_net_aux
         in
         (var, tyo', unroll_exp e)) net.defs;
     utys =
-      BatList.map (fun m -> StringMap.map unroll_type m) net.utys;
+      BatList.map (fun (x,m) -> (x, unroll_type m)) net.utys;
     assertion = (match net.assertion with
         | None -> None
         | Some e ->
@@ -353,7 +353,7 @@ let unroll_net_aux
   }
 
 let unroll_net (net : Syntax.network) =
-  let rtys = net.utys in
+  let rtys = net.utys |> Syntax.get_record_types_from_utys  in
   let unrolled = unroll_net_aux rtys net in
   (* print_endline @@ Printing.declarations_to_string unrolled; *)
   let map_back sol =

@@ -343,7 +343,6 @@ let rec declarations_to_string ds =
 
 let network_to_string ?(show_topology=false) (net : Syntax.network) =
   (** User types **)
-<<<<<<< HEAD:src/utils/Printing.ml
   let utypes =
     Collections.printList (fun (x, ty) ->
         Printf.sprintf "type %s = %s" (Var.name x) (ty_to_string ty)) net.utys "" "\n" "\n"

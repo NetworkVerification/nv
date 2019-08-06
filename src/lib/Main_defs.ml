@@ -7,6 +7,7 @@ open Nv_solution
 open Nv_lang.Syntax
 open Nv_interpreter
 open Nv_transformations
+open Nv_compile
 open Nv_compression.Abstraction
 open BuildAbstractNetwork
 open Nv_utils

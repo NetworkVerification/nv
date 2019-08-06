@@ -207,7 +207,7 @@ type network =
     interface : exp option; (* partitioning *)
     symbolics : (var * ty_or_exp) list;
     defs : (var * ty option * exp) list;
-    utys : (ty StringMap.t) list;
+    utys : (var * ty) list;
     requires : exp list;
     graph : AdjGraph.t;
   }
@@ -982,6 +982,9 @@ let get_requires ds =
     [] ds
   |> List.rev
 
+let get_types ds =
+  BatList.filter_map (fun d -> match d with | DUserTy (x,y) -> Some (x,y) | _ -> None) ds
+
 let get_record_types ds =
   List.fold_left
     (fun acc d ->
@@ -990,6 +993,15 @@ let get_record_types ds =
        | _ -> acc
     )
     [] ds
+
+let get_record_types_from_utys uty =
+  BatList.fold_left
+    (fun acc (_, ty) ->
+       match ty with
+         | TRecord lst -> lst :: acc
+         | _ -> acc
+    )
+    [] uty
 
 let rec get_inner_type t : ty =
   match t with TVar {contents= Link t} -> get_inner_type t | _ -> t

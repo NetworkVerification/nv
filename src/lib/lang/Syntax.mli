@@ -306,6 +306,8 @@ val get_types : declarations -> (var * ty) list
 
 val get_record_types : declarations -> (ty StringMap.t) list
 
+val get_record_types_from_utys: (var * ty) list -> (ty StringMap.t) list
+
 val equal_values : cmp_meta:bool -> value -> value -> bool
 
 val equal_exps : cmp_meta:bool -> exp -> exp -> bool

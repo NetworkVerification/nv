@@ -8,6 +8,7 @@
     nv_utils
     nv_transformations
     nv_compression
+    nv_compile
     integers
     str
     batteries

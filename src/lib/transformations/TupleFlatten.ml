@@ -387,7 +387,7 @@ let flatten_net net =
       BatList.map (fun (x, oty, e) ->
           (x, Some (flatten_ty (Nv_utils.OCamlUtils.oget oty)), flatten_exp e)) net.defs;
     utys =
-      BatList.map (fun m -> StringMap.map flatten_ty m) net.utys;
+      BatList.map (fun (x,m) -> (x, flatten_ty m)) net.utys;
     requires = BatList.map (flatten_exp) net.requires;
     graph = net.graph
   }, unflatten_sol net.attr_type
