@@ -98,18 +98,15 @@ let run_smt_classic file cfg info (net : Syntax.network) fs =
 
   let net, f = Renaming.alpha_convert_net net in (*TODO: why are we renaming here?*)
   let fs = f :: fs in
-  let solve_fun =
-    if cfg.hiding then
-      (SmtHiding.solve_hiding ~starting_vars:[] ~full_chan:(smt_query_file file))
-    else
-      Smt.solveClassic
-  in
-  let solve_smt net =
-    solve_fun info cfg.query (smt_query_file file) net
-  in
 
-  let smt_result_to_answer fs (result : Smt.smt_result) =
-    match result with
+  let get_answer net fs =
+    let solve_fun =
+      if cfg.hiding then
+        (SmtHiding.solve_hiding ~starting_vars:[] ~full_chan:(smt_query_file file))
+      else
+        Smt.solveClassic
+    in
+    match solve_fun info cfg.query (smt_query_file file) net with
     | Unsat ->
       (Success None, [])
     | Unknown -> Console.error "SMT returned unknown"
@@ -140,6 +137,7 @@ let run_smt_classic file cfg info (net : Syntax.network) fs =
          net, f :: fs)
       slices
   in
+
   (* Return the first slice that returns a counterexample, or the result of the
      last slice if all of them succeed *)
   (* print_endline @@ Printing.exp_to_string @@ ((List.hd slices |> fst).assertion |> oget); *)
@@ -148,7 +146,7 @@ let run_smt_classic file cfg info (net : Syntax.network) fs =
     match slices with
     | [] -> failwith "impossible"
     | (net, fs)::tl ->
-      let answer = smt_result_to_answer fs (solve_smt net) in
+      let answer = get_answer net fs in
       match answer with
       | CounterExample _, _ -> answer
       | Success _, _ ->

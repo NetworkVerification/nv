@@ -14,7 +14,7 @@ let mapo f o =
 ;;
 
 let rec cleanup_ty ty =
-    match ty with
+  match ty with
   | TUnit | TBool | TInt _ | TNode | TEdge | QVar _ -> ty
   | TTuple [] -> TUnit
   | TTuple [ty'] -> cleanup_ty ty'
@@ -31,7 +31,7 @@ let rec cleanup_ty ty =
 ;;
 
 let rec cleanup_pattern p =
-    match p with
+  match p with
   | PWild | PUnit | PBool _ | PInt _ | PVar _ | PNode _ | PEdge _ -> p
   | PTuple [] -> PUnit
   | PTuple [p] -> cleanup_pattern p
@@ -41,7 +41,7 @@ let rec cleanup_pattern p =
 ;;
 
 let rec cleanup_val v =
-    let new_v =
+  let new_v =
     match v.v with
     | VUnit | VBool _ | VInt _ | VNode _ | VEdge _ -> v
     | VTuple [] -> vunit ()
@@ -55,10 +55,10 @@ let rec cleanup_val v =
 ;;
 
 let rec cleanup_exp e =
-    let new_e =
+  let new_e =
     match e.e with
     | ETuple [] -> e_val (vunit ())
-    | ETuple [e] -> e
+    | ETuple [e] -> cleanup_exp e
     | ETuple es -> etuple (List.map cleanup_exp es)
     | EVar _ -> e
     | EOp (op, es) ->
@@ -93,13 +93,13 @@ let rec cleanup_exp e =
 ;;
 
 let cleanup_toe toe =
-    match toe with
+  match toe with
   | Ty ty -> Ty (cleanup_ty ty)
   | Exp e -> Exp (cleanup_exp e)
 ;;
 
 let rec cleanup_decl d =
-    match d with
+  match d with
   | DNodes _ | DEdges _ -> d
   | DInit e -> DInit (cleanup_exp e)
   | DTrans e -> DTrans (cleanup_exp e)
