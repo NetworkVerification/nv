@@ -383,4 +383,7 @@ let rec parse_reply (solver: solver_proc) =
   | Some "unsat" -> UNSAT
   | Some "unknown" -> UNKNOWN
   | None -> OTHER "EOF"
-  | Some r -> print_endline r; parse_reply solver
+  | Some r ->
+    if BatString.starts_with r "(error"
+    then Console.error ("Solver error: " ^ r)
+    else print_endline r; parse_reply solver
