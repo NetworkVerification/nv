@@ -112,6 +112,9 @@ let rec replace_decl d =
   | DRequire e -> DRequire (replace_exp e)
   | DATy aty -> DATy (replace_ty aty)
   | DUserTy (x, ty) -> DUserTy (x, replace_ty ty)
+  (* partitioning *)
+  | DPartition e -> DPartition (replace_exp e)
+  | DInterface e -> DInterface (replace_exp e)
   | _ -> failwith "not yet implemented!"
 ;;
 
