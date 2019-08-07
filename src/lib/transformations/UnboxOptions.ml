@@ -49,9 +49,9 @@ let rec unbox_val v =
      | _ -> failwith "expected option type")
   | VOption (Some v1) ->
     aexp (etuple [(vbool true |> exp_of_value); (unbox_val v1)],
-          Some (unbox_ty (Nv_utils.OCamlUtils.oget v.vty)), v.vspan)
+          Some (unbox_ty (oget v.vty)), v.vspan)
   | VTuple vs ->
-    aexp (etuple (BatList.map unbox_val vs), Some (unbox_ty (Nv_utils.OCamlUtils.oget v.vty)), v.vspan)
+    aexp (etuple (BatList.map unbox_val vs), Some (unbox_ty (oget v.vty)), v.vspan)
   | VClosure _ -> failwith "Closures not yet implemented"
   | VMap _ -> failwith "no map values"
   | VRecord _ -> failwith "no record values"
@@ -61,19 +61,19 @@ let rec unbox_exp e : exp =
   | ETy (e, _) -> unbox_exp e
   | EVal v ->
     unbox_val v
-  | EVar _ -> aexp(e, Some (unbox_ty (Nv_utils.OCamlUtils.oget e.ety)), e.espan)
+  | EVar _ -> aexp(e, Some (unbox_ty (oget e.ety)), e.espan)
   | EFun f ->
     aexp (efun
             { f with
-              argty= Some (unbox_ty (Nv_utils.OCamlUtils.oget f.argty));
-              resty= Some (unbox_ty (Nv_utils.OCamlUtils.oget f.resty));
+              argty= Some (unbox_ty (oget f.argty));
+              resty= Some (unbox_ty (oget f.resty));
               body= unbox_exp f.body },
-          Some (unbox_ty (TArrow (Nv_utils.OCamlUtils.oget f.argty, Nv_utils.OCamlUtils.oget f.resty))), e.espan)
+          Some (unbox_ty (TArrow (oget f.argty, oget f.resty))), e.espan)
   | EApp (e1, e2) ->
-    aexp (eapp (unbox_exp e1) (unbox_exp e2), Some (unbox_ty (Nv_utils.OCamlUtils.oget e.ety)), e.espan)
+    aexp (eapp (unbox_exp e1) (unbox_exp e2), Some (unbox_ty (oget e.ety)), e.espan)
   | EIf (e1, e2, e3) ->
     aexp (eif (unbox_exp e1) (unbox_exp e2) (unbox_exp e3),
-          Some (unbox_ty (Nv_utils.OCamlUtils.oget e.ety)), e.espan)
+          Some (unbox_ty (oget e.ety)), e.espan)
   | ELet (x, e1, e2) ->
     (* The commented piece of code is the correct way to do this
        transformation. The problem is I don't know how to do it in
@@ -87,17 +87,17 @@ let rec unbox_exp e : exp =
     (*     aexp(elet x (unbox_exp e1) (unbox_exp e2), *)
     (*          Some (unbox_ty (oget e.ety)), e.espan)) *)
     aexp(elet x (unbox_exp e1) (unbox_exp e2),
-         Some (unbox_ty (Nv_utils.OCamlUtils.oget e.ety)), e.espan)
+         Some (unbox_ty (oget e.ety)), e.espan)
   | ETuple es ->
-    aexp (etuple (BatList.map unbox_exp es), Some (unbox_ty (Nv_utils.OCamlUtils.oget e.ety)), e.espan)
+    aexp (etuple (BatList.map unbox_exp es), Some (unbox_ty (oget e.ety)), e.espan)
   | ESome e1 ->
     let p1 = aexp (e_val (vbool true), Some TBool, Span.default) in
-    let p2 = aexp (unbox_exp e1, Some (unbox_ty (Nv_utils.OCamlUtils.oget e1.ety)), Span.default) in
-    aexp (etuple [p1;p2], Some (unbox_ty (Nv_utils.OCamlUtils.oget e.ety)), Span.default)
+    let p2 = aexp (unbox_exp e1, Some (unbox_ty (oget e1.ety)), Span.default) in
+    aexp (etuple [p1;p2], Some (unbox_ty (oget e.ety)), Span.default)
   | EMatch (e1, bs) ->
     (* Printf.printf "match expr: %s" (Printing.exp_to_string e); *)
-    aexp (ematch (unbox_exp e1) (unbox_branches bs (Nv_utils.OCamlUtils.oget e1.ety)),
-          Some (unbox_ty (Nv_utils.OCamlUtils.oget e.ety)),
+    aexp (ematch (unbox_exp e1) (unbox_branches bs (oget e1.ety)),
+          Some (unbox_ty (oget e.ety)),
           e.espan)
   | EOp (op, es) -> (
       match (op, es) with
@@ -118,7 +118,7 @@ let rec unbox_exp e : exp =
       | TGet _, _
       | TSet _, _ ->
         aexp (eop op (BatList.map unbox_exp es),
-              Some (unbox_ty (Nv_utils.OCamlUtils.oget e.ety)), e.espan)
+              Some (unbox_ty (oget e.ety)), e.espan)
       | _ -> failwith "TODO: implement option unboxing for rest of map operations")
   | ERecord _ | EProject _ ->
     failwith "Record operation in option unboxing"
@@ -157,7 +157,7 @@ and unbox_branches bs ty =
 
 let unbox_decl d =
   match d with
-  | DLet (x, oty, e) -> DLet (x, Some (unbox_ty (Nv_utils.OCamlUtils.oget oty)), unbox_exp e)
+  | DLet (x, oty, e) -> DLet (x, Some (unbox_ty (oget oty)), unbox_exp e)
   | DMerge e -> DMerge (unbox_exp e)
   | DTrans e ->
     DTrans (unbox_exp e)
@@ -225,7 +225,7 @@ let unbox_net net =
         match e with
         | Ty ty -> (x, Ty (unbox_ty ty))
         | Exp e -> (x, Exp (unbox_exp e))) net.symbolics;
-    defs = BatList.map (fun (x, oty, e) -> (x, Some (unbox_ty (Nv_utils.OCamlUtils.oget oty)), unbox_exp e))
+    defs = BatList.map (fun (x, oty, e) -> (x, Some (unbox_ty (oget oty)), unbox_exp e))
         net.defs;
     utys = BatList.map (fun m ->
         Nv_utils.PrimitiveCollections.StringMap.map unbox_ty m) net.utys;

@@ -159,17 +159,19 @@ let lookup_map_type ty lst =
   instead of just the values which appear in the program
 *)
 let add_keys_for_nodes_and_edges decls maplist =
+  let make_node n = aexp (e_val (avalue (vnode n, Some TNode, Span.default)), Some TNode, Span.default) in
+  let make_edge (i, j) = aexp (e_val (avalue (vedge (i, j), Some TEdge, Span.default)), Some TEdge, Span.default) in
   let nodes =
     get_nodes decls
     |> Nv_utils.OCamlUtils.oget
     |> BatEnum.(--^) 0 (* Enum of 0 to (num_nodes - 1) *)
-    |> BatEnum.map (fun n -> e_val (vnode n))
+    |> BatEnum.map make_node
     |> ExpSet.of_enum
   in
   let edges =
     get_edges decls
     |> Nv_utils.OCamlUtils.oget
-    |> List.map (fun (n1, n2) -> e_val (vedge (n1, n2)))
+    |> List.map make_edge
     |> ExpSet.of_list
   in
   List.map
