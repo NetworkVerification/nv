@@ -69,7 +69,7 @@ let run_smt_func file cfg info net fs =
 
 let run_smt_classic file cfg info (net : Syntax.network) fs =
   let net, fs =
-    if cfg.unbox || cfg.hiding then
+    if cfg.unbox then
       begin
         SmtUtils.smt_config.unboxing <- true;
         let net, f1 = Profile.time_profile "Unbox options" (fun () -> UnboxOptions.unbox_net net) in
@@ -80,21 +80,6 @@ let run_smt_classic file cfg info (net : Syntax.network) fs =
       end
     else net, fs
   in
-
-  (* print_endline @@ Printing.network_to_string net;
-     print_endline "\nAttribute dependencies:";
-     print_endline @@ AttributeSlicing.attrdepmap_to_string @@ AttributeSlicing.attribute_dependencies net;
-     print_endline "\nAssert conjuncts and dependencies:";
-     print_endline @@ BatString.concat "\n" @@
-     List.map (fun (e, s) -> Printf.sprintf "%s:{ %s }" (Printing.exp_to_string e)
-               (Collections.IntSet.fold
-                  (fun n acc ->
-                     Printf.sprintf "%s; %d" acc n) s "")) @@
-     AttributeSlicing.assert_dependencies net;
-     List.iter
-     (fun (n, _) -> print_endline (BatString.make 80 '-');
-      print_endline @@ Printing.network_to_string n) @@
-     AttributeSlicing.slice_network net; *)
 
   let net, f = Renaming.alpha_convert_net net in (*TODO: why are we renaming here?*)
   let fs = f :: fs in
@@ -121,10 +106,10 @@ let run_smt_classic file cfg info (net : Syntax.network) fs =
   in
 
   (* Attribute Slicing requires the net to have an assertion and for its attribute
-     to be a tuple type. TODO: Add a command-line flag as well *)
+     to be a tuple type. *)
   let slices =
-    match net.assertion, net.attr_type with
-    | Some _, TTuple _ ->
+    match cfg.slicing, net.assertion, net.attr_type with
+    | true, Some _, TTuple _ ->
       AttributeSlicing.slice_network net
       |> List.map (fun (net, f) -> net, f :: fs)
     | _ ->
@@ -140,7 +125,6 @@ let run_smt_classic file cfg info (net : Syntax.network) fs =
 
   (* Return the first slice that returns a counterexample, or the result of the
      last slice if all of them succeed *)
-  (* print_endline @@ Printing.exp_to_string @@ ((List.hd slices |> fst).assertion |> oget); *)
   (* List.iter (fun (net, _) -> print_endline @@ Printing.network_to_string net) slices; *)
   let rec solve_slices slices =
     match slices with
@@ -316,6 +300,8 @@ let parse_input (args : string array)
   : Cmdline.t * Console.info * string * Syntax.network * ((Solution.t -> Solution.t) list) =
   let cfg, rest = argparse default "nv" args in
   Cmdline.set_cfg cfg ;
+  Cmdline.update_cfg_dependencies ();
+  let cfg = Cmdline.get_cfg () in
   if cfg.debug then Printexc.record_backtrace true ;
   let file = rest.(0) in
   let ds, info = Input.parse file in (* Parse nv file *)
@@ -328,7 +314,7 @@ let parse_input (args : string array)
   let decls, f = RecordUnrolling.unroll decls in (* Unroll records done first *)
   let fs = [f] in
   let decls,fs = (* inlining definitions *)
-    if cfg.inline || cfg.unroll || cfg.smt || cfg.check_monotonicity || cfg.smart_gen then
+    if cfg.inline then
       (* Note! Must rename before inling otherwise inling is unsound *)
       let decls, f = Renaming.alpha_convert_declarations decls in
       (Profile.time_profile "Inlining" (
@@ -339,7 +325,7 @@ let parse_input (args : string array)
       (decls,fs)
   in
   let decls, fs =
-    if cfg.unroll || cfg.smt then
+    if cfg.unroll then
       let decls, f = (* unrolling maps *)
         Profile.time_profile "Map unrolling" (fun () -> MapUnrolling.unroll info decls)
       in

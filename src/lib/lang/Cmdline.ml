@@ -21,8 +21,9 @@ type t =
   (* ; draw: bool                         (\** emits a .jpg file of the graph          *\) *)
   ; depth: int                         (** search depth for refinement procedure   *)
   ; check_monotonicity: bool           (** checks monotonicity of trans function   *)
-  ; link_failures: int                  (** adds at most k link failures to the network  *)
-  ; hiding: bool                        (** Use the hiding abstraction during SMT solving *)
+  ; link_failures: int                 (** adds at most k link failures to the network  *)
+  ; hiding: bool                       (** Use the hiding abstraction during SMT solving *)
+  ; slicing: bool                      (** Try to slice the network's attribute *)
   }
 [@@deriving
   show
@@ -54,6 +55,7 @@ let default =
   ; check_monotonicity=false
   ; link_failures=0
   ; hiding=false
+  ; slicing=false
   }
 
 let cfg = ref default
@@ -61,3 +63,16 @@ let cfg = ref default
 let get_cfg () = !cfg
 
 let set_cfg c = cfg := c
+
+(* Some of our flags only make sense if we have other ones -- for example,
+   we can't do map unrolling unless we also do inlining. Make sure all the
+   appropriate flags are set, so we don't have to check for lots of different
+   variables at the site of each transformation *)
+let update_cfg_dependencies () =
+  if !cfg.smt then cfg := {!cfg with unroll=true; inline=true};
+  if !cfg.unroll then cfg := {!cfg with inline=true};
+  if !cfg.check_monotonicity then cfg := {!cfg with inline=true};
+  if !cfg.smart_gen then cfg := {!cfg with inline=true};
+  if !cfg.slicing then cfg := {!cfg with unbox=true};
+  if !cfg.hiding then cfg := {!cfg with unbox=true};
+  ()
