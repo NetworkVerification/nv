@@ -7,6 +7,7 @@ open Syntax
 open Collections
 open Dependency
 open Nv_solution
+open Nv_interpreter
 
 (* Maps attribute elements to the set of other elements they depend on *)
 type attrdepmap = IntSet.t IntMap.t
@@ -157,7 +158,24 @@ let assert_dependencies (net : Syntax.network) =
   List.map (fun c -> c, compute_final_dependencies c) (get_conjuncts [] body)
 ;;
 
-let rewrite_fun (attr_ty : ty) (elts_to_keep : IntSet.t) (assertion : exp) (leading_args : int) (f : exp) =
+(* If we're slicing away every attribute element (which can happpen if we're
+   e.g. doing a fold), we also slice away every argument to the srp functions,
+   which causes type errors later. In that case, add a dummy argument to each
+   function *)
+let add_dummy_arg args_to_add elements (body : exp) =
+  if not (IntSet.is_empty elements) then body else
+    let rec aux count body =
+      if count = 0 then body else
+        aux (count-1) @@
+        aexp
+          (efun ({arg= Var.fresh "SlicingUnitVar"; argty = Some (TTuple []); resty= body.ety; body=body}),
+           Some (TArrow (TTuple [], oget body.ety)),
+           body.espan)
+    in
+    aux args_to_add body
+;;
+
+let rewrite_fun (attr_ty : ty) (elts_to_keep : IntSet.t) (assertion : exp) (leading_args : int) (args_to_add : int) (f : exp) =
   (* Types of the elements of the original attribute *)
   let attr_tys =
     match attr_ty with | TTuple lst -> lst | _ -> failwith "impossible"
@@ -183,7 +201,7 @@ let rewrite_fun (attr_ty : ty) (elts_to_keep : IntSet.t) (assertion : exp) (lead
         rewrite_fun_aux func.body (count + 1) ((func.arg, func.argty, false)::args)
           (fun e -> cont e)
     | _ ->
-      let body_with_dummy_args e =
+      let bind_dummy_vars e =
         args
         |> List.filter (fun (_,_,b) -> not b)
         |> List.fold_left
@@ -198,12 +216,12 @@ let rewrite_fun (attr_ty : ty) (elts_to_keep : IntSet.t) (assertion : exp) (lead
           )
           e
       in
+      let finish = cont % (add_dummy_arg args_to_add elts_to_keep) % InterpPartialFull.interp_partial in
       match e.ety with
       | Some TBool -> (* This is the assert function. Return the input assert body *)
         assertion
-        |> body_with_dummy_args
-        |> Nv_interpreter.InterpPartialFull.interp_partial
-        |> cont
+        |> bind_dummy_vars
+        |> finish
       | _ ->
         (* Not the assert function. Replace the input arguments with dummy variables
            and extract only the relevant elements of the result. *)
@@ -231,12 +249,11 @@ let rewrite_fun (attr_ty : ty) (elts_to_keep : IntSet.t) (assertion : exp) (lead
         in
         let final_match =
           ematch
-            (body_with_dummy_args e)
+            (bind_dummy_vars e)
             (addBranch (PTuple pat) final_output emptyBranch)
         in
         (aexp (final_match, Some (TTuple sliced_attr_tys), e.espan))
-        |> Nv_interpreter.InterpPartialFull.interp_partial
-        |> cont
+        |> finish
   in
   rewrite_fun_aux f 0 [] (fun e -> e)
 ;;
@@ -279,15 +296,15 @@ let map_back old_aty elements (sol : Solution.t) =
    its assert function. *)
 let slice (net : Syntax.network) (asn_slice : exp) (elements : IntSet.t) =
   let slice_fun = rewrite_fun (net.attr_type) elements asn_slice in
-  let sliced_init = slice_fun 1 (* First arg is node *) net.init in
-  let sliced_trans = slice_fun 2 (* First two args are edge nodes *) net.trans in
-  let sliced_merge = slice_fun 1 (* First arg is node *) net.merge in
+  let sliced_init = slice_fun 1 (* First arg is node *) 0 net.init in
+  let sliced_trans = slice_fun 2 (* First two args are edge nodes *) 1 net.trans in
+  let sliced_merge = slice_fun 1 (* First arg is node *) 2 net.merge in
+  let sliced_assert = slice_fun 1 (* First arg is node *) 1 (net.assertion |> oget) in
   let sliced_aty =
     match net.attr_type with
     | TTuple lst -> TTuple (List.filteri (fun i _ -> IntSet.mem i elements) lst)
     | _ -> failwith "impossible"
   in
-  let sliced_assert = slice_fun 1 (* First arg is node *) (net.assertion |> oget) in
   let sliced_net, cleanup_map_back =
     {net with attr_type=sliced_aty;
               init=sliced_init;
