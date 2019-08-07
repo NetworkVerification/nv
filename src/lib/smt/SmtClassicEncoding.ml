@@ -145,13 +145,16 @@ struct
            with _ ->
              incoming_map :=
                AdjGraph.VertexMap.add j [(i, j)] !incoming_map ) ;
+         let node_value n =
+           avalue ((vnode n), Some Typing.node_ty, Span.default)
+         in
          let edge =
            if SmtUtils.smt_config.unboxing then
-             [avalue ((vnode i), Some Typing.node_ty, Span.default);
-              avalue ((vnode j), Some Typing.node_ty, Span.default)]
+             [node_value i; node_value j]
            else
-             [avalue (vedge (i, j),
-                      Some Typing.edge_ty, Span.default)] in
+             [avalue (vtuple [node_value i; node_value j],
+                      Some (TTuple [TNode; TNode]), Span.default)]
+         in
          (* Printf.printf "etrans:%s\n" (Printing.exp_to_string etrans); *)
          let etrans_uv = InterpPartial.interp_partial_fun etrans edge in
          let trans, x =
