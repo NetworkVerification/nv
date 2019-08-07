@@ -33,5 +33,5 @@ let map_back_mutator _ v orig_ty =
 (* Bools and Unit have the same mask type *)
 let mask_mutator _ v _ = Some v;;
 
-let unbox_declarations = Mutators.mutate_declarations ty_mutator pat_mutator value_mutator exp_mutator map_back_mutator mask_mutator;;
-let unbox_net = Mutators.mutate_network ty_mutator pat_mutator value_mutator exp_mutator map_back_mutator mask_mutator;;
+let unbox_declarations = Mutators.mutate_declarations ~name:"UnboxUnits" ty_mutator pat_mutator value_mutator exp_mutator map_back_mutator mask_mutator;;
+let unbox_net = Mutators.mutate_network ~name:"UnboxUnits" ty_mutator pat_mutator value_mutator exp_mutator map_back_mutator mask_mutator;;

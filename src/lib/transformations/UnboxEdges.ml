@@ -1,4 +1,5 @@
 open Nv_lang.Syntax
+open Nv_datastructures
 
 let ty_mutator _ ty =
   match ty with
@@ -30,5 +31,5 @@ let map_back_mutator _ v orig_ty =
 (* Pretty sure this works *)
 let mask_mutator = map_back_mutator;;
 
-let unbox_declarations = Mutators.mutate_declarations ty_mutator pat_mutator value_mutator exp_mutator map_back_mutator mask_mutator;;
-let unbox_net = Mutators.mutate_network ty_mutator pat_mutator value_mutator exp_mutator map_back_mutator mask_mutator;;
+let unbox_declarations = Mutators.mutate_declarations ~name:"UnboxEdges" ty_mutator pat_mutator value_mutator exp_mutator map_back_mutator mask_mutator;;
+let unbox_net = Mutators.mutate_network ~name:"UnboxEdges" ty_mutator pat_mutator value_mutator exp_mutator map_back_mutator mask_mutator;;

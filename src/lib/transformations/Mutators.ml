@@ -10,8 +10,10 @@ type 'a mutator = ('a -> 'a) -> 'a -> 'a option
 type map_back_mutator = (value -> ty -> value) -> value -> ty -> value option
 type mask_mutator = map_back_mutator
 
-let rec mutate_ty ty_mutator ty =
-  let mutate_ty = mutate_ty ty_mutator in
+let rec mutate_ty
+    ~(name:string)
+    (ty_mutator : ty mutator) (ty : ty) =
+  let mutate_ty = mutate_ty ~name:name ty_mutator in
   let ty_mutator = ty_mutator mutate_ty in
   match ty_mutator ty with
   | Some ty -> ty
@@ -24,25 +26,30 @@ let rec mutate_ty ty_mutator ty =
     | TArrow (ty1, ty2) -> TArrow (mutate_ty ty1, mutate_ty ty2)
     | TMap (kty, vty) -> TMap (mutate_ty kty, mutate_ty vty)
     | TVar {contents= Link ty1} -> mutate_ty ty1
-    | TVar _ | QVar _ -> failwith "mutate_ty: encountered TVar or QVar"
+    | TVar _ | QVar _ -> failwith @@ name ^ ": mutate_ty: encountered TVar or QVar"
 ;;
 
-let rec mutate_pattern pat_mutator p =
-  let mutate_pattern = mutate_pattern pat_mutator in
+let rec mutate_pattern
+    ~(name:string)
+    (pat_mutator : pattern mutator) (p : pattern) =
+  let mutate_pattern = mutate_pattern ~name:name pat_mutator in
   let pat_mutator = pat_mutator mutate_pattern in
   match pat_mutator p with
   | Some p -> p
   | None ->
     match p with
-    | PWild | PVar _ | PBool _ | PInt _ | PNode _ | PEdge _ | POption None | PUnit -> p
+    | (PWild | PVar _ | PBool _ | PInt _ | PNode _ | PEdge _ | POption None | PUnit) -> p
     | POption (Some p) -> POption (Some (mutate_pattern p))
     | PTuple ps -> PTuple (List.map mutate_pattern ps)
-    | PRecord map -> PRecord (StringMap.map mutate_pattern map)
+    | PRecord pmap ->
+      PRecord (StringMap.map mutate_pattern pmap)
 ;;
 
-let rec mutate_value ty_mutator value_mutator v =
-  let mutate_ty = mutate_ty ty_mutator in
-  let mutate_value = mutate_value ty_mutator value_mutator in
+let rec mutate_value
+    ~(name:string)
+    (ty_mutator : ty mutator) (value_mutator : value mutator) (v : value) =
+  let mutate_ty = mutate_ty ~name:name ty_mutator in
+  let mutate_value = mutate_value ~name:name ty_mutator value_mutator in
   let value_mutator = value_mutator mutate_value in
   let v' =
     match value_mutator v with
@@ -58,16 +65,19 @@ let rec mutate_value ty_mutator value_mutator v =
            program. I think this value achieves that *)
         let op_key = e_val v, BatSet.PSet.empty in
         vmap (BddMap.map op_key (fun v -> mutate_value v) bdd)
-      | VClosure _ -> failwith "mutate_value: encountered VClosure"
+      | VClosure _ -> failwith @@ name ^ ": mutate_value: encountered VClosure"
   in
   avalue (v', omap mutate_ty v.vty, v.vspan)
 ;;
 
-let rec mutate_exp ty_mutator pat_mutator value_mutator exp_mutator e =
-  let mutate_ty = mutate_ty ty_mutator in
-  let mutate_pattern = mutate_pattern pat_mutator in
-  let mutate_value = mutate_value ty_mutator value_mutator in
-  let mutate_exp = mutate_exp ty_mutator pat_mutator value_mutator exp_mutator in
+let rec mutate_exp
+    ~(name:string)
+    (ty_mutator : ty mutator) (pat_mutator : pattern mutator) (value_mutator : value mutator)
+    (exp_mutator : exp mutator) (e : exp) =
+  let mutate_ty = mutate_ty ~name:name ty_mutator in
+  let mutate_pattern = mutate_pattern ~name:name pat_mutator in
+  let mutate_value = mutate_value ~name:name ty_mutator value_mutator in
+  let mutate_exp = mutate_exp ~name:name ty_mutator pat_mutator value_mutator exp_mutator in
   let exp_mutator = exp_mutator mutate_exp in
   let e' =
     match exp_mutator e with
@@ -96,19 +106,25 @@ let rec mutate_exp ty_mutator pat_mutator value_mutator exp_mutator e =
   aexp (e', omap mutate_ty e.ety, e.espan)
 ;;
 
-let mutate_symbolic ty_mutator pat_mutator value_mutator exp_mutator (x, toe) =
+let mutate_symbolic
+    ~(name:string)
+    (ty_mutator : ty mutator) (pat_mutator : pattern mutator) (value_mutator : value mutator)
+    (exp_mutator : exp mutator) (x, toe) =
   let toe' =
     match toe with
-    | Ty ty -> Ty (mutate_ty ty_mutator ty)
-    | Exp e -> Exp (mutate_exp ty_mutator pat_mutator value_mutator exp_mutator e)
+    | Ty ty -> Ty (mutate_ty ~name:name ty_mutator ty)
+    | Exp e -> Exp (mutate_exp ~name:name ty_mutator pat_mutator value_mutator exp_mutator e)
   in
   x, toe'
 ;;
 
-let mutate_decl ty_mutator pat_mutator value_mutator exp_mutator d =
-  let mutate_ty = mutate_ty ty_mutator in
-  let mutate_exp = mutate_exp ty_mutator pat_mutator value_mutator exp_mutator in
-  let mutate_symbolic = mutate_symbolic ty_mutator pat_mutator value_mutator exp_mutator in
+let mutate_decl
+    ~(name:string)
+    (ty_mutator : ty mutator) (pat_mutator : pattern mutator) (value_mutator : value mutator)
+    (exp_mutator : exp mutator) (d : declaration) =
+  let mutate_ty = mutate_ty ~name:name ty_mutator in
+  let mutate_exp = mutate_exp ~name:name ty_mutator pat_mutator value_mutator exp_mutator in
+  let mutate_symbolic = mutate_symbolic ~name:name ty_mutator pat_mutator value_mutator exp_mutator in
   match d with
   | DLet (x, tyo, e) -> DLet (x, omap mutate_ty tyo, mutate_exp e)
   | DInit e -> DInit (mutate_exp e)
@@ -124,8 +140,10 @@ let mutate_decl ty_mutator pat_mutator value_mutator exp_mutator d =
   | DNodes _ | DEdges _ -> d
 ;;
 
-let rec map_back_value (map_back_mutator : map_back_mutator) v orig_ty =
-  let map_back_value = map_back_value map_back_mutator in
+let rec map_back_value
+    ~(name:string)
+    (map_back_mutator : map_back_mutator) (v : value) (orig_ty : ty) =
+  let map_back_value = map_back_value ~name:name map_back_mutator in
   let map_back_mutator = map_back_mutator map_back_value in
   match map_back_mutator v orig_ty with
   | Some v -> v
@@ -143,12 +161,16 @@ let rec map_back_value (map_back_mutator : map_back_mutator) v orig_ty =
     | VClosure _, _ -> failwith "Can't have closures in attributes"
     | (VOption _ | VTuple _ | VRecord _ | VMap _), _ ->
       failwith @@
-      Printf.sprintf "Mutators.map_back_value: value %s does not match type %s"
-        (Printing.value_to_string v) (Printing.ty_to_string orig_ty)
+      Printf.sprintf "%s: map_back_value: value %s does not match type %s"
+        name (Printing.value_to_string v) (Printing.ty_to_string orig_ty)
 
-let map_back_sol (map_back_mutator : map_back_mutator) mask_mutator symb_tys attr_ty (sol : Solution.t) : Solution.t =
-  let map_back_mask = (fun v -> map_back_value mask_mutator v attr_ty) in
-  let map_back_value = map_back_value map_back_mutator in
+let map_back_sol
+    ~(name:string)
+    (map_back_mutator : map_back_mutator) (mask_mutator : mask_mutator) (symb_tys : ty VarMap.t)
+    (attr_ty : ty) (sol : Solution.t)
+  : Solution.t =
+  let map_back_mask = (fun v -> map_back_value ~name:name mask_mutator v attr_ty) in
+  let map_back_value = map_back_value ~name:name map_back_mutator in
   {
     symbolics = VarMap.mapi (fun x v -> map_back_value v (VarMap.find x symb_tys)) sol.symbolics;
     labels = VertexMap.map (fun v -> map_back_value v attr_ty) sol.labels;
@@ -157,7 +179,11 @@ let map_back_sol (map_back_mutator : map_back_mutator) mask_mutator symb_tys att
   }
 ;;
 
-let mutate_declarations ty_mutator pat_mutator value_mutator exp_mutator map_back_mutator mask_mutator ds =
+let mutate_declarations
+    ~(name:string)
+    (ty_mutator : ty mutator) (pat_mutator : pattern mutator) (value_mutator : value mutator)
+    (exp_mutator : exp mutator) (map_back_mutator : map_back_mutator) (mask_mutator : mask_mutator)
+    (ds : declarations) =
   let attr_ty = get_attr_type ds |> oget in
   let symb_tys =
     get_symbolics ds
@@ -166,14 +192,18 @@ let mutate_declarations ty_mutator pat_mutator value_mutator exp_mutator map_bac
          VarMap.add x (match toe with | Ty ty -> ty | Exp e -> (oget e.ety)) acc)
       VarMap.empty
   in
-  List.map (mutate_decl ty_mutator pat_mutator value_mutator exp_mutator) ds,
-  map_back_sol map_back_mutator mask_mutator symb_tys attr_ty
+  List.map (mutate_decl ~name:name ty_mutator pat_mutator value_mutator exp_mutator) ds,
+  map_back_sol ~name:name map_back_mutator mask_mutator symb_tys attr_ty
 ;;
 
-let mutate_network ty_mutator pat_mutator value_mutator exp_mutator (map_back_mutator : map_back_mutator) (mask_mutator : mask_mutator) net =
-  let mutate_ty = mutate_ty ty_mutator in
-  let mutate_exp = mutate_exp ty_mutator pat_mutator value_mutator exp_mutator in
-  let mutate_symbolic = mutate_symbolic ty_mutator pat_mutator value_mutator exp_mutator in
+let mutate_network
+    ~(name:string)
+    (ty_mutator : ty mutator) (pat_mutator : pattern mutator) (value_mutator : value mutator)
+    (exp_mutator : exp mutator) (map_back_mutator : map_back_mutator) (mask_mutator : mask_mutator)
+    (net : network) =
+  let mutate_ty = mutate_ty ~name:name ty_mutator in
+  let mutate_exp = mutate_exp ~name:name ty_mutator pat_mutator value_mutator exp_mutator in
+  let mutate_symbolic = mutate_symbolic ~name:name ty_mutator pat_mutator value_mutator exp_mutator in
   let attr_ty = net.attr_type in
   let symb_tys =
     List.fold_left
@@ -196,4 +226,4 @@ let mutate_network ty_mutator pat_mutator value_mutator exp_mutator (map_back_mu
     defs = List.map (fun (x, tyo, e) -> (x, omap mutate_ty tyo, mutate_exp e)) net.defs;
     graph = net.graph;
   },
-  map_back_sol map_back_mutator mask_mutator symb_tys attr_ty
+  map_back_sol ~name:name map_back_mutator mask_mutator symb_tys attr_ty
