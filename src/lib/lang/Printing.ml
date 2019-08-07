@@ -215,7 +215,7 @@ and value_to_string_p prec v =
   | VClosure cl -> closure_to_string_p prec cl
   | VRecord map -> print_record "=" (value_to_string_p prec) map
   | VNode n -> Printf.sprintf "%dn" n
-  | VEdge (n1, n2) -> Printf.sprintf "%dn-%dn" n1 n2
+  | VEdge (n1, n2) -> Printf.sprintf "%d~%d" n1 n2
 
 and exp_to_string_p prec e =
   let p = prec_exp e in
