@@ -28,8 +28,8 @@ let map_back_mutator _ v orig_ty =
   | _ -> None
 ;;
 
-(* Pretty sure this works *)
-let mask_mutator = map_back_mutator;;
+(* The mask type for edges is always a tuple, even if we don't unbox them *)
+let mask_mutator _ v _ = Some v;;
 
 let unbox_declarations = Mutators.mutate_declarations ~name:"UnboxEdges" ty_mutator pat_mutator value_mutator exp_mutator map_back_mutator mask_mutator;;
 let unbox_net = Mutators.mutate_network ~name:"UnboxEdges" ty_mutator pat_mutator value_mutator exp_mutator map_back_mutator mask_mutator;;

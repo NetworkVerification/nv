@@ -63,6 +63,8 @@ let rec mutate_value
       | VMap bdd ->
         (* This op_key should be different on each call, and not used in the NV
            program. I think this value achieves that *)
+        (* FIXME: Should this mutate key values as well? If so, the other bdd
+           operations in this file should take that into account *)
         let op_key = e_val v, BatSet.PSet.empty in
         vmap (BddMap.map op_key (fun v -> mutate_value v) bdd)
       | VClosure _ -> failwith @@ name ^ ": mutate_value: encountered VClosure"
@@ -154,22 +156,50 @@ let rec map_back_value
     | VTuple vs, TTuple tys -> vtuple (List.map2 map_back_value vs tys)
     | VRecord vmap, TRecord tmap -> vrecord @@ StringMap.mapi (fun l v -> map_back_value v (StringMap.find l tmap)) vmap
     | VMap bdd, TMap (_, vty) ->
-      (* This op_key should be different on each call, and not used in the NV
-         program. I think this value achieves that *)
       let op_key = e_val v, BatSet.PSet.empty in
       vmap (BddMap.map op_key (fun v -> map_back_value v vty) bdd)
-    | VClosure _, _ -> failwith "Can't have closures in attributes"
+    | VClosure _, _ -> failwith @@ name ^ ": Can't have closures in attributes"
     | (VOption _ | VTuple _ | VRecord _ | VMap _), _ ->
       failwith @@
       Printf.sprintf "%s: map_back_value: value %s does not match type %s"
         name (Printing.value_to_string v) (Printing.ty_to_string orig_ty)
+;;
+
+let rec map_back_mask
+    ~(name:string)
+    (mask_mutator : mask_mutator) (v : value) (orig_ty : ty) =
+  let map_back_mask = map_back_value ~name:name mask_mutator in
+  let mask_mutator = mask_mutator map_back_mask in
+  match mask_mutator v orig_ty with
+  | Some v -> v
+  | None ->
+    match v.v, orig_ty with
+    | VBool _, (TUnit | TBool | TInt _ | TNode)
+    | VOption None, TOption _
+      -> v
+    | VOption (Some v), TOption ty -> voption (Some (map_back_mask v ty))
+    | VTuple [v1; v2], TEdge -> vtuple [map_back_mask v1 TNode; map_back_mask v2 TNode]
+    | VTuple vs, TTuple ts -> vtuple (List.map2 map_back_mask vs ts)
+    | VRecord vmap, TRecord tmap -> vrecord @@ StringMap.mapi (fun l v -> map_back_mask v (StringMap.find l tmap)) vmap
+    | VMap bdd, TMap (_, vty) ->
+      let op_key = e_val v, BatSet.PSet.empty in
+      vmap (BddMap.map op_key (fun v -> map_back_mask v vty) bdd)
+    | (VUnit | VInt _ | VNode _ | VEdge _), _ ->
+      failwith @@ name ^ ": Found illegal mask value"
+    | VClosure _, _ ->
+      failwith @@ name ^ ": Can't have closures in mask"
+    | (VBool _ | VOption _ | VTuple _ | VRecord _ | VMap _) , _ ->
+      failwith @@
+      Printf.sprintf "%s: map_back_value: value %s does not match type %s"
+        name (Printing.value_to_string v) (Printing.ty_to_string orig_ty)
+;;
 
 let map_back_sol
     ~(name:string)
     (map_back_mutator : map_back_mutator) (mask_mutator : mask_mutator) (symb_tys : ty VarMap.t)
     (attr_ty : ty) (sol : Solution.t)
   : Solution.t =
-  let map_back_mask = (fun v -> map_back_value ~name:name mask_mutator v attr_ty) in
+  let map_back_mask = (fun v -> map_back_mask ~name:name mask_mutator v attr_ty) in
   let map_back_value = map_back_value ~name:name map_back_mutator in
   {
     symbolics = VarMap.mapi (fun x v -> map_back_value v (VarMap.find x symb_tys)) sol.symbolics;
