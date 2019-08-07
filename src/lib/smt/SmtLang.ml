@@ -156,7 +156,7 @@ let mk_ite_fast t1 t2 t3 =
      | Bool false, Bool true -> Not t1
      | Bool true, Bool true -> Bool true
      | Bool false, Bool false -> Bool false
-     | Int i1, Int i2 -> Bool (i1 = i2)
+     | Int i1, Int i2 when i1 = i2 -> t2
      | _, _ ->
        mk_ite t1 t2 t3)
 
