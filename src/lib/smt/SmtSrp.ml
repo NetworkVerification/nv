@@ -9,7 +9,7 @@ let node_exp (u: Syntax.node) : Syntax.exp =
 
 let edge_exp (u: Syntax.node) (v: Syntax.node) : Syntax.exp =
   let open Syntax in
-  aexp (e_val (vtuple [vnode u; vnode v]), Some Typing.edge_ty, Span.default)
+  aexp(e_val (vedge (u, v)), Some Typing.edge_ty, Span.default)
 
 let init_exp einit u =
   InterpPartialFull.interp_partial_fun einit [node_exp u]

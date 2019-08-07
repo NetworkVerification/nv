@@ -8,13 +8,15 @@ let rec alpha_rename_smt_term (renaming: string StringMap.t)
   match tm with
   | Int _ | Bool _ | Constructor _ -> tm
   | And (tm1, tm2) ->
-    And (alpha_rename_smt_term renaming valMap tm1,
-         alpha_rename_smt_term renaming valMap tm2)
+    mk_and_fast
+      (alpha_rename_smt_term renaming valMap tm1)
+      (alpha_rename_smt_term renaming valMap tm2)
   | Or (tm1, tm2) ->
-    Or (alpha_rename_smt_term renaming valMap tm1,
-        alpha_rename_smt_term renaming valMap tm2)
+    mk_or_fast
+      (alpha_rename_smt_term renaming valMap tm1)
+      (alpha_rename_smt_term renaming valMap tm2)
   | Not tm1 ->
-    Not (alpha_rename_smt_term renaming valMap tm1)
+    mk_not_fast (alpha_rename_smt_term renaming valMap tm1)
   | Add (tm1, tm2) ->
     Add (alpha_rename_smt_term renaming valMap tm1,
          alpha_rename_smt_term renaming valMap tm2)
@@ -22,8 +24,9 @@ let rec alpha_rename_smt_term (renaming: string StringMap.t)
     Sub (alpha_rename_smt_term renaming valMap tm1,
          alpha_rename_smt_term renaming valMap tm2)
   | Eq (tm1, tm2) ->
-    Eq (alpha_rename_smt_term renaming valMap tm1,
-        alpha_rename_smt_term renaming valMap tm2)
+    let tm1 = alpha_rename_smt_term renaming valMap tm1 in
+    let tm2 = alpha_rename_smt_term renaming valMap tm2 in
+    mk_eq tm1 tm2
   | Lt (tm1, tm2) ->
     Lt (alpha_rename_smt_term renaming valMap tm1,
         alpha_rename_smt_term renaming valMap tm2)
@@ -31,9 +34,10 @@ let rec alpha_rename_smt_term (renaming: string StringMap.t)
     Leq (alpha_rename_smt_term renaming valMap tm1,
          alpha_rename_smt_term renaming valMap tm2)
   | Ite (tm1, tm2, tm3) ->
-    Ite (alpha_rename_smt_term renaming valMap tm1,
-         alpha_rename_smt_term renaming valMap tm2,
-         alpha_rename_smt_term renaming valMap tm3)
+    mk_ite_fast
+      (alpha_rename_smt_term renaming valMap tm1)
+      (alpha_rename_smt_term renaming valMap tm2)
+      (alpha_rename_smt_term renaming valMap tm3)
   | AtMost (tm1, tm2, tm3) ->
     AtMost (BatList.map (alpha_rename_smt_term renaming valMap) tm1,
             tm2,
