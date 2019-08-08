@@ -1,5 +1,6 @@
 (library
   (name nv_transformations)
+  (public_name nv_lib.transformations)
   (libraries
     nv_datastructures
     nv_lang

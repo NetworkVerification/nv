@@ -1,5 +1,6 @@
 (library
   (name nv_lang)
+  (public_name nv_lib.lang)
   (libraries
     batteries
     fileutils

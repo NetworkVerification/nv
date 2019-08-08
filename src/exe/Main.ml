@@ -1,5 +1,6 @@
 open Nv_lib.Main_defs
 open Nv_solution
+open Nv_compile
 
 let compile_and_simulate cfg info file net fs =
    let path = Filename.remove_extension file in
