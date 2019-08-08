@@ -10,7 +10,7 @@ let ty_mutator _ ty =
   | _ -> None
 ;;
 
-let pat_mutator _ p =
+let pattern_mutator _ p _ =
   match p with
   | PUnit -> Some PWild (* Preserves irrefutability *)
   | _ -> None
@@ -33,5 +33,10 @@ let map_back_mutator _ v orig_ty =
 (* Bools and Unit have the same mask type *)
 let mask_mutator _ v _ = Some v;;
 
-let unbox_declarations = Mutators.mutate_declarations ~name:"UnboxUnits" ty_mutator pat_mutator value_mutator exp_mutator map_back_mutator mask_mutator;;
-let unbox_net = Mutators.mutate_network ~name:"UnboxUnits" ty_mutator pat_mutator value_mutator exp_mutator map_back_mutator mask_mutator;;
+let make_toplevel (toplevel_mutator : 'a Mutators.toplevel_mutator) =
+  toplevel_mutator ~name:"UnboxOptions" ty_mutator pattern_mutator value_mutator exp_mutator map_back_mutator mask_mutator
+;;
+
+let unbox_declarations = make_toplevel Mutators.mutate_declarations
+let unbox_net = make_toplevel Mutators.mutate_network
+let unbox_srp = make_toplevel Mutators.mutate_srp

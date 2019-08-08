@@ -1,12 +1,11 @@
-open Nv_lang
+open Nv_lang.Syntax
 open Nv_solution
 
-val unbox_ty : Syntax.ty -> Syntax.ty
+(* Convert all option values to tuples of (bool, v), where
+   None is represented by (false, default_value)
+   Some v is represented by (true, v)
+*)
 
-(** [unbox ds] converts options in an NV program to a tuple of the form (bool,val)
-   where false represents None and true Some *)
-val unbox : Syntax.declarations -> Syntax.declarations
-
-val unbox_net : Syntax.network -> Syntax.network * (Solution.t -> Solution.t)
-
-val unbox_srp : Syntax.srp_unfold -> Syntax.srp_unfold * (Solution.t -> Solution.t)
+val unbox_declarations : declarations -> declarations * Solution.map_back
+val unbox_net : network -> network * Solution.map_back
+val unbox_srp : srp_unfold -> srp_unfold * Solution.map_back
