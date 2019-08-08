@@ -2,6 +2,8 @@ open Nv_lang
 open Nv_utils
 open RecordUtils
 open Collections
+open OCamlUtils
+open Nv_solution
 
 (* Re-copying that here, to turn Unbound tvars into unbound tvars instead of TBool.
    We do the TBool thing, such that the SMT can handle those values (e.g. unused None).
@@ -122,8 +124,8 @@ let rec unroll_exp
     (e : Syntax.exp)
   : Syntax.exp
   =
-    let open Nv_utils.OCamlUtils in
-    let open Syntax in
+  let open Nv_utils.OCamlUtils in
+  let open Syntax in
   let unroll_exp e = unroll_exp rtys e in
   let unroll_type ty = unroll_type rtys ty in
   match e.e with
@@ -222,7 +224,7 @@ let rec convert_value
     (v : Syntax.value)
   : Syntax.value
   =
-    let open Syntax in
+  let open Syntax in
   (* TODO: Potentially add on span and type info *)
   match v.v, original_ty with
   | VBool _, TBool
@@ -268,7 +270,7 @@ let convert_symbolics
     symbolics
     (sol : Nv_solution.Solution.t)
   =
-    let open Syntax in
+  let open Syntax in
   let convert_symbolic symb v =
     let _, toe =
       (* Printf.printf "Looking for symbolic %s with symbolics [%s]\n" symb @@
@@ -297,16 +299,20 @@ let convert_attrs
     sol.labels
 ;;
 
+let map_back symbolics attr_type (sol : Solution.t) =
+  {sol with
+   symbolics = convert_symbolics symbolics sol;
+   labels = convert_attrs attr_type sol;
+   mask = omap (fun v -> convert_value (Solution.mask_type_ty attr_type) v) sol.mask;
+  }
+;;
+
 let unroll decls =
   let rtys = Syntax.get_record_types decls in
   let unrolled = BatList.map (unroll_decl rtys) decls in
   (* print_endline @@ Printing.declarations_to_string unrolled; *)
-  let map_back sol =
-    let new_symbolics = convert_symbolics (Syntax.get_symbolics decls) sol in
-    let new_labels = convert_attrs (Nv_utils.OCamlUtils.oget (Syntax.get_attr_type decls)) sol in
-    {sol with symbolics = new_symbolics; labels = new_labels}
-  in
-  unrolled, map_back
+  unrolled, map_back (Syntax.get_symbolics decls) (Syntax.get_attr_type decls |> oget)
+;;
 
 let unroll_net_aux
     (rtys : Syntax.ty StringMap.t list)
@@ -315,50 +321,45 @@ let unroll_net_aux
   let unroll_exp = unroll_exp rtys in
   let unroll_type = unroll_type rtys in
   Syntax.{ attr_type = unroll_type net.attr_type;
-    init = unroll_exp net.init;
-    merge = unroll_exp net.merge;
-    trans = unroll_exp net.trans;
-    symbolics = BatList.map (fun (var, toe) ->
-        let toe' =
-          match toe with
-          | Ty t -> Ty(unroll_type t)
-          | Exp e -> Exp(unroll_exp e)
-        in
-        (var, toe')) net.symbolics;
-    defs = BatList.map (fun (var, tyo, e) ->
-        let tyo' =
-          match tyo with
-          | Some t -> Some(unroll_type t)
-          | None -> None
-        in
-        (var, tyo', unroll_exp e)) net.defs;
-    utys =
-      BatList.map (fun m -> StringMap.map unroll_type m) net.utys;
-    assertion = (match net.assertion with
-        | None -> None
-        | Some e ->
-          Some (unroll_exp e));
-    (* partitioning *)
-    partition = (match net.partition with
-        | None -> None
-        | Some e ->
-          Some (unroll_exp e));
-    interface = (match net.interface with
-        | None -> None
-        | Some e ->
-          Some (unroll_exp e));
-    (* end partitioning *)
-    requires = BatList.map unroll_exp net.requires;
-    graph = net.graph
-  }
+           init = unroll_exp net.init;
+           merge = unroll_exp net.merge;
+           trans = unroll_exp net.trans;
+           symbolics = BatList.map (fun (var, toe) ->
+               let toe' =
+                 match toe with
+                 | Ty t -> Ty(unroll_type t)
+                 | Exp e -> Exp(unroll_exp e)
+               in
+               (var, toe')) net.symbolics;
+           defs = BatList.map (fun (var, tyo, e) ->
+               let tyo' =
+                 match tyo with
+                 | Some t -> Some(unroll_type t)
+                 | None -> None
+               in
+               (var, tyo', unroll_exp e)) net.defs;
+           utys =
+             BatList.map (fun m -> StringMap.map unroll_type m) net.utys;
+           assertion = (match net.assertion with
+               | None -> None
+               | Some e ->
+                 Some (unroll_exp e));
+           (* partitioning *)
+           partition = (match net.partition with
+               | None -> None
+               | Some e ->
+                 Some (unroll_exp e));
+           interface = (match net.interface with
+               | None -> None
+               | Some e ->
+                 Some (unroll_exp e));
+           (* end partitioning *)
+           requires = BatList.map unroll_exp net.requires;
+           graph = net.graph
+         }
 
 let unroll_net (net : Syntax.network) =
   let rtys = net.utys in
   let unrolled = unroll_net_aux rtys net in
   (* print_endline @@ Printing.declarations_to_string unrolled; *)
-  let map_back sol =
-    let new_symbolics = convert_symbolics net.symbolics sol in
-    let new_labels = convert_attrs net.attr_type sol in
-    {sol with symbolics = new_symbolics; labels = new_labels}
-  in
-  unrolled, map_back
+  unrolled, map_back net.symbolics net.attr_type

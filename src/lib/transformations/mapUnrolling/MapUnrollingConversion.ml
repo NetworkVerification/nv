@@ -2,6 +2,9 @@ open Nv_lang
 open Collections
 open MapUnrollingGuts
 open Typing
+open Nv_utils.OCamlUtils
+open Nv_solution
+open Nv_datastructures
 
 (* e must be a literal *)
 let rec exp_to_value (e : Syntax.exp) : Syntax.value =
@@ -14,9 +17,9 @@ let rec exp_to_value (e : Syntax.exp) : Syntax.value =
   | ELet _
   | EMatch _
   | EProject _ ->
-     failwith
-       (Printf.sprintf "MapUnrollingConversions internal error on: %s"
-                       (Printing.exp_to_string e))
+    failwith
+      (Printf.sprintf "MapUnrollingConversions internal error on: %s"
+         (Printing.exp_to_string e))
   | ESome exp2 ->
     Syntax.voption (Some (exp_to_value exp2))
   | ETuple es ->
@@ -28,12 +31,12 @@ let rec exp_to_value (e : Syntax.exp) : Syntax.value =
 let rec convert_value
     (ty : Syntax.ty)
     (keys : Syntax.exp list * Syntax.var list)
-    (sol : Nv_solution.Solution.t)
+    (sol : Solution.t)
     (v : Syntax.value)
     (original_ty : Syntax.ty)
   : Syntax.value
   =
-    let open Syntax in
+  let open Syntax in
   (* TODO: Potentially add on span and type info *)
   let convert_value = convert_value ty keys sol in
   match v.v, (canonicalize_type original_ty) with
@@ -80,7 +83,7 @@ let convert_symbolics
     (ty : Syntax.ty)
     (keys : Syntax.exp list * Syntax.var list)
     (decls : Syntax.declarations)
-    (sol : Nv_solution.Solution.t)
+    (sol : Solution.t)
   =
   let symbolics = Syntax.get_symbolics decls in
   let convert_value = convert_value ty keys sol in
@@ -113,10 +116,10 @@ let convert_attrs
     (ty : Syntax.ty)
     (keys : Syntax.exp list * Syntax.var list)
     (decls : Syntax.declarations)
-    (sol : Nv_solution.Solution.t)
+    (sol : Solution.t)
   =
-    let open Nv_datastructures in
-  let attr_ty = Nv_utils.OCamlUtils.oget (Syntax.get_attr_type decls) in
+  let open Nv_datastructures in
+  let attr_ty = oget (Syntax.get_attr_type decls) in
   let unrolled_attr_ty = unroll_type ty keys attr_ty in
   if Typing.equiv_tys attr_ty unrolled_attr_ty then sol.labels
   else (* Attribute type involved a map, so transform all attributes *)
@@ -125,16 +128,34 @@ let convert_attrs
       sol.labels
 ;;
 
+let convert_mask
+    (ty : Syntax.ty)
+    (keys : Syntax.exp list * Syntax.var list)
+    (decls : Syntax.declarations)
+    (sol : Solution.t)
+  =
+  let open Nv_datastructures in
+  let attr_ty = oget (Syntax.get_attr_type decls) in
+  let unrolled_attr_ty = unroll_type ty keys attr_ty in
+  if Typing.equiv_tys attr_ty unrolled_attr_ty then sol.mask
+  else (* Attribute type involved a map, so transform the mask *)
+    omap
+      (fun v -> convert_value ty keys sol v (Solution.mask_type_ty attr_ty))
+      sol.mask
+;;
+
 (* Given the map type and keys, return a function which will convert a
    solution to the unrolled version into a solution to the original *)
 let convert_solution
     (ty : Syntax.ty)
     (keys : Syntax.exp list * Syntax.var list)
     (decls : Syntax.declarations)
-    (sol : Nv_solution.Solution.t)
-  : Nv_solution.Solution.t
+    (sol : Solution.t)
+  : Solution.t
   =
-  let new_symbolics = convert_symbolics ty keys decls sol in
-  let new_labels = convert_attrs ty keys decls sol in
-  {sol with symbolics = new_symbolics; labels = new_labels}
+  {sol with
+   symbolics = convert_symbolics ty keys decls sol;
+   labels = convert_attrs ty keys decls sol;
+   mask = convert_mask ty keys decls sol;
+  }
 ;;

@@ -16,7 +16,7 @@ let remove env x = M.remove x env
 let update env x entry = M.add x entry env
 
 (* update env1 with the bindings of env2.  If both environments have the same key, env2 shadows env1 *)
-let updates env1 env2 = M.merge (fun _ _ v2 -> v2) env1 env2
+let updates env1 env2 = M.merge (fun _ v1 v2 -> match v2 with | None -> v1 | _ -> v2) env1 env2
 
 let bind x entry = M.add x entry empty
 

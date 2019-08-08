@@ -2,12 +2,14 @@
 
 default:
 	dune build src/exe/main.exe
-
-install: default
 	cp _build/default/src/exe/main.exe nv
 
-test:
+#install: default
+#	cp _build/default/src/exe/main.exe nv
+
+test: default
 	dune runtest -f --no-buffer
 
 clean:
 	dune clean
+	rm -f nv

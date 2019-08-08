@@ -116,6 +116,8 @@ and env = {ty: ty Env.t; value: value Env.t}
 
 and ty_or_exp = Ty of ty | Exp of exp
 
+val is_irrefutable : pattern -> bool
+
 type branchLookup = Found of exp | Rest of (pattern * exp) list
 
 val addBranch: Pat.t -> exp -> branches -> branches

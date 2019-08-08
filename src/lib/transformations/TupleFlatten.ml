@@ -1,11 +1,12 @@
 open Nv_lang
 open Collections
 open Syntax
+open Nv_utils.OCamlUtils
 
 let rec flatten_ty ty =
   match ty with
   | TVar {contents= Link t} -> flatten_ty t
-  | TUnit | TBool | TInt _ | TNode -> ty
+  | TUnit | TBool | TInt _ | TNode | TEdge -> ty
   | TArrow (t1, t2) ->
     let ty1 = flatten_ty t1 in
     (match ty1 with
@@ -14,7 +15,6 @@ let rec flatten_ty ty =
            TArrow (t, acc)) ts (flatten_ty t2)
      | _ ->
        TArrow (ty1, flatten_ty t2))
-  | TEdge -> flatten_ty (TTuple [TNode; TNode])
   | TTuple ts ->
     let ts = BatList.map flatten_ty ts in
     let ts' = BatList.fold_right (fun ty acc ->
@@ -55,13 +55,9 @@ let size_and_index_after_flattening ty lo hi =
 let rec flatten_val v =
   let open Nv_utils.OCamlUtils in
   match v.v with
-  | VUnit | VBool _ | VInt _ | VNode _ | VOption None -> v
+  | VUnit | VBool _ | VInt _ | VNode _ | VOption None | VEdge _-> v
   | VOption (Some v) ->
     avalue (voption (Some (flatten_val v)), Some (flatten_ty (oget v.vty)), v.vspan)
-  | VEdge (n1, n2) ->
-    let v1 = avalue (vnode n1, Some TNode, v.vspan) in
-    let v2 = avalue (vnode n2, Some TNode, v.vspan) in
-    flatten_val @@ avalue (vtuple [v1; v2], Some (TTuple [TNode; TNode]), v.vspan)
   | VTuple vs ->
     let vs = BatList.map flatten_val vs in
     let vs' = BatList.fold_right (fun v acc ->
@@ -216,15 +212,12 @@ and flatten_branches bs ty =
     let ty = get_inner_type ty in
     (* Something of a kludge to account for the fact that edges disappear
        during flattening *)
-    let ty = if ty = TEdge then TTuple [TNode; TNode] else ty in
     match p with
     | POption (Some p) ->
       (match ty with
        | TOption t ->
          POption (Some (flatten_pattern p t))
        | _ -> failwith "expected option type")
-    | PEdge (p1, p2) ->
-      flatten_pattern (PTuple [p1; p2]) (TTuple [TNode; TNode])
     | PTuple ps ->
       (match ty with
        | TTuple ts ->
@@ -238,7 +231,6 @@ and flatten_branches bs ty =
        | _ -> failwith "expected tuple type")
     | PVar x ->
       (match ty with
-       | TEdge
        | TTuple _ ->
          (match flatten_ty ty with
           | TTuple ts ->
@@ -255,7 +247,7 @@ and flatten_branches bs ty =
             PTuple ps
           | _ -> failwith "must be ttuple")
        | _ -> p)
-    | PUnit | PBool _ | PInt _ | POption None | PNode _ -> p
+    | PUnit | PBool _ | PInt _ | POption None | PNode _ | PEdge _-> p
     | PRecord _ -> failwith "record pattern in flattening"
   in
   mapBranches (fun (p, e) -> (flatten_pattern p ty, flatten_exp e)) bs
@@ -303,12 +295,6 @@ let flatten ds =
 
 let rec unflatten_list (vs : Syntax.value list) (ty : Syntax.ty) =
   match ty with
-  | TEdge ->
-    begin
-      match vs with
-      | [{v=VNode n1; _}; {v=VNode n2; _}] -> (vedge (n1, n2)), []
-      | _ -> failwith "internal error unflattening edge"
-    end
   | TTuple ts ->
     let vs, vleft = BatList.fold_left (fun (vacc, vleft)  ty ->
         let v, vs' = unflatten_list vleft ty in
@@ -361,7 +347,8 @@ let unflatten_sol
   { sol with
     labels = Nv_datastructures.AdjGraph.VertexMap.map (fun v -> unflatten_val v orig_attr) sol.labels;
     symbolics = VarMap.mapi (fun x v ->
-        unflatten_val v (VarMap.find x sym_types)) (unproj_symbolics sol.symbolics)
+        unflatten_val v (VarMap.find x sym_types)) (unproj_symbolics sol.symbolics);
+    mask = omap (fun v -> unflatten_val v (Nv_solution.Solution.mask_type_ty orig_attr)) sol.mask;
   }
 
 let flatten_net net =

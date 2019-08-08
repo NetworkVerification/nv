@@ -1,6 +1,9 @@
 open Nv_lang
+open Syntax
 open Typing
 open Collections
+open Nv_datastructures
+open Nv_utils.OCamlUtils
 
 let has_target_type (target : Syntax.ty) (e : Syntax.exp) : bool =
   match e.ety with
@@ -25,7 +28,7 @@ let get_index_symb keys symb =
   let const_keys, symb_keys = keys in
   try
     let index, _ =
-      BatList.findi (fun _ s -> Nv_datastructures.Var.equal s symb) symb_keys
+      BatList.findi (fun _ s -> Var.equal s symb) symb_keys
     in
     Some(index + List.length const_keys)
   with
@@ -76,9 +79,8 @@ let rec unroll_get_or_set
     (keys : Syntax.exp list * Syntax.var list)
     (mk_op : int -> Syntax.exp)
     (etype : Syntax.ty option)
-    (espan : Nv_datastructures.Span.t)
+    (espan : Span.t)
     (k : Syntax.exp) =
-  let open Syntax in
   let get_index_const = get_index_const keys in
   let get_index_symb = get_index_symb keys in
   match get_index_const k with
@@ -95,7 +97,7 @@ let rec unroll_get_or_set
       |> List.fold_left
         (fun acc (p,x) -> addBranch p x acc) emptyBranch
     in
-    match canonicalize_type (Nv_utils.OCamlUtils.oget k.ety) with
+    match canonicalize_type (oget k.ety) with
     | TNode
     | TEdge ->
       (* We know all possible node and edge values in advance, so just
@@ -111,7 +113,7 @@ let rec unroll_get_or_set
             | Some i -> v,i
             | None -> failwith @@
               "Encountered non-constant, non-symbolic variable key whose type is not TNode or TEdge: " ^
-              Printing.exp_to_string k ^ ", type: " ^ Printing.ty_to_string (Nv_utils.OCamlUtils.oget k.ety)
+              Printing.exp_to_string k ^ ", type: " ^ Printing.ty_to_string (oget k.ety)
           end
         | _ -> failwith @@
           "Encountered non-constant, non-variable key whose type is not TNode or TEdge: " ^
@@ -130,7 +132,7 @@ let rec unroll_get_or_set
              in
              let ethen =
                (* If they're the same value, use v's index instead of k's *)
-               v |> get_index_symb |> Nv_utils.OCamlUtils.oget |> mk_op
+               v |> get_index_symb |> oget |> mk_op
              in
              aexp (eif cmp ethen acc, etype, espan)
           )
@@ -149,13 +151,13 @@ let rec unroll_exp
     (e : Syntax.exp)
   : Syntax.exp
   =
-    let open Syntax in
   let unroll_type = unroll_type ty keys in
   let unroll_exp e = unroll_exp ty keys e in
   let has_target_type e = has_target_type ty e in
 
   let ty_unrolled = unroll_type ty in
   let const_keys, symb_keys = keys in
+
   let unrolled_size = List.length const_keys + List.length symb_keys in
   let unrolled_exp =
     match e.e with
@@ -241,8 +243,8 @@ let rec unroll_exp
           in
           let f' = unroll_exp f in
           let freshvars =
-            BatList.map (fun _ -> Nv_datastructures.Var.fresh "UnrollingMapVar") symb_keys @
-            BatList.map (fun _ -> Nv_datastructures.Var.fresh "UnrollingMapVar") const_keys
+            BatList.map (fun _ -> Var.fresh "UnrollingMapVar") symb_keys @
+            BatList.map (fun _ -> Var.fresh "UnrollingMapVar") const_keys
           in
           let pattern =
             PTuple (BatList.map (fun var -> PVar var) freshvars)
@@ -272,7 +274,7 @@ let rec unroll_exp
             const_keys
           in
           let freshvars =
-            BatList.map (fun _ -> Nv_datastructures.Var.fresh "UnrollingMapFilterVar") all_keys
+            BatList.map (fun _ -> Var.fresh "UnrollingMapFilterVar") all_keys
           in
           let pattern =
             PTuple (BatList.map (fun var -> PVar var) freshvars)
@@ -314,8 +316,8 @@ let rec unroll_exp
             let lst =
               BatList.make (List.length symb_keys + List.length const_keys) ()
             in
-            BatList.map (fun _ -> Nv_datastructures.Var.fresh "UnrollingMergeVar1") lst,
-            BatList.map (fun _ -> Nv_datastructures.Var.fresh "UnrollingMergeVar2") lst
+            BatList.map (fun _ -> Var.fresh "UnrollingMergeVar1") lst,
+            BatList.map (fun _ -> Var.fresh "UnrollingMergeVar2") lst
           in
           let pattern =
             PTuple([
@@ -357,13 +359,13 @@ let rec unroll_exp
             | _ -> failwith "impossible"
           in
           let acc' = unroll_exp acc in
-          let acc_ty = Nv_utils.OCamlUtils.oget acc'.ety in
+          let acc_ty = oget acc'.ety in
           let f' = unroll_exp f in
           let symb_var_keys =
             List.map (fun v -> aexp (evar v, Some key_ty, e.espan)) symb_keys
           in
           let freshvars =
-            BatList.map (fun k -> (k, Nv_datastructures.Var.fresh "UnrollingFoldVar")) (symb_var_keys @ const_keys)
+            BatList.map (fun k -> (k, Var.fresh "UnrollingFoldVar")) (symb_var_keys @ const_keys)
           in
           let pattern =
             PTuple (BatList.map (fun (_, var) -> PVar var) freshvars)
@@ -395,7 +397,6 @@ let unroll_decl
     (decl : Syntax.declaration)
   : Syntax.declaration
   =
-    let open Syntax in
   let unroll_exp = unroll_exp ty keys in
   let unroll_type = unroll_type ty keys in
   match decl with
