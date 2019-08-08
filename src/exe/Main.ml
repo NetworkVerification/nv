@@ -7,8 +7,8 @@ let compile_and_simulate cfg info file net fs =
    let name = Filename.basename path in
    let dir = Filename.dirname path in
    let name = String.mapi (fun i c -> if i = 0 then Char.uppercase_ascii c else c) name in
-   let newpath = dir ^ "/" ^ name in
-     (*Compile.compile_ocaml newpath net;*)
+   let newpath = name in
+     Compile.compile_ocaml newpath net;
      Loader.simulate newpath
 
 let main =
@@ -22,7 +22,7 @@ let main =
       else if cfg.random_test then run_test
       else if cfg.simulate then run_simulator
       else if cfg.compile then
-        (compile_and_simulate cfg info file net []; failwith "todo")
+        (compile_and_simulate cfg info file net [])
       else exit 0
   in
   if cfg.compress >= 0 then

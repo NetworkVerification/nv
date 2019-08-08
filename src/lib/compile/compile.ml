@@ -263,7 +263,8 @@ let set_entry (name: string) =
   Printf.sprintf "let () = SrpNative.srp := Some (module %s:SrpNative.NATIVE_SRP)" name
 
 let generate_ocaml (name : string) net =
-  let header = Printf.sprintf "module %s : SrpNative.NATIVE_SRP = struct\n" name in
+  let header = Printf.sprintf "open Nv_datastructures\n open Nv_compile\n\n \
+                               module %s : SrpNative.NATIVE_SRP = struct\n" name in
   let ocaml_decls = compile_net net in
   (* let s = if !hasRequire then ""
    *         else "let require = true\n"
@@ -274,40 +275,43 @@ let generate_ocaml (name : string) net =
   Printf.sprintf "%s %s %s end\n %s" header ocaml_decls s (set_entry name)
 
 
-let build_meta_file name =
+let build_dune_file name =
   Printf.sprintf
-    "(library\n \
-     (name nv_plugin_%s)\n \
-     (public_name nv-plugin-%s)\n \
-     (libraries\n \
-      nv_lang\n \
-      nv_datastructures\n \
-      nv_utils\n \
-      nv_compile\n \
-      nv))" name name
+    "(library \n \
+     (name %s_plugin) \n \
+     (public_name %s.plugin) \n
+     (libraries nv_lib))" name name
+
+let build_project_file name =
+  Printf.sprintf "(lang dune 1.10)\n (name %s)" name
+
+let build_opam_file name =
+  Printf.sprintf "name: \"%s-plugin\"\n \
+                  build: [ \"dune\" \"build\" \"-p\" name \"-j\" jobs ]" name
+
+let print_file file s =
+  let oc = open_out file in
+    Printf.fprintf oc "%s" s;
+    close_out oc
 
 (* TODO: should use srcdir env. Or even better get rid of source all together,
    find out how to generate and link cmxs files from build directory*)
 let compile_command_ocaml name =
-  let build_dir = Sys.getenv "NV_BUILD" in
-  (* let cmd = Printf.sprintf "ocamlbuild -build-dir %s -use-ocamlfind -Is \
-   *  src/datastructures,src/compile,src,src/datatypes,src/utils,src/transformations \
-   *            %s.ml %s.cmxs" build_dir name name *)
-  let src_dir = "/Users/gian/Documents/Princeton/networks/davidnv/nv/src" in
-  let includes = ["datastructures";"compile";"datatypes";"utils";"transformations";""] in
-  let includes_s = Collections.printList (fun x -> "src/" ^ x) includes "" "," "" in
-  let cmd = Printf.sprintf "ocamlbuild -use-ocamlfind -Is \
-                            %s \
-             %s.ml %s.cmxs" includes_s name name
-  in
-  Printf.printf "COMMAND: %s\n" cmd;
-  flush stdout;
-  Sys.command cmd
+  (* let nv_dir = Sys.getenv "NV_BUILD" in *)
+  let dune = build_dune_file name in
+  let project = build_project_file name in
+  let opam = build_opam_file name in
+    print_file "dune" dune;
+    print_file "dune-project" project;
+    print_file (name ^ ".opam") opam;
+    Sys.command "dune build; sudo dune install"
 
 let compile_ocaml name net =
   let basename = Filename.basename name in
   let program = generate_ocaml basename net in
-  let oc = open_out (name ^ ".ml") in
-  Printf.fprintf oc "%s" program;
-  close_out oc;
+  let src_dir = "/Users/gian/Documents/Princeton/networks/davidnv/nv/" ^ name in
+    (try Unix.mkdir src_dir (0o777) with
+      | _ -> ());
+    Unix.chdir src_dir;
+    print_file (name ^ ".ml") program;
   compile_command_ocaml name
