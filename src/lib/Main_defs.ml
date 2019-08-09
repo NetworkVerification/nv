@@ -159,6 +159,21 @@ let run_simulator cfg _ net fs =
   with Srp.Require_false ->
     Console.error "required conditions not satisfied"
 
+(** Native simulator - compiles SRP to OCaml *)
+let compile_and_simulate file cfg info net fs =
+   let path = Filename.remove_extension file in
+   let name = Filename.basename path in
+   let name = String.mapi (fun i c -> if i = 0 then Char.uppercase_ascii c else c) name in
+   let newpath = name in
+   let solution = Loader.simulate newpath net in
+     match solution.assertions with
+    | None -> Success (Some solution), fs
+    | Some m ->
+      if AdjGraph.VertexMap.exists (fun _ b -> not b) m then
+        CounterExample solution, fs
+      else
+        Success (Some solution), fs
+
 let compress file info net cfg fs networkOp =
   (* Printf.printf "Number of concrete edges:%d\n" (List.length (oget (get_edges decls))); *)
   let open Nv_compression in

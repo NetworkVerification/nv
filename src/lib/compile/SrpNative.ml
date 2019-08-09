@@ -4,6 +4,7 @@ open Unsigned
 open Nv_solution
 open Nv_lang
 open Nv_datastructures
+open Nv_lang.Collections
 (* open Slicing *)
 
 (** Type of SRP network *)
@@ -17,9 +18,6 @@ module type NATIVE_SRP =
     val assertion: (int -> attribute -> bool) option
     (* val require: bool *)
   end
-
-(* TODO: probably move in the compiler file*)
-let rec proj_unsafe (attr_ty : Syntax.ty) (v : 'a) = failwith "todo"
 
 (** Reference to a NATIVE_SRP module *)
 let srp = ref None
@@ -36,7 +34,7 @@ let get_srp () : (module NATIVE_SRP) =
 
 module type SrpSimulationSig =
 sig
-  val simulate_srp: unit -> unit
+  val simulate_srp: Syntax.ty -> Nv_solution.Solution.t
 end
 
 module S = Map.Make (Integer)
@@ -116,25 +114,40 @@ module SrpSimulation (Srp : NATIVE_SRP) : SrpSimulationSig =
       in
       loop s q k
 
-    let check_assertion node v =
-      match assertion with
-      | None -> true
-      | Some a ->
-          if a node v then
-            true
-          else
-            false
+    let check_assertion a node v m =
+      AdjGraph.VertexMap.add node (a node v) m
 
     let check_assertions vals =
-      AdjGraph.VertexMap.fold (fun n v acc -> (check_assertion n v) && acc) vals true
+      match assertion with
+        | None -> None
+        | Some a ->
+          Some (AdjGraph.VertexMap.fold (fun n v acc -> (check_assertion a n v acc))
+                  vals AdjGraph.VertexMap.empty)
 
-    let simulate_srp () =
+let rec proj_unsafe (attr_ty : Syntax.ty) (v : 'a) =
+  match attr_ty with
+    | TUnit -> Syntax.vunit ()
+    | TBool -> Syntax.vbool (Obj.magic v)
+    | TInt _ -> Syntax.vint (Obj.magic v)
+    | TArrow _ -> failwith "Function computed as value" (*oh no*)
+    | TTuple ts ->
+      Syntax.vtuple (BatList.map2 (fun ty v -> proj_unsafe ty v) ts (Obj.magic v))
+    | TOption ty ->
+      (match (Obj.magic v) with
+        | None -> Syntax.voption None
+        | Some v -> Syntax.voption (Some (proj_unsafe ty v)))
+    | _ -> failwith "todo"
+    (* | TMap of Nv_lang.Syntax.ty * Nv_lang.Syntax.ty
+     * | TRecord of Nv_lang.Syntax.ty Nv_utils.PrimitiveCollections.StringMap.t
+     * | TNode
+     * | TEdge *)
+
+    let simulate_srp attr_ty =
       let s = srp_to_state () in
       let vals = simulate_init s in
       let asserts = check_assertions vals in
-      if asserts then
-        Printf.printf "success\n"
-      else
-        Printf.printf "assertion failed\n"
-      (* {labels= vals; symbolics= syms; assertions= Some asserts} *)
+      let open Solution in
+        { labels = AdjGraph.VertexMap.map (fun v -> proj_unsafe attr_ty v) vals;
+          symbolics = VarMap.empty;
+          assertions = asserts}
   end

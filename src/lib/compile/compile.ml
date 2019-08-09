@@ -190,8 +190,7 @@ let rec declaration_to_ocaml_string d =
      Printf.sprintf "let trans = %s\n" (exp_to_ocaml_string e)
   | DAssert e ->
      hasAssertion := true;
-     (* Printf.sprintf "let assertion = %s\n" (exp_to_ocaml_string e) *)
-     "let assertion = None\n"
+     Printf.sprintf "let assertion = %s\n" (exp_to_ocaml_string e)
   | DRequire e ->
      hasRequire := true;
      Printf.sprintf "let require = %s\n" (exp_to_ocaml_string e)
@@ -254,7 +253,7 @@ let compile_net net =
     | None ->
        "let assertion = None\n"
     | Some e ->
-       Printf.sprintf "let assertion = %s\n" (exp_to_ocaml_string e)
+       Printf.sprintf "let assertion = Some (%s)\n" (exp_to_ocaml_string e)
   in
   Printf.sprintf "%s %s %s %s %s %s %s %s %s %s"
     utys_s attr_s graph_s symbs_s defs_s init_s trans_s merge_s requires_s assert_s
@@ -269,9 +268,10 @@ let generate_ocaml (name : string) net =
   (* let s = if !hasRequire then ""
    *         else "let require = true\n"
    * in *)
-  let s = if !hasAssertion then ""
-          else ("let assertion = None \n")
-  in
+  (* let s = if !hasAssertion then ""
+   *         else ("let assertion = None \n")
+   * in *)
+  let s = "" in
   Printf.sprintf "%s %s %s end\n %s" header ocaml_decls s (set_entry name)
 
 
@@ -280,7 +280,7 @@ let build_dune_file name =
     "(library \n \
      (name %s_plugin) \n \
      (public_name %s.plugin) \n
-     (libraries nv_lib))" name name
+     (libraries nv_lib)\n)" name name
 
 let build_project_file name =
   Printf.sprintf "(lang dune 1.10)\n (name %s)" name
@@ -304,7 +304,7 @@ let compile_command_ocaml name =
     print_file "dune" dune;
     print_file "dune-project" project;
     print_file (name ^ ".opam") opam;
-    Sys.command "dune build; sudo dune install"
+    Sys.command "dune build command >>/dev/null 2>&1; sudo dune install command >>/dev/null 2>&1"
 
 let compile_ocaml name net =
   let basename = Filename.basename name in

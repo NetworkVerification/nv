@@ -8,8 +8,9 @@ let load_srp name =
    *   List.iter (fun p -> Printf.printf "%s\n" p) pkgs; *)
   Fl_dynload.load_packages [name]
 
-let simulate name =
+let simulate name net =
+  Compile.compile_ocaml name net; (* make this optional *)
   load_srp (name ^ ".plugin");
   let module Srp = (val get_srp () : NATIVE_SRP) in
   let module SrpSimulator = (val (module SrpSimulation(Srp) : SrpSimulationSig)) in
-    SrpSimulator.simulate_srp ()
+    SrpSimulator.simulate_srp net.attr_type
