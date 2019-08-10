@@ -311,7 +311,7 @@ let parse_input (args : string array)
   let decls = Typing.infer_declarations info decls in
   Typing.check_annot_decls decls ;
   Wellformed.check info decls ;
-  let decls, f = RecordUnrolling.unroll decls in (* Unroll records done first *)
+  let decls, f = RecordUnrolling.unroll_declarations decls in (* Unroll records done first *)
   let fs = [f] in
   let decls,fs = (* inlining definitions *)
     if cfg.inline then

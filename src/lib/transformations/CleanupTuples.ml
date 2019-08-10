@@ -67,7 +67,7 @@ let mask_mutator _ v oldty =
 ;;
 
 let make_toplevel (toplevel_mutator : 'a Mutators.toplevel_mutator) =
-  toplevel_mutator ~name:"UnboxOptions" ty_mutator pattern_mutator value_mutator exp_mutator map_back_mutator mask_mutator
+  toplevel_mutator ~name:"CleanupTuples" ty_mutator pattern_mutator value_mutator exp_mutator map_back_mutator mask_mutator
 ;;
 
 let cleanup_declarations = make_toplevel Mutators.mutate_declarations

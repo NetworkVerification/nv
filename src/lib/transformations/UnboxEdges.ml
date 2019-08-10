@@ -32,7 +32,7 @@ let map_back_mutator _ v orig_ty =
 let mask_mutator _ v _ = Some v;;
 
 let make_toplevel (toplevel_mutator : 'a Mutators.toplevel_mutator) =
-  toplevel_mutator ~name:"UnboxOptions" ty_mutator pattern_mutator value_mutator exp_mutator map_back_mutator mask_mutator
+  toplevel_mutator ~name:"UnboxEdges" ty_mutator pattern_mutator value_mutator exp_mutator map_back_mutator mask_mutator
 ;;
 
 let unbox_declarations = make_toplevel Mutators.mutate_declarations
