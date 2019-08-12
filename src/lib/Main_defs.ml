@@ -201,7 +201,7 @@ let compress file info net cfg fs networkOp =
 
   FailuresAbstraction.refinement_breadth := cfg.depth;
   FailuresAbstraction.counterexample_refinement_breadth := cfg.depth;
-  let net = OptimizeBranches.optimizeNet net in
+  let net, _ = OptimizeBranches.optimize_net net in (* The _ should match the identity function *)
 
   let rec loop (finit: AbstractionMap.abstractionMap)
       (f: AbstractionMap.abstractionMap)
