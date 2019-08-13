@@ -908,6 +908,26 @@ let rec exp_to_pattern e =
   | EMatch _ ->
     failwith "can't use these expressions as patterns"
 
+(* e must be a literal *)
+let rec exp_to_value (e : exp) : value =
+  match e.e with
+  | EVar _
+  | EOp _
+  | EFun _
+  | EApp _
+  | EIf _
+  | ELet _
+  | EMatch _
+  | EProject _ ->
+    failwith "Not a literal"
+  | ESome exp2 ->
+    voption (Some (exp_to_value exp2))
+  | ETuple es ->
+    vtuple (List.map exp_to_value es)
+  | EVal v -> v
+  | ETy (exp2, _) -> exp_to_value exp2
+  | ERecord map -> vrecord (StringMap.map exp_to_value map)
+
 let func x body = {arg= x; argty= None; resty= None; body}
 
 let funcFull x argty resty body = {arg= x; argty= argty; resty= resty; body}

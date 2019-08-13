@@ -228,6 +228,9 @@ val deconstructFun: exp -> func
 
 val exp_to_pattern: exp -> pattern
 
+(* exp must be a literal *)
+val exp_to_value: exp -> value
+
 val empty_env: env
 
 (* Utilities *)

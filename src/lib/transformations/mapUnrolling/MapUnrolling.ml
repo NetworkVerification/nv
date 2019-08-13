@@ -1,3 +1,4 @@
+open Batteries
 open Nv_lang
 (* Unroll all map types contained in decls. Cannot handle polymorphism,
    so requires that inlining has been run first.
@@ -14,13 +15,12 @@ let unroll _ decls =
       (fun (decls, f) (mty, keys) ->
          let const_keys = Collections.ExpSet.elements (fst keys) in
          let symb_keys = Collections.VarSet.elements (snd keys) in
-         let new_decls = MapUnrollingGuts.unroll_one_map_type mty (const_keys, symb_keys) decls in
-         let f' = MapUnrollingConversion.convert_solution mty (const_keys, symb_keys) decls in
+         let new_decls, f' = MapUnrollingSingle.unroll_declarations mty (const_keys, symb_keys) decls in
          (new_decls, (fun x -> f (f' x))))
       (decls, (fun x -> x)) maplist
   in
   let final_decls, map_back2 =
     CleanupTuples.cleanup_declarations unrolled_decls
   in
-  final_decls, (fun x -> map_back1 (map_back2 x))
+  final_decls, map_back1 % map_back2
 ;;
