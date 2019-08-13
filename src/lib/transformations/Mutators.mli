@@ -10,7 +10,7 @@ type recursors = {
 
 type 'a mutator = recursors -> 'a -> 'a option
 type pattern_mutator = recursors -> pattern -> ty -> pattern option
-type map_back_mutator = (value -> ty -> value) -> value -> ty -> value option
+type map_back_mutator = (value -> ty -> value) -> Solution.t -> value -> ty -> value option
 type mask_mutator = map_back_mutator
 
 type 'a toplevel_mutator =

@@ -52,14 +52,14 @@ let exp_mutator (recursors: Mutators.recursors) e =
 (** Functions to convert a solution to the cleanup'd version to a solution
     to the original version **)
 
-let rec map_back_mutator _ v oldty =
+let rec map_back_mutator _ _ v oldty =
   match v.v, oldty with
   | VUnit, TTuple [] -> Some(vtuple [])
   | _, TTuple [_] -> Some(vtuple [v])
   | _ -> None
 ;;
 
-let mask_mutator _ v oldty =
+let mask_mutator _ _ v oldty =
   match v.v, oldty with
   | VBool _, TTuple [] -> Some (vtuple [])
   | _, TTuple [_] -> Some(vtuple [v])

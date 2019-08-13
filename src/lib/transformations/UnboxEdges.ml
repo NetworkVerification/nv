@@ -22,14 +22,14 @@ let value_mutator _ v =
 
 let exp_mutator _ _ = None;;
 
-let map_back_mutator _ v orig_ty =
+let map_back_mutator _ _ v orig_ty =
   match v.v, orig_ty with
   | VTuple [{v=VNode n1}; {v=VNode n2}], TEdge -> Some (vedge (n1, n2))
   | _ -> None
 ;;
 
 (* The mask type for edges is always a tuple, even if we don't unbox them *)
-let mask_mutator _ v _ = Some v;;
+let mask_mutator _ _ v _ = Some v;;
 
 let make_toplevel (toplevel_mutator : 'a Mutators.toplevel_mutator) =
   toplevel_mutator ~name:"UnboxEdges" ty_mutator pattern_mutator value_mutator exp_mutator map_back_mutator mask_mutator

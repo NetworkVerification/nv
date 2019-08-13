@@ -18,9 +18,9 @@ let exp_mutator (recursors : Mutators.recursors) e =
   | _ -> None
 ;;
 
-let map_back_mutator _ v _ = Some v;;
+let map_back_mutator _ _ v _ = Some v;;
 
-let mask_mutator _ v _ = Some v;;
+let mask_mutator = map_back_mutator;;
 
 let make_toplevel (toplevel_mutator : 'a Mutators.toplevel_mutator) =
   toplevel_mutator ~name:"OptimizeBranches" ty_mutator pattern_mutator value_mutator exp_mutator map_back_mutator mask_mutator

@@ -223,7 +223,7 @@ let unflatten_list (vs : value list) (tys : ty list) =
   assert (List.is_empty excess);
   List.rev vs
 
-let map_back_mutator recurse v orig_ty =
+let map_back_mutator recurse _ v orig_ty =
   match v.v, orig_ty with
   | VTuple vs, TTuple tys ->
     let vs' = unflatten_list vs tys in

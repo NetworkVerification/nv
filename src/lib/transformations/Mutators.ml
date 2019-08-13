@@ -15,7 +15,7 @@ type recursors = {
 
 type 'a mutator = recursors -> 'a -> 'a option
 type pattern_mutator = recursors -> pattern -> ty -> pattern option
-type map_back_mutator = (value -> ty -> value) -> value -> ty -> value option
+type map_back_mutator = (value -> ty -> value) -> Solution.t -> value -> ty -> value option
 type mask_mutator = map_back_mutator
 
 type 'a toplevel_mutator =
@@ -172,9 +172,9 @@ let mutate_decl ~(name:string) (mutators:mutators) (d : declaration) =
 
 let rec map_back_value
     ~(name:string)
-    (map_back_mutator : map_back_mutator) (v : value) (orig_ty : ty) =
-  let map_back_value = map_back_value ~name:name map_back_mutator in
-  let map_back_mutator = map_back_mutator map_back_value in
+    (sol : Solution.t) (map_back_mutator : map_back_mutator) (v : value) (orig_ty : ty) =
+  let map_back_value = map_back_value ~name:name sol map_back_mutator in
+  let map_back_mutator = map_back_mutator map_back_value sol in
   match map_back_mutator v orig_ty with
   | Some v -> v
   | None ->
@@ -195,9 +195,9 @@ let rec map_back_value
 
 let rec map_back_mask
     ~(name:string)
-    (mask_mutator : mask_mutator) (v : value) (orig_ty : ty) =
-  let map_back_mask = map_back_value ~name:name mask_mutator in
-  let mask_mutator = mask_mutator map_back_mask in
+    (sol : Solution.t) (mask_mutator : mask_mutator) (v : value) (orig_ty : ty) =
+  let map_back_mask = map_back_value ~name:name sol mask_mutator in
+  let mask_mutator = mask_mutator map_back_mask sol in
   match mask_mutator v orig_ty with
   | Some v -> v
   | None ->
@@ -227,8 +227,8 @@ let map_back_sol
     (map_back_mutator : map_back_mutator) (mask_mutator : mask_mutator) (symb_tys : ty VarMap.t)
     (attr_ty : ty) (sol : Solution.t)
   : Solution.t =
-  let map_back_mask = (fun v -> map_back_mask ~name:name mask_mutator v attr_ty) in
-  let map_back_value = map_back_value ~name:name map_back_mutator in
+  let map_back_mask = (fun v -> map_back_mask ~name:name sol mask_mutator v attr_ty) in
+  let map_back_value = map_back_value ~name:name sol map_back_mutator in
   {
     symbolics = VarMap.mapi (fun x v -> map_back_value v (VarMap.find x symb_tys)) sol.symbolics;
     labels = VertexMap.map (fun v -> map_back_value v attr_ty) sol.labels;

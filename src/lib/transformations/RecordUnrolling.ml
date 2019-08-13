@@ -39,7 +39,7 @@ let exp_mutator (rtys : ty StringMap.t list) (recursors : Mutators.recursors) e 
   | _ -> None
 ;;
 
-let map_back_mutator recurse v orig_ty =
+let map_back_mutator recurse _ v orig_ty =
   match v.v, orig_ty with
   | VTuple vs, TRecord tmap ->
     let vtys = get_record_entries tmap in
