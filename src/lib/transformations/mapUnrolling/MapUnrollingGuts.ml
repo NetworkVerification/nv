@@ -5,19 +5,15 @@ open Collections
 open Nv_datastructures
 open Nv_utils.OCamlUtils
 
-let has_target_type (target : Syntax.ty) (e : Syntax.exp) : bool =
-  match e.ety with
-  | Some (ty) ->
-    Typing.equiv_tys target ty
-  | None ->
-    failwith "Found expression with no ety during map unrolling"
+let has_target_type (target : ty) (e : exp) : bool =
+    equal_inner_tys target (oget e.ety)
 ;;
 
 let get_index_const keys k =
   let const_keys, _ = keys in
   try
     let index, _ =
-      BatList.findi (fun _ e -> Syntax.compare_es e k = 0) const_keys
+      BatList.findi (fun _ e -> compare_es e k = 0) const_keys
     in
     Some(index)
   with
@@ -35,17 +31,11 @@ let get_index_symb keys symb =
   | _ -> None
 ;;
 
-let mapo f o =
-  match o with
-  | None -> None
-  | Some x -> Some (f x)
-;;
-
 let rec unroll_type
-    (ty : Syntax.ty)
-    (keys : Syntax.exp list * Syntax.var list)
-    (ty2 : Syntax.ty)
-  : Syntax.ty
+    (ty : ty)
+    (keys : exp list * var list)
+    (ty2 : ty)
+  : ty
   =
   let unroll_type = unroll_type ty keys in
   match (canonicalize_type ty2) with
@@ -76,11 +66,11 @@ let rec unroll_type
 ;;
 
 let rec unroll_get_or_set
-    (keys : Syntax.exp list * Syntax.var list)
-    (mk_op : int -> Syntax.exp)
-    (etype : Syntax.ty option)
+    (keys : exp list * var list)
+    (mk_op : int -> exp)
+    (etype : ty option)
     (espan : Span.t)
-    (k : Syntax.exp) =
+    (k : exp) =
   let get_index_const = get_index_const keys in
   let get_index_symb = get_index_symb keys in
   match get_index_const k with
@@ -146,10 +136,10 @@ let rec unroll_get_or_set
 ;;
 
 let rec unroll_exp
-    (ty : Syntax.ty)
-    (keys : Syntax.exp list * Syntax.var list)
-    (e : Syntax.exp)
-  : Syntax.exp
+    (ty : ty)
+    (keys : exp list * var list)
+    (e : exp)
+  : exp
   =
   let unroll_type = unroll_type ty keys in
   let unroll_exp e = unroll_exp ty keys e in
@@ -163,12 +153,12 @@ let rec unroll_exp
     match e.e with
     | EVal v ->
       (* No way to construct map value directly *)
-      e_val (avalue (v, mapo unroll_type v.vty, v.vspan))
+      e_val (avalue (v, omap unroll_type v.vty, v.vspan))
     | EVar _ -> e
     | EFun f ->
       efun
         { f with
-          argty= mapo unroll_type f.argty; resty= mapo unroll_type f.resty; body= unroll_exp f.body }
+          argty= omap unroll_type f.argty; resty= omap unroll_type f.resty; body= unroll_exp f.body }
     | EApp (e1, e2) ->
       eapp (unroll_exp e1) (unroll_exp e2)
     | EIf (e1, e2, e3) ->
@@ -212,7 +202,7 @@ let rec unroll_exp
           eop MGet [unroll_exp map; unroll_exp k]
         else
           let unrolled_map = unroll_exp map in
-          let unrolled_ety = mapo unroll_type e.ety in
+          let unrolled_ety = omap unroll_type e.ety in
           let mk_op =
             (fun index ->
                aexp (eop (TGet (unrolled_size, index, index)) [unrolled_map],
@@ -225,7 +215,7 @@ let rec unroll_exp
         else
           let unrolled_map = unroll_exp map in
           let unrolled_setval = unroll_exp setval in
-          let unrolled_ety = mapo unroll_type e.ety in
+          let unrolled_ety = omap unroll_type e.ety in
           let mk_op =
             (fun index ->
                aexp (eop (TSet (unrolled_size, index, index)) [unrolled_map; unrolled_setval],
@@ -388,19 +378,19 @@ let rec unroll_exp
         failwith @@ "Failed to unroll map: Incorrect number of arguments to map operation : "
                     ^ Printing.exp_to_string e
   in
-  aexp (unrolled_exp, mapo unroll_type e.ety, e.espan)
+  aexp (unrolled_exp, omap unroll_type e.ety, e.espan)
 ;;
 
 let unroll_decl
-    (ty : Syntax.ty)
-    (keys : Syntax.exp list * Syntax.var list)
-    (decl : Syntax.declaration)
-  : Syntax.declaration
+    (ty : ty)
+    (keys : exp list * var list)
+    (decl : declaration)
+  : declaration
   =
   let unroll_exp = unroll_exp ty keys in
   let unroll_type = unroll_type ty keys in
   match decl with
-  | DLet (var, tyo, e) -> DLet (var, mapo unroll_type tyo, unroll_exp e)
+  | DLet (var, tyo, e) -> DLet (var, omap unroll_type tyo, unroll_exp e)
   | DSymbolic (var, toe) ->
     let toe' =
       match toe with
@@ -422,10 +412,10 @@ let unroll_decl
 ;;
 
 let unroll_one_map_type
-    (ty : Syntax.ty)
-    (keys : Syntax.exp list * Syntax.var list)
-    (decls : Syntax.declarations)
-  : Syntax.declarations
+    (ty : ty)
+    (keys : exp list * var list)
+    (decls : declarations)
+  : declarations
   =
   (* According to the docs, ExpSet.elements returns a sorted list.
      This is important because we need a consistent numbering for

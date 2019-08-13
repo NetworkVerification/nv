@@ -315,10 +315,11 @@ let rec equal_lists eq_elts lst1 lst2 =
 
 let rec equal_tys ty1 ty2 =
   match (ty1, ty2) with
+  | TUnit, TUnit
   | TBool, TBool
-  | TInt _, TInt _
   | TNode, TNode
   | TEdge, TEdge -> true
+  | TInt n1, TInt n2 -> n1 = n2
   | TVar t1, TVar t2 -> (
       match (!t1, !t2) with
       | Unbound (n1, x1), Unbound (n2, x2) ->
@@ -333,7 +334,36 @@ let rec equal_tys ty1 ty2 =
   | TOption t1, TOption t2 -> equal_tys t1 t2
   | TMap (t1, t2), TMap (s1, s2) ->
     equal_tys t1 s1 && equal_tys t2 s2
-  | _ -> false
+  | (TUnit | TBool | TNode | TEdge | TInt _ | TVar _ | QVar _
+    | TArrow _ | TTuple _ | TRecord _ | TOption _ | TMap _), _ ->
+    false
+
+let rec equal_inner_tys ty1 ty2 =
+  match (ty1, ty2) with
+  | TUnit, TUnit
+  | TBool, TBool
+  | TNode, TNode
+  | TEdge, TEdge -> true
+  | TInt n1, TInt n2 -> n1 = n2
+  | TVar {contents=Link t1}, t2 -> equal_inner_tys t1 t2
+  | t1, TVar {contents=Link t2} -> equal_inner_tys t1 t2
+  | TVar t1, TVar t2 -> (
+      match (!t1, !t2) with
+      | Unbound (n1, x1), Unbound (n2, x2) ->
+        Var.equals n1 n2 && x1 = x2
+      (* | Link t1, Link t2 -> equal_tys t1 t2 *)
+      | _ -> false )
+  | QVar n1, QVar n2 -> Var.equals n1 n2
+  | TArrow (t1, t2), TArrow (s1, s2) ->
+    equal_inner_tys t1 s1 && equal_inner_tys t2 s2
+  | TTuple ts1, TTuple ts2 -> equal_lists equal_inner_tys ts1 ts2
+  | TRecord map1, TRecord map2 -> StringMap.equal equal_inner_tys map1 map2
+  | TOption t1, TOption t2 -> equal_inner_tys t1 t2
+  | TMap (t1, t2), TMap (s1, s2) ->
+    equal_inner_tys t1 s1 && equal_inner_tys t2 s2
+  | (TUnit | TBool | TNode | TEdge | TInt _ | TVar _ | QVar _
+    | TArrow _ | TTuple _ | TRecord _ | TOption _ | TMap _), _ ->
+    false
 
 let rec equal_values ~cmp_meta (v1: value) (v2: value) =
   let cfg = Cmdline.get_cfg () in
