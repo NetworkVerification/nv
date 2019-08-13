@@ -134,7 +134,7 @@ let run_simulator cfg _ net fs =
     let solution, q =
       match cfg.bound with
       | None ->
-        ( Srp.simulate_net net
+        (Profile.time_profile "Interpreted simulation" (fun () -> Srp.simulate_net net)
         , QueueSet.empty Pervasives.compare )
       | Some b -> Srp.simulate_net_bound net b
     in
@@ -287,6 +287,7 @@ let parse_input (args : string array) =
   let decls = ds in
   (* print_endline @@ Printing.declarations_to_string decls ; *)
   let decls = ToEdge.toEdge_decl decls :: decls in
+    Printf.printf "%s" (Printing.declarations_to_string decls);
   let decls = Typing.infer_declarations info decls in
   Typing.check_annot_decls decls ;
   Wellformed.check info decls;

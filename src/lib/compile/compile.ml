@@ -22,6 +22,46 @@ let record_to_ocaml_record
   in
   Printf.sprintf "{ %s }" entries
 
+let record_table = ref IntSet.empty
+
+let proj_rec i n =
+  record_table := IntSet.add n !record_table;
+  Printf.sprintf "p%d__%d" i n
+
+(* don't call with a negative n...*)
+let rec fold_int (f: int -> 'a -> 'a) acc n =
+  if (n = 0) then
+    acc
+  else
+    fold_int f (f n acc) (n-1)
+
+let build_record_type n =
+  let lst = BatList.init n (fun i -> i) in
+  let type_vars =
+    Collections.printList (fun i -> Printf.sprintf "'a%d" i) lst "(" ", " ")"
+  in
+  let proj_vars =
+    Collections.printList (fun i -> Printf.sprintf "p%d__%d : 'a%d" i n i) lst "{" "; " "}"
+  in
+    Printf.sprintf "%s tup__%d = %s" type_vars n proj_vars
+
+let build_record_types () =
+  let lst = IntSet.to_list !record_table in
+    Collections.printList (fun n -> build_record_type n) lst  "type " "\n and " "\n"
+
+let build_proj_func n =
+  let lst = BatList.init n (fun i -> i) in
+    Collections.printList (fun i -> Printf.sprintf "| \"p%d__%d\" -> Obj.magic (fun x -> x.p%d__%d)" i n i n)
+      lst  "" "\n" "\n"
+
+let build_proj_funcs () =
+  let branches =
+    IntSet.fold (fun n acc -> Printf.sprintf "%s%s" (build_proj_func n) acc) !record_table ""
+  in
+  Printf.sprintf "let record_fns s v = match s with \n\
+                  %s" branches
+
+
 let is_keyword_op op =
   match op with
   | And | Or | Not | UAdd _ | USub _ | Eq | ULess _ | ULeq _ | MGet | NLess | NLeq -> false
@@ -58,7 +98,9 @@ let rec pattern_to_ocaml_string pattern =
   | PBool false -> "false"
   | PInt i -> string_of_int (Integer.to_int i)
   | PTuple ps ->
-     Collections.printList pattern_to_ocaml_string ps "(" ", "  ")"
+    let n = BatList.length ps in 
+    Collections.printListi (fun i p -> Printf.sprintf "%s = %s" (proj_rec i n)
+                               (pattern_to_ocaml_string p)) ps "{" "; "  "}"
   | POption None -> "None"
   | POption (Some p) -> Printf.sprintf "Some %s" (pattern_to_ocaml_string p)
   | PRecord map -> record_to_ocaml_record "=" pattern_to_ocaml_string map
@@ -85,7 +127,11 @@ let rec ty_to_ocaml_string t =
        (ty_to_ocaml_string t1)
        (ty_to_ocaml_string t2)
   | TTuple ts ->
-     Collections.printList ty_to_ocaml_string ts "(" " * " ")"
+    let n = BatList.length ts in
+    let tup_typ = Printf.sprintf ") tup__%d" n in
+      (*TODO:FIXME to apply types to record type*)
+      Collections.printListi (fun i ty -> Printf.sprintf "%s" (ty_to_ocaml_string ty))
+        ts "(" "," tup_typ
   | TOption t ->
      Printf.sprintf "(%s) option"
        (ty_to_ocaml_string t)
@@ -104,7 +150,9 @@ let rec value_to_ocaml_string v =
   | VMap _ ->
      failwith "This seems doable, but later: map_to_ocaml_string m"
   | VTuple vs ->
-     Collections.printList value_to_ocaml_string vs "(" "; " ")"
+    let n = BatList.length vs in
+      Collections.printListi (fun i v -> Printf.sprintf "%s = %s" (proj_rec i n)
+                                 (value_to_ocaml_string v)) vs "{" "; " "}"
   | VOption None ->
      "None"
   | VOption (Some v) ->
@@ -136,7 +184,9 @@ and exp_to_ocaml_string e =
          (exp_to_ocaml_string e1)
          (exp_to_ocaml_string e2)
     | ETuple es ->
-       Collections.printList exp_to_ocaml_string es "(" ", " ")"
+      let n = BatList.length es in
+        Collections.printListi (fun i e -> Printf.sprintf "%s = %s" (proj_rec i n)
+                                   (exp_to_ocaml_string e)) es "{" "; " "}"
     | ESome e ->
        Printf.sprintf "(Some %s)" (exp_to_ocaml_string e)
     | EMatch (e1, bs) ->
@@ -255,8 +305,11 @@ let compile_net net =
     | Some e ->
        Printf.sprintf "let assertion = Some (%s)\n" (exp_to_ocaml_string e)
   in
-  Printf.sprintf "%s %s %s %s %s %s %s %s %s %s"
-    utys_s attr_s graph_s symbs_s defs_s init_s trans_s merge_s requires_s assert_s
+  let tuple_s = build_record_types () in
+  let record_fns = build_proj_funcs () in
+  Printf.sprintf "%s %s %s %s %s %s %s %s %s %s %s %s"
+    tuple_s utys_s attr_s graph_s symbs_s defs_s init_s trans_s merge_s requires_s assert_s
+    record_fns
 
 let set_entry (name: string) =
   Printf.sprintf "let () = SrpNative.srp := Some (module %s:SrpNative.NATIVE_SRP)" name
@@ -265,12 +318,6 @@ let generate_ocaml (name : string) net =
   let header = Printf.sprintf "open Nv_datastructures\n open Nv_compile\n\n \
                                module %s : SrpNative.NATIVE_SRP = struct\n" name in
   let ocaml_decls = compile_net net in
-  (* let s = if !hasRequire then ""
-   *         else "let require = true\n"
-   * in *)
-  (* let s = if !hasAssertion then ""
-   *         else ("let assertion = None \n")
-   * in *)
   let s = "" in
   Printf.sprintf "%s %s %s end\n %s" header ocaml_decls s (set_entry name)
 
@@ -304,7 +351,9 @@ let compile_command_ocaml name =
     print_file "dune" dune;
     print_file "dune-project" project;
     print_file (name ^ ".opam") opam;
-    Sys.command "dune build command >>/dev/null 2>&1; sudo dune install command >>/dev/null 2>&1"
+    Sys.command "dune build; sudo dune install"
+
+    (* Sys.command "dune build command >>/dev/null 2>&1; sudo dune install command >>/dev/null 2>&1" *)
 
 let compile_ocaml name net =
   let basename = Filename.basename name in

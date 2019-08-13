@@ -73,3 +73,20 @@ let printList (printer: 'a -> string) (ls: 'a list) (first : string)
   loop ls;
   Buffer.add_string buf last;
   Buffer.contents buf
+
+let printListi (printer: int -> 'a -> string) (ls: 'a list) (first : string)
+              (sep : string) (last : string) =
+  let buf = Buffer.create 500 in
+  let rec loop i ls =
+    match ls with
+    | [] -> ()
+    | [l] -> Buffer.add_string buf (printer i l)
+    | l :: ls ->
+       Buffer.add_string buf (printer i l);
+       Buffer.add_string buf sep;
+       loop (i+1) ls
+  in
+  Buffer.add_string buf first;
+  loop 0 ls;
+  Buffer.add_string buf last;
+  Buffer.contents buf

@@ -16,6 +16,8 @@ module type NATIVE_SRP =
     val trans: int * int -> attribute -> attribute
     val merge: int -> attribute -> attribute -> attribute
     val assertion: (int -> attribute -> bool) option
+
+    val record_fns: string -> 'a -> 'b
     (* val require: bool *)
   end
 
@@ -124,30 +126,48 @@ module SrpSimulation (Srp : NATIVE_SRP) : SrpSimulationSig =
           Some (AdjGraph.VertexMap.fold (fun n v acc -> (check_assertion a n v acc))
                   vals AdjGraph.VertexMap.empty)
 
-let rec proj_unsafe (attr_ty : Syntax.ty) (v : 'a) =
-  match attr_ty with
-    | TUnit -> Syntax.vunit ()
-    | TBool -> Syntax.vbool (Obj.magic v)
-    | TInt _ -> Syntax.vint (Obj.magic v)
-    | TArrow _ -> failwith "Function computed as value" (*oh no*)
-    | TTuple ts ->
-      Syntax.vtuple (BatList.map2 (fun ty v -> proj_unsafe ty v) ts (Obj.magic v))
-    | TOption ty ->
-      (match (Obj.magic v) with
-        | None -> Syntax.voption None
-        | Some v -> Syntax.voption (Some (proj_unsafe ty v)))
-    | _ -> failwith "todo"
+    let rec proj_unsafe (attr_ty : Syntax.ty) (v : 'a) : Syntax.value =
+      match attr_ty with
+        | TUnit ->
+          Syntax.vunit ()
+        | TBool ->
+          Syntax.vbool (Obj.magic v)
+        | TInt _ ->
+          Syntax.vint (Obj.magic v |> Integer.of_int)
+        | TOption ty ->
+          (match Obj.magic v with
+            | None -> Syntax.voption None
+            | Some v' -> Syntax.voption (Some (proj_unsafe ty v')))
+        | TArrow _ -> failwith "Function computed as value"
+        | TTuple ts ->
+          let vrec = Obj.magic v in
+          let n = BatList.length ts in
+            Syntax.vtuple
+              (BatList.mapi (fun i t ->
+                let projv = Obj.magic (record_fns (Printf.sprintf "p%d__%d" i n) vrec) in
+                  proj_unsafe t projv) ts)
+        | TMap _ -> failwith "tmap"
+        | TRecord _ -> failwith "Trecord"
+        | TNode -> failwith "Tnode"
+        | TEdge -> failwith "Tedge"
+
+
     (* | TMap of Nv_lang.Syntax.ty * Nv_lang.Syntax.ty
      * | TRecord of Nv_lang.Syntax.ty Nv_utils.PrimitiveCollections.StringMap.t
      * | TNode
      * | TEdge *)
+
 
     let simulate_srp attr_ty =
       let s = srp_to_state () in
       let vals = simulate_init s in
       let asserts = check_assertions vals in
       let open Solution in
-        { labels = AdjGraph.VertexMap.map (fun v -> proj_unsafe attr_ty v) vals;
-          symbolics = VarMap.empty;
+        { labels =(*  AdjGraph.VertexMap.map (fun v ->
+               * let v' = proj_unsafe attr_ty v in
+               *   (Nv_lang.Printing.value_to_string v');
+                   *   v') vals; *)
+            AdjGraph.VertexMap.empty;
+          symbolics = VarMap.empty; (*TODO: but it's not important for simulation.*)
           assertions = asserts}
   end

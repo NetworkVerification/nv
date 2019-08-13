@@ -153,9 +153,9 @@ module ExpMap = BatMap.Make (struct
 
 let map_cache = ref ExpMap.empty
 
-let map ~op_key (f: value -> value) ((vdd, ty): t) : t =
+let map ~op_key (f: value -> value -> value) ((vdd, ty): t) : t =
   let cfg = Cmdline.get_cfg () in
-  let g x = f (Mtbdd.get x) |> Mtbdd.unique B.tbl in
+  let g x = f x (Mtbdd.get x) |> Mtbdd.unique B.tbl in
   if cfg.no_caching then (Mapleaf.mapleaf1 g vdd, ty)
   else
     let op =
