@@ -23,6 +23,7 @@ type t =
   ; check_monotonicity: bool           (** checks monotonicity of trans function   *)
   ; link_failures: int                  (** adds at most k link failures to the network  *)
   ; hiding: bool                        (** Use the hiding abstraction during SMT solving *)
+  ; kirigami: bool    [@short "-k"]     (** enable partitioning features           *)
   }
 [@@deriving
   show
@@ -54,6 +55,7 @@ let default =
   ; check_monotonicity=false
   ; link_failures=0
   ; hiding=false
+  ; kirigami = false
   }
 
 let cfg = ref default
