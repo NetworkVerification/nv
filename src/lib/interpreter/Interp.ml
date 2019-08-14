@@ -119,7 +119,6 @@ and interp_op env ty op es =
   | MSet, [{v= VMap m}; vkey; vval] ->
     vmap (BddMap.update m vkey vval)
   | MMap, [{v= VClosure (c_env, f)}; {v= VMap m}] ->
-    let arg_key = f.arg in
     let seen = BatSet.PSet.singleton ~cmp:Var.compare f.arg in
     let free = Syntax.free seen f.body in
     let env = build_env c_env free in

@@ -287,7 +287,6 @@ let parse_input (args : string array) =
   let decls = ds in
   (* print_endline @@ Printing.declarations_to_string decls ; *)
   let decls = ToEdge.toEdge_decl decls :: decls in
-    Printf.printf "%s" (Printing.declarations_to_string decls);
   let decls = Typing.infer_declarations info decls in
   Typing.check_annot_decls decls ;
   Wellformed.check info decls;
@@ -303,7 +302,7 @@ let process_input cfg info file decls :
       decls, [f]
   in
   let decls, fs = (* inlining definitions *)
-    if cfg.inline || cfg.unroll || cfg.smt || cfg.check_monotonicity || cfg.smart_gen then
+    if cfg.inline || cfg.smt || cfg.check_monotonicity || cfg.smart_gen then
       (* Note! Must rename before inling otherwise inling is unsound *)
       let decls, f = Renaming.alpha_convert_declarations decls in
       (Profile.time_profile "Inlining" (
