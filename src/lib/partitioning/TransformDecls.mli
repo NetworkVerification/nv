@@ -12,7 +12,7 @@ open Nv_lang
  * | _ -> init x
  * where the edge u~v has been partitioned into u~out and in~v.
  *)
-val transform_init : (Syntax.exp) -> (AdjGraph.t) -> (Syntax.exp)
+val transform_init : (Syntax.exp) -> (OpenAdjGraph.t) -> (Syntax.exp)
 
 (* Wrap the given trans exp in a new exp of the form:
  * match e with
@@ -22,7 +22,7 @@ val transform_init : (Syntax.exp) -> (AdjGraph.t) -> (Syntax.exp)
  * where the edge u~v has been partitioned into u~out and in~v.
  * Note that the `trans u~v a` case is pulled from the previous exp.
  *)
-val transform_trans : (Syntax.exp) -> (AdjGraph.t) -> (Syntax.exp)
+val transform_trans : (Syntax.exp) -> (OpenAdjGraph.t) -> (Syntax.exp)
 
 (* Wrap the given merge exp in a new exp of the form:
  * match n with
@@ -31,4 +31,4 @@ val transform_trans : (Syntax.exp) -> (AdjGraph.t) -> (Syntax.exp)
  * | _ -> merge n x y
  * where the edge u~v has been partitioned into u~out and in~v.
  *)
-val transform_merge : (Syntax.exp) -> (AdjGraph.t) -> (Syntax.exp)
+val transform_merge : (Syntax.exp) -> (OpenAdjGraph.t) -> (Syntax.exp)

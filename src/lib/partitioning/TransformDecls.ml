@@ -1,20 +1,20 @@
 open Nv_lang
+open Syntax
 
-let transform_init e graph =
-  (* TODO: extract the in-out pairs *)
-  let open Syntax in
+let transform_init (e: Syntax.exp) (ograph: OpenAdjGraph.t) : Syntax.exp =
+  let OpenAdjGraph.{ inputs; outputs;_ } = ograph in
   let default_branch =
     addBranch PWild e emptyBranch
   in
   let _branches =
+    (* create a (pattern * exp) from each input and output *)
     default_branch
   in
   failwith "TODO"
   (* DInit (ematch branches) *)
 
-let transform_trans e graph =
-  (* TODO: extract the in-out pairs *)
-  let open Syntax in
+let transform_trans (e: Syntax.exp) (ograph: OpenAdjGraph.t) : Syntax.exp =
+  let OpenAdjGraph.{ inputs; outputs;_ } = ograph in
   let default_branch =
     addBranch PWild e emptyBranch
   in
@@ -24,9 +24,8 @@ let transform_trans e graph =
   failwith "TODO"
   (* DTrans (ematch branches) *)
 
-let transform_merge e graph =
-  (* TODO: extract the in-out pairs *)
-  let open Syntax in
+let transform_merge (e: Syntax.exp) (ograph: OpenAdjGraph.t) : Syntax.exp =
+  let OpenAdjGraph.{ inputs; outputs;_ } = ograph in
   let default_branch =
     addBranch PWild e emptyBranch
   in
