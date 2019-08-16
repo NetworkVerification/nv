@@ -4,11 +4,13 @@ open AdjGraph
 
 (* Internal AdjGraph.t structure *)
 (* One Map for the input->base edges *)
-(* One Map set for the base->output edges *)
+(* One Map for the base->output edges *)
+(* One Map for the broken base->base edges *)
 type t = {
   graph: AdjGraph.t;
   inputs: Vertex.t VertexMap.t;
   outputs: Vertex.t VertexMap.t;
+  broken: Vertex.t VertexMap.t;
 }
 
 (** add_new_input g v creates a new open graph with a new node u with an edge u~v *)

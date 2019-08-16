@@ -6,34 +6,46 @@ type t = {
   graph: AdjGraph.t;
   inputs: Vertex.t VertexMap.t;
   outputs: Vertex.t VertexMap.t;
+  broken: Vertex.t VertexMap.t
 }
 
-let add_new_input (ograph: t) (v: AdjGraph.Vertex.t) : t =
-let { graph; inputs; outputs } = ograph in
-good_vertex graph v ;
-(* get the id of the new input *)
-let input = (AdjGraph.Vertex.from_index (num_vertices graph)) in
-{ graph = add_vertices graph 1 |>
-(fun g -> add_edge g (input, v));
-  inputs = VertexMap.add input v inputs;
-  outputs = outputs }
+let add_new_input (ograph: t) (v: Vertex.t) : t =
+  let { graph; inputs; outputs; broken } = ograph in
+  good_vertex graph v ;
+  (* get the id of the new input *)
+  let input = (Vertex.from_index (num_vertices graph)) in
+  { graph = add_vertices graph 1 |>
+  (fun g -> add_edge g (input, v));
+    inputs = VertexMap.add input v inputs;
+    outputs = outputs;
+    broken = broken }
 
 let add_new_output (ograph: t) (v: Vertex.t) : t =
-let { graph; inputs; outputs } = ograph in
-good_vertex graph v ;
-(* get the id of the new output *)
-let output = (AdjGraph.Vertex.from_index (num_vertices graph)) in
-{ graph = add_vertices graph 1 |>
-(fun g -> add_edge g (v, output));
-  inputs = inputs;
-  outputs = VertexMap.add output v outputs }
+  let { graph; inputs; outputs; broken } = ograph in
+  good_vertex graph v ;
+  (* get the id of the new output *)
+  let output = (Vertex.from_index (num_vertices graph)) in
+  { graph = add_vertices graph 1 |>
+  (fun g -> add_edge g (v, output));
+    inputs = inputs;
+    outputs = VertexMap.add output v outputs;
+    broken = broken }
 
+let break_edge (ograph: t) (e: Edge.t) : t =
+  let { graph; inputs; outputs; broken } = ograph in
+  let (startv, endv) = e in
+  { graph = remove_edge graph e;
+    inputs = inputs;
+    outputs = outputs;
+    broken = VertexMap.add startv endv broken
+  }
+
+(* Perform a sequence of three updates: add an output, add an input, remove the old edge *)
 let partition_edge (ograph: t) (e: Edge.t) : t =
-let (u, v) = e in
-  let og = add_new_output ograph u
-  |> (fun og -> add_new_input og v)
-  in
-    { og with graph = (AdjGraph.remove_edge og.graph (u,v)) }
+  let (u, v) = e in
+    add_new_output ograph u
+    |> (fun og -> add_new_input og v)
+    |> (fun og -> break_edge og e)
 
 (** Return the base node associated with the input node v, or Not_found *)
 let to_node ograph v = VertexMap.find v ograph.inputs
