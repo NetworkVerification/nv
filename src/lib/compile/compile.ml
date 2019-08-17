@@ -72,7 +72,7 @@ let op_to_ocaml_string op =
   match op with
   | And -> "&&"
   | Or -> "||"
-  | Not -> "!"
+  | Not -> "not"
   | UAdd _ -> "+"
   | USub _ -> "-"
   | Eq -> "="
@@ -327,6 +327,7 @@ let build_dune_file name =
     "(library \n \
      (name %s_plugin) \n \
      (public_name %s.plugin) \n
+     (modes native)\n
      (libraries nv_lib)\n)" name name
 
 let build_project_file name =

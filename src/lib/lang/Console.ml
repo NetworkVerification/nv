@@ -1,6 +1,7 @@
 open Collections
 
 module T = ANSITerminal
+exception Error of string
 
 type file_info = {input: string array; linenums: (int * int) array}
 
@@ -14,7 +15,7 @@ let show_message msg color label =
 
 let error msg =
   show_message msg T.Red "error" ;
-  exit 0
+  raise (Error msg)
 
 let warning msg = show_message msg T.Yellow "warning"
 

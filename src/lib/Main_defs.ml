@@ -70,7 +70,7 @@ let run_smt_func file cfg info net fs =
 
 let run_smt_classic file cfg info (net : Syntax.network) fs =
   let net, fs =
-    if cfg.unbox || cfg.hiding then
+    if cfg.unbox then
       begin
         SmtUtils.smt_config.unboxing <- true;
         let net, f1 = Profile.time_profile "Unbox options" (fun () -> UnboxOptions.unbox_net net) in
@@ -84,27 +84,61 @@ let run_smt_classic file cfg info (net : Syntax.network) fs =
 
   let net, f = Renaming.alpha_convert_net net in (*TODO: why are we renaming here?*)
   let fs = f :: fs in
-  let solve_fun =
-    if cfg.hiding then
-      (SmtHiding.solve_hiding ~starting_vars:[] ~full_chan:(smt_query_file file))
-    else
-      Smt.solveClassic
-  in
-  let res =
-    solve_fun info cfg.query (smt_query_file file) net
-  in
-  match res with
-  | Unsat ->
-    (Success None, [])
-  | Unknown -> Console.error "SMT returned unknown"
-  | Sat solution ->
-    match solution.assertions with
-    | None -> Success (Some solution), fs
-    | Some m ->
-      if AdjGraph.VertexMap.exists (fun _ b -> not b) m then
-        CounterExample solution, fs
+
+  let get_answer net fs =
+    let solve_fun =
+      if cfg.hiding then
+        (SmtHiding.solve_hiding ~starting_vars:[] ~full_chan:(smt_query_file file))
       else
-        Success (Some solution), fs
+        Smt.solveClassic
+    in
+    match solve_fun info cfg.query (smt_query_file file) net with
+    | Unsat ->
+      (Success None, [])
+    | Unknown -> Console.error "SMT returned unknown"
+    | Sat solution ->
+      match solution.assertions with
+      | None -> Success (Some solution), fs
+      | Some m ->
+        if AdjGraph.VertexMap.exists (fun _ b -> not b) m then
+          CounterExample solution, fs
+        else
+          Success (Some solution), fs
+  in
+
+  (* Attribute Slicing requires the net to have an assertion and for its attribute
+     to be a tuple type. *)
+  let slices =
+    match cfg.slicing, net.assertion, net.attr_type with
+    | true, Some _, TTuple _ ->
+      AttributeSlicing.slice_network net
+      |> List.map (fun (net, f) -> net, f :: fs)
+    | _ ->
+      [net, fs]
+  in
+  let slices =
+    List.map
+      (fun (net, fs) ->
+         let net, f = UnboxUnits.unbox_net net in
+         net, f :: fs)
+      slices
+  in
+
+  (* Return the first slice that returns a counterexample, or the result of the
+     last slice if all of them succeed *)
+  (* List.iter (fun (net, _) -> print_endline @@ Printing.network_to_string net) slices; *)
+  let rec solve_slices slices =
+    match slices with
+    | [] -> failwith "impossible"
+    | (net, fs)::tl ->
+      let answer = get_answer net fs in
+      match answer with
+      | CounterExample _, _ -> answer
+      | Success _, _ ->
+        if BatList.is_empty tl then answer else solve_slices tl
+  in
+  solve_slices slices
+;;
 
 let run_smt file cfg info (net : Syntax.network) fs =
   if cfg.func then
@@ -183,7 +217,7 @@ let compress file info net cfg fs networkOp =
 
   FailuresAbstraction.refinement_breadth := cfg.depth;
   FailuresAbstraction.counterexample_refinement_breadth := cfg.depth;
-  let net = OptimizeBranches.optimizeNet net in
+  let net, _ = OptimizeBranches.optimize_net net in (* The _ should match the identity function *)
 
   let rec loop (finit: AbstractionMap.abstractionMap)
       (f: AbstractionMap.abstractionMap)
@@ -281,6 +315,8 @@ let checkPolicy info cfg file ds =
 let parse_input (args : string array) =
   let cfg, rest = argparse default "nv" args in
   Cmdline.set_cfg cfg ;
+  Cmdline.update_cfg_dependencies ();
+  let cfg = Cmdline.get_cfg () in
   if cfg.debug then Printexc.record_backtrace true ;
   let file = rest.(0) in
   let ds, info = Input.parse file in (* Parse nv file *)
@@ -289,31 +325,27 @@ let parse_input (args : string array) =
   let decls = ToEdge.toEdge_decl decls :: decls in
   let decls = Typing.infer_declarations info decls in
   Typing.check_annot_decls decls ;
-  Wellformed.check info decls;
-  cfg, info, file, decls
-
-let process_input cfg info file decls :
-      Cmdline.t * Console.info * string * Syntax.network * ((Solution.t -> Solution.t) list) =
+  Wellformed.check info decls ;
   let decls, fs = (* Unroll records done first *)
     if cfg.compile then
       decls, []
     else
-      let decls, f = RecordUnrolling.unroll decls in
-      decls, [f]
+      let decls, f = RecordUnrolling.unroll_declarations decls in
+        decls, [f]
   in
-  let decls, fs = (* inlining definitions *)
-    if cfg.inline || cfg.smt || cfg.check_monotonicity || cfg.smart_gen then
+  let decls,fs = (* inlining definitions *)
+    if cfg.inline then
       (* Note! Must rename before inling otherwise inling is unsound *)
       let decls, f = Renaming.alpha_convert_declarations decls in
       (Profile.time_profile "Inlining" (
-           fun () ->
-           Inline.inline_declarations decls |>
-             Typing.infer_declarations info), f :: fs)
+          fun () ->
+            Inline.inline_declarations decls |>
+            Typing.infer_declarations info), f :: fs)
     else
       (decls,fs)
   in
   let decls, fs =
-    if cfg.unroll || cfg.smt then
+    if cfg.unroll then
       let decls, f = (* unrolling maps *)
         Profile.time_profile "Map unrolling" (fun () -> MapUnrolling.unroll info decls)
       in
@@ -322,6 +354,13 @@ let process_input cfg info file decls :
       (* (Typing.infer_declarations info decls, f :: fs) (* TODO: is type inf necessary here?*) *)
       (decls, f :: fs)
     else decls, fs
+  in
+  let decls, fs =
+    if cfg.smt then
+      let decls, f = UnboxEdges.unbox_declarations decls in
+      decls, f :: fs
+    else
+      decls, fs
   in
   let net = Slicing.createNetwork decls in (* Create something of type network *)
   let net =

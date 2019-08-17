@@ -169,5 +169,7 @@ module SrpSimulation (Srp : NATIVE_SRP) : SrpSimulationSig =
                    *   v') vals; *)
             AdjGraph.VertexMap.empty;
           symbolics = VarMap.empty; (*TODO: but it's not important for simulation.*)
-          assertions = asserts}
+          assertions = asserts;
+          mask = None;
+        }
   end

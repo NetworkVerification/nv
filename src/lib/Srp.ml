@@ -209,7 +209,7 @@ let simulate_net (net: Syntax.network) : Nv_solution.Solution.t =
   in
   let vals = simulate_init srp state in
   let asserts = check_assertions srp vals in
-  {labels= vals; symbolics= syms; assertions= Some asserts}
+  {labels= vals; symbolics= syms; assertions= Some asserts; mask= None}
 
 let simulate_net_bound net k : (Nv_solution.Solution.t * queue) =
   let srp, state, syms =
@@ -217,4 +217,4 @@ let simulate_net_bound net k : (Nv_solution.Solution.t * queue) =
   in
   let vals, q = simulate_init_bound srp state k in
   let asserts = check_assertions srp vals in
-  ({labels= vals; symbolics= syms; assertions= Some asserts}, q)
+  ({labels= vals; symbolics= syms; assertions= Some asserts; mask= None}, q)

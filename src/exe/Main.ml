@@ -3,8 +3,7 @@ open Nv_solution
 
 let main =
   Printexc.record_backtrace true;
-  let cfg, info, file, decls = parse_input Sys.argv in
-  let cfg, info, file, net, fs = process_input cfg info file decls in
+let cfg, info, file, net, fs = parse_input Sys.argv in
   (* if cfg.check_monotonicity then *)
   (*   checkPolicy info cfg file decls; *)
   let networkOp =

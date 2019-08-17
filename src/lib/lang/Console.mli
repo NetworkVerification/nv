@@ -1,4 +1,5 @@
 module T = ANSITerminal
+exception Error of string
 
 type info
 
