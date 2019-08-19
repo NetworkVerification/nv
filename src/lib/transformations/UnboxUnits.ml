@@ -4,39 +4,39 @@ open Nv_lang.Syntax
 (* Replace all instances of Unit with booleans (set to false), so we don't
    have to deal with them during SMT encoding *)
 
-let ty_mutator _ ty =
+let ty_transformer _ ty =
   match ty with
   | TUnit -> Some TBool
   | _ -> None
 ;;
 
-let pattern_mutator _ p _ =
+let pattern_transformer _ p _ =
   match p with
   | PUnit -> Some PWild (* Preserves irrefutability *)
   | _ -> None
 ;;
 
-let value_mutator _ v =
+let value_transformer _ v =
   match v.v with
   | VUnit -> Some (vbool false)
   | _ -> None
 ;;
 
-let exp_mutator _ _ = None;;
+let exp_transformer _ _ = None;;
 
-let map_back_mutator _ _ v orig_ty =
+let map_back_transformer _ _ v orig_ty =
   match v.v, orig_ty with
   | VBool false, TUnit -> Some (vunit ())
   | _ -> None
 ;;
 
 (* Bools and Unit have the same mask type *)
-let mask_mutator _ _ v _ = Some v;;
+let mask_transformer _ _ v _ = Some v;;
 
-let make_toplevel (toplevel_mutator : 'a Mutators.toplevel_mutator) =
-  toplevel_mutator ~name:"UnboxUnits" ty_mutator pattern_mutator value_mutator exp_mutator map_back_mutator mask_mutator
+let make_toplevel (toplevel_transformer : 'a Transformers.toplevel_transformer) =
+  toplevel_transformer ~name:"UnboxUnits" ty_transformer pattern_transformer value_transformer exp_transformer map_back_transformer mask_transformer
 ;;
 
-let unbox_declarations = make_toplevel Mutators.mutate_declarations
-let unbox_net = make_toplevel Mutators.mutate_network
-let unbox_srp = make_toplevel Mutators.mutate_srp
+let unbox_declarations = make_toplevel Transformers.transform_declarations
+let unbox_net = make_toplevel Transformers.transform_network
+let unbox_srp = make_toplevel Transformers.transform_srp

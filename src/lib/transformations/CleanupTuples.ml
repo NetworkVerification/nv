@@ -6,28 +6,28 @@ open Syntax
 open Nv_utils.OCamlUtils
 open Nv_solution
 
-let ty_mutator _ ty =
+let ty_transformer _ ty =
   match ty with
   | TTuple [] -> Some(TUnit)
   | TTuple [ty] -> Some(ty)
   | _ -> None
 ;;
 
-let pattern_mutator _ p _ =
+let pattern_transformer _ p _ =
   match p with
   | PTuple [] -> Some(PUnit)
   | PTuple [p] -> Some(p)
   | _ -> None
 ;;
 
-let value_mutator _ v =
+let value_transformer _ v =
   match v.v with
   | VTuple [] -> Some(vunit ())
   | VTuple [v] -> Some(v)
   | _ -> None
 ;;
 
-let exp_mutator (recursors: Mutators.recursors) e =
+let exp_transformer (recursors: Transformers.recursors) e =
   let cleanup_exp = recursors.recurse_exp in
   match e.e with
   | ETuple [] -> Some (e_val (avalue (vunit (), Some TUnit, e.espan)))
@@ -52,24 +52,24 @@ let exp_mutator (recursors: Mutators.recursors) e =
 (** Functions to convert a solution to the cleanup'd version to a solution
     to the original version **)
 
-let rec map_back_mutator _ _ v oldty =
+let rec map_back_transformer _ _ v oldty =
   match v.v, oldty with
   | VUnit, TTuple [] -> Some(vtuple [])
   | _, TTuple [_] -> Some(vtuple [v])
   | _ -> None
 ;;
 
-let mask_mutator _ _ v oldty =
+let mask_transformer _ _ v oldty =
   match v.v, oldty with
   | VBool _, TTuple [] -> Some (vtuple [])
   | _, TTuple [_] -> Some(vtuple [v])
   | _ -> None
 ;;
 
-let make_toplevel (toplevel_mutator : 'a Mutators.toplevel_mutator) =
-  toplevel_mutator ~name:"CleanupTuples" ty_mutator pattern_mutator value_mutator exp_mutator map_back_mutator mask_mutator
+let make_toplevel (toplevel_transformer : 'a Transformers.toplevel_transformer) =
+  toplevel_transformer ~name:"CleanupTuples" ty_transformer pattern_transformer value_transformer exp_transformer map_back_transformer mask_transformer
 ;;
 
-let cleanup_declarations = make_toplevel Mutators.mutate_declarations
-let cleanup_net = make_toplevel Mutators.mutate_network
-let cleanup_srp = make_toplevel Mutators.mutate_srp
+let cleanup_declarations = make_toplevel Transformers.transform_declarations
+let cleanup_net = make_toplevel Transformers.transform_network
+let cleanup_srp = make_toplevel Transformers.transform_srp

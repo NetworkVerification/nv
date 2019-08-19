@@ -7,7 +7,7 @@ open Collections
 open OCamlUtils
 open Nv_solution
 
-let ty_mutator (recursors : Mutators.recursors) ty =
+let ty_transformer (recursors : Transformers.recursors) ty =
   match ty with
   | TRecord map ->
     Some (TTuple (List.map recursors.recurse_ty (get_record_entries map)))
@@ -15,20 +15,20 @@ let ty_mutator (recursors : Mutators.recursors) ty =
   | _ -> None
 ;;
 
-let pattern_mutator (recursors : Mutators.recursors) p ty =
+let pattern_transformer (recursors : Transformers.recursors) p ty =
   match p, ty with
   | PRecord map, TRecord tmap ->
     Some (PTuple (List.map2 recursors.recurse_pattern (get_record_entries map) (get_record_entries tmap)))
   | _ -> None
 ;;
 
-let value_mutator (recursors : Mutators.recursors) v =
+let value_transformer (recursors : Transformers.recursors) v =
   match v.v with
   | VRecord map -> Some (vtuple (List.map recursors.recurse_value (get_record_entries map)))
   | _ -> None
 ;;
 
-let exp_mutator (rtys : ty StringMap.t list) (recursors : Mutators.recursors) e =
+let exp_transformer (rtys : ty StringMap.t list) (recursors : Transformers.recursors) e =
   match e.e with
   | ERecord map ->
     Some (etuple (List.map recursors.recurse_exp @@ get_record_entries map))
@@ -39,7 +39,7 @@ let exp_mutator (rtys : ty StringMap.t list) (recursors : Mutators.recursors) e 
   | _ -> None
 ;;
 
-let map_back_mutator recurse _ v orig_ty =
+let map_back_transformer recurse _ v orig_ty =
   match v.v, orig_ty with
   | VTuple vs, TRecord tmap ->
     let vtys = get_record_entries tmap in
@@ -50,11 +50,11 @@ let map_back_mutator recurse _ v orig_ty =
   | _ -> None
 ;;
 
-let mask_mutator = map_back_mutator;; (* Conveniently works in this case *)
+let mask_transformer = map_back_transformer;; (* Conveniently works in this case *)
 
-let make_toplevel (rtys : ty StringMap.t list) (toplevel_mutator : 'a Mutators.toplevel_mutator) =
-  toplevel_mutator ~name:"RecordUnrolling" ty_mutator pattern_mutator value_mutator (exp_mutator rtys) map_back_mutator mask_mutator
+let make_toplevel (rtys : ty StringMap.t list) (toplevel_transformer : 'a Transformers.toplevel_transformer) =
+  toplevel_transformer ~name:"RecordUnrolling" ty_transformer pattern_transformer value_transformer (exp_transformer rtys) map_back_transformer mask_transformer
 ;;
 
-let unroll_declarations decls = make_toplevel (get_record_types decls) Mutators.mutate_declarations decls
-let unroll_net net = make_toplevel net.utys Mutators.mutate_network net
+let unroll_declarations decls = make_toplevel (get_record_types decls) Transformers.transform_declarations decls
+let unroll_net net = make_toplevel net.utys Transformers.transform_network net
