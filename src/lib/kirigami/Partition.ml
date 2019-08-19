@@ -1,5 +1,7 @@
 open Batteries
 open Nv_datastructures
+open Nv_utils.PrimitiveCollections
+open Nv_lang.Syntax
 
 type s = int
 
@@ -32,6 +34,32 @@ module InterfaceSet(S: Interfaces.OrderedType) : Set.S with type elt = Interface
 (* It is possible that a better implementation involves building a new graph using the interface set,
  * as indexing newly-added nodes could break on AdjGraph implementation change
  *)
+type onetwork =
+  {
+    attr_type       : ty;
+    init            : exp;
+    trans           : exp;
+    merge           : exp;
+    assertion       : exp option;
+    symbolics       : (var * ty_or_exp) list;
+    defs            : (var * ty option * exp) list;
+    utys            : (ty StringMap.t) list;
+    requires        : exp list;
+    ograph          : OpenAdjGraph.t
+  }
 
-(* let partition_graph graph interfaces = *)
-(*   Set.fold (fun e g -> partition_edge g e) interfaces graph *)
+let open_network (net: network) : onetwork =
+  let { attr_type; init; trans; merge; assertion; partition; interface; symbolics; defs; utys; requires; graph } : network = net
+  in
+  {
+    attr_type;
+    init;
+    trans;
+    merge;
+    assertion;
+    symbolics;
+    defs;
+    utys;
+    requires;
+    ograph = OpenAdjGraph.from_graph graph;
+  }

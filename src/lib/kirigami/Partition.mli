@@ -1,6 +1,8 @@
 (* Partitioning utilities and partition interface definitions *)
 open Batteries
 open Nv_datastructures
+open Nv_utils.PrimitiveCollections
+open Nv_lang.Syntax
 
 (* Return true if an edge is cross-partition, given a partition function *)
 val is_cross_partition : (AdjGraph.Vertex.t -> int) -> AdjGraph.Edge.t -> bool
@@ -29,4 +31,20 @@ module InterfaceSet(S: Interfaces.OrderedType) : Set.S with type elt = Interface
  *)
 
 (* Graph transformations *)
-(* val partition_graph : OpenAdjGraph.t -> InterfaceSet.t -> OpenAdjGraph.t *)
+(* conversion of Syntax.network to opened network *)
+type onetwork =
+  {
+    attr_type       : ty;
+    init            : exp;
+    trans           : exp;
+    merge           : exp;
+    assertion       : exp option;
+    symbolics       : (var * ty_or_exp) list;
+    defs            : (var * ty option * exp) list;
+    utys            : (ty StringMap.t) list;
+    requires        : exp list;
+    ograph          : OpenAdjGraph.t
+  }
+
+(** Convert a Syntax.network to an onetwork *)
+val open_network : network -> onetwork

@@ -9,6 +9,13 @@ type t = {
   broken: Vertex.t VertexMap.t
 }
 
+let from_graph (graph: AdjGraph.t) : t =
+  { graph;
+    inputs = VertexMap.empty;
+    outputs = VertexMap.empty;
+    broken = VertexMap.empty
+  }
+
 let add_new_input (ograph: t) (v: Vertex.t) : t =
   let { graph; inputs; outputs; broken } = ograph in
   good_vertex graph v ;
@@ -46,6 +53,10 @@ let partition_edge (ograph: t) (e: Edge.t) : t =
     add_new_output ograph u
     |> (fun og -> add_new_input og v)
     |> (fun og -> break_edge og e)
+
+(** Perform a sequence of edge partitionings *)
+let partition_graph (ograph: t) (es: EdgeSet.t) : t =
+  EdgeSet.fold (fun e g -> partition_edge g e) es ograph
 
 (** Return the base node associated with the input node v, or Not_found *)
 let to_node ograph v = VertexMap.find v ograph.inputs
