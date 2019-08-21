@@ -6,6 +6,8 @@ open SmtLang
 open SmtUtils
 open Nv_utils.OCamlUtils
 
+let int_as_arith = false
+
 (** * SMT encoding without SMT-datatypes *)
 module Unboxed : SmtEncodingSigs.ExprEncoding =
 struct
@@ -68,7 +70,11 @@ struct
     match ty with
     | TVar {contents= Link t} -> ty_to_sort t
     | TBool -> BoolSort
-    | TInt _ -> IntSort
+    | TInt n ->
+      if int_as_arith then
+        IntSort
+      else
+        BitVecSort n
     | TNode -> ty_to_sort (TInt 32)
     | TEdge
     | TTuple _
@@ -87,7 +93,7 @@ struct
     | TVar {contents= Link t} ->
       ty_to_sorts t
     | TBool -> [BoolSort]
-    | TInt _ -> [IntSort]
+    | TInt _ -> [ty_to_sort ty]
     | TNode -> ty_to_sorts (TInt 32)
     | TEdge ->  ty_to_sorts (TTuple [TNode; TNode])
     | TTuple ts -> (
@@ -173,7 +179,10 @@ struct
         | Syntax.UAdd _, [e1;e2] ->
           let ze1 = encode_exp_z3_single descr env e1 in
           let ze2 = encode_exp_z3_single descr env e2 in
-          mk_add ze1.t ze2.t |> mk_term ~tloc:e.espan
+            if int_as_arith then
+              mk_add ze1.t ze2.t |> mk_term ~tloc:e.espan
+            else
+              mk_bv_add ze1.t ze2.t |> mk_term ~tloc:e.espan
         | Syntax.USub _, [e1;e2] ->
           let ze1 = encode_exp_z3_single descr env e1 in
           let ze2 = encode_exp_z3_single descr env e2 in
@@ -185,7 +194,10 @@ struct
         | ULess _, [e1;e2] ->
           let ze1 = encode_exp_z3_single descr env e1 in
           let ze2 = encode_exp_z3_single descr env e2 in
-          mk_lt ze1.t ze2.t |> mk_term ~tloc:e.espan
+            if int_as_arith then
+              mk_lt ze1.t ze2.t |> mk_term ~tloc:e.espan
+            else
+              mk_bv_lt ze1.t ze2.t |> mk_term ~tloc:e.espan
         | ULeq _, [e1;e2] ->
           let ze1 = encode_exp_z3_single descr env e1 in
           let ze2 = encode_exp_z3_single descr env e2 in
@@ -310,8 +322,8 @@ struct
     | PBool b, TBool ->
       [mk_eq (BatList.hd znames).t (mk_bool b) |> mk_term]
     | PInt i, TInt _ ->
-      let const = mk_int_u32 i in
-      [mk_eq (BatList.hd znames).t const |> mk_term]
+      let const = if int_as_arith then mk_int_u32 i else mk_bv i in
+        [mk_eq (BatList.hd znames).t const |> mk_term]
     | PTuple ps, TTuple ts -> (
         match (ps, ts) with
         | [p], [t] -> encode_pattern_z3 descr env znames p t
@@ -339,7 +351,7 @@ struct
       mk_bool b |>
       mk_term ~tloc:v.vspan
     | VInt i ->
-      mk_int_u32 i |>
+      (if int_as_arith || (Integer.size i = 32) then mk_int_u32 i else mk_bv i) |>
       mk_term ~tloc:v.vspan ~tdescr:"val"
     | VNode n ->
       encode_value_z3_single descr env @@

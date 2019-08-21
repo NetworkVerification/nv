@@ -51,6 +51,8 @@ type smt_term =
   | Ite of smt_term * smt_term * smt_term
   | Var of string
   | Bv of Integer.t
+  | BvAdd of smt_term * smt_term
+  | BvLt of smt_term * smt_term
   | AtMost of (smt_term list) * (smt_term list) * smt_term
   | Constructor of string * sort (** constructor name, instantiated sort*)
   | App of smt_term * (smt_term list)
@@ -144,6 +146,10 @@ let mk_lt t1 t2 = Lt (t1, t2)
 
 let mk_leq t1 t2 = Leq (t1, t2)
 
+let mk_bv_add t1 t2 = BvAdd (t1, t2)
+
+let mk_bv_lt t1 t2 = BvLt (t1, t2)
+
 let mk_ite t1 t2 t3 = Ite (t1, t2, t3)
 
 let mk_ite_fast t1 t2 t3 =
@@ -208,6 +214,8 @@ let rec get_vars (tm : smt_term) : string list =
   | Sub (tm1, tm2)
   | Eq (tm1, tm2)
   | Lt (tm1, tm2)
+  | BvAdd (tm1, tm2)
+  | BvLt (tm1, tm2)
   | Leq (tm1, tm2) ->
     get_vars tm1 @ get_vars tm2
   | Ite (tm1, tm2, tm3) ->
@@ -236,7 +244,7 @@ let rec sort_to_smt (s : sort) : string =
   | DataTypeSort (name, ls) ->
     let args = Collections.printList sort_to_smt ls "" " " "" in
     Printf.sprintf "(%s %s)" name args
-  | BitVecSort _ -> failwith "not yet"
+  | BitVecSort n -> Printf.sprintf "(_ BitVec %d)" n
   | VarSort s -> s
 
 let rec smt_term_to_smt (tm : smt_term) : string =
@@ -264,7 +272,11 @@ let rec smt_term_to_smt (tm : smt_term) : string =
     Printf.sprintf "(ite %s %s %s)" (smt_term_to_smt t1) (smt_term_to_smt t2)
       (smt_term_to_smt t3)
   | Var s -> s
-  | Bv _ -> failwith "not yet"
+  | Bv n -> Printf.sprintf "(_ bv%d %d)" (Integer.to_int n) (Integer.size n)
+  | BvAdd (t1, t2) ->
+    Printf.sprintf "(bvadd %s %s)" (smt_term_to_smt t1) (smt_term_to_smt t2)
+  | BvLt (t1, t2) ->
+    Printf.sprintf "(bvult %s %s)" (smt_term_to_smt t1) (smt_term_to_smt t2)
   | AtMost (ts1, ts2, t1) ->
     Printf.sprintf "((_ pble %s %s) %s)"
       (smt_term_to_smt t1)
