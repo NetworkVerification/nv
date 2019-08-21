@@ -58,7 +58,7 @@ let build_proj_funcs () =
   let branches =
     IntSet.fold (fun n acc -> Printf.sprintf "%s%s" (build_proj_func n) acc) !record_table ""
   in
-  Printf.sprintf "let record_fns s v = match s with \n\
+  Printf.sprintf "let record_fns s = match s with \n\
                   %s" branches
 
 
@@ -129,7 +129,7 @@ let rec ty_to_ocaml_string t =
   | TTuple ts ->
     let n = BatList.length ts in
     let tup_typ = Printf.sprintf ") tup__%d" n in
-      (*TODO:FIXME to apply types to record type*)
+      (*TODO:FIXME to apply types to record type.Did I fix that? not sure what I meant...*)
       Collections.printListi (fun i ty -> Printf.sprintf "%s" (ty_to_ocaml_string ty))
         ts "(" "," tup_typ
   | TOption t ->
