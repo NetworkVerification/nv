@@ -121,10 +121,14 @@ let vars_to_value vars ty =
         aux idx tup
       | TNode ->
         (* Was encoded as int, so decode same way *)
-        aux idx (TInt 32)
+        (match aux idx (TInt 32) with
+         | {v = VInt n; _}, i ->  vnode (Integer.to_int n), i
+         | _ -> failwith "impossible")
       | TEdge ->
         (* Was encoded as tuple of nodes *)
-        aux idx (TTuple [TNode; TNode])
+        (match aux idx (TTuple [TNode; TNode]) with
+         | {v = VTuple [{v= VNode n1; _}; {v= VNode n2; _}]; _}, i -> vedge (n1, n2), i
+         | _ -> failwith "impossible")
       | TOption tyo ->
         let tag = B.tbool_to_bool vars.(idx) in
         let v, i = aux (idx + 1) tyo in

@@ -1,0 +1,13 @@
+type attribute = dict[int,option[int]]
+
+let nodes = 1
+
+let edges = { }
+
+let merge node x y = x
+
+let trans edge x = x
+
+let init node = createDict None
+
+let assert n x = x[3] = None

@@ -1,4 +1,14 @@
-# Educational materials on network verification
+# An intermediate language for network verification
+
+NV is a functional language that can be used to express the semantics of
+routing protocols, such as BGP, OSPF, etc. The language is designed to be
+minimal (based on lambda calculus), yet expressive (one
+can easily express new protocols or customizations of existing ones).
+
+See [examples](https://github.com/princedpw/nv/tree/master/examples) and the
+[wiki](https://github.com/princedpw/nv/wiki) for some more information.
+
+Please note that NV is still at an early development stage.
 
 ## Building nv
 
@@ -35,6 +45,10 @@ opam install -y \
 ```
 
 Then clone the repo and run `dune build src/exe/main.exe`.
+
+### MacOS
+
+For instructions on installing `mlcuddidl`, see Issue [#7](https://github.com/princedpw/nv/issues/7).
 
 ### Ubuntu (16.04+)
 

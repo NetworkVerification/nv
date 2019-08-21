@@ -56,6 +56,19 @@ let add_if_map_type symbolics (ty, keyo) lst : maplist =
   | _ -> lst
 ;;
 
+let rec collect_in_ty symbolics ty acc =
+  let collect_in_ty = collect_in_ty symbolics in
+  match ty with
+  | TUnit | TBool | TInt _ | TNode | TEdge -> acc
+  | TOption ty -> collect_in_ty ty acc
+  | TTuple tys -> List.fold_left (BatPervasives.flip collect_in_ty) acc tys
+  | TRecord map -> StringMap.fold (fun _ -> collect_in_ty) map acc
+  | TMap (_, vty) -> collect_in_ty vty (add_to_maplist symbolics (ty, None) acc)
+  | TArrow (ty1, ty2) -> collect_in_ty ty1 acc |> collect_in_ty ty2
+  | TVar {contents= Link ty} -> collect_in_ty ty acc
+  | TVar _ | QVar _ -> failwith "collect_in_ty: bad ty"
+;;
+
 let rec collect_in_exp (symbolics : var list) (exp : Syntax.exp) (acc : maplist) : maplist =
   (* print_endline @@ "Collecting in expr " ^ Printing.exp_to_string exp; *)
   let curr_ty = Nv_utils.OCamlUtils.oget exp.ety in
@@ -109,6 +122,7 @@ let collect_in_decl (symbolics : var list) (d : declaration) (acc : maplist) : m
   (* print_endline @@ "Collecting in decl " ^ Printing.declaration_to_string d; *)
   let add_if_map_type = add_if_map_type symbolics in
   let collect_in_exp = collect_in_exp symbolics in
+  let collect_in_ty = collect_in_ty symbolics in
   match d with
   | DLet (_, tyo, exp) ->
     add_if_map_type (Nv_utils.OCamlUtils.oget tyo, None) acc
@@ -116,14 +130,13 @@ let collect_in_decl (symbolics : var list) (d : declaration) (acc : maplist) : m
   | DSymbolic (_, toe) ->
     begin
       match toe with
-      | Ty ty ->
-        add_if_map_type (ty, None) acc
+      | Ty ty -> collect_in_ty ty acc
       | Exp exp -> collect_in_exp exp acc
     end
   | DATy ty ->
-    add_if_map_type (ty, None) acc
+    collect_in_ty ty acc
   | DUserTy (_, ty) ->
-    add_if_map_type (ty, None) acc
+    collect_in_ty ty acc
   | DMerge exp
   | DTrans exp
   | DInit exp
@@ -146,17 +159,19 @@ let lookup_map_type ty lst =
   instead of just the values which appear in the program
 *)
 let add_keys_for_nodes_and_edges decls maplist =
+  let make_node n = aexp (e_val (avalue (vnode n, Some TNode, Span.default)), Some TNode, Span.default) in
+  let make_edge (i, j) = aexp (e_val (avalue (vedge (i, j), Some TEdge, Span.default)), Some TEdge, Span.default) in
   let nodes =
     get_nodes decls
     |> Nv_utils.OCamlUtils.oget
     |> BatEnum.(--^) 0 (* Enum of 0 to (num_nodes - 1) *)
-    |> BatEnum.map (fun n -> e_val (vnode n))
+    |> BatEnum.map make_node
     |> ExpSet.of_enum
   in
   let edges =
     get_edges decls
     |> Nv_utils.OCamlUtils.oget
-    |> List.map (fun (n1, n2) -> e_val (vedge (n1, n2)))
+    |> List.map make_edge
     |> ExpSet.of_list
   in
   List.map

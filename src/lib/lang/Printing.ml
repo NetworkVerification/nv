@@ -41,7 +41,6 @@ let prec_op op =
 
 
 let prec_exp e =
-  let open Syntax in
   match e.e with
   | EVar _ -> 0
   | EVal _ -> 0
@@ -72,63 +71,46 @@ let semi_sep f xs = sep ";" f xs
 
 let semi_term f xs = term ";" f xs
 
-let max_prec = 10
-
-let ty_prec t =
-  let open Syntax in
-  match t with
-  | TUnit -> 0
-  | TVar _ -> 0
-  | QVar _ -> 0
-  | TBool -> 0
-  | TInt _ -> 0
-  | TNode -> 0
-  | TEdge -> 0
-  | TArrow _ -> 8
-  | TTuple _ -> 6
-  | TOption _ -> 4
-  | TMap _ -> 4
-  | TRecord _ -> 6
-
 let list_to_string f lst =
   "[ " ^
   List.fold_left (fun s1 elt -> s1 ^ f elt ^ "; ") "" lst ^
   "] "
 ;;
 
-let rec ty_to_string_p prec t =
-  let p = ty_prec t in
-  let s =
-    match t with
-    | TVar {contents= tv} -> tyvar_to_string tv
-    | QVar name -> "{" ^ Var.to_string name ^ "}"
-    | TUnit -> "unit"
-    | TBool -> "bool"
-    | TInt i -> "int" ^ string_of_int i
-    | TNode -> "node"
-    | TEdge -> "edge"
-    | TArrow (t1, t2) ->
-      ty_to_string_p p t1 ^ " -> " ^ ty_to_string_p prec t2
-    | TTuple ts -> "(" ^ sep "*" (ty_to_string_p p) ts ^ ")"
-    | TOption t -> "option[" ^ ty_to_string_p p t ^ "]"
-    | TMap (t1, t2) ->
-      "dict[" ^ ty_to_string_p p t1 ^ "," ^ ty_to_string_p p t2
-      ^ "]"
-    | TRecord map -> print_record ":" (ty_to_string_p prec) map
-
-  in
-  if p < prec then s else "(" ^ s ^ ")"
+(* The way we print our types means that we don't really need precedence rules.
+   The only type which isn't totally self-contained is TArrow *)
+let rec ty_to_string t =
+  match t with
+  | TVar {contents= tv} -> tyvar_to_string tv
+  | QVar name -> "{" ^ Var.to_string name ^ "}"
+  | TUnit -> "unit"
+  | TBool -> "bool"
+  | TInt i -> "int" ^ string_of_int i
+  | TNode -> "node"
+  | TEdge -> "edge"
+  | TTuple ts ->
+    if BatList.is_empty ts then "TEmptyTuple"
+    else "(" ^ sep "," ty_to_string ts ^ ")"
+  | TOption t -> "option[" ^ ty_to_string t ^ "]"
+  | TMap (t1, t2) ->
+    "dict[" ^ ty_to_string t1 ^ "," ^ ty_to_string t2
+    ^ "]"
+  | TRecord map -> print_record ":" (ty_to_string) map
+  | TArrow (t1, t2) ->
+    let leftside =
+      match t1 with
+      | TArrow _ -> "(" ^ ty_to_string t1 ^ ")"
+      | _ -> ty_to_string t1
+    in
+    leftside ^ " -> " ^ ty_to_string t2
 
 and tyvar_to_string tv =
   match tv with
   | Unbound (name, l) ->
     Var.to_string name ^ "[" ^ string_of_int l ^ "]"
-  | Link ty -> "<" ^ ty_to_string_p max_prec ty ^ ">"
-
-let ty_to_string t = ty_to_string_p max_prec t
+  | Link ty -> "<" ^ ty_to_string ty ^ ">"
 
 let op_to_string op =
-  let open Syntax in
   match op with
   | And -> "&&"
   | Or -> "||"
@@ -153,15 +135,16 @@ let op_to_string op =
   | AtMost _ -> "atMost"
 
 let rec pattern_to_string pattern =
-  let open Syntax in
   match pattern with
   | PWild -> "_"
   | PVar x -> Var.to_string x
-  | PUnit -> "()"
+  | PUnit -> "PUnit"
   | PBool true -> "true"
   | PBool false -> "false"
   | PInt i -> Integer.to_string i
-  | PTuple ps -> "(" ^ comma_sep pattern_to_string ps ^ ")"
+  | PTuple ps ->
+    if BatList.is_empty ps then "PEmptyTuple" else
+      "(" ^ comma_sep pattern_to_string ps ^ ")"
   | POption None -> "None"
   | POption (Some p) -> "Some " ^ pattern_to_string p
   | PRecord map -> print_record "=" pattern_to_string map
@@ -216,13 +199,14 @@ and map_to_string sep_s term_s m =
 
 and value_to_string_p prec v =
   match v.v with
-  | VUnit -> "()"
+  | VUnit -> "VUnit"
   | VBool true -> "true"
   | VBool false -> "false"
   | VInt i -> Integer.to_string i
   | VMap m -> map_to_string ":=" "," m
   | VTuple vs ->
-    "(" ^ comma_sep (value_to_string_p max_prec) vs ^ ")"
+    if BatList.is_empty vs then "VEmptyTuple" else
+      "(" ^ comma_sep (value_to_string_p max_prec) vs ^ ")"
   | VOption None -> (* Printf.sprintf "None:%s" (ty_to_string (oget v.vty)) *)
     "None"
   | VOption (Some v) ->
@@ -231,7 +215,7 @@ and value_to_string_p prec v =
   | VClosure cl -> closure_to_string_p prec cl
   | VRecord map -> print_record "=" (value_to_string_p prec) map
   | VNode n -> Printf.sprintf "%dn" n
-  | VEdge (n1, n2) -> Printf.sprintf "%dn-%dn" n1 n2
+  | VEdge (n1, n2) -> Printf.sprintf "%d~%d" n1 n2
 
 and exp_to_string_p prec e =
   let p = prec_exp e in
@@ -254,7 +238,8 @@ and exp_to_string_p prec e =
       ^ exp_to_string_p max_prec e1
       ^ " in \n" ^ exp_to_string_p prec e2
     | ETuple es ->
-      "(" ^ comma_sep (exp_to_string_p max_prec) es ^ ")"
+      if BatList.is_empty es then "EEmptyTuple" else
+        "(" ^ comma_sep (exp_to_string_p max_prec) es ^ ")"
     | ESome e -> "Some(" ^ exp_to_string_p prec e ^ ")"
     | EMatch (e1, bs) ->
       "(match "
@@ -354,7 +339,7 @@ let network_to_string ?(show_topology=false) (net : Syntax.network) =
   @ ["\n"] @
   (** Topology -- hide unless specifically requested **)
   (if not show_topology then [] else
-    let open Nv_datastructures in
+     let open Nv_datastructures in
      [
        Printf.sprintf "let nodes = %d\n\n" (AdjGraph.num_vertices net.graph);
 
@@ -404,4 +389,4 @@ let network_to_string ?(show_topology=false) (net : Syntax.network) =
    | None -> []
    | Some e -> [Printf.sprintf "let interface = %s\n\n" @@ exp_to_string e]
   )
- (* end partitioning *)
+(* end partitioning *)

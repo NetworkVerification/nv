@@ -118,6 +118,8 @@ and env = {ty: ty Env.t; value: value Env.t}
 
 and ty_or_exp = Ty of ty | Exp of exp
 
+val is_irrefutable : pattern -> bool
+
 type branchLookup = Found of exp | Rest of (pattern * exp) list
 
 val addBranch: Pat.t -> exp -> branches -> branches
@@ -228,6 +230,9 @@ val deconstructFun: exp -> func
 
 val exp_to_pattern: exp -> pattern
 
+(* exp must be a literal *)
+val exp_to_value: exp -> value
+
 val empty_env: env
 
 (* Utilities *)
@@ -327,11 +332,13 @@ val compare_values : value -> value -> int
 (* As above, but for exps *)
 val compare_exps : exp -> exp -> int
 
-(* Actual equality. For equivalence, consider using
-   Typing.equiv_tys instead *)
+val get_inner_type : ty -> ty
+
+(* Actual equality. Prefer equal_inner_tys since it ignores TVar Links.
+   For a stronger notion of equivalence, use Typing.equiv_tys *)
 val equal_tys : ty -> ty -> bool
 
-val get_inner_type : ty -> ty
+val equal_inner_tys : ty -> ty -> bool
 
 val free : Var.t BatSet.PSet.t -> exp -> Var.t BatSet.PSet.t
 

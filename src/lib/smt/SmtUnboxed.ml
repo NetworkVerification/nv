@@ -329,11 +329,6 @@ struct
 
   and encode_value_z3 descr env (v: Syntax.value) : term list =
     match v.v with
-    | VEdge (n1, n2) ->
-      let v1 = avalue (vnode n1, Some TNode, v.vspan) in
-      let v2 = avalue (vnode n2, Some TNode, v.vspan) in
-      encode_value_z3 descr env @@
-      avalue (vtuple [v1; v2], Some (TTuple [TNode; TNode]), v.vspan)
     | VTuple vs ->
       BatList.map (fun v -> encode_value_z3_single descr env v) vs
     | _ -> [encode_value_z3_single descr env v]
@@ -350,7 +345,7 @@ struct
       encode_value_z3_single descr env @@
       avalue (vint (Integer.create ~size:32 ~value:n), Some (TInt 32), v.vspan)
     | VUnit -> failwith "units should have been unboxed"
-    | VEdge _ -> failwith "internal error (tried to directly encode edge)"
+    | VEdge _ -> failwith "edges should have been tupelized"
     | VOption _ -> failwith "options should have been unboxed"
     | VTuple _ -> failwith "internal error (check that tuples are flat)"
     | VClosure _ -> failwith "internal error (closure in smt)"
