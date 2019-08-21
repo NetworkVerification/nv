@@ -2,11 +2,13 @@ open Batteries
 open Nv_datastructures
 open Nv_datastructures.AdjGraph
 
+type vertex_vertex_map = Vertex.t VertexMap.t
+
 type t = {
   graph: AdjGraph.t;
-  inputs: Vertex.t VertexMap.t;
-  outputs: Vertex.t VertexMap.t;
-  broken: Vertex.t VertexMap.t
+  inputs: vertex_vertex_map;
+  outputs: vertex_vertex_map;
+  broken: vertex_vertex_map;
 }
 
 let from_graph (graph: AdjGraph.t) : t =
@@ -47,6 +49,16 @@ let break_edge (ograph: t) (e: Edge.t) : t =
     broken = VertexMap.add startv endv broken
   }
 
+(** Return the base node associated with the input node v, or Not_found *)
+let to_node ograph v = VertexMap.find v ograph.inputs
+
+(** Return the base node associated with the output node v, or Not_found *)
+let from_node ograph v = VertexMap.find v ograph.outputs
+
+let input_nodes ograph = VertexMap.keys ograph.inputs
+
+let output_nodes ograph = VertexMap.keys ograph.outputs
+
 (* Perform a sequence of three updates: add an output, add an input, remove the old edge *)
 let partition_edge (ograph: t) (e: Edge.t) : t =
   let (u, v) = e in
@@ -58,12 +70,8 @@ let partition_edge (ograph: t) (e: Edge.t) : t =
 let partition_graph (ograph: t) (es: EdgeSet.t) : t =
   EdgeSet.fold (fun e g -> partition_edge g e) es ograph
 
-(** Return the base node associated with the input node v, or Not_found *)
-let to_node ograph v = VertexMap.find v ograph.inputs
-
-(** Return the base node associated with the output node v, or Not_found *)
-let from_node ograph v = VertexMap.find v ograph.outputs
-
-let input_nodes ograph = VertexMap.keys ograph.inputs
-
-let output_nodes ograph = VertexMap.keys ograph.outputs
+(* Perform a sequence of three updates: remove an output, remove an input, add an edge *)
+let compose_edge (ograph: t) (outnode: Vertex.t) (innode: Vertex.t) : t =
+  let u = from_node ograph outnode in
+  let v = to_node ograph innode in
+    ograph

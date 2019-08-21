@@ -8,7 +8,7 @@ type s = int
 let is_cross_partition (f: AdjGraph.Vertex.t -> int) edge =
   (f (fst edge)) <> (f (snd edge))
 
-module Interface(S: Interfaces.OrderedType) :
+module Make_interface(S: Interfaces.OrderedType) :
   sig
     type t = AdjGraph.Vertex.t * AdjGraph.Vertex.t * S.t  option
 
@@ -29,7 +29,7 @@ end
 
 (* module type OrderedInterface = Interfaces.OrderedType Interface.t *)
 
-module InterfaceSet(S: Interfaces.OrderedType) : Set.S with type elt = Interface(S).t = Set.Make(Interface(S))
+module InterfaceSet : Set.S with type elt = Make_interface(Int).t = Set.Make(Make_interface(Int))
 
 (* It is possible that a better implementation involves building a new graph using the interface set,
  * as indexing newly-added nodes could break on AdjGraph implementation change
@@ -63,3 +63,12 @@ let open_network (net: network) : onetwork =
     requires;
     ograph = OpenAdjGraph.from_graph graph;
   }
+
+let partition_interface { partition: exp option; interface: exp option; _ } : InterfaceSet.t =
+  match partition with
+  | Some parte -> match interface with
+    | Some intfe -> 
+        (* apply the interface expression to each edge that is cross partition *)
+        failwith "TODO"
+    | None -> failwith "TODO"
+  | None -> InterfaceSet.empty

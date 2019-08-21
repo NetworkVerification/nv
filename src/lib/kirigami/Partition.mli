@@ -8,16 +8,17 @@ open Nv_lang.Syntax
 val is_cross_partition : (AdjGraph.Vertex.t -> int) -> AdjGraph.Edge.t -> bool
 
 (* The interface module used for partitioning and composing interfaces *)
-module Interface(S: Interfaces.OrderedType) :
+module Make_interface(S: Interfaces.OrderedType) :
   sig
-    type t = AdjGraph.Vertex.t * AdjGraph.Vertex.t * S.t option
+    type hyp = S.t option
+    type t = AdjGraph.Vertex.t * AdjGraph.Vertex.t * hyp
 
-    val create : AdjGraph.Edge.t -> S.t option -> t
+    val create : AdjGraph.Edge.t -> hyp -> t
 
     val compare : t -> t -> int
 end
 
-module InterfaceSet(S: Interfaces.OrderedType) : Set.S with type elt = Interface(S).t
+module InterfaceSet : Set.S with type elt = Make_interface(Int).t
 
 (* module Interface : Set.S with type elt = (AdjGraph.Vertex.t * AdjGraph.Vertex.t * t) *)
 
@@ -48,3 +49,5 @@ type onetwork =
 
 (** Convert a Syntax.network to an onetwork *)
 val open_network : network -> onetwork
+(* Create a partition interface from a Syntax.network *)
+val partition_interface: network -> InterfaceSet.t

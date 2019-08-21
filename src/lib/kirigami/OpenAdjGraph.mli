@@ -2,15 +2,16 @@ open Batteries
 open Nv_datastructures
 open AdjGraph
 
+type vertex_vertex_map = Vertex.t VertexMap.t
 (* Internal AdjGraph.t structure *)
 (* One Map for the input->base edges *)
 (* One Map for the base->output edges *)
 (* One Map for the broken base->base edges *)
 type t = {
   graph: AdjGraph.t;
-  inputs: Vertex.t VertexMap.t;
-  outputs: Vertex.t VertexMap.t;
-  broken: Vertex.t VertexMap.t;
+  inputs: vertex_vertex_map;
+  outputs: vertex_vertex_map;
+  broken: vertex_vertex_map;
 }
 
 (** from_graph g creates a new open graph from a (closed) graph *)
