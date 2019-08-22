@@ -320,6 +320,7 @@ let parse_input (args : string array)
       (Profile.time_profile "Inlining" (
           fun () ->
             Inline.inline_declarations decls |>
+            (* TODO: We could probably propagate type information through inlining *)
             Typing.infer_declarations info), f :: fs)
     else
       (decls,fs)
