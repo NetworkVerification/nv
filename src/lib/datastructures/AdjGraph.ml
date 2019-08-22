@@ -1,3 +1,5 @@
+open Graph
+
 module Vertex = struct
   type t = int (* Really should be Syntax.node, but that causes a dependency loop *)
 
@@ -21,6 +23,8 @@ module Edge = struct
     if Pervasives.compare v1 v2 <> 0 then Pervasives.compare v1 v2
     else Pervasives.compare w1 w2
 end
+
+include Imperative.Graph.Concrete(Vertex)
 
 let printEdge (e : Edge.t) =
   Printf.sprintf "<%d,%d>" (fst e) (snd e);
