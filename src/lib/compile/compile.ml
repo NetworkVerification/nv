@@ -22,6 +22,7 @@ let record_to_ocaml_record
   in
   Printf.sprintf "{ %s }" entries
 
+(** Keeps track of the tuple-sizes used throughout the nv program *)
 let record_table = ref IntSet.empty
 
 let proj_rec i n =
@@ -35,6 +36,7 @@ let rec fold_int (f: int -> 'a -> 'a) acc n =
   else
     fold_int f (f n acc) (n-1)
 
+(** For each tuple of size n creates a corresponding record*)
 let build_record_type n =
   let lst = BatList.init n (fun i -> i) in
   let type_vars =
@@ -54,6 +56,8 @@ let build_proj_func n =
     Collections.printList (fun i -> Printf.sprintf "| \"p%d__%d\" -> Obj.magic (fun x -> x.p%d__%d)" i n i n)
       lst  "" "\n" "\n"
 
+(** Builds a table (function) that maps record projector names to the respective
+   functions *)
 let build_proj_funcs () =
   let branches =
     IntSet.fold (fun n acc -> Printf.sprintf "%s%s" (build_proj_func n) acc) !record_table ""
@@ -261,6 +265,7 @@ let rec declaration_to_ocaml_string d =
 let rec declarations_to_ocaml_string ds =
   Collections.printList declaration_to_ocaml_string ds "" "\n" "\n"
 
+(** Translate something of type [Syntax.network] to an OCaml program*)
 let compile_net net =
   let utys_s =
     Collections.printList
@@ -316,6 +321,8 @@ let generate_ocaml (name : string) net =
   Printf.sprintf "%s %s end\n %s" header ocaml_decls (set_entry name)
 
 
+(* Create the plugin that we will dynamically load later, do not print warnings
+   do not treat them as errors*)
 let build_dune_file name =
   Printf.sprintf
     "(library \n \

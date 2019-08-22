@@ -9,9 +9,8 @@ let load_srp name =
     with Dynlink.Error err ->
       Printf.printf "%s\n" (Dynlink.error_message err)
 
-
 let simulate name net =
-  Compile.compile_ocaml name net; (* make this optional *)
+  Compile.compile_ocaml name net; (* TODO: make this optional *)
   load_srp (name ^ ".plugin");
   let module Srp = (val get_srp () : NATIVE_SRP) in
   let module SrpSimulator = (val (module SrpSimulation(Srp) : SrpSimulationSig)) in

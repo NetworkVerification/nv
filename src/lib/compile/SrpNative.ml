@@ -5,7 +5,6 @@ open Nv_solution
 open Nv_lang
 open Nv_datastructures
 open Nv_lang.Collections
-(* open Slicing *)
 
 (** Type of SRP network *)
 module type NATIVE_SRP =
@@ -123,6 +122,8 @@ module SrpSimulation (Srp : NATIVE_SRP) : SrpSimulationSig =
           Some (AdjGraph.VertexMap.fold (fun n v acc -> (check_assertion a n v acc))
                   vals AdjGraph.VertexMap.empty)
 
+    (** Given the attribute type of the network constructs an OCaml function
+        that takes as input an OCaml value and creates a similar NV value.*)
     let rec build_proj_unsafe (attr_ty: Syntax.ty) : 'a -> Syntax.value =
       match attr_ty with
         | TUnit ->
