@@ -114,7 +114,7 @@ let rec ty_to_ocaml_string t =
   match t with
   | TVar {contents= Link ty } ->
      ty_to_ocaml_string ty
-  | TVar {contents= Unbound _ } -> failwith "Unbound type variable"
+  | TVar {contents= Unbound _ } -> failwith "unbound var"
   | QVar name ->
      Printf.sprintf "'%s" (Var.name name)
   | TUnit -> "unit"
@@ -214,6 +214,7 @@ and op_args_to_ocaml_string op es =
 
 and func_to_ocaml_string f =
   Printf.sprintf "(fun %s -> %s)" (Var.name f.arg) (exp_to_ocaml_string f.body)
+  (* Printf.sprintf "(fun (%s : %s) -> %s)" (Var.name f.arg) (ty_to_ocaml_string (OCamlUtils.oget f.argty)) (exp_to_ocaml_string f.body) *)
 
 and branch_to_ocaml_string (p, e) =
   Printf.sprintf "| %s -> %s\n"
@@ -326,9 +327,12 @@ let build_dune_file name =
   Printf.sprintf
     "(library \n \
      (name %s_plugin) \n \
-     (public_name %s.plugin) \n
-     (modes native)\n
-     (libraries nv_lib)\n)" name name
+     (public_name %s.plugin)\n \
+     (modes native)\n \
+     (libraries nv_lib))\n \
+     (env\n \
+     (dev\n \
+     (flags (:standard -warn-error -A -w -a))))" name name
 
 let build_project_file name =
   Printf.sprintf "(lang dune 1.10)\n (name %s)" name
@@ -352,14 +356,14 @@ let compile_command_ocaml name =
     print_file "dune" dune;
     print_file "dune-project" project;
     print_file (name ^ ".opam") opam;
-    Sys.command "dune build; sudo dune install"
+    Sys.command "dune build; dune install"
 
     (* Sys.command "dune build command >>/dev/null 2>&1; sudo dune install command >>/dev/null 2>&1" *)
 
 let compile_ocaml name net =
   let basename = Filename.basename name in
   let program = generate_ocaml basename net in
-  let src_dir = "/Users/gian/Documents/Princeton/networks/davidnv/nv/" ^ name in
+  let src_dir = "/Users/gian/Documents/Princeton/networks/davidnv/" ^ name in
     (try Unix.mkdir src_dir (0o777) with
       | _ -> ());
     Unix.chdir src_dir;

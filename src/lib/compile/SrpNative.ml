@@ -155,7 +155,7 @@ module SrpSimulation (Srp : NATIVE_SRP) : SrpSimulationSig =
         | TArrow _ -> failwith "Function computed as value"
         | TRecord _ -> failwith "Trecord"
         | TNode -> failwith "Tnode"
-        | TEdge -> failwith "Tedge" 
+        | TEdge -> failwith "Tedge"
 
     (* | TMap of Nv_lang.Syntax.ty * Nv_lang.Syntax.ty
      * | TRecord of Nv_lang.Syntax.ty Nv_utils.PrimitiveCollections.StringMap.t
