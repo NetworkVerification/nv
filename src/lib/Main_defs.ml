@@ -39,6 +39,10 @@ let partialEvalNet net =
 let run_smt_func file cfg info net fs =
   SmtUtils.smt_config.encoding <- Functional;
   let srp = SmtSrp.network_to_srp net in
+  let srp, fs =
+    let srp, f = UnboxUnits.unbox_srp srp in
+    srp, f :: fs
+  in
   let srp, f = Renaming.alpha_convert_srp srp in
   let srp, fs =
     if cfg.unbox then
