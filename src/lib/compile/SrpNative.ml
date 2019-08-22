@@ -11,7 +11,6 @@ open Nv_lang.Collections
 module type NATIVE_SRP =
   sig
     type attribute
-    val graph: AdjGraph.t
     val init : int -> attribute
     val trans: int * int -> attribute -> attribute
     val merge: int -> attribute -> attribute -> attribute
@@ -36,7 +35,7 @@ let get_srp () : (module NATIVE_SRP) =
 
 module type SrpSimulationSig =
 sig
-  val simulate_srp: Syntax.ty -> Nv_solution.Solution.t
+  val simulate_srp: Syntax.ty -> AdjGraph.t -> Nv_solution.Solution.t
 end
 
 module S = Map.Make (Integer)
@@ -68,10 +67,8 @@ module SrpSimulation (Srp : NATIVE_SRP) : SrpSimulationSig =
 
     exception Require_false
 
-    let srp_to_state () =
+    let srp_to_state graph =
       create_state (AdjGraph.num_vertices graph)
-
-    let solution_to_string s = failwith "to be implemented"
 
     let get_attribute (v: AdjGraph.VertexMap.key) (s : solution) =
       let find_opt v m =
@@ -81,7 +78,7 @@ module SrpSimulation (Srp : NATIVE_SRP) : SrpSimulationSig =
       | None -> failwith ("no attribute at vertex " ^ string_of_int v)
       | Some a -> a
 
-    let simulate_step (s : solution) (origin : int) =
+    let simulate_step (graph: AdjGraph.t) (s : solution) (origin : int) =
       let do_neighbor (initial_attribute : attribute) (s, todo) neighbor =
         let edge = (neighbor, origin) in
         let n_incoming_attribute = trans edge initial_attribute in
@@ -96,22 +93,22 @@ module SrpSimulation (Srp : NATIVE_SRP) : SrpSimulationSig =
       BatList.fold_left (do_neighbor initial_attribute) (s, []) neighbors
 
     (* simulate_init s q simulates srp starting with initial state (s,q) *)
-    let rec simulate_init ((s, q): state) =
+    let rec simulate_init (graph: AdjGraph.t) ((s, q): state) =
       match QueueSet.pop q with
       | None -> s
       | Some (next, rest) ->
-          let s', more = simulate_step s next in
-          simulate_init (s', QueueSet.add_all rest more)
+          let s', more = simulate_step graph s next in
+          simulate_init graph (s', QueueSet.add_all rest more)
 
     (* simulate for at most k steps *)
-    let simulate_init_bound ((s, q): state) k =
+    let simulate_init_bound (graph: AdjGraph.t) ((s, q): state) k =
       let rec loop s q k =
         if k <= 0 then (s, q)
         else
           match QueueSet.pop q with
           | None -> (s, q)
           | Some (next, rest) ->
-              let s', more = simulate_step s next in
+              let s', more = simulate_step graph s next in
               loop s' (QueueSet.add_all rest more) (k - 1)
       in
       loop s q k
@@ -156,16 +153,16 @@ module SrpSimulation (Srp : NATIVE_SRP) : SrpSimulationSig =
         | TRecord _ -> failwith "Trecord"
         | TNode -> failwith "Tnode"
         | TEdge -> failwith "Tedge"
+        | TVar _ | QVar _ -> failwith "TVars and QVars shuld not show up here"
 
     (* | TMap of Nv_lang.Syntax.ty * Nv_lang.Syntax.ty
      * | TRecord of Nv_lang.Syntax.ty Nv_utils.PrimitiveCollections.StringMap.t
      * | TNode
      * | TEdge *)
 
-
-    let simulate_srp attr_ty =
-      let s = srp_to_state () in
-      let vals = simulate_init s in
+    let simulate_srp attr_ty graph =
+      let s = srp_to_state graph in
+      let vals = simulate_init graph s in
       let asserts = check_assertions vals in
       let open Solution in
         let val_proj = build_proj_unsafe attr_ty in

@@ -194,7 +194,7 @@ let run_simulator cfg _ net fs =
     Console.error "required conditions not satisfied"
 
 (** Native simulator - compiles SRP to OCaml *)
-let compile_and_simulate file cfg info net fs =
+let compile_and_simulate file _ _ net fs =
    let path = Filename.remove_extension file in
    let name = Filename.basename path in
    let name = String.mapi (fun i c -> if i = 0 then Char.uppercase_ascii c else c) name in
@@ -217,7 +217,6 @@ let compress file info net cfg fs networkOp =
 
   FailuresAbstraction.refinement_breadth := cfg.depth;
   FailuresAbstraction.counterexample_refinement_breadth := cfg.depth;
-  let net, _ = OptimizeBranches.optimize_net net in (* The _ should match the identity function *)
 
   let rec loop (finit: AbstractionMap.abstractionMap)
       (f: AbstractionMap.abstractionMap)
@@ -268,19 +267,6 @@ let compress file info net cfg fs networkOp =
        let n = AdjGraph.num_vertices slice.net.graph in
        let sources =
          Slicing.findRelevantNodes (Slicing.partialEvalOverNodes n (oget slice.net.assertion)) in
-       (* partially evaluate the functions of the network. *)
-       (* TODO, this should be done outside of this loop, maybe just redone here *)
-       (* Printf.printf "Just before opt\n"; *)
-       (* let optTrans = OptimizeBranches.optimizeExp slice.net.trans in *)
-       (* Printf.printf "trans:%s\n" (Printing.exp_to_string slice.net.trans); *)
-       (* Printf.printf "trans\n"; *)
-       (* (Visitors.iter_exp (fun e -> *)
-       (*      match e.e with *)
-       (*      | EMatch (e, bs) -> *)
-       (*         branchSize bs *)
-       (*      | _ -> ()) optTrans); *)
-       (* flush stdout; *)
-       (* failwith "stop"; *)
        let transMap =
          Profile.time_profile "partial eval trans"
            (fun () ->
@@ -322,7 +308,7 @@ let parse_input (args : string array) =
   let ds, info = Input.parse file in (* Parse nv file *)
   let decls = ds in
   (* print_endline @@ Printing.declarations_to_string decls ; *)
-  let decls = ToEdge.toEdge_decl decls :: decls in
+  let decls = (ToEdge.toEdge_decl cfg.compile decls) :: decls in
   let decls = Typing.infer_declarations info decls in
   Typing.check_annot_decls decls ;
   Wellformed.check info decls ;
@@ -368,4 +354,5 @@ let parse_input (args : string array) =
       Failures.buildFailuresNet net cfg.link_failures
     else net
   in
+  let net, _ = OptimizeBranches.optimize_net net in (* The _ should match the identity function *)
   (cfg, info, file, net, fs)

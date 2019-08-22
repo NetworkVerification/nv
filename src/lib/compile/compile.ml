@@ -130,7 +130,7 @@ let rec ty_to_ocaml_string t =
     let n = BatList.length ts in
     let tup_typ = Printf.sprintf ") tup__%d" n in
       (*TODO:FIXME to apply types to record type.Did I fix that? not sure what I meant...*)
-      Collections.printListi (fun i ty -> Printf.sprintf "%s" (ty_to_ocaml_string ty))
+      Collections.printList (fun ty -> Printf.sprintf "%s" (ty_to_ocaml_string ty))
         ts "(" "," tup_typ
   | TOption t ->
      Printf.sprintf "(%s) option"
@@ -283,17 +283,11 @@ let compile_net net =
        Collections.printList (fun e -> Printf.sprintf "let () = assert %s" (exp_to_ocaml_string e))
          rs "" "\n\n" "\n\n"
   in
-  let graph_s =
-    Printf.sprintf
-      "let graph = AdjGraph.add_edges (AdjGraph.create %d)\n %s"
-      (AdjGraph.num_vertices net.graph)
-      (Collections.printList (fun (u,v) ->
-           Printf.sprintf "(%d,%d)" u v) (AdjGraph.edges net.graph) "[" ";\n" "]\n")
-  in
   let defs_s =
     Collections.printList
-      (fun (x, tyo, e) -> Printf.sprintf "let %s = %s"
-                            (Var.name x) (exp_to_ocaml_string e))
+      (fun (x, _, e) ->
+         Printf.sprintf "let %s = %s"
+           (Var.name x) (exp_to_ocaml_string e))
       net.defs "" "\n\n" "\n\n"
   in
   let init_s = Printf.sprintf "let init = %s\n\n" (exp_to_ocaml_string net.init) in
@@ -308,8 +302,8 @@ let compile_net net =
   in
   let tuple_s = build_record_types () in
   let record_fns = build_proj_funcs () in
-  Printf.sprintf "%s %s %s %s %s %s %s %s %s %s %s %s"
-    tuple_s utys_s attr_s graph_s symbs_s defs_s init_s trans_s merge_s requires_s assert_s
+  Printf.sprintf "%s %s %s %s %s %s %s %s %s %s %s"
+    tuple_s utys_s attr_s symbs_s defs_s init_s trans_s merge_s requires_s assert_s
     record_fns
 
 let set_entry (name: string) =
@@ -318,9 +312,8 @@ let set_entry (name: string) =
 let generate_ocaml (name : string) net =
   let header = Printf.sprintf "open Nv_datastructures\n open Nv_compile\n\n \
                                module %s : SrpNative.NATIVE_SRP = struct\n" name in
-  let ocaml_decls = compile_net net in
-  let s = "" in
-  Printf.sprintf "%s %s %s end\n %s" header ocaml_decls s (set_entry name)
+  let ocaml_decls = Profile.time_profile "Compilation Time" (fun () -> compile_net net) in
+  Printf.sprintf "%s %s end\n %s" header ocaml_decls (set_entry name)
 
 
 let build_dune_file name =
@@ -342,7 +335,7 @@ let build_opam_file name =
                   build: [ \"dune\" \"build\" \"-p\" name \"-j\" jobs ]" name
 
 let print_file file s =
-  let oc = open_out file in
+  let oc = open_out_gen [Open_rdonly; Open_wronly; Open_creat; Open_trunc] 0o777 file in
     Printf.fprintf oc "%s" s;
     close_out oc
 

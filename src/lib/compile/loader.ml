@@ -16,4 +16,4 @@ let simulate name net =
   let module Srp = (val get_srp () : NATIVE_SRP) in
   let module SrpSimulator = (val (module SrpSimulation(Srp) : SrpSimulationSig)) in
     Profile.time_profile "Native simulation"
-      (fun () -> SrpSimulator.simulate_srp net.attr_type)
+      (fun () -> SrpSimulator.simulate_srp net.attr_type net.graph)
