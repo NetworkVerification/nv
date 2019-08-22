@@ -307,5 +307,15 @@ let flatten_net net =
 
 let flatten_srp srp =
   let srp, f = make_toplevel Transformers.transform_srp srp in
-  {srp with srp_symbolics = List.map proj_symbolic srp.srp_symbolics |> List.concat},
-  f
+  let proj_symbolics symbs = List.map proj_symbolic symbs |> List.concat in
+  let proj_label labels =
+    List.map
+      (fun (v, ty) ->
+         List.map (fun (v, toe) -> v, match toe with | Ty ty -> ty | _ -> failwith "Impossible") @@
+         proj_symbolic (v, Ty ty))
+      labels
+    |> List.concat
+  in
+  {srp with srp_symbolics = proj_symbolics srp.srp_symbolics;
+            srp_labels = AdjGraph.VertexMap.map proj_label srp.srp_labels},
+  f % unproj_symbolics
