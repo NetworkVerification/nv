@@ -29,7 +29,7 @@ let size_and_index_after_flattening flatten_ty ty lo hi =
   | _ -> failwith "Called size_and_index_after_flattening without tuple type"
 ;;
 
-let ty_mutator (recursors : Mutators.recursors) ty =
+let ty_transformer (recursors : Transformers.recursors) ty =
   match ty with
   | TTuple tys ->
     let tys = List.map recursors.recurse_ty tys in
@@ -52,7 +52,7 @@ let ty_mutator (recursors : Mutators.recursors) ty =
   | _ -> None
 ;;
 
-let pattern_mutator (recursors : Mutators.recursors) p ty =
+let pattern_transformer (recursors : Transformers.recursors) p ty =
   match p, ty with
   | PTuple ps, TTuple tys ->
     let ps = List.map2 recursors.recurse_pattern ps tys in
@@ -80,7 +80,7 @@ let pattern_mutator (recursors : Mutators.recursors) p ty =
   | _ -> None
 ;;
 
-let value_mutator (recursors : Mutators.recursors) v =
+let value_transformer (recursors : Transformers.recursors) v =
   match v.v with
   | VTuple vs ->
     let vs = List.map recursors.recurse_value vs in
@@ -93,7 +93,7 @@ let value_mutator (recursors : Mutators.recursors) v =
   | _ -> None
 ;;
 
-let exp_mutator (recursors : Mutators.recursors) e =
+let exp_transformer (recursors : Transformers.recursors) e =
   let flatten_ty = recursors.recurse_ty in
   let flatten_exp = recursors.recurse_exp in
   match e.e with
@@ -237,7 +237,7 @@ let unflatten_list (vs : value list) (tys : ty list) =
   assert (List.is_empty excess);
   List.rev vs
 
-let map_back_mutator recurse _ v orig_ty =
+let map_back_transformer recurse _ v orig_ty =
   match v.v, orig_ty with
   | VTuple vs, TTuple tys ->
     let vs' = unflatten_list vs tys in
@@ -245,9 +245,9 @@ let map_back_mutator recurse _ v orig_ty =
   | _ -> None
 ;;
 
-let mask_mutator = map_back_mutator;;
+let mask_transformer = map_back_transformer;;
 
-(* Currently, Mutators doesn't support changing the number of symbolics. So we
+(* Currently, Transformers doesn't support changing the number of symbolics. So we
    have to do that manually here *)
 
 let proj_symbolic (var, toe) =
@@ -301,8 +301,8 @@ let unproj_symbolics (sol : Solution.t) =
 ;;
 
 
-let make_toplevel (toplevel_mutator : 'a Mutators.toplevel_mutator) =
-  toplevel_mutator ~name:"TupleFlatten" ty_mutator pattern_mutator value_mutator exp_mutator map_back_mutator mask_mutator
+let make_toplevel (toplevel_transformer : 'a Transformers.toplevel_transformer) =
+  toplevel_transformer ~name:"TupleFlatten" ty_transformer pattern_transformer value_transformer exp_transformer map_back_transformer mask_transformer
 ;;
 
 let flatten_decl d =
@@ -313,16 +313,26 @@ let flatten_decl d =
   | _ -> [d]
 
 let flatten_declarations decls =
-  let decls, f = make_toplevel Mutators.mutate_declarations decls in
+  let decls, f = make_toplevel Transformers.transform_declarations decls in
   List.map flatten_decl decls |> List.concat,
   f % unproj_symbolics
 
 let flatten_net net =
-  let net, f = make_toplevel Mutators.mutate_network net in
+  let net, f = make_toplevel Transformers.transform_network net in
   {net with symbolics = List.map proj_symbolic net.symbolics |> List.concat},
   f % unproj_symbolics
 
 let flatten_srp srp =
-  let srp, f = make_toplevel Mutators.mutate_srp srp in
-  {srp with srp_symbolics = List.map proj_symbolic srp.srp_symbolics |> List.concat},
-  f
+  let srp, f = make_toplevel Transformers.transform_srp srp in
+  let proj_symbolics symbs = List.map proj_symbolic symbs |> List.concat in
+  let proj_label labels =
+    List.map
+      (fun (v, ty) ->
+         List.map (fun (v, toe) -> v, match toe with | Ty ty -> ty | _ -> failwith "Impossible") @@
+         proj_symbolic (v, Ty ty))
+      labels
+    |> List.concat
+  in
+  {srp with srp_symbolics = proj_symbolics srp.srp_symbolics;
+            srp_labels = AdjGraph.VertexMap.map proj_label srp.srp_labels},
+  f % unproj_symbolics
