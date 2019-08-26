@@ -9,6 +9,10 @@ let omap (f : 'a -> 'b) (x: 'a option): 'b option = (* BatOption.map f x *)
   | None -> None
   | Some y -> Some(f y)
 
+(*** Lazy utilities ***)
+let lmap (f : 'a -> 'b) (x : 'a Lazy.t) : 'b Lazy.t =
+  lazy(f (Lazy.force x))
+
 (*** List Utilities ***)
 let rec list_to_string f lst =
   Printf.sprintf "[%s]" @@ BatString.concat ";" @@ List.map f lst

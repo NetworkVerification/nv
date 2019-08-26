@@ -115,26 +115,33 @@ let run_smt_classic file cfg info (net : Syntax.network) fs =
     match cfg.slicing, net.assertion, net.attr_type with
     | true, Some _, TTuple _ ->
       AttributeSlicing.slice_network net
-      |> List.map (fun (net, f) -> net, f :: fs)
+      |> List.map (lmap (fun (net, f) -> net, f :: fs))
     | _ ->
-      [net, fs]
+      [lazy (net, fs)]
   in
   let slices =
     List.map
-      (fun (net, fs) ->
-         let net, f = UnboxUnits.unbox_net net in
-         net, f :: fs)
+      (lmap (fun (net, fs) ->
+           let net, f = UnboxUnits.unbox_net net in
+           net, f :: fs))
       slices
   in
 
   (* Return the first slice that returns a counterexample, or the result of the
      last slice if all of them succeed *)
   (* List.iter (fun (net, _) -> print_endline @@ Printing.network_to_string net) slices; *)
+  let count = ref (-1) in
   let rec solve_slices slices =
     match slices with
     | [] -> failwith "impossible"
-    | (net, fs)::tl ->
-      let answer = get_answer net fs in
+    | laz::tl ->
+      let answer =
+        incr count;
+        Profile.time_profile_absolute ("Slice " ^ string_of_int !count)
+          (fun () ->
+             let net, fs = Lazy.force laz in
+             get_answer net fs)
+      in
       match answer with
       | CounterExample _, _ -> answer
       | Success _, _ ->

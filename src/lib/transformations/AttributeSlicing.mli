@@ -1,4 +1,4 @@
 open Nv_lang.Syntax
 open Nv_solution
 
-val slice_network : network -> (network * (Solution.t -> Solution.t)) list
+val slice_network : network -> (network * (Solution.t -> Solution.t)) Lazy.t list
