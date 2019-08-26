@@ -22,7 +22,6 @@ type smt_result = Unsat | Unknown | Sat of Nv_solution.Solution.t
 
 (** ** Translate the environment to SMT-LIB2 *)
 
-
 let env_to_smt ?(verbose=false) ?(name_asserts=false) info (env : smt_env) =
   let count = ref (-1) in
   let map_fun =
@@ -45,10 +44,7 @@ let env_to_smt ?(verbose=false) ?(name_asserts=false) info (env : smt_env) =
   let decls = StringMap.bindings env.type_decls in
   let decls = String.concat "\n"
       (BatList.map (fun (_,typ) -> type_decl_to_smt typ) decls) in
-  Printf.sprintf "(set-option :model_evaluator.completion true)
-                          \n %s\n %s\n %s\n" decls constants context
-(* this new line is super important otherwise we don't get a reply
-   from Z3.. not understanding why*)
+  Printf.sprintf "(push)%s\n %s\n %s\n" decls constants context
 
 let check_sat info =
   Printf.sprintf "%s\n"
@@ -106,7 +102,7 @@ let get_sat query chan info env solver renaming nodes eassert reply =
   | _ -> failwith "unexpected answer from solver\n"
 
 let refineModel (model : Nv_solution.Solution.t) info query chan env solver renaming
-  nodes eassert requires =
+    nodes eassert requires =
   let refiner = refineModelMinimizeFailures in
   match refiner model info query chan solver renaming env requires with
   | None ->
@@ -128,74 +124,78 @@ let refineModel (model : Nv_solution.Solution.t) info query chan env solver rena
       isSat
     | _ -> Sat model
 
-let solve info query chan params net_or_srp nodes eassert requires =
-  let solve_aux solver =
-    (* compute the encoding of the network *)
-  let renaming, env =
-    time_profile "Encoding network"
-      (fun () -> let env = net_or_srp () in
-                 if smt_config.optimize then propagate_eqs env
-                 else (StringMap.empty, StringMap.empty), env)
+(* Apparently not setting this option can lead to Z3 not giving us a response *)
+let solver = lazy(let solver = start_solver [] in
+                  ask_solver solver "(set-option :model_evaluator.completion true)\n";
+                  solver)
+
+let solve info query chan net_or_srp nodes eassert requires =
+  let solver = Lazy.force solver in
+  let print_and_ask q =
+    if query then
+      printQuery chan q;
+    ask_solver_blocking solver q
   in
-  (* compile the encoding to SMT-LIB *)
-  let smt_encoding =
-    time_profile "Compiling query"
-      (fun () -> env_to_smt ~verbose:smt_config.verbose info env) in
-  (* print query to a file if asked to *)
-  if query then
-    printQuery chan smt_encoding;
-  (* Printf.printf "communicating with solver"; *)
-  (* start communication with solver process *)
-  ask_solver_blocking solver smt_encoding;
-  match smt_config.failures with
-  | None ->
-     let q = check_sat info in
-     if query then
-       printQuery chan q;
-     ask_solver solver q;
-     let reply = solver |> parse_reply in
-     get_sat query chan info env solver renaming nodes eassert reply
-  | Some _ ->
-     let q = check_sat info in
-     if query then
-       printQuery chan q;
-     (* ask if it is satisfiable *)
-     ask_solver solver q;
-     let reply = solver |> parse_reply in
-     (* check the reply *)
-     let isSat = get_sat query chan info env solver renaming nodes eassert reply in
-     (* In order to minimize refinement iterations, once we get a
-       counter-example we try to minimize it by only keeping failures
-       on single links. If it works then we found an actual
-       counterexample, otherwise we refine using the first
-       counterexample. *)
-     match isSat with
-     | Unsat -> Unsat
-     | Unknown -> Unknown
-     | Sat model1 ->
-       refineModel model1 info query chan env solver renaming nodes eassert requires
+  let solve_aux () =
+    let renaming, env =
+      time_profile "Encoding network"
+        (fun () -> let env = net_or_srp () in
+          if smt_config.optimize then propagate_eqs env
+          else (StringMap.empty, StringMap.empty), env)
+    in
+    (* compile the encoding to SMT-LIB *)
+    let smt_encoding =
+      time_profile "Compiling query"
+        (fun () -> env_to_smt ~verbose:smt_config.verbose info env) in
+    (* print query to a file if asked to *)
+
+    (* Printf.printf "communicating with solver"; *)
+    print_and_ask smt_encoding;
+    match smt_config.failures with
+    | None ->
+      let q = check_sat info in
+      print_and_ask q;
+      let reply = solver |> parse_reply in
+      get_sat query chan info env solver renaming nodes eassert reply
+    | Some _ ->
+      let q = check_sat info in
+      (* ask if it is satisfiable *)
+      print_and_ask q;
+      let reply = solver |> parse_reply in
+      (* check the reply *)
+      let isSat = get_sat query chan info env solver renaming nodes eassert reply in
+      (* In order to minimize refinement iterations, once we get a
+         counter-example we try to minimize it by only keeping failures
+         on single links. If it works then we found an actual
+         counterexample, otherwise we refine using the first
+         counterexample. *)
+      match isSat with
+      | Unsat -> Unsat
+      | Unknown -> Unknown
+      | Sat model1 ->
+        refineModel model1 info query chan env solver renaming nodes eassert requires
   in
-  let solver = start_solver params in
-  let ret = solve_aux solver in
-  close_solver solver;
+  print_and_ask "(push)";
+  let ret = solve_aux () in
+  print_and_ask "(pop)";
   ret
 
-let solveClassic info query chan ?(params=[]) net =
+let solveClassic info query chan net =
   let open Nv_lang.Syntax in
   let module ExprEnc = (val expr_encoding smt_config) in
   let module Enc =
     (val (module SmtClassicEncoding.ClassicEncoding(ExprEnc) : SmtClassicEncoding.ClassicEncodingSig))
   in
-  solve info query chan params (fun () -> Enc.encode_z3 net)
+  solve info query chan (fun () -> Enc.encode_z3 net)
     (Nv_datastructures.AdjGraph.num_vertices net.graph) net.assertion net.requires
 
-let solveFunc info query chan ?(params=[]) srp =
+let solveFunc info query chan srp =
   let open Nv_lang.Syntax in
   let module ExprEnc = (val expr_encoding smt_config) in
   let module Enc =
     (val (module SmtFunctionalEncoding.FunctionalEncoding(ExprEnc) : SmtFunctionalEncoding.FunctionalEncodingSig))
   in
-  solve info query chan params (fun () -> Enc.encode_z3 srp)
+  solve info query chan (fun () -> Enc.encode_z3 srp)
     (Nv_datastructures.AdjGraph.num_vertices srp.srp_graph) srp.srp_assertion srp.srp_requires
 
 (** For quickcheck smart value generation *)

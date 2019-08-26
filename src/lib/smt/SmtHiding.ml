@@ -457,11 +457,29 @@ let rec refineModel info verbose query partial_chan full_chan ask_for_nv_model p
   | _ -> failwith "refineModel: Unexpected answer from solver"
 ;;
 
-let solve_hiding info query partial_chan ~full_chan ?(params=[]) ?(starting_vars=[]) net =
+let partial_solver = lazy(let solver = start_solver [] in
+                          ask_solver solver "(set-option :model_evaluator.completion true)";
+                          solver)
+
+let full_solver = lazy(let solver = start_solver [] in
+                       ask_solver solver @@ "(set-option :model_evaluator.completion true)\n" ^
+                                            "(set-option :produce-unsat-cores true)\n";
+                       solver)
+
+let solve_hiding info query partial_chan ~full_chan ?(starting_vars=[]) net =
+  let partial_solver = Lazy.force partial_solver in
+  let full_solver = Lazy.force full_solver in
+  let print_and_ask solver chan q =
+    if query then
+      printQuery chan q;
+    ask_solver_blocking solver q
+  in
+  let print_and_ask_partial = print_and_ask partial_solver partial_chan in
+  let print_and_ask_full = print_and_ask full_solver full_chan in
   ignore starting_vars;
   (* We need two solver processes: one for the partially hidden program, and
      one for the full program with additional constraints *)
-  let solve_aux full_solver partial_solver =
+  let solve_aux () =
     let module ExprEnc = (val expr_encoding smt_config) in
     let module Enc =
       (val (module SmtClassicEncoding.ClassicEncoding(ExprEnc) : SmtClassicEncoding.ClassicEncodingSig))
@@ -477,20 +495,14 @@ let solve_hiding info query partial_chan ~full_chan ?(params=[]) ?(starting_vars
     (* TODO: add starting_vars once I figure that out *)
     (* compile the encoding to SMT-LIB *)
     let full_encoding =
-      "(set-option :produce-unsat-cores true)\n" ^
       time_profile "Compiling full query"
         (fun () -> env_to_smt ~verbose:smt_config.verbose ~name_asserts:true info full_env) in
     let partial_encoding =
       time_profile "Compiling partial query"
         (fun () -> env_to_smt ~verbose:smt_config.verbose ~name_asserts:false info partial_env) in
-    (* print query to a file if asked to *)
-    if query then
-      (printQuery partial_chan partial_encoding;
-       printQuery full_chan full_encoding);
 
-    (* start communication with solver process *)
-    ask_solver_blocking partial_solver partial_encoding;
-    ask_solver_blocking full_solver full_encoding;
+    print_and_ask_partial partial_encoding;
+    print_and_ask_full full_encoding;
 
     let nodes = Nv_datastructures.AdjGraph.num_vertices net.graph in
     let ask_for_nv_model solver =
@@ -501,9 +513,9 @@ let solve_hiding info query partial_chan ~full_chan ?(params=[]) ?(starting_vars
          refineModel info smt_config.verbose query partial_chan full_chan ask_for_nv_model partial_solver full_solver hiding_map
       )
   in
-  let solver1 = start_solver params in
-  let solver2 = start_solver params in
-  let ret = solve_aux solver1 solver2 in
-  close_solver solver1;
-  close_solver solver2;
+  print_and_ask_partial "(push)";
+  print_and_ask_full "(push)";
+  let ret = solve_aux () in
+  print_and_ask_partial "(pop)\n(pop)";
+  print_and_ask_full "(pop)\n(pop)";
   ret
