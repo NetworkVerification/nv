@@ -216,6 +216,8 @@ let rewrite_fun (attr_ty : ty) (elts_to_keep : IntSet.t) (assertion : exp) (lead
           )
           e
       in
+      (* FIXME: It occurs to me that since we do partial interpretation during encoding, this pass
+         might be redundant. Test this out once we have actual test data *)
       let finish = cont % (add_dummy_arg args_to_add elts_to_keep) % InterpPartialFull.interp_partial in
       match e.ety with
       | Some TBool -> (* This is the assert function. Return the input assert body *)

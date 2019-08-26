@@ -147,7 +147,26 @@ let run_smt_classic file cfg info (net : Syntax.network) fs =
       | Success _, _ ->
         if BatList.is_empty tl then answer else solve_slices tl
   in
-  solve_slices slices
+  (* let results = Parmap.parmap (BatPervasives.uncurry get_answer) @@ Parmap.L slices in
+     match List.find_opt (function | CounterExample _, _ -> true | _ -> false) results with
+     | Some answer -> answer
+     | None -> List.hd results *)
+  let solve_parallel ncores slices =
+    Parmap.parfold ~ncores:ncores
+      (fun laz acc ->
+         let net, fs = Lazy.force laz in
+         match acc with
+         | CounterExample _, _ -> acc
+         | _ -> get_answer net fs)
+      (Parmap.L slices) (Success None, [])
+      (fun ans1 ans2 ->
+         match ans1 with
+         | CounterExample _, _ -> ans1
+         | _ -> ans2)
+  in
+  match cfg.parallelize with
+  | None -> solve_slices slices
+  | Some n -> solve_parallel n slices
 ;;
 
 let run_smt file cfg info (net : Syntax.network) fs =

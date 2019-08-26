@@ -24,6 +24,7 @@ type t =
   ; link_failures: int                 (** adds at most k link failures to the network  *)
   ; hiding: bool                       (** Use the hiding abstraction during SMT solving *)
   ; slicing: bool                      (** Try to slice the network's attribute *)
+  ; parallelize : int option [@short "-p"] (** Try to parallelize using n cores **)
   }
 [@@deriving
   show
@@ -56,6 +57,7 @@ let default =
   ; link_failures=0
   ; hiding=false
   ; slicing=false
+  ; parallelize= None
   }
 
 let cfg = ref default
