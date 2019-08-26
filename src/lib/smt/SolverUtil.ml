@@ -29,8 +29,10 @@ let start_solver (params : string list) =
   BatUnix.set_close_on_exec nv_in;
   BatUnix.set_close_on_exec nv_out;
 
-  let pid = BatUnix.create_process solver (Array.of_list (solver :: params))
-              solver_in solver_out solver_out in
+  let pid =
+    BatUnix.create_process solver (Array.of_list (solver :: params))
+      solver_in solver_out solver_out
+  in
 
   (* NV should close the descriptors used by the solver *)
   BatUnix.close solver_in;
@@ -45,13 +47,18 @@ let start_solver (params : string list) =
 let ask_solver (solver: solver_proc) (question: string) : unit =
   (* BatIO.write_string solver.nvout question *)
   ignore(Thread.create(fun s ->
-             output_string solver.nvout s;
-             flush solver.nvout) question)
+      output_string solver.nvout s;
+      flush solver.nvout) question)
 
 let ask_solver_blocking (solver: solver_proc) (question: string) : unit =
   (* BatIO.write_string solver.nvout question *)
   output_string solver.nvout question;
   flush solver.nvout
+
+let close_solver (solver : solver_proc) : unit =
+  Unix.close @@ Unix.descr_of_in_channel solver.nvin;
+  Unix.close @@ Unix.descr_of_out_channel solver.nvout;
+  ignore @@ Unix.waitpid [] solver.pid
 
 let get_reply (solver: solver_proc) : string option =
   try Some (input_line solver.nvin) with End_of_file -> None

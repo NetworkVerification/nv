@@ -129,7 +129,8 @@ let refineModel (model : Nv_solution.Solution.t) info query chan env solver rena
     | _ -> Sat model
 
 let solve info query chan params net_or_srp nodes eassert requires =
-  (* compute the encoding of the network *)
+  let solve_aux solver =
+    (* compute the encoding of the network *)
   let renaming, env =
     time_profile "Encoding network"
       (fun () -> let env = net_or_srp () in
@@ -145,7 +146,6 @@ let solve info query chan params net_or_srp nodes eassert requires =
     printQuery chan smt_encoding;
   (* Printf.printf "communicating with solver"; *)
   (* start communication with solver process *)
-  let solver = start_solver params in
   ask_solver_blocking solver smt_encoding;
   match smt_config.failures with
   | None ->
@@ -174,6 +174,11 @@ let solve info query chan params net_or_srp nodes eassert requires =
      | Unknown -> Unknown
      | Sat model1 ->
        refineModel model1 info query chan env solver renaming nodes eassert requires
+  in
+  let solver = start_solver params in
+  let ret = solve_aux solver in
+  close_solver solver;
+  ret
 
 let solveClassic info query chan ?(params=[]) net =
   let open Nv_lang.Syntax in
