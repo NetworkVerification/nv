@@ -318,7 +318,7 @@ let slice (net : Syntax.network) (asn_slice : exp) (elements : IntSet.t) =
   sliced_net, (map_back net.attr_type elements) % cleanup_map_back
 ;;
 
-let slice_network (net : Syntax.network) : (Syntax.network * (Solution.t -> Solution.t)) Lazy.t list =
+let slice_network (net : Syntax.network) : (Syntax.network * (Solution.t -> Solution.t)) delayed list =
   let attr_deps = attribute_dependencies net in
   let assert_deps = assert_dependencies net in
   let assert_deps_transitive =
@@ -332,4 +332,4 @@ let slice_network (net : Syntax.network) : (Syntax.network * (Solution.t -> Solu
       )
       assert_deps
   in
-  List.map (fun (a,es) -> lazy (slice net a es)) assert_deps_transitive
+  List.map (fun (a,es) -> fun () -> (slice net a es)) assert_deps_transitive

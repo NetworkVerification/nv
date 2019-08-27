@@ -115,13 +115,13 @@ let run_smt_classic file cfg info (net : Syntax.network) fs =
     match cfg.slicing, net.assertion, net.attr_type with
     | true, Some _, TTuple _ ->
       AttributeSlicing.slice_network net
-      |> List.map (lmap (fun (net, f) -> net, f :: fs))
+      |> List.map (dmap (fun (net, f) -> net, f :: fs))
     | _ ->
-      [lazy (net, fs)]
+      [fun () -> (net, fs)]
   in
   let slices =
     List.map
-      (lmap (fun (net, fs) ->
+      (dmap (fun (net, fs) ->
            let net, f = UnboxUnits.unbox_net net in
            net, f :: fs))
       slices
@@ -139,7 +139,7 @@ let run_smt_classic file cfg info (net : Syntax.network) fs =
         incr count;
         Profile.time_profile_absolute ("Slice " ^ string_of_int !count)
           (fun () ->
-             let net, fs = Lazy.force laz in
+             let net, fs = laz () in
              get_answer net fs)
       in
       match answer with
@@ -154,7 +154,7 @@ let run_smt_classic file cfg info (net : Syntax.network) fs =
   let solve_parallel ncores slices =
     Parmap.parfold ~ncores:ncores
       (fun laz acc ->
-         let net, fs = Lazy.force laz in
+         let net, fs = laz () in
          match acc with
          | CounterExample _, _ -> acc
          | _ -> get_answer net fs)
