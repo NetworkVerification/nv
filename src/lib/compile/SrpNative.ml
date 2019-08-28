@@ -77,13 +77,23 @@ module SrpSimulation (Srp : NATIVE_SRP) : SrpSimulationSig =
       | None -> failwith ("no attribute at vertex " ^ string_of_int v)
       | Some a -> a
 
+    let attr_equal = ref (fun v1 v2 -> true)
+
     let simulate_step (graph: AdjGraph.t) (s : solution) (origin : int) =
       let do_neighbor (initial_attribute : attribute) (s, todo) neighbor =
         let edge = (neighbor, origin) in
         let n_incoming_attribute = trans edge initial_attribute in
         let n_old_attribute = get_attribute neighbor s in
         let n_new_attribute = merge neighbor n_old_attribute n_incoming_attribute in
-        if n_old_attribute = n_new_attribute
+          (* Collections.printList (fun (k,v) -> Printf.sprintf "(%d,%b)" k v)
+           *   (BatMap.bindings (Obj.magic n_old_attribute)) "\n" ";" "\n" |>
+           * Printf.printf "%s";
+           * Printf.printf "new\n";
+           * Collections.printList (fun (k,v) -> Printf.sprintf "(%d,%b)" k v)
+           *   (BatMap.bindings (Obj.magic n_new_attribute)) "\n" ";" "\n" |>
+           * Printf.printf "%s"; *)
+          (* This comparison fails with usual maps. With BDDs it seems not to. why?*)
+        if !attr_equal n_old_attribute n_new_attribute
         then (s, todo)
         else (AdjGraph.VertexMap.add neighbor n_new_attribute s, neighbor :: todo)
       in
@@ -122,6 +132,36 @@ module SrpSimulation (Srp : NATIVE_SRP) : SrpSimulationSig =
           Some (AdjGraph.VertexMap.fold (fun n v acc -> (check_assertion a n v acc))
                   vals AdjGraph.VertexMap.empty)
 
+    (** Builds equality function to check whether attributes are equal. This is
+       only necessary when we use Batteries maps to represent nv maps. BDDs
+       don't have this issue it seems *)
+    let rec build_equality (attr_ty: Syntax.ty) : 'a -> 'a -> bool =
+      match attr_ty with
+        | TUnit -> fun _ _ -> true
+        | TBool | TInt _ | TOption _->
+          fun v1 v2 -> v1 = v2
+        | TTuple ts ->
+          let fs = BatList.map (fun ty ->
+              let f_rec = build_equality ty in
+                fun v1 v2 -> f_rec v1 v2) ts
+          in
+            fun vs1 vs2 ->
+              let rec compareTuples fs vs1 vs2 =
+                match fs,vs1,vs2 with
+                  | [], [], [] -> true
+                  | f :: fs, v1 :: vs1, v2 :: vs2 ->
+                    (f v1 v2) && compareTuples fs vs1 vs2
+              in
+                compareTuples fs (Obj.magic vs1) (Obj.magic vs2)
+        | TMap (_, vty) ->
+          let f_rec = build_equality vty in
+          fun v1 v2 -> BatMap.equal f_rec (Obj.magic v1) (Obj.magic v2)
+        | TArrow _ -> failwith "Function computed as value"
+        | TRecord _ -> failwith "Trecord"
+        | TNode -> failwith "Tnode"
+        | TEdge -> failwith "Tedge"
+        | TVar _ | QVar _ -> failwith "TVars and QVars shuld not show up here"
+
     (** Given the attribute type of the network constructs an OCaml function
         that takes as input an OCaml value and creates a similar NV value.*)
     let rec build_proj_unsafe (attr_ty: Syntax.ty) : 'a -> Syntax.value =
@@ -149,7 +189,7 @@ module SrpSimulation (Srp : NATIVE_SRP) : SrpSimulationSig =
                     f_rec (proj_val vrec)) ts
           in
             fun v -> Syntax.vtuple (BatList.map (fun f -> f v) fs)
-        | TMap _ -> failwith "tmap"
+        | TMap _ -> fun _ -> Syntax.vunit ()
         | TArrow _ -> failwith "Function computed as value"
         | TRecord _ -> failwith "Trecord"
         | TNode -> failwith "Tnode"
@@ -163,6 +203,7 @@ module SrpSimulation (Srp : NATIVE_SRP) : SrpSimulationSig =
 
     let simulate_srp attr_ty graph =
       let s = srp_to_state graph in
+      attr_equal := build_equality attr_ty;
       let vals = simulate_init graph s in
       let asserts = check_assertions vals in
       let open Solution in

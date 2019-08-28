@@ -18,7 +18,7 @@ let rec ty_to_size ty =
   match get_inner_type ty with
   | TUnit -> 1 (* I don't understand how Cudd BDDs work, so encode TUnit as false *)
   | TBool -> 1
-  | TInt _ -> 32
+  | TInt _ -> 32 (* TODO: why is this 32?*)
   | TOption tyo -> 1 + ty_to_size tyo
   | TTuple ts ->
     List.fold_left (fun acc t -> acc + ty_to_size t) 0 ts
@@ -54,3 +54,24 @@ let mk_int i idx =
 
 let tbool_to_bool tb =
   match tb with Man.False | Man.Top -> false | Man.True -> true
+
+let count_tops arr sz =
+  let j = ref 0 in
+  for i = 0 to sz - 1 do
+    match arr.(i) with Man.Top -> incr j | _ -> ()
+  done ;
+  !j
+
+let rec expand (vars: Man.tbool list) sz : Man.tbool list list =
+  if sz = 0 then [[]]
+  else
+    match vars with
+    | [] -> [[]]
+    | Man.Top :: xs ->
+      let vars = expand xs (sz - 1) in
+      let trus = List.map (fun v -> Man.False :: v) vars in
+      let fals = List.map (fun v -> Man.True :: v) vars in
+      fals @ trus
+    | x :: xs ->
+      let vars = expand xs (sz - 1) in
+      List.map (fun v -> x :: v) vars

@@ -4,10 +4,10 @@ open BatSet
 open Nv_datastructures
 open Nv_utils
 
-module B = BddUtils
-
 (* TODO: optimize variable ordering  *)
 type t = mtbdd
+
+module B = BddUtils
 
 (* let res = User.map_op2
    ~commutative:true ~idempotent:true
@@ -172,52 +172,18 @@ let map ~op_key (f: value -> value) ((vdd, ty): t) : t =
         o
       | Some op -> op
     in
-    (User.apply_op1 op vdd, ty)
+      (User.apply_op1 op vdd, ty)
 
-let count_tops arr sz =
-  let j = ref 0 in
-  for i = 0 to sz - 1 do
-    match arr.(i) with Man.Top -> incr j | _ -> ()
-  done ;
-  !j
-
-let rec size ty =
-  match get_inner_type ty with
-  | QVar _ | TVar _ | TArrow _ | TMap _ ->
-    failwith "internal error (size)"
-  | TUnit -> size (TBool) (* Encode as boolean because I don't understand this code *)
-  | TBool -> 1
-  | TInt _ -> 32
-  | TNode -> size (TInt 32)
-  | TEdge -> size (TTuple [TNode; TNode])
-  | TTuple ts -> List.fold_left (fun acc t -> acc + size t) 0 ts
-  | TRecord map -> size (TTuple (RecordUtils.get_record_entries map))
-  | TOption t -> 1 + size t
-
-let pick_default_value (map, ty) =
+let pick_default_value (map,ty) =
   let count = ref (-1) in
   let value = ref None in
   Mtbdd.iter_cube
     (fun vars v ->
-       let c = count_tops vars (size ty) in
+       let c = B.count_tops vars (B.ty_to_size ty) in
        if c > !count then count := c ;
        value := Some v )
     map ;
   Nv_utils.OCamlUtils.oget !value
-
-let rec expand (vars: Man.tbool list) sz : Man.tbool list list =
-  if sz = 0 then [[]]
-  else
-    match vars with
-    | [] -> [[]]
-    | Man.Top :: xs ->
-      let vars = expand xs (sz - 1) in
-      let trus = List.map (fun v -> Man.False :: v) vars in
-      let fals = List.map (fun v -> Man.True :: v) vars in
-      fals @ trus
-    | x :: xs ->
-      let vars = expand xs (sz - 1) in
-      List.map (fun v -> x :: v) vars
 
 let bindings ((map, ty): t) : (value * value) list * value =
   let bs = ref [] in
@@ -225,9 +191,9 @@ let bindings ((map, ty): t) : (value * value) list * value =
   Mtbdd.iter_cube
     (fun vars v ->
        let lst = Array.to_list vars in
-       let sz = size ty in
+       let sz = B.ty_to_size ty in
        let expanded =
-         if count_tops vars sz <= 5 then expand lst sz else [lst]
+         if B.count_tops vars sz <= 5 then B.expand lst sz else [lst]
        in
        List.iter
          (fun vars ->

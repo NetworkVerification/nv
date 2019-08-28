@@ -71,6 +71,11 @@ let is_keyword_op op =
   | And | Or | Not | UAdd _ | USub _ | Eq | ULess _ | ULeq _ | MGet | NLess | NLeq -> false
   | MCreate | MSet | MMap | MMerge | MMapFilter | AtMost _ -> true
 
+let is_map_op op =
+  match op with
+    | MCreate | MGet | MSet | MMap | MMapFilter | MMerge -> true
+    | _ -> false
+
 (** Translating NV operators to OCaml operators*)
 let op_to_ocaml_string op =
   match op with
@@ -139,8 +144,10 @@ let rec ty_to_ocaml_string t =
   | TOption t ->
      Printf.sprintf "(%s) option"
        (ty_to_ocaml_string t)
-  | TMap _ ->
-     failwith "Map types not yet translated"
+  | TMap (key_ty, val_ty) ->
+    Printf.sprintf "((%s, %s) BatMap.t)"
+      (ty_to_ocaml_string key_ty)
+      (ty_to_ocaml_string val_ty)
   | TRecord map ->
      record_to_ocaml_record ":" ty_to_ocaml_string map
 
@@ -152,7 +159,7 @@ let rec value_to_ocaml_string v =
   | VBool false -> "false"
   | VInt i -> string_of_int (Integer.to_int i)
   | VMap _ ->
-     failwith "This seems doable, but later: map_to_ocaml_string m"
+     failwith "Maps don't have values (I think)"
   | VTuple vs ->
     let n = BatList.length vs in
       Collections.printListi (fun i v -> Printf.sprintf "%s = %s" (proj_rec i n)
@@ -160,7 +167,7 @@ let rec value_to_ocaml_string v =
   | VOption None ->
      "None"
   | VOption (Some v) ->
-     Printf.sprintf "Some (%s)" (value_to_ocaml_string v)
+     Printf.sprintf "(Some %s)" (value_to_ocaml_string v)
   | VClosure _ -> failwith "Closures shouldn't appear here."
   | VRecord map ->
      record_to_ocaml_record "=" value_to_ocaml_string map
@@ -171,10 +178,12 @@ and exp_to_ocaml_string e =
     match e.e with
     | EVar x -> Var.name x
     | EVal v -> value_to_ocaml_string v
+    | EOp (op, es) when is_map_op op ->
+      map_to_ocaml_string op es (OCamlUtils.oget e.ety)
     | EOp (op, es) -> op_args_to_ocaml_string op es
     | EFun f -> func_to_ocaml_string f
     | EApp (e1, e2) ->
-       Printf.sprintf "(%s %s)"
+       Printf.sprintf "(%s) (%s)"
          (exp_to_ocaml_string e1)
          (exp_to_ocaml_string e2)
     | EIf (e1, e2, e3) ->
@@ -192,7 +201,7 @@ and exp_to_ocaml_string e =
         Collections.printListi (fun i e -> Printf.sprintf "%s = %s" (proj_rec i n)
                                    (exp_to_ocaml_string e)) es "{" "; " "}"
     | ESome e ->
-       Printf.sprintf "(Some %s)" (exp_to_ocaml_string e)
+       Printf.sprintf "Some (%s)" (exp_to_ocaml_string e)
     | EMatch (e1, bs) ->
        Printf.sprintf "(match %s with \n %s)"
          (exp_to_ocaml_string e1)
@@ -224,6 +233,81 @@ and branch_to_ocaml_string (p, e) =
   Printf.sprintf "| %s -> %s\n"
     (pattern_to_ocaml_string p)
     (exp_to_ocaml_string e)
+
+and map_to_ocaml_string op es ty =
+  match op with
+    | MCreate ->
+      Printf.sprintf "BatMap.empty"
+    | MSet ->
+      (match es with
+        | [e1;e2;e3] ->
+          Printf.sprintf "(BatMap.add (%s) (%s) (%s))"
+            (exp_to_ocaml_string e2)
+            (exp_to_ocaml_string e3) (exp_to_ocaml_string e1)
+        | _ -> failwith "Wrong number of arguments for set operation")
+    | MGet ->
+      (match es with
+        | [e1;e2] ->
+          Printf.sprintf "(BatMap.find (%s) (%s))"
+            (exp_to_ocaml_string e2) (exp_to_ocaml_string e1)
+        | _ -> failwith "Wrong number of arguments for get operation")
+    | MMap ->
+      (match es with
+        | [e1;e2] ->
+          Printf.sprintf "(BatMap.map (%s) (%s))"
+            (exp_to_ocaml_string e1) (exp_to_ocaml_string e2)
+        | _ -> failwith "Wrong number of arguments for map operation")
+    | MMerge ->
+      (match es with
+        | (e1 :: e2 :: e3 :: _) ->
+          let ty2 = match OCamlUtils.oget e2.ety |> get_inner_type  with
+            | TMap (_, vty) -> vty
+            | x -> Printf.printf "%s\n" (Printing.ty_to_string x); failwith "expected a map"
+          in
+          let ty3 = match OCamlUtils.oget e3.ety |> get_inner_type with
+            | TMap (_, vty) -> vty
+            | _ -> failwith "expected a map"
+          in
+          Printf.sprintf "(BatMap.merge (fun _ v1 v2 -> \n \
+                                      let v1 = match v1 with | Some v1 -> v1 | None -> %s in\n\
+                                      let v2 = match v2 with | Some v2 -> v2 | None -> %s in\n\
+                          Some (%s v1 v2)) (%s) (%s))"
+            (value_to_ocaml_string (default_value ty2)) (value_to_ocaml_string (default_value ty3))
+            (exp_to_ocaml_string e1) (exp_to_ocaml_string e2) (exp_to_ocaml_string e3)
+        | _ -> failwith "Wrong number of arguments for merge operation")
+    | MMapFilter ->
+      (match es with
+        | [e1;e2;e3] ->
+          Printf.sprintf "(BatMap.mapi (fun k v -> if (%s k) then (%s v) else v) (%s))"
+            (exp_to_ocaml_string e1) (exp_to_ocaml_string e2) (exp_to_ocaml_string e3)
+        | _ -> failwith "Wrong number of arguments for mapIf operation")
+
+(* BDD based maps *)
+  (*       and map_to_ocaml_string op es ty =
+   * match op with
+   *   | MCreate ->
+   *     (match ty with
+   *       | TMap (kty,_) ->
+   *         Printf.sprintf "BddMapNat.create Syntax.%s %s"
+   *           (PrintingRaw.show_ty kty) (exp_to_ocaml_string e1)
+   *       | _ -> failwith "Wrong type for map operation")
+   *   | EOp (MSet, [e1;e2;e3]) ->
+   *     (match OCamlUtils.oget e.ety with
+   *       | TMap (kty,_) ->
+   *         Printf.sprintf "(BddMapNat.update (%s) Syntax.%s (%s) (%s))"
+   *           (PrintingRaw.show_ty kty) (exp_to_ocaml_string e1)
+   *           (exp_to_ocaml_string e2) (exp_to_ocaml_string e3)
+   *       | _ -> failwith "Wrong type for map operation")
+   *   | EOp (MGet, [e1;e2]) ->
+   *     (match OCamlUtils.oget e1.ety with
+   *       | TMap (kty,_) ->
+   *         Printf.sprintf "(BddMapNat.find (%s) Syntax.%s (%s))"
+   *           (PrintingRaw.show_ty kty) (exp_to_ocaml_string e1) (exp_to_ocaml_string e2)
+   *       | _ -> failwith "Wrong type for map operation")
+   *   | EOp (MMap, [e1;e2]) ->
+   *     Printf.sprintf "(BddMapNat.map (%s) (%s))"
+   *       (exp_to_ocaml_string e1) (exp_to_ocaml_string e2) *)
+
 
 let hasRequire = ref false
 let hasAssertion = ref false
