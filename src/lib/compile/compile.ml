@@ -6,7 +6,7 @@ open Syntax
 open Nv_datastructures
 open BddMap
 
-(** Translating nv records to OCaml records (type or values depending on f)*)
+(** Translating NV records to OCaml records (type or values depending on f)*)
 let record_to_ocaml_record
       (sep: string)
       (f : 'a -> string)
@@ -53,7 +53,8 @@ let build_record_types () =
 
 let build_proj_func n =
   let lst = BatList.init n (fun i -> i) in
-    Collections.printList (fun i -> Printf.sprintf "| \"p%d__%d\" -> Obj.magic (fun x -> x.p%d__%d)" i n i n)
+    Collections.printList
+      (fun i -> Printf.sprintf "| \"p%d__%d\" -> Obj.magic (fun x -> x.p%d__%d)" i n i n)
       lst  "" "\n" "\n"
 
 (** Builds a table (function) that maps record projector names to the respective
@@ -63,6 +64,29 @@ let build_proj_funcs () =
     IntSet.fold (fun n acc -> Printf.sprintf "%s%s" (build_proj_func n) acc) !record_table ""
   in
   Printf.sprintf "let record_fns s = match s with \n\
+                  %s" branches
+
+
+(*TODO: string comparisons are more expensive than integer comparisons. In the
+   future make an indirection on the matching for constructors and projections
+*)
+let build_constructor n =
+  let lst = BatList.init n (fun i -> i) in
+  let fun_args =
+    Collections.printList (fun i -> Printf.sprintf "p%d__%d" i n) lst ("fun ") (" ") (" -> ")
+  in
+  let fun_body =
+    Collections.printList (fun i -> Printf.sprintf "p%d__%d" i n) lst  ("{") ("; ") ("}\n")
+  in
+  Printf.sprintf "| %s -> %s%s" (string_of_int n) fun_args fun_body
+
+(** Builds a table (function) that maps each record to a function that takes as
+   arguments a value for each of its fields and creates the record*)
+let build_constructors () =
+  let branches =
+    IntSet.fold (fun n acc -> Printf.sprintf "%s%s" (build_constructor n) acc) !record_table ""
+  in
+  Printf.sprintf "let record_cnstrs s = match s with \n\
                   %s" branches
 
 
@@ -107,7 +131,7 @@ let rec pattern_to_ocaml_string pattern =
   | PBool false -> "false"
   | PInt i -> string_of_int (Integer.to_int i)
   | PTuple ps ->
-    let n = BatList.length ps in 
+    let n = BatList.length ps in
     Collections.printListi (fun i p -> Printf.sprintf "%s = %s" (proj_rec i n)
                                (pattern_to_ocaml_string p)) ps "{" "; "  "}"
   | POption None -> "None"
@@ -234,7 +258,41 @@ and branch_to_ocaml_string (p, e) =
     (pattern_to_ocaml_string p)
     (exp_to_ocaml_string e)
 
+(* BDD based maps *)
 and map_to_ocaml_string op es ty =
+  match op with
+    | MCreate ->
+      (match ty with
+        | TMap (kty,vty) ->
+          Printf.sprintf "NativeBdd.create record_fns ~key_ty:%s ~val_ty:%s %s"
+            (PrintingRaw.show_ty kty) (PrintingRaw.show_ty vty) (exp_to_ocaml_string (BatList.hd es))
+        | _ -> failwith "Wrong type for map operation")
+    | MSet ->
+      (match es with
+        | [e1;e2;e3] ->
+          Printf.sprintf "(NativeBdd.update record_fns (%s) (%s) (%s))"
+            (exp_to_ocaml_string e1) (exp_to_ocaml_string e2) (exp_to_ocaml_string e3)
+        | _ -> failwith "Wrong number of arguments to MSet operation")
+    | MGet ->
+      (match ty with
+        | TMap (kty,_) ->
+          (match es with
+            | [e1;e2] ->
+              Printf.sprintf "(NativeBdd.find record_cnstrs record_fns (%s) (%s))"
+                (PrintingRaw.show_ty kty) (exp_to_ocaml_string e1) (exp_to_ocaml_string e2)
+            | _ -> failwith "Wrong number of arguments to MGet operation")
+        | _ -> failwith "Wrong type for map operation")
+    | MMap ->
+      match es with
+        | [e1;e2] ->
+          (match OCamlUtils.oget e1.ety with
+            | TArrow (_, newty) ->
+              Printf.sprintf "(NativeBdd.map record_cnstrs record_fns (%s) (%s) (%s))"
+                (PrintingRaw.show_ty newty) (exp_to_ocaml_string e1) (exp_to_ocaml_string e2))
+        | _ -> failwith "Wrong number of arguments to map operation"
+
+(* BatMap maps*)
+(*and map_to_ocaml_string op es ty =
   match op with
     | MCreate ->
       Printf.sprintf "BatMap.empty"
@@ -281,73 +339,8 @@ and map_to_ocaml_string op es ty =
           Printf.sprintf "(BatMap.mapi (fun k v -> if (%s k) then (%s v) else v) (%s))"
             (exp_to_ocaml_string e1) (exp_to_ocaml_string e2) (exp_to_ocaml_string e3)
         | _ -> failwith "Wrong number of arguments for mapIf operation")
+*)
 
-(* BDD based maps *)
-  (*       and map_to_ocaml_string op es ty =
-   * match op with
-   *   | MCreate ->
-   *     (match ty with
-   *       | TMap (kty,_) ->
-   *         Printf.sprintf "BddMapNat.create Syntax.%s %s"
-   *           (PrintingRaw.show_ty kty) (exp_to_ocaml_string e1)
-   *       | _ -> failwith "Wrong type for map operation")
-   *   | EOp (MSet, [e1;e2;e3]) ->
-   *     (match OCamlUtils.oget e.ety with
-   *       | TMap (kty,_) ->
-   *         Printf.sprintf "(BddMapNat.update (%s) Syntax.%s (%s) (%s))"
-   *           (PrintingRaw.show_ty kty) (exp_to_ocaml_string e1)
-   *           (exp_to_ocaml_string e2) (exp_to_ocaml_string e3)
-   *       | _ -> failwith "Wrong type for map operation")
-   *   | EOp (MGet, [e1;e2]) ->
-   *     (match OCamlUtils.oget e1.ety with
-   *       | TMap (kty,_) ->
-   *         Printf.sprintf "(BddMapNat.find (%s) Syntax.%s (%s))"
-   *           (PrintingRaw.show_ty kty) (exp_to_ocaml_string e1) (exp_to_ocaml_string e2)
-   *       | _ -> failwith "Wrong type for map operation")
-   *   | EOp (MMap, [e1;e2]) ->
-   *     Printf.sprintf "(BddMapNat.map (%s) (%s))"
-   *       (exp_to_ocaml_string e1) (exp_to_ocaml_string e2) *)
-
-
-let hasRequire = ref false
-let hasAssertion = ref false
-
-let rec declaration_to_ocaml_string d =
-  match d with
-  | DLet (x, _, e) ->
-     Printf.sprintf "let %s = %s\n"
-       (Var.name x) (exp_to_ocaml_string e)
-  | DSymbolic (x, Exp e) ->
-     Printf.sprintf "let %s = %s\n"
-       (Var.name x) (exp_to_ocaml_string e)
-  | DSymbolic (x, Ty ty) ->
-     Printf.sprintf "let %s = %s\n"
-       (Var.name x) (value_to_ocaml_string (default_value ty))
-  | DMerge e ->
-     Printf.sprintf "let merge = %s\n" (exp_to_ocaml_string e)
-  | DTrans e ->
-     Printf.sprintf "let trans = %s\n" (exp_to_ocaml_string e)
-  | DAssert e ->
-     hasAssertion := true;
-     Printf.sprintf "let assertion = %s\n" (exp_to_ocaml_string e)
-  | DRequire e ->
-     hasRequire := true;
-     Printf.sprintf "let require = %s\n" (exp_to_ocaml_string e)
-  | DNodes n -> Printf.sprintf "let graph = AdjGraph.create %d" n
-  | DEdges es ->
-     Printf.sprintf
-       "let graph = AdjGraph.add_edges graph\n %s"
-       (Collections.printList (fun (u,v) ->
-            Printf.sprintf "(%d,%d)" u v) es "[" ";\n" "]\n")
-  | DInit e ->
-     Printf.sprintf "let init = %s\n" (exp_to_ocaml_string e)
-  | DATy t ->
-     Printf.sprintf "type attribute = %s" (ty_to_ocaml_string t)
-  | DUserTy (name, ty) ->
-    Printf.sprintf "type %s = %s" (Var.name name) (ty_to_ocaml_string ty)
-
-let rec declarations_to_ocaml_string ds =
-  Collections.printList declaration_to_ocaml_string ds "" "\n" "\n"
 
 (** Translate something of type [Syntax.network] to an OCaml program*)
 let compile_net net =
@@ -392,14 +385,13 @@ let compile_net net =
   let tuple_s = build_record_types () in
   let record_fns = build_proj_funcs () in
   Printf.sprintf "%s %s %s %s %s %s %s %s %s %s %s"
-    tuple_s utys_s attr_s symbs_s defs_s init_s trans_s merge_s requires_s assert_s
-    record_fns
+    tuple_s utys_s attr_s record_fns symbs_s defs_s init_s trans_s merge_s requires_s assert_s
 
 let set_entry (name: string) =
   Printf.sprintf "let () = SrpNative.srp := Some (module %s:SrpNative.NATIVE_SRP)" name
 
 let generate_ocaml (name : string) net =
-  let header = Printf.sprintf "open Nv_datastructures\n open Nv_compile\n\n \
+  let header = Printf.sprintf "open Nv_datastructures\n open Nv_lang\n open Syntax\nopen Nv_compile\n\n \
                                module %s : SrpNative.NATIVE_SRP = struct\n" name in
   let ocaml_decls = Profile.time_profile "Compilation Time" (fun () -> compile_net net) in
   Printf.sprintf "%s %s end\n %s" header ocaml_decls (set_entry name)

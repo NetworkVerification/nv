@@ -164,42 +164,8 @@ module SrpSimulation (Srp : NATIVE_SRP) : SrpSimulationSig =
 
     (** Given the attribute type of the network constructs an OCaml function
         that takes as input an OCaml value and creates a similar NV value.*)
-    let rec build_proj_unsafe (attr_ty: Syntax.ty) : 'a -> Syntax.value =
-      match attr_ty with
-        | TUnit ->
-          fun _ -> Syntax.vunit ()
-        | TBool ->
-          fun v -> Syntax.vbool (Obj.magic v)
-        | TInt _ ->
-          fun v -> Syntax.vint ((Obj.magic v) |> Integer.of_int)
-        | TOption ty ->
-          let f = build_proj_unsafe ty in
-            (Obj.magic (fun v ->
-                ((match v with
-                    | None -> Syntax.voption None
-                    | Some v' -> Syntax.voption (Some (f v'))))) : 'a -> Syntax.value)
-        | TTuple ts ->
-          let n = BatList.length ts in
-          let fs = BatList.mapi (fun i ty ->
-              let proj_fun = Printf.sprintf "p%d__%d" i n in
-              let f_rec = build_proj_unsafe ty in
-              let proj_val = record_fns proj_fun in
-                fun v ->
-                  let vrec = v in
-                    f_rec (proj_val vrec)) ts
-          in
-            fun v -> Syntax.vtuple (BatList.map (fun f -> f v) fs)
-        | TMap _ -> fun _ -> Syntax.vunit ()
-        | TArrow _ -> failwith "Function computed as value"
-        | TRecord _ -> failwith "Trecord"
-        | TNode -> failwith "Tnode"
-        | TEdge -> failwith "Tedge"
-        | TVar _ | QVar _ -> failwith "TVars and QVars shuld not show up here"
-
-    (* | TMap of Nv_lang.Syntax.ty * Nv_lang.Syntax.ty
-     * | TRecord of Nv_lang.Syntax.ty Nv_utils.PrimitiveCollections.StringMap.t
-     * | TNode
-     * | TEdge *)
+    let ocaml_to_nv_value (attr_ty: Syntax.ty) : 'a -> Syntax.value =
+      Embeddings.embed_value record_fns attr_ty
 
     let simulate_srp attr_ty graph =
       let s = srp_to_state graph in
@@ -207,7 +173,7 @@ module SrpSimulation (Srp : NATIVE_SRP) : SrpSimulationSig =
       let vals = simulate_init graph s in
       let asserts = check_assertions vals in
       let open Solution in
-        let val_proj = build_proj_unsafe attr_ty in
+      let val_proj = ocaml_to_nv_value attr_ty in
         { labels = AdjGraph.VertexMap.map (fun v -> val_proj v) vals;
           symbolics = VarMap.empty; (*TODO: but it's not important for simulation.*)
           assertions = asserts;
