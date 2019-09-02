@@ -2,6 +2,7 @@
 open Cudd
 open Nv_datastructures
 open Nv_utils.PrimitiveCollections
+open Batteries
 
 type node = int
 [@@deriving eq, ord]
@@ -166,8 +167,8 @@ and exp =
   }
 [@@deriving ord]
 
-and branches = { pmap              : exp PatMap.t;
-                 plist             : (pattern * exp) list
+and branches = { pmap  : exp PatMap.t;
+                 plist : (pattern * exp) list
                }
 
 and func = {arg: var; argty: ty option; resty: ty option; body: exp}
@@ -521,7 +522,7 @@ let rec hash_ty ty =
   | TVar tyvar -> (
       match !tyvar with
       | Unbound (name, x) -> hash_string (Var.to_string name) + x
-      | Link t -> 2 + hash_ty t )
+      | Link t -> hash_ty t )
   | QVar name -> 3 + hash_string (Var.to_string name)
   | TBool -> 4
   | TInt _ -> 5
