@@ -245,7 +245,8 @@ module MergeMap = BatMap.Make (struct
 
 let unwrap x =
   match x with
-  | {v= VOption (Some v)} -> (true, v)
+    | {v= VOption (Some v)} ->
+      (true, v)
   | _ -> (false, vbool false)
 
 let merge_op_cache = ref MergeMap.empty

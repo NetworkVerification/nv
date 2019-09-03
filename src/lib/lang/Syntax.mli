@@ -1,8 +1,7 @@
 open Cudd
 open Nv_datastructures
 open Nv_utils.PrimitiveCollections
-open Batteries
-
+       
 type node = int
 
 type edge = node * node
@@ -320,6 +319,8 @@ val equal_exps : cmp_meta:bool -> exp -> exp -> bool
 val hash_value : hash_meta:bool -> value -> int
 
 val hash_exp : hash_meta:bool -> exp -> int
+
+val hash_ty : ty -> int
 
 (* Operates only on the 'v' element of the value records, ignoring
    all other entries *)

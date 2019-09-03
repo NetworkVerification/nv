@@ -1,7 +1,0 @@
-include "generic-topologies/fattree1000.nv"
-include "generic-algebras/distance-allpairs.nv"
-
-let assert node x =
-  match x[19n] with
-  | None -> false
-  | Some _ -> true

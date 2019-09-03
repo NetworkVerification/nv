@@ -2,7 +2,6 @@
 open Cudd
 open Nv_datastructures
 open Nv_utils.PrimitiveCollections
-open Batteries
 
 type node = int
 [@@deriving eq, ord]
@@ -532,7 +531,7 @@ let rec hash_ty ty =
   | TOption t -> 8 + hash_ty t
   | TMap (ty1, ty2) -> 9 + hash_ty ty1 + hash_ty ty2
   | TRecord map ->
-    StringMap.fold (fun l t acc -> acc + + hash_string l + hash_ty t) map 0 + 10
+    StringMap.fold (fun l t acc -> acc + hash_string l + hash_ty t) map 0 + 10
   | TUnit -> 11
   | TNode -> 12
   | TEdge -> 13

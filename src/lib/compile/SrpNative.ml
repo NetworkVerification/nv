@@ -77,7 +77,7 @@ module SrpSimulation (Srp : NATIVE_SRP) : SrpSimulationSig =
       | None -> failwith ("no attribute at vertex " ^ string_of_int v)
       | Some a -> a
 
-    let attr_equal = ref (fun v1 v2 -> true)
+    let attr_equal = ref (fun _ _ -> true)
 
     let simulate_step (graph: AdjGraph.t) (s : solution) (origin : int) =
       let do_neighbor (initial_attribute : attribute) (s, todo) neighbor =
@@ -93,13 +93,14 @@ module SrpSimulation (Srp : NATIVE_SRP) : SrpSimulationSig =
            *   (BatMap.bindings (Obj.magic n_new_attribute)) "\n" ";" "\n" |>
            * Printf.printf "%s"; *)
           (* This comparison fails with usual maps. With BDDs it seems not to. why?*)
-        if !attr_equal n_old_attribute n_new_attribute
-        then (s, todo)
-        else (AdjGraph.VertexMap.add neighbor n_new_attribute s, neighbor :: todo)
+          (* if !attr_equal n_old_attribute n_new_attribute *)
+          if n_old_attribute = n_new_attribute
+          then (s, todo)
+          else (AdjGraph.VertexMap.add neighbor n_new_attribute s, neighbor :: todo)
       in
       let initial_attribute = get_attribute origin s in
       let neighbors = AdjGraph.neighbors graph origin in
-      BatList.fold_left (do_neighbor initial_attribute) (s, []) neighbors
+        BatList.fold_left (do_neighbor initial_attribute) (s, []) neighbors
 
     (* simulate_init s q simulates srp starting with initial state (s,q) *)
     let rec simulate_init (graph: AdjGraph.t) ((s, q): state) =
@@ -173,6 +174,7 @@ module SrpSimulation (Srp : NATIVE_SRP) : SrpSimulationSig =
       let vals = simulate_init graph s in
       let asserts = check_assertions vals in
       let open Solution in
+      Printf.printf "time embedding/unembedding: %f" (!Embeddings.total_time);
       let val_proj = ocaml_to_nv_value attr_ty in
         { labels = AdjGraph.VertexMap.map (fun v -> val_proj v) vals;
           symbolics = VarMap.empty; (*TODO: but it's not important for simulation.*)

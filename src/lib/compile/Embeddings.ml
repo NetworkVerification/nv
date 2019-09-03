@@ -4,11 +4,29 @@ open Nv_utils
 open Nv_datastructures
 open PrimitiveCollections
 open Syntax
+open Fix
+open Memoize
 
 (* TODO: cache calls to embed and unembed, based on type, but potentially based on value too *)
 
+module TyHash =
+struct
+  type t = Syntax.ty
+  let equal = Syntax.equal_tys
+  let hash = Syntax.hash_ty
+end
+
+module TyOrdered =
+struct
+  type t = Syntax.ty
+  let compare = compare
+end
+
+module HashMemTy = ForHashedType(TyHash)
+module OrdMemTy = ForOrderedType(TyOrdered)
+
 (** Given an NV type and an OCaml value constructs an NV value*)
-let rec embed_value (record_fns: string -> 'a -> 'b) (typ: Syntax.ty) : 'a -> Syntax.value =
+let rec embed_value (record_fns: string -> 'a -> 'b) (typ: Syntax.ty) : 'v -> Syntax.value =
   match typ with
     | TUnit ->
       fun _ -> Syntax.vunit ()
@@ -18,8 +36,8 @@ let rec embed_value (record_fns: string -> 'a -> 'b) (typ: Syntax.ty) : 'a -> Sy
       fun v -> Syntax.vint ((Obj.magic v) |> Integer.of_int)
     | TOption ty ->
       let f = embed_value record_fns ty in
-        Obj.magic (fun v ->
-            (match v with
+        (fun v ->
+            (match Obj.magic v with
               | None -> Syntax.voption None
               | Some v' -> Syntax.voption (Some (f v'))))
     | TTuple ts ->
@@ -30,23 +48,24 @@ let rec embed_value (record_fns: string -> 'a -> 'b) (typ: Syntax.ty) : 'a -> Sy
           let proj_val = record_fns proj_fun in
             fun v ->
               let vrec = v in
-                f_rec (proj_val vrec)) ts
+                f_rec (Obj.magic (proj_val vrec))) ts
       in
         fun v -> Syntax.vtuple (BatList.map (fun f -> f v) fs)
     | TMap _ -> (* trivial as we represent maps with the same mtbdd + value type*)
       fun v -> Syntax.vmap (fst (Obj.magic v))
     | TArrow _ -> failwith "Function computed as value"
     | TRecord _ -> failwith "Trecord"
-    | TNode -> failwith "Tnode"
+    | TNode ->
+      fun v -> Syntax.vint ((Obj.magic v) |> Integer.of_int)
     | TEdge -> failwith "Tedge"
     | TVar _ | QVar _ -> failwith "TVars and QVars shuld not show up here"
 
 (** Takes an NV value of type typ and returns an OCaml value.*)
 let rec unembed_value (record_cnstrs : string -> 'c) (record_proj : string -> 'a -> 'b)
-    (typ: Syntax.ty) : Syntax.value -> 'a =
+    (typ: Syntax.ty) : Syntax.value -> 'v =
   match typ with
     | TUnit ->
-      fun _ -> ()
+      fun _ -> Obj.magic ()
     | TBool ->
       fun v ->
         (match v.v with
@@ -59,13 +78,13 @@ let rec unembed_value (record_cnstrs : string -> 'c) (record_proj : string -> 'a
           | _ -> failwith "mistyped value")
     | TOption ty ->
       let f = unembed_value record_cnstrs record_proj ty in
-        Obj.magic (fun v ->
-            match v.v with
-              | VOption None -> None
-              | VOption (Some v') -> Some (f v')
-              | _ -> failwith "mistyped value")
+        fun v ->
+          (match v.v with
+            | VOption None -> Obj.magic None
+            | VOption (Some v') -> Obj.magic (Some (f v'))
+            | _ -> failwith "mistyped value")
     | TTuple ts ->
-      (*TODO: this case is wrong, fix it*)
+      (*TODO: this case is wrong? fix it*)
       let n = BatList.length ts in
       let f_cnstr = record_cnstrs (string_of_int n) in (*function that constructs the record*)
       let fs = (*functions that unembed each value of a tuple *)
@@ -85,6 +104,40 @@ let rec unembed_value (record_cnstrs : string -> 'c) (record_proj : string -> 'a
           | _ -> failwith "mistyped value")
     | TArrow _ -> failwith "Function computed as value"
     | TRecord _ -> failwith "Trecord"
-    | TNode -> failwith "Tnode"
+    | TNode ->
+      fun v ->
+        (match v.v with
+          | VNode n -> Obj.magic n
+          | _ -> failwith "mistyped value")
     | TEdge -> failwith "Tedge"
     | TVar _ | QVar _ -> failwith "TVars and QVars shuld not show up here"
+
+(* Only memoizing outermost call on type. There is probably little merit to
+   memoize the recursive calls. TODO: memoize based on values too?*)
+
+(* NOTE: Using hashing memoization degrades performance probably because hashing
+   the type takes time.
+   NOTE: Using ordered (i.e. a tree) comparison is much
+   faster but still slightly degrades performance.
+   TODO: Instead we should assign each type an integer/tag and then look that up in a
+   memoized table.
+*)
+
+let total_time = ref 0.0
+
+let embed_value (record_fns: string -> 'a -> 'b) : ty -> ('v -> Syntax.value) =
+  let start_time = Sys.time () in
+  (* let res = OrdMemTy.memoize (embed_value record_fns)  in *)
+  let res = fun ty v -> embed_value record_fns ty v in
+  let finish_time = Sys.time () in
+    total_time := !total_time +. (finish_time -. start_time);
+    res
+
+
+let unembed_value (record_cnstrs: string -> 'c)  (record_fns: string -> 'a -> 'b) : ty -> (Syntax.value -> 'v) =
+  let start_time = Sys.time () in
+  (* let res = OrdMemTy.memoize (unembed_value record_cnstrs record_fns) in *)
+  let res = fun ty v -> unembed_value record_cnstrs record_fns ty v in
+  let finish_time = Sys.time () in
+    total_time := !total_time +. (finish_time -. start_time);
+    res

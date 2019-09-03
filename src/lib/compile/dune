@@ -7,5 +7,6 @@
     nv_datastructures
     nv_utils
     findlib.dynload
+    fix
   )
 )
