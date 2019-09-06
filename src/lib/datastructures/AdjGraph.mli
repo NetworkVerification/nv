@@ -40,17 +40,16 @@ val good_graph : t -> unit
 
 (* create a graph with i vertices named 0..i-1 *)
 
-val create : int -> t
+(* val create : int -> t *)
 
 (* number of vertices in the graph (named 0..i-1) *)
 
-val num_vertices : t -> int
-
+(* val num_vertices : t -> int *)
 
 val fold_vertices : (Vertex.t -> 'a -> 'a) -> Vertex.t -> 'a -> 'a
 
 (** Vertices in the adjacency graph *)
-val get_vertices : t -> VertexSet.t
+(* val get_vertices : t -> VertexSet.t *)
 
 (* edges in the graph *)
 
@@ -58,20 +57,20 @@ val edges : t -> (Vertex.t * Vertex.t) list
 
 (* add_edge g e adds directed edge e to g *)
 
-val add_edge : t -> Edge.t -> t
+(* val add_edge : t -> Edge.t -> t *)
 
 (* add_edge g l adds all directed edges in l to g *)
 
-val add_edges : t -> Edge.t list -> t
+(* val add_edges : t -> Edge.t list -> t *)
 
 (* add_edge g e adds directed edge e to g *)
 
-val remove_edge : t -> Edge.t -> t
+(* val remove_edge : t -> Edge.t -> t *)
 
 (** Removes multiple edges from the graph. More efficient, than
    multiple calls to remove_edge. Does not raise BadVertex if an edge
    is invalid! *)
-val remove_edges : t -> EdgeSet.t -> t
+(* val remove_edges : t -> EdgeSet.t -> t *)
 
 (* neighbors g v returns neighbors of v in g; raise BadVertex if v invalid *)
 
@@ -86,7 +85,7 @@ val print : t -> unit
 val to_string : t -> string
 
 (** computes min-cut between s and t and the returns the min-cut and the S and T sets *)
-val min_cut : t -> Vertex.t -> Vertex.t -> EdgeSet.t * VertexSet.t * VertexSet.t
+(* val min_cut : t -> Vertex.t -> Vertex.t -> EdgeSet.t * VertexSet.t * VertexSet.t *)
 
 module DrawableGraph :
 sig
