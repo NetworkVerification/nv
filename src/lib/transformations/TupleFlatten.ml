@@ -197,7 +197,21 @@ let exp_transformer (recursors : Transformers.recursors) e =
       | TSet (_, lo, hi) ->
         let tup =  match es with | [e1;_] -> e1 | _ -> failwith "Bad TSet" in
         let size, lo, hi = size_and_index_after_flattening (oget tup.ety) lo hi in
-        Some (eop (TSet (size, lo, hi)) (List.map flatten_exp es))
+          Some (eop (TSet (size, lo, hi)) (List.map flatten_exp es))
+      | Eq ->
+        (match es with
+          | [e1; e2] when (match oget e.ety with | TTuple _ -> true | _ -> false) ->
+            let e1 = flatten_exp e1 in
+            let e2 = flatten_exp e2 in
+            (match tupleToListSafe e1, tupleToListSafe e2 with
+              | ((_ :: _ :: _) as es1), ((_ :: _ :: _) as es2) ->
+                Some (List.fold_left2 (fun acc e1 e2 ->
+                    let eq12 = eop Eq [e1;e2] |> wrap e in
+                      eop And [eq12; acc] |> wrap e)
+                    (e_val (vbool true) |> wrap e) es1 es2)
+              | _ ->
+                None)
+          | _ -> None)
       | _ -> None
     end
   | _ -> None
@@ -266,6 +280,8 @@ let unproj_symbolics (sol : Solution.t) =
       VarMap.empty
   in
   (* Transform our lists of (index, value) pairs into the corresponding tuples *)
+  (* TODO: is that code necessary? I don't 100% understand what's the goal but
+     the SmtModel code does something like this.*)
   let unprojed =
     VarMap.map
       (fun elts ->
@@ -274,8 +290,9 @@ let unproj_symbolics (sol : Solution.t) =
          | [(0, v)] -> v
          | lst ->
            let lst = List.sort (fun a b -> compare (fst a) (fst b)) lst in
-           (* Sanity check *)
-           assert (List.fold_lefti (fun acc i elt -> acc && (i = fst elt)) true lst);
+             (* Sanity check *)
+             (* worst case scenario it crashes *)
+           (* assert (List.fold_lefti (fun acc i elt -> acc && (i = fst elt)) true lst); *)
            vtuple (List.map snd lst)
       )
       unboxed_map
@@ -307,5 +324,15 @@ let flatten_net net =
 
 let flatten_srp srp =
   let srp, f = make_toplevel Transformers.transform_srp srp in
-  {srp with srp_symbolics = List.map proj_symbolic srp.srp_symbolics |> List.concat},
-  f
+  let proj_symbolics symbs = List.map proj_symbolic symbs |> List.concat in
+  let proj_label labels =
+    List.map
+      (fun (v, ty) ->
+         List.map (fun (v, toe) -> v, match toe with | Ty ty -> ty | _ -> failwith "Impossible") @@
+         proj_symbolic (v, Ty ty))
+      labels
+    |> List.concat
+  in
+  {srp with srp_symbolics = proj_symbolics srp.srp_symbolics;
+            srp_labels = AdjGraph.VertexMap.map proj_label srp.srp_labels},
+  f % unproj_symbolics

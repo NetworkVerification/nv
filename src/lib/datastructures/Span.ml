@@ -9,4 +9,4 @@ let extend (x: t) (y: t) : t =
 let default = {fname = ""; start= -1; finish= -1}
 
 let show_span (span: t) =
-  Printf.sprintf "(%d,%d)" span.start span.finish
+  Printf.sprintf "%s:(%d,%d)" span.fname span.start span.finish
