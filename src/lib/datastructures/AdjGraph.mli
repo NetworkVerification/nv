@@ -4,6 +4,9 @@ module Vertex :
 
     val printVertex : t -> string
     val compare : t -> t -> int
+    val equal : t -> t -> bool
+    val hash : t -> int
+    val of_int : int -> t
   end
 
 module Edge : Map.OrderedType with type t = Vertex.t * Vertex.t
@@ -16,6 +19,9 @@ module VertexSet : BatSet.S with type elt = Vertex.t
 module VertexSetSet : BatSet.S with type elt = VertexSet.t
 module VertexSetMap : BatMap.S with type key = VertexSet.t
 
+(** Create an incrementing set of vertices given an integer *)
+val create_vertices : int -> VertexSet.t
+
 module EdgeSet : BatSet.S with type elt = Edge.t
 
 module EdgeMap : BatMap.S with type key = Edge.t
@@ -27,8 +33,8 @@ val vertex_map_to_string : ('a -> string) -> 'a VertexMap.t -> string
 val print_vertex_map : ('a -> string) -> 'a VertexMap.t -> unit
 
 (* graph *)
-
-type t
+(* include module type of Graph.Persistent.Graph.Concrete (Vertex) *)
+include module type of Graph.Pack.Graph
 
 (* raise BadVertex if a vertex v does not belong to a graph's set of vertices, ie: 0..num_vertex-1 *)
 
@@ -39,17 +45,16 @@ val good_vertex : t -> Vertex.t -> unit
 val good_graph : t -> unit
 
 (* create a graph with i vertices named 0..i-1 *)
-
 (* val create : int -> t *)
 
 (* number of vertices in the graph (named 0..i-1) *)
 
-(* val num_vertices : t -> int *)
+val num_vertices : t -> int
 
 val fold_vertices : (Vertex.t -> 'a -> 'a) -> Vertex.t -> 'a -> 'a
 
 (** Vertices in the adjacency graph *)
-(* val get_vertices : t -> VertexSet.t *)
+val get_vertices : t -> VertexSet.t
 
 (* edges in the graph *)
 
@@ -59,9 +64,11 @@ val edges : t -> (Vertex.t * Vertex.t) list
 
 (* val add_edge : t -> Edge.t -> t *)
 
-(* add_edge g l adds all directed edges in l to g *)
+(* of_edges l creates a new graph with all nodes and edges given in l *)
+val of_edges : (Vertex.t * Vertex.t) list -> t
 
-(* val add_edges : t -> Edge.t list -> t *)
+(* add_edges g l adds all directed edges in l to g *)
+val add_edges : t -> Edge.t list -> t
 
 (* add_edge g e adds directed edge e to g *)
 
@@ -85,7 +92,7 @@ val print : t -> unit
 val to_string : t -> string
 
 (** computes min-cut between s and t and the returns the min-cut and the S and T sets *)
-(* val min_cut : t -> Vertex.t -> Vertex.t -> EdgeSet.t * VertexSet.t * VertexSet.t *)
+val min_cut : t -> Vertex.t -> Vertex.t -> EdgeSet.t * VertexSet.t * VertexSet.t
 
 module DrawableGraph :
 sig

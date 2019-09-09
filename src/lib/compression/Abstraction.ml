@@ -190,10 +190,10 @@ module BuildAbstractNetwork =
 
     let buildAbstractAdjGraph (g: AdjGraph.t) (f: abstractionMap) : AdjGraph.t =
       let n = size f in
-      let ag = AdjGraph.create n in
+      let ag = AdjGraph.create ~size:n () in
       fold_vertices (fun uhat ag ->
           let es = findAbstractEdges g f uhat in
-          EdgeSet.fold (fun e ag -> add_edge ag e) es ag) n ag
+          EdgeSet.fold (fun e ag -> AdjGraph.add_edge_e ag e) es ag) n ag
 
     (* get all the concrete neighbors v of u s.t. f(v) = vhat *)
     let getNeighborsInVhat f g u vhat =
@@ -655,7 +655,7 @@ module FailuresAbstraction =
           let u, todo' = VertexSet.pop_min todo in
           if u <> d then
             begin
-              let (es, sset, tset) =  min_cut g d u in
+              let (es, sset, tset) =  AdjGraph.min_cut g d u in
               if EdgeSet.cardinal es > k then
                 loop todo' cuts new_todo
               else
@@ -770,7 +770,7 @@ module FailuresAbstraction =
       let backMap = buildForwardMap forig f in
       let unused_new = update_edge_set backMap ag unused in
       (* compute the abstract graph after removing the unused edges *)
-      let rag = EdgeSet.fold (fun e acc -> AdjGraph.remove_edge acc e) unused_new ag in
+      let rag = EdgeSet.fold (fun e acc -> AdjGraph.remove_edge_e acc e) unused_new ag in
       let d = getId f (VertexSet.choose ds) in (*assume only one destination for now *)
       let cuts, todo = compute_cuts rag d k todo in
       match cuts with
@@ -956,12 +956,12 @@ module FailuresAbstraction =
                if b then
                  begin
                    Printf.printf "Failed Edge: %s\n" (AdjGraph.printEdge edge);
-                   (EdgeSet.add edge acc, AdjGraph.add_edge ag edge)
+                   (EdgeSet.add edge acc, AdjGraph.add_edge_e ag edge)
                  end
-               else (acc, AdjGraph.add_edge ag edge)
+               else (acc, AdjGraph.add_edge_e ag edge)
             | _ -> failwith "This should be a boolean variable") failVars
-                     (EdgeSet.empty,
-                      AdjGraph.create (AbstractionMap.size f))
+                     (EdgeSet.empty, 
+                      AdjGraph.create ~size:(AbstractionMap.size f) ())
       in
 
       (* number of concrete links failed in the network *)

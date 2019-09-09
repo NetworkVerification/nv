@@ -9,12 +9,19 @@ module Vertex = struct
   let compare = Pervasives.compare
   let equal = (fun a b -> compare a b = 0)
   let hash = Hashtbl.hash
+  let of_int i = i
 end
 
 module VertexMap = BatMap.Make (Vertex)
 module VertexSet = BatSet.Make(Vertex)
 module VertexSetSet : BatSet.S with type elt = VertexSet.t = BatSet.Make(VertexSet)
 module VertexSetMap : BatMap.S with type key = VertexSet.t = BatMap.Make(VertexSet)
+
+let create_vertices (i: int) =
+  let open Batteries in
+  (* enumerate ints *)
+  let e = 0 -- i in
+    BatEnum.fold (fun acc v -> VertexSet.add (Vertex.of_int v) acc) VertexSet.empty e
 
 module Edge = struct
   type t = Vertex.t * Vertex.t
@@ -24,22 +31,14 @@ module Edge = struct
     else Pervasives.compare w1 w2
 end
 
-include Persistent.Graph.Concrete(Vertex)
+(* include Persistent.Graph.Concrete(Vertex) *)
+include Pack.Graph
 
 let printEdge (e : Edge.t) =
   Printf.sprintf "<%d,%d>" (fst e) (snd e);
 
 module EdgeSet = BatSet.Make(Edge)
 module EdgeMap = BatMap.Make(Edge)
-
-(* OCaml 4.06 contains find_opt and update built in. upgrade compiler. *)
-let find_opt v m =
-  try Some (VertexMap.find v m) with Not_found -> None
-
-let update v f m =
-  match f (find_opt v m) with
-  | None -> VertexMap.remove v m
-  | Some ns -> VertexMap.add v ns m
 
 let vertex_map_to_string elem_to_string m =
   let kvs = VertexMap.fold (fun k v l -> (k, v) :: l) m [] in
@@ -56,15 +55,11 @@ let print_vertex_map elem_to_string m =
 (* a graph as ajacency list * # of vertices *)
 (* type t = Vertex.t list VertexMap.t * int *)
 
-(* create a graph with i vertices *)
-(* let create i = (VertexMap.empty, i) *)
-
 (* vertices and edges *)
-(* let num_vertices (_, i) = i *)
+let num_vertices (g: t) = nb_vertex g
 
-(* let get_vertices (m, i) = *)
-(*   VertexMap.fold (fun k _ acc -> VertexSet.add k acc) *)
-(*                  m VertexSet.empty *)
+let get_vertices (g: t) =
+  fold_vertex (fun v acc -> VertexSet.add (V.label v) acc) g VertexSet.empty
 
 let fold_vertices (f: Vertex.t -> 'a -> 'a) i (acc: 'a) : 'a =
   let rec loop j =
@@ -78,19 +73,23 @@ let fold_vertices (f: Vertex.t -> 'a -> 'a) i (acc: 'a) : 'a =
 (* let get_vertices (_, i) = *)
 (*   VertexSet.of_enum (BatEnum.(--) 0 i) *)
 
-let edges g =
+let edges (g: t) =
   let append_edge u v acc = (u, v) :: acc
   in
   BatList.rev
     (fold_edges append_edge g [])
 
-let edges_map (m, _) (f: Edge.t -> 'a) =
-  let my_edges v neighbors a =
-    BatList.fold_left (fun a w -> EdgeMap.add (v, w) (f (v,w)) a) a neighbors
+let of_edges (l: (V.t * V.t) list) : t =
+  let g = create () in
+  begin
+    BatList.iter (fun (u, v) -> add_edge g u v) l;
+    g
+  end
+
+let edges_map (g: t) (f: Edge.t -> 'a) =
+  let add_edge u v acc = EdgeMap.add (u, v) (f (u, v)) acc
   in
-  VertexMap.fold
-    (fun v neighbors a -> my_edges v neighbors a)
-    m EdgeMap.empty
+  fold_edges add_edge g EdgeMap.empty
 
 (* a vertex v does not belong to a graph's set of vertices *)
 exception BadVertex of Vertex.t
@@ -116,10 +115,10 @@ let good_graph g =
 (*   in *)
 (*   (update v f m, i) *)
 
-(* let rec add_edges g edges = *)
-(*   match edges with *)
-(*   | [] -> g *)
-(*   | e :: edges -> add_edges (add_edge g e) edges *)
+let rec add_edges g edges =
+  match edges with
+  | [] -> g
+  | e :: edges -> add_edges (add_edge_e g e) edges
 
 (* add_edge g e adds directed edge e to g *)
 (* let remove_edge (m, i) (v, w) = *)
@@ -222,40 +221,40 @@ let dfs (g: t) (rg : int EdgeMap.t) (s: Vertex.t) =
   in
   loop s VertexSet.empty
 
-(* let min_cut g s t =*)
-(*   let rg = ref (edges_map g (fun _ -> 1)) in*)
-(*   let rec loop reach path =*)
-(*     if reach then*)
-(*       begin*)
-(*         let path_flow = ref max_int in*)
-(*         let u = ref t in*)
-(*         while (!u <> s) do*)
-(*           let v = !u in*)
-(*           u := VertexMap.find !u path;*)
-(*           path_flow := min !path_flow (EdgeMap.find (!u, v) !rg)*)
-(*         done;*)
-(*         u := t;*)
-(*         while (!u <> s) do*)
-(*           let v = !u in (*current node*)*)
-(*           u := VertexMap.find !u path; (*parent node*)*)
-(*           rg := EdgeMap.modify (!u, v) (fun n -> n - !path_flow) !rg;*)
-(*           rg := EdgeMap.modify (v, !u) (fun n -> n + !path_flow) !rg*)
-(*         done;*)
-(*         let reach, path = bfs g !rg s t in*)
-(*         loop reach path*)
-(*       end*)
-(*   in*)
-(*   let reach, path = bfs g !rg s t in*)
-(*   loop reach path;*)
+let min_cut (g: t) s t =
+  let rg = ref (edges_map g (fun _ -> 1)) in
+  let rec loop reach path =
+    if reach then
+      begin
+        let path_flow = ref max_int in
+        let u = ref t in
+        while (!u <> s) do
+          let v = !u in
+          u := VertexMap.find !u path;
+          path_flow := min !path_flow (EdgeMap.find (!u, v) !rg)
+        done;
+        u := t;
+        while (!u <> s) do
+          let v = !u in (*current node*)
+          u := VertexMap.find !u path; (*parent node*)
+          rg := EdgeMap.modify (!u, v) (fun n -> n - !path_flow) !rg;
+          rg := EdgeMap.modify (v, !u) (fun n -> n + !path_flow) !rg
+        done;
+        let reach, path = bfs g !rg s t in
+        loop reach path
+      end
+  in
+  let reach, path = bfs g !rg s t in
+  loop reach path;
 
-(*   let visited = dfs g !rg s in *)
-(*   let cut = EdgeMap.fold (fun (u,v) _ cutset -> *)
-(*                 if (VertexSet.mem u visited) && (not (VertexSet.mem v visited)) then *)
-(*                   (EdgeSet.add (u,v) cutset) *)
-(*                 else *)
-(*                   cutset) !rg EdgeSet.empty *)
-(*   in *)
-(*   (cut, visited, VertexSet.diff (get_vertices g) visited) *)
+  let visited = dfs g !rg s in
+  let cut = EdgeMap.fold (fun (u,v) _ cutset ->
+                if (VertexSet.mem u visited) && (not (VertexSet.mem v visited)) then
+                  (EdgeSet.add (u,v) cutset)
+                else
+                  cutset) !rg EdgeSet.empty
+  in
+  (cut, visited, VertexSet.diff (get_vertices g) visited)
 
 (*
 module BoolOrdered = struct
