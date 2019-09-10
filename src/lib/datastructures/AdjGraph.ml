@@ -58,6 +58,25 @@ let fold_vertices (f: Vertex.t -> 'a -> 'a) i (acc: 'a) : 'a =
 let create i =
   fold_vertices (fun v g -> add_vertex g v) i empty
 
+(* a vertex v does not belong to a graph's set of vertices *)
+exception BadVertex of Vertex.t
+
+let good_vertex g v = 
+  if not (mem_vertex g v)
+  then (Printf.printf "bad: %s" (Vertex.printVertex v); raise (BadVertex v))
+
+(* neighbors of v in g *)
+let neighbors g v =
+  good_vertex g v ;
+  (* collect all successors and predecessors, ignoring duplicates *)
+  let succs = fold_succ (fun u s -> BatSet.add u s) g v BatSet.empty
+    in
+    let all_nbrs = fold_pred (fun u s -> BatSet.add u s) g v succs
+      in
+      BatSet.elements all_nbrs
+  (* succ g v pred g v *)
+  (* match find_opt v m with None -> [] | Some ns -> ns *)
+
 let edges (g: t) =
   let append_edge u v acc = (u, v) :: acc
   in
@@ -68,33 +87,23 @@ let of_edges (l: (Vertex.t * Vertex.t) list) : t =
   let g = empty in
     BatList.fold_left (fun g (u, v) -> add_edge g u v) g l
 
+(* return a VertexMap where each vertex key has a map of edge neighbors *)
 let edges_map (g: t) (f: Edge.t -> 'a) =
-  let add_edge u v acc = EdgeMap.add (u, v) (f (u, v)) acc
+  (* create an EdgeMap containing all neighbors of u *)
+  let my_edges v neighbors a =
+    BatList.fold_left (fun a w -> EdgeMap.add (v, w) (f (v, w)) a) a neighbors
   in
-  fold_edges add_edge g EdgeMap.empty
-
-(* a vertex v does not belong to a graph's set of vertices *)
-exception BadVertex of Vertex.t
-
-let good_vertex g v = 
-  if not (mem_vertex g v)
-  then (Printf.printf "bad: %s" (Vertex.printVertex v); raise (BadVertex v))
-
-let good_graph g =
-  BatList.iter
-    (fun (v, w) -> good_vertex g v ; good_vertex g w)
-    (edges g)
+  fold_vertex (fun v a -> my_edges v (neighbors g v) a) g EdgeMap.empty
 
 let rec add_edges g edges =
   match edges with
   | [] -> g
   | e :: edges -> add_edges (add_edge_e g e) edges
 
-(* neighbors of v in g *)
-let neighbors g v =
-  good_vertex g v ;
-  succ g v
-  (* match find_opt v m with None -> [] | Some ns -> ns *)
+let good_graph g =
+  BatList.iter
+    (fun (v, w) -> good_vertex g v ; good_vertex g w)
+    (edges g)
 
 let print g =
   Printf.printf "%d\n" (nb_vertex g) ;
@@ -156,7 +165,7 @@ let dfs (g: t) (rg : int EdgeMap.t) (s: Vertex.t) =
   in
   loop s VertexSet.empty
 
-let min_cut (g: t) s t =
+let min_cut g s t =
   let rg = ref (edges_map g (fun _ -> 1)) in
   let rec loop reach path =
     if reach then
