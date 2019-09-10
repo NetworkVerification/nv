@@ -1,9 +1,6 @@
 open Graph
 
-(* include Pack.Graph *)
-
 module Vertex = struct
-  (* include Pack.Graph.V *)
   type t = int (* Really should be Syntax.node, but that causes a dependency loop *)
 
   let printVertex i =
