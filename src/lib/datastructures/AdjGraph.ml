@@ -24,15 +24,7 @@ let create_vertices (i: int) =
   let e = 0 -- i in
     BatEnum.fold (fun acc v -> VertexSet.add v acc) VertexSet.empty e
 
-module Edge = struct
-  type t = Vertex.t * Vertex.t
-
-  let src = fst
-  let dst = snd
-  let compare (v1, w1) (v2, w2) =
-    if Pervasives.compare v1 v2 <> 0 then Pervasives.compare v1 v2
-    else Pervasives.compare w1 w2
-end
+module Edge = E
 
 let printEdge (e : Edge.t) =
   Printf.sprintf "<%d,%d>" (Edge.src e) (Edge.dst e);
@@ -52,12 +44,7 @@ let print_vertex_map elem_to_string m =
       print_endline (Vertex.printVertex k ^ ":" ^ elem_to_string v) )
     m
 
-(* a graph as ajacency list * # of vertices *)
-(* type t = Vertex.t list VertexMap.t * int *)
-
 (* vertices and edges *)
-let num_vertices = nb_vertex
-
 let get_vertices (g: t) =
   fold_vertex (fun v acc -> VertexSet.add v acc) g VertexSet.empty
 
@@ -70,11 +57,6 @@ let fold_vertices (f: Vertex.t -> 'a -> 'a) i (acc: 'a) : 'a =
 
 let create i =
   fold_vertices (fun v g -> add_vertex g v) i empty
-
-(* get_vertices now returns all the vertices in the graph, not just
-   the ones that have an outgoing edge.*)
-(* let get_vertices (_, i) = *)
-(*   VertexSet.of_enum (BatEnum.(--) 0 i) *)
 
 let edges (g: t) =
   let append_edge u v acc = (u, v) :: acc
@@ -95,7 +77,6 @@ let edges_map (g: t) (f: Edge.t -> 'a) =
 exception BadVertex of Vertex.t
 
 let good_vertex g v = 
-  (* if Pervasives.compare v 0 < 0 || not (Pervasives.compare (nb_vertex g) v > 0) *)
   if not (mem_vertex g v)
   then (Printf.printf "bad: %s" (Vertex.printVertex v); raise (BadVertex v))
 
@@ -104,56 +85,10 @@ let good_graph g =
     (fun (v, w) -> good_vertex g v ; good_vertex g w)
     (edges g)
 
-(* add_edge g e adds directed edge e to g *)
-(* let add_edge (m, i) (v, w) = *)
-(*   good_vertex (m, i) v ; *)
-(*   good_vertex (m, i) w ; *)
-(*   let f adj = *)
-(*     match adj with *)
-(*     | None -> Some [w] *)
-(*     | Some ns -> if BatList.mem w ns then adj else Some (w :: ns) *)
-(*   in *)
-(*   (update v f m, i) *)
-
 let rec add_edges g edges =
   match edges with
   | [] -> g
   | e :: edges -> add_edges (add_edge_e g e) edges
-
-(* add_edge g e adds directed edge e to g *)
-(* let remove_edge (m, i) (v, w) = *)
-(*   good_vertex (m, i) v ; *)
-(*   good_vertex (m, i) w ; *)
-(*   let f adj = *)
-(*     match adj with *)
-(*     | None -> adj *)
-(*     | Some ns -> *)
-(*       match *)
-(*         BatList.filter (fun a -> not (a = w)) ns *)
-(*       with *)
-(*       | [] -> None *)
-(*       | ns' -> Some ns' *)
-(*   in *)
-(*   (update v f m, i) *)
-
-(* let remove_edges (m, i) (es: EdgeSet.t) = *)
-(*   let umap = EdgeSet.fold (fun (u,v) acc -> *)
-(*                  VertexMap.modify_def (VertexSet.empty) u *)
-(*                                       (fun vs -> VertexSet.add v vs) acc) *)
-(*                           es VertexMap.empty *)
-(*   in *)
-(*   let f vs adj = *)
-(*     match adj with *)
-(*     | None -> adj *)
-(*     | Some ns -> *)
-(*       match *)
-(*         BatList.filter (fun a -> not (VertexSet.mem a vs)) ns *)
-(*       with *)
-(*       | [] -> None *)
-(*       | ns' -> Some ns' *)
-(*   in *)
-(*   let m' = VertexMap.fold (fun u vs acc -> update u (f vs) acc) umap m in *)
-(*   (m', i) *)
 
 (* neighbors of v in g *)
 let neighbors g v =
@@ -256,13 +191,6 @@ let min_cut (g: t) s t =
   in
   (cut, visited, VertexSet.diff (get_vertices g) visited)
 
-(*
-module BoolOrdered = struct
-  type t = bool
-  let default = false
-  let compare = compare
-end *)
-
 module DrawableGraph = struct
 
   let graph_dot_file =
@@ -272,13 +200,6 @@ module DrawableGraph = struct
     file ^ "-" ^ (string_of_int k) ^ "-" ^ (string_of_int !counter)
 
   module G = Graph.Persistent.Graph.Concrete (Vertex)
-  (* module G = Pack.Graph *)
-
-(*   let createGraph ((m,_): t)  = *)
-(*     (1* Assume no vertices of degree 0 *1) *)
-(*     VertexMap.fold (fun u es acc -> *)
-(*         BatList.fold_left (fun acc v -> *)
-(*             G.add_edge_e acc (G.E.create u () v)) acc es) m G.empty *)
 
   module Dot = Graph.Graphviz.Dot(struct
                    include G

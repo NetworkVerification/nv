@@ -387,7 +387,7 @@ module BuildAbstractNetwork =
       let open Slicing in
       let absGraph= buildAbstractAdjGraph slice.net.graph f in
       let edgeshat = AdjGraph.edges absGraph in
-      let n = AdjGraph.num_vertices absGraph in
+      let n = AdjGraph.nb_vertex absGraph in
       (* build the symbolic representation of failures *)
       (*TODO: make this a separate transformation?*)
       let (failuresMap, symbolics, requires) = buildSymbolicFailures edgeshat k in
@@ -400,12 +400,12 @@ module BuildAbstractNetwork =
       in
       (* build the abstract init function *)
       let initMap =
-        Slicing.partialEvalOverNodes (num_vertices slice.net.graph) slice.net.init
+        Slicing.partialEvalOverNodes (AdjGraph.nb_vertex slice.net.graph) slice.net.init
       in
       let inithat = buildAbstractInit slice.destinations initMap slice.net.attr_type f in
       (* build the abstract assert function *)
       let assertMap =
-        Slicing.partialEvalOverNodes (num_vertices slice.net.graph) (Nv_utils.OCamlUtils.oget slice.net.assertion)
+        Slicing.partialEvalOverNodes (AdjGraph.nb_vertex slice.net.graph) (Nv_utils.OCamlUtils.oget slice.net.assertion)
       in
       let asserthat = buildAbstractAssert assertMap f in
       if !debugAbstraction then
@@ -961,7 +961,7 @@ module FailuresAbstraction =
                else (acc, AdjGraph.add_edge_e ag edge)
             | _ -> failwith "This should be a boolean variable") failVars
                      (EdgeSet.empty,
-                      AdjGraph.create (AbstractionMap.size f))
+                      AdjGraph.empty)
       in
 
       (* number of concrete links failed in the network *)
@@ -979,7 +979,7 @@ module FailuresAbstraction =
             AdjGraph.fold_vertices (fun u acc ->
                 if not (validAttribute attrTy (VertexMap.find u sol.labels)) then
                   VertexSet.add u acc
-                else acc) (AdjGraph.num_vertices agraph) VertexSet.empty
+                else acc) (AdjGraph.nb_vertex agraph) VertexSet.empty
           in
           (* and the set of edges that were not used for forwarding even though there
              were no failures *)
@@ -1382,7 +1382,7 @@ module FailuresAbstraction =
          (* for statistics only *)
          (* let ag = BuildAbstractNetwork.buildAbstractAdjGraph g f in *)
          (* let d = getId f (VertexSet.choose ds) in *)
-         (* for u=0 to (AdjGraph.num_vertices ag |> Integer.to_int) do *)
+         (* for u=0 to (AdjGraph.nb_vertex ag |> Integer.to_int) do *)
          (*    let (es, sset, tset) =  min_cut ag d (Integer.of_int u) in *)
          (*      if (EdgeSet.cardinal es > (k+1)) then *)
          (*        Printf.printf "not optimal\n" *)

@@ -341,7 +341,7 @@ let network_to_string ?(show_topology=false) (net : Syntax.network) =
   (if not show_topology then [] else
      let open Nv_datastructures in
      [
-       Printf.sprintf "let nodes = %d\n\n" (AdjGraph.num_vertices net.graph);
+       Printf.sprintf "let nodes = %d\n\n" (AdjGraph.nb_vertex net.graph);
 
        Printf.sprintf "let edges = {%s}\n\n" @@ list_to_string
          (fun (i, j) -> Printf.sprintf "%dn-%dn" i j)

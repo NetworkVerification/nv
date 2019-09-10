@@ -493,7 +493,7 @@ let solve_hiding info query partial_chan ~full_chan ?(params=[]) ?(starting_vars
   ask_solver_blocking partial_solver partial_encoding;
   ask_solver_blocking full_solver full_encoding;
 
-  let nodes = Nv_datastructures.AdjGraph.num_vertices net.graph in
+  let nodes = Nv_datastructures.AdjGraph.nb_vertex net.graph in
   let ask_for_nv_model solver =
     ask_for_model query partial_chan info full_env solver renaming nodes net.assertion
   in

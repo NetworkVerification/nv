@@ -41,7 +41,7 @@ let network_to_srp (net : network) =
         (*create label var *)
         let lbl_var = Var.create lbl_u_name in
         AdjGraph.VertexMap.add u [(lbl_var, net.attr_type)] acc)
-      (AdjGraph.num_vertices net.graph) AdjGraph.VertexMap.empty
+      (AdjGraph.nb_vertex net.graph) AdjGraph.VertexMap.empty
   in
   (* Map from nodes to incoming messages*)
   let incoming_messages_map =
@@ -66,7 +66,7 @@ let network_to_srp (net : network) =
         let best_eval = InterpPartialFull.interp_partial best in
         (* Printf.printf "merge after interp:\n%s\n" (Printing.exp_to_string best_eval); *)
         AdjGraph.VertexMap.add u best_eval acc)
-      (AdjGraph.num_vertices net.graph) AdjGraph.VertexMap.empty
+      (AdjGraph.nb_vertex net.graph) AdjGraph.VertexMap.empty
   in
   { srp_attr = net.attr_type;
     srp_constraints = merged_messages_map;
