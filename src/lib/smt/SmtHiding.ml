@@ -369,7 +369,7 @@ let get_variables_to_unhide query chan solver =
   let print_and_ask solver q =
     if query then
       printQuery chan q;
-    ask_solver solver q
+    ask_solver_blocking solver q
   in
   (* TODO: Z3 doesn't minimize cores by default; we may want it to do so *)
   print_and_ask solver "(get-unsat-core)\n";
@@ -458,11 +458,11 @@ let rec refineModel info verbose query partial_chan full_chan ask_for_nv_model p
 ;;
 
 let partial_solver = lazy(let solver = start_solver [] in
-                          ask_solver solver "(set-option :model_evaluator.completion true)";
+                          ask_solver_blocking solver "(set-option :model_evaluator.completion true)";
                           solver)
 
 let full_solver = lazy(let solver = start_solver [] in
-                       ask_solver solver @@ "(set-option :model_evaluator.completion true)\n" ^
+                       ask_solver_blocking solver @@ "(set-option :model_evaluator.completion true)\n" ^
                                             "(set-option :produce-unsat-cores true)\n";
                        solver)
 
