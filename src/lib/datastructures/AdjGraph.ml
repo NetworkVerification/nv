@@ -46,7 +46,7 @@ let print_vertex_map elem_to_string m =
 
 (* vertices and edges *)
 let get_vertices (g: t) =
-  fold_vertex (fun v acc -> VertexSet.add v acc) g VertexSet.empty
+  fold_vertex VertexSet.add g VertexSet.empty
 
 let fold_vertices (f: Vertex.t -> 'a -> 'a) i (acc: 'a) : 'a =
   let rec loop j =
@@ -69,19 +69,17 @@ let good_vertex g v =
 let neighbors g v =
   good_vertex g v ;
   (* collect all successors and predecessors, ignoring duplicates *)
-  let succs = fold_succ (fun u s -> BatSet.add u s) g v BatSet.empty
+  let succs = fold_succ BatSet.add g v BatSet.empty
     in
-    let all_nbrs = fold_pred (fun u s -> BatSet.add u s) g v succs
+    let all_nbrs = fold_pred BatSet.add g v succs
       in
       BatSet.elements all_nbrs
   (* succ g v pred g v *)
   (* match find_opt v m with None -> [] | Some ns -> ns *)
 
 let edges (g: t) =
-  let append_edge u v acc = (u, v) :: acc
-  in
   BatList.rev
-    (fold_edges append_edge g [])
+    (fold_edges_e List.cons g [])
 
 let of_edges (l: (Vertex.t * Vertex.t) list) : t =
   let g = empty in
