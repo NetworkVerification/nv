@@ -190,10 +190,10 @@ module BuildAbstractNetwork =
 
     let buildAbstractAdjGraph (g: AdjGraph.t) (f: abstractionMap) : AdjGraph.t =
       let n = size f in
-      let ag = AdjGraph.create ~size:n () in
+      let ag = AdjGraph.create n in
       fold_vertices (fun uhat ag ->
           let es = findAbstractEdges g f uhat in
-          EdgeSet.fold (fun e ag -> AdjGraph.add_edge_e ag e) es ag) n ag
+          EdgeSet.fold (fun e ag -> add_edge_e ag e) es ag) n ag
 
     (* get all the concrete neighbors v of u s.t. f(v) = vhat *)
     let getNeighborsInVhat f g u vhat =
@@ -655,7 +655,7 @@ module FailuresAbstraction =
           let u, todo' = VertexSet.pop_min todo in
           if u <> d then
             begin
-              let (es, sset, tset) =  AdjGraph.min_cut g d u in
+              let (es, sset, tset) =  min_cut g d u in
               if EdgeSet.cardinal es > k then
                 loop todo' cuts new_todo
               else
@@ -960,8 +960,8 @@ module FailuresAbstraction =
                  end
                else (acc, AdjGraph.add_edge_e ag edge)
             | _ -> failwith "This should be a boolean variable") failVars
-                     (EdgeSet.empty, 
-                      AdjGraph.create ~size:(AbstractionMap.size f) ())
+                     (EdgeSet.empty,
+                      AdjGraph.create (AbstractionMap.size f))
       in
 
       (* number of concrete links failed in the network *)

@@ -1,13 +1,17 @@
+
 module Vertex :
   sig
+    (* include module type of Graph.Pack.Graph.V *)
     type t = int (* Really should be Syntax.node, but that causes a dependency loop *)
 
     val printVertex : t -> string
     val compare : t -> t -> int
     val equal : t -> t -> bool
     val hash : t -> int
-    val of_int : int -> t
   end
+
+(* graph *)
+include module type of Graph.Persistent.Graph.Concrete (Vertex)
 
 module Edge : Map.OrderedType with type t = Vertex.t * Vertex.t
 
@@ -32,10 +36,6 @@ val vertex_map_to_string : ('a -> string) -> 'a VertexMap.t -> string
 
 val print_vertex_map : ('a -> string) -> 'a VertexMap.t -> unit
 
-(* graph *)
-(* include module type of Graph.Persistent.Graph.Concrete (Vertex) *)
-include module type of Graph.Pack.Graph
-
 (* raise BadVertex if a vertex v does not belong to a graph's set of vertices, ie: 0..num_vertex-1 *)
 
 exception BadVertex of Vertex.t
@@ -45,10 +45,9 @@ val good_vertex : t -> Vertex.t -> unit
 val good_graph : t -> unit
 
 (* create a graph with i vertices named 0..i-1 *)
-(* val create : int -> t *)
+val create : int -> t
 
 (* number of vertices in the graph (named 0..i-1) *)
-
 val num_vertices : t -> int
 
 val fold_vertices : (Vertex.t -> 'a -> 'a) -> Vertex.t -> 'a -> 'a

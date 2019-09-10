@@ -1,6 +1,9 @@
 open Graph
 
+(* include Pack.Graph *)
+
 module Vertex = struct
+  (* include Pack.Graph.V *)
   type t = int (* Really should be Syntax.node, but that causes a dependency loop *)
 
   let printVertex i =
@@ -9,8 +12,9 @@ module Vertex = struct
   let compare = Pervasives.compare
   let equal = (fun a b -> compare a b = 0)
   let hash = Hashtbl.hash
-  let of_int i = i
 end
+
+include Persistent.Graph.Concrete(Vertex)
 
 module VertexMap = BatMap.Make (Vertex)
 module VertexSet = BatSet.Make(Vertex)
@@ -21,21 +25,20 @@ let create_vertices (i: int) =
   let open Batteries in
   (* enumerate ints *)
   let e = 0 -- i in
-    BatEnum.fold (fun acc v -> VertexSet.add (Vertex.of_int v) acc) VertexSet.empty e
+    BatEnum.fold (fun acc v -> VertexSet.add v acc) VertexSet.empty e
 
 module Edge = struct
   type t = Vertex.t * Vertex.t
 
+  let src = fst
+  let dst = snd
   let compare (v1, w1) (v2, w2) =
     if Pervasives.compare v1 v2 <> 0 then Pervasives.compare v1 v2
     else Pervasives.compare w1 w2
 end
 
-(* include Persistent.Graph.Concrete(Vertex) *)
-include Pack.Graph
-
 let printEdge (e : Edge.t) =
-  Printf.sprintf "<%d,%d>" (fst e) (snd e);
+  Printf.sprintf "<%d,%d>" (Edge.src e) (Edge.dst e);
 
 module EdgeSet = BatSet.Make(Edge)
 module EdgeMap = BatMap.Make(Edge)
@@ -43,23 +46,23 @@ module EdgeMap = BatMap.Make(Edge)
 let vertex_map_to_string elem_to_string m =
   let kvs = VertexMap.fold (fun k v l -> (k, v) :: l) m [] in
   BatList.fold_left
-    (fun s (k, v) -> string_of_int k ^ ":" ^ elem_to_string v ^ s)
+    (fun s (k, v) -> (Vertex.printVertex k) ^ ":" ^ elem_to_string v ^ s)
     "" kvs
 
 let print_vertex_map elem_to_string m =
   VertexMap.iter
     (fun k v ->
-      print_endline (string_of_int k ^ ":" ^ elem_to_string v) )
+      print_endline (Vertex.printVertex k ^ ":" ^ elem_to_string v) )
     m
 
 (* a graph as ajacency list * # of vertices *)
 (* type t = Vertex.t list VertexMap.t * int *)
 
 (* vertices and edges *)
-let num_vertices (g: t) = nb_vertex g
+let num_vertices = nb_vertex
 
 let get_vertices (g: t) =
-  fold_vertex (fun v acc -> VertexSet.add (V.label v) acc) g VertexSet.empty
+  fold_vertex (fun v acc -> VertexSet.add v acc) g VertexSet.empty
 
 let fold_vertices (f: Vertex.t -> 'a -> 'a) i (acc: 'a) : 'a =
   let rec loop j =
@@ -67,6 +70,9 @@ let fold_vertices (f: Vertex.t -> 'a -> 'a) i (acc: 'a) : 'a =
     else f j (loop (j + 1))
   in
   loop 0
+
+let create i =
+  fold_vertices (fun v g -> add_vertex g v) i empty
 
 (* get_vertices now returns all the vertices in the graph, not just
    the ones that have an outgoing edge.*)
@@ -79,12 +85,9 @@ let edges (g: t) =
   BatList.rev
     (fold_edges append_edge g [])
 
-let of_edges (l: (V.t * V.t) list) : t =
-  let g = create () in
-  begin
-    BatList.iter (fun (u, v) -> add_edge g u v) l;
-    g
-  end
+let of_edges (l: (Vertex.t * Vertex.t) list) : t =
+  let g = empty in
+    BatList.fold_left (fun g (u, v) -> add_edge g u v) g l
 
 let edges_map (g: t) (f: Edge.t -> 'a) =
   let add_edge u v acc = EdgeMap.add (u, v) (f (u, v)) acc
@@ -165,7 +168,7 @@ let print g =
   Printf.printf "%d\n" (nb_vertex g) ;
   BatList.iter
     (fun (v, w) ->
-      Printf.printf "%d -> %d\n" v w
+      Printf.printf "%s -> %s\n" (Vertex.printVertex v) (Vertex.printVertex w)
       )
     (edges g)
 
@@ -176,7 +179,7 @@ let to_string g =
     | [] -> ()
     | (v, w) :: rest ->
         Buffer.add_string b
-          (Printf.sprintf "%d -> %d\n" v w) ;
+          (Printf.sprintf "%s -> %s\n" (Vertex.printVertex v) (Vertex.printVertex w)) ;
         add_edges rest
   in
   Buffer.add_string b (string_of_int (nb_vertex g) ^ "\n") ;
@@ -272,6 +275,7 @@ module DrawableGraph = struct
     file ^ "-" ^ (string_of_int k) ^ "-" ^ (string_of_int !counter)
 
   module G = Graph.Persistent.Graph.Concrete (Vertex)
+  (* module G = Pack.Graph *)
 
 (*   let createGraph ((m,_): t)  = *)
 (*     (1* Assume no vertices of degree 0 *1) *)
@@ -288,7 +292,7 @@ module DrawableGraph = struct
                    let vertex_attributes v =
                      let label = Vertex.printVertex v in
                      [`Shape `Circle; `Label label; `Fontsize 11;]
-                   let vertex_name v = string_of_int v
+                   let vertex_name v = Vertex.printVertex v
                    let default_vertex_attributes _ = []
                    let graph_attributes _ = [`Center true; `Nodesep 0.45;
                                              `Ranksep 0.45; `Size (82.67, 62.42)]
