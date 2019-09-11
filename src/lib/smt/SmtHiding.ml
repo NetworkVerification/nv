@@ -1,5 +1,5 @@
 (** * SMT encoding of network *)
-
+open Batteries
 open Nv_lang.Collections
 open Nv_utils.Profile
 open SolverUtil
@@ -27,7 +27,7 @@ let propagate_eqs_for_hiding (env : smt_env) =
     try
       StringMap.find s eqSets, eqSets
     with Not_found ->
-      let r = BatUref.uref s in
+      let r = Uref.uref s in
       r, StringMap.add s r eqSets
   in
   (* True iff this is not an equality between a label- and a merge- variable,
@@ -37,19 +37,19 @@ let propagate_eqs_for_hiding (env : smt_env) =
       (* FIXME: The bit that checks for -result is a little fragile, since a user could
                 conceivably make a variable name containing that string. If it starts
                 causing problems we won't lose any precision by removing it. *)
-      (BatString.starts_with s1 "label-" && BatString.starts_with s2 "merge-" && BatString.exists s2 "-result") ||
-      (BatString.starts_with s2 "label-" && BatString.starts_with s1 "merge-" && BatString.exists s1 "-result") ||
-      (BatString.starts_with s1 "assert-" && BatString.ends_with s1 "-result") ||
-      (BatString.starts_with s2 "assert-" && BatString.ends_with s2 "-result")
+      (String.starts_with s1 "label-" && String.starts_with s2 "merge-" && String.exists s2 "-result") ||
+      (String.starts_with s2 "label-" && String.starts_with s1 "merge-" && String.exists s1 "-result") ||
+      (String.starts_with s1 "assert-" && String.ends_with s1 "-result") ||
+      (String.starts_with s2 "assert-" && String.ends_with s2 "-result")
     in
     not should_not_propagate
   in
-  (* Used for BatUref.unite to ensure it always selects label- variables if
+  (* Used for Uref.unite to ensure it always selects label- variables if
      possible, so the resulting SMT program has things in terms of the attributes
      of each node *)
-  let sel s1 s2 = if BatString.starts_with s1 "label-" then s1 else s2 in
+  let sel s1 s2 = if String.starts_with s1 "label-" then s1 else s2 in
   (* compute equality classes of variables and remove equalities between variables *)
-  let (eqSets, valMap, new_ctx) = BatList.fold_left (fun (eqSets, valMap, acc) c ->
+  let (eqSets, valMap, new_ctx) = List.fold_left (fun (eqSets, valMap, acc) c ->
       match c.com with
       | Assert tm ->
         (match tm.t with
@@ -58,7 +58,7 @@ let propagate_eqs_for_hiding (env : smt_env) =
             | Var s1, Var s2 when should_propagate s1 s2 ->
               let r1, eqSets = updateUnionFind eqSets s1 in
               let r2, eqSets = updateUnionFind eqSets s2 in
-              BatUref.unite ~sel:sel r1 r2;
+              Uref.unite ~sel:sel r1 r2;
               (eqSets, valMap, acc)
             (* | Var s1, Int _ | Var s1, Bool _ ->
                let valMap = StringMap.add s1 tm2 valMap in
@@ -68,14 +68,14 @@ let propagate_eqs_for_hiding (env : smt_env) =
       | _ -> (eqSets, valMap, c :: acc))
       (StringMap.empty, StringMap.empty, []) env.ctx
   in
-  let renaming = StringMap.map (fun r -> BatUref.uget r) eqSets in
+  let renaming = StringMap.map (fun r -> Uref.uget r) eqSets in
   let newValMap = StringMap.fold (fun s v acc ->
       match StringMap.Exceptionless.find s renaming with
       | None -> StringMap.add s v acc
       | Some r -> StringMap.add r v acc) valMap StringMap.empty
   in
   (* apply the computed renaming *)
-  env.ctx <- BatList.rev_map (fun c ->
+  env.ctx <- List.rev_map (fun c ->
       match c.com with
       | Assert tm ->
         {c with com = Assert (alpha_rename_term renaming newValMap tm)}
@@ -129,14 +129,14 @@ let map_vars_to_commands env : command list StringMap.t =
     | [] -> map
     | lst ->
       (* If this is true, then this is *definitely* a "require" clause *)
-      if BatList.for_all (fun s -> BatString.starts_with s "symbolic-") lst
+      if List.for_all (fun s -> String.starts_with s "symbolic-") lst
       (* So unhide this clause when we unhide any of the symbolic variables *)
       then List.fold_left (update_map com) map lst
       else
         (* Otherwise, it's probably a regular assert. Unhide it when we unhide
            the primary variable *)
         match get_assert_var com with
-        | Some s1 when not (BatString.starts_with s1 "symbolic-") ->
+        | Some s1 when not (String.starts_with s1 "symbolic-") ->
           update_map com map s1
         | _ ->
           (* This is a require clause which involves a non-symbolic variable.
@@ -170,17 +170,12 @@ let hiding_map_to_string hm : string =
       smt_term_to_smt tm.t
     | _ -> failwith "hiding_map_to_string failure"
   in
-  StringMap.fold
-    (fun _var (b1, b2, coms, decl) acc ->
-       let str =
-         Printf.sprintf "(%b, %b, [%s], %s)" b1 b2
-           (BatString.concat ", " @@ List.map com_to_str coms)
-           (decl.cname)
-       in
-       acc ^ str ^ "\n"
-    )
+  StringMap.to_string
+    (fun (b1, b2, coms, decl) ->
+       Printf.sprintf "(%b, %b, [%s], %s)" b1 b2
+         (String.concat ", " @@ List.map com_to_str coms)
+         (decl.cname))
     hm
-    ""
 ;;
 
 let declare_variable hiding_map var : hiding_map * ConstantSet.t =
@@ -211,7 +206,7 @@ let rec unhide_variable hiding_map var : hiding_map * command list * ConstantSet
     (* Never recursively unhide a label var: we only unhide these when they appear
        directly in an unsat core *)
     let label_vars, intermediate_vars =
-      List.partition (fun s -> BatString.starts_with s "label-") additional_vars
+      List.partition (fun s -> String.starts_with s "label-") additional_vars
     in
     (* Declare, but do not unhide, the label vars *)
     let new_map, new_decls =
@@ -268,14 +263,14 @@ let construct_starting_env (full_env : smt_env) : smt_env * hiding_map =
     | Assert tm ->
       begin
         match tm.t with
-        | Not (And (_, (Eq (Var s1, Bool true)))) -> BatString.starts_with s1 "assert-"
+        | Not (And (_, (Eq (Var s1, Bool true)))) -> String.starts_with s1 "assert-"
         | _ -> false
       end
     (* I don't think we'll have any other commands besides asserts, so if we do
        they're probably important, and so should probably not be hidden. *)
     | _ -> true
   in
-  let active_coms, _hidden_coms = BatList.partition must_keep full_env.ctx in
+  let active_coms, _hidden_coms = List.partition must_keep full_env.ctx in
 
   (*** Step 2: Unhide all the variables which appear in the remaining commands.
        This will probably mean unhiding all the assert-result variables. ***)
@@ -340,7 +335,7 @@ let get_model verbose info _query _chan solver =
         ignore @@ Str.search_forward line_regex s1 0;
         Str.matched_group 1 s1
       in
-      let varval = BatString.chop ~l:1 s2 in
+      let varval = String.chop ~l:1 s2 in
       process_raw_model tl @@ StringMap.add varname varval acc
   in
   process_raw_model (List.tl raw_model) StringMap.empty
@@ -375,7 +370,7 @@ let get_variables_to_unhide query chan solver =
   print_and_ask solver "(get-unsat-core)\n";
   let raw_core = Nv_utils.OCamlUtils.oget @@ get_reply solver in
   (* Chop off leading and trailing parens *)
-  let chopped_core = BatString.chop ~l:1 ~r:1 raw_core in
+  let chopped_core = String.chop ~l:1 ~r:1 raw_core in
   let assertion_names = String.split_on_char ' ' chopped_core in
   let prefix = Str.regexp "constraint-[0-9]+\\$" in
   List.concat @@
@@ -433,14 +428,14 @@ let rec refineModel info verbose query partial_chan full_chan ask_for_nv_model p
         in
         (* Convert the constant declarations into a string *)
         let constants =
-          BatString.concat "\n" @@
-          BatList.map (fun c -> const_decl_to_smt ~verbose:verbose info c)
+          String.concat "\n" @@
+          List.map (fun c -> const_decl_to_smt ~verbose:verbose info c)
             (ConstantSet.to_list decls_to_add)
         in
         (* Convert the commands into a string *)
         let commands =
-          BatString.concat "\n" @@
-          BatList.rev_map
+          String.concat "\n" @@
+          List.rev_map
             (fun c ->  smt_command_to_smt info c.com)
             coms_to_add
         in
@@ -463,7 +458,7 @@ let partial_solver = lazy(let solver = start_solver [] in
 
 let full_solver = lazy(let solver = start_solver [] in
                        ask_solver_blocking solver @@ "(set-option :model_evaluator.completion true)\n" ^
-                                            "(set-option :produce-unsat-cores true)\n";
+                                                     "(set-option :produce-unsat-cores true)\n";
                        solver)
 
 let solve_hiding info query partial_chan ~full_chan ?(starting_vars=[]) net =
