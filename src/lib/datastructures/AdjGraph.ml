@@ -65,17 +65,8 @@ let good_vertex g v =
   if not (mem_vertex g v)
   then (Printf.printf "bad: %s" (Vertex.printVertex v); raise (BadVertex v))
 
-(* neighbors of v in g *)
-let neighbors g v =
-  good_vertex g v ;
-  (* collect all successors and predecessors, ignoring duplicates *)
-  let succs = fold_succ BatSet.add g v BatSet.empty
-    in
-    let all_nbrs = fold_pred BatSet.add g v succs
-      in
-      BatSet.elements all_nbrs
-  (* succ g v pred g v *)
-  (* match find_opt v m with None -> [] | Some ns -> ns *)
+(* out-neighbors of v in g *)
+let neighbors = succ
 
 let edges (g: t) =
   BatList.rev
