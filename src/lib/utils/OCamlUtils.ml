@@ -9,6 +9,12 @@ let omap (f : 'a -> 'b) (x: 'a option): 'b option = (* BatOption.map f x *)
   | None -> None
   | Some y -> Some(f y)
 
+(*** Delayed computation ***)
+type 'a delayed = unit -> 'a
+
+let dmap (f : 'a -> 'b) (x : 'a delayed) : 'b delayed =
+  fun () -> f (x ())
+
 (*** List Utilities ***)
 let rec list_to_string f lst =
   Printf.sprintf "[%s]" @@ BatString.concat ";" @@ List.map f lst

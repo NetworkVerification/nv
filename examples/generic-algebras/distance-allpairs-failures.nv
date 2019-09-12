@@ -1,0 +1,28 @@
+include "../utils.nv"
+
+type attribute = option[dict[tnode, option[int]]]
+
+symbolic failures : dict[tedge, bool]
+require (foldEdges (fun k v acc -> acc + (if v then 1 else 0)) failures 0) <= 1
+
+let failed edge =
+  if failures[edge] then true else
+  match edge with
+  | u~v ->
+    match toEdge v u with
+    | Some e -> failures[e]
+    | None -> false
+
+let trans e x =
+  if failed e then None else
+  mapo (fun x -> map (fun o -> mapo (fun n -> n + 1) o) x) x
+
+let merge n x1 x2 =
+  mapbetter (fun x1 x2 ->
+  combine
+  (fun o1 o2 -> mapbetter (fun n1 n2 -> if n1 < n2 then n1 else n2) o1 o2)
+  x1 x2) x1 x2
+
+let init n =
+  let m = createDict None in
+  Some (m[n := Some 0])

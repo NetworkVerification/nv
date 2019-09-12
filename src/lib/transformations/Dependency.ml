@@ -14,24 +14,22 @@ type dependency =
   | VarDep of var (* Variable name *)
 ;;
 
-module DepSet = BatSet.Make (struct
+let dependency_to_string d =
+  match d with
+  | ArgDep n -> Printf.sprintf "Arg%d" n
+  | VarDep x -> Var.to_string x
+;;
+
+module DepSet = BetterSet.Make (struct
     type t = dependency
     let compare = compare
+    let to_string = dependency_to_string
   end)
 ;;
 
 type depresult =
   | DBase of DepSet.t
   | DTuple of depresult list
-;;
-
-type depmap = depresult VarMap.t
-;;
-
-let dependency_to_string d =
-  match d with
-  | ArgDep n -> Printf.sprintf "Arg%d" n
-  | VarDep x -> Var.to_string x
 ;;
 
 let rec depresult_to_string r =
@@ -44,13 +42,9 @@ let rec depresult_to_string r =
       (BatString.concat "; " @@ BatList.map depresult_to_string lst)
 ;;
 
-let depmap_to_string m =
-  Printf.sprintf "{ %s }" @@
-  VarMap.fold
-    (fun v r acc ->
-       Printf.sprintf "%s;\n %s -> %s " acc (Var.to_string v) (depresult_to_string r))
-    m ""
-;;
+type depmap = depresult VarMap.t;;
+
+let depmap_to_string = VarMap.to_string depresult_to_string;;
 
 let rec add_to_depresult (newdeps : DepSet.t) (r : depresult) =
   match r with
@@ -74,7 +68,6 @@ let rec compress_depresult r =
     let lst = List.map compress_depresult lst in
     List.fold_left combine_depresults (List.hd lst) (List.tl lst)
 ;;
-
 
 let rec compute_dependencies_exp (acc : depmap) (e : exp) : depresult =
   match e.e with
