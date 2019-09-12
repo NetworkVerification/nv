@@ -3,7 +3,7 @@ open Graph
 module Vertex = struct
   type t = int (* Really should be Syntax.node, but that causes a dependency loop *)
 
-  let printVertex i =
+  let to_string i =
     Printf.sprintf "%d" i
 
   let compare = Pervasives.compare
@@ -35,13 +35,13 @@ module EdgeMap = BatMap.Make(Edge)
 let vertex_map_to_string elem_to_string m =
   let kvs = VertexMap.fold (fun k v l -> (k, v) :: l) m [] in
   BatList.fold_left
-    (fun s (k, v) -> (Vertex.printVertex k) ^ ":" ^ elem_to_string v ^ s)
+    (fun s (k, v) -> (Vertex.to_string k) ^ ":" ^ elem_to_string v ^ s)
     "" kvs
 
 let print_vertex_map elem_to_string m =
   VertexMap.iter
     (fun k v ->
-      print_endline (Vertex.printVertex k ^ ":" ^ elem_to_string v) )
+      print_endline (Vertex.to_string k ^ ":" ^ elem_to_string v) )
     m
 
 (* vertices and edges *)
@@ -63,7 +63,7 @@ exception BadVertex of Vertex.t
 
 let good_vertex g v = 
   if not (mem_vertex g v)
-  then (Printf.printf "bad: %s" (Vertex.printVertex v); raise (BadVertex v))
+  then (Printf.printf "bad: %s" (Vertex.to_string v); raise (BadVertex v))
 
 (* out-neighbors of v in g *)
 let neighbors = succ
@@ -98,7 +98,7 @@ let print g =
   Printf.printf "%d\n" (nb_vertex g) ;
   BatList.iter
     (fun (v, w) ->
-      Printf.printf "%s -> %s\n" (Vertex.printVertex v) (Vertex.printVertex w)
+      Printf.printf "%s -> %s\n" (Vertex.to_string v) (Vertex.to_string w)
       )
     (edges g)
 
@@ -109,7 +109,7 @@ let to_string g =
     | [] -> ()
     | (v, w) :: rest ->
         Buffer.add_string b
-          (Printf.sprintf "%s -> %s\n" (Vertex.printVertex v) (Vertex.printVertex w)) ;
+          (Printf.sprintf "%s -> %s\n" (Vertex.to_string v) (Vertex.to_string w)) ;
         add_edges rest
   in
   Buffer.add_string b (string_of_int (nb_vertex g) ^ "\n") ;
@@ -206,9 +206,9 @@ module DrawableGraph = struct
                    let default_edge_attributes _ = []
                    let get_subgraph _ = None
                    let vertex_attributes v =
-                     let label = Vertex.printVertex v in
+                     let label = Vertex.to_string v in
                      [`Shape `Circle; `Label label; `Fontsize 11;]
-                   let vertex_name v = Vertex.printVertex v
+                   let vertex_name v = Vertex.to_string v
                    let default_vertex_attributes _ = []
                    let graph_attributes _ = [`Center true; `Nodesep 0.45;
                                              `Ranksep 0.45; `Size (82.67, 62.42)]
