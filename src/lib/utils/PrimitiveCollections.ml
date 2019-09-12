@@ -39,8 +39,8 @@ module BetterSet = struct
   end
 
   module type S = sig
-    include Map.S
-    val to_string : 'a t -> string
+    include Set.S
+    val to_string : t -> string
   end
 
   module Make (E : EltType) = struct

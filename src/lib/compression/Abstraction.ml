@@ -955,7 +955,7 @@ module FailuresAbstraction =
             | VBool b ->
                if b then
                  begin
-                   Printf.printf "Failed Edge: %s\n" (AdjGraph.printEdge edge);
+                   Printf.printf "Failed Edge: %s\n" (Edge.to_string edge);
                    (EdgeSet.add edge acc, AdjGraph.add_edge_e ag edge)
                  end
                else (acc, AdjGraph.add_edge_e ag edge)
@@ -1076,7 +1076,7 @@ module FailuresAbstraction =
             BatList.iter (fun cut ->
                 Printf.printf "min-cut: ";
                 BatList.iter (fun e ->
-                    Printf.printf "%s," (printEdge e))
+                    Printf.printf "%s," (Edge.to_string e))
                   cut;
                 Printf.printf "\n") concrete_cuts;
             raise Cutoff
@@ -1249,7 +1249,7 @@ module FailuresAbstraction =
             BatList.iter (fun cut ->
                 Printf.printf "min-cut: ";
                 BatList.iter (fun e ->
-                    Printf.printf "%s," (printEdge e))
+                    Printf.printf "%s," (Edge.to_string e))
                   cut;
                 Printf.printf "\n") concrete_cuts;
             raise Cutoff

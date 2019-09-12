@@ -1,4 +1,5 @@
 open Graph
+open Nv_utils.PrimitiveCollections
 
 module Vertex = struct
   type t = int (* Really should be Syntax.node, but that causes a dependency loop *)
@@ -13,10 +14,10 @@ end
 
 include Persistent.Graph.Concrete(Vertex)
 
-module VertexMap = BatMap.Make (Vertex)
-module VertexSet = BatSet.Make(Vertex)
-module VertexSetSet : BatSet.S with type elt = VertexSet.t = BatSet.Make(VertexSet)
-module VertexSetMap : BatMap.S with type key = VertexSet.t = BatMap.Make(VertexSet)
+module VertexMap = BetterMap.Make (Vertex)
+module VertexSet = BetterSet.Make(Vertex)
+module VertexSetSet : BetterSet.S with type elt = VertexSet.t = BetterSet.Make(VertexSet)
+module VertexSetMap : BetterMap.S with type key = VertexSet.t = BetterMap.Make(VertexSet)
 
 let create_vertices (i: int) =
   let open Batteries in
@@ -24,13 +25,15 @@ let create_vertices (i: int) =
   let e = 0 -- i in
     BatEnum.fold (fun acc v -> VertexSet.add v acc) VertexSet.empty e
 
-module Edge = E
+module Edge = struct
+  include E
 
-let printEdge (e : Edge.t) =
-  Printf.sprintf "<%d,%d>" (Edge.src e) (Edge.dst e);
+  let to_string e =
+    Printf.sprintf "<%s,%s>" (Vertex.to_string (src e)) (Vertex.to_string (dst e))
+end
 
-module EdgeSet = BatSet.Make(Edge)
-module EdgeMap = BatMap.Make(Edge)
+module EdgeSet = BetterSet.Make(Edge)
+module EdgeMap = BetterMap.Make(Edge)
 
 let vertex_map_to_string elem_to_string m =
   let kvs = VertexMap.fold (fun k v l -> (k, v) :: l) m [] in

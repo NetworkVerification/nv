@@ -2,7 +2,7 @@ module Vertex :
   sig
     type t = int (* Really should be Syntax.node, but that causes a dependency loop *)
 
-    val printVertex : t -> string
+    val to_string : t -> string
     val compare : t -> t -> int
     val equal : t -> t -> bool
     val hash : t -> int
@@ -11,9 +11,11 @@ module Vertex :
 (* graph *)
 include module type of Graph.Persistent.Graph.Concrete (Vertex)
 
-module Edge = E
-
-val printEdge : Edge.t -> string
+module Edge :
+  sig
+    include module type of E
+    val to_string : t -> string
+  end
 
 module VertexMap : BatMap.S with type key = Vertex.t
 

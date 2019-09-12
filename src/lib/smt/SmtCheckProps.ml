@@ -139,6 +139,6 @@ let checkMonotonicity info query chan net =
       match reply with
       | SAT ->
         Nv_lang.Console.warning (Printf.sprintf "Policy on edge %s is non-monotonic"
-                           (AdjGraph.printEdge edge))
+                           (AdjGraph.Edge.to_string edge))
       | UNSAT -> ()
       | _ -> failwith "unknown answer") transTable
