@@ -15,7 +15,7 @@ module BetterMap = struct
     val to_string : ('a -> string) -> 'a t -> string
   end
 
-  module Make (K : KeyType) = struct
+  module Make (K : KeyType) : (S with type key = K.t) = struct
     include Map.Make(K)
 
     let to_string f t =
@@ -39,11 +39,11 @@ module BetterSet = struct
   end
 
   module type S = sig
-    include Map.S
-    val to_string : 'a t -> string
+    include Set.S
+    val to_string : t -> string
   end
 
-  module Make (E : EltType) = struct
+  module Make (E : EltType) : (S with type elt = E.t) = struct
     include Set.Make(E)
 
     let to_string t =
@@ -60,7 +60,8 @@ module IntMap = BetterMap.Make(Int)
 module IntSet = BetterSet.Make(Int)
 
 module StringMap = BetterMap.Make (struct
-    include String
+    type t = string
+    let compare = compare
     let to_string x = x
   end)
 
