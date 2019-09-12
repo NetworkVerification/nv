@@ -41,6 +41,7 @@ opam install -y \
   ocamlgraph \
   fileutils \
   z3 \
+  parmap \
   dune
 ```
 
