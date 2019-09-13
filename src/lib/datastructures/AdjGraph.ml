@@ -66,7 +66,8 @@ let edges_map (g: t) (f: Edge.t -> 'a) : 'a EdgeMap.t =
   fold_edges_e (fun e a -> EdgeMap.add e (f e) a) g EdgeMap.empty
 
 
-let bfs (g: t) (rg : int EdgeMap.t) (s: Vertex.t) (t: Vertex.t) =
+(* return a (bool, VertexMap) tuple indicating whether the node t was visited and what the path to it was? *)
+let bfs (g: t) (rg : int EdgeMap.t) (s: Vertex.t) (t: Vertex.t) : (bool * Vertex.t VertexMap.t) =
   let visited = VertexSet.singleton s in
   let path = VertexMap.empty |> VertexMap.add s s in
   let q = Queue.create () in
@@ -75,16 +76,15 @@ let bfs (g: t) (rg : int EdgeMap.t) (s: Vertex.t) (t: Vertex.t) =
     if not (Queue.is_empty q) then
       begin
         let u = Queue.pop q in
-        let vs = succ g u in
         let visited, path =
-          BatList.fold_left (fun (accvs, accpath) (v: Vertex.t) ->
+          fold_succ (fun (v: Vertex.t) (accvs, accpath) ->
               if ((not (VertexSet.mem v accvs)) && (EdgeMap.find (u,v) rg > 0)) then
                 begin
                   Queue.push v q;
                   (VertexSet.add v accvs, VertexMap.add v u accpath)
                 end
               else
-                (accvs, accpath)) (visited, path) vs
+                (accvs, accpath)) g u (visited, path)
         in
         loop path visited
       end
@@ -93,14 +93,15 @@ let bfs (g: t) (rg : int EdgeMap.t) (s: Vertex.t) (t: Vertex.t) =
   let path, visited = loop path visited in
   (VertexSet.mem t visited, path)
 
-let dfs (g: t) (rg : int EdgeMap.t) (s: Vertex.t) =
+(* return the set of vertices reachable from s via DFS taking paths with positive flow? *)
+let dfs (g: t) (rg : int EdgeMap.t) (s: Vertex.t) : VertexSet.t =
   let rec loop u visited =
     let visited = VertexSet.add u visited in
-    let vs = succ g u in
-    BatList.fold_left (fun accvs v ->
+    fold_succ
+     (fun v accvs ->
         if ((EdgeMap.find (u,v) rg > 0) && (not (VertexSet.mem v accvs))) then
           loop v accvs
-        else accvs) visited vs
+        else accvs) g u visited
   in
   loop s VertexSet.empty
 

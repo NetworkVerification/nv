@@ -61,13 +61,12 @@ let groupVerticesByAbsId (umap: (AbsIdSet.t) VertexMap.t) : VertexSetSet.t =
 let refineTopological (f: abstractionMap) (g: AdjGraph.t)
                       (us: AbstractNode.t) : abstractionMap =
   let refineOne (u : Vertex.t) (umap : AbsIdSet.t VertexMap.t) =
-    BatList.fold_left (fun acc v ->
+    fold_succ (fun v acc ->
         let vhat = getId f v in
         VertexMap.modify_opt u (fun omapu ->
                             match omapu with
                             | None -> Some (AbsIdSet.singleton vhat)
-                            | Some vs -> Some (AbsIdSet.add vhat vs)) acc) umap
-                   (succ g u)
+                            | Some vs -> Some (AbsIdSet.add vhat vs)) acc) g u umap
   in
   let vmap = AbstractNode.fold (fun u acc -> refineOne u acc) us VertexMap.empty in
   VertexSetSet.fold (fun us f' -> AbstractionMap.split f' (AbstractNode.fromSet us))
@@ -642,23 +641,27 @@ module FailuresAbstraction =
           let us = GroupMap.find uorig backMap in
           let vs = GroupMap.find vorig backMap in
           BatList.fold_left (fun acc u ->
-              let ns = succ g u in
-              BatList.fold_left (fun acc n ->
+              fold_succ (fun n acc ->
                   if BatList.mem n vs then
                     EdgeSet.add (u,n) acc
-                  else acc) acc ns) acc us) es EdgeSet.empty
+                  else acc) g u acc) acc us) es EdgeSet.empty
 
     (* Returns a pair of cuts and set of vertices that have min-cuts <= k *)
     let compute_cuts (g : AdjGraph.t) (d: abstrId) k (todo: VertexSet.t) =
+      (* loop function removes elements from todo, adds new cuts to the list and grows new_todo set *)
       let rec loop todo cuts new_todo =
         try
+          (* pop the smallest vertex u from todo *)
           let u, todo' = VertexSet.pop_min todo in
           if u <> d then
             begin
+              (* get the min cut that minimizes the edges from the source d to the sink u *)
               let (es, _, tset) =  min_cut g d u in
               if EdgeSet.cardinal es > k then
+                (* if there are more than k elements in the min-cut, ignore it *)
                 loop todo' cuts new_todo
               else
+                (* otherwise, add it to our list of cuts and move the sink set `tset` from todo to new_todo *)
                 loop (VertexSet.diff todo' tset) (es :: cuts) (VertexSet.union tset new_todo)
             end
           else
