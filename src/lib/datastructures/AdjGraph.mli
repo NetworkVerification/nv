@@ -53,10 +53,10 @@ val fold_vertices : (Vertex.t -> 'a -> 'a) -> Vertex.t -> 'a -> 'a
 val get_vertices : t -> VertexSet.t
 
 (** edges in the graph *)
-val edges : t -> (Vertex.t * Vertex.t) list
+val edges : t -> Edge.t list
 
 (** of_edges l creates a new graph with all nodes and edges given in l *)
-val of_edges : (Vertex.t * Vertex.t) list -> t
+val of_edges : Edge.t list -> t
 
 (** add_edges g l adds all directed edges in l to g *)
 val add_edges : t -> Edge.t list -> t

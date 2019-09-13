@@ -125,7 +125,7 @@ let bfs (g: t) (rg : int EdgeMap.t) (s: Vertex.t) (t: Vertex.t) =
     if not (Queue.is_empty q) then
       begin
         let u = Queue.pop q in
-        let vs = neighbors g u in
+        let vs = succ g u in
         let visited, path =
           BatList.fold_left (fun (accvs, accpath) (v: Vertex.t) ->
               if ((not (VertexSet.mem v accvs)) && (EdgeMap.find (u,v) rg > 0)) then
@@ -146,7 +146,7 @@ let bfs (g: t) (rg : int EdgeMap.t) (s: Vertex.t) (t: Vertex.t) =
 let dfs (g: t) (rg : int EdgeMap.t) (s: Vertex.t) =
   let rec loop u visited =
     let visited = VertexSet.add u visited in
-    let vs = neighbors g u in
+    let vs = succ g u in
     BatList.fold_left (fun accvs v ->
         if ((EdgeMap.find (u,v) rg > 0) && (not (VertexSet.mem v accvs))) then
           loop v accvs
