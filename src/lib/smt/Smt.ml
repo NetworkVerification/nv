@@ -187,7 +187,7 @@ let solveClassic info query chan net =
     (val (module SmtClassicEncoding.ClassicEncoding(ExprEnc) : SmtClassicEncoding.ClassicEncodingSig))
   in
   solve info query chan (fun () -> Enc.encode_z3 net)
-    (Nv_datastructures.AdjGraph.num_vertices net.graph) net.assertion net.requires
+    (Nv_datastructures.AdjGraph.nb_vertex net.graph) net.assertion net.requires
 
 let solveFunc info query chan srp =
   let open Nv_lang.Syntax in
@@ -196,7 +196,7 @@ let solveFunc info query chan srp =
     (val (module SmtFunctionalEncoding.FunctionalEncoding(ExprEnc) : SmtFunctionalEncoding.FunctionalEncodingSig))
   in
   solve info query chan (fun () -> Enc.encode_z3 srp)
-    (Nv_datastructures.AdjGraph.num_vertices srp.srp_graph) srp.srp_assertion srp.srp_requires
+    (Nv_datastructures.AdjGraph.nb_vertex srp.srp_graph) srp.srp_assertion srp.srp_requires
 
 (** For quickcheck smart value generation *)
 let symvar_assign info (net: Nv_lang.Syntax.network) : Nv_lang.Syntax.value VarMap.t option =

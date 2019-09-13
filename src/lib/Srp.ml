@@ -101,7 +101,7 @@ let net_to_srp net ~throw_requires =
   info.a <- (match net.Syntax.assertion with
              | Some a -> get_func a
              | None -> None);
-  info.ns <- Some (AdjGraph.num_vertices net.Syntax.graph);
+  info.ns <- Some (AdjGraph.nb_vertex net.Syntax.graph);
   info.es <- Some (AdjGraph.edges net.Syntax.graph);
   (* process requires *)
   BatList.iter (fun e ->
@@ -136,7 +136,7 @@ let net_to_srp net ~throw_requires =
 
 let net_to_state net ~throw_requires =
   let srp, init, syms = net_to_srp net ~throw_requires in
-  let state = create_state (AdjGraph.num_vertices srp.graph) init in
+  let state = create_state (AdjGraph.nb_vertex srp.graph) init in
   (srp, state, syms)
 
 let solution_to_string s =

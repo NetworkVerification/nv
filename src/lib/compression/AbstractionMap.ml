@@ -12,8 +12,8 @@ module AbstractNode =
       let rec printAux lst acc =
         match lst with
         | [] -> "}" :: acc
-        | [u] -> printAux [] ((Printf.sprintf "%s" (Vertex.printVertex u)) :: acc)
-        | u :: lst -> printAux lst ((Printf.sprintf "%s," (Vertex.printVertex u)) :: acc)
+        | [u] -> printAux [] ((Printf.sprintf "%s" (Vertex.to_string u)) :: acc)
+        | u :: lst -> printAux lst ((Printf.sprintf "%s," (Vertex.to_string u)) :: acc)
       in
       String.concat "" (BatList.rev (printAux (VertexSet.elements us) ["{"]))
 

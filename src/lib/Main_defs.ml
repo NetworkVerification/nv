@@ -279,7 +279,7 @@ let compress file info net cfg fs networkOp =
        Console.show_message (Slicing.printPrefixes slice.Slicing.prefixes)
          Console.T.Green "Checking SRP for prefixes";
        (* find source nodes *)
-       let n = AdjGraph.num_vertices slice.net.graph in
+       let n = AdjGraph.nb_vertex slice.net.graph in
        let sources =
          Slicing.findRelevantNodes (Slicing.partialEvalOverNodes n (oget slice.net.assertion)) in
        (* partially evaluate the functions of the network. *)
