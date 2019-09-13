@@ -1,0 +1,34 @@
+(* A BGP attack example from Sosnovich et al.'s 2015 paper in LPAR,
+ * "Analyzing Internet Routing Security Using Model Checking" 
+ * Node 0 is the destination.
+ * Node 1 is the attacker.
+ * A directed edge A-B represents a customer A connecting via a provider B.
+ * An undirected edge A=B represents two peers A and B with a connection between them.
+ *)
+
+(* attributes are the chosen next-hop to forward through, and a flag to indicate if
+ * the path routes through the attacker
+ *)
+let attribute = (option[int], bool)
+
+let nodes = 10
+
+let edges = {
+    0-1;
+    0-5;
+    1-2;
+    1=7;
+    2-3;
+    3-9;
+    4-6;
+    4=9;
+    5-4;
+    8-7;
+    8-6;
+    9-7;
+}
+
+let init node = match node with
+ | 0n -> (Some 0, false)
+ | 1n -> (Some 0, true)
+ | _ -> (None, false)
