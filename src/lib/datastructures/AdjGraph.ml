@@ -71,21 +71,18 @@ let good_vertex g v =
 (* out-neighbors of v in g *)
 let neighbors = succ
 
+(* list of edges in graph g *)
 let edges (g: t) =
   BatList.rev
     (fold_edges_e List.cons g [])
 
 let of_edges (l: (Vertex.t * Vertex.t) list) : t =
   let g = empty in
-    BatList.fold_left (fun g (u, v) -> add_edge g u v) g l
+    BatList.fold_left (fun g e -> add_edge_e g e) g l
 
-(* return a VertexMap where each vertex key has a map of edge neighbors *)
-let edges_map (g: t) (f: Edge.t -> 'a) =
-  (* create an EdgeMap containing all neighbors of u *)
-  let my_edges v neighbors a =
-    BatList.fold_left (fun a w -> EdgeMap.add (v, w) (f (v, w)) a) a neighbors
-  in
-  fold_vertex (fun v a -> my_edges v (neighbors g v) a) g EdgeMap.empty
+(* return an EdgeMap where each edge key has a map of edge neighbors *)
+let edges_map (g: t) (f: Edge.t -> 'a) : 'a EdgeMap.t =
+  fold_edges_e (fun e a -> EdgeMap.add e (f e) a) g EdgeMap.empty
 
 let rec add_edges g edges =
   match edges with
