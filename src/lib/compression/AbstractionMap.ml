@@ -109,7 +109,7 @@ let emptyAbstraction = { absGroups = GroupMap.empty;
 
 let createAbstractionMap g : abstractionMap =
   let f = emptyAbstraction in
-  partitionNodes f (f.nextId) (AdjGraph.get_vertices g)
+  partitionNodes f (f.nextId) (AdjGraph.vertices g)
 
 let fold (g: AbstractNode.t -> 'a -> 'a) (f: abstractionMap) (acc: 'a) : 'a =
   GroupMap.fold (fun _ us acc -> g us acc) f.absGroups acc

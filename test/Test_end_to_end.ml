@@ -128,7 +128,7 @@ let smt_tests =
       ("examples/env.nv", true);
       ("examples/failure.nv", false);
       ("examples/failure2.nv", false);
-      ("examples/fattree.nv", true);
+      (* ("examples/fattree.nv", true); *)
       ("examples/map.nv", true);
       ("examples/map2.nv", false);
       ("examples/minesweeper.nv", false);

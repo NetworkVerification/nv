@@ -67,7 +67,7 @@ let refineTopological (f: abstractionMap) (g: AdjGraph.t)
                             match omapu with
                             | None -> Some (AbsIdSet.singleton vhat)
                             | Some vs -> Some (AbsIdSet.add vhat vs)) acc) umap
-                   (neighbors g u)
+                   (succ g u)
   in
   let vmap = AbstractNode.fold (fun u acc -> refineOne u acc) us VertexMap.empty in
   VertexSetSet.fold (fun us f' -> AbstractionMap.split f' (AbstractNode.fromSet us))
@@ -111,7 +111,7 @@ let refineAbstraction (f: abstractionMap) (g: AdjGraph.t)
                                Some (merge_pol, TransAbsIdSet.singleton (trans_pol, vhat))
                             | Some (mp, vs) ->
                                Some (mp, TransAbsIdSet.add (trans_pol, vhat) vs))
-                          acc) umap (neighbors g u)
+                          acc) umap (succ g u)
   in
   (* for each node u in us, find the (abstract) nodes it's connected to and their policy *)
   let vmap = AbstractNode.fold (fun u acc -> refineOne u acc) us VertexMap.empty in
@@ -143,7 +143,7 @@ let partialEvalTrans (graph : AdjGraph.t)
 
 let partialEvalMerge (graph : AdjGraph.t)
                      (merge : Syntax.exp) : (Vertex.t, int * Syntax.exp) Hashtbl.t =
-  let ns = AdjGraph.get_vertices graph in
+  let ns = AdjGraph.vertices graph in
   let tbl = Hashtbl.create (VertexSet.cardinal ns) in
   VertexSet.iter (fun v ->
       let pmerge = Nv_interpreter.InterpPartial.interp_partial_fun merge [vnode v] in
@@ -154,7 +154,7 @@ let partialEvalMerge (graph : AdjGraph.t)
    node id returns its abstract edges *)
 let findAbstractEdges (g: AdjGraph.t) (f: abstractionMap) (uhat: abstrId) : EdgeSet.t =
   let repru = getGroupRepresentativeId f uhat in
-  let ns = neighbors g repru in
+  let ns = succ g repru in
   BatList.fold_left (fun acc v -> EdgeSet.add (uhat, getId f v) acc) EdgeSet.empty ns
 
 (* Given a concrete graph, transfer, merge functions a destinations
@@ -198,7 +198,7 @@ module BuildAbstractNetwork =
     (* get all the concrete neighbors v of u s.t. f(v) = vhat *)
     let getNeighborsInVhat f g u vhat =
       BatList.filter_map (fun v ->
-          if (getId f v = vhat) then Some (u,v) else None) (neighbors g u)
+          if (getId f v = vhat) then Some (u,v) else None) (succ g u)
 
     (* Given the abstract edges and a concrete transfer function,
    synthesizes an abstract transfer function. *)
@@ -410,8 +410,8 @@ module BuildAbstractNetwork =
       let asserthat = buildAbstractAssert assertMap f in
       if !debugAbstraction then
         begin
-          let agraph = AdjGraph.add_edges (AdjGraph.create n) edgeshat in
-          AdjGraph.print agraph
+          let agraph = List.fold_left AdjGraph.add_edge_e (AdjGraph.create n) edgeshat in
+          print_endline @@ AdjGraph.to_string agraph
         end;
       (failuresMap,
        { attr_type = slice.net.attr_type;
@@ -471,7 +471,7 @@ module FailuresAbstraction =
     let findSplittingByConnectivity (uhat : AbstractNode.t) (vhat : AbstractNode.t)
                          (g: AdjGraph.t) : splittings =
       let addNeighbor u =
-        let neighborsOfu = neighbors g u in
+        let neighborsOfu = succ g u in
         let neighborsOfUinV =
           BatList.fold_left (fun acc v ->
               if AbstractNode.mem v vhat then
@@ -580,7 +580,7 @@ module FailuresAbstraction =
         : ((abstrId * int) list) * ((abstrId list) GroupMap.t) * ((abstrId list) GroupMap.t) =
       let accfreq, accReachAbs, accUnreachAbs =
         BatList.fold_left (fun acc cutset ->
-            EdgeSet.fold (fun (u,v) (accfreq, accReachAbs, accUnreachAbs) ->
+            EdgeSet.fold (fun (u,v) (accfreq, accReachAbs, _) ->
                 (updateList u (fun freq -> match freq with
                                            | None -> 1
                                            | Some f -> f+1) accfreq,
@@ -642,7 +642,7 @@ module FailuresAbstraction =
           let us = GroupMap.find uorig backMap in
           let vs = GroupMap.find vorig backMap in
           BatList.fold_left (fun acc u ->
-              let ns = neighbors g u in
+              let ns = succ g u in
               BatList.fold_left (fun acc n ->
                   if BatList.mem n vs then
                     EdgeSet.add (u,n) acc
@@ -655,7 +655,7 @@ module FailuresAbstraction =
           let u, todo' = VertexSet.pop_min todo in
           if u <> d then
             begin
-              let (es, sset, tset) =  min_cut g d u in
+              let (es, _, tset) =  min_cut g d u in
               if EdgeSet.cardinal es > k then
                 loop todo' cuts new_todo
               else
@@ -842,7 +842,7 @@ module FailuresAbstraction =
             (* Printf.printf "size of uhats: %d\n" (List.length uhats); *)
             (* for each node to split, compute a refinement with each of its neighbor *)
             let uhat_neighbors =
-              BatList.map (fun uhat -> (uhat, neighbors ag uhat)) uhats in
+              BatList.map (fun uhat -> (uhat, succ ag uhat)) uhats in
             let refinements =
               BatList.fold_left (fun acc (uhat, vhats) ->
                   let uhatGroup = getGroupById f uhat in
@@ -1103,7 +1103,7 @@ module FailuresAbstraction =
             (* add in the most_freq node *)
             let uhats = most_freq @ uhats in
             (* for each node to split, compute a refinement with each of its neighbor *)
-            let uhat_neighbors = BatList.map (fun uhat -> (uhat, neighbors ag uhat)) uhats in
+            let uhat_neighbors = BatList.map (fun uhat -> (uhat, succ ag uhat)) uhats in
             let refinements =
               BatList.fold_left (fun acc (uhat, vhats) ->
                   let uhatGroup = getGroupById f uhat in
@@ -1236,7 +1236,7 @@ module FailuresAbstraction =
             let concrete_cuts =
               BatList.fold_left (fun acc es ->
                   let ces =
-                    EdgeSet.fold (fun ehat acc ->
+                    EdgeSet.fold (fun ehat _ ->
                         EdgeSet.fold (fun e acc ->
                             e :: acc) (BuildAbstractNetwork.abstractToConcreteEdge g f ehat)
                           []) es []
@@ -1277,7 +1277,7 @@ module FailuresAbstraction =
             (* add in the most_freq node *)
             let uhats = most_freq @ uhats in
             (* for each node to split, compute a refinement with each of its neighbor *)
-            let uhat_neighbors = BatList.map (fun uhat -> (uhat, neighbors ag uhat)) uhats in
+            let uhat_neighbors = BatList.map (fun uhat -> (uhat, succ ag uhat)) uhats in
             let refinements =
               BatList.fold_left (fun acc (uhat, vhats) ->
                   let uhatGroup = getGroupById f uhat in

@@ -1,120 +1,70 @@
 open Graph
 open Nv_utils.PrimitiveCollections
 
+(*** Module definitions ***)
+
 module Vertex = struct
   type t = int (* Really should be Syntax.node, but that causes a dependency loop *)
-
-  let to_string i =
-    Printf.sprintf "%d" i
 
   let compare = Pervasives.compare
   let equal = (fun a b -> compare a b = 0)
   let hash = Hashtbl.hash
+  let to_string = string_of_int
 end
 
 include Persistent.Digraph.Concrete(Vertex)
 
-module VertexMap = BetterMap.Make (Vertex)
-module VertexSet = BetterSet.Make(Vertex)
-module VertexSetSet : BetterSet.S with type elt = VertexSet.t = BetterSet.Make(VertexSet)
-module VertexSetMap : BetterMap.S with type key = VertexSet.t = BetterMap.Make(VertexSet)
-
-let create_vertices (i: int) =
-  let open Batteries in
-  (* enumerate ints *)
-  let e = 0 -- i in
-    BatEnum.fold (fun acc v -> VertexSet.add v acc) VertexSet.empty e
-
 module Edge = struct
   include E
-
   let to_string e =
-    Printf.sprintf "<%s,%s>" (Vertex.to_string (src e)) (Vertex.to_string (dst e))
+    Printf.sprintf "%s~%s" (Vertex.to_string (src e)) (Vertex.to_string (dst e))
 end
 
-module EdgeSet = BetterSet.Make(Edge)
+module VertexMap = BetterMap.Make(Vertex)
+module VertexSet = BetterSet.Make(Vertex)
+module VertexSetSet = BetterSet.Make(VertexSet)
+module VertexSetMap = BetterMap.Make(VertexSet)
 module EdgeMap = BetterMap.Make(Edge)
+module EdgeSet = BetterSet.Make(Edge)
 
-let vertex_map_to_string elem_to_string m =
-  let kvs = VertexMap.fold (fun k v l -> (k, v) :: l) m [] in
-  BatList.fold_left
-    (fun s (k, v) -> (Vertex.to_string k) ^ ":" ^ elem_to_string v ^ s)
-    "" kvs
+(*** Printing ***)
 
-let print_vertex_map elem_to_string m =
-  VertexMap.iter
-    (fun k v ->
-      print_endline (Vertex.to_string k ^ ":" ^ elem_to_string v) )
-    m
+let to_string g =
+  Printf.sprintf "Vertices: {%s}\nEdges: {%s}"
+    (fold_vertex (fun v acc -> acc ^ Vertex.to_string v ^ ";") g "")
+    (fold_edges_e (fun e acc -> acc ^ Edge.to_string e ^ ";") g "")
 
-(* vertices and edges *)
-let get_vertices (g: t) =
-  fold_vertex VertexSet.add g VertexSet.empty
+(*** Vertex/Edge Utilities ***)
 
-let fold_vertices (f: Vertex.t -> 'a -> 'a) i (acc: 'a) : 'a =
+let fold_vertices (f: Vertex.t -> 'a -> 'a) (i : int) (acc: 'a) : 'a =
   let rec loop j =
     if i = j then acc
     else f j (loop (j + 1))
   in
   loop 0
 
-let create i =
-  fold_vertices (fun v g -> add_vertex g v) i empty
+let vertices (g: t) = fold_vertex VertexSet.add g VertexSet.empty
 
-(* a vertex v does not belong to a graph's set of vertices *)
-exception BadVertex of Vertex.t
+let edges (g: t) = BatList.rev (fold_edges_e List.cons g [])
 
-let good_vertex g v = 
-  if not (mem_vertex g v)
-  then (Printf.printf "bad: %s" (Vertex.to_string v); raise (BadVertex v))
+(*** Graph Creation **)
 
-(* out-neighbors of v in g *)
-let neighbors = succ
-
-(* list of edges in graph g *)
-let edges (g: t) =
-  BatList.rev
-    (fold_edges_e List.cons g [])
+let create n = fold_vertices (fun v g -> add_vertex g v) n empty
 
 let of_edges (l: (Vertex.t * Vertex.t) list) : t =
-  let g = empty in
-    BatList.fold_left (fun g e -> add_edge_e g e) g l
+  BatList.fold_left (fun g e -> add_edge_e g e) empty l
+
+(*** Min-cut computation ***)
+
+(* FIXME: ocamlgraph apparently has implmentations of all these functions,
+   even including min-cut. However, apparently they were giving different
+   results. We should look into that to make sure the differences are legitimate,
+   then remove this and switch to ocamlgraph's min-cut. *)
 
 (* return an EdgeMap where each edge key has a map of edge neighbors *)
 let edges_map (g: t) (f: Edge.t -> 'a) : 'a EdgeMap.t =
   fold_edges_e (fun e a -> EdgeMap.add e (f e) a) g EdgeMap.empty
 
-let rec add_edges g edges =
-  match edges with
-  | [] -> g
-  | e :: edges -> add_edges (add_edge_e g e) edges
-
-let good_graph g =
-  BatList.iter
-    (fun (v, w) -> good_vertex g v ; good_vertex g w)
-    (edges g)
-
-let print g =
-  Printf.printf "%d\n" (nb_vertex g) ;
-  BatList.iter
-    (fun (v, w) ->
-      Printf.printf "%s -> %s\n" (Vertex.to_string v) (Vertex.to_string w)
-      )
-    (edges g)
-
-let to_string g =
-  let b = Buffer.create 80 in
-  let rec add_edges es =
-    match es with
-    | [] -> ()
-    | (v, w) :: rest ->
-        Buffer.add_string b
-          (Printf.sprintf "%s -> %s\n" (Vertex.to_string v) (Vertex.to_string w)) ;
-        add_edges rest
-  in
-  Buffer.add_string b (string_of_int (nb_vertex g) ^ "\n") ;
-  add_edges (edges g) ;
-  Buffer.contents b
 
 let bfs (g: t) (rg : int EdgeMap.t) (s: Vertex.t) (t: Vertex.t) =
   let visited = VertexSet.singleton s in
@@ -182,42 +132,42 @@ let min_cut g s t =
 
   let visited = dfs g !rg s in
   let cut = EdgeMap.fold (fun (u,v) _ cutset ->
-                if (VertexSet.mem u visited) && (not (VertexSet.mem v visited)) then
-                  (EdgeSet.add (u,v) cutset)
-                else
-                  cutset) !rg EdgeSet.empty
+      if (VertexSet.mem u visited) && (not (VertexSet.mem v visited)) then
+        (EdgeSet.add (u,v) cutset)
+      else
+        cutset) !rg EdgeSet.empty
   in
-  (cut, visited, VertexSet.diff (get_vertices g) visited)
+  (cut, visited, VertexSet.diff (vertices g) visited)
 
 module DrawableGraph = struct
 
   let graph_dot_file =
     let counter = ref (-1) in
     fun (k: int) (file: string) ->
-    incr counter;
-    file ^ "-" ^ (string_of_int k) ^ "-" ^ (string_of_int !counter)
+      incr counter;
+      file ^ "-" ^ (string_of_int k) ^ "-" ^ (string_of_int !counter)
 
   module G = Graph.Persistent.Digraph.Concrete (Vertex)
 
   module Dot = Graph.Graphviz.Dot(struct
-                   include G
-                   let edge_attributes _ =
-                       [`Color 3711; `Dir `None]
-                   let default_edge_attributes _ = []
-                   let get_subgraph _ = None
-                   let vertex_attributes v =
-                     let label = Vertex.to_string v in
-                     [`Shape `Circle; `Label label; `Fontsize 11;]
-                   let vertex_name v = Vertex.to_string v
-                   let default_vertex_attributes _ = []
-                   let graph_attributes _ = [`Center true; `Nodesep 0.45;
-                                             `Ranksep 0.45; `Size (82.67, 62.42)]
-                 end)
+      include G
+      let edge_attributes _ =
+        [`Color 3711; `Dir `None]
+      let default_edge_attributes _ = []
+      let get_subgraph _ = None
+      let vertex_attributes v =
+        let label = Vertex.to_string v in
+        [`Shape `Circle; `Label label; `Fontsize 11;]
+      let vertex_name v = Vertex.to_string v
+      let default_vertex_attributes _ = []
+      let graph_attributes _ = [`Center true; `Nodesep 0.45;
+                                `Ranksep 0.45; `Size (82.67, 62.42)]
+    end)
 
   let drawGraph (g: t) (dotfile: string)  =
     let chan = open_out (dotfile ^ ".dot") in
     Dot.output_graph chan g;
     let _ = Sys.command ("dot -Tjpg " ^ dotfile ^
-                           ".dot -o " ^ dotfile ^ ".jpg") in
+                         ".dot -o " ^ dotfile ^ ".jpg") in
     close_out chan
 end
