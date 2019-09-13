@@ -299,7 +299,7 @@ let transform_srp
   {
     srp_attr = transformd_attr;
     srp_constraints = VertexMap.map transform_exp srp.srp_constraints;
-    srp_labels = VertexMap.map (fun xs -> BatList.map (fun (x,_) -> (x, transformd_attr)) xs) srp.srp_labels;
+    srp_labels = VertexMap.map (fun xs -> BatList.map (fun (x,ty) -> (x, transform_ty ty)) xs) srp.srp_labels;
     srp_symbolics =  BatList.map transform_symbolic srp.srp_symbolics;
     srp_assertion = omap transform_exp srp.srp_assertion;
     srp_requires = BatList.map transform_exp srp.srp_requires;

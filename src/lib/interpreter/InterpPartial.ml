@@ -315,7 +315,7 @@ let rec interp_exp_partial isapp env e =
         aexp (e_val v, v.vty, v.vspan))
   | EVal _ -> e
   | EOp (op, es) ->
-    aexp (interp_op_partial env (oget e.ety) op es, e.ety, e.espan)
+    aexp (interp_op_partial env op es, e.ety, e.espan)
   | EFun f ->
     (*Also note that we avoid using closures for our comfort, and
        since they are not needed for inlined functions *)
@@ -371,7 +371,7 @@ let rec interp_exp_partial isapp env e =
 
   | ERecord _ | EProject _ -> failwith "Record found during partial interpretation"
 
-and interp_op_partial env _ op es =
+and interp_op_partial env op es =
   let pes = BatList.map (interp_exp_partial false env) es in
   if BatList.exists (fun pe -> not (is_value pe)) pes then
     simplify_exps op pes
@@ -398,12 +398,12 @@ and interp_op_partial env _ op es =
         if n1 < n2 then vbool true else vbool false
       | NLeq, [{v= VNode n1}; {v= VNode n2}] ->
         if n1 <= n2 then vbool true else vbool false
-      | TGet (size, lo, hi), [{v= VTuple lst}] ->
-        assert (List.length lst = size) ; (* Sanity check *)
+      | TGet (_, lo, hi), [{v= VTuple lst}] ->
+        (* assert (List.length lst = size) ; (\* Sanity check *\) *)
         if lo = hi then List.nth lst lo
         else vtuple (lst |> BatList.drop lo |> BatList.take (hi - lo + 1))
-      | TSet (size, lo, hi), [{v= VTuple lst}; v] ->
-        assert (List.length lst = size) ; (* Sanity check *)
+      | TSet (_, lo, hi), [{v= VTuple lst}; v] ->
+        (* assert (List.length lst = size) ; (\* Sanity check *\) *)
         if lo = hi then
           vtuple @@ BatList.modify_at lo (fun _ -> v) lst
         else

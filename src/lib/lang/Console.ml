@@ -49,8 +49,8 @@ let read_files fnames : info =
     fnames
 
 let get_position_opt fname idx info =
-  let position = ref None in
   if fname = "" then None else
+    let position = ref None in
     let file_info = StringMap.find fname info in
     Array.iteri
       (fun i (s, e) ->
@@ -90,7 +90,7 @@ let show_message_position info (span: Nv_datastructures.Span.t) msg color label 
   (match get_start_position span info, get_end_position span info with
    | Some (l1, c1), Some (l2, c2) ->
      let file_info = StringMap.find span.fname info in
-     T.print_string [] border ;
+     T.print_string [] (Printf.sprintf "\nIn %s: \n%s" span.fname border) ;
      if l2 - l1 = 0 then show_line file_info l1 (Some (c1, c2, color))
      else for i = l1 to l2 do show_line file_info i None done ;
      T.print_string [] "\n"
@@ -101,7 +101,7 @@ let show_message_position info (span: Nv_datastructures.Span.t) msg color label 
 
 let error_position info span msg =
   show_message_position info span msg T.Red "error" ;
-  exit 0
+  raise (Error msg)
 
 let warning_position info span msg =
   show_message_position info span msg T.Yellow "warning"

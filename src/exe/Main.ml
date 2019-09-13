@@ -1,7 +1,7 @@
 open Nv_lib.Main_defs
 open Nv_solution
 
-let main =
+let main_func () =
   Printexc.record_backtrace true;
   let cfg, info, file, net, fs = parse_input Sys.argv in
   (* if cfg.check_monotonicity then *)
@@ -26,3 +26,6 @@ let main =
       | Success None, _ ->
          Printf.printf "No counterexamples found\n"
     end
+
+let main =
+  Nv_utils.Profile.time_profile_absolute "Entire Program" main_func

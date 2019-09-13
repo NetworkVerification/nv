@@ -22,9 +22,9 @@ let add_new_input (ograph: t) (v: Vertex.t) : t =
   let { graph; inputs; outputs; broken } = ograph in
   good_vertex graph v ;
   (* get the id of the new input *)
-  let input = (Vertex.from_index (num_vertices graph)) in
-  { graph = add_vertices graph 1 |>
-  (fun g -> add_edge g (input, v));
+  let input = (Vertex.create (nb_vertex graph)) in
+  { graph = add_vertex graph input |>
+  (fun g -> add_edge g input v);
     inputs = VertexMap.add input v inputs;
     outputs = outputs;
     broken = broken }
@@ -33,9 +33,9 @@ let add_new_output (ograph: t) (v: Vertex.t) : t =
   let { graph; inputs; outputs; broken } = ograph in
   good_vertex graph v ;
   (* get the id of the new output *)
-  let output = (Vertex.from_index (num_vertices graph)) in
-  { graph = add_vertices graph 1 |>
-  (fun g -> add_edge g (v, output));
+  let output = (Vertex.create (nb_vertex graph)) in
+  { graph = add_vertex graph output |>
+  (fun g -> add_edge g v output);
     inputs = inputs;
     outputs = VertexMap.add output v outputs;
     broken = broken }
@@ -43,7 +43,7 @@ let add_new_output (ograph: t) (v: Vertex.t) : t =
 let break_edge (ograph: t) (e: Edge.t) : t =
   let { graph; inputs; outputs; broken } = ograph in
   let (startv, endv) = e in
-  { graph = remove_edge graph e;
+  { graph = remove_edge graph startv endv;
     inputs = inputs;
     outputs = outputs;
     broken = VertexMap.add startv endv broken

@@ -25,6 +25,7 @@ type t =
   ; hiding: bool                        (** Use the hiding abstraction during SMT solving *)
   ; kirigami: bool    [@short "-k"]     (** enable partitioning features           *)
   ; slicing: bool                      (** Try to slice the network's attribute *)
+  ; parallelize : int option [@short "-p"] (** Try to parallelize using n cores **)
   }
 [@@deriving
   show
@@ -56,11 +57,9 @@ let default =
   ; check_monotonicity=false
   ; link_failures=0
   ; hiding=false
-<<<<<<< HEAD
   ; kirigami = false
-=======
   ; slicing=false
->>>>>>> master
+  ; parallelize= None
   }
 
 let cfg = ref default

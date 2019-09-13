@@ -7,7 +7,7 @@
   exception Eof
 
   let position lexbuf =
-    {fname=(Lexing.lexeme_start_p lexbuf).pos_fname; start=Lexing.lexeme_start lexbuf; finish=Lexing.lexeme_end lexbuf}
+    {fname=(lexbuf.Lexing.lex_start_p).pos_fname; start=Lexing.lexeme_start lexbuf; finish=Lexing.lexeme_end lexbuf}
 
   let incr_linenum lexbuf =
     let pos = lexbuf.Lexing.lex_curr_p in

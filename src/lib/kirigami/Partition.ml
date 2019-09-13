@@ -10,16 +10,18 @@ let is_cross_partition (f: AdjGraph.Vertex.t -> int) edge =
 
 module Make_interface(S: Interfaces.OrderedType) :
   sig
-    type t = AdjGraph.Vertex.t * AdjGraph.Vertex.t * S.t  option
+    type hyp = S.t option
+    type t = AdjGraph.Vertex.t * AdjGraph.Vertex.t * hyp
 
     val create : AdjGraph.Edge.t -> S.t option -> t
 
     val compare : t -> t -> int
   end =
 struct
-  type t = AdjGraph.Vertex.t * AdjGraph.Vertex.t * S.t option
+  type hyp = S.t option
+  type t = AdjGraph.Vertex.t * AdjGraph.Vertex.t * hyp
 
-  let create (edge: AdjGraph.Edge.t) (hyp: S.t option) = (fst edge, snd edge, hyp)
+  let create (edge: AdjGraph.Edge.t) (hyp: hyp) = (fst edge, snd edge, hyp)
 
   let compare (u1, v1, h1) (u2, v2, h2) =
     if compare u1 u2 <> 0 then compare u1 u2
