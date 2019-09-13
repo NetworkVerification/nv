@@ -9,7 +9,7 @@ module Vertex :
   end
 
 (* graph *)
-include module type of Graph.Persistent.Graph.Concrete (Vertex)
+include module type of Graph.Persistent.Digraph.Concrete (Vertex)
 
 module Edge :
   sig

@@ -12,7 +12,7 @@ module Vertex = struct
   let hash = Hashtbl.hash
 end
 
-include Persistent.Graph.Concrete(Vertex)
+include Persistent.Digraph.Concrete(Vertex)
 
 module VertexMap = BetterMap.Make (Vertex)
 module VertexSet = BetterSet.Make(Vertex)
@@ -197,7 +197,7 @@ module DrawableGraph = struct
     incr counter;
     file ^ "-" ^ (string_of_int k) ^ "-" ^ (string_of_int !counter)
 
-  module G = Graph.Persistent.Graph.Concrete (Vertex)
+  module G = Graph.Persistent.Digraph.Concrete (Vertex)
 
   module Dot = Graph.Graphviz.Dot(struct
                    include G
