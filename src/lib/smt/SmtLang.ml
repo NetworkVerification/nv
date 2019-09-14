@@ -15,6 +15,22 @@ let printVerbose (msg: string) (descr: string) (span: Span.t) info =
   in
   Printf.sprintf "; %s: %s on %d-%d\n" msg descr sl fl
 
+let printList (printer: 'a -> string) (ls: 'a list) (first : string)
+    (sep : string) (last : string) =
+  let buf = Buffer.create 500 in
+  let rec loop ls =
+    match ls with
+    | [] -> ()
+    | [l] -> Buffer.add_string buf (printer l)
+    | l :: ls ->
+      Buffer.add_string buf (printer l);
+      Buffer.add_string buf sep;
+      loop ls
+  in
+  Buffer.add_string buf first;
+  loop ls;
+  Buffer.add_string buf last;
+  Buffer.contents buf
 
 type datatype_decl =
   { name         : string;
@@ -234,7 +250,7 @@ let rec sort_to_smt (s : sort) : string =
   | MapSort (s1, s2) ->
     Printf.sprintf "((%s) %s)" (sort_to_smt s1) (sort_to_smt s2)
   | DataTypeSort (name, ls) ->
-    let args = Collections.printList sort_to_smt ls "" " " "" in
+    let args = printList sort_to_smt ls "" " " "" in
     Printf.sprintf "(%s %s)" name args
   | BitVecSort _ -> failwith "not yet"
   | VarSort s -> s
@@ -291,7 +307,7 @@ let constructor_to_smt (c: constructor_decl) : string =
   | [] -> c.constr_name
   | (p :: ps) ->
     let constrArgs =
-      Collections.printList (fun (p,s) ->
+      printList (fun (p,s) ->
           Printf.sprintf "(%s %s)" p (sort_to_smt s)) (p :: ps) "" " " ""
     in
     Printf.sprintf "(%s %s)" c.constr_name constrArgs
@@ -368,7 +384,7 @@ let command_to_smt_meta (verbose : bool) info (com : command) : string =
   smt_command_to_smt info com.com
 
 let commands_to_smt (verbose : bool) info (coms : command list) : string =
-  Collections.printList (fun c -> command_to_smt verbose info c) coms "\n" "\n" "\n"
+  printList (fun c -> command_to_smt verbose info c) coms "\n" "\n" "\n"
 
 type smt_answer =
     UNSAT | SAT | UNKNOWN

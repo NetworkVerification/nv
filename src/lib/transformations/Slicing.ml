@@ -153,7 +153,7 @@ let createNetwork decls =
       defs = defs;
       requires = erequires;
       utys = utys;
-      graph = AdjGraph.add_edges (AdjGraph.create n) es
+      graph = List.fold_left AdjGraph.add_edge_e (AdjGraph.create n) es
     }
   | _ ->
     Console.error
@@ -163,7 +163,7 @@ let createNetwork decls =
 (* Need to have inlined definitions before calling this *)
 let createSlices _info net =
   let open Syntax in
-  let n = AdjGraph.num_vertices net.graph in
+  let n = AdjGraph.nb_vertex net.graph in
   let initMap = partialEvalOverNodes n net.init in
   let assertMap = partialEvalOverNodes n (Nv_utils.OCamlUtils.oget net.assertion) in
   (* find the prefixes that are relevant to the assertions *)
