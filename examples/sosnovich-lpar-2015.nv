@@ -4,12 +4,14 @@
  * Node 1 is the attacker.
  * A directed edge A-B represents a customer A connecting via a provider B.
  * An undirected edge A=B represents two peers A and B with a connection between them.
+ *
+ * The local state of a node n is a set of routes to the destination 0, with a particular most preferred route.
  *)
 
 (* attributes are the chosen next-hop to forward through, and a flag to indicate if
  * the path routes through the attacker
  *)
-let attribute = (option[int], bool)
+let attribute = (option[node], bool)
 
 let nodes = 10
 
@@ -28,7 +30,20 @@ let edges = {
     9-7;
 }
 
+(* select most preferred route, prepend self to it *)
+let trans edge x = (None, false) (*TODO*)
+
+(* add received route to RIB *)
+let merge node x y = (None, false) (*TODO*)
+
 let init node = match node with
- | 0n -> (Some 0, false)
- | 1n -> (Some 0, true)
+ | 0n -> (Some 0n, false)
+ | 1n -> (Some 0n, true)
  | _ -> (None, false)
+
+(* check if a node was successfully attacked *)
+let assert node x =
+  let (_, attacked) in x in
+    attacked
+
+(* vim: set syntax=ocaml ts=2 sts=2 sw=2: *)
