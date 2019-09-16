@@ -53,7 +53,7 @@ let transform_trans (e: Syntax.exp) (ograph: OpenAdjGraph.t) : Syntax.exp =
   else
     (* new function argument *)
     let edge_var = Var.create "edge" in
-    let { inputs; outputs; broken; _ } : OpenAdjGraph.t = ograph in
+    let { inputs; outputs; _ } : OpenAdjGraph.t = ograph in
     let in_trans_branch k v b = (* branches for in~base edges: identity function *)
       let edge_pat = exp_to_pattern (e_val (vedge (k, v))) in
       (* return the identity function *)
@@ -63,10 +63,11 @@ let transform_trans (e: Syntax.exp) (ograph: OpenAdjGraph.t) : Syntax.exp =
     in
     let out_trans_branch k v b = (* branches for base~out edges: perform original trans for full edge *)
       let edge_pat = exp_to_pattern (e_val (vedge (v, k))) in
-      (* recover the old edge from the OpenAdjGraph's broken edges map *)
-      let old_edge = e_val (vedge (v, VertexMap.find v broken)) in
+      (* recover the old edge from the OpenAdjGraph's broken edges *)
+      let old_edge = OpenAdjGraph.broken_edge ograph k in
+      let edge_val = e_val (vedge old_edge) in
       (* call the original expression using the old edge *)
-      let out_exp = (eapp e old_edge) in
+      let out_exp = (eapp e edge_val) in
       addBranch edge_pat out_exp b 
     in
     (* the default branch runs (original_trans edge), where original_trans = e *)

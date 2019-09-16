@@ -2,6 +2,7 @@ open Batteries
 open Nv_datastructures
 open Nv_utils.PrimitiveCollections
 open Nv_lang.Syntax
+open TransformDecls
 
 type s = int
 
@@ -53,17 +54,19 @@ type onetwork =
 let open_network (net: network) : onetwork =
   let { attr_type; init; trans; merge; assertion; partition; interface; symbolics; defs; utys; requires; graph } : network = net
   in
+  let ograph = OpenAdjGraph.from_graph graph in
+  (* TODO: generate interface set, update ograph *)
   {
     attr_type;
-    init;
-    trans;
-    merge;
+    init = transform_init init ograph; (*TODO: use actual hypotheses from InterfaceSet *)
+    trans = transform_trans trans ograph;
+    merge = transform_merge merge ograph;
     assertion;
     symbolics;
     defs;
     utys;
     requires;
-    ograph = OpenAdjGraph.from_graph graph;
+    ograph;
   }
 
 let partition_interface { partition: exp option; interface: exp option; _ } : InterfaceSet.t =
