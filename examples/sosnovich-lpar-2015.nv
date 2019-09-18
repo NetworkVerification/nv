@@ -30,15 +30,51 @@ let edges = {
     4-6; (* customer-provider *)
     4=9;
     5-4; (* customer-provider *)
-    8-7; (* customer-provider *)
     8-6; (* customer-provider *)
+    8-7; (* customer-provider *)
     9-7; (* customer-provider *)
 }
 
+(* return a new bgp record *)
+let transBgp edge m =
+  match edge with
+  | 0~1 ->
+    Some {m with aslen=m.aslen+1}
+  | 0~5 ->
+    Some {m with aslen=m.aslen+1}
+  | 1~2 ->
+    Some {m with aslen=m.aslen+1}
+  | 1~7 ->
+    Some {m with aslen=m.aslen+1}
+  | 2~3 ->
+    Some {m with aslen=m.aslen+1}
+  | 3~9 ->
+    Some {m with aslen=m.aslen+1}
+  | 4~6 ->
+    Some {m with aslen=m.aslen+1}
+  | 4~9 ->
+    Some {m with aslen=m.aslen+1}
+  | 5~4 ->
+    Some {m with aslen=m.aslen+1}
+  | 7~1 ->
+    Some {m with aslen=m.aslen+1}
+  | 8~6 ->
+    Some {m with aslen=m.aslen+1}
+  | 8~7 ->
+    Some {m with aslen=m.aslen+1}
+  | 9~4 ->
+    Some {m with aslen=m.aslen+1}
+  | 9~7 ->
+    Some {m with aslen=m.aslen+1}
+
+let transferRoute edge x soly =
+  let newBgp = transBgp x.bgp soly in
+  Some {fwdEdge = edge; bgp=newBg}
+
 (* select most preferred route, prepend self to it *)
 let trans edge x = 
-  let (_hop, attacked) = x in
-  let (u, _v) = edge in (*TODO*)
+  let (hop, attacked) = x in
+    map (fun r -> transferRoute edge r y) hop
 
 (* bgp attribute comparison *)
 let betterBgp b1 b2 =
