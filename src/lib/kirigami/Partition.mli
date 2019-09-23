@@ -18,7 +18,10 @@ module Make_interface(S: Interfaces.OrderedType) :
     val compare : t -> t -> int
 end
 
-module InterfaceSet : Set.S with type elt = Make_interface(Int).t
+module InterfaceSet : Set.S with type elt = Make_interface(sig 
+  type t = value
+  val compare : t -> t -> int
+  end).t
 
 (* module Interface : Set.S with type elt = (AdjGraph.Vertex.t * AdjGraph.Vertex.t * t) *)
 
