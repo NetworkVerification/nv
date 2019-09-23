@@ -10,7 +10,7 @@ open Nv_utils.OCamlUtils
 
 let rec tnf_exp e : exp =
   match e.e with
-  | ETy (e, _) -> tnf_exp e
+  | ETy (e, ty) -> ety (tnf_exp e) ty |> wrap e
   | EVal _
   | EVar _ -> e
   | EFun f -> efun {f with body = tnf_exp f.body} |> wrap e

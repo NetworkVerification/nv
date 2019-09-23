@@ -83,7 +83,7 @@ let rec inline_app env e1 e2 : exp =
     | ELet (x, e3, e4) ->
       let e5 = inline_exp env (eapp e4 e2 |> wrap e4) in
       elet x e3 e5 |> wrap e1
-    | ETy (e1, _) -> inline_app env e1 e2
+    | ETy (e1, ty) -> ety (inline_app env e1 e2) ty |> wrap e1
     | EMatch (e, bs) ->
       let e = inline_exp env e in
       let branches =

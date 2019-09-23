@@ -137,7 +137,7 @@ let rec matchExp branches pe1 penv =
    of variables) but it did not improve performance (it actually made it worse) *)
 let rec interp_exp_partial_opt isapp env expEnv e =
   match e.e with
-  | ETy (e, _) -> interp_exp_partial_opt isapp env expEnv e
+  | ETy (e, ty) -> ety (interp_exp_partial_opt isapp env expEnv e) ty |> wrap e
   | EVar x -> (
       match Env.lookup_opt env.value x with
       | None ->
@@ -264,7 +264,7 @@ and interp_op_partial_opt env expEnv _ op es =
 
 let rec interp_exp_partial isapp env e =
   match e.e with
-  | ETy (e, _) -> interp_exp_partial isapp env e
+  | ETy (e, ty) -> ety (interp_exp_partial isapp env e) ty |> wrap e
   | EVar x -> (
       match Env.lookup_opt env.value x with
       | None ->

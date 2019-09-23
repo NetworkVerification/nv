@@ -284,7 +284,9 @@ let rec match_branches branches v =
     expressions, not just values.*)
 let rec interp_exp_partial (env: Syntax.exp Env.t) e =
   match e.e with
-  | ETy (e, _) -> interp_exp_partial env e
+  | ETy (e, ty) ->
+    let env, e' = interp_exp_partial env e in
+    (env, ety e' ty |> wrap e)
   | EVar x -> (
       match Env.lookup_opt env x with
       | None ->
