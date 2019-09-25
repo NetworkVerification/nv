@@ -12,7 +12,7 @@ open Nv_lang
  * | _ -> init x
  * where the edge u~v has been partitioned into u~out and in~v.
  *)
-val transform_init : (Syntax.exp) -> (OpenAdjGraph.t) -> (Syntax.exp)
+val transform_init : (Syntax.exp) -> (OpenAdjGraph.t) -> ?intf:Syntax.value option AdjGraph.EdgeMap.t -> (Syntax.exp)
 
 (* Wrap the given trans exp in a new exp of the form:
  * match e with
