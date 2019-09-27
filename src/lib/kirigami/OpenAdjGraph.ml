@@ -31,10 +31,9 @@ let broken_edge ograph v : Edge.t =
 
 let add_new_input (ograph: t) (v: Vertex.t) : (t * Vertex.t) =
   let { graph; inputs; outputs; broken } = ograph in
-  good_vertex graph v ;
   (* get the id of the new input *)
   (* NOTE: this operation is not parallelizable *)
-  let input = (Vertex.create (nb_vertex graph)) in
+  let input = (nb_vertex graph) in
   { graph = add_vertex graph input |>
   (fun g -> add_edge g input v);
     inputs = VertexMap.add input v inputs;
@@ -43,9 +42,8 @@ let add_new_input (ograph: t) (v: Vertex.t) : (t * Vertex.t) =
 
 let add_new_output (ograph: t) (v: Vertex.t) : (t * Vertex.t) =
   let { graph; inputs; outputs; broken } = ograph in
-  good_vertex graph v ;
   (* get the id of the new output *)
-  let output = (Vertex.create (nb_vertex graph)) in
+  let output = (nb_vertex graph) in
   { graph = add_vertex graph output |>
   (fun g -> add_edge g v output);
     inputs = inputs;
