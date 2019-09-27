@@ -123,7 +123,7 @@ let net_to_srp net ~throw_requires =
     ; init= Some cl
     ; _ } ->
       let srp =
-        { graph= AdjGraph.add_edges (AdjGraph.create n) es
+        { graph= List.fold_left AdjGraph.add_edge_e (AdjGraph.create n) es
         ; trans= tf
         ; merge= mf
         ; assertion= a }
@@ -141,7 +141,7 @@ let net_to_state net ~throw_requires =
   (srp, state, syms)
 
 let solution_to_string s =
-  AdjGraph.vertex_map_to_string Printing.value_to_string s
+  AdjGraph.VertexMap.to_string Printing.value_to_string s
 
 let get_attribute v s =
   let find_opt v m =
@@ -168,7 +168,7 @@ let simulate_step ({graph= g; trans; merge; _} : srp) s x =
     else (AdjGraph.VertexMap.add n n_new_attribute s, n :: todo)
   in
   let initial_attribute = get_attribute x s in
-  let neighbors = AdjGraph.neighbors g x in
+  let neighbors = AdjGraph.succ g x in
   List.fold_left (do_neighbor initial_attribute) (s, []) neighbors
 
 (* simulate srp s q simulates srp starting with initial state (s,q) *)

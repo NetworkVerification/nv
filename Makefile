@@ -10,6 +10,9 @@ default:
 test: default
 	dune runtest -f --no-buffer
 
+doc:
+	dune build @doc
+
 clean:
 	dune clean
 	rm -f nv

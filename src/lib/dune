@@ -1,6 +1,6 @@
 (library
   (name nv_lib)
-  ; (public_name nv_lib)
+  (public_name nv)
   (libraries
     nv_kirigami
     nv_lang

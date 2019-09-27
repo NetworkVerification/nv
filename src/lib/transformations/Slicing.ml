@@ -153,7 +153,7 @@ let createNetwork decls =
       defs = defs;
       requires = erequires;
       utys = utys;
-      graph = AdjGraph.add_edges (AdjGraph.create n) es
+      graph = List.fold_left AdjGraph.add_edge_e (AdjGraph.create n) es
     }
   | _ ->
     Console.error

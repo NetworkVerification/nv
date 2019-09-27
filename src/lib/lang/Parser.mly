@@ -132,6 +132,17 @@
     in
     build_map StringMap.empty sorted
 
+  let ip_to_dec b1 b2 b3 b4 =
+    let b1 = Nv_datastructures.Integer.to_int b1 in
+    let b2 = Nv_datastructures.Integer.to_int b2 in
+    let b3 = Nv_datastructures.Integer.to_int b3 in
+    let b4 = Nv_datastructures.Integer.to_int b4 in
+    if (b1 > 255) || (b2 > 255) || (b3 > 255) || (b4 > 255) then
+      failwith "Invalid ip address"
+    else
+      (b1 * 16777216) + (b2 * 65536) + (b3 * 256) + b4
+      |> Integer.of_int
+
 %}
 
 %token <Nv_datastructures.Span.t * Nv_datastructures.Var.t> ID
@@ -166,6 +177,7 @@
 %token <Nv_datastructures.Span.t> BAR
 %token <Nv_datastructures.Span.t> ARROW
 %token <Nv_datastructures.Span.t> DOT
+%token <Nv_datastructures.Span.t> SLASH
 %token <Nv_datastructures.Span.t> SEMI
 %token <Nv_datastructures.Span.t> LPAREN
 %token <Nv_datastructures.Span.t> RPAREN
@@ -399,6 +411,7 @@ expr3:
     | ID                                { exp (evar (snd $1)) (fst $1) }
     | ID DOT ID                         { exp (eproject (evar (snd $1)) (Nv_datastructures.Var.name (snd $3))) (Span.extend (fst $1) (fst $3)) }
     | NUM                               { to_value (vint (snd $1)) (fst $1) }
+    | prefixes                          { $1 }
     | NODE                              { to_value (vnode (snd $1)) (fst $1)}
     | edge_arg TILDE edge_arg           { to_value (vedge (snd $1, snd $3)) (Span.extend (fst $1) (fst $3))}
     | TRUE                              { to_value (vbool true) $1 }
@@ -406,6 +419,13 @@ expr3:
     | NONE                              { to_value (voption None) $1 }
     | LPAREN exprs RPAREN               { tuple_it $2 (Span.extend $1 $3) }
 ;
+
+ipaddr:
+  | NUM DOT NUM DOT NUM DOT NUM         { to_value (vint (ip_to_dec (snd $1) (snd $3) (snd $5) (snd $7))) (fst $1) }
+
+prefixes:
+  | ipaddr SLASH NUM                    { let pre = to_value (vint (snd $3)) (fst $3) in
+                                          etuple [$1; pre]}
 
 edge_arg:
   | NUM                                 { (fst $1), (Nv_datastructures.Integer.to_int (snd $1))}

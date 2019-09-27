@@ -16,6 +16,7 @@
 \usepackage{hyperref}          % hyper-text links
 \usepackage{cleveref}          % smarter type-based cross-references
 \usepackage{apptools}          % customizable appendix
+\usepackage{minted}            % code highlighting
 \usepackage{local}             % user-defined commands stored in local.sty
 
 % break long urls in the bibliography
@@ -111,7 +112,7 @@ that verification techniques can efficiently reason about.
 %
 %=====================================================
 
-\section{Translating real networks}
+\section{Translating vendor configurations}
 \label{sec:translation}
 
 Batfish to NV translation. Define how we map devices/interfaces to nodes/edges,
@@ -152,12 +153,63 @@ transformations to improve verification performance. Moreover, arguing about the
 \section{Backends}
 \label{sec:backends}
 
+
 \subsection{Simulation}
 \begin{itemize}
   \item Simulator.
+  \item BDDs seems like a big deal to discuss.
   \item Randomized testing / Fuzzing? This is like the simulator but it does a smarter instantiation of symbolic variables. Would be interesting if we gave that a bit more thought, but maybe it is too much to ask.
-  \item Native simulator - This is pushing my OCaml engineering skills to the limits, but I should get it done. It's an interesting new backend enabled by our research and should deliver much better performance, especially for networks with complex routing policy.
 \end{itemize}
+
+\subsection{Native Simulation}
+As shown in \cref{sec:transformations} one of the advantages of using a
+conventional programming language based on the well-studied lambda calculus, is
+that we can leverage a large body of research on language transformations. A
+commonly used transformation is \emph{compilation} to assembly; languages like
+OCaml and Haskell owe much of their success to their optimizing compilers that
+can produce very fast assembly-level code. We can apply the same idea when
+simulating NV programs. Instead of using an interpreter of the NV language to
+the compute the effect of the network's policy (i.e. the transfer and merge
+functions) on routing announcements, we compile the network to assembly and
+execute the much faster assembly program. Of course, there is no reason to write
+a compiler to assembly from scratch. We merely have to translate an NV program
+to an OCaml program, at this point we may \emph{reuse} the OCaml compiler to
+produce a fast assembly program that captures the semantics of a given network.
+
+\paragraph{Compilation}
+
+\paragraph{Architecture}
+Before compiling an NV program to an OCaml program, we define an abstract
+interface that the OCaml program should satisfy (\cref{lst:native-srp}). This is
+essentially the type of an SRP, but defined over an abstract OCaml type instead
+of an NV type. The \texttt{record\_fns} function is an auxliary function used to
+convert an OCaml value back to an NV value.
+
+\begin{listing}[ht]
+  \begin{ocamlcode}
+  module type NATIVE_SRP =
+    sig
+      type attribute
+      val init : int -> attribute
+      val trans: int * int -> attribute -> attribute
+      val merge: int -> attribute -> attribute -> attribute
+      val assertion: (int -> attribute -> bool) option
+      val record_fns: string -> 'a -> 'b
+    end
+  \end{ocamlcode}
+\caption{Native SRP type}
+\label{lst:native-srp}
+\end{listing}
+
+Given an NV program, our framework will typecheck, compile it to an OCaml module
+that satisfies the interface of \texttt{NATIVE\_SRP}, and dynamically link this
+module. The simulator that implements the bellman-ford algorithm (or any other
+routing algorithm) is virtually the same as in the case of the interpreted
+simulator, it just operates over OCaml values instead of NV values. Finally the
+computed labels are translated to NV values. This step is not necessary, but can
+be useful if the user wants to run further analyses that utilizes those labels.
+
+
 
 \subsection{SMT-based verification}
 \begin{enumerate}

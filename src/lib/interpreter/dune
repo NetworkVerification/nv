@@ -1,5 +1,6 @@
 (library
   (name nv_interpreter)
+  (public_name nv.interpreter)
   (libraries
     batteries
     lru-cache

@@ -1,6 +1,6 @@
 (library
  (name nv_datastructures)
- ; (public_name nv.datastructures)
+ (public_name nv.datastructures)
  (libraries
     nv_utils
     integers
