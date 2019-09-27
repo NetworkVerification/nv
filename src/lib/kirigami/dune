@@ -1,5 +1,6 @@
 (library
   (name nv_kirigami)
+  (public_name nv.kirigami)
   (libraries
     nv_lang
     nv_smt
