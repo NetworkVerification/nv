@@ -2,11 +2,10 @@ module Vertex :
   sig
     type t = int (* Really should be Syntax.node, but that causes a dependency loop *)
 
-    val to_string : t -> string
-    val create : int -> t
     val compare : t -> t -> int
     val equal : t -> t -> bool
     val hash : t -> int
+    val to_string : t -> string
   end
 
 (* graph *)
@@ -52,9 +51,6 @@ val fold_vertices : (Vertex.t -> 'a -> 'a) -> Vertex.t -> 'a -> 'a
 
 (** Vertices in the graph *)
 val get_vertices : t -> VertexSet.t
-
-(* add_vertices g n adds n vertices to g *)
-(* val add_vertices : t -> int -> t *)
 
 (** edges in the graph *)
 val edges : t -> Edge.t list

@@ -4,13 +4,10 @@ open Nv_utils.PrimitiveCollections
 module Vertex = struct
   type t = int (* Really should be Syntax.node, but that causes a dependency loop *)
 
-  let to_string i =
-    Printf.sprintf "%d" i
-
-  let create i = i
   let compare = Pervasives.compare
   let equal = (fun a b -> compare a b = 0)
   let hash = Hashtbl.hash
+  let to_string = string_of_int
 end
 
 include Persistent.Digraph.Concrete(Vertex)
