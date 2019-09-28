@@ -3,8 +3,8 @@
 open Nv_lang.Collections
 open Nv_utils.Profile
 open SolverUtil
-open SmtLang
 open SmtUtils
+open SmtLang
 open SmtOptimizations
 open Smt
 

@@ -2,11 +2,9 @@ open Nv_datastructures
 open Nv_lang
 open Syntax
 open Collections
-open SmtLang
 open SmtUtils
+open SmtLang
 open Nv_utils.OCamlUtils
-
-let int_as_arith = false
 
 (** * SMT encoding without SMT-datatypes *)
 module Unboxed : SmtEncodingSigs.ExprEncoding =
@@ -71,7 +69,7 @@ struct
     | TVar {contents= Link t} -> ty_to_sort t
     | TBool -> BoolSort
     | TInt n ->
-      if int_as_arith then
+      if smt_config.infinite_arith then
         IntSort
       else
         BitVecSort n
@@ -142,13 +140,13 @@ struct
     | (a1::l1, a2::l2, a3::l3) -> let r = f a1 a2 a3 in r :: map3 f l1 l2 l3
     | (_, _, _) -> invalid_arg "map3"
 
-  let rec encode_exp_z3_single descr env (e: exp) : term =
+  let rec encode_exp_z3_single ?(arith=false) descr env (e: exp) : term =
     match e.e with
     | EVar x ->
       create_vars env descr x
       |> mk_var
       |> (mk_term ~tloc:e.espan)
-    | EVal v -> encode_value_z3_single descr env v
+    | EVal v -> encode_value_z3_single ~arith descr env v
     | EOp (op, es) -> (
         match (op, es) with
         | Syntax.And, [e1;e2] when is_value e1 ->
@@ -179,7 +177,7 @@ struct
         | Syntax.UAdd _, [e1;e2] ->
           let ze1 = encode_exp_z3_single descr env e1 in
           let ze2 = encode_exp_z3_single descr env e2 in
-            if int_as_arith then
+            if smt_config.infinite_arith then
               mk_add ze1.t ze2.t |> mk_term ~tloc:e.espan
             else
               mk_bv_add ze1.t ze2.t |> mk_term ~tloc:e.espan
@@ -194,7 +192,7 @@ struct
         | ULess _, [e1;e2] ->
           let ze1 = encode_exp_z3_single descr env e1 in
           let ze2 = encode_exp_z3_single descr env e2 in
-            if int_as_arith then
+            if smt_config.infinite_arith then
               mk_lt ze1.t ze2.t |> mk_term ~tloc:e.espan
             else
               mk_bv_lt ze1.t ze2.t |> mk_term ~tloc:e.espan
@@ -206,11 +204,11 @@ struct
           (match e1.e with
            | ETuple es ->
              let zes =
-               BatList.map (fun e -> (encode_exp_z3_single descr env e).t) es in
+               BatList.map (fun e -> (encode_exp_z3_single ~arith:true descr env e).t) es in
              (match e2.e with
               | ETuple es ->
                 let zes2 =
-                  BatList.map (fun e -> (encode_exp_z3_single descr env e).t) es
+                  BatList.map (fun e -> (encode_exp_z3_single ~arith:true descr env e).t) es
                 in
                 let ze3 = encode_value_z3_single descr env (Syntax.to_value e3) in
                 mk_atMost zes zes2 ze3.t |>
@@ -232,7 +230,7 @@ struct
         | MFoldNode, _
         | MFoldEdge, _
         | _ -> failwith "internal error (encode_exp_z3)")
-    | ETy (e, _) -> encode_exp_z3_single descr env e
+    | ETy (e, _) -> encode_exp_z3_single ~arith descr env e
     | _ ->
       (* we always know this is going to be a singleton list *)
       let es = encode_exp_z3 descr env e in
@@ -322,7 +320,7 @@ struct
     | PBool b, TBool ->
       [mk_eq (BatList.hd znames).t (mk_bool b) |> mk_term]
     | PInt i, TInt _ ->
-      let const = if int_as_arith then mk_int_u32 i else mk_bv i in
+      let const = if smt_config.infinite_arith then mk_int_u32 i else mk_bv i in
         [mk_eq (BatList.hd znames).t const |> mk_term]
     | PTuple ps, TTuple ts -> (
         match (ps, ts) with
@@ -339,19 +337,19 @@ struct
            (Printing.pattern_to_string p)
            (Printing.ty_to_string (get_inner_type t)))
 
-  and encode_value_z3 descr env (v: Syntax.value) : term list =
+  and encode_value_z3 ?(arith=false) descr env (v: Syntax.value) : term list =
     match v.v with
     | VTuple vs ->
-      BatList.map (fun v -> encode_value_z3_single descr env v) vs
-    | _ -> [encode_value_z3_single descr env v]
+      BatList.map (fun v -> encode_value_z3_single ~arith descr env v) vs
+    | _ -> [encode_value_z3_single ~arith descr env v]
 
-  and encode_value_z3_single descr env (v: Syntax.value) : term =
+  and encode_value_z3_single ?(arith = false) descr env (v: Syntax.value) : term =
     match v.v with
     | VBool b ->
       mk_bool b |>
       mk_term ~tloc:v.vspan
     | VInt i ->
-      (if int_as_arith || (Integer.size i = 32) then mk_int_u32 i else mk_bv i) |>
+      (if (smt_config.infinite_arith || arith) then mk_int_u32 i else mk_bv i) |>
       mk_term ~tloc:v.vspan ~tdescr:"val"
     | VNode n ->
       encode_value_z3_single descr env @@

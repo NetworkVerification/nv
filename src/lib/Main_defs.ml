@@ -140,6 +140,10 @@ let run_smt_classic file cfg info (net : Syntax.network) fs =
 ;;
 
 let run_smt file cfg info (net : Syntax.network) fs =
+  (if not(cfg.infinite_arith) then
+     SmtUtils.smt_config.infinite_arith <- false);
+  (if cfg.smt_parallel then
+     SmtUtils.smt_config.parallel <- true);
   if cfg.func then
     run_smt_func file cfg info net fs
   else
@@ -349,4 +353,4 @@ let parse_input (args : string array)
       net, fs
   in
    let net, _ = OptimizeBranches.optimize_net net in (* The _ should match the identity function *)
-  (cfg, info, file, net, fs)
+   (cfg, info, file, net, fs)

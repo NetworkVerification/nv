@@ -1,8 +1,8 @@
 open Nv_datastructures
 open Nv_lang.Syntax
 open SolverUtil
-open SmtLang
 open SmtUtils
+open SmtLang
 open Smt
 
 module Boxed = SmtBoxed.Boxed
