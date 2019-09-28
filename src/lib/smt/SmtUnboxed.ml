@@ -184,7 +184,10 @@ struct
         | Syntax.USub _, [e1;e2] ->
           let ze1 = encode_exp_z3_single descr env e1 in
           let ze2 = encode_exp_z3_single descr env e2 in
-          mk_sub ze1.t ze2.t |> mk_term ~tloc:e.espan
+          if smt_config.infinite_arith then
+            mk_sub ze1.t ze2.t |> mk_term ~tloc:e.espan
+          else
+            mk_bv_sub ze1.t ze2.t |> mk_term ~tloc:e.espan
         | Eq, [e1;e2] ->
           let ze1 = encode_exp_z3_single descr env e1 in
           let ze2 = encode_exp_z3_single descr env e2 in

@@ -95,6 +95,7 @@ module SmtLang =
       | Var of string
       | Bv of Integer.t
       | BvAdd of smt_term * smt_term
+      | BvSub of smt_term * smt_term
       | BvLt of smt_term * smt_term
       | AtMost of (smt_term list) * (smt_term list) * smt_term
       | Constructor of string * sort (** constructor name, instantiated sort*)
@@ -191,6 +192,8 @@ module SmtLang =
 
     let mk_bv_add t1 t2 = BvAdd (t1, t2)
 
+    let mk_bv_sub t1 t2 = BvSub (t1, t2)
+
     let mk_bv_lt t1 t2 = BvLt (t1, t2)
 
     let mk_ite t1 t2 t3 = Ite (t1, t2, t3)
@@ -258,6 +261,7 @@ module SmtLang =
         | Eq (tm1, tm2)
         | Lt (tm1, tm2)
         | BvAdd (tm1, tm2)
+        | BvSub (tm1, tm2)
         | BvLt (tm1, tm2)
         | Leq (tm1, tm2) ->
         get_vars tm1 @ get_vars tm2
@@ -318,6 +322,8 @@ module SmtLang =
       | Bv n -> Printf.sprintf "(_ bv%d %d)" (Integer.to_int n) (Integer.size n)
       | BvAdd (t1, t2) ->
         Printf.sprintf "(bvadd %s %s)" (smt_term_to_smt t1) (smt_term_to_smt t2)
+      | BvSub (t1, t2) ->
+        Printf.sprintf "(bvsub %s %s)" (smt_term_to_smt t1) (smt_term_to_smt t2)
       | BvLt (t1, t2) ->
         Printf.sprintf "(bvult %s %s)" (smt_term_to_smt t1) (smt_term_to_smt t2)
       | AtMost (ts1, ts2, t1) ->
