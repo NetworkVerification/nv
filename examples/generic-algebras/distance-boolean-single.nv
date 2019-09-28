@@ -1,0 +1,45 @@
+(* Shortest path routing using bitvectors *)
+
+(* 3 bits, representing path lenghts up to 7, we consider 5 to be the max length for now.  *)
+type attribute = option[(bool, bool, bool)]
+
+let trans e x =
+  match x with
+  | None -> None
+  | Some b ->
+     (match b with
+     | (false, false, false) -> Some (true, false, false)
+     | (true, false, false) -> Some (false, true, false)
+     | (false, true, false) -> Some (true, true, false)
+     | (true, true, false) -> Some (false, false, true)
+     | (false, false, true) -> Some (true, false, true)
+     | (b0, b1, b2) ->
+       (* overflow after 4 *)
+       Some (true,true,true))
+
+let pickSmallest xi yi x y =
+  match (xi, yi) with
+  | (true, false) -> Some y
+  | (false, true) -> Some x
+  | (_, _) -> None
+
+let merge u x y =
+  match (x,y) with
+  | (Some _, None) -> x
+  | (None, _) -> y
+  | (Some (x0,x1,x2), Some (y0,y1,y2)) ->
+      (match pickSmallest x2 y2 x y with
+       | Some r -> r
+       | None ->
+          (match pickSmallest x1 y1 x y with
+           | Some r -> r
+           | None ->
+            (match pickSmallest x0 y0 x y with
+             | Some r -> r
+             | None -> x (*x = y*)
+             )))
+
+let init n =
+  match n with
+  | 0n -> Some (false,false,false)
+  | _ -> None

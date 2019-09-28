@@ -4,8 +4,8 @@ open Nv_lang.Collections
 open Nv_solution.Solution
 open Nv_utils.Profile
 open SolverUtil
-open SmtLang
 open SmtUtils
+open SmtLang
 open SmtEncodingSigs
 open SmtOptimizations
 open SmtModel

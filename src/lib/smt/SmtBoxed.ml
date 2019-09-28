@@ -2,8 +2,8 @@ open Nv_lang
 open Nv_datastructures
 open Syntax
 open Collections
-open SmtLang
 open SmtUtils
+open SmtLang
 open Nv_utils.OCamlUtils
 
 module Boxed: SmtEncodingSigs.ExprEncoding =

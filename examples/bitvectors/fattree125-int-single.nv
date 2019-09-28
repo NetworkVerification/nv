@@ -1,0 +1,7 @@
+include "../generic-algebras/distance-single.nv"
+include "../generic-topologies/fattree125.nv"
+
+let assert u x =
+  match x with
+  | None -> false
+  | Some _ -> true

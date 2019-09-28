@@ -58,6 +58,24 @@ let smt_test filename expected: test =
   }
 ;;
 
+let bv_test filename expected: test =
+  {
+    testname = filename ^ "_bv";
+    args = Array.of_list ["nv"; "-m"; "-unbox"; "-finite-arith"; filename_prefix ^ filename];
+    testfun = run_smt;
+    expected;
+  }
+;;
+
+let parallel_test filename expected: test =
+  {
+    testname = filename ^ "_parallel";
+    args = Array.of_list ["nv"; "-m"; "-unbox"; "-smt-parallel"; filename_prefix ^ filename];
+    testfun = run_smt;
+    expected;
+  }
+;;
+
 let unboxed_test filename expected: test =
   {
     testname = filename ^ "_unboxed";
@@ -242,6 +260,20 @@ let slicing_tests =
     ]
 ;;
 
+let bv_tests =
+  List.map (fun (f,b) -> bv_test f b)
+    [
+      ("examples/bitvectors/fattree125-bv-single.nv", true);
+    ]
+;;
+
+let parallel_tests =
+  List.map (fun (f,b) -> parallel_test f b)
+    [
+      ("examples/bitvectors/fattree125-bv-single.nv", true);
+    ]
+;;
+
 let make_ounit_test test =
   test.testname >:: fun _ ->
     let cfg, info, file, decls, fs = parse_input test.args in
@@ -259,4 +291,6 @@ let tests =
   unboxed_tests @
   hiding_tests @
   slicing_tests @
+  bv_tests @
+  parallel_tests @
   [] (* So we can easily comment out the last actual test *)

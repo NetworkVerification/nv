@@ -3,6 +3,7 @@ open Nv_lang.Collections
 open Nv_lang.Syntax
 open Nv_solution.Solution
 open Nv_datastructures
+open SmtUtils
 open SmtLang
 open SolverUtil
 

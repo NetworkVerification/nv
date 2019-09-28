@@ -110,7 +110,8 @@ struct
               else c
             end
           else b) 0 ps1 ps2
-    | _, _ -> failwith "No comparison between non-concrete patterns"
+    | _, _ -> failwith
+                (Printf.sprintf "No comparison between non-concrete patterns")
 end
 
 module PatMap = BatMap.Make(Pat)

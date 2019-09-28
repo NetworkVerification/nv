@@ -170,6 +170,10 @@ let run_smt_classic file cfg info (net : Syntax.network) fs =
 ;;
 
 let run_smt file cfg info (net : Syntax.network) fs =
+  (if cfg.finite_arith then
+     SmtUtils.smt_config.infinite_arith <- false);
+  (if cfg.smt_parallel then
+     SmtUtils.smt_config.parallel <- true);
   if cfg.func then
     run_smt_func file cfg info net fs
   else
@@ -366,17 +370,18 @@ let parse_input (args : string array)
       (decls, f :: fs)
     else decls, fs
   in
-  let decls, fs =
-    if cfg.smt then
-      let decls, f = UnboxEdges.unbox_declarations decls in
-      decls, f :: fs
-    else
-      decls, fs
-  in
   let net = Slicing.createNetwork decls in (* Create something of type network *)
-  let net =
-    if cfg.link_failures > 0 then
-      Failures.buildFailuresNet net cfg.link_failures
-    else net
+    let net =
+      if cfg.link_failures > 0 then
+        Failures.buildFailuresNet net cfg.link_failures
+      else net
+    in
+  let net, fs =
+    if cfg.smt then
+      let net, f = UnboxEdges.unbox_net net in
+      net, f :: fs
+    else
+      net, fs
   in
-  (cfg, info, file, net, fs)
+   (* let net, _ = OptimizeBranches.optimize_net net in (\* The _ should match the identity function *\) *)
+   (cfg, info, file, net, fs)
