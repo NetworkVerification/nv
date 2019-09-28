@@ -52,7 +52,7 @@ let checkMonotonicity info query chan net =
   let checka = Boxed.create_strings "checka" net.attr_type in
   let checka_var = Boxed.lift1 Var.create checka in
   let transTable = Nv_transformations.Slicing.partialEvalOverEdges (AdjGraph.edges net.graph) net.trans in
-  let mergeTable = Nv_transformations.Slicing.partialEvalOverNodes (AdjGraph.num_vertices net.graph) net.merge in
+  let mergeTable = Nv_transformations.Slicing.partialEvalOverNodes (AdjGraph.nb_vertex net.graph) net.merge in
   let solver = start_solver [] in
   let unbox x = Boxed.to_list x |> List.hd in
   Hashtbl.iter (fun edge trans ->
@@ -139,6 +139,6 @@ let checkMonotonicity info query chan net =
       match reply with
       | SAT ->
         Nv_lang.Console.warning (Printf.sprintf "Policy on edge %s is non-monotonic"
-                           (AdjGraph.printEdge edge))
+                           (AdjGraph.Edge.to_string edge))
       | UNSAT -> ()
       | _ -> failwith "unknown answer") transTable

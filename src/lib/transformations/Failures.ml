@@ -60,7 +60,7 @@ let buildSymbolicFailures (aedges : AdjGraph.Edge.t list) (k : int) =
   let open AdjGraph in
   let failuresMap =
     BatList.fold_left (fun acc (u,v) ->
-        let e = Printf.sprintf "%s-%s" (Vertex.printVertex u) (Vertex.printVertex v) in
+        let e = Printf.sprintf "%s-%s" (Vertex.to_string u) (Vertex.to_string v) in
         let failVar = Var.fresh ("failed-" ^ e) in
         EdgeMap.add (u,v) failVar acc) EdgeMap.empty aedges in
   let failures_leq_k = failuresConstraint_pb k failuresMap in

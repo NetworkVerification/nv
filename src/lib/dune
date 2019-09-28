@@ -1,6 +1,6 @@
 (library
   (name nv_lib)
-  ; (public_name nv_lib)
+  (public_name nv)
   (libraries
     nv_lang
     nv_smt
@@ -12,7 +12,8 @@
     str
     batteries
     lru-cache
-    zarith)
+    zarith
+    parmap)
   (preprocess
     (pps ppx_deriving.std ppx_deriving_argparse))
 )

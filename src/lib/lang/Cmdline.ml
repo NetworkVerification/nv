@@ -26,6 +26,7 @@ type t =
   ; check_monotonicity: bool           (** checks monotonicity of trans function   *)
   ; link_failures: int                 (** adds at most k link failures to the network  *)
   ; slicing: bool                      (** Try to slice the network's attribute *)
+  ; parallelize : int option [@short "-p"] (** Try to parallelize using n cores **)
   }
 [@@deriving
   show
@@ -60,6 +61,7 @@ let default =
   ; link_failures=0
   ; hiding=false
   ; slicing=false
+  ; parallelize= None
   }
 
 let cfg = ref default

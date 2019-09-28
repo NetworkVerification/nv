@@ -1,5 +1,6 @@
 (library
   (name nv_solution)
+  (public_name nv.solution)
   (libraries
     ANSITerminal
     nv_datastructures

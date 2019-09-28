@@ -1,187 +1,68 @@
+open Graph
+open Nv_utils.PrimitiveCollections
+
+(*** Module definitions ***)
+
 module Vertex = struct
   type t = int (* Really should be Syntax.node, but that causes a dependency loop *)
-
-  let printVertex i =
-    Printf.sprintf "%d" i
 
   let compare = Pervasives.compare
   let equal = (fun a b -> compare a b = 0)
   let hash = Hashtbl.hash
+  let to_string = string_of_int
 end
 
-module VertexMap = BatMap.Make (Vertex)
-module VertexSet = BatSet.Make(Vertex)
-module VertexSetSet : BatSet.S with type elt = VertexSet.t = BatSet.Make(VertexSet)
-module VertexSetMap : BatMap.S with type key = VertexSet.t = BatMap.Make(VertexSet)
+include Persistent.Digraph.Concrete(Vertex)
 
 module Edge = struct
-  type t = Vertex.t * Vertex.t
-
-  let compare (v1, w1) (v2, w2) =
-    if Pervasives.compare v1 v2 <> 0 then Pervasives.compare v1 v2
-    else Pervasives.compare w1 w2
+  include E
+  let to_string e =
+    Printf.sprintf "%s~%s" (Vertex.to_string (src e)) (Vertex.to_string (dst e))
 end
 
-let printEdge (e : Edge.t) =
-  Printf.sprintf "<%d,%d>" (fst e) (snd e);
+module VertexMap = BetterMap.Make(Vertex)
+module VertexSet = BetterSet.Make(Vertex)
+module VertexSetSet = BetterSet.Make(VertexSet)
+module VertexSetMap = BetterMap.Make(VertexSet)
+module EdgeMap = BetterMap.Make(Edge)
+module EdgeSet = BetterSet.Make(Edge)
 
-module EdgeSet = BatSet.Make(Edge)
-module EdgeMap = BatMap.Make(Edge)
+(*** Printing ***)
 
-(* OCaml 4.06 contains find_opt and update built in. upgrade compiler. *)
-let find_opt v m =
-  try Some (VertexMap.find v m) with Not_found -> None
+let to_string g =
+  Printf.sprintf "Vertices: {%s}\nEdges: {%s}"
+    (fold_vertex (fun v acc -> acc ^ Vertex.to_string v ^ ";") g "")
+    (fold_edges_e (fun e acc -> acc ^ Edge.to_string e ^ ";") g "")
 
-let update v f m =
-  match f (find_opt v m) with
-  | None -> VertexMap.remove v m
-  | Some ns -> VertexMap.add v ns m
+(*** Vertex/Edge Utilities ***)
 
-let vertex_map_to_string elem_to_string m =
-  let kvs = VertexMap.fold (fun k v l -> (k, v) :: l) m [] in
-  BatList.fold_left
-    (fun s (k, v) -> string_of_int k ^ ":" ^ elem_to_string v ^ s)
-    "" kvs
-
-let print_vertex_map elem_to_string m =
-  VertexMap.iter
-    (fun k v ->
-      print_endline (string_of_int k ^ ":" ^ elem_to_string v) )
-    m
-
-(* a graph as ajacency list * # of vertices *)
-type t = Vertex.t list VertexMap.t * int
-
-(* create a graph with i vertices *)
-let create i = (VertexMap.empty, i)
-
-(* vertices and edges *)
-let num_vertices (_, i) = i
-
-(* let get_vertices (m, i) = *)
-(*   VertexMap.fold (fun k _ acc -> VertexSet.add k acc) *)
-(*                  m VertexSet.empty *)
-
-let fold_vertices (f: Vertex.t -> 'a -> 'a) i (acc: 'a) : 'a =
+let fold_vertices (f: Vertex.t -> 'a -> 'a) (i : int) (acc: 'a) : 'a =
   let rec loop j =
     if i = j then acc
     else f j (loop (j + 1))
   in
   loop 0
 
-(* get_vertices now returns all the vertices in the graph, not just
-   the ones that have an outgoing edge.*)
-let get_vertices (_, i) =
-  VertexSet.of_enum (BatEnum.(--) 0 i)
+let vertices (g: t) = fold_vertex VertexSet.add g VertexSet.empty
 
-let edges (m, _) =
-  let my_edges v neighbors acc =
-    BatList.fold_left (fun a w -> (v, w) :: a) acc neighbors
-  in
-  BatList.rev
-    (VertexMap.fold
-       (fun v neighbors a -> my_edges v neighbors a)
-       m [])
+let edges (g: t) = BatList.rev (fold_edges_e List.cons g [])
 
-let edges_map (m, _) (f: Edge.t -> 'a) =
-  let my_edges v neighbors a =
-    BatList.fold_left (fun a w -> EdgeMap.add (v, w) (f (v,w)) a) a neighbors
-  in
-  VertexMap.fold
-    (fun v neighbors a -> my_edges v neighbors a)
-    m EdgeMap.empty
+(*** Graph Creation **)
 
-(* a vertex v does not belong to a graph's set of vertices *)
-exception BadVertex of Vertex.t
+let create n = fold_vertices (fun v g -> add_vertex g v) n empty
 
-let good_vertex (_, i) v =
-  if Pervasives.compare v 0 < 0 || not (Pervasives.compare i v > 0)
-  then (Printf.printf "bad: %s" (Vertex.printVertex v); raise (BadVertex v))
+let of_edges (l: (Vertex.t * Vertex.t) list) : t =
+  BatList.fold_left (fun g e -> add_edge_e g e) empty l
 
-let good_graph g =
-  BatList.iter
-    (fun (v, w) -> good_vertex g v ; good_vertex g w)
-    (edges g)
+(*** Min-cut computation ***)
 
-(* add_edge g e adds directed edge e to g *)
-let add_edge (m, i) (v, w) =
-  good_vertex (m, i) v ;
-  good_vertex (m, i) w ;
-  let f adj =
-    match adj with
-    | None -> Some [w]
-    | Some ns -> if BatList.mem w ns then adj else Some (w :: ns)
-  in
-  (update v f m, i)
+(* FIXME: ocamlgraph apparently has implmentations of all these functions,
+   even including min-cut. However, apparently they were giving different
+   results. We should look into that to make sure the differences are legitimate,
+   then remove this and switch to ocamlgraph's min-cut. *)
 
-let rec add_edges g edges =
-  match edges with
-  | [] -> g
-  | e :: edges -> add_edges (add_edge g e) edges
-
-(* add_edge g e adds directed edge e to g *)
-let remove_edge (m, i) (v, w) =
-  good_vertex (m, i) v ;
-  good_vertex (m, i) w ;
-  let f adj =
-    match adj with
-    | None -> adj
-    | Some ns ->
-      match
-        BatList.filter (fun a -> not (a = w)) ns
-      with
-      | [] -> None
-      | ns' -> Some ns'
-  in
-  (update v f m, i)
-
-let remove_edges (m, i) (es: EdgeSet.t) =
-  let umap = EdgeSet.fold (fun (u,v) acc ->
-                 VertexMap.modify_def (VertexSet.empty) u
-                                      (fun vs -> VertexSet.add v vs) acc)
-                          es VertexMap.empty
-  in
-  let f vs adj =
-    match adj with
-    | None -> adj
-    | Some ns ->
-      match
-        BatList.filter (fun a -> not (VertexSet.mem a vs)) ns
-      with
-      | [] -> None
-      | ns' -> Some ns'
-  in
-  let m' = VertexMap.fold (fun u vs acc -> update u (f vs) acc) umap m in
-  (m', i)
-
-(* neighbors of v in g *)
-let neighbors (m, i) v =
-  good_vertex (m, i) v ;
-  match find_opt v m with None -> [] | Some ns -> ns
-
-let print g =
-  Printf.printf "%d\n" (num_vertices g) ;
-  BatList.iter
-    (fun (v, w) ->
-      Printf.printf "%d -> %d\n" v w
-      )
-    (edges g)
-
-let to_string g =
-  let b = Buffer.create 80 in
-  let rec add_edges es =
-    match es with
-    | [] -> ()
-    | (v, w) :: rest ->
-        Buffer.add_string b
-          (Printf.sprintf "%d -> %d\n" v w) ;
-        add_edges rest
-  in
-  Buffer.add_string b (string_of_int (num_vertices g) ^ "\n") ;
-  add_edges (edges g) ;
-  Buffer.contents b
-
-let bfs (g: t) (rg : int EdgeMap.t) (s: Vertex.t) (t: Vertex.t) =
+(* return a (bool, VertexMap) tuple indicating whether the node t was visited and what the path to it was? *)
+let bfs (g: t) (rg : int EdgeMap.t) (s: Vertex.t) (t: Vertex.t) : (bool * Vertex.t VertexMap.t) =
   let visited = VertexSet.singleton s in
   let path = VertexMap.empty |> VertexMap.add s s in
   let q = Queue.create () in
@@ -190,16 +71,15 @@ let bfs (g: t) (rg : int EdgeMap.t) (s: Vertex.t) (t: Vertex.t) =
     if not (Queue.is_empty q) then
       begin
         let u = Queue.pop q in
-        let vs = neighbors g u in
         let visited, path =
-          BatList.fold_left (fun (accvs, accpath) (v: Vertex.t) ->
+          fold_succ (fun (v: Vertex.t) (accvs, accpath) ->
               if ((not (VertexSet.mem v accvs)) && (EdgeMap.find (u,v) rg > 0)) then
                 begin
                   Queue.push v q;
                   (VertexSet.add v accvs, VertexMap.add v u accpath)
                 end
               else
-                (accvs, accpath)) (visited, path) vs
+                (accvs, accpath)) g u (visited, path)
         in
         loop path visited
       end
@@ -208,22 +88,32 @@ let bfs (g: t) (rg : int EdgeMap.t) (s: Vertex.t) (t: Vertex.t) =
   let path, visited = loop path visited in
   (VertexSet.mem t visited, path)
 
-let dfs (g: t) (rg : int EdgeMap.t) (s: Vertex.t) =
+
+(* return the set o vertices reachable from s via DFS taking paths with positive flow? *)
+let dfs (g: t) (rg : int EdgeMap.t) (s: Vertex.t) : VertexSet.t =
   let rec loop u visited =
     let visited = VertexSet.add u visited in
-    let vs = neighbors g u in
-    BatList.fold_left (fun accvs v ->
+    fold_succ
+     (fun v accvs ->
+       (* if there is some _positive_ edge from u to a neighbour v,
+        * continue the loop at v, otherwise stop *)
         if ((EdgeMap.find (u,v) rg > 0) && (not (VertexSet.mem v accvs))) then
           loop v accvs
-        else accvs) visited vs
+        else accvs) g u visited
   in
   loop s VertexSet.empty
 
+(* module Dfs = Traverse.Dfs(Persistent.Digraph.Concrete(Vertex)) *)
+(* module Bfs = Traverse.Bfs(Persistent.Digraph.Concrete(Vertex)) *)
+
 let min_cut g s t =
-  let rg = ref (edges_map g (fun _ -> 1)) in
+  (* rg is a map of edges to weights, initialized to 1 at every edge *)
+  let rg = ref (fold_edges_e (fun e a -> EdgeMap.add e 1 a) g EdgeMap.empty) in
+  (* modified Edmonds-Carp algorithm *)
   let rec loop reach path =
     if reach then
       begin
+        (* compute min flow capacity from s to t along the path *)
         let path_flow = ref max_int in
         let u = ref t in
         while (!u <> s) do
@@ -231,6 +121,7 @@ let min_cut g s t =
           u := VertexMap.find !u path;
           path_flow := min !path_flow (EdgeMap.find (!u, v) !rg)
         done;
+        (* update edge weights using the capacity *)
         u := t;
         while (!u <> s) do
           let v = !u in (*current node*)
@@ -238,63 +129,57 @@ let min_cut g s t =
           rg := EdgeMap.modify (!u, v) (fun n -> n - !path_flow) !rg;
           rg := EdgeMap.modify (v, !u) (fun n -> n + !path_flow) !rg
         done;
+        (* recompute reachability check *)
         let reach, path = bfs g !rg s t in
         loop reach path
       end
   in
+  (* reach represents the existence of a path from s to t;
+   * path is the shortest path from s to t
+   *)
   let reach, path = bfs g !rg s t in
   loop reach path;
 
+  (* return the s-set produced by min cut *)
   let visited = dfs g !rg s in
   let cut = EdgeMap.fold (fun (u,v) _ cutset ->
-                if (VertexSet.mem u visited) && (not (VertexSet.mem v visited)) then
-                  (EdgeSet.add (u,v) cutset)
-                else
-                  cutset) !rg EdgeSet.empty
+      if (VertexSet.mem u visited) && (not (VertexSet.mem v visited)) then
+        (EdgeSet.add (u,v) cutset)
+      else
+        cutset) !rg EdgeSet.empty
   in
-  (cut, visited, VertexSet.diff (get_vertices g) visited)
-(*
-module BoolOrdered = struct
-  type t = bool
-  let default = false
-  let compare = compare
-end *)
+  (* return the cut-set, the visited vertices (s-set) and the non-visited vertices (t-set) *)
+  (cut, visited, VertexSet.diff (vertices g) visited)
 
 module DrawableGraph = struct
 
   let graph_dot_file =
     let counter = ref (-1) in
     fun (k: int) (file: string) ->
-    incr counter;
-    file ^ "-" ^ (string_of_int k) ^ "-" ^ (string_of_int !counter)
+      incr counter;
+      file ^ "-" ^ (string_of_int k) ^ "-" ^ (string_of_int !counter)
 
-  module G = Graph.Persistent.Graph.Concrete (Vertex)
-
-  let createGraph ((m,_): t)  =
-    (* Assume no vertices of degree 0 *)
-    VertexMap.fold (fun u es acc ->
-        BatList.fold_left (fun acc v ->
-            G.add_edge_e acc (G.E.create u () v)) acc es) m G.empty
+  module G = Graph.Persistent.Digraph.Concrete (Vertex)
 
   module Dot = Graph.Graphviz.Dot(struct
-                   include G
-                   let edge_attributes _ =
-                       [`Color 3711; `Dir `None]
-                   let default_edge_attributes _ = []
-                   let get_subgraph _ = None
-                   let vertex_attributes v =
-                     let label = Vertex.printVertex v in
-                     [`Shape `Circle; `Label label; `Fontsize 11;]
-                   let vertex_name v = string_of_int v
-                   let default_vertex_attributes _ = []
-                   let graph_attributes _ = [`Center true; `Nodesep 0.45;
-                                             `Ranksep 0.45; `Size (82.67, 62.42)]
-                 end)
+      include G
+      let edge_attributes _ =
+        [`Color 3711; `Dir `None]
+      let default_edge_attributes _ = []
+      let get_subgraph _ = None
+      let vertex_attributes v =
+        let label = Vertex.to_string v in
+        [`Shape `Circle; `Label label; `Fontsize 11;]
+      let vertex_name v = Vertex.to_string v
+      let default_vertex_attributes _ = []
+      let graph_attributes _ = [`Center true; `Nodesep 0.45;
+                                `Ranksep 0.45; `Size (82.67, 62.42)]
+    end)
 
   let drawGraph (g: t) (dotfile: string)  =
     let chan = open_out (dotfile ^ ".dot") in
-    Dot.output_graph chan (createGraph g);
+    Dot.output_graph chan g;
     let _ = Sys.command ("dot -Tjpg " ^ dotfile ^
-                           ".dot -o " ^ dotfile ^ ".jpg") in
+                         ".dot -o " ^ dotfile ^ ".jpg") in
     close_out chan
 end

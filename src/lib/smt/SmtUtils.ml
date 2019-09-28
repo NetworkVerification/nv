@@ -59,6 +59,23 @@ module SmtLang =
       in
       Printf.sprintf "; %s: %s on %d-%d\n" msg descr sl fl
 
+    let printList (printer: 'a -> string) (ls: 'a list) (first : string)
+          (sep : string) (last : string) =
+      let buf = Buffer.create 1000 in
+      let rec loop ls =
+        match ls with
+        | [] -> ()
+        | [l] -> Buffer.add_string buf (printer l)
+        | l :: ls ->
+          Buffer.add_string buf (printer l);
+          Buffer.add_string buf sep;
+          loop ls
+      in
+      Buffer.add_string buf first;
+      loop ls;
+      Buffer.add_string buf last;
+      Buffer.contents buf
+
     type datatype_decl =
       { name         : string;
         params       : sort list;
@@ -209,6 +226,7 @@ module SmtLang =
          | Bool true, Bool true -> Bool true
          | Bool false, Bool false -> Bool false
          | Int i1, Int i2 when i1 = i2 -> t2
+         | Bv i1, Bv i2 when i1 = i2 -> t2
          | _, _ ->
            mk_ite t1 t2 t3)
 
@@ -289,13 +307,12 @@ module SmtLang =
       | MapSort (s1, s2) ->
         Printf.sprintf "((%s) %s)" (sort_to_smt s1) (sort_to_smt s2)
       | DataTypeSort (name, ls) ->
-        let args = Collections.printList sort_to_smt ls "" " " "" in
+        let args = printList sort_to_smt ls "" " " "" in
         Printf.sprintf "(%s %s)" name args
       | BitVecSort n -> Printf.sprintf "(_ BitVec %d)" n
       | VarSort s -> s
 
     let rec smt_term_to_smt (tm : smt_term) : string =
-      let open Collections in
       match tm with
       | Int s -> s
       | Bool b -> if b then "true" else "false"
@@ -352,13 +369,12 @@ module SmtLang =
       | [] -> c.constr_name
       | (p :: ps) ->
         let constrArgs =
-          Collections.printList (fun (p,s) ->
+          printList (fun (p,s) ->
               Printf.sprintf "(%s %s)" p (sort_to_smt s)) (p :: ps) "" " " ""
         in
         Printf.sprintf "(%s %s)" c.constr_name constrArgs
 
     let rec type_decl_to_smt (dt: datatype_decl) : string =
-      let open Collections in
       Printf.sprintf "(declare-datatypes %s ((%s %s)))"
         (printList sort_to_smt dt.params "(" " " ")")
         dt.name
@@ -382,7 +398,6 @@ module SmtLang =
     let assert_tm_to_name count tm =
       let base = "constraint-" ^ string_of_int count in
       List.fold_left (fun s1 s2 -> s1 ^ "$" ^ s2) base (get_vars tm.t)
-    ;;
 
     let smt_command_to_smt ?(name_asserts=false) ?(count=0) (info : Console.info) (comm : smt_command): string =
       match comm with
@@ -433,7 +448,7 @@ module SmtLang =
               smt_command_to_smt info com.com
 
           let commands_to_smt (verbose : bool) info (coms : command list) : string =
-            Collections.printList (fun c -> command_to_smt verbose info c) coms "\n" "\n" "\n"
+            printList (fun c -> command_to_smt verbose info c) coms "\n" "\n" "\n"
 
           type smt_answer =
             UNSAT | SAT | UNKNOWN

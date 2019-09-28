@@ -114,7 +114,7 @@ struct
     let eassert = net.assertion in
     let emerge = net.merge in
     let etrans = net.trans in
-    let nodes = (AdjGraph.num_vertices net.graph) in
+    let nodes = (AdjGraph.nb_vertex net.graph) in
     let edges = (AdjGraph.edges net.graph) in
     let aty = net.attr_type in
     (* map each node to the init result variable *)

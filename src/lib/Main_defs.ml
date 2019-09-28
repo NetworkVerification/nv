@@ -39,6 +39,10 @@ let partialEvalNet net =
 let run_smt_func file cfg info net fs =
   SmtUtils.smt_config.encoding <- Functional;
   let srp = SmtSrp.network_to_srp net in
+  let srp, fs =
+    let srp, f = UnboxUnits.unbox_srp srp in
+    srp, f :: fs
+  in
   let srp, f = Renaming.alpha_convert_srp srp in
   let srp, fs =
     if cfg.unbox then
@@ -111,32 +115,58 @@ let run_smt_classic file cfg info (net : Syntax.network) fs =
     match cfg.slicing, net.assertion, net.attr_type with
     | true, Some _, TTuple _ ->
       AttributeSlicing.slice_network net
-      |> List.map (fun (net, f) -> net, f :: fs)
+      |> List.map (dmap (fun (net, f) -> net, f :: fs))
     | _ ->
-      [net, fs]
+      [fun () -> (net, fs)]
   in
   let slices =
     List.map
-      (fun (net, fs) ->
-         let net, f = UnboxUnits.unbox_net net in
-         net, f :: fs)
+      (dmap (fun (net, fs) ->
+           let net, f = UnboxUnits.unbox_net net in
+           net, f :: fs))
       slices
   in
 
   (* Return the first slice that returns a counterexample, or the result of the
      last slice if all of them succeed *)
   (* List.iter (fun (net, _) -> print_endline @@ Printing.network_to_string net) slices; *)
+  let count = ref (-1) in
   let rec solve_slices slices =
     match slices with
     | [] -> failwith "impossible"
-    | (net, fs)::tl ->
-      let answer = get_answer net fs in
+    | laz::tl ->
+      let answer =
+        incr count;
+        Profile.time_profile_absolute ("Slice " ^ string_of_int !count)
+          (fun () ->
+             let net, fs = laz () in
+             get_answer net fs)
+      in
       match answer with
       | CounterExample _, _ -> answer
       | Success _, _ ->
         if BatList.is_empty tl then answer else solve_slices tl
   in
-  solve_slices slices
+  (* let results = Parmap.parmap (BatPervasives.uncurry get_answer) @@ Parmap.L slices in
+     match List.find_opt (function | CounterExample _, _ -> true | _ -> false) results with
+     | Some answer -> answer
+     | None -> List.hd results *)
+  let solve_parallel ncores slices =
+    Parmap.parfold ~ncores:ncores
+      (fun laz acc ->
+         let net, fs = laz () in
+         match acc with
+         | CounterExample _, _ -> acc
+         | _ -> get_answer net fs)
+      (Parmap.L slices) (Success None, [])
+      (fun ans1 ans2 ->
+         match ans1 with
+         | CounterExample _, _ -> ans1
+         | _ -> ans2)
+  in
+  match cfg.parallelize with
+  | None -> solve_slices slices
+  | Some n -> solve_parallel n slices
 ;;
 
 let run_smt file cfg info (net : Syntax.network) fs =
@@ -253,7 +283,7 @@ let compress file info net cfg fs networkOp =
        Console.show_message (Slicing.printPrefixes slice.Slicing.prefixes)
          Console.T.Green "Checking SRP for prefixes";
        (* find source nodes *)
-       let n = AdjGraph.num_vertices slice.net.graph in
+       let n = AdjGraph.nb_vertex slice.net.graph in
        let sources =
          Slicing.findRelevantNodes (Slicing.partialEvalOverNodes n (oget slice.net.assertion)) in
        (* partially evaluate the functions of the network. *)
@@ -324,6 +354,7 @@ let parse_input (args : string array)
       (Profile.time_profile "Inlining" (
           fun () ->
             Inline.inline_declarations decls |>
+            (* TODO: We could probably propagate type information through inlining *)
             Typing.infer_declarations info), f :: fs)
     else
       (decls,fs)
