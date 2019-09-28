@@ -13,7 +13,7 @@ type t =
   ; func: bool                         (** use to enable functional smt encoding   *)
   ; hiding: bool                       (** Use the hiding abstraction during SMT solving *)
   ; smt_parallel: bool                 (** use parallel smt/sat solving*)
-  ; infinite_arith: bool [@set_false]  (** set to false to use finite arithmetic in SMT *)
+  ; finite_arith: bool                 (** set to false to use finite arithmetic in SMT *)
   ; hashcons: bool    [@short "-c"]    (** enables hashconsing of all ast terms    *)
   ; memoize: bool     [@short "-z"]    (** memoizes the interpreter for reuse      *)
   ; no_caching: bool                   (** disables mtbdd operation caching        *)
@@ -53,7 +53,7 @@ let default =
   ; unroll= false
   ; unbox = false
   ; func = false
-  ; infinite_arith = true
+  ; finite_arith = false
   (* ; draw=false *)
   ; depth=20
   ; check_monotonicity=false
@@ -79,5 +79,5 @@ let update_cfg_dependencies () =
   if !cfg.smart_gen then cfg := {!cfg with inline=true};
   if !cfg.slicing then cfg := {!cfg with unbox=true};
   if !cfg.hiding then cfg := {!cfg with unbox=true};
-  if !cfg.smt_parallel then cfg := {!cfg with infinite_arith=false};
+  if !cfg.smt_parallel then cfg := {!cfg with finite_arith=true};
   ()

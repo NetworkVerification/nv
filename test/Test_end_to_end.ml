@@ -61,7 +61,7 @@ let smt_test filename expected: test =
 let bv_test filename expected: test =
   {
     testname = filename ^ "_bv";
-    args = Array.of_list ["nv"; "-m"; "-unbox"; "-infinite-arith"; filename_prefix ^ filename];
+    args = Array.of_list ["nv"; "-m"; "-unbox"; "-finite-arith"; filename_prefix ^ filename];
     testfun = run_smt;
     expected;
   }

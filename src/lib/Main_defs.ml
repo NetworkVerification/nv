@@ -140,7 +140,7 @@ let run_smt_classic file cfg info (net : Syntax.network) fs =
 ;;
 
 let run_smt file cfg info (net : Syntax.network) fs =
-  (if not(cfg.infinite_arith) then
+  (if cfg.finite_arith then
      SmtUtils.smt_config.infinite_arith <- false);
   (if cfg.smt_parallel then
      SmtUtils.smt_config.parallel <- true);
