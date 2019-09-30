@@ -413,7 +413,8 @@ module SmtLang =
       | CheckSat ->
         (* for now i am hardcoding the tactics here. *)
         if smt_config.parallel then
-          Printf.sprintf "(check-sat-using (then simplify propagate-values simplify \
+          Printf.sprintf "(set-option :parallel.enable true)\n\
+                          (check-sat-using (then simplify propagate-values simplify \
                           solve-eqs bit-blast psat))"
         else
           Printf.sprintf "(check-sat-using (then simplify propagate-values simplify \
