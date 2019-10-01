@@ -382,6 +382,6 @@ let parse_input (args : string array)
       net, f :: fs
     else
       net, fs
-  in
+    in
    (* let net, _ = OptimizeBranches.optimize_net net in (\* The _ should match the identity function *\) *)
    (cfg, info, file, net, fs)

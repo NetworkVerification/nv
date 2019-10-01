@@ -106,14 +106,14 @@ let rec check_annot (e: exp) =
 let check_annot_decl (d: declaration) =
   match d with
   | DLet (_, _, e)
-  |DSymbolic (_, Exp e)
-  |DMerge e
-  |DTrans e
-  |DInit e
-  |DAssert e
-  |DPartition e (* partitioning *)
-  |DInterface e (* partitioning *)
-  |DRequire e ->
+  | DSymbolic (_, Exp e)
+  | DMerge e
+  | DTrans e
+  | DInit e
+  | DAssert e
+  | DPartition e (* partitioning *)
+  | DInterface e (* partitioning *)
+  | DRequire e ->
     check_annot e
   | DNodes _ | DEdges _ | DATy _ | DSymbolic _ | DUserTy _ -> ()
 
@@ -178,13 +178,15 @@ let rec unify info e t1 t2 : unit =
     if t1 == t2 then true (* t1 and t2 are physically the same *)
     else
       match (t1, t2) with
-      | TVar {contents= Link t1}, t2 -> try_unify t1 t2
-      | t1, TVar {contents= Link t2} -> try_unify t1 t2
+      | (TVar {contents = Link t1},t2)
+      | (t1,TVar {contents = Link t2}) -> try_unify t1 t2
       | TVar ({contents= Unbound _} as tv), t'
-      |t', TVar ({contents= Unbound _} as tv) ->
+      | t', TVar ({contents= Unbound _} as tv) ->
         occurs tv t' ;
         tv := Link t' ;
         true
+      (* | TVar {contents= Link t1}, t2 -> try_unify t1 t2
+       * | t1, TVar {contents= Link t2} -> try_unify t1 t2 *)
       | TArrow (tyl1, tyl2), TArrow (tyr1, tyr2) ->
         try_unify tyl1 tyr1 && try_unify tyl2 tyr2
       | TBool, TBool -> true
