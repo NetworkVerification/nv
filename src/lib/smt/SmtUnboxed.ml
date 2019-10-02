@@ -213,7 +213,7 @@ struct
                 let zes2 =
                   BatList.map (fun e -> (encode_exp_z3_single ~arith:true descr env e).t) es
                 in
-                let ze3 = encode_value_z3_single descr env (Syntax.to_value e3) in
+                let ze3 = encode_value_z3_single ~arith:true descr env (Syntax.to_value e3) in
                 mk_atMost zes zes2 ze3.t |>
                 mk_term ~tloc:e.espan
               | _ -> failwith "AtMost requires a list of integers as second arg"

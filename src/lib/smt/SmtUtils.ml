@@ -417,8 +417,12 @@ module SmtLang =
                           (check-sat-using (then simplify propagate-values simplify \
                           solve-eqs bit-blast psat))"
         else
-          Printf.sprintf "(check-sat-using (then simplify propagate-values simplify \
-                          solve-eqs smt))"
+          if smt_config.infinite_arith then
+            Printf.sprintf "(check-sat-using (then simplify propagate-values simplify \
+                            solve-eqs smt))"
+          else
+            Printf.sprintf "(check-sat-using (then simplify propagate-values simplify \
+                            solve-eqs bit-blast smtfd))"
         | GetModel ->
           Printf.sprintf "(get-model)"
         | Push ->
