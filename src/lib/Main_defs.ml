@@ -84,7 +84,8 @@ let run_smt_classic file cfg info (net : Syntax.network) fs =
       end
     else net, fs
   in
-
+  let net = {net with trans = InterpPartial.interp_partial net.trans} in
+  Printf.printf "%s\n" (Printing.network_to_string net);
   let net, f = Renaming.alpha_convert_net net in (*TODO: why are we renaming here?*)
   let fs = f :: fs in
 
@@ -197,6 +198,8 @@ let run_test cfg info net fs =
   | Some sol -> (CounterExample sol, fs)
 
 let run_simulator cfg _ net fs =
+  let net =partialEvalNet net in
+  Printf.printf "%s\n" (Printing.network_to_string net);
   try
     let solution, q =
       match cfg.bound with
