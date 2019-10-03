@@ -962,9 +962,10 @@ let apply_closure cl (args: value list) =
   apps (exp_of_v (VClosure cl)) (List.map (fun a -> e_val a) args)
 
 (* Requires that e is of type TTuple *)
-let tupleToList (e : exp) =
+let rec tupleToList (e : exp) =
   match e.e with
   | ETuple es -> es
+  | ETy (e, _) -> tupleToList e
   | EVal v ->
     (match v.v with
      | VTuple vs ->
@@ -974,7 +975,7 @@ let tupleToList (e : exp) =
 
 let tupleToListSafe (e : exp) =
   match e.e with
-  | ETuple _| EVal _ -> tupleToList e
+  | ETuple _| ETy _ | EVal _ -> tupleToList e
   | _ -> [e]
 
 

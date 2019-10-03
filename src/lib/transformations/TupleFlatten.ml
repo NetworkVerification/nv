@@ -254,10 +254,10 @@ let proj_symbolic (var, toe) =
   (* Flattening should have already happened *)
   match toe with
   | Exp e ->
-    (match e.e with
-     | ETuple es ->
-       List.mapi (fun i ei -> (proj_var i var, Exp ei)) es
-     | _ -> [(var, Exp e)])
+    (match tupleToListSafe e with
+     | [e] -> [(var, Exp e)]
+     | es ->
+       List.mapi (fun i ei -> (proj_var i var, Exp ei)) es)
   | Ty ty ->
     (match ty with
      | TTuple ts ->
