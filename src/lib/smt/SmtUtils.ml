@@ -114,6 +114,7 @@ module SmtLang =
       | BvAdd of smt_term * smt_term
       | BvSub of smt_term * smt_term
       | BvLt of smt_term * smt_term
+      | BvLeq of smt_term * smt_term
       | AtMost of (smt_term list) * (smt_term list) * smt_term
       | Constructor of string * sort (** constructor name, instantiated sort*)
       | App of smt_term * (smt_term list)
@@ -213,6 +214,8 @@ module SmtLang =
 
     let mk_bv_lt t1 t2 = BvLt (t1, t2)
 
+    let mk_bv_leq t1 t2 = BvLeq (t1, t2)
+
     let mk_ite t1 t2 t3 = Ite (t1, t2, t3)
 
     let mk_ite_fast t1 t2 t3 =
@@ -261,27 +264,28 @@ module SmtLang =
     (* Retrieve the names of all smt variables which appear in tm *)
     let rec get_vars (tm : smt_term) : string list =
       (* This could be optimized to not use @ and be tail-reursive, but I don't
-     think our terms are ever very large so it probably doesn't matter *)
+         think our terms are ever very large so it probably doesn't matter *)
       match tm with
       | Int _
-        | Bool _
-        | Bv _
-        | Constructor _ ->
+      | Bool _
+      | Bv _
+      | Constructor _ ->
         []
       | Var s ->
         [s]
       | Not tm1 ->
         get_vars tm1
       | And (tm1, tm2)
-        | Or (tm1, tm2)
-        | Add (tm1, tm2)
-        | Sub (tm1, tm2)
-        | Eq (tm1, tm2)
-        | Lt (tm1, tm2)
-        | BvAdd (tm1, tm2)
-        | BvSub (tm1, tm2)
-        | BvLt (tm1, tm2)
-        | Leq (tm1, tm2) ->
+      | Or (tm1, tm2)
+      | Add (tm1, tm2)
+      | Sub (tm1, tm2)
+      | Eq (tm1, tm2)
+      | Lt (tm1, tm2)
+      | BvAdd (tm1, tm2)
+      | BvSub (tm1, tm2)
+      | BvLt (tm1, tm2)
+      | BvLeq (tm1, tm2)
+      | Leq (tm1, tm2) ->
         get_vars tm1 @ get_vars tm2
       | Ite (tm1, tm2, tm3) ->
         get_vars tm1 @ get_vars tm2 @ get_vars tm3
@@ -343,6 +347,8 @@ module SmtLang =
         Printf.sprintf "(bvsub %s %s)" (smt_term_to_smt t1) (smt_term_to_smt t2)
       | BvLt (t1, t2) ->
         Printf.sprintf "(bvult %s %s)" (smt_term_to_smt t1) (smt_term_to_smt t2)
+      | BvLeq (t1, t2) ->
+        Printf.sprintf "(bvule %s %s)" (smt_term_to_smt t1) (smt_term_to_smt t2)
       | AtMost (ts1, ts2, t1) ->
         Printf.sprintf "((_ pble %s %s) %s)"
           (smt_term_to_smt t1)
@@ -412,10 +418,11 @@ module SmtLang =
           Printf.sprintf "(assert %s)" (term_to_smt false info tm)
       | CheckSat ->
         (* for now i am hardcoding the tactics here. *)
+        Printf.printf "reached here\n";
         if smt_config.parallel then
           Printf.sprintf "(set-option :parallel.enable true)\n\
                           (check-sat-using (then simplify propagate-values simplify \
-                          solve-eqs bit-blast psat))"
+                          solve-eqs bit-blast psat))\n"
         else
           if smt_config.infinite_arith then
             Printf.sprintf "(check-sat-using (then simplify propagate-values simplify \

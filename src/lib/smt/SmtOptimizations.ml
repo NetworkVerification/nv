@@ -26,6 +26,9 @@ let rec alpha_rename_smt_term (renaming: string StringMap.t)
   | BvLt (tm1, tm2) ->
     BvLt (alpha_rename_smt_term renaming valMap tm1,
           alpha_rename_smt_term renaming valMap tm2)
+  | BvLeq (tm1, tm2) ->
+    BvLeq (alpha_rename_smt_term renaming valMap tm1,
+          alpha_rename_smt_term renaming valMap tm2)
   | Add (tm1, tm2) ->
     Add (alpha_rename_smt_term renaming valMap tm1,
          alpha_rename_smt_term renaming valMap tm2)
