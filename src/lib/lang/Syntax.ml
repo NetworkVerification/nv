@@ -973,9 +973,15 @@ let rec tupleToList (e : exp) =
      | _ -> failwith "Not a tuple type")
   | _ -> failwith "Not a tuple type"
 
-let tupleToListSafe (e : exp) =
-  match e.e with
-  | ETuple _| ETy _ | EVal _ -> tupleToList e
+let rec tupleToListSafe (e : exp) =
+    match e.e with
+  | ETuple es -> es
+  | ETy (e, _) -> tupleToListSafe e
+  | EVal v ->
+    (match v.v with
+     | VTuple vs ->
+       BatList.map (fun v -> aexp(e_val v, v.vty, v.vspan)) vs
+     | _ -> [e])
   | _ -> [e]
 
 
