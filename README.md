@@ -40,10 +40,13 @@ opam install -y \
   zarith \
   ocamlgraph \
   fileutils \
-  z3 \
   parmap \
   dune
 ```
+
+You may install z3 via opam as well (`opam install -y z3`), but this is not recommended
+as it takes a long time, and may be out of date. It is recommended that you install
+z3 yourself, separately.
 
 Then clone the repo and run `dune build src/exe/main.exe`.
 

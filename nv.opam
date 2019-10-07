@@ -24,7 +24,6 @@ depends: [
   "ppx_deriving"
   "ppx_deriving_argparse"
   "menhir"
-  "z3"
   "parmap"
 ]
 build: [
