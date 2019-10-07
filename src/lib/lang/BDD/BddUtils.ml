@@ -2,6 +2,7 @@ open Syntax
 open Cudd
 open Nv_utils
 open Nv_datastructures
+open Batteries
 
 let mgr = Man.make_v ()
 
@@ -62,6 +63,7 @@ let count_tops arr sz =
   done ;
   !j
 
+(*TODO: improve performance of this*)
 let rec expand (vars: Man.tbool list) sz : Man.tbool list list =
   if sz = 0 then [[]]
   else

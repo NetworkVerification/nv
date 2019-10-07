@@ -166,7 +166,7 @@ and interp_op env ty op es =
       ; {v= VMap m} ] ) ->
     let seen = BatSet.PSet.singleton ~cmp:Var.compare f2.arg in
     let env = build_env c_env2 (Syntax.free seen f2.body) in
-    (* FIXME: Do we need to do something with the env for f1? use it for bddf? *)
+    (* FIXME: Do we need to do something with the env for f1? use it for bddf I believe. *)
     let mtbdd =
       match ExpMap.Exceptionless.find f1.body !bddfunc_cache with
       | None -> (

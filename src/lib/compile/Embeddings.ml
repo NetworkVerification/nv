@@ -126,18 +126,12 @@ let rec unembed_value (record_cnstrs : string -> 'c) (record_proj : string -> 'a
 let total_time = ref 0.0
 
 let embed_value (record_fns: string -> 'a -> 'b) : ty -> ('v -> Syntax.value) =
-  let start_time = Sys.time () in
   (* let res = OrdMemTy.memoize (embed_value record_fns)  in *)
   let res = fun ty v -> embed_value record_fns ty v in
-  let finish_time = Sys.time () in
-    total_time := !total_time +. (finish_time -. start_time);
     res
 
 
 let unembed_value (record_cnstrs: string -> 'c)  (record_fns: string -> 'a -> 'b) : ty -> (Syntax.value -> 'v) =
-  let start_time = Sys.time () in
   (* let res = OrdMemTy.memoize (unembed_value record_cnstrs record_fns) in *)
   let res = fun ty v -> unembed_value record_cnstrs record_fns ty v in
-  let finish_time = Sys.time () in
-    total_time := !total_time +. (finish_time -. start_time);
     res

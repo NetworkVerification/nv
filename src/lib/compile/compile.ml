@@ -106,7 +106,7 @@ let is_keyword_op op =
 let is_map_op op =
   match op with
     | MCreate | MGet | MSet | MMap | MMapFilter | MMerge -> true
-    | _ -> false
+    | And | Or | Not | UAdd _ | USub _ | Eq | ULess _ | ULeq _ | AtMost _ | NLess | NLeq | TGet _ | TSet _ -> false
 
 (** Translating NV operators to OCaml operators*)
 let op_to_ocaml_string op =
@@ -126,7 +126,7 @@ let op_to_ocaml_string op =
   | MSet
   | MMap
   | MMapFilter
-  | MMerge -> failwith "Map ops are still todo"
+  | MMerge -> failwith "Map ops are handled elsewhere"
   | AtMost _ -> failwith "todo: atmost"
 
 (** Translating NV patterns to OCaml patterns*)
@@ -185,7 +185,8 @@ let rec ty_to_ocaml_string t =
 (** Returns an OCaml string that contains the hashconsed int of the function
    body and a tuple with the free variables that appear in the function. Used
    for caching BDD operations.
-    NOTE: In general this is sound only if you inline.
+    NOTE: In general this is sound only if you inline, because we do not capture the environment
+    of any called function.
 *)
 let getFuncCache (e: exp) : string =
    match e.e with
@@ -198,6 +199,10 @@ let getFuncCache (e: exp) : string =
            closure free;
          Printf.sprintf "(%d, %s)" f.body.etag (BatInnerIO.close_out closure)
      | _ -> failwith "Expected a function"
+
+(* Expression map cache used to avoid recompiling mapIf predicates to BDDs *)
+let bddfunc_cache : bool Cudd.Mtbdd.t Collections.ExpMap.t ref = ref Collections.ExpMap.empty
+
 
 (** Translating NV values and expressions to OCaml*)
 let rec value_to_ocaml_string v =
@@ -307,10 +312,11 @@ and map_to_ocaml_string op es ty =
       (match es with
         | [e1;e2] ->
           (match OCamlUtils.oget e1.ety with
-            | TArrow (_, newty) ->
+           | TArrow (_, newty) ->
+             (* Get e1's hashcons and closure *)
               let op_key = getFuncCache e1 in
-              (*this needs to be fresh, but our separator is not Ocaml
-                 friendly*)
+              (*this needs to be fresh, to avoid the case where it is used
+                 inside e1 but our separator is not OCaml friendly*)
               let op_key_var = "op_key" in
                 (*need the Obj.magic to op_key_var arg here because tuple may
                    have different type/size depending on the free vars*)
@@ -336,6 +342,46 @@ and map_to_ocaml_string op es ty =
             op_key_var op_key opt op_key_var (exp_to_ocaml_string e1)
             (exp_to_ocaml_string e2) (exp_to_ocaml_string e3)
         | _ -> failwith "Wrong number of arguments for merge operation")
+    (*| MMapFilter ->
+      (match es with
+       | [pred; f; m] ->
+         let pred =
+           match pred.e with
+           | EFun f -> f
+           | _ -> failwith "predicate is not syntactically a function, cannot compile"
+         in
+         (* NOTE: for now considering that pred is closed (no free variables), as in the interpreter. FIXME. *)
+         let mtbdd =
+           match Collections.ExpMap.Exceptionless.find pred.body !bddfunc_cache with
+           | None ->
+             let bddf = BddFunc.create_value (OCamlUtils.oget pred.argty) in
+             let env = Env.update Env.empty pred.arg bddf in
+             let bddf = BddFunc.eval env pred.body in
+             (match bddf with
+              | BBool bdd ->
+                let mtbdd = BddFunc.wrap_mtbdd bdd in
+                bddfunc_cache :=
+                  Collections.ExpMap.add pred.body mtbdd !bddfunc_cache ;
+                mtbdd
+              | _ -> failwith "A boolean bdd was expected but something went wrong")
+           | Some bddf -> bddf
+         in
+         (match OCamlUtils.oget f.ety with
+           | TArrow (_, newty) ->
+             (* Get e1's hashcons and closure *)
+              let op_key = getFuncCache f in
+              (*this needs to be fresh, to avoid the case where it is used
+                 inside f but our separator is not OCaml friendly*)
+              let op_key_var = "op_key" in
+                (*need the Obj.magic to op_key_var arg here because tuple may
+                   have different type/size depending on the free vars*)
+              Printf.sprintf "(let %s = %s in \n\
+                               NativeBdd.map record_cnstrs record_fns (Obj.magic %s) (%s) (%s) (%s))"
+                op_key_var op_key op_key_var (PrintingRaw.show_ty newty)
+                (exp_to_ocaml_string e1) (exp_to_ocaml_string e2)
+            | _ -> failwith "Wrong type for function argument")
+       | _ -> failwith "Wrong number of arguments to mapIf operation")
+      *)
     | _ -> failwith "Not yet implemented"
 
 (* BatMap maps*)
@@ -397,13 +443,12 @@ let compile_net net =
       net.utys "" "\n" "\n\n"
   in
   let attr_s = Printf.sprintf "type attribute = %s\n\n" (ty_to_ocaml_string net.attr_type) in
+
+  (* Handling of symbolic values*)
   let symbs_s =
-    Collections.printList
-      (fun (x, tye) ->
-        Printf.sprintf "let %s = %s" (Var.name x)
-        (match tye with
-         | Ty ty -> (value_to_ocaml_string (default_value ty))
-         | Exp e -> (exp_to_ocaml_string e))) net.symbolics "" "\n" "\n\n"
+    Collections.printListi
+      (fun i (x, _) ->
+        Printf.sprintf "let %s = S.get_symb record_cnstrs record_fns %d" (Var.name x) i) net.symbolics "" "\n" "\n\n"
   in
   let requires_s =
     match net.requires with
@@ -436,11 +481,11 @@ let compile_net net =
     tuple_s utys_s attr_s record_cnstrs record_fns symbs_s defs_s init_s trans_s merge_s requires_s assert_s
 
 let set_entry (name: string) =
-  Printf.sprintf "let () = SrpNative.srp := Some (module %s:SrpNative.NATIVE_SRP)" name
+  Printf.sprintf "let () = SrpNative.srp := Some (module %s:SrpNative.EnrichedSRPSig)" name
 
 let generate_ocaml (name : string) net =
   let header = Printf.sprintf "open Nv_datastructures\n open Nv_lang\n open Syntax\nopen Nv_compile\n\n \
-                               module %s : SrpNative.NATIVE_SRP = struct\n" name in
+                               module %s (S: Symbolics.PackedSymbolics): SrpNative.NATIVE_SRP = struct\n" name in
   let ocaml_decls = Profile.time_profile "Compilation Time" (fun () -> compile_net net) in
   Printf.sprintf "%s %s end\n %s" header ocaml_decls (set_entry name)
 
@@ -473,7 +518,6 @@ let print_file file s =
 (* TODO: should use srcdir env. Or even better get rid of source all together,
    find out how to generate and link cmxs files from build directory*)
 let compile_command_ocaml name =
-  (* let nv_dir = Sys.getenv "NV_BUILD" in *)
   let dune = build_dune_file name in
   let project = build_project_file name in
   let opam = build_opam_file name in
@@ -487,9 +531,13 @@ let compile_command_ocaml name =
 let compile_ocaml name net =
   let basename = Filename.basename name in
   let program = generate_ocaml basename net in
-  let src_dir = "/Users/gian/Documents/Princeton/networks/davidnv/" ^ name in
+  let src_dir =
+    try (Sys.getenv "NV_BUILD") ^ name
+    with Not_found -> failwith "To use compiler, please set environment variable NV_BUILD to the directory to be used (use something different than NV's directory)"
+  in
     (try Unix.mkdir src_dir (0o777) with
       | _ -> ());
     Unix.chdir src_dir;
+    Printf.printf "Current dir: %s\n" (Unix.getcwd ());
     print_file (name ^ ".ml") program;
   compile_command_ocaml name

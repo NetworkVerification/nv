@@ -5,6 +5,7 @@ open Nv_solution
 open Nv_lang
 open Nv_datastructures
 open Nv_lang.Collections
+open Symbolics
 
 (** Type of SRP network *)
 module type NATIVE_SRP =
@@ -15,15 +16,17 @@ module type NATIVE_SRP =
     val merge: int -> attribute -> attribute -> attribute
     val assertion: (int -> attribute -> bool) option
 
+    (** Communication from SRP to NV *)
     val record_fns: string -> 'a -> 'b
-    (* val require: bool *)
   end
 
+module type EnrichedSRPSig = functor(S:PackedSymbolics) -> NATIVE_SRP
+
 (** Reference to a NATIVE_SRP module *)
-let srp = ref None
+let (srp : (module EnrichedSRPSig) option ref) = ref None
 
 (** Getter function for [srp]*)
-let get_srp () : (module NATIVE_SRP) =
+let get_srp () =
   match !srp with
   | Some srp -> srp
   | None -> failwith "No srp loaded"
@@ -37,7 +40,8 @@ sig
   val simulate_srp: Syntax.ty -> AdjGraph.t -> Nv_solution.Solution.t
 end
 
-module S = Map.Make (Integer)
+
+
 module SrpSimulation (Srp : NATIVE_SRP) : SrpSimulationSig =
   struct
     open Srp
@@ -170,7 +174,6 @@ module SrpSimulation (Srp : NATIVE_SRP) : SrpSimulationSig =
 
     let simulate_srp attr_ty graph =
       let s = srp_to_state graph in
-      attr_equal := build_equality attr_ty;
       let vals = simulate_init graph s in
       let asserts = check_assertions vals in
       let open Solution in
