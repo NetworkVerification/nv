@@ -200,9 +200,18 @@ let getFuncCache (e: exp) : string =
          Printf.sprintf "(%d, %s)" f.body.etag (BatInnerIO.close_out closure)
      | _ -> failwith "Expected a function"
 
-(* Expression map cache used to avoid recompiling mapIf predicates to BDDs *)
-let bddfunc_cache : bool Cudd.Mtbdd.t Collections.ExpMap.t ref = ref Collections.ExpMap.empty
+(* Expression map cache used to avoid recompiling mapIf predicates to BatDeque.t
+   First element of the value is the bdd, second one is the identifier used to look it up in
+   the compiled BDDs module
+  *)
+let bddfunc_cache : (bool Cudd.Mtbdd.t * int) Collections.ExpMap.t ref = ref Collections.ExpMap.empty
 
+let bddfunc_id = ref 0
+
+let fresh_bdd_id () =
+  let x = !bddfunc_id in
+  incr bddfunc_id;
+  x
 
 (** Translating NV values and expressions to OCaml*)
 let rec value_to_ocaml_string v =
@@ -342,7 +351,7 @@ and map_to_ocaml_string op es ty =
             op_key_var op_key opt op_key_var (exp_to_ocaml_string e1)
             (exp_to_ocaml_string e2) (exp_to_ocaml_string e3)
         | _ -> failwith "Wrong number of arguments for merge operation")
-    (*| MMapFilter ->
+    | MMapFilter ->
       (match es with
        | [pred; f; m] ->
          let pred =
@@ -351,7 +360,7 @@ and map_to_ocaml_string op es ty =
            | _ -> failwith "predicate is not syntactically a function, cannot compile"
          in
          (* NOTE: for now considering that pred is closed (no free variables), as in the interpreter. FIXME. *)
-         let mtbdd =
+         let bdd_id =
            match Collections.ExpMap.Exceptionless.find pred.body !bddfunc_cache with
            | None ->
              let bddf = BddFunc.create_value (OCamlUtils.oget pred.argty) in
@@ -360,11 +369,12 @@ and map_to_ocaml_string op es ty =
              (match bddf with
               | BBool bdd ->
                 let mtbdd = BddFunc.wrap_mtbdd bdd in
+                let id = fresh_bdd_id () in
                 bddfunc_cache :=
-                  Collections.ExpMap.add pred.body mtbdd !bddfunc_cache ;
-                mtbdd
+                  Collections.ExpMap.add pred.body (mtbdd, id) !bddfunc_cache ;
+                id
               | _ -> failwith "A boolean bdd was expected but something went wrong")
-           | Some bddf -> bddf
+           | Some (_, id) -> id
          in
          (match OCamlUtils.oget f.ety with
            | TArrow (_, newty) ->
@@ -381,7 +391,6 @@ and map_to_ocaml_string op es ty =
                 (exp_to_ocaml_string e1) (exp_to_ocaml_string e2)
             | _ -> failwith "Wrong type for function argument")
        | _ -> failwith "Wrong number of arguments to mapIf operation")
-      *)
     | _ -> failwith "Not yet implemented"
 
 (* BatMap maps*)
