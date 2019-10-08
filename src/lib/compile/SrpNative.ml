@@ -20,7 +20,7 @@ module type NATIVE_SRP =
     val record_fns: string -> 'a -> 'b
   end
 
-module type EnrichedSRPSig = functor(S:PackedSymbolics) -> NATIVE_SRP
+module type EnrichedSRPSig = functor (S:PackedSymbolics) -> NATIVE_SRP
 
 (** Reference to a NATIVE_SRP module *)
 let (srp : (module EnrichedSRPSig) option ref) = ref None
@@ -39,7 +39,6 @@ module type SrpSimulationSig =
 sig
   val simulate_srp: Syntax.ty -> AdjGraph.t -> Nv_solution.Solution.t
 end
-
 
 
 module SrpSimulation (Srp : NATIVE_SRP) : SrpSimulationSig =

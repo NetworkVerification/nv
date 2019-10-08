@@ -7,6 +7,9 @@ type t =
   | BTuple of t list
   | BOption of Bdd.vt * t
 
+
+val bdd_of_bool: bool -> Cudd.Man.v Cudd.Bdd.t
+
 val create_value : ty -> t
 
 val eval : t Nv_datastructures.Env.t -> exp -> t

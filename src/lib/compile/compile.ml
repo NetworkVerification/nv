@@ -5,14 +5,7 @@ open PrimitiveCollections
 open Syntax
 open Nv_datastructures
 open BddMap
-
-(* TODO: Deal with caching in operation such as map and merge.*)
-(* NOTE: Caching based on the OCaml values doesn't seem plausible unless there
-   is some trick to compare functional values and their closures. For now I am
-   implementing a very simple caching mechanism based on expressions but it is
-   naive. It assumes that functions are defined as EFuns (i.e. not through other
-   expressions such as EVars). To lift this limitation we need some kind of
-   partial evaluation/inlining before running the compiler.*)
+open CompileBDDs
 
 (** Translating NV records to OCaml records (type or values depending on f)*)
 let record_to_ocaml_record
@@ -182,6 +175,35 @@ let rec ty_to_ocaml_string t =
     record_to_ocaml_record ":" ty_to_ocaml_string map
 
 
+let rec ty_to_nv_string ty =
+  match ty with
+  | TVar tyvar -> (
+      match !tyvar with
+      | Unbound (name, _) -> "TUnit"
+      | Link t ->
+        Printf.sprintf "%s" (ty_to_nv_string t))
+  | QVar name -> failwith "QVar in compiler"
+  | TBool -> "TBool"
+  | TInt n -> Printf.sprintf "TInt %d" n
+  | TArrow (ty1, ty2) ->
+    Printf.sprintf "TArrow (%s,%s)" (ty_to_nv_string ty1) (ty_to_nv_string ty2)
+  | TTuple ts ->
+    let str = Collections.printList (fun ty -> ty_to_nv_string ty) ts "[" ";" "]" in
+    Printf.sprintf "TTuple %s" str
+  | TOption t -> Printf.sprintf "TOption (%s)" (ty_to_nv_string t)
+  | TMap (ty1, ty2) ->
+    Printf.sprintf "TMap (%s,%s)" (ty_to_nv_string ty1) (ty_to_nv_string ty2)
+  | TRecord map ->
+    let smap = PrimitiveCollections.StringMap.fold (fun k v acc ->
+        let vs = ty_to_nv_string v in
+        "PrimitiveCollections.StringMap.add \"%s\" (%s) (%s)" k vs acc
+      ) map "StringMap.empty" in
+    let record_type = Printf.sprintf "let record_type_%d = TRecord "
+    failwith "not doing for now"
+  | TUnit -> "TUnit"
+  | TNode -> "TNode"
+  | TEdge -> "TEdge"
+
 (** Returns an OCaml string that contains the hashconsed int of the function
    body and a tuple with the free variables that appear in the function. Used
    for caching BDD operations.
@@ -200,18 +222,6 @@ let getFuncCache (e: exp) : string =
          Printf.sprintf "(%d, %s)" f.body.etag (BatInnerIO.close_out closure)
      | _ -> failwith "Expected a function"
 
-(* Expression map cache used to avoid recompiling mapIf predicates to BatDeque.t
-   First element of the value is the bdd, second one is the identifier used to look it up in
-   the compiled BDDs module
-  *)
-let bddfunc_cache : (bool Cudd.Mtbdd.t * int) Collections.ExpMap.t ref = ref Collections.ExpMap.empty
-
-let bddfunc_id = ref 0
-
-let fresh_bdd_id () =
-  let x = !bddfunc_id in
-  incr bddfunc_id;
-  x
 
 (** Translating NV values and expressions to OCaml*)
 let rec value_to_ocaml_string v =
@@ -324,11 +334,11 @@ and map_to_ocaml_string op es ty =
            | TArrow (_, newty) ->
              (* Get e1's hashcons and closure *)
               let op_key = getFuncCache e1 in
-              (*this needs to be fresh, to avoid the case where it is used
-                 inside e1 but our separator is not OCaml friendly*)
+              (*FIXME: this needs to be fresh, to avoid the case where it is
+                 used inside e1 but our separator is not OCaml friendly*)
               let op_key_var = "op_key" in
-                (*need the Obj.magic to op_key_var arg here because tuple may
-                   have different type/size depending on the free vars*)
+              (*need the Obj.magic to op_key_var arg here because tuple may have
+                 different type/size depending on the free vars*)
               Printf.sprintf "(let %s = %s in \n\
                                NativeBdd.map record_cnstrs record_fns (Obj.magic %s) (%s) (%s) (%s))"
                 op_key_var op_key op_key_var (PrintingRaw.show_ty newty)
@@ -380,15 +390,16 @@ and map_to_ocaml_string op es ty =
            | TArrow (_, newty) ->
              (* Get e1's hashcons and closure *)
               let op_key = getFuncCache f in
-              (*this needs to be fresh, to avoid the case where it is used
+              (*FIXME: this needs to be fresh, to avoid the case where it is used
                  inside f but our separator is not OCaml friendly*)
               let op_key_var = "op_key" in
-                (*need the Obj.magic to op_key_var arg here because tuple may
+              (*need the Obj.magic to op_key_var arg here because tuple may
                    have different type/size depending on the free vars*)
               Printf.sprintf "(let %s = %s in \n\
-                               NativeBdd.map record_cnstrs record_fns (Obj.magic %s) (%s) (%s) (%s))"
-                op_key_var op_key op_key_var (PrintingRaw.show_ty newty)
-                (exp_to_ocaml_string e1) (exp_to_ocaml_string e2)
+                               NativeBdd.mapIf record_cnstrs record_fns %d (Obj.magic %s) (%s) (%s) (%s))"
+                op_key_var op_key (*first let*)
+                bdd_id op_key_var (PrintingRaw.show_ty newty)
+                (exp_to_ocaml_string f) (exp_to_ocaml_string m)
             | _ -> failwith "Wrong type for function argument")
        | _ -> failwith "Wrong number of arguments to mapIf operation")
     | _ -> failwith "Not yet implemented"
@@ -494,7 +505,7 @@ let set_entry (name: string) =
 
 let generate_ocaml (name : string) net =
   let header = Printf.sprintf "open Nv_datastructures\n open Nv_lang\n open Syntax\nopen Nv_compile\n\n \
-                               module %s (S: Symbolics.PackedSymbolics): SrpNative.NATIVE_SRP = struct\n" name in
+                               module %s (B: CompileBDDs.BDDs) (S: Symbolics.PackedSymbolics): SrpNative.NATIVE_SRP = struct\n" name in
   let ocaml_decls = Profile.time_profile "Compilation Time" (fun () -> compile_net net) in
   Printf.sprintf "%s %s end\n %s" header ocaml_decls (set_entry name)
 

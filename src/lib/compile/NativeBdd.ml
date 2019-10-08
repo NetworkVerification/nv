@@ -5,6 +5,7 @@ open Nv_datastructures
 open Batteries
 open BddMap
 open Embeddings
+open CompileBDDs
 
 module B = BddUtils
 
@@ -14,11 +15,7 @@ module B = BddUtils
      mset k v m: embed key, value and set them on the map.
      mmap f m: for every value, unembed it, apply the function f and then embed the result.
      merge: unembed both values, apply f, embed result.
-     mapIf p f m: need to somehow create BDD out of ocaml function..
-
-It seems as if only mapIf would require us to also embed/unembed expressions not just values
-need an ocaml lift function (taking you to bdds) on ocaml functions.
-
+     mapIf p f m: create BDD for predicate p during compilation.
   *)
 
 (* BddMap plus the type of the values*)
@@ -37,7 +34,8 @@ let create (record_fns: string -> 'a -> 'b) ~key_ty ~val_ty (vnat: 'v) : t =
 
 (** Takes the function of record_constructors and record_projections, [op_key] a
    tuple of the hashconsed NV expression and a tuple of OCaml variables
-   (strings) that represent the closure of the mapped expression, the new type of the map, the function mapped and the map. *)
+   (strings) that represent the closure of the mapped expression, the new type
+   of the map, the function mapped and the map. *)
 let map (record_cnstrs: string -> 'c) (record_fns: string -> 'a -> 'b)
     (op_key: (int * 'f)) (vty_new: Syntax.ty) (f: 'a1 -> 'a2) (((vdd, kty), vty_old): t) : t =
   let cfg = Cmdline.get_cfg () in
@@ -161,34 +159,40 @@ let merge (record_cnstrs: string -> 'c) (record_fns: string -> 'a -> 'b)
 let equal (bm1, _) (bm2, _) = BddMap.equal bm1 bm2
 
 (** * MapIf related functions*)
-(* let mapw_op_cache = ref HashClosureMap.empty *)
+let mapw_op_cache = ref HashClosureMap.empty
 
-(* let map_if (pred: bool Mtbdd.t) ~op_key (f: value -> value)
- *     ((vdd, ty): t) : t =
- *   let cfg = Cmdline.get_cfg () in
- *   let g b v =
- *     if Mtbdd.get b then f (Mtbdd.get v) |> Mtbdd.unique B.tbl
- *     else v
- *   in
- *   if cfg.no_caching then (Mapleaf.mapleaf2 g pred vdd, ty)
- *   else
- *     let op =
- *       match ExpMap.Exceptionless.find op_key !mapw_op_cache with
- *       | None ->
- *         let special =
- *           if cfg.no_cutoff then fun _ _ -> None
- *           else fun bdd1 bdd2 ->
- *             if Vdd.is_cst bdd1 && not (Mtbdd.get (Vdd.dval bdd1))
- *             then Some bdd2
- *             else None
- *         in
- *         let op =
- *           User.make_op2
- *             ~memo:(Memo.Cache (Cache.create2 ()))
- *             ~commutative:false ~idempotent:false ~special g
- *         in
- *         mapw_op_cache := ExpMap.add op_key op !mapw_op_cache ;
- *         op
- *       | Some op -> op
- *     in
- *     (User.apply_op2 op pred vdd, ty) *)
+let mapIf (record_cnstrs: string -> 'c) (record_fns: string -> 'a -> 'b)
+    (predId: int) (op_key : int * 'f) (vty_new: Syntax.ty) (f: 'a1 -> 'a2)
+    (((vdd, kty), vty_old) : t) : t =
+  let cfg = Cmdline.get_cfg () in
+  let pred = get_bdd predId in
+  let f_embed =
+    fun x -> (f (unembed_value record_cnstrs record_fns vty_old x))
+             |> embed_value record_fns vty_new
+  in
+  let g b v =
+    if Mtbdd.get b then f_embed (Mtbdd.get v) |> Mtbdd.unique B.tbl
+    else v
+  in
+  if cfg.no_caching then ((Mapleaf.mapleaf2 g pred vdd, kty), vty_new)
+  else
+    let op =
+      match HashClosureMap.Exceptionless.find op_key !mapw_op_cache with
+      | None ->
+        let special =
+          if cfg.no_cutoff then fun _ _ -> None
+          else fun bdd1 bdd2 ->
+            if Vdd.is_cst bdd1 && not (Mtbdd.get (Vdd.dval bdd1))
+            then Some bdd2
+            else None
+        in
+        let op =
+          User.make_op2
+            ~memo:(Memo.Cache (Cudd.Cache.create2 ()))
+            ~commutative:false ~idempotent:false ~special g
+        in
+        mapw_op_cache := HashClosureMap.add op_key op !mapw_op_cache ;
+        op
+      | Some op -> op
+    in
+    ((User.apply_op2 op pred vdd, kty), vty_new)
