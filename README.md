@@ -1,4 +1,5 @@
 # An intermediate language for network verification
+[![Build Status](https://travis-ci.com/princedpw/nv.svg?branch=master)](https://travis-ci.com/princedpw/nv)
 
 NV is a functional language that can be used to express the semantics of
 routing protocols, such as BGP, OSPF, etc. The language is designed to be
