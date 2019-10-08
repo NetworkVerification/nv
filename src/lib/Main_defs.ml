@@ -319,6 +319,8 @@ let parse_input (args : string array) =
       let decls, f = RecordUnrolling.unroll_declarations decls in
         decls, [f]
   in
+  (* let decls, f = RecordUnrolling.unroll_declarations decls in
+   * let fs = [f] in *)
   let decls,fs = (* inlining definitions *)
     if cfg.inline then
       (* Note! Must rename before inling otherwise inling is unsound *)

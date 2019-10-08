@@ -190,14 +190,14 @@ let getFuncCache (e: exp) : string =
          Collections.printList (fun x -> Var.name x) freeList "(" "," ")"
        in
        Printf.sprintf "(%d, %s)" f.body.etag closure
-
        (*FIXME: annoying BatSet printing outputs null character at the end*)
        (* let closure = BatIO.output_string () in
         *   BatSet.PSet.print ~first:"(" ~sep:"," ~last:")"
         *     (fun out x -> BatIO.write_string out (Var.name x))
         *     closure free;
         *   Printf.sprintf "(%d, %s)" f.body.etag (BatInnerIO.close_out closure) *)
-     | _ -> failwith "Expected a function"
+     | _ -> (*assume there are no free variables, but this needs to be fixed. FIXME*)
+       Printf.sprintf "(%d, ())" e.etag
 
 
 (** Translating NV values and expressions to OCaml*)
@@ -307,7 +307,7 @@ and map_to_ocaml_string op es ty =
     | MMap ->
       (match es with
         | [e1;e2] ->
-          (match OCamlUtils.oget e1.ety with
+          (match get_inner_type (OCamlUtils.oget e1.ety) with
            | TArrow (_, newty) ->
              (* Get e1's hashcons and closure *)
               let op_key = getFuncCache e1 in
@@ -320,7 +320,7 @@ and map_to_ocaml_string op es ty =
                                NativeBdd.map record_cnstrs record_fns (Obj.magic %s) (%d) (%s) (%s))"
                 op_key_var op_key op_key_var (get_fresh_type_id newty)
                 (exp_to_ocaml_string e1) (exp_to_ocaml_string e2)
-            | _ -> failwith "Wrong type for function argument")
+            | _ -> failwith ("Wrong type for function argument" ^ (Printing.ty_to_string (OCamlUtils.oget e1.ety))))
         | _ -> failwith "Wrong number of arguments to map operation")
     | MMerge ->
       (match es with
@@ -363,7 +363,7 @@ and map_to_ocaml_string op es ty =
               | _ -> failwith "A boolean bdd was expected but something went wrong")
            | Some (_, id) -> id
          in
-         (match OCamlUtils.oget f.ety with
+         (match get_inner_type (OCamlUtils.oget f.ety) with
            | TArrow (_, newty) ->
              (* Get e1's hashcons and closure *)
               let op_key = getFuncCache f in
@@ -377,7 +377,7 @@ and map_to_ocaml_string op es ty =
                 op_key_var op_key (*first let*)
                 bdd_id op_key_var (get_fresh_type_id newty)
                 (exp_to_ocaml_string f) (exp_to_ocaml_string m)
-            | _ -> failwith "Wrong type for function argument")
+            | _ -> failwith ("Wrong type for function argument" ^ (Printing.ty_to_string (OCamlUtils.oget f.ety))))
        | _ -> failwith "Wrong number of arguments to mapIf operation")
     | _ -> failwith "Not yet implemented"
 
