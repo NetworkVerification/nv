@@ -1,5 +1,6 @@
 open Nv_lang.Syntax
 open Nv_datastructures
+open Nv_lang.Collections
 
 let is_function_ty e =
   match get_inner_type (Nv_utils.OCamlUtils.oget e.ety) with
@@ -12,10 +13,11 @@ let rec has_var p x =
   | PVar y -> Var.equals x y
   | PEdge (p1, p2) -> has_var p1 x || has_var p2 x
   | PTuple ps ->
-    BatList.fold_left (fun acc p -> acc || has_var p x) false ps
+    BatList.exists (fun p -> has_var p x) ps
+  | PRecord map ->
+    StringMap.exists (fun _ p -> has_var p x) map
   | POption None -> false
   | POption (Some p) -> has_var p x
-  | PRecord _ -> failwith "Found record during Inlining"
 
 let rec remove_all env p =
   match p with
@@ -24,9 +26,10 @@ let rec remove_all env p =
   | PEdge (p1, p2) -> remove_all env (PTuple [p1; p2])
   | PTuple ps ->
     BatList.fold_left (fun acc p -> remove_all acc p) env ps
+  | PRecord map ->
+    StringMap.fold (fun _ p acc -> remove_all acc p) map env
   | POption None -> env
   | POption (Some p) -> remove_all env p
-  | PRecord _ -> failwith "Found record during Inlining"
 
 let rec substitute x e1 e2 =
   match e1.e with
@@ -52,11 +55,13 @@ let rec substitute x e1 e2 =
   | ESome e -> esome (substitute x e e2) |> wrap e1
   | ETuple es ->
     etuple (BatList.map (fun e -> substitute x e e2) es) |> wrap e1
+  | ERecord map ->
+    erecord (StringMap.map (fun e -> substitute x e e2) map) |> wrap e1
+  | EProject (e, l) ->
+    eproject (substitute x e e2) l
   | EOp (op, es) ->
     eop op (BatList.map (fun e -> substitute x e e2) es) |> wrap e1
   | EVal _ -> e1
-  | ERecord _ | EProject _ -> failwith "Found record during Inlining"
-
 
 and substitute_pattern x e2 (p, e) =
   if has_var p x then (p, e) else (p, substitute x e e2)
@@ -125,13 +130,14 @@ and inline_exp (env: exp Env.t) (e: exp) : exp =
       inline_exp (Env.update env x e1') e2
     else elet x e1' (inline_exp env e2) |> wrap e
   | ETuple es -> etuple (BatList.map (inline_exp env) es) |> wrap e
+  | ERecord map -> erecord (StringMap.map (inline_exp env) map) |> wrap e
+  | EProject (e, l) -> eproject (inline_exp env e) l |> wrap e
   | ESome e1 -> esome (inline_exp env e1) |> wrap e
   | EMatch (e1, bs) ->
     ematch (inline_exp env e1)
       (mapBranches (fun (p,e) -> inline_branch env (p,e)) bs)
     |> wrap e
   | ETy (e1, ty) -> ety (inline_exp env e1) ty |> wrap e
-  | ERecord _ | EProject _ -> failwith "Found record during Inlining"
 
 (* Printf.printf "inline: %s\n" (Printing.exp_to_string e);
    Printf.printf "result: %s\n\n" (Printing.exp_to_string ret); *)
@@ -154,11 +160,11 @@ let inline_declaration (env: exp Env.t) (d: declaration) =
     (* Inline in symbolic expression but do not inline the symbolic expression!
        It is only used in the case of the simulator *)
     (match e with
-      | Exp e' ->
-        let e' = inline_exp env e' in
-          (env, Some (DSymbolic (x, Exp e')))
-      | Ty _ ->
-        (env, Some (DSymbolic (x, e))))
+     | Exp e' ->
+       let e' = inline_exp env e' in
+       (env, Some (DSymbolic (x, Exp e')))
+     | Ty _ ->
+       (env, Some (DSymbolic (x, e))))
   | DMerge e -> (env, Some (DMerge (inline_exp env e)))
   | DTrans e -> (env, Some (DTrans (inline_exp env e)))
   | DInit e -> (env, Some (DInit (inline_exp env e)))
@@ -180,7 +186,7 @@ let rec inline_declarations_aux env (ds: declarations) : declarations =
 
 let inline_declarations (ds: declarations) =
   inline_declarations_aux Env.empty ds
-  (* match get_attr_type ds with
-  | None ->
-    failwith "attribute type not declared: type attribute = ..."
-  | Some ty -> inline_declarations_aux Env.empty ds *)
+(* match get_attr_type ds with
+   | None ->
+   failwith "attribute type not declared: type attribute = ..."
+   | Some ty -> inline_declarations_aux Env.empty ds *)
