@@ -84,7 +84,7 @@ module SrpSimulation (Srp : NATIVE_SRP) : SrpSimulationSig =
 
     let simulate_step (graph: AdjGraph.t) (s : solution) (origin : int) =
       let do_neighbor (initial_attribute : attribute) (s, todo) neighbor =
-        let edge = (neighbor, origin) in
+        let edge = (origin, neighbor) in
         let n_incoming_attribute = trans edge initial_attribute in
         let n_old_attribute = get_attribute neighbor s in
         let n_new_attribute = merge neighbor n_old_attribute n_incoming_attribute in

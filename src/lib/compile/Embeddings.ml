@@ -58,7 +58,8 @@ let rec embed_value (record_fns: string -> 'a -> 'b) (typ: Syntax.ty) : 'v -> Sy
     | TNode ->
       fun v -> Syntax.vint ((Obj.magic v) |> Integer.of_int)
     | TEdge -> failwith "Tedge"
-    | TVar _ | QVar _ -> failwith "TVars and QVars shuld not show up here"
+    | TVar {contents = Link ty} -> embed_value record_fns ty
+    | TVar _ | QVar _ -> failwith ("TVars and QVars should not show up here: " ^ (PrintingRaw.show_ty typ))
 
 (** Takes an NV value of type typ and returns an OCaml value.*)
 let rec unembed_value (record_cnstrs : string -> 'c) (record_proj : string -> 'a -> 'b)
@@ -110,7 +111,8 @@ let rec unembed_value (record_cnstrs : string -> 'c) (record_proj : string -> 'a
           | VNode n -> Obj.magic n
           | _ -> failwith "mistyped value")
     | TEdge -> failwith "Tedge"
-    | TVar _ | QVar _ -> failwith "TVars and QVars shuld not show up here"
+    | TVar {contents = Link ty} -> unembed_value record_cnstrs record_proj ty
+    | TVar _ | QVar _ -> failwith ("TVars and QVars should not show up here: " ^ (PrintingRaw.show_ty typ))
 
 (* Only memoizing outermost call on type. There is probably little merit to
    memoize the recursive calls. TODO: memoize based on values too?*)

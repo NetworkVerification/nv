@@ -17,15 +17,11 @@ let simulate name net =
   (* Build symbolics module *)
   let module Symbs = (val (defaultSymbolics net.symbolics)) in
 
-  (* Build BDDs module *)
-  let module Bdds = (val (buildBdds ())) in
-
   (* Load compiled NV program*)
   let module EnrichedSrp = (val get_srp ()) in
 
   (* Plug everything together to get an SRP *)
-  let module BddSrp = (val (module EnrichedSrp(Bdds) : SymbolicsSRPSig)) in
-  let module Srp = (val (module BddSrp(Symbs) : NATIVE_SRP)) in
+  let module Srp = (val (module EnrichedSrp(Symbs) : NATIVE_SRP)) in
 
   (* Call simulation *)
   let module SrpSimulator = (val (module SrpSimulation(Srp) : SrpSimulationSig)) in

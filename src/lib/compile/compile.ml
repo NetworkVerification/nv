@@ -174,36 +174,6 @@ let rec ty_to_ocaml_string t =
   | TRecord map ->
     record_to_ocaml_record ":" ty_to_ocaml_string map
 
-
-let rec ty_to_nv_string ty =
-  match ty with
-  | TVar tyvar -> (
-      match !tyvar with
-      | Unbound (name, _) -> "TUnit"
-      | Link t ->
-        Printf.sprintf "%s" (ty_to_nv_string t))
-  | QVar name -> failwith "QVar in compiler"
-  | TBool -> "TBool"
-  | TInt n -> Printf.sprintf "TInt %d" n
-  | TArrow (ty1, ty2) ->
-    Printf.sprintf "TArrow (%s,%s)" (ty_to_nv_string ty1) (ty_to_nv_string ty2)
-  | TTuple ts ->
-    let str = Collections.printList (fun ty -> ty_to_nv_string ty) ts "[" ";" "]" in
-    Printf.sprintf "TTuple %s" str
-  | TOption t -> Printf.sprintf "TOption (%s)" (ty_to_nv_string t)
-  | TMap (ty1, ty2) ->
-    Printf.sprintf "TMap (%s,%s)" (ty_to_nv_string ty1) (ty_to_nv_string ty2)
-  | TRecord map ->
-    let smap = PrimitiveCollections.StringMap.fold (fun k v acc ->
-        let vs = ty_to_nv_string v in
-        "PrimitiveCollections.StringMap.add \"%s\" (%s) (%s)" k vs acc
-      ) map "StringMap.empty" in
-    let record_type = Printf.sprintf "let record_type_%d = TRecord "
-    failwith "not doing for now"
-  | TUnit -> "TUnit"
-  | TNode -> "TNode"
-  | TEdge -> "TEdge"
-
 (** Returns an OCaml string that contains the hashconsed int of the function
    body and a tuple with the free variables that appear in the function. Used
    for caching BDD operations.
@@ -215,11 +185,18 @@ let getFuncCache (e: exp) : string =
      | EFun f ->
        let seen = BatSet.PSet.singleton ~cmp:Var.compare f.arg in
        let free = Syntax.free seen f.body in
-       let closure = BatInnerIO.output_string () in
-         BatSet.PSet.print ~first:"(" ~sep:"," ~last:")"
-           (fun out x -> BatInnerIO.write_string out (Var.name x))
-           closure free;
-         Printf.sprintf "(%d, %s)" f.body.etag (BatInnerIO.close_out closure)
+       let freeList = BatSet.PSet.to_list free in
+       let closure =
+         Collections.printList (fun x -> Var.name x) freeList "(" "," ")"
+       in
+       Printf.sprintf "(%d, %s)" f.body.etag closure
+
+       (*FIXME: annoying BatSet printing outputs null character at the end*)
+       (* let closure = BatIO.output_string () in
+        *   BatSet.PSet.print ~first:"(" ~sep:"," ~last:")"
+        *     (fun out x -> BatIO.write_string out (Var.name x))
+        *     closure free;
+        *   Printf.sprintf "(%d, %s)" f.body.etag (BatInnerIO.close_out closure) *)
      | _ -> failwith "Expected a function"
 
 
@@ -311,9 +288,9 @@ and map_to_ocaml_string op es ty =
   match op with
     | MCreate ->
       (match ty with
-        | TMap (kty,vty) ->
-          Printf.sprintf "NativeBdd.create record_fns ~key_ty:(%s) ~val_ty:(%s) %s"
-            (PrintingRaw.show_ty kty) (PrintingRaw.show_ty vty) (exp_to_ocaml_string (BatList.hd es))
+       | TMap (kty,vty) ->
+          Printf.sprintf "NativeBdd.create record_fns ~key_ty:(%d) ~val_ty:(%d) %s"
+            (get_fresh_type_id kty) (get_fresh_type_id vty) (exp_to_ocaml_string (BatList.hd es))
         | _ -> failwith "Wrong type for map operation")
     | MSet ->
       (match es with
@@ -339,9 +316,9 @@ and map_to_ocaml_string op es ty =
               let op_key_var = "op_key" in
               (*need the Obj.magic to op_key_var arg here because tuple may have
                  different type/size depending on the free vars*)
-              Printf.sprintf "(let %s = %s in \n\
-                               NativeBdd.map record_cnstrs record_fns (Obj.magic %s) (%s) (%s) (%s))"
-                op_key_var op_key op_key_var (PrintingRaw.show_ty newty)
+              Printf.sprintf "(let %s = %s in \n \
+                               NativeBdd.map record_cnstrs record_fns (Obj.magic %s) (%d) (%s) (%s))"
+                op_key_var op_key op_key_var (get_fresh_type_id newty)
                 (exp_to_ocaml_string e1) (exp_to_ocaml_string e2)
             | _ -> failwith "Wrong type for function argument")
         | _ -> failwith "Wrong number of arguments to map operation")
@@ -396,9 +373,9 @@ and map_to_ocaml_string op es ty =
               (*need the Obj.magic to op_key_var arg here because tuple may
                    have different type/size depending on the free vars*)
               Printf.sprintf "(let %s = %s in \n\
-                               NativeBdd.mapIf record_cnstrs record_fns %d (Obj.magic %s) (%s) (%s) (%s))"
+                               NativeBdd.mapIf record_cnstrs record_fns %d (Obj.magic %s) (%d) (%s) (%s))"
                 op_key_var op_key (*first let*)
-                bdd_id op_key_var (PrintingRaw.show_ty newty)
+                bdd_id op_key_var (get_fresh_type_id newty)
                 (exp_to_ocaml_string f) (exp_to_ocaml_string m)
             | _ -> failwith "Wrong type for function argument")
        | _ -> failwith "Wrong number of arguments to mapIf operation")
@@ -497,6 +474,11 @@ let compile_net net =
   let tuple_s = build_record_types () in
   let record_fns = build_proj_funcs () in
   let record_cnstrs = build_constructors () in
+
+  (* build bdd and type arrays so that lookups during execution will work *)
+  build_type_array ();
+  build_bdd_array ();
+
   Printf.sprintf "%s %s %s %s %s %s %s %s %s %s %s %s"
     tuple_s utys_s attr_s record_cnstrs record_fns symbs_s defs_s init_s trans_s merge_s requires_s assert_s
 
@@ -505,7 +487,7 @@ let set_entry (name: string) =
 
 let generate_ocaml (name : string) net =
   let header = Printf.sprintf "open Nv_datastructures\n open Nv_lang\n open Syntax\nopen Nv_compile\n\n \
-                               module %s (B: CompileBDDs.BDDs) (S: Symbolics.PackedSymbolics): SrpNative.NATIVE_SRP = struct\n" name in
+                               module %s (S: Symbolics.PackedSymbolics): SrpNative.NATIVE_SRP = struct\n" name in
   let ocaml_decls = Profile.time_profile "Compilation Time" (fun () -> compile_net net) in
   Printf.sprintf "%s %s end\n %s" header ocaml_decls (set_entry name)
 

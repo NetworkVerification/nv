@@ -6,6 +6,7 @@ open Batteries
 open BddMap
 open Embeddings
 open CompileBDDs
+open Collections
 
 module B = BddUtils
 
@@ -18,9 +19,11 @@ module B = BddUtils
      mapIf p f m: create BDD for predicate p during compilation.
   *)
 
+
 (* BddMap plus the type of the values*)
 type t = BddMap.t * Syntax.ty
 
+(* Used to cache functions and their closures *)
 module HashClosureMap = BatMap.Make (struct
     type t = int * unit (*NOTE: unit here is a placeholder for the closure type which is a tuple of OCaml variables*)
     let compare = Pervasives.compare
@@ -29,6 +32,8 @@ module HashClosureMap = BatMap.Make (struct
 let map_cache = ref HashClosureMap.empty
 
 let create (record_fns: string -> 'a -> 'b) ~key_ty ~val_ty (vnat: 'v) : t =
+  let key_ty = get_type key_ty in
+  let val_ty = get_type val_ty in
   let v = embed_value record_fns val_ty vnat in
     (BddMap.create key_ty v, val_ty)
 
@@ -37,8 +42,9 @@ let create (record_fns: string -> 'a -> 'b) ~key_ty ~val_ty (vnat: 'v) : t =
    (strings) that represent the closure of the mapped expression, the new type
    of the map, the function mapped and the map. *)
 let map (record_cnstrs: string -> 'c) (record_fns: string -> 'a -> 'b)
-    (op_key: (int * 'f)) (vty_new: Syntax.ty) (f: 'a1 -> 'a2) (((vdd, kty), vty_old): t) : t =
+    (op_key: (int * 'f)) (vty_new_id: int) (f: 'a1 -> 'a2) (((vdd, kty), vty_old): t) : t =
   let cfg = Cmdline.get_cfg () in
+  let vty_new = get_type vty_new_id in
   let f_embed =
     fun x -> (f (unembed_value record_cnstrs record_fns vty_old x))
              |> embed_value record_fns vty_new
@@ -162,9 +168,10 @@ let equal (bm1, _) (bm2, _) = BddMap.equal bm1 bm2
 let mapw_op_cache = ref HashClosureMap.empty
 
 let mapIf (record_cnstrs: string -> 'c) (record_fns: string -> 'a -> 'b)
-    (predId: int) (op_key : int * 'f) (vty_new: Syntax.ty) (f: 'a1 -> 'a2)
+    (predId: int) (op_key : int * 'f) (vty_new_id: int) (f: 'a1 -> 'a2)
     (((vdd, kty), vty_old) : t) : t =
   let cfg = Cmdline.get_cfg () in
+  let vty_new = get_type vty_new_id in
   let pred = get_bdd predId in
   let f_embed =
     fun x -> (f (unembed_value record_cnstrs record_fns vty_old x))

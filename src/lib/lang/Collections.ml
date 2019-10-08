@@ -57,6 +57,15 @@ module ExpMap = Map.Make (struct
                                compare e1 e2
                          end)
 
+module HashTy : BatHashtbl.HashedType =
+struct
+  type t = Syntax.ty
+  let equal = Syntax.equal_tys
+  let hash = Syntax.hash_ty
+end
+
+module HashTblTy = Hashtbl.Make(HashTy)
+
 let printList (printer: 'a -> string) (ls: 'a list) (first : string)
               (sep : string) (last : string) =
   let buf = Buffer.create 500 in
