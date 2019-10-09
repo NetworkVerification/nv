@@ -19,6 +19,7 @@ module B = BddUtils
      mapIf p f m: create BDD for predicate p during compilation.
   *)
 
+(*TODO: create embed and unembed functions statically, use an int to lookup.*)
 
 (* BddMap plus the type of the values*)
 type t = BddMap.t * Syntax.ty
