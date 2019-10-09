@@ -16,8 +16,9 @@ module type NATIVE_SRP =
     val merge: int -> attribute -> attribute -> attribute
     val assertion: (int -> attribute -> bool) option
 
-    (** Communication from SRP to NV *)
+    (** Communication between SRP and NV *)
     val record_fns: string -> 'a -> 'b
+    val record_cnstrs: string -> 'c
   end
 
 module type EnrichedSRPSig = functor (S:PackedSymbolics) -> NATIVE_SRP
@@ -172,6 +173,8 @@ module SrpSimulation (Srp : NATIVE_SRP) : SrpSimulationSig =
       Embeddings.embed_value record_fns attr_ty
 
     let simulate_srp attr_ty graph =
+      Embeddings.build_embed_cache record_fns;
+      Embeddings.build_unembed_cache record_cnstrs record_fns;
       let s = srp_to_state graph in
       let vals = simulate_init graph s in
       let asserts = check_assertions vals in

@@ -22,7 +22,7 @@ module B = BddUtils
 (*TODO: create embed and unembed functions statically, use an int to lookup.*)
 
 (* BddMap plus the type of the values*)
-type t = BddMap.t * Syntax.ty
+type t = {bdd : BddMap.t; key_ty_id : int; val_ty_id: int}
 
 (* Used to cache functions and their closures *)
 module HashClosureMap = BatMap.Make (struct
@@ -32,27 +32,35 @@ module HashClosureMap = BatMap.Make (struct
 
 let map_cache = ref HashClosureMap.empty
 
-let create (record_fns: string -> 'a -> 'b) ~key_ty ~val_ty (vnat: 'v) : t =
-  let key_ty = get_type key_ty in
-  let val_ty = get_type val_ty in
-  let v = embed_value record_fns val_ty vnat in
-    (BddMap.create key_ty v, val_ty)
+let create record_fns ~(key_ty_id:int) ~(val_ty_id:int) (vnat: 'v) : t =
+  let key_ty = get_type key_ty_id in
+  let v = embed_value_id val_ty_id vnat in
+  (* let v = embed_value record_fns (get_type val_ty_id) vnat in
+   * Printf.printf "create val_ty_id: %d\n" val_ty_id; *)
+  {bdd = BddMap.create key_ty v; key_ty_id=key_ty_id; val_ty_id=val_ty_id}
 
+
+(* (record_cnstrs: string -> 'c) (record_fns: string -> 'a -> 'b) *)
 (** Takes the function of record_constructors and record_projections, [op_key] a
    tuple of the hashconsed NV expression and a tuple of OCaml variables
    (strings) that represent the closure of the mapped expression, the new type
    of the map, the function mapped and the map. *)
-let map (record_cnstrs: string -> 'c) (record_fns: string -> 'a -> 'b)
-    (op_key: (int * 'f)) (vty_new_id: int) (f: 'a1 -> 'a2) (((vdd, kty), vty_old): t) : t =
+let map record_fns record_cnstrs (op_key: (int * 'f)) (vty_new_id: int) (f: 'a1 -> 'a2) (vmap: t) : t =
+  let vdd = fst (vmap.bdd) in
+  let kty = snd (vmap.bdd) in
+  let vty_old_id = vmap.val_ty_id in
   let cfg = Cmdline.get_cfg () in
-  let vty_new = get_type vty_new_id in
   let f_embed =
-    fun x -> (f (unembed_value record_cnstrs record_fns vty_old x))
-             |> embed_value record_fns vty_new
+    fun x -> (f (unembed_value_id vty_old_id x))
+             |> embed_value_id vty_old_id (*NOTE: changed this from vty_new_id*)
   in
+  (* let f_embed =
+   *   fun x -> (f (unembed_value record_cnstrs record_fns (get_type vty_old_id) x))
+   *            |> embed_value record_fns (get_type vty_old_id) (\*NOTE: changed this from vty_new_id*\)
+   * in *)
   let g x = f_embed (Mtbdd.get x) |> Mtbdd.unique B.tbl in
-    if cfg.no_caching then
-      ((Mapleaf.mapleaf1 g vdd, kty), vty_new)
+  if cfg.no_caching then
+    {bdd = (Mapleaf.mapleaf1 g vdd, kty); key_ty_id = vmap.key_ty_id; val_ty_id = vty_new_id}
     else
       let op =
         match HashClosureMap.Exceptionless.find op_key !map_cache with
@@ -64,20 +72,23 @@ let map (record_cnstrs: string -> 'c) (record_fns: string -> 'a -> 'b)
               o
           | Some op -> op
       in
-        ((User.apply_op1 op vdd, kty), vty_new)
+        {bdd = (User.apply_op1 op vdd, kty); key_ty_id = vmap.key_ty_id; val_ty_id = vty_new_id}
 
 
 (** Takes as input an OCaml map and an ocaml key and returns an ocaml value*)
-let find (record_cnstrs: string -> 'c) (record_fns: string -> 'a -> 'b)
-    (((map,kty), vty): t) (k: 'key) : 'v =
-  let k_embed = embed_value record_fns kty k in
-    BddMap.find (map,kty) k_embed
-    |> unembed_value record_cnstrs record_fns vty
+let find record_fns record_cnstrs (vmap: t) (k: 'key) : 'v =
+  let k_embed = embed_value_id (vmap.key_ty_id) k in
+  (* let k_embed = embed_value record_fns (get_type vmap.key_ty_id) k in *)
+    BddMap.find vmap.bdd k_embed
+    |> unembed_value_id vmap.val_ty_id
+    (* |> unembed_value record_cnstrs record_fns (get_type vmap.val_ty_id) *)
 
-let update (record_fns: string -> 'a -> 'b) (((vdd,kty),vty): t) (k: 'key) (v: 'v): t =
-  let k_embed = embed_value record_fns kty (Obj.magic k) in
-  let v_embed = embed_value record_fns vty (Obj.magic v) in
-    (BddMap.update (vdd,kty) k_embed v_embed, vty)
+let update record_fns vty (vmap: t) (k: 'key) (v: 'v): t =
+  let k_embed = embed_value_id vmap.key_ty_id (Obj.magic k) in
+  let v_embed = embed_value_id vty (Obj.magic v) in
+  (* let k_embed = embed_value record_fns (get_type vmap.key_ty_id) (Obj.magic k) in
+   * let v_embed = embed_value record_fns (get_type vty) (Obj.magic v) in *)
+    {vmap with bdd = BddMap.update vmap.bdd k_embed v_embed}
 
 
 module HashMergeMap = BatMap.Make (struct
@@ -89,30 +100,29 @@ module HashMergeMap = BatMap.Make (struct
 
 let merge_op_cache = ref HashMergeMap.empty
 
-let unwrap record_fns vty (x: 'a) : bool * 'b =
+let unwrap vty_id (x: 'a) : bool * 'b =
   match Obj.magic x with
     | Some v ->
-      (true, embed_value record_fns vty v)
+      (true, embed_value_id vty_id v)
     | _ ->
       (false, vbool false)
 
 (* NOTE: Currently vty1=vty2 and the type of the result is also vty1*)
-(** [op_key] is a tuple of the hashcons of the function used to perform the
+(** [op_key] is a tuple of the id of the function used to perform the
    merge and a tuple that contains the values of the closure.*)
-let merge (record_cnstrs: string -> 'c) (record_fns: string -> 'a -> 'b)
-    ?(opt=None) (op_key: (int * 'f)) f (((m1, kty), vty1):t) (((m2,_), _):t) =
+let merge ?(opt=None) (op_key: (int * 'f)) f (vmap1: t) (vmap2: t) = (* (((m1, kty), vty1):t) (((m2,_), _):t) *)
   let cfg = Cmdline.get_cfg () in
   let f_embed =
     fun x y ->
-      let xnat = unembed_value record_cnstrs record_fns vty1 x in
-      let ynat = unembed_value record_cnstrs record_fns vty1 y in
-      embed_value record_fns vty1 (f xnat ynat)
+      let xnat = unembed_value_id vmap1.val_ty_id x in
+      let ynat = unembed_value_id vmap2.val_ty_id y in
+      embed_value_id vmap1.val_ty_id (f xnat ynat)
   in
   let g x y =
     f_embed (Mtbdd.get x) (Mtbdd.get y) |> Mtbdd.unique B.tbl
   in
-    if cfg.no_caching then
-      ((Mapleaf.mapleaf2 g m1 m2, kty), vty1)
+  if cfg.no_caching then
+    {vmap1 with bdd = (Mapleaf.mapleaf2 g (fst vmap1.bdd) (fst vmap2.bdd), (snd vmap1.bdd))}
     else
       let key = (Obj.magic op_key, opt) in
       let op =
@@ -122,10 +132,11 @@ let merge (record_cnstrs: string -> 'c) (record_fns: string -> 'a -> 'b)
               match (opt, cfg.no_cutoff) with
                 | None, _ | _, true -> fun _ _ -> None
                 | Some (el0, el1, er0, er1), false ->
-                  let bl0, vl0 = unwrap record_fns vty1 el0 in
-                  let bl1, vl1 = unwrap record_fns vty1 el1 in
-                  let br0, vr0 = unwrap record_fns vty1 er0 in
-                  let br1, vr1 = unwrap record_fns vty1 er1 in
+                  let vty1_id = vmap1.val_ty_id in
+                  let bl0, vl0 = unwrap vty1_id el0 in
+                  let bl1, vl1 = unwrap vty1_id el1 in
+                  let br0, vr0 = unwrap vty1_id er0 in
+                  let br1, vr1 = unwrap vty1_id er1 in
                     fun left right ->
                       if
                         bl0 && Vdd.is_cst left
@@ -161,28 +172,28 @@ let merge (record_cnstrs: string -> 'c) (record_fns: string -> 'a -> 'b)
               o
           | Some op -> op
       in
-        ((User.apply_op2 op m1 m2, kty), vty1)
+      {vmap1 with bdd = (User.apply_op2 op (fst vmap1.bdd) (fst vmap2.bdd), (snd vmap1.bdd))}
 
-let equal (bm1, _) (bm2, _) = BddMap.equal bm1 bm2
+let equal m1 m2 = BddMap.equal m1.bdd m2.bdd
 
 (** * MapIf related functions*)
 let mapw_op_cache = ref HashClosureMap.empty
 
-let mapIf (record_cnstrs: string -> 'c) (record_fns: string -> 'a -> 'b)
-    (predId: int) (op_key : int * 'f) (vty_new_id: int) (f: 'a1 -> 'a2)
-    (((vdd, kty), vty_old) : t) : t =
+let mapIf (predId: int) (op_key : int * 'f) (vty_new_id: int) (f: 'a1 -> 'a2) (vmap : t) : t =
   let cfg = Cmdline.get_cfg () in
-  let vty_new = get_type vty_new_id in
   let pred = get_bdd predId in
   let f_embed =
-    fun x -> (f (unembed_value record_cnstrs record_fns vty_old x))
-             |> embed_value record_fns vty_new
+    fun x -> (f (unembed_value_id vmap.val_ty_id x))
+             |> embed_value_id vty_new_id
   in
   let g b v =
     if Mtbdd.get b then f_embed (Mtbdd.get v) |> Mtbdd.unique B.tbl
     else v
   in
-  if cfg.no_caching then ((Mapleaf.mapleaf2 g pred vdd, kty), vty_new)
+  (* Printf.printf "mapIf vty_old_id:%d\n" vmap.val_ty_id;
+   * Printf.printf "mapIf vty_new_id:%d\n" vty_new_id; *)
+  if cfg.no_caching then {vmap with bdd = (Mapleaf.mapleaf2 g pred (fst vmap.bdd), get_type vty_new_id);
+                                    val_ty_id = vty_new_id}
   else
     let op =
       match HashClosureMap.Exceptionless.find op_key !mapw_op_cache with
@@ -203,4 +214,5 @@ let mapIf (record_cnstrs: string -> 'c) (record_fns: string -> 'a -> 'b)
         op
       | Some op -> op
     in
-    ((User.apply_op2 op pred vdd, kty), vty_new)
+    {vmap with bdd = (User.apply_op2 op pred (fst vmap.bdd), get_type vty_new_id);
+               val_ty_id = vty_new_id}

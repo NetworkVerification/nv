@@ -287,19 +287,19 @@ and map_to_ocaml_string op es ty =
     | MCreate ->
       (match ty with
        | TMap (kty,vty) ->
-          Printf.sprintf "NativeBdd.create record_fns ~key_ty:(%d) ~val_ty:(%d) %s"
+          Printf.sprintf "NativeBdd.create record_fns ~key_ty_id:(%d) ~val_ty_id:(%d) %s"
             (get_fresh_type_id kty) (get_fresh_type_id vty) (exp_to_ocaml_string (BatList.hd es))
         | _ -> failwith "Wrong type for map operation")
     | MSet ->
       (match es with
         | [e1;e2;e3] ->
-          Printf.sprintf "(NativeBdd.update record_fns (%s) (%s) (%s))"
-            (exp_to_ocaml_string e1) (exp_to_ocaml_string e2) (exp_to_ocaml_string e3)
+          Printf.sprintf "(NativeBdd.update record_fns (%d) (%s) (%s) (%s))"
+            (get_fresh_type_id (OCamlUtils.oget e3.ety)) (exp_to_ocaml_string e1) (exp_to_ocaml_string e2) (exp_to_ocaml_string e3)
         | _ -> failwith "Wrong number of arguments to MSet operation")
     | MGet ->
       (match es with
         | [e1;e2] ->
-          Printf.sprintf "(NativeBdd.find record_cnstrs record_fns (%s) (%s))"
+          Printf.sprintf "(NativeBdd.find record_fns record_cnstrs (%s) (%s))"
             (exp_to_ocaml_string e1) (exp_to_ocaml_string e2)
         | _ -> failwith "Wrong number of arguments to MGet operation")
     | MMap ->
@@ -315,7 +315,7 @@ and map_to_ocaml_string op es ty =
               (*need the Obj.magic to op_key_var arg here because tuple may have
                  different type/size depending on the free vars*)
               Printf.sprintf "(let %s = %s in \n \
-                               NativeBdd.map record_cnstrs record_fns (Obj.magic %s) (%d) (%s) (%s))"
+                               NativeBdd.map record_fns record_cnstrs (Obj.magic %s) (%d) (%s) (%s))"
                 op_key_var op_key op_key_var (get_fresh_type_id newty)
                 (exp_to_ocaml_string e1) (exp_to_ocaml_string e2)
             | _ -> failwith ("Wrong type for function argument" ^ (Printing.ty_to_string (OCamlUtils.oget e1.ety))))
@@ -332,7 +332,7 @@ and map_to_ocaml_string op es ty =
             | _ -> ""
           in
           Printf.sprintf "(let %s = %s in \n\
-                          NativeBdd.merge record_cnstrs record_fns %s (Obj.magic %s) (%s) (%s) (%s))"
+                          NativeBdd.merge %s (Obj.magic %s) (%s) (%s) (%s))"
             op_key_var op_key opt op_key_var (exp_to_ocaml_string e1)
             (exp_to_ocaml_string e2) (exp_to_ocaml_string e3)
         | _ -> failwith "Wrong number of arguments for merge operation")
@@ -371,7 +371,7 @@ and map_to_ocaml_string op es ty =
               (*need the Obj.magic to op_key_var arg here because tuple may
                    have different type/size depending on the free vars*)
               Printf.sprintf "(let %s = %s in \n\
-                               NativeBdd.mapIf record_cnstrs record_fns %d (Obj.magic %s) (%d) (%s) (%s))"
+                               NativeBdd.mapIf %d (Obj.magic %s) (%d) (%s) (%s))"
                 op_key_var op_key (*first let*)
                 bdd_id op_key_var (get_fresh_type_id newty)
                 (exp_to_ocaml_string f) (exp_to_ocaml_string m)

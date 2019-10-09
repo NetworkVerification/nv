@@ -4,27 +4,13 @@ open Nv_utils
 open Nv_datastructures
 open PrimitiveCollections
 open Syntax
-open Fix
-open Memoize
+open CompileBDDs
+(* open Fix
+ * open Memoize *)
+
 
 (* TODO: cache calls to embed and unembed, based on type, but potentially based
    on value too *)
-
-module TyHash =
-struct
-  type t = Syntax.ty
-  let equal = Syntax.equal_tys
-  let hash = Syntax.hash_ty
-end
-
-module TyOrdered =
-struct
-  type t = Syntax.ty
-  let compare = compare
-end
-
-module HashMemTy = ForHashedType(TyHash)
-module OrdMemTy = ForOrderedType(TyOrdered)
 
 (** Given an NV type and an OCaml value constructs an NV value*)
 let rec embed_value (record_fns: string -> 'a -> 'b) (typ: Syntax.ty) : 'v -> Syntax.value =
@@ -126,15 +112,53 @@ let rec unembed_value (record_cnstrs : string -> 'c) (record_proj : string -> 'a
    memoized table.
 *)
 
+let embed_cache : ((int*int -> int) array) ref = ref (Array.create 100 (fun _ -> 0))
+
+let build_embed_cache record_fns =
+  embed_cache := Array.map (fun ty -> Obj.magic (embed_value record_fns ty)) !type_array
+
+let unembed_cache : (int*int ->int) array ref = ref (Array.create 100 (fun _ -> 0))
+
+let build_unembed_cache record_cnstrs record_fns =
+  unembed_cache := Array.map (fun ty -> Obj.magic (unembed_value record_cnstrs record_fns ty)) !type_array
+
 let total_time = ref 0.0
 
-let embed_value (record_fns: string -> 'a -> 'b) : ty -> ('v -> Syntax.value) =
-  (* let res = OrdMemTy.memoize (embed_value record_fns)  in *)
-  let res = fun ty v -> embed_value record_fns ty v in
-    res
+let embed_value_id ty_id (v: 'v) : Syntax.value =
+  let embedding : 'v -> value= !embed_cache.(ty_id) |> Obj.magic in
+  embedding v
 
+let unembed_value_id ty_id (v: Syntax.value) : 'v =
+  let unembedding : value -> 'v = !unembed_cache.(ty_id) |> Obj.magic in
+  unembedding v
 
-let unembed_value (record_cnstrs: string -> 'c)  (record_fns: string -> 'a -> 'b) : ty -> (Syntax.value -> 'v) =
-  (* let res = OrdMemTy.memoize (unembed_value record_cnstrs record_fns) in *)
-  let res = fun ty v -> unembed_value record_cnstrs record_fns ty v in
-    res
+(* let embed_value_id ty_id (v: 'v) : Syntax.value =
+ *   Printf.printf "em get ty_id:%d\n" ty_id;
+ *   let embedding : 'v -> value= !embed_cache.(ty_id) |> Obj.magic in
+ *   embedding v
+ *
+ * let unembed_value_id ty_id (v: Syntax.value) : 'v =
+ *   Printf.printf "un get ty_id:%d\n" ty_id;
+ *   let unembedding : value -> 'v = !unembed_cache.(ty_id) |> Obj.magic in
+ *   unembedding v *)
+
+(* let cache_default_size = 10
+ * let embed_cache : int BatDynArray.t = BatDynArray.make cache_default_size
+ *
+ * let build_embed_cache record_fns =
+ *   Array.iter (fun ty -> BatDynArray.add embed_cache (Obj.magic (embed_value record_fns ty))) !type_array
+ *
+ * let unembed_cache : int BatDynArray.t = BatDynArray.make cache_default_size
+ *
+ * let build_unembed_cache record_cnstrs record_fns =
+ *   Array.iter (fun ty -> BatDynArray.add unembed_cache (unembed_value record_cnstrs record_fns ty)) !type_array
+ *
+ * let total_time = ref 0.0
+ *
+ * let embed_value_id ty_id (v: 'v) : Syntax.value =
+ *   let embedding = Obj.magic (BatDynArray.get embed_cache ty_id) in
+ *   embedding v
+ *
+ * let unembed_value_id ty_id (v: Syntax.value) : 'v =
+ *   let unembedding = BatDynArray.get unembed_cache ty_id in
+ *   unembedding v *)
