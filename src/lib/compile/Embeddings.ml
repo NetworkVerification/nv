@@ -122,8 +122,6 @@ let unembed_cache : (int*int ->int) array ref = ref (Array.create 100 (fun _ -> 
 let build_unembed_cache record_cnstrs record_fns =
   unembed_cache := Array.map (fun ty -> Obj.magic (unembed_value record_cnstrs record_fns ty)) !type_array
 
-let total_time = ref 0.0
-
 let embed_value_id ty_id (v: 'v) : Syntax.value =
   let embedding : 'v -> value= !embed_cache.(ty_id) |> Obj.magic in
   embedding v

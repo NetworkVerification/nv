@@ -19,7 +19,6 @@ module B = BddUtils
      mapIf p f m: create BDD for predicate p during compilation.
   *)
 
-(*TODO: create embed and unembed functions statically, use an int to lookup.*)
 
 (* BddMap plus the type of the values*)
 type t = {bdd : BddMap.t; key_ty_id : int; val_ty_id: int}
@@ -32,7 +31,7 @@ module HashClosureMap = BatMap.Make (struct
 
 let map_cache = ref HashClosureMap.empty
 
-let create record_fns ~(key_ty_id:int) ~(val_ty_id:int) (vnat: 'v) : t =
+let create ~(key_ty_id:int) ~(val_ty_id:int) (vnat: 'v) : t =
   let key_ty = get_type key_ty_id in
   let v = embed_value_id val_ty_id vnat in
   (* let v = embed_value record_fns (get_type val_ty_id) vnat in
@@ -45,11 +44,11 @@ let create record_fns ~(key_ty_id:int) ~(val_ty_id:int) (vnat: 'v) : t =
    tuple of the hashconsed NV expression and a tuple of OCaml variables
    (strings) that represent the closure of the mapped expression, the new type
    of the map, the function mapped and the map. *)
-let map record_fns record_cnstrs (op_key: (int * 'f)) (vty_new_id: int) (f: 'a1 -> 'a2) (vmap: t) : t =
+let map (op_key: (int * 'f)) (vty_new_id: int) (f: 'a1 -> 'a2) (vmap: t) : t =
   let vdd = fst (vmap.bdd) in
   let kty = snd (vmap.bdd) in
   let vty_old_id = vmap.val_ty_id in
-  let cfg = Cmdline.get_cfg () in
+  (* let cfg = Cmdline.get_cfg () in *)
   let f_embed =
     fun x -> (f (unembed_value_id vty_old_id x))
              |> embed_value_id vty_old_id (*NOTE: changed this from vty_new_id*)
@@ -59,31 +58,31 @@ let map record_fns record_cnstrs (op_key: (int * 'f)) (vty_new_id: int) (f: 'a1 
    *            |> embed_value record_fns (get_type vty_old_id) (\*NOTE: changed this from vty_new_id*\)
    * in *)
   let g x = f_embed (Mtbdd.get x) |> Mtbdd.unique B.tbl in
-  if cfg.no_caching then
-    {bdd = (Mapleaf.mapleaf1 g vdd, kty); key_ty_id = vmap.key_ty_id; val_ty_id = vty_new_id}
-    else
-      let op =
-        match HashClosureMap.Exceptionless.find op_key !map_cache with
-          | None ->
-            let o =
-              User.make_op1 ~memo:(Memo.Cache (Cudd.Cache.create1 ())) g
-            in
-              map_cache := HashClosureMap.add op_key o !map_cache ;
-              o
-          | Some op -> op
+  (* if cfg.no_caching then
+   *   {bdd = (Mapleaf.mapleaf1 g vdd, kty); key_ty_id = vmap.key_ty_id; val_ty_id = vty_new_id}
+   *   else *)
+  let op =
+    match HashClosureMap.Exceptionless.find op_key !map_cache with
+    | None ->
+      let o =
+        User.make_op1 ~memo:(Memo.Cache (Cudd.Cache.create1 ())) g
       in
-        {bdd = (User.apply_op1 op vdd, kty); key_ty_id = vmap.key_ty_id; val_ty_id = vty_new_id}
+      map_cache := HashClosureMap.add op_key o !map_cache ;
+      o
+    | Some op -> op
+  in
+  {bdd = (User.apply_op1 op vdd, kty); key_ty_id = vmap.key_ty_id; val_ty_id = vty_new_id}
 
 
 (** Takes as input an OCaml map and an ocaml key and returns an ocaml value*)
-let find record_fns record_cnstrs (vmap: t) (k: 'key) : 'v =
+let find (vmap: t) (k: 'key) : 'v =
   let k_embed = embed_value_id (vmap.key_ty_id) k in
   (* let k_embed = embed_value record_fns (get_type vmap.key_ty_id) k in *)
     BddMap.find vmap.bdd k_embed
     |> unembed_value_id vmap.val_ty_id
     (* |> unembed_value record_cnstrs record_fns (get_type vmap.val_ty_id) *)
 
-let update record_fns vty (vmap: t) (k: 'key) (v: 'v): t =
+let update vty (vmap: t) (k: 'key) (v: 'v): t =
   let k_embed = embed_value_id vmap.key_ty_id (Obj.magic k) in
   let v_embed = embed_value_id vty (Obj.magic v) in
   (* let k_embed = embed_value record_fns (get_type vmap.key_ty_id) (Obj.magic k) in
@@ -121,9 +120,9 @@ let merge ?(opt=None) (op_key: (int * 'f)) f (vmap1: t) (vmap2: t) = (* (((m1, k
   let g x y =
     f_embed (Mtbdd.get x) (Mtbdd.get y) |> Mtbdd.unique B.tbl
   in
-  if cfg.no_caching then
-    {vmap1 with bdd = (Mapleaf.mapleaf2 g (fst vmap1.bdd) (fst vmap2.bdd), (snd vmap1.bdd))}
-    else
+  (* if cfg.no_caching then
+   *   {vmap1 with bdd = (Mapleaf.mapleaf2 g (fst vmap1.bdd) (fst vmap2.bdd), (snd vmap1.bdd))}
+   *   else *)
       let key = (Obj.magic op_key, opt) in
       let op =
         match HashMergeMap.Exceptionless.find key !merge_op_cache with
@@ -190,29 +189,27 @@ let mapIf (predId: int) (op_key : int * 'f) (vty_new_id: int) (f: 'a1 -> 'a2) (v
     if Mtbdd.get b then f_embed (Mtbdd.get v) |> Mtbdd.unique B.tbl
     else v
   in
-  (* Printf.printf "mapIf vty_old_id:%d\n" vmap.val_ty_id;
-   * Printf.printf "mapIf vty_new_id:%d\n" vty_new_id; *)
-  if cfg.no_caching then {vmap with bdd = (Mapleaf.mapleaf2 g pred (fst vmap.bdd), get_type vty_new_id);
-                                    val_ty_id = vty_new_id}
-  else
-    let op =
-      match HashClosureMap.Exceptionless.find op_key !mapw_op_cache with
-      | None ->
-        let special =
-          if cfg.no_cutoff then fun _ _ -> None
-          else fun bdd1 bdd2 ->
-            if Vdd.is_cst bdd1 && not (Mtbdd.get (Vdd.dval bdd1))
-            then Some bdd2
-            else None
-        in
-        let op =
-          User.make_op2
-            ~memo:(Memo.Cache (Cudd.Cache.create2 ()))
-            ~commutative:false ~idempotent:false ~special g
-        in
-        mapw_op_cache := HashClosureMap.add op_key op !mapw_op_cache ;
-        op
-      | Some op -> op
-    in
-    {vmap with bdd = (User.apply_op2 op pred (fst vmap.bdd), get_type vty_new_id);
-               val_ty_id = vty_new_id}
+  (* if cfg.no_caching then {vmap with bdd = (Mapleaf.mapleaf2 g pred (fst vmap.bdd), get_type vty_new_id);
+   *                                   val_ty_id = vty_new_id}
+   * else *)
+  let op =
+    match HashClosureMap.Exceptionless.find op_key !mapw_op_cache with
+    | None ->
+      let special =
+        if cfg.no_cutoff then fun _ _ -> None
+        else fun bdd1 bdd2 ->
+          if Vdd.is_cst bdd1 && not (Mtbdd.get (Vdd.dval bdd1))
+          then Some bdd2
+          else None
+      in
+      let op =
+        User.make_op2
+          ~memo:(Memo.Cache (Cudd.Cache.create2 ()))
+          ~commutative:false ~idempotent:false ~special g
+      in
+      mapw_op_cache := HashClosureMap.add op_key op !mapw_op_cache ;
+      op
+    | Some op -> op
+  in
+  {vmap with bdd = (User.apply_op2 op pred (fst vmap.bdd), get_type vty_new_id);
+             val_ty_id = vty_new_id}

@@ -179,7 +179,6 @@ module SrpSimulation (Srp : NATIVE_SRP) : SrpSimulationSig =
       let vals = simulate_init graph s in
       let asserts = check_assertions vals in
       let open Solution in
-      Printf.printf "time embedding/unembedding: %f" (!Embeddings.total_time);
       let val_proj = ocaml_to_nv_value attr_ty in
         { labels = AdjGraph.VertexMap.map (fun v -> val_proj v) vals;
           symbolics = VarMap.empty; (*TODO: but it's not important for simulation.*)
