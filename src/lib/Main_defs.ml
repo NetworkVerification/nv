@@ -312,15 +312,15 @@ let parse_input (args : string array) =
   let decls = Typing.infer_declarations info decls in
   Typing.check_annot_decls decls ;
   Wellformed.check info decls ;
-  let decls, fs = (* Unroll records done first *)
-    if cfg.compile then
-      decls, []
-    else
-      let decls, f = RecordUnrolling.unroll_declarations decls in
-        decls, [f]
-  in
-  (* let decls, f = RecordUnrolling.unroll_declarations decls in
-   * let fs = [f] in *)
+  (* let decls, fs = (\* Unroll records done first *\)
+   *   if cfg.compile then
+   *     decls, []
+   *   else
+   *     let decls, f = RecordUnrolling.unroll_declarations decls in
+   *       decls, [f]
+   * in *)
+  let decls, f = RecordUnrolling.unroll_declarations decls in
+  let fs = [f] in
   let decls,fs = (* inlining definitions *)
     if cfg.inline then
       (* Note! Must rename before inling otherwise inling is unsound *)
@@ -356,5 +356,5 @@ let parse_input (args : string array) =
       Failures.buildFailuresNet net cfg.link_failures
     else net
   in
-  let net, _ = OptimizeBranches.optimize_net net in (* The _ should match the identity function *)
+  (* let net, _ = OptimizeBranches.optimize_net net in (\* The _ should match the identity function *\) *)
   (cfg, info, file, net, fs)

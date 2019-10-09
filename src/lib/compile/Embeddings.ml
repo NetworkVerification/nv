@@ -7,7 +7,8 @@ open Syntax
 open Fix
 open Memoize
 
-(* TODO: cache calls to embed and unembed, based on type, but potentially based on value too *)
+(* TODO: cache calls to embed and unembed, based on type, but potentially based
+   on value too *)
 
 module TyHash =
 struct

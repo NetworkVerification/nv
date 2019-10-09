@@ -77,9 +77,9 @@ let build_constructor n =
     Collections.printList (fun i -> Printf.sprintf "p%d__%d" i n) lst ("fun ") (" ") (" -> ")
   in
   let fun_body =
-    Collections.printList (fun i -> Printf.sprintf "p%d__%d" i n) lst  ("{") ("; ") ("}\n")
+    Collections.printList (fun i -> Printf.sprintf "p%d__%d" i n) lst  ("{") ("; ") ("}")
   in
-  Printf.sprintf "| \"%s\" -> Obj.magic (%s%s)" (string_of_int n) fun_args fun_body
+  Printf.sprintf "| \"%s\" -> Obj.magic (%s%s)\n" (string_of_int n) fun_args fun_body
 
 (** Builds a table (function) that maps each record to a function that takes as
    arguments a value for each of its fields and creates the record*)
@@ -89,12 +89,6 @@ let build_constructors () =
   in
   Printf.sprintf "let record_cnstrs s = match s with \n\
                   %s" branches
-
-
-let is_keyword_op op =
-  match op with
-  | And | Or | Not | UAdd _ | USub _ | Eq | ULess _ | ULeq _ | MGet | NLess | NLeq -> false
-  | MCreate | MSet | MMap | MMerge | MMapFilter | AtMost _ -> true
 
 let is_map_op op =
   match op with
@@ -189,7 +183,7 @@ let getFuncCache (e: exp) : string =
        let closure =
          Collections.printList (fun x -> Var.name x) freeList "(" "," ")"
        in
-       Printf.sprintf "(%d, %s)" f.body.etag closure
+       Printf.sprintf "(%d, %s)" (get_fresh_exp_id f.body) closure
        (*FIXME: annoying BatSet printing outputs null character at the end*)
        (* let closure = BatIO.output_string () in
         *   BatSet.PSet.print ~first:"(" ~sep:"," ~last:")"
@@ -197,7 +191,7 @@ let getFuncCache (e: exp) : string =
         *     closure free;
         *   Printf.sprintf "(%d, %s)" f.body.etag (BatInnerIO.close_out closure) *)
      | _ -> (*assume there are no free variables, but this needs to be fixed. FIXME*)
-       Printf.sprintf "(%d, ())" e.etag
+       Printf.sprintf "(%d, ())" (get_fresh_exp_id e)
 
 
 (** Translating NV values and expressions to OCaml*)
@@ -229,6 +223,14 @@ and exp_to_ocaml_string e =
     | EVal v -> value_to_ocaml_string v
     | EOp (op, es) when is_map_op op ->
       map_to_ocaml_string op es (OCamlUtils.oget e.ety)
+    | EOp (TGet (sz, lo, hi), [e]) ->
+      (if (lo != hi) then failwith "Can only handle TGet from one slot");
+      let proj = proj_rec lo sz in
+      Printf.sprintf "(%s).%s" (exp_to_ocaml_string e) proj
+    | EOp (TSet (sz, lo, hi), [e1;e2]) ->
+      (if (lo != hi) then failwith "Can only handle TSet from one slot");
+      let proj = proj_rec lo sz in
+      Printf.sprintf "{%s with %s=%s}" (exp_to_ocaml_string e1) proj (exp_to_ocaml_string e2)
     | EOp (op, es) -> op_args_to_ocaml_string op es
     | EFun f -> func_to_ocaml_string f
     | EApp (e1, e2) ->
@@ -262,17 +264,13 @@ and exp_to_ocaml_string e =
        Printf.sprintf "(%s.%s)" (exp_to_ocaml_string e) l
 
 and op_args_to_ocaml_string op es =
-  if is_keyword_op op then
-    Printf.sprintf "(%s %s)" (op_to_ocaml_string op)
-      (Collections.printList exp_to_ocaml_string es "" " " "")
-  else
-    match es with
-    | [] -> failwith "Empty operand list"
-    | [e1] -> Printf.sprintf "(%s %s)" (op_to_ocaml_string op) (exp_to_ocaml_string e1)
-    | [e1; e2] ->
-       Printf.sprintf "(%s %s %s)" (exp_to_ocaml_string e1)
-         (op_to_ocaml_string op) (exp_to_ocaml_string e2)
-    | _ -> failwith "Should be a keyword op"
+  match es with
+  | [] -> failwith "Empty operand list"
+  | [e1] -> Printf.sprintf "(%s %s)" (op_to_ocaml_string op) (exp_to_ocaml_string e1)
+  | [e1; e2] ->
+    Printf.sprintf "(%s %s %s)" (exp_to_ocaml_string e1)
+      (op_to_ocaml_string op) (exp_to_ocaml_string e2)
+  | _ -> failwith "Should be a keyword op"
 
 and func_to_ocaml_string f =
   Printf.sprintf "(fun %s -> %s)" (Var.name f.arg) (exp_to_ocaml_string f.body)
