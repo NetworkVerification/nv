@@ -15,14 +15,7 @@ type attrdepmap = IntSet.t IntMap.t
 (* Maps function arguments to the attribute element they correspond to *)
 type argmap = int IntMap.t
 
-let attrdepmap_to_string m =
-  Printf.sprintf "{ %s }" @@
-  IntMap.fold
-    (fun d deps acc ->
-       Printf.sprintf "%s\n %d : { %s } " acc d @@
-       IntSet.fold (fun d acc -> acc ^ "; " ^ string_of_int d) deps "")
-    m ""
-;;
+let attrdepmap_to_string = IntMap.to_string IntSet.to_string;;
 
 let get_attr_size net =
   match net.attr_type with
@@ -216,6 +209,8 @@ let rewrite_fun (attr_ty : ty) (elts_to_keep : IntSet.t) (assertion : exp) (lead
           )
           e
       in
+      (* FIXME: It occurs to me that since we do partial interpretation during encoding, this pass
+         might be redundant. Test this out once we have actual test data *)
       let finish = cont % (add_dummy_arg args_to_add elts_to_keep) % InterpPartialFull.interp_partial in
       match e.ety with
       | Some TBool -> (* This is the assert function. Return the input assert body *)
@@ -316,7 +311,7 @@ let slice (net : Syntax.network) (asn_slice : exp) (elements : IntSet.t) =
   sliced_net, (map_back net.attr_type elements) % cleanup_map_back
 ;;
 
-let slice_network (net : Syntax.network) : (Syntax.network * (Solution.t -> Solution.t)) list =
+let slice_network (net : Syntax.network) : (Syntax.network * (Solution.t -> Solution.t)) delayed list =
   let attr_deps = attribute_dependencies net in
   let assert_deps = assert_dependencies net in
   let assert_deps_transitive =
@@ -330,4 +325,4 @@ let slice_network (net : Syntax.network) : (Syntax.network * (Solution.t -> Solu
       )
       assert_deps
   in
-  List.map (fun (a,es) -> slice net a es) assert_deps_transitive
+  List.map (fun (a,es) -> fun () -> (slice net a es)) assert_deps_transitive

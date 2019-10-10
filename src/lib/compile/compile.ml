@@ -299,8 +299,8 @@ and map_to_ocaml_string op es ty =
     | MGet ->
       (match es with
         | [e1;e2] ->
-          Printf.sprintf "(NativeBdd.find (%s) (%s))"
-            (exp_to_ocaml_string e1) (exp_to_ocaml_string e2)
+          Printf.sprintf "(NativeBdd.find %d (%s) (%s))"
+            (get_fresh_type_id ty) (exp_to_ocaml_string e1) (exp_to_ocaml_string e2)
         | _ -> failwith "Wrong number of arguments to MGet operation")
     | MMap ->
       (match es with
@@ -535,8 +535,11 @@ let compile_ocaml name net =
     try (Sys.getenv "NV_BUILD") ^ name
     with Not_found -> failwith "To use compiler, please set environment variable NV_BUILD to the directory to be used (use something different than NV's directory)"
   in
-    (try Unix.mkdir src_dir (0o777) with
-      | _ -> ());
+  (try Unix.mkdir src_dir (0o777) with
+   | _ -> ());
+  let curdir = Sys.getcwd () in
     Unix.chdir src_dir;
     print_file (name ^ ".ml") program;
-  compile_command_ocaml name
+    let ret = compile_command_ocaml name in
+    Unix.chdir curdir;
+    ret

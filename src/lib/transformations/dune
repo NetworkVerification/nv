@@ -2,6 +2,7 @@
   (name nv_transformations)
   (public_name nv_lib.transformations)
   (libraries
+    parmap
     nv_datastructures
     nv_lang
     nv_utils

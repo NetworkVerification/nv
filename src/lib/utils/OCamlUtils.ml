@@ -9,6 +9,12 @@ let omap (f : 'a -> 'b) (x: 'a option): 'b option = (* BatOption.map f x *)
   | None -> None
   | Some y -> Some(f y)
 
+(*** Delayed computation ***)
+type 'a delayed = unit -> 'a
+
+let dmap (f : 'a -> 'b) (x : 'a delayed) : 'b delayed =
+  fun () -> f (x ())
+
 (*** List Utilities ***)
 let rec list_to_string f lst =
   Printf.sprintf "[%s]" @@ BatString.concat ";" @@ List.map f lst
@@ -40,3 +46,37 @@ let rec combine3 lst1 lst2 lst3 =
   | [], [], [] -> []
   | hd1::tl1, hd2::tl2, hd3::tl3 -> (hd1,hd2,hd3)::combine3 tl1 tl2 tl3
   | _ -> raise (Invalid_argument "combine3: lists have different lengths")
+
+let printList (printer: 'a -> string) (ls: 'a list) (first : string)
+              (sep : string) (last : string) =
+  let buf = Buffer.create 500 in
+  let rec loop ls =
+    match ls with
+    | [] -> ()
+    | [l] -> Buffer.add_string buf (printer l)
+    | l :: ls ->
+       Buffer.add_string buf (printer l);
+       Buffer.add_string buf sep;
+       loop ls
+  in
+  Buffer.add_string buf first;
+  loop ls;
+  Buffer.add_string buf last;
+  Buffer.contents buf
+
+let printListi (printer: int -> 'a -> string) (ls: 'a list) (first : string)
+              (sep : string) (last : string) =
+  let buf = Buffer.create 500 in
+  let rec loop i ls =
+    match ls with
+    | [] -> ()
+    | [l] -> Buffer.add_string buf (printer i l)
+    | l :: ls ->
+       Buffer.add_string buf (printer i l);
+       Buffer.add_string buf sep;
+       loop (i+1) ls
+  in
+  Buffer.add_string buf first;
+  loop 0 ls;
+  Buffer.add_string buf last;
+  Buffer.contents buf

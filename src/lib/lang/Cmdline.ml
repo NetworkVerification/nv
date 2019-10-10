@@ -9,6 +9,11 @@ type t =
   ; smart_gen: bool   [@short "-g"]    (** generate relevant randomized inputs     *)
   ; smt: bool         [@short "-m"]    (** search for bugs using an smt solver     *)
   ; query: bool                        (** emit the query used by the smt solver   *)
+  ; unbox: bool                        (** unboxes options and flattens tuples     *)
+  ; func: bool                         (** use to enable functional smt encoding   *)
+  ; hiding: bool                       (** Use the hiding abstraction during SMT solving *)
+  ; smt_parallel: bool                 (** use parallel smt/sat solving*)
+  ; finite_arith: bool                 (** set to false to use finite arithmetic in SMT *)
   ; hashcons: bool    [@short "-c"]    (** enables hashconsing of all ast terms    *)
   ; memoize: bool     [@short "-z"]    (** memoizes the interpreter for reuse      *)
   ; no_caching: bool                   (** disables mtbdd operation caching        *)
@@ -17,14 +22,12 @@ type t =
   ; compile: bool                      (** compile network to OCaml code before simulation *)
   ; compress: int                      (** compress the network for n failures     *)
   ; unroll: bool                       (** whether to unroll maps or not           *)
-  ; unbox: bool                        (** unboxes options and flattens tuples     *)
-  ; func: bool                         (** use to enable functional smt encoding   *)
   (* ; draw: bool                         (\** emits a .jpg file of the graph          *\) *)
   ; depth: int                         (** search depth for refinement procedure   *)
   ; check_monotonicity: bool           (** checks monotonicity of trans function   *)
   ; link_failures: int                 (** adds at most k link failures to the network  *)
-  ; hiding: bool                       (** Use the hiding abstraction during SMT solving *)
   ; slicing: bool                      (** Try to slice the network's attribute *)
+  ; parallelize : int option [@short "-p"] (** Try to parallelize using n cores **)
   }
 [@@deriving
   show
@@ -41,6 +44,7 @@ let default =
   ; ntests = 100
   ; smart_gen= false
   ; smt= false
+  ; smt_parallel=false
   ; query= false
   ; hashcons=false
   ; memoize = false
@@ -52,12 +56,14 @@ let default =
   ; unroll= false
   ; unbox = false
   ; func = false
+  ; finite_arith = false
   (* ; draw=false *)
   ; depth=20
   ; check_monotonicity=false
   ; link_failures=0
   ; hiding=false
   ; slicing=false
+  ; parallelize= None
   }
 
 let cfg = ref default
@@ -77,4 +83,5 @@ let update_cfg_dependencies () =
   if !cfg.smart_gen then cfg := {!cfg with inline=true};
   if !cfg.slicing then cfg := {!cfg with unbox=true};
   if !cfg.hiding then cfg := {!cfg with unbox=true};
+  if !cfg.smt_parallel then cfg := {!cfg with finite_arith=true};
   ()

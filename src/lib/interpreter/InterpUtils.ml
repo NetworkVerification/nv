@@ -61,7 +61,7 @@ let rec val_to_pat v =
   | VClosure _ -> PWild
 
 let rec match_branches branches v env =
-  (* iterBranches (fun (p,e) ->  Printf.printf "%s\n" (Printing.pattern_to_string p)) branches;
+  (* Syntax.iterBranches (fun (p,e) ->  Printf.printf "%s\n" (Printing.pattern_to_string p)) branches;
    * Printf.printf "val: %s\n" (Printing.value_to_string v); *)
   match Syntax.lookUpPat (val_to_pat v) branches with
   | Found e -> Some (env, e)

@@ -58,7 +58,7 @@ struct
     in
     let env = init_solver srp.srp_symbolics ~labels:labels in
     let aty = srp.srp_attr in
-    let nodes = (AdjGraph.num_vertices srp.srp_graph) in
+    let nodes = (AdjGraph.nb_vertex srp.srp_graph) in
 
     let smt_labels =
       AdjGraph.VertexMap.map

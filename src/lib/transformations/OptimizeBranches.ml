@@ -1,13 +1,13 @@
 open Nv_lang.Syntax
 open Nv_lang.Collections
 
-let ty_mutator _ x = Some x;;
+let ty_transformer _ x = Some x;;
 
-let pattern_mutator _ p _ = Some p;;
+let pattern_transformer _ p _ = Some p;;
 
-let value_mutator _ v = Some v;;
+let value_transformer _ v = Some v;;
 
-let exp_mutator (recursors : Mutators.recursors) e =
+let exp_transformer (recursors : Transformers.recursors) e =
   let optimizeExp = recursors.recurse_exp in
   match e.e with
   | EMatch (e1, bs) ->
@@ -18,14 +18,14 @@ let exp_mutator (recursors : Mutators.recursors) e =
   | _ -> None
 ;;
 
-let map_back_mutator _ _ v _ = Some v;;
+let map_back_transformer _ _ v _ = Some v;;
 
-let mask_mutator = map_back_mutator;;
+let mask_transformer = map_back_transformer;;
 
-let make_toplevel (toplevel_mutator : 'a Mutators.toplevel_mutator) =
-  toplevel_mutator ~name:"OptimizeBranches" ty_mutator pattern_mutator value_mutator exp_mutator map_back_mutator mask_mutator
+let make_toplevel (toplevel_transformer : 'a Transformers.toplevel_transformer) =
+  toplevel_transformer ~name:"OptimizeBranches" ty_transformer pattern_transformer value_transformer exp_transformer map_back_transformer mask_transformer
 ;;
 
-let optimize_declarations = make_toplevel Mutators.mutate_declarations
-let optimize_net = make_toplevel Mutators.mutate_network
-let optimize_srp = make_toplevel Mutators.mutate_srp
+let optimize_declarations = make_toplevel Transformers.transform_declarations
+let optimize_net = make_toplevel Transformers.transform_network
+let optimize_srp = make_toplevel Transformers.transform_srp

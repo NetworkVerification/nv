@@ -1,0 +1,15 @@
+include "../utils.nv"
+
+type attribute = dict[tnode, option[int3]]
+
+let trans e x = map (fun o -> mapo (fun n -> if (n = 7u3) then 7u3 else n +u3 1u3) o) x
+
+let merge n x1 x2 =
+  combine
+  (fun o1 o2 -> mapbetter (fun n1 n2 -> if n1 <u3 n2 then n1 else n2) o1 o2)
+  x1 x2
+  (Some None) None (Some None) None (* Extra args to combine to make simulator faster *)
+
+let init n =
+  let m = createDict None in
+  m[n := Some 0u3]

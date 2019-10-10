@@ -1,0 +1,22 @@
+(* A monotonic but non-selective SRP *)
+
+type attribute = int
+
+let nodes = 3
+let edges = {
+  0=1;
+  1=2;
+}
+
+let average x y = (x + y) >> 2
+
+let init node = match node with
+  | 0n -> 3
+  | 1n -> 8
+  | 2n -> 4
+
+let trans e x = if x = 0 then x else x - 1
+
+let merge n x y = if y + 1 = x then x else average x y
+
+(* vim: set syntax=ocaml: *)

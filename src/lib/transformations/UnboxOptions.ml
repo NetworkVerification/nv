@@ -5,7 +5,7 @@ open Nv_solution
 open Nv_datastructures
 open Nv_utils.OCamlUtils
 
-let ty_mutator (recursors: Mutators.recursors) ty =
+let ty_transformer (recursors: Transformers.recursors) ty =
   match ty with
   | TOption t ->
     (* If we write something like "let x = None in 5", the particular option type
@@ -15,7 +15,7 @@ let ty_mutator (recursors: Mutators.recursors) ty =
   | _ -> None
 ;;
 
-let pattern_mutator (recursors: Mutators.recursors) p ty =
+let pattern_transformer (recursors: Transformers.recursors) p ty =
   match p, ty with
   | POption None, TOption _ ->
     Some(PTuple [PBool false; PWild])
@@ -24,7 +24,7 @@ let pattern_mutator (recursors: Mutators.recursors) p ty =
   | _ -> None
 ;;
 
-let value_mutator (recursors: Mutators.recursors) v =
+let value_transformer (recursors: Transformers.recursors) v =
   match v.v with
   | VOption None ->
     (* This takes advantage of the fact that the default value for bools is false *)
@@ -34,7 +34,7 @@ let value_mutator (recursors: Mutators.recursors) v =
   | _ -> None
 ;;
 
-let exp_mutator (recursors: Mutators.recursors) e =
+let exp_transformer (recursors: Transformers.recursors) e =
   match e.e with
   | ESome e' ->
     Some (etuple [aexp ((e_val (avalue (vbool true, Some TBool, e.espan))), Some TBool, e.espan);
@@ -42,7 +42,7 @@ let exp_mutator (recursors: Mutators.recursors) e =
   | _ -> None
 ;;
 
-let map_back_mutator recurse _ v orig_ty =
+let map_back_transformer recurse _ v orig_ty =
   match v.v, orig_ty with
   | VTuple [vflag; vval], TOption ty ->
     (match vflag.v with
@@ -55,12 +55,12 @@ let map_back_mutator recurse _ v orig_ty =
 ;;
 
 (* Conveniently this happens to work *)
-let mask_mutator = map_back_mutator
+let mask_transformer = map_back_transformer
 
-let make_toplevel (toplevel_mutator : 'a Mutators.toplevel_mutator) =
-  toplevel_mutator ~name:"UnboxOptions" ty_mutator pattern_mutator value_mutator exp_mutator map_back_mutator mask_mutator
+let make_toplevel (toplevel_transformer : 'a Transformers.toplevel_transformer) =
+  toplevel_transformer ~name:"UnboxOptions" ty_transformer pattern_transformer value_transformer exp_transformer map_back_transformer mask_transformer
+;;
 
-
-let unbox_declarations = make_toplevel Mutators.mutate_declarations
-let unbox_net = make_toplevel Mutators.mutate_network
-let unbox_srp = make_toplevel Mutators.mutate_srp
+let unbox_declarations = make_toplevel Transformers.transform_declarations
+let unbox_net = make_toplevel Transformers.transform_network
+let unbox_srp = make_toplevel Transformers.transform_srp

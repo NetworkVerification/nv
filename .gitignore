@@ -28,8 +28,10 @@ setup.log
 # NV Query output
 *.nv-*-query
 
-# Testing output
+# Temporary testing files
 output/*
+testfiles/*
+tmp.txt
 
 # NV executable
 nv

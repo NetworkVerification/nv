@@ -1,0 +1,7 @@
+include "../generic-algebras/distance-bv-allpairs.nv"
+include "../generic-topologies/fattree500.nv"
+
+let assert u x =
+  match x with
+  | None -> false
+  | Some k -> if (k <u3 5u3) then true else false

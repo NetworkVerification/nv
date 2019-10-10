@@ -110,7 +110,8 @@ struct
               else c
             end
           else b) 0 ps1 ps2
-    | _, _ -> failwith "No comparison between non-concrete patterns"
+    | _, _ -> failwith
+                (Printf.sprintf "No comparison between non-concrete patterns")
 end
 
 module PatMap = BatMap.Make(Pat)
@@ -961,9 +962,10 @@ let apply_closure cl (args: value list) =
   apps (exp_of_v (VClosure cl)) (List.map (fun a -> e_val a) args)
 
 (* Requires that e is of type TTuple *)
-let tupleToList (e : exp) =
+let rec tupleToList (e : exp) =
   match e.e with
   | ETuple es -> es
+  | ETy (e, _) -> tupleToList e
   | EVal v ->
     (match v.v with
      | VTuple vs ->
@@ -971,9 +973,15 @@ let tupleToList (e : exp) =
      | _ -> failwith "Not a tuple type")
   | _ -> failwith "Not a tuple type"
 
-let tupleToListSafe (e : exp) =
-  match e.e with
-  | ETuple _| EVal _ -> tupleToList e
+let rec tupleToListSafe (e : exp) =
+    match e.e with
+  | ETuple es -> es
+  | ETy (e, _) -> tupleToListSafe e
+  | EVal v ->
+    (match v.v with
+     | VTuple vs ->
+       BatList.map (fun v -> aexp(e_val v, v.vty, v.vspan)) vs
+     | _ -> [e])
   | _ -> [e]
 
 

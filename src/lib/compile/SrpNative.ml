@@ -71,7 +71,7 @@ module SrpSimulation (Srp : NATIVE_SRP) : SrpSimulationSig =
     exception Require_false
 
     let srp_to_state graph =
-      create_state (AdjGraph.num_vertices graph)
+      create_state (AdjGraph.nb_vertex graph)
 
     let get_attribute (v: AdjGraph.VertexMap.key) (s : solution) =
       let find_opt v m =
@@ -103,7 +103,7 @@ module SrpSimulation (Srp : NATIVE_SRP) : SrpSimulationSig =
           else (AdjGraph.VertexMap.add neighbor n_new_attribute s, neighbor :: todo)
       in
       let initial_attribute = get_attribute origin s in
-      let neighbors = AdjGraph.neighbors graph origin in
+      let neighbors = AdjGraph.succ graph origin in
         BatList.fold_left (do_neighbor initial_attribute) (s, []) neighbors
 
     (* simulate_init s q simulates srp starting with initial state (s,q) *)
@@ -127,15 +127,13 @@ module SrpSimulation (Srp : NATIVE_SRP) : SrpSimulationSig =
       in
       loop s q k
 
-    let check_assertion a node v m =
-      AdjGraph.VertexMap.add node (a node v) m
+    let check_assertion a node v = a node v
 
     let check_assertions vals =
       match assertion with
         | None -> None
         | Some a ->
-          Some (AdjGraph.VertexMap.fold (fun n v acc -> (check_assertion a n v acc))
-                  vals AdjGraph.VertexMap.empty)
+          Some (AdjGraph.VertexMap.mapi (fun n v -> (check_assertion a n v)) vals)
 
     (** Builds equality function to check whether attributes are equal. This is
        only necessary when we use Batteries maps to represent nv maps. BDDs

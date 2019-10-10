@@ -1,6 +1,6 @@
 open Nv_lang
-open SmtLang
 open SmtUtils
+open SmtLang
 
 module type ExprEncoding =
 sig

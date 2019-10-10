@@ -1,3 +1,5 @@
+open Batteries
+
 let read ?(filename : string option = None) lexbuf =
   let get_info () =
     let curr = lexbuf.Lexing.lex_curr_p in
@@ -29,9 +31,12 @@ let read_from_in cin =
 let read_from_str str = Lexing.from_string str |> read
 
 let read_from_file fname =
-  let cin = open_in fname in
-  let res = read ~filename:(Some fname) (Lexing.from_channel cin) in
-  close_in cin ; res
+  let fin = open_in fname in
+  let lexbuf = Lexing.from_channel fin in
+  lexbuf.lex_curr_p <- {lexbuf.lex_curr_p with pos_fname=fname};
+  lexbuf.lex_start_p <- {lexbuf.lex_start_p with pos_fname=fname};
+  let res = read ~filename:(Some fname) lexbuf in
+  close_in fin ; res
 
 (* Make dest_fname relative to the current directory (or absolute),
    instead of relative to the source_fname *)
@@ -48,15 +53,15 @@ let process_includes (fname : string) : string list =
     if List.mem fname seen then (seen, imports) else
       (* Get any imports in this file *)
       let lines =
-        try BatFile.lines_of fname
+        try File.lines_of fname
         with _ -> Console.error ("File not found: " ^ fname)
       in
       let includes =
-        BatEnum.take_while
-          (fun s -> BatString.starts_with s "include")
-          (BatEnum.filter (fun s -> String.trim s <> "") lines)
+        Enum.take_while
+          (fun s -> String.starts_with s "include")
+          (Enum.filter (fun s -> String.trim s <> "") lines)
       in
-      let imported_fnames = BatEnum.map (fun s ->
+      let imported_fnames = Enum.map (fun s ->
           if Str.string_match (Str.regexp "include[ ]*\\\"\\(.+\\)\\\"") s 0 then
             adjust_filename fname (Str.matched_group 1 s)
           else
@@ -66,7 +71,7 @@ let process_includes (fname : string) : string list =
       in
       (* Recursively process those imports *)
       let rec_seen, rec_imports =
-        BatEnum.fold process_includes_aux
+        Enum.fold process_includes_aux
           (fname::seen, imports) imported_fnames
       in
       (rec_seen, fname :: rec_imports)

@@ -29,7 +29,7 @@ let size_and_index_after_flattening flatten_ty ty lo hi =
   | _ -> failwith "Called size_and_index_after_flattening without tuple type"
 ;;
 
-let ty_mutator (recursors : Mutators.recursors) ty =
+let ty_transformer (recursors : Transformers.recursors) ty =
   match ty with
   | TTuple tys ->
     let tys = List.map recursors.recurse_ty tys in
@@ -52,7 +52,7 @@ let ty_mutator (recursors : Mutators.recursors) ty =
   | _ -> None
 ;;
 
-let pattern_mutator (recursors : Mutators.recursors) p ty =
+let pattern_transformer (recursors : Transformers.recursors) p ty =
   match p, ty with
   | PTuple ps, TTuple tys ->
     let ps = List.map2 recursors.recurse_pattern ps tys in
@@ -80,7 +80,7 @@ let pattern_mutator (recursors : Mutators.recursors) p ty =
   | _ -> None
 ;;
 
-let value_mutator (recursors : Mutators.recursors) v =
+let value_transformer (recursors : Transformers.recursors) v =
   match v.v with
   | VTuple vs ->
     let vs = List.map recursors.recurse_value vs in
@@ -93,7 +93,7 @@ let value_mutator (recursors : Mutators.recursors) v =
   | _ -> None
 ;;
 
-let exp_mutator (recursors : Mutators.recursors) e =
+let exp_transformer (recursors : Transformers.recursors) e =
   let flatten_ty = recursors.recurse_ty in
   let flatten_exp = recursors.recurse_exp in
   match e.e with
@@ -197,7 +197,21 @@ let exp_mutator (recursors : Mutators.recursors) e =
       | TSet (_, lo, hi) ->
         let tup =  match es with | [e1;_] -> e1 | _ -> failwith "Bad TSet" in
         let size, lo, hi = size_and_index_after_flattening (oget tup.ety) lo hi in
-        Some (eop (TSet (size, lo, hi)) (List.map flatten_exp es))
+          Some (eop (TSet (size, lo, hi)) (List.map flatten_exp es))
+      | Eq ->
+        (match es with
+          | [e1; e2] when (match oget e.ety with | TTuple _ -> true | _ -> false) ->
+            let e1 = flatten_exp e1 in
+            let e2 = flatten_exp e2 in
+            (match tupleToListSafe e1, tupleToListSafe e2 with
+              | ((_ :: _ :: _) as es1), ((_ :: _ :: _) as es2) ->
+                Some (List.fold_left2 (fun acc e1 e2 ->
+                    let eq12 = eop Eq [e1;e2] |> wrap e in
+                      eop And [eq12; acc] |> wrap e)
+                    (e_val (vbool true) |> wrap e) es1 es2)
+              | _ ->
+                None)
+          | _ -> None)
       | _ -> None
     end
   | _ -> None
@@ -223,7 +237,7 @@ let unflatten_list (vs : value list) (tys : ty list) =
   assert (List.is_empty excess);
   List.rev vs
 
-let map_back_mutator recurse _ v orig_ty =
+let map_back_transformer recurse _ v orig_ty =
   match v.v, orig_ty with
   | VTuple vs, TTuple tys ->
     let vs' = unflatten_list vs tys in
@@ -231,19 +245,19 @@ let map_back_mutator recurse _ v orig_ty =
   | _ -> None
 ;;
 
-let mask_mutator = map_back_mutator;;
+let mask_transformer = map_back_transformer;;
 
-(* Currently, Mutators doesn't support changing the number of symbolics. So we
+(* Currently, Transformers doesn't support changing the number of symbolics. So we
    have to do that manually here *)
 
 let proj_symbolic (var, toe) =
   (* Flattening should have already happened *)
   match toe with
   | Exp e ->
-    (match e.e with
-     | ETuple es ->
-       List.mapi (fun i ei -> (proj_var i var, Exp ei)) es
-     | _ -> [(var, Exp e)])
+    (match tupleToListSafe e with
+     | [e] -> [(var, Exp e)]
+     | es ->
+       List.mapi (fun i ei -> (proj_var i var, Exp ei)) es)
   | Ty ty ->
     (match ty with
      | TTuple ts ->
@@ -266,6 +280,8 @@ let unproj_symbolics (sol : Solution.t) =
       VarMap.empty
   in
   (* Transform our lists of (index, value) pairs into the corresponding tuples *)
+  (* TODO: is that code necessary? I don't 100% understand what's the goal but
+     the SmtModel code does something like this.*)
   let unprojed =
     VarMap.map
       (fun elts ->
@@ -274,8 +290,9 @@ let unproj_symbolics (sol : Solution.t) =
          | [(0, v)] -> v
          | lst ->
            let lst = List.sort (fun a b -> compare (fst a) (fst b)) lst in
-           (* Sanity check *)
-           assert (List.fold_lefti (fun acc i elt -> acc && (i = fst elt)) true lst);
+             (* Sanity check *)
+             (* worst case scenario it crashes *)
+           (* assert (List.fold_lefti (fun acc i elt -> acc && (i = fst elt)) true lst); *)
            vtuple (List.map snd lst)
       )
       unboxed_map
@@ -283,9 +300,9 @@ let unproj_symbolics (sol : Solution.t) =
   {sol with symbolics=unprojed}
 ;;
 
-let make_toplevel (toplevel_mutator : 'a Mutators.toplevel_mutator) =
-  toplevel_mutator ~name:"TupleFlatten" ty_mutator pattern_mutator value_mutator exp_mutator map_back_mutator mask_mutator
-;;
+
+let make_toplevel (toplevel_transformer : 'a Transformers.toplevel_transformer) =
+  toplevel_transformer ~name:"TupleFlatten" ty_transformer pattern_transformer value_transformer exp_transformer map_back_transformer mask_transformer
 
 let flatten_decl d =
   match d with
@@ -295,16 +312,26 @@ let flatten_decl d =
   | _ -> [d]
 
 let flatten_declarations decls =
-  let decls, f = make_toplevel Mutators.mutate_declarations decls in
+  let decls, f = make_toplevel Transformers.transform_declarations decls in
   List.map flatten_decl decls |> List.concat,
   f % unproj_symbolics
 
 let flatten_net net =
-  let net, f = make_toplevel Mutators.mutate_network net in
+  let net, f = make_toplevel Transformers.transform_network net in
   {net with symbolics = List.map proj_symbolic net.symbolics |> List.concat},
   f % unproj_symbolics
 
 let flatten_srp srp =
-  let srp, f = make_toplevel Mutators.mutate_srp srp in
-  {srp with srp_symbolics = List.map proj_symbolic srp.srp_symbolics |> List.concat},
-  f
+  let srp, f = make_toplevel Transformers.transform_srp srp in
+  let proj_symbolics symbs = List.map proj_symbolic symbs |> List.concat in
+  let proj_label labels =
+    List.map
+      (fun (v, ty) ->
+         List.map (fun (v, toe) -> v, match toe with | Ty ty -> ty | _ -> failwith "Impossible") @@
+         proj_symbolic (v, Ty ty))
+      labels
+    |> List.concat
+  in
+  {srp with srp_symbolics = proj_symbolics srp.srp_symbolics;
+            srp_labels = AdjGraph.VertexMap.map proj_label srp.srp_labels},
+  f % unproj_symbolics

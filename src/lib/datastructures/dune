@@ -2,6 +2,7 @@
  (name nv_datastructures)
  (public_name nv_lib.datastructures)
  (libraries
+    nv_utils
     integers
     ocamlgraph
     batteries

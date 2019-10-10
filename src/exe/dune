@@ -1,4 +1,4 @@
 (executable
   (name main)
-  (libraries nv_lib findlib.dynload)
-)
+  ; (public_name nv)
+  (libraries nv_lib findlib.dynload))

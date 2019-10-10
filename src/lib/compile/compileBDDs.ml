@@ -50,6 +50,7 @@ let get_fresh_type_id typ =
   match Collections.TypeMap.Exceptionless.find typ !type_cache with
   | None ->
     let new_id = fresh_type_id () in
+    Printf.printf "Adding %s to %d\n" (Printing.ty_to_string typ) new_id;
     type_cache := Collections.TypeMap.add typ new_id !type_cache;
     new_id
   | Some id -> id

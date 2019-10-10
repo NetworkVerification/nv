@@ -35,7 +35,7 @@ let get_index_symb (keys : keys) (symb : var) =
   | _ -> None
 ;;
 
-let ty_mutator (target : ty) (keys : keys) _ ty =
+let ty_transformer (target : ty) (keys : keys) _ ty =
   (* let ty = canonicalize_type ty in *)
   match ty with
   | TMap(_, vty) ->
@@ -50,9 +50,9 @@ let ty_mutator (target : ty) (keys : keys) _ ty =
 ;;
 
 (* No such thing as a map pattern *)
-let pattern_mutator _ p _ = Some p;;
+let pattern_transformer _ p _ = Some p;;
 
-let value_mutator _ v =
+let value_transformer _ v =
   match v.v with
   | VMap _ -> failwith "This should be impossible, but if not we'll have to implement it"
   | _ -> None
@@ -128,7 +128,7 @@ let rec unroll_get_or_set
       ematch k final_branches
 ;;
 
-let exp_mutator (target : ty) (keys : keys) (recursors : Mutators.recursors) e =
+let exp_transformer (target : ty) (keys : keys) (recursors : Transformers.recursors) e =
   let unroll_type = recursors.recurse_ty in
   let unroll_exp = recursors.recurse_exp in
   let has_target_type = has_target_type target in
@@ -316,7 +316,7 @@ let exp_mutator (target : ty) (keys : keys) (recursors : Mutators.recursors) e =
   | _ -> None
 ;;
 
-let map_back_mutator (keys : keys) _ (sol : Solution.t) v orig_ty =
+let map_back_transformer (keys : keys) _ (sol : Solution.t) v orig_ty =
   match v.v, orig_ty with
   | VTuple vs, TMap (kty, vty) ->
     (* We found a converted map; convert it back *)
@@ -331,14 +331,14 @@ let map_back_mutator (keys : keys) _ (sol : Solution.t) v orig_ty =
   | _ -> None
 ;;
 
-let mask_mutator = map_back_mutator;;
+let mask_transformer = map_back_transformer;;
 
 
-let make_toplevel (target : ty) (keys : keys) (toplevel_mutator : 'a Mutators.toplevel_mutator) =
-  toplevel_mutator ~name:"MapUnrolling" (ty_mutator target keys) pattern_mutator value_mutator
-    (exp_mutator target keys) (map_back_mutator keys) (mask_mutator keys)
+let make_toplevel (target : ty) (keys : keys) (toplevel_transformer : 'a Transformers.toplevel_transformer) =
+  toplevel_transformer ~name:"MapUnrolling" (ty_transformer target keys) pattern_transformer value_transformer
+    (exp_transformer target keys) (map_back_transformer keys) (mask_transformer keys)
 ;;
 
-let unroll_declarations target keys = make_toplevel target keys Mutators.mutate_declarations
-let unroll_net target keys = make_toplevel target keys Mutators.mutate_network
-let unroll_srp target keys = make_toplevel target keys Mutators.mutate_srp
+let unroll_declarations target keys = make_toplevel target keys Transformers.transform_declarations
+let unroll_net target keys = make_toplevel target keys Transformers.transform_network
+let unroll_srp target keys = make_toplevel target keys Transformers.transform_srp

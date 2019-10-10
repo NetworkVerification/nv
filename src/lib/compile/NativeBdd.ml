@@ -75,12 +75,11 @@ let map (op_key: (int * 'f)) (vty_new_id: int) (f: 'a1 -> 'a2) (vmap: t) : t =
 
 
 (** Takes as input an OCaml map and an ocaml key and returns an ocaml value*)
-let find (vmap: t) (k: 'key) : 'v =
-  let k_embed = embed_value_id (vmap.key_ty_id) k in
-  (* let k_embed = embed_value record_fns (get_type vmap.key_ty_id) k in *)
-    BddMap.find vmap.bdd k_embed
-    |> unembed_value_id vmap.val_ty_id
-    (* |> unembed_value record_cnstrs record_fns (get_type vmap.val_ty_id) *)
+let find vty (vmap: t) (k: 'key) : 'v =
+  let k_embed = embed_value_id vmap.key_ty_id k in
+  let value = BddMap.find vmap.bdd k_embed in
+  unembed_value_id vty value
+
 
 let update vty (vmap: t) (k: 'key) (v: 'v): t =
   let k_embed = embed_value_id vmap.key_ty_id (Obj.magic k) in

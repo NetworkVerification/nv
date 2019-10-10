@@ -1,9 +1,10 @@
 (* Printing utilities for abstract syntax *)
-
+open Batteries
 open Syntax
 open Nv_datastructures
-open Collections
+open Nv_utils.PrimitiveCollections
 open Nv_utils.RecordUtils
+open Nv_utils
 
 let is_keyword_op op =
   match op with
@@ -89,7 +90,7 @@ let rec ty_to_string t =
   | TNode -> "node"
   | TEdge -> "edge"
   | TTuple ts ->
-    if BatList.is_empty ts then "TEmptyTuple"
+    if List.is_empty ts then "TEmptyTuple"
     else "(" ^ sep "," ty_to_string ts ^ ")"
   | TOption t -> "option[" ^ ty_to_string t ^ "]"
   | TMap (t1, t2) ->
@@ -143,7 +144,7 @@ let rec pattern_to_string pattern =
   | PBool false -> "false"
   | PInt i -> Integer.to_string i
   | PTuple ps ->
-    if BatList.is_empty ps then "PEmptyTuple" else
+    if List.is_empty ps then "PEmptyTuple" else
       "(" ^ comma_sep pattern_to_string ps ^ ")"
   | POption None -> "None"
   | POption (Some p) -> "Some " ^ pattern_to_string p
@@ -205,7 +206,7 @@ and value_to_string_p prec v =
   | VInt i -> Integer.to_string i
   | VMap m -> map_to_string ":=" "," m
   | VTuple vs ->
-    if BatList.is_empty vs then "VEmptyTuple" else
+    if List.is_empty vs then "VEmptyTuple" else
       "(" ^ comma_sep (value_to_string_p max_prec) vs ^ ")"
   | VOption None -> (* Printf.sprintf "None:%s" (ty_to_string (oget v.vty)) *)
     "None"
@@ -238,7 +239,7 @@ and exp_to_string_p prec e =
       ^ exp_to_string_p max_prec e1
       ^ " in \n" ^ exp_to_string_p prec e2
     | ETuple es ->
-      if BatList.is_empty es then "EEmptyTuple" else
+      if List.is_empty es then "EEmptyTuple" else
         "(" ^ comma_sep (exp_to_string_p max_prec) es ^ ")"
     | ESome e -> "Some(" ^ exp_to_string_p prec e ^ ")"
     | EMatch (e1, bs) ->
@@ -327,9 +328,10 @@ let rec declarations_to_string ds =
     declaration_to_string d ^ "\n" ^ declarations_to_string ds
 
 let network_to_string ?(show_topology=false) (net : Syntax.network) =
+
   (** User types **)
   let utypes =
-    Collections.printList (fun (x, ty) ->
+    OCamlUtils.printList (fun (x, ty) ->
         Printf.sprintf "type %s = %s" (Var.name x) (ty_to_string ty)) net.utys "" "\n" "\n"
   in
   (** Attr type **)
@@ -339,13 +341,13 @@ let network_to_string ?(show_topology=false) (net : Syntax.network) =
     if not show_topology then "" else
       let open Nv_datastructures in
       Printf.sprintf "let nodes = %d\n let edges = {%s}\n"
-        (AdjGraph.num_vertices net.graph)
+        (AdjGraph.nb_vertex net.graph)
         (list_to_string (fun (i, j) -> Printf.sprintf "%dn-%dn" i j)
            (AdjGraph.edges net.graph))
   in
   (** Symbolic Variables **)
   let symbs =
-    Collections.printList
+    OCamlUtils.printList
       (fun (var, toe) ->
         Printf.sprintf "symbolic %s %s" (Var.to_string var)
           (match toe with
@@ -355,12 +357,12 @@ let network_to_string ?(show_topology=false) (net : Syntax.network) =
   in
   (** Requires **)
   let reqs =
-    Collections.printList
+    OCamlUtils.printList
       (fun e -> Printf.sprintf "require %s\n" (exp_to_string e)) net.requires "" "" ""
   in
   (** Additional declarations **)
   let udefs =
-    Collections.printList
+    OCamlUtils.printList
     (fun (var, tyo, e) ->
        Printf.sprintf "let %s%s = %s"
          (Var.to_string var)

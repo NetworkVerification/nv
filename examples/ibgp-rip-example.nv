@@ -122,11 +122,10 @@ module IBGP =
       best_route = pick_best bgp_0 rip_0;
     }
 
-  (* Return true iff we have a route to dest via SOME protocol. In practice
-     dest will only ever be a DNode *)
+  (* Return true iff we have a route to dest via some IGP. Here, the only IGP is RIP. *)
   let has_route ibgp_attr dest =
-    match ibgp_attr.bgp[dest], ibgp_attr.rip[dest] with
-    | None, None -> false
+    match ibgp_attr.rip[dest] with
+    | None -> false
     | _ -> true
 
   let trans edge x =

@@ -1,0 +1,104 @@
+(* A BGP attack example from Sosnovich et al.'s 2015 paper in LPAR,
+ * "Analyzing Internet Routing Security Using Model Checking" 
+ * Node 0 is the destination.
+ * Node 1 is the attacker.
+ * A directed edge A-B represents a customer A connecting via a provider B.
+ * An undirected edge A=B represents two peers A and B with a connection between them.
+ *
+ * The local state of a node n is a set of routes to the destination 0, with a particular most preferred route.
+ *)
+
+(* attributes are a simplified RIB entry table, and a flag to indicate if
+ * the path routes through the attacker
+ *)
+type bgp = { bgpad : int; lp : int; aslen : int }
+
+type ribEntryRecord = {fwdEdge: tedge; bgp: option[(tedge, bgp)]}
+type ribEntry = option[ribEntryRecord]
+
+type attribute = (dict[tnode, ribEntry], bool)
+
+let nodes = 10
+
+let edges = {
+    0-1; (* customer-provider *)
+    0-5; (* customer-provider *)
+    1-2; (* customer-provider *)
+    1=7;
+    2-3; (* customer-provider *)
+    3-9; (* customer-provider *)
+    4-6; (* customer-provider *)
+    4=9;
+    5-4; (* customer-provider *)
+    8-6; (* customer-provider *)
+    8-7; (* customer-provider *)
+    9-7; (* customer-provider *)
+}
+
+(* return a new bgp record *)
+let transBgp edge m =
+  match edge with
+  | 0~1 ->
+    Some {m with aslen=m.aslen+1}
+  | 0~5 ->
+    Some {m with aslen=m.aslen+1}
+  | 1~2 ->
+    Some {m with aslen=m.aslen+1}
+  | 1~7 ->
+    Some {m with aslen=m.aslen+1}
+  | 2~3 ->
+    Some {m with aslen=m.aslen+1}
+  | 3~9 ->
+    Some {m with aslen=m.aslen+1}
+  | 4~6 ->
+    Some {m with aslen=m.aslen+1}
+  | 4~9 ->
+    Some {m with aslen=m.aslen+1}
+  | 5~4 ->
+    Some {m with aslen=m.aslen+1}
+  | 7~1 ->
+    Some {m with aslen=m.aslen+1}
+  | 8~6 ->
+    Some {m with aslen=m.aslen+1}
+  | 8~7 ->
+    Some {m with aslen=m.aslen+1}
+  | 9~4 ->
+    Some {m with aslen=m.aslen+1}
+  | 9~7 ->
+    Some {m with aslen=m.aslen+1}
+
+let transferRoute edge x soly =
+  let newBgp = transBgp x.bgp soly in
+  Some {fwdEdge = edge; bgp=newBg}
+
+(* select most preferred route, prepend self to it *)
+let trans edge x = 
+  let (hop, attacked) = x in
+    map (fun r -> transferRoute edge r y) hop
+
+(* bgp attribute comparison *)
+let betterBgp b1 b2 =
+  if b1.lp > b2.lp then true
+  else if b2.lp > b1.lp then false
+  else if b1.aslen < b2.aslen then true
+  else false
+
+(* add received route to RIB *)
+let merge node x y = (*TODO*)
+
+let init node = 
+  let d = createDict None in
+  let p = match node with
+ | 0n -> let b = { bgpad=0; lp=100; aslen=0 } in
+    Some {fwdEdge=(0,0); bgp=Some b}
+ | 1n -> let b = { bgpad=1; lp=100; aslen=1 } in
+    Some {fwdEdge=(1,0); bgp=Some b}
+ | _ -> None
+ in (d[node := p], node == 1n)
+
+(* check if a node was successfully attacked *)
+let assert node x =
+  let (_, attacked) in x in
+    attacked
+
+(* vim: set syntax=ocaml ts=2 sts=2 sw=2: *)
