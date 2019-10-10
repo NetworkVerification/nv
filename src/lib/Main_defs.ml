@@ -344,17 +344,10 @@ let parse_input (args : string array) =
   let ds, info = Input.parse file in (* Parse nv file *)
   let decls = ds in
   (* print_endline @@ Printing.declarations_to_string decls ; *)
-  let decls = (ToEdge.toEdge_decl cfg.compile decls) :: decls in
+  let decls = (ToEdge.toEdge_decl decls) :: decls in
   let decls = Typing.infer_declarations info decls in
   Typing.check_annot_decls decls ;
   Wellformed.check info decls ;
-  (* let decls, fs = (\* Unroll records done first *\)
-   *   if cfg.compile then
-   *     decls, []
-   *   else
-   *     let decls, f = RecordUnrolling.unroll_declarations decls in
-   *       decls, [f]
-   * in *)
   let decls, f = RecordUnrolling.unroll_declarations decls in
   let fs = [f] in
   let decls,fs = (* inlining definitions *)

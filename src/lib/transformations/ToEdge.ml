@@ -22,11 +22,11 @@ open Nv_lang.Syntax
    | _ -> None
  ***)
 
-let toEdge_decl compile decls =
+let toEdge_decl decls =
   let open Nv_datastructures in
   let n1_var = Var.create "n1" in
   let n2_var = Var.create "n2" in
-    if compile then
+   (* if compile then
       DLet
         (
           Var.create "toEdge",
@@ -36,11 +36,11 @@ let toEdge_decl compile decls =
              body =
                efun
                  {arg = n2_var; argty = None; resty= None;
-                  body = etuple [evar n1_var; evar n2_var]
+                  body = esome (e_val (vedge (n1_var, n2_var)))
                  }
             }
         )
-    else
+    else*)
       (* print_endline @@ Nv_lang.Printing.declarations_to_string decls ; *)
       let edges = get_edges decls |> Nv_utils.OCamlUtils.oget in
       let default_branch =
