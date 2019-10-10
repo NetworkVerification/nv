@@ -538,7 +538,7 @@ let compile_ocaml name net =
   let program = generate_ocaml basename net in
   let src_dir =
     try (Sys.getenv "NV_BUILD") ^ name
-    with Not_found -> failwith "To use compiler, please set environment variable NV_BUILD to the directory to be used (use something different than NV's directory)"
+    with Not_found -> failwith "To use compiler, please set environment variable NV_BUILD to a directory in which to generate build files. Use something outside the nv directory."
   in
   (try Unix.mkdir src_dir (0o777) with
    | _ -> ());
