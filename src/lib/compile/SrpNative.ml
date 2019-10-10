@@ -154,6 +154,7 @@ module SrpSimulation (Srp : NATIVE_SRP) : SrpSimulationSig =
                   | [], [], [] -> true
                   | f :: fs, v1 :: vs1, v2 :: vs2 ->
                     (f v1 v2) && compareTuples fs vs1 vs2
+                  | _ -> failwith "Was expecting same length tuples"
               in
                 compareTuples fs (Obj.magic vs1) (Obj.magic vs2)
         | TMap (_, vty) ->

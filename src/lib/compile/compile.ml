@@ -94,6 +94,7 @@ let is_map_op op =
   match op with
     | MCreate | MGet | MSet | MMap | MMapFilter | MMerge -> true
     | And | Or | Not | UAdd _ | USub _ | Eq | ULess _ | ULeq _ | AtMost _ | NLess | NLeq | TGet _ | TSet _ -> false
+    | MFoldEdge | MFoldNode -> failwith "Todo: map folds"
 
 (** Translating NV operators to OCaml operators*)
 let op_to_ocaml_string op =
@@ -115,6 +116,10 @@ let op_to_ocaml_string op =
   | MMapFilter
   | MMerge -> failwith "Map ops are handled elsewhere"
   | AtMost _ -> failwith "todo: atmost"
+  | MFoldEdge
+  | MFoldNode -> failwith "todo: Map folds"
+  | TGet _
+  | TSet _ -> failwith "Todo: TGet/TSet"
 
 (** Translating NV patterns to OCaml patterns*)
 let rec pattern_to_ocaml_string pattern =
