@@ -61,7 +61,7 @@ module SmtLang =
 
     let printList (printer: 'a -> string) (ls: 'a list) (first : string)
           (sep : string) (last : string) =
-      let buf = Buffer.create 1000 in
+      let buf = Buffer.create 5000 in
       let rec loop ls =
         match ls with
         | [] -> ()
@@ -418,7 +418,6 @@ module SmtLang =
           Printf.sprintf "(assert %s)" (term_to_smt false info tm)
       | CheckSat ->
         (* for now i am hardcoding the tactics here. *)
-        Printf.printf "reached here\n";
         if smt_config.parallel then
           Printf.sprintf "(set-option :parallel.enable true)\n\
                           (check-sat-using (then simplify propagate-values simplify \

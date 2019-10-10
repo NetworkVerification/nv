@@ -167,8 +167,8 @@ and exp =
   }
 [@@deriving ord]
 
-and branches = { pmap              : exp PatMap.t;
-                 plist             : (pattern * exp) list
+and branches = { pmap  : exp PatMap.t;
+                 plist : (pattern * exp) list
                }
 
 and func = {arg: var; argty: ty option; resty: ty option; body: exp}
@@ -208,7 +208,7 @@ type network =
     interface : exp option; (* partitioning *)
     symbolics : (var * ty_or_exp) list;
     defs : (var * ty option * exp) list;
-    utys : (ty StringMap.t) list;
+    utys : (var * ty) list;
     requires : exp list;
     graph : AdjGraph.t;
   }
@@ -522,7 +522,7 @@ let rec hash_ty ty =
   | TVar tyvar -> (
       match !tyvar with
       | Unbound (name, x) -> hash_string (Var.to_string name) + x
-      | Link t -> 2 + hash_ty t )
+      | Link t -> hash_ty t )
   | QVar name -> 3 + hash_string (Var.to_string name)
   | TBool -> 4
   | TInt _ -> 5
@@ -532,7 +532,7 @@ let rec hash_ty ty =
   | TOption t -> 8 + hash_ty t
   | TMap (ty1, ty2) -> 9 + hash_ty ty1 + hash_ty ty2
   | TRecord map ->
-    StringMap.fold (fun l t acc -> acc + + hash_string l + hash_ty t) map 0 + 10
+    StringMap.fold (fun l t acc -> acc + hash_string l + hash_ty t) map 0 + 10
   | TUnit -> 11
   | TNode -> 12
   | TEdge -> 13
@@ -1048,6 +1048,9 @@ let get_requires ds =
     [] ds
   |> List.rev
 
+let get_types ds =
+  BatList.filter_map (fun d -> match d with | DUserTy (x,y) -> Some (x,y) | _ -> None) ds
+
 let get_record_types ds =
   List.fold_left
     (fun acc d ->
@@ -1056,6 +1059,15 @@ let get_record_types ds =
        | _ -> acc
     )
     [] ds
+
+let get_record_types_from_utys uty =
+  BatList.fold_left
+    (fun acc (_, ty) ->
+       match ty with
+         | TRecord lst -> lst :: acc
+         | _ -> acc
+    )
+    [] uty
 
 let rec get_inner_type t : ty =
   match t with TVar {contents= Link t} -> get_inner_type t | _ -> t

@@ -103,6 +103,15 @@ let slicing_test filename expected: test =
   }
 ;;
 
+let compiler_test filename expected: test =
+  {
+    testname = filename ^ "_compiled";
+    args = Array.of_list ["nv"; "-compile"; filename_prefix ^ filename];
+    testfun = (fun _ cfg info decls fs -> run_compiled (filename_prefix ^ filename) cfg info decls fs);
+    expected;
+  }
+;;
+
 (*** Suites of tests ***)
 let simulator_tests =
   List.map (fun (f,b) -> simulator_test f b)
@@ -132,6 +141,31 @@ let simulator_tests =
       ("examples/symbolic3.nv", true);
       ("examples/symbolicDecls.nv", true);
       ("examples/ospf-areas.nv", true);
+    ]
+;;
+
+let compiler_tests =
+  List.map (fun (f,b) -> compiler_test f b)
+    [
+      ("examples/batfish.nv", false);
+      ("examples/diamond.nv", true);
+      ("examples/env.nv", true);
+      ("examples/failure.nv", true);
+      ("examples/failure2.nv", true);
+      ("examples/fattree.nv", true);
+      ("examples/map.nv", true);
+      ("examples/map2.nv", false);
+      ("examples/property.nv", true);
+      ("examples/set.nv", true);
+      ("examples/simple.nv", true);
+      ("examples/symbolic.nv", true);
+      ("examples/symbolic2.nv", true);
+      ("examples/maprecord.nv", true);
+      ("examples/maprecordpattern.nv", true);
+      ("examples/maprecord2.nv", true);
+
+      ("examples/symbolic3.nv", true);
+      ("examples/symbolicDecls.nv", true);
     ]
 ;;
 
@@ -283,6 +317,7 @@ let make_ounit_test test =
 
 (* Name the test cases and group them together *)
 let tests =
+  Printf.printf "%s\n" (Unix.getcwd ());
   "Test_end_to_end"
   >:::
   List.map make_ounit_test @@
@@ -293,4 +328,5 @@ let tests =
   slicing_tests @
   bv_tests @
   parallel_tests @
+  compiler_tests @
   [] (* So we can easily comment out the last actual test *)

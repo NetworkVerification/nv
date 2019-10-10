@@ -3,6 +3,7 @@ open Syntax
 open Nv_datastructures
 open Nv_utils
 open Nv_utils.OCamlUtils
+open Batteries
 
 module B = BddUtils
 
@@ -54,17 +55,12 @@ let rec ite (b: Bdd.vt) (x: t) (y: t) : t =
   match (x, y) with
   | BBool m, BBool n -> BBool (Bdd.ite b m n)
   | BInt ms, BInt ns ->
-    let both =
-      List.combine (Array.to_list ms) (Array.to_list ns)
-    in
-    let ite = List.map (fun (m, n) -> Bdd.ite b m n) both in
-    BInt (Array.of_list ite)
+    BInt (Array.map2 (fun m n -> Bdd.ite b m n) ms ns)
   | BOption (tag1, m), BOption (tag2, n) ->
     let tag = Bdd.ite b tag1 tag2 in
     BOption (tag, ite b m n)
   | BTuple ms, BTuple ns ->
-    let both = List.combine ms ns in
-    let ite = List.map (fun (m, n) -> ite b m n) both in
+    let ite = List.map2 (fun m n -> ite b m n) ms ns in
     BTuple ite
   | _ -> failwith "internal error (ite)"
 
@@ -73,31 +69,26 @@ let rec eq (x: t) (y: t) : t =
     match (x, y) with
     | BBool b1, BBool b2 -> Bdd.eq b1 b2
     | BInt bs1, BInt bs2 ->
-      let both =
-        List.combine (Array.to_list bs1) (Array.to_list bs2)
-      in
-      List.fold_left
-        (fun acc (b1, b2) -> Bdd.dand acc (Bdd.eq b1 b2))
-        (Bdd.dtrue B.mgr) both
+      Array.fold_lefti (fun acc i b1 ->
+          Bdd.dand acc (Bdd.eq b1 bs2.(i))) (Bdd.dtrue B.mgr) bs1
     | BOption (tag1, b1), BOption (tag2, b2) ->
       let tags = Bdd.eq tag1 tag2 in
       let values = aux b1 b2 in
       Bdd.dand tags values
     | BTuple bs1, BTuple bs2 ->
-      let both = List.combine bs1 bs2 in
-      List.fold_left
-        (fun acc (b1, b2) -> Bdd.dand acc (aux b1 b2))
-        (Bdd.dtrue B.mgr) both
+      List.fold_left2 (fun acc b1 b2 ->
+          Bdd.dand acc (aux b1 b2)) (Bdd.dtrue B.mgr) bs1 bs2
     | _ -> failwith "internal error (eq)"
   in
   BBool (aux x y)
 
 let add (x: t) (y: t) : t =
   let aux xs ys =
-    assert ((Array.length xs) = (Array.length ys));
+    (* assert ((Array.length xs) = (Array.length ys)); *)
     let var3 = ref (Bdd.dfalse B.mgr) in
     let var4 = Array.make (Array.length xs) (Bdd.dfalse B.mgr) in
-    for var5 = 0 to Array.length xs - 1 do
+    let lenxs = Array.length xs in
+    for var5 = 0 to lenxs - 1 do
       var4.(var5) <- Bdd.xor xs.(var5) ys.(var5) ;
       var4.(var5) <- Bdd.xor var4.(var5) !var3 ;
       let var6 = Bdd.dor xs.(var5) ys.(var5) in
@@ -193,7 +184,6 @@ let rec eval (env: t Env.t) (e: exp) : t =
     BTuple vs
   | ESome e -> BOption (Bdd.dtrue B.mgr, eval env e)
   | EMatch (e1, branches) -> (
-      (* Printf.printf "EMatch e1: %s\n" (PrintingRaw.show_exp ~show_meta:false e1); *)
       let bddf = eval env e1 in
       let ((p,e), bs) = popBranch branches in
       let env, _ = eval_branch env bddf p in
@@ -226,13 +216,11 @@ and eval_branch env bddf p : t Env.t * Bdd.vt =
       done ;
       (env, !cond)
   | PTuple ps, BTuple bs ->
-    let zip = List.combine ps bs in
-    List.fold_left
-      (fun (env, pred) (p, b) ->
+    List.fold_left2
+      (fun (env, pred) p b ->
          let env', pred' = eval_branch env b p in
          (env', Bdd.dand pred pred') )
-      (env, Bdd.dtrue B.mgr)
-      zip
+      (env, Bdd.dtrue B.mgr) ps bs
   | POption None, BOption (tag, _) -> (env, Bdd.dnot tag)
   | POption (Some p), BOption (tag, bo) ->
     let env, cond = eval_branch env bo p in

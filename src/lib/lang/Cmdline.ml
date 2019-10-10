@@ -19,6 +19,7 @@ type t =
   ; no_caching: bool                   (** disables mtbdd operation caching        *)
   ; no_cutoff: bool                    (** disables mtbdd early termination        *)
   ; inline: bool      [@short "-i"]    (** inline the policy before simulation     *)
+  ; compile: bool                      (** compile network to OCaml code before simulation *)
   ; compress: int                      (** compress the network for n failures     *)
   ; unroll: bool                       (** whether to unroll maps or not           *)
   (* ; draw: bool                         (\** emits a .jpg file of the graph          *\) *)
@@ -50,6 +51,7 @@ let default =
   ; no_caching=false
   ; no_cutoff=false
   ; inline=false
+  ; compile=false
   ; compress= -1
   ; unroll= false
   ; unbox = false

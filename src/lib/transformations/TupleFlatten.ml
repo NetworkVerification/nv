@@ -303,7 +303,6 @@ let unproj_symbolics (sol : Solution.t) =
 
 let make_toplevel (toplevel_transformer : 'a Transformers.toplevel_transformer) =
   toplevel_transformer ~name:"TupleFlatten" ty_transformer pattern_transformer value_transformer exp_transformer map_back_transformer mask_transformer
-;;
 
 let flatten_decl d =
   match d with

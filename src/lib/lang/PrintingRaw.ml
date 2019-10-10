@@ -16,16 +16,18 @@ let show_record f prefix map =
   in
   Printf.sprintf "%s { %s }" prefix str
 
-let rec show_ty ty =
+let rec show_ty ?(show_links=false) ty =
   match ty with
   | TVar tyvar -> (
       match !tyvar with
       | Unbound (name, _) ->
         Printf.sprintf "TVar (Unbound %s)" (Var.to_string name)
-      | Link t -> Printf.sprintf "Link (%s)" (show_ty t) )
+      | Link t ->
+        if show_links then Printf.sprintf "Link (%s)" (show_ty t)
+        else Printf.sprintf "%s" (show_ty t))
   | QVar name -> Printf.sprintf "QVar (%s)" (Var.to_string name)
   | TBool -> "TBool"
-  | TInt _ -> "TInt"
+  | TInt n -> Printf.sprintf "TInt %d" n
   | TArrow (ty1, ty2) ->
     Printf.sprintf "TArrow (%s,%s)" (show_ty ty1) (show_ty ty2)
   | TTuple ts ->

@@ -3,13 +3,14 @@ open Nv_solution
 
 let main_func () =
   Printexc.record_backtrace true;
-  let cfg, info, file, net, fs = parse_input Sys.argv in
+let cfg, info, file, net, fs = parse_input Sys.argv in
   (* if cfg.check_monotonicity then *)
   (*   checkPolicy info cfg file decls; *)
   let networkOp =
       if cfg.smt then run_smt file
       else if cfg.random_test then run_test
       else if cfg.simulate then run_simulator
+      else if cfg.compile then run_compiled file
       else exit 0
   in
   if cfg.compress >= 0 then

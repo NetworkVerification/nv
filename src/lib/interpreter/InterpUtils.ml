@@ -67,16 +67,6 @@ let rec match_branches branches v env =
   | Found e -> Some (env, e)
   | Rest ls -> match_branches_lst ls v env
 
-(* We have an ExpMap in Collections that uses a slightly different
-   comparison function (one which allows for hashing). I don't see
-   a reason to redefine it here, but maybe the difference in comparison
-   matters *)
-(* module ExpMap = Map.Make (struct
-    type t = exp
-
-    let compare = Pervasives.compare
-   end) *)
-
 let build_env (env: Syntax.env) (free_vars: Nv_datastructures.Var.t BatSet.PSet.t) :
   Syntax.value BatSet.PSet.t =
   let base = BatSet.PSet.create Syntax.compare_values in

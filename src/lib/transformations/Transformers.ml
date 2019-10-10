@@ -278,7 +278,7 @@ let transform_network
     assertion = omap transform_exp net.assertion;
     symbolics = List.map transform_symbolic net.symbolics;
     requires = List.map transform_exp net.requires;
-    utys = List.map (fun map -> StringMap.map transform_ty map) net.utys;
+    utys =  List.map (fun (x,m) -> (x, transform_ty m)) net.utys;
     partition = omap transform_exp net.partition;
     interface = omap transform_exp net.interface;
     defs = List.map (fun (x, tyo, e) -> (x, omap transform_ty tyo, transform_exp e)) net.defs;

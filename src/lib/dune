@@ -1,6 +1,7 @@
 (library
   (name nv_lib)
-  (public_name nv)
+  (public_name nv_lib)
+  (modes native)
   (libraries
     nv_lang
     nv_smt
@@ -8,6 +9,7 @@
     nv_utils
     nv_transformations
     nv_compression
+    nv_compile
     integers
     str
     batteries

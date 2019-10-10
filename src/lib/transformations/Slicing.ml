@@ -137,7 +137,7 @@ let createNetwork decls =
     , get_attr_type decls
     , get_symbolics decls
     , get_lets decls
-    , get_record_types decls
+    , get_types decls
     , get_requires decls)
   with
   | Some emerge, Some etrans, Some einit, Some n, Some es,
