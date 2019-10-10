@@ -42,6 +42,7 @@ opam install -y \
   ocamlgraph \
   fileutils \
   parmap \
+  fix \
   dune
 ```
 

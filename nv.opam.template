@@ -21,6 +21,7 @@ depends: [
   "ppx_deriving"
   "ppx_deriving_argparse"
   "menhir"
+  "fix"
 ]
 build: ["dune" "build" "-p" name]
 dev-repo: "git+https://github.com/princedpw/nv"

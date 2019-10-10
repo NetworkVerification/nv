@@ -25,6 +25,7 @@ depends: [
   "ppx_deriving_argparse"
   "menhir"
   "parmap"
+  "fix"
 ]
 build: [
   ["dune" "build" "-p" name "-j" jobs]
