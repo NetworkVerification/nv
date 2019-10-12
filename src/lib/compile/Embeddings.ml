@@ -9,9 +9,6 @@ open CompileBDDs
  * open Memoize *)
 
 
-(* TODO: cache calls to embed and unembed, based on type, but potentially based
-   on value too *)
-
 (** Given an NV type and an OCaml value constructs an NV value*)
 let rec embed_value (record_fns: string -> 'a -> 'b) (typ: Syntax.ty) : 'v -> Syntax.value =
   match typ with
