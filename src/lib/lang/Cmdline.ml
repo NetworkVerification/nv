@@ -77,7 +77,7 @@ let set_cfg c = cfg := c
    appropriate flags are set, so we don't have to check for lots of different
    variables at the site of each transformation *)
 let update_cfg_dependencies () =
-  if !cfg.smt then cfg := {!cfg with unroll=true; inline=true};
+  if !cfg.smt then cfg := {!cfg with unroll=true; unbox=true; inline=true};
   if !cfg.unroll then cfg := {!cfg with inline=true};
   if !cfg.check_monotonicity then cfg := {!cfg with inline=true};
   if !cfg.smart_gen then cfg := {!cfg with inline=true};

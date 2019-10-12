@@ -47,6 +47,15 @@ let rec combine3 lst1 lst2 lst3 =
   | hd1::tl1, hd2::tl2, hd3::tl3 -> (hd1,hd2,hd3)::combine3 tl1 tl2 tl3
   | _ -> raise (Invalid_argument "combine3: lists have different lengths")
 
+
+let replaceSlice lo hi ls slice =
+  BatList.fold_righti (fun i x (vs, acc) ->
+      if (i >= lo && i <= hi) then
+        (BatList.tl vs, (BatList.hd vs) :: acc)
+      else
+        (vs, x :: acc)
+    ) ls (BatList.rev slice, []) |> snd
+
 let printList (printer: 'a -> string) (ls: 'a list) (first : string)
               (sep : string) (last : string) =
   let buf = Buffer.create 500 in
