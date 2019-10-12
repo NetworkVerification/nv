@@ -250,6 +250,20 @@ struct
          let ze1 = encode_exp_z3 descr env e1 in
          let ze2 = encode_exp_z3 descr env e2 in
          lift2 (fun ze1 ze2 -> mk_eq ze1.t ze2.t |> mk_term ~tloc:e.espan) ze1 ze2
+       | TGet (_, lo, hi), [e1] when lo < hi ->
+         let ze1 = encode_exp_z3 descr env e1 in
+         ze1 |> BatList.drop lo |> BatList.take (hi - lo + 1)
+       | TGet (_, lo, _), [e1] (*lo = hi*) ->
+         let ze1 = encode_exp_z3 descr env e1 in
+         [BatList.nth ze1 lo]
+       | TSet (_, lo, hi), [e1; e2] when lo < hi ->
+         let ze1 = encode_exp_z3 descr env e1 in
+         let ze2 = encode_exp_z3 descr env e2 in
+         replaceSlice lo hi ze1 ze2
+       | TSet (_, lo, _), [e1; e2] (*lo=hi*) ->
+         let ze1 = encode_exp_z3 descr env e1 in
+         let ze2 = encode_exp_z3_single descr env e2 in
+         BatList.modify_at lo (fun _ -> ze2) ze1
        | _ -> [encode_exp_z3_single descr env e])
     | EVal v when (match v.vty with | Some (TTuple _) -> true | _ -> false) ->
       encode_value_z3 descr env v

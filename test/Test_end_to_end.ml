@@ -172,37 +172,6 @@ let compiler_tests =
     ]
 ;;
 
-let smt_tests =
-  List.map (fun (f,b) -> smt_test f b)
-    [
-      ("examples/debugging/debug-combine.nv", true);
-      (* Takes forever? *)
-      (* ("examples/batfish.nv", false); *)
-      ("examples/diamond.nv", true);
-      ("examples/diamond-ospf.nv", true);
-      ("examples/env.nv", true);
-      ("examples/failure.nv", false);
-      ("examples/failure2.nv", false);
-      (* ("examples/fattree.nv", true); *)
-      ("examples/map.nv", true);
-      ("examples/map2.nv", false);
-      ("examples/minesweeper.nv", false);
-      ("examples/property.nv", true);
-      ("examples/set.nv", true);
-      ("examples/simple.nv", true);
-      ("examples/symbolic.nv", false);
-      ("examples/symbolic2.nv", false);
-      ("examples/maprecord.nv", true);
-      ("examples/maprecordpattern.nv", true);
-      ("examples/maprecord2.nv", true);
-      ("examples/record.nv", true);
-      ("examples/recordwith.nv", true);
-
-      ("examples/symbolic3.nv", false);
-      ("examples/symbolicDecls.nv", false);
-      ("examples/ospf-areas.nv", true);
-    ]
-;;
 
 let unboxed_tests =
   List.map (fun (f,b) -> unboxed_test f b)
@@ -325,7 +294,6 @@ let tests =
   >:::
   List.map make_ounit_test @@
   simulator_tests @
-  smt_tests @
   unboxed_tests @
   hiding_tests @
   slicing_tests @

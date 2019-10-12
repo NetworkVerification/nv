@@ -46,17 +46,12 @@ let run_smt_func file cfg info net fs =
   in
   let srp, f = Renaming.alpha_convert_srp srp in
   let srp, fs =
-    if cfg.unbox then
-      begin
-        SmtUtils.smt_config.unboxing <- true;
-        let srp, f1 = Profile.time_profile "Unbox options" (fun () -> UnboxOptions.unbox_srp srp) in
-        let srp, f2 =
-          Profile.time_profile "Flattening Tuples" (fun () -> TupleFlatten.flatten_srp srp)
-        in
-        srp, (f2 :: f1 :: f :: fs)
-      end
-    else
-      srp, f :: fs
+    SmtUtils.smt_config.unboxing <- true;
+    let srp, f1 = Profile.time_profile "Unbox options" (fun () -> UnboxOptions.unbox_srp srp) in
+    let srp, f2 =
+      Profile.time_profile "Flattening Tuples" (fun () -> TupleFlatten.flatten_srp srp)
+    in
+    srp, (f2 :: f1 :: f :: fs)
   in
   let res = Smt.solveFunc info cfg.query (smt_query_file file) srp in
   match res with
@@ -74,16 +69,12 @@ let run_smt_func file cfg info net fs =
 
 let run_smt_classic file cfg info (net : Syntax.network) fs =
   let net, fs =
-    if cfg.unbox then
-      begin
-        SmtUtils.smt_config.unboxing <- true;
-        let net, f1 = Profile.time_profile "Unbox options" (fun () -> UnboxOptions.unbox_net net) in
-        let net, f2 =
-          Profile.time_profile "Flattening Tuples" (fun () -> TupleFlatten.flatten_net net)
-        in
-        net, (f2 :: f1 :: fs)
-      end
-    else net, fs
+    SmtUtils.smt_config.unboxing <- true;
+    let net, f1 = Profile.time_profile "Unbox options" (fun () -> UnboxOptions.unbox_net net) in
+    let net, f2 =
+      Profile.time_profile "Flattening Tuples" (fun () -> TupleFlatten.flatten_net net)
+    in
+    net, (f2 :: f1 :: fs)
   in
   (* let net = {net with trans = InterpPartial.interp_partial net.trans} in
    * Printf.printf "%s\n" (Printing.network_to_string net); *)
