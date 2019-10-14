@@ -28,7 +28,7 @@ depends: [
   "fix"
 ]
 build: [
-  ["dune" "build" "-p" name "-j" jobs]
+  ["dune" "build" "-p" name "-j" jobs "@install"]
   ["dune" "runtest" "-p" name "-f" "--no-buffer" "-j" jobs] {with-test}
   ["dune" "build" "@doc" "-p" name "-j" jobs] {with-doc}
 ]
