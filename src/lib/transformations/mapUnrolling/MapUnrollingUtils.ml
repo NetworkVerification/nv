@@ -43,7 +43,7 @@ let rec add_to_maplist symbolics (ty, keyo) lst : maplist =
   match lst with
   | [] -> [(ty, add_key (ExpSet.empty, VarSet.empty) keyo)]
   | (ty2, keys) :: tl ->
-    if Syntax.equal_tys ty ty2 then
+    if Syntax.equal_tys false ty ty2 then
       (ty, add_key keys keyo) :: tl
     else
       (ty2, keys) :: add_to_maplist symbolics (ty, keyo) tl

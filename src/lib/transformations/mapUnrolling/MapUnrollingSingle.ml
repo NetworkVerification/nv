@@ -10,7 +10,7 @@ open Nv_solution
 type keys = (exp list) * (var list)
 
 let has_target_type (target : ty) (e : exp) : bool =
-  equal_inner_tys target (oget e.ety)
+  equal_inner_tys false target (oget e.ety)
 ;;
 
 let get_index_const (keys : keys) (k : exp) =
@@ -39,7 +39,7 @@ let ty_transformer (target : ty) (keys : keys) _ ty =
   (* let ty = canonicalize_type ty in *)
   match ty with
   | TMap(_, vty) ->
-    if equal_inner_tys target ty then
+    if equal_inner_tys false target ty then
       let const_keys, symb_keys = keys in
       (* Don't need to recurse since types cannot contain themselves *)
       Some (TTuple (List.make (List.length const_keys + List.length symb_keys) vty))

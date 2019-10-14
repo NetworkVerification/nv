@@ -1,7 +1,7 @@
 open Cudd
 open Nv_datastructures
 open Nv_utils.PrimitiveCollections
-       
+
 type node = int
 
 type edge = node * node
@@ -13,22 +13,6 @@ type level = int
 type var = Var.t
 
 type tyname = Var.t
-
-type ty =
-  | TVar of tyvar ref
-  | QVar of tyname
-  | TUnit
-  | TBool
-  | TInt of bitwidth
-  | TArrow of ty * ty
-  | TTuple of ty list
-  | TOption of ty
-  | TMap of ty * ty
-  | TRecord of ty StringMap.t
-  | TNode
-  | TEdge
-
-and tyvar = Unbound of tyname * level | Link of ty
 
 type op =
   | And
@@ -70,7 +54,24 @@ module Pat : Map.OrderedType with type t = pattern
 
 module PatMap : BatMap.S with type key = Pat.t
 
-type v = private
+type ty =
+  | TVar of tyvar ref
+  | QVar of tyname
+  | TUnit
+  | TBool
+  | TInt of bitwidth
+  | TArrow of ty * ty
+  | TTuple of ty list
+  | TOption of ty
+  | TMap of ty * ty
+  | TRecord of ty StringMap.t
+  | TNode
+  | TEdge
+  | TSubset of exp list
+
+and tyvar = Unbound of tyname * level | Link of ty
+
+and v = private
   | VUnit
   | VBool of bool
   | VInt of Integer.t
@@ -320,7 +321,7 @@ val hash_value : hash_meta:bool -> value -> int
 
 val hash_exp : hash_meta:bool -> exp -> int
 
-val hash_ty : ty -> int
+val hash_ty : hash_meta:bool -> ty -> int
 
 (* Operates only on the 'v' element of the value records, ignoring
    all other entries *)
@@ -339,9 +340,9 @@ val get_inner_type : ty -> ty
 
 (* Actual equality. Prefer equal_inner_tys since it ignores TVar Links.
    For a stronger notion of equivalence, use Typing.equiv_tys *)
-val equal_tys : ty -> ty -> bool
+val equal_tys : cmp_meta:bool -> ty -> ty -> bool
 
-val equal_inner_tys : ty -> ty -> bool
+val equal_inner_tys : cmp_meta:bool -> ty -> ty -> bool
 
 val free : Var.t BatSet.PSet.t -> exp -> Var.t BatSet.PSet.t
 

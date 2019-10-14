@@ -22,23 +22,6 @@ type var = Var.t
 type tyname = Var.t
 [@@deriving ord, eq]
 
-type ty =
-  | TVar of tyvar ref
-  | QVar of tyname
-  | TUnit
-  | TBool
-  | TInt of bitwidth
-  | TArrow of ty * ty
-  | TTuple of ty list
-  | TOption of ty
-  | TMap of ty * ty
-  | TRecord of ty StringMap.t
-  | TNode
-  | TEdge
-[@@deriving ord, eq]
-
-and tyvar = Unbound of tyname * level | Link of ty
-
 type op =
   | And
   | Or
@@ -116,7 +99,25 @@ end
 
 module PatMap = BatMap.Make(Pat)
 
-type v =
+type ty =
+  | TVar of tyvar ref
+  | QVar of tyname
+  | TUnit
+  | TBool
+  | TInt of bitwidth
+  | TArrow of ty * ty
+  | TTuple of ty list
+  | TOption of ty
+  | TMap of ty * ty
+  | TRecord of ty StringMap.t
+  | TNode
+  | TEdge
+  | TSubset of exp list (* Should be either values or symbolic variables *)
+[@@deriving ord]
+
+and tyvar = Unbound of tyname * level | Link of ty
+
+and v =
   | VUnit
   | VBool of bool
   | VInt of Integer.t
@@ -139,7 +140,7 @@ and value =
 [@@deriving ord]
 
 and mtbdd = (value Mtbdd.t * ty)
-    [@compare fun _ _ -> failwith "Map value comparison not supported"]
+            [@compare fun _ _ -> failwith "Map value comparison not supported"]
 [@@deriving ord]
 
 and e =
@@ -174,7 +175,7 @@ and branches = { pmap  : exp PatMap.t;
 and func = {arg: var; argty: ty option; resty: ty option; body: exp}
 
 and closure = (env * func)
-    [@compare fun _ _ -> failwith "Map value comparison not supported"]
+              [@compare fun _ _ -> failwith "Map value comparison not supported"]
 [@@deriving ord]
 
 and env = {ty: ty Env.t; value: value Env.t}
@@ -314,7 +315,8 @@ let rec equal_lists eq_elts lst1 lst2 =
   | [], _ :: _ | _ :: _, [] -> false
   | t1 :: ts1, t2 :: ts2 -> eq_elts t1 t2 && equal_lists eq_elts ts1 ts2
 
-let rec equal_tys ty1 ty2 =
+let rec equal_tys ~cmp_meta ty1 ty2 =
+  let equal_tys = equal_tys ~cmp_meta in
   match (ty1, ty2) with
   | TUnit, TUnit
   | TBool, TBool
@@ -335,11 +337,14 @@ let rec equal_tys ty1 ty2 =
   | TOption t1, TOption t2 -> equal_tys t1 t2
   | TMap (t1, t2), TMap (s1, s2) ->
     equal_tys t1 s1 && equal_tys t2 s2
+  | TSubset es1, TSubset es2 ->
+    List.for_all2 (equal_exps ~cmp_meta) es1 es2
   | (TUnit | TBool | TNode | TEdge | TInt _ | TVar _ | QVar _
-    | TArrow _ | TTuple _ | TRecord _ | TOption _ | TMap _), _ ->
+    | TArrow _ | TTuple _ | TRecord _ | TOption _ | TMap _ | TSubset _), _ ->
     false
 
-let rec equal_inner_tys ty1 ty2 =
+and equal_inner_tys ~cmp_meta ty1 ty2 =
+  let equal_inner_tys = equal_inner_tys ~cmp_meta in
   match (ty1, ty2) with
   | TUnit, TUnit
   | TBool, TBool
@@ -362,11 +367,13 @@ let rec equal_inner_tys ty1 ty2 =
   | TOption t1, TOption t2 -> equal_inner_tys t1 t2
   | TMap (t1, t2), TMap (s1, s2) ->
     equal_inner_tys t1 s1 && equal_inner_tys t2 s2
+  | TSubset es1, TSubset es2 ->
+    List.for_all2 (equal_exps ~cmp_meta) es1 es2
   | (TUnit | TBool | TNode | TEdge | TInt _ | TVar _ | QVar _
-    | TArrow _ | TTuple _ | TRecord _ | TOption _ | TMap _), _ ->
+    | TArrow _ | TTuple _ | TRecord _ | TOption _ | TMap _ | TSubset _), _ ->
     false
 
-let rec equal_values ~cmp_meta (v1: value) (v2: value) =
+and equal_values ~cmp_meta (v1: value) (v2: value) =
   let cfg = Cmdline.get_cfg () in
   let b =
     if cfg.hashcons then v1.vtag = v2.vtag
@@ -374,7 +381,7 @@ let rec equal_values ~cmp_meta (v1: value) (v2: value) =
   in
   if cmp_meta then
     b
-    && equal_opt equal_tys v1.vty v2.vty
+    && equal_opt (equal_tys ~cmp_meta) v1.vty v2.vty
     && equal_spans v1.vspan v2.vspan
   else b
 
@@ -386,8 +393,8 @@ and equal_vs ~cmp_meta v1 v2 =
   | VEdge e1, VEdge e2 -> e1 = e2
   | VInt i1, VInt i2 -> Integer.equal i1 i2
   | VMap (m1, ty1), VMap (m2, ty2) ->
-    Mtbdd.is_equal m1 m2 && equal_tys ty1 ty2
-  | VTuple vs1, VTuple vs2 -> equal_lists ~cmp_meta vs1 vs2
+    Mtbdd.is_equal m1 m2 && equal_tys ~cmp_meta ty1 ty2
+  | VTuple vs1, VTuple vs2 -> equal_lists (equal_values ~cmp_meta) vs1 vs2
   | VOption vo1, VOption vo2 -> (
       match (vo1, vo2) with
       | None, None -> true
@@ -397,20 +404,13 @@ and equal_vs ~cmp_meta v1 v2 =
   | VClosure (e1, f1), VClosure (e2, f2) ->
     let {ty= ty1; value= value1} = e1 in
     let {ty= ty2; value= value2} = e2 in
-    Env.equal equal_tys ty1 ty2
+    Env.equal (equal_tys ~cmp_meta) ty1 ty2
     && Env.equal (equal_values ~cmp_meta) value1 value2
     && equal_funcs ~cmp_meta f1 f2
   | VRecord map1, VRecord map2 ->
     StringMap.equal (equal_values ~cmp_meta) map1 map2
   | (VUnit | VBool _ | VNode _ | VEdge _ | VInt _ | VMap _
     | VTuple _ | VOption _ | VClosure _ | VRecord _ ), _ -> false
-
-and equal_lists ~cmp_meta vs1 vs2 =
-  match (vs1, vs2) with
-  | [], [] -> true
-  | [], _ | _, [] -> false
-  | v1 :: vs1, v2 :: vs2 ->
-    equal_values ~cmp_meta v1 v2 && equal_lists ~cmp_meta vs1 vs2
 
 and equal_exps ~cmp_meta (e1: exp) (e2: exp) =
   let cfg = Cmdline.get_cfg () in
@@ -420,7 +420,7 @@ and equal_exps ~cmp_meta (e1: exp) (e2: exp) =
   in
   if cmp_meta then
     b
-    && equal_opt equal_tys e1.ety e2.ety
+    && equal_opt (equal_tys ~cmp_meta) e1.ety e2.ety
     && equal_spans e1.espan e2.espan
   else b
 
@@ -504,7 +504,8 @@ and equal_funcs ~cmp_meta f1 f2 =
   let {arg= y; argty= aty2; resty= rty2; body= e2} = f2 in
   let b =
     if cmp_meta then
-      equal_opt equal_tys aty1 aty2 && equal_opt equal_tys rty1 rty2
+      equal_opt (equal_tys ~cmp_meta) aty1 aty2 &&
+      equal_opt (equal_tys ~cmp_meta) rty1 rty2
     else true
   in
   b && Var.equals x y && equal_exps ~cmp_meta e1 e2
@@ -517,7 +518,14 @@ let hash_string str =
   done ;
   !acc
 
-let rec hash_ty ty =
+
+let hash_span (span: Span.t) = (19 * span.start) + span.finish
+
+let hash_opt h o =
+  match o with None -> 1 | Some x -> (19 * h x) + 2
+
+let rec hash_ty ~hash_meta ty =
+  let hash_ty = hash_ty ~hash_meta in
   match ty with
   | TVar tyvar -> (
       match !tyvar with
@@ -536,17 +544,13 @@ let rec hash_ty ty =
   | TUnit -> 11
   | TNode -> 12
   | TEdge -> 13
+  | TSubset es -> 14 + List.fold_left (fun acc e -> acc + hash_exp ~hash_meta e) 0 es
 
-let hash_span (span: Span.t) = (19 * span.start) + span.finish
-
-let hash_opt h o =
-  match o with None -> 1 | Some x -> (19 * h x) + 2
-
-let rec hash_value ~hash_meta v : int =
+and hash_value ~hash_meta v : int =
   let cfg = Cmdline.get_cfg () in
   let m =
     if hash_meta then
-      (19 * hash_opt hash_ty v.vty) + hash_span v.vspan
+      (19 * hash_opt (hash_ty ~hash_meta) v.vty) + hash_span v.vspan
     else 0
   in
   if cfg.hashcons then (19 * v.vhkey) + m
@@ -594,7 +598,7 @@ and hash_exp ~hash_meta e =
   let cfg = Cmdline.get_cfg () in
   let m =
     if hash_meta then
-      (19 * hash_opt hash_ty e.ety) + hash_span e.espan
+      (19 * hash_opt (hash_ty ~hash_meta) e.ety) + hash_span e.espan
     else 0
   in
   if cfg.hashcons then (19 * e.ehkey) + m
@@ -609,7 +613,7 @@ and hash_e ~hash_meta e =
   | EFun f ->
     let i =
       if hash_meta then
-        hash_opt hash_ty f.argty + hash_opt hash_ty f.resty
+        hash_opt (hash_ty ~hash_meta) f.argty + hash_opt (hash_ty ~hash_meta) f.resty
       else 0
     in
     19
@@ -637,7 +641,7 @@ and hash_e ~hash_meta e =
     * ((19 * hash_exp ~hash_meta e) + hash_branches ~hash_meta bs)
     + 9
   | ETy (e, ty) ->
-    (19 * ((19 * hash_exp ~hash_meta e) + hash_ty ty)) + 10
+    (19 * ((19 * hash_exp ~hash_meta e) + (hash_ty ~hash_meta) ty)) + 10
   | ERecord map ->
     (19 *
      StringMap.fold
@@ -974,7 +978,7 @@ let rec tupleToList (e : exp) =
   | _ -> failwith "Not a tuple type"
 
 let rec tupleToListSafe (e : exp) =
-    match e.e with
+  match e.e with
   | ETuple es -> es
   | ETy (e, _) -> tupleToListSafe e
   | EVal v ->
@@ -1064,8 +1068,8 @@ let get_record_types_from_utys uty =
   BatList.fold_left
     (fun acc (_, ty) ->
        match ty with
-         | TRecord lst -> lst :: acc
-         | _ -> acc
+       | TRecord lst -> lst :: acc
+       | _ -> acc
     )
     [] uty
 
