@@ -35,3 +35,6 @@ tmp.txt
 
 # NV executable
 nv
+
+# Side effect of opam (?)
+nv.install

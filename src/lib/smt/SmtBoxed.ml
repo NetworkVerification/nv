@@ -68,6 +68,7 @@ struct
     | TNode -> type_name (TInt 32)
     | TEdge -> type_name (TTuple [TNode; TNode])
     | TMap _ -> failwith "no maps yet"
+    | TSubset es -> type_name ((List.hd es).ety |> oget)
     | TArrow _ | TVar _ | QVar _ | TRecord _ -> failwith "unsupported type in SMT"
 
   let rec ty_to_sort (ty: ty) : sort =
@@ -88,6 +89,7 @@ struct
       let name = oget (datatype_name ty) in
       DataTypeSort (name, [ty_to_sort ty'])
     | TMap _ -> failwith "unimplemented"
+    | TSubset es -> ty_to_sort ((List.hd es).ety |> oget)
     (*       mk_array_sort ctx (ty_to_sort ctx ty1) (ty_to_sort ctx ty2)*)
     | TVar _ | QVar _ | TArrow _ | TRecord _ ->
       failwith
@@ -119,6 +121,7 @@ struct
                        BatList.mapi (fun i _ ->
                            Printf.sprintf "proj%d" i, BatList.nth params i) ts} in
       { name = name; params = params; constructors = [mkpair] }
+    | TSubset es -> ty_to_type_decl ((List.hd es).ety |> oget)
     | TVar _ | QVar _ | TArrow _ | TMap _ | TRecord _ ->
       failwith "not a datatype"
 

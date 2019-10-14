@@ -30,7 +30,7 @@ let (srp : (module EnrichedSRPSig) option ref) = ref None
 let get_srp () =
   match !srp with
   | Some srp -> srp
-  | None -> failwith "No srp loaded"
+  | None -> failwith "No srp loaded (try running \"dune build @install\")"
 
 (******************)
 (* SRP Simulation *)
@@ -164,6 +164,7 @@ module SrpSimulation (Srp : NATIVE_SRP) : SrpSimulationSig =
         | TRecord _ -> failwith "Trecord"
         | TNode -> failwith "Tnode"
         | TEdge -> failwith "Tedge"
+        | TSubset _ -> failwith "Tsubset"
         | TVar _ | QVar _ -> failwith "TVars and QVars shuld not show up here"
 
     (** Given the attribute type of the network constructs an OCaml function

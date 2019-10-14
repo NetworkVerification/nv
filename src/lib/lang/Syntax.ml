@@ -518,7 +518,6 @@ let hash_string str =
   done ;
   !acc
 
-
 let hash_span (span: Span.t) = (19 * span.start) + span.finish
 
 let hash_opt h o =

@@ -244,6 +244,7 @@ ty:
    | TDICT LBRACKET ty COMMA ty RBRACKET{ TMap ($3,$5) }
    | TSET LBRACKET ty RBRACKET          { TMap ($3,TBool) }
    | LBRACE record_entry_tys RBRACE     { TRecord (make_record_map $2) }
+   | LBRACE exprs RBRACE           { TSubset ($2) }
    | ID                                 { get_user_type (snd $1) }
 ;
 

@@ -1,8 +1,10 @@
+open Batteries
 open Syntax
 open Cudd
 open BatSet
 open Nv_datastructures
 open Nv_utils
+open OCamlUtils
 
 (* TODO: optimize variable ordering  *)
 type t = mtbdd
@@ -37,6 +39,7 @@ let rec default_value ty =
     avalue (vmap (create ~key_ty:ty1 (default_value ty2)), Some ty, Span.default)
   | TNode -> avalue (vnode 0, Some ty, Span.default)
   | TEdge -> avalue (vedge (0, 1), Some ty, Span.default)
+  | TSubset es -> List.find_map (fun e -> match e.e with | EVal v -> Some v | _ -> None) es
   | TVar {contents= Link t} ->
     default_value t
   | TVar _ | QVar _ | TArrow _ ->
@@ -137,6 +140,9 @@ let vars_to_value vars ty =
           else voption None
         in
         (v, i)
+      | TSubset es ->
+        let encoded_ty = (List.hd es).ety |> oget in
+        aux idx encoded_ty
       | TArrow _ | TMap _ | TVar _ | QVar _ ->
         failwith "internal error (bdd_to_value)"
     in

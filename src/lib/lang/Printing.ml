@@ -78,39 +78,6 @@ let list_to_string f lst =
   "] "
 ;;
 
-(* The way we print our types means that we don't really need precedence rules.
-   The only type which isn't totally self-contained is TArrow *)
-let rec ty_to_string t =
-  match t with
-  | TVar {contents= tv} -> tyvar_to_string tv
-  | QVar name -> "{" ^ Var.to_string name ^ "}"
-  | TUnit -> "unit"
-  | TBool -> "bool"
-  | TInt i -> "int" ^ string_of_int i
-  | TNode -> "node"
-  | TEdge -> "edge"
-  | TTuple ts ->
-    if List.is_empty ts then "TEmptyTuple"
-    else "(" ^ sep "," ty_to_string ts ^ ")"
-  | TOption t -> "option[" ^ ty_to_string t ^ "]"
-  | TMap (t1, t2) ->
-    "dict[" ^ ty_to_string t1 ^ "," ^ ty_to_string t2
-    ^ "]"
-  | TRecord map -> print_record ":" (ty_to_string) map
-  | TArrow (t1, t2) ->
-    let leftside =
-      match t1 with
-      | TArrow _ -> "(" ^ ty_to_string t1 ^ ")"
-      | _ -> ty_to_string t1
-    in
-    leftside ^ " -> " ^ ty_to_string t2
-
-and tyvar_to_string tv =
-  match tv with
-  | Unbound (name, l) ->
-    Var.to_string name ^ "[" ^ string_of_int l ^ "]"
-  | Link ty -> "<" ^ ty_to_string ty ^ ">"
-
 let op_to_string op =
   match op with
   | And -> "&&"
@@ -152,10 +119,45 @@ let rec pattern_to_string pattern =
   | PNode n -> Printf.sprintf "%dn" n
   | PEdge (p1, p2) -> Printf.sprintf "%s~%s" (pattern_to_string p1) (pattern_to_string p2)
 
-let ty_env_to_string env = Nv_datastructures.Env.to_string ty_to_string env.ty
-
 let glob = ref false
-let rec value_env_to_string env =
+
+(* The way we print our types means that we don't really need precedence rules.
+   The only type which isn't totally self-contained is TArrow *)
+let rec ty_to_string t =
+  match t with
+  | TVar {contents= tv} -> tyvar_to_string tv
+  | QVar name -> "{" ^ Var.to_string name ^ "}"
+  | TUnit -> "unit"
+  | TBool -> "bool"
+  | TInt i -> "int" ^ string_of_int i
+  | TNode -> "node"
+  | TEdge -> "edge"
+  | TTuple ts ->
+    if List.is_empty ts then "TEmptyTuple"
+    else "(" ^ sep "," ty_to_string ts ^ ")"
+  | TOption t -> "option[" ^ ty_to_string t ^ "]"
+  | TMap (t1, t2) ->
+    "dict[" ^ ty_to_string t1 ^ "," ^ ty_to_string t2
+    ^ "]"
+  | TRecord map -> print_record ":" (ty_to_string) map
+  | TArrow (t1, t2) ->
+    let leftside =
+      match t1 with
+      | TArrow _ -> "(" ^ ty_to_string t1 ^ ")"
+      | _ -> ty_to_string t1
+    in
+    leftside ^ " -> " ^ ty_to_string t2
+  | TSubset es -> Printf.sprintf "Ty{%s}" @@ sep ";" (exp_to_string_p max_prec) es
+
+and tyvar_to_string tv =
+  match tv with
+  | Unbound (name, l) ->
+    Var.to_string name ^ "[" ^ string_of_int l ^ "]"
+  | Link ty -> "<" ^ ty_to_string ty ^ ">"
+
+and ty_env_to_string env = Nv_datastructures.Env.to_string ty_to_string env.ty
+
+and value_env_to_string env =
   Nv_datastructures.Env.to_string (value_to_string_p max_prec) env.value
 
 and env_to_string env =
@@ -349,10 +351,10 @@ let network_to_string ?(show_topology=false) (net : Syntax.network) =
   let symbs =
     OCamlUtils.printList
       (fun (var, toe) ->
-        Printf.sprintf "symbolic %s %s" (Var.to_string var)
-          (match toe with
-           | Ty ty -> ": " ^ ty_to_string ty
-           | Exp e -> "= " ^ exp_to_string e))
+         Printf.sprintf "symbolic %s %s" (Var.to_string var)
+           (match toe with
+            | Ty ty -> ": " ^ ty_to_string ty
+            | Exp e -> "= " ^ exp_to_string e))
       net.symbolics "" "\n" "\n"
   in
   (** Requires **)
@@ -363,12 +365,12 @@ let network_to_string ?(show_topology=false) (net : Syntax.network) =
   (** Additional declarations **)
   let udefs =
     OCamlUtils.printList
-    (fun (var, tyo, e) ->
-       Printf.sprintf "let %s%s = %s"
-         (Var.to_string var)
-         (match tyo with None -> "" | Some ty -> " : " ^ ty_to_string ty)
-         (exp_to_string e))
-    net.defs "" "\n" "\n"
+      (fun (var, tyo, e) ->
+         Printf.sprintf "let %s%s = %s"
+           (Var.to_string var)
+           (match tyo with None -> "" | Some ty -> " : " ^ ty_to_string ty)
+           (exp_to_string e))
+      net.defs "" "\n" "\n"
   in
   Printf.sprintf "%s %s %s %s %s %s \
                   let init = %s\n \
@@ -380,11 +382,11 @@ let network_to_string ?(show_topology=false) (net : Syntax.network) =
     utypes attr top symbs reqs udefs (exp_to_string net.init)
     (exp_to_string net.trans) (exp_to_string net.merge)
     (match net.partition with
-      | None -> ""
-      | Some e -> Printf.sprintf "let partition = %s\n" (exp_to_string e))
+     | None -> ""
+     | Some e -> Printf.sprintf "let partition = %s\n" (exp_to_string e))
     (match net.interface with
-      | None -> ""
-      | Some e -> Printf.sprintf "let interface = %s\n" (exp_to_string e))
+     | None -> ""
+     | Some e -> Printf.sprintf "let interface = %s\n" (exp_to_string e))
     (match net.assertion with
-      | None -> ""
-      | Some e -> Printf.sprintf "let assert = %s\n" (exp_to_string e))
+     | None -> ""
+     | Some e -> Printf.sprintf "let assert = %s\n" (exp_to_string e))

@@ -16,7 +16,8 @@ let show_record f prefix map =
   in
   Printf.sprintf "%s { %s }" prefix str
 
-let rec show_ty ?(show_links=false) ty =
+let rec show_ty ~show_meta ?(show_links=false) ty =
+  let show_ty = show_ty ~show_meta in
   match ty with
   | TVar tyvar -> (
       match !tyvar with
@@ -40,12 +41,13 @@ let rec show_ty ?(show_links=false) ty =
   | TUnit -> "TUnit"
   | TNode -> "TNode"
   | TEdge -> "TEdge"
+  | TSubset es -> "TSubset" ^ show_list (show_exp ~show_meta) es
 
-let rec show_exp ~show_meta e =
+and show_exp ~show_meta e =
   if show_meta then
     Printf.sprintf "{e=%s; ety=%s; espan=%s; etag=%d; ehkey=%d}"
       (show_e ~show_meta e.e)
-      (show_opt show_ty e.ety)
+      (show_opt (show_ty ~show_meta) e.ety)
       (Span.show_span e.espan) e.etag e.ehkey
   else
     Printf.sprintf "e=%s" (show_e ~show_meta e.e)
@@ -72,7 +74,7 @@ and show_e ~show_meta e =
     Printf.sprintf "EMatch (%s,%s)" (show_exp ~show_meta e)
       (show_list (show_branch ~show_meta) (branchToList bs))
   | ETy (e, ty) ->
-    Printf.sprintf "ETy (%s,%s)" (show_exp ~show_meta e) (show_ty ty)
+    Printf.sprintf "ETy (%s,%s)" (show_exp ~show_meta e) (show_ty ~show_meta ty)
   | ERecord map ->
     show_record (show_exp ~show_meta) "ERecord" map
   | EProject (e, label) ->
@@ -81,8 +83,8 @@ and show_e ~show_meta e =
 and show_func ~show_meta f =
   Printf.sprintf "{arg=%s; argty=%s; resty=%s; body=%s}"
     (Var.to_string f.arg)
-    (show_opt show_ty f.argty)
-    (show_opt show_ty f.resty)
+    (show_opt (show_ty ~show_meta) f.argty)
+    (show_opt (show_ty ~show_meta) f.resty)
     (show_exp ~show_meta f.body)
 
 and show_branch ~show_meta (p, e) =
@@ -111,7 +113,7 @@ and show_value ~show_meta v =
   if show_meta then
     Printf.sprintf "{e=%s; ety=%s; espan=%s; etag=%d; ehkey=%d}"
       (show_v ~show_meta v.v)
-      (show_opt show_ty v.vty)
+      (show_opt (show_ty ~show_meta) v.vty)
       (Span.show_span v.vspan) v.vtag v.vhkey
   else
     Printf.sprintf "{v=%s;}"
@@ -136,5 +138,5 @@ and show_closure ~show_meta (e, f) =
 
 and show_env ~show_meta e =
   Printf.sprintf "{ty=%s; value=%s}"
-    (Env.to_string show_ty e.ty)
+    (Env.to_string (show_ty ~show_meta) e.ty)
     (Env.to_string (show_value ~show_meta) e.value)

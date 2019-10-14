@@ -127,7 +127,7 @@ exception Invalid_type
 let rec strip_ty ty =
   match ty with
   | TVar {contents= Link t} -> strip_ty t
-  | TUnit | TBool | TInt _ | TNode | TEdge -> ty
+  | TUnit | TBool | TInt _ | TNode | TEdge | TSubset _ -> ty
   | TArrow (t1, t2) -> TArrow (strip_ty t1, strip_ty t2)
   | TTuple ts -> TTuple (BatList.map strip_ty ts)
   | TOption t -> TOption (strip_ty t)
@@ -154,7 +154,7 @@ let occurs tvr ty =
       if_debug ("qvar " ^ Var.to_string q ^ " appears in occ check") ;
       ()
     | TArrow (t1, t2) -> occ tvr t1 ; occ tvr t2
-    | TUnit | TBool | TInt _ | TNode | TEdge -> ()
+    | TUnit | TBool | TInt _ | TNode | TEdge | TSubset _ -> ()
     | TRecord map -> StringMap.iter (fun _ -> occ tvr) map
     | TTuple ts -> BatList.iter (occ tvr) ts
     | TOption t -> occ tvr t
@@ -234,7 +234,7 @@ let generalize ty =
     | TVar {contents= Unbound (name, l)} when l > !current_level ->
       QVar name
     | TVar {contents= Link ty} -> gen ty
-    | TVar _ | TUnit | TBool | TInt _ | TNode | TEdge -> ty
+    | TVar _ | TUnit | TBool | TInt _ | TNode | TEdge | TSubset _ -> ty
     | QVar q ->
       if_debug
         ( "qvar " ^ Var.to_string q
@@ -268,7 +268,7 @@ let inst subst ty =
         if_debug ("found unbound tyvar " ^ Var.to_string name) ;
         try Env.lookup subst name with Env.Unbound_var x ->
           Console.error ("bad instantiation: " ^ x) )
-    | TUnit | TBool | TInt _ | TNode | TEdge -> ty
+    | TUnit | TBool | TInt _ | TNode | TEdge | TSubset _ -> ty
     | TArrow (ty1, ty2) ->
       let ty1 = loop subst ty1 in
       let ty2 = loop subst ty2 in
@@ -316,7 +316,7 @@ let substitute (ty: ty) : ty =
           map := Env.update !map name ty ;
           ty
         | Some ty -> ty )
-    | TVar _ | TUnit | TBool | TInt _ | TNode | TEdge -> ty
+    | TVar _ | TUnit | TBool | TInt _ | TNode | TEdge | TSubset _ -> ty
     | TArrow (ty1, ty2) ->
       TArrow (substitute_aux ty1, substitute_aux ty2)
     | TRecord map -> TRecord (StringMap.map substitute_aux map)
@@ -869,6 +869,16 @@ and infer_declaration i info env aty d : ty Env.t * declaration =
     let ty = oget e'.ety in
     unify info e ty (init_ty aty) ;
     (Env.update env (Var.create "init") ty, DInit e')
+  | DUserTy (x, TSubset es) ->
+    let tvar = fresh_tyvar () in
+    let es' =
+    List.map (fun e ->
+        let e' = infer_exp (i + 1) info env e in
+        let ty = oget e'.ety in
+        unify info e ty tvar;
+        e') es
+    in
+    (env, DUserTy (x, TSubset es'))
   | DATy _ | DUserTy _ | DNodes _ | DEdges _ -> (env, d)
 
 (* ensure patterns do not contain duplicate variables *)
@@ -903,7 +913,8 @@ let canonicalize_type (ty : ty) : ty =
     | TBool
     | TInt _
     | TNode
-    | TEdge ->
+    | TEdge
+    | TSubset _ ->
       ty, map, count
     | TArrow (t1, t2) ->
       let t1', map, count = aux t1 map count in

@@ -59,7 +59,7 @@ let add_if_map_type symbolics (ty, keyo) lst : maplist =
 let rec collect_in_ty symbolics ty acc =
   let collect_in_ty = collect_in_ty symbolics in
   match ty with
-  | TUnit | TBool | TInt _ | TNode | TEdge -> acc
+  | TUnit | TBool | TInt _ | TNode | TEdge | TSubset _-> acc
   | TOption ty -> collect_in_ty ty acc
   | TTuple tys -> List.fold_left (BatPervasives.flip collect_in_ty) acc tys
   | TRecord map -> StringMap.fold (fun _ -> collect_in_ty) map acc

@@ -79,6 +79,7 @@ struct
     | TMap _ -> failwith "Not a single sort"
     | TOption _
     | TUnit -> failwith "should be unboxed"
+    | TSubset es -> ty_to_sort ((List.hd es).ety |> oget)
     (*       mk_array_sort ctx (ty_to_sort ctx ty1) (ty_to_sort ctx ty2)*)
     | TVar _ | QVar _ | TArrow _ | TRecord _ ->
       failwith
@@ -94,6 +95,7 @@ struct
     | TInt _ -> [ty_to_sort ty]
     | TNode -> ty_to_sorts (TInt 32)
     | TEdge ->  ty_to_sorts (TTuple [TNode; TNode])
+    | TSubset es -> ty_to_sorts ((List.hd es).ety |> oget)
     | TTuple ts -> (
         match ts with
         | [] -> failwith "empty tuple"

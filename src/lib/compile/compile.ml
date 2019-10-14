@@ -172,6 +172,7 @@ let rec ty_to_ocaml_string t =
     Printf.sprintf "NativeBdd.t"
   | TRecord map ->
     record_to_ocaml_record ":" ty_to_ocaml_string map
+  | TSubset _ -> failwith "Tsubset"
 
 (** Returns an OCaml string that contains the hashconsed int of the function
    body and a tuple with the free variables that appear in the function. Used

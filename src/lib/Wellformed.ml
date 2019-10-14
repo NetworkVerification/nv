@@ -1,13 +1,13 @@
 open Nv_lang
 open Nv_datastructures
 open Nv_utils
+open OCamlUtils
 open Collections
 open Syntax
 open Batteries
 
 (* Check a variety of other requirements for a well-
    formed program. Assumes the program is well-typed *)
-
 let rec has_map ty =
   match get_inner_type ty with
   | TUnit | TBool | TInt _ | TNode | TEdge | TVar _ | QVar _ -> false
@@ -15,25 +15,34 @@ let rec has_map ty =
   | TArrow (ty1, ty2) -> has_map ty1 || has_map ty2
   | TOption ty -> has_map ty
   | TRecord map -> StringMap.exists (fun _ -> has_map) map
+  | TSubset es -> has_map ((List.hd es).ety |> oget)
   | TMap _ -> true
 
-let rec check_type ty : bool =
+(* Ensure that map types don't use maps as keys *)
+let rec check_map_key_types fail ty : unit =
+  let check_map_key_types = check_map_key_types fail in
   match get_inner_type ty with
-  | TUnit | TBool | TInt _  | TNode | TEdge | TVar _ | QVar _ -> true
-  | TTuple ts -> List.for_all check_type ts
-  | TOption ty -> check_type ty
-  | TArrow (ty1, ty2) -> check_type ty1 && check_type ty2
-  | TRecord map -> StringMap.for_all (fun _ -> check_type) map
+  | TUnit | TBool | TInt _  | TNode | TEdge | TVar _ | QVar _ -> ()
+  | TTuple ts -> List.iter check_map_key_types ts
+  | TOption ty -> check_map_key_types ty
+  | TArrow (ty1, ty2) -> check_map_key_types ty1; check_map_key_types ty2
+  | TRecord map -> StringMap.iter (fun _ -> check_map_key_types) map
   | TMap (kty, vty) ->
-    not (has_map kty) && check_type kty && check_type vty
+    if (has_map kty) then fail ();
+    check_map_key_types kty; check_map_key_types vty
+  | TSubset es -> check_map_key_types ((List.hd es).ety |> oget)
 
 let check_types info _ (e: exp) =
-  let ty = Nv_utils.OCamlUtils.oget e.ety in
-  if not (check_type ty) then
+  let mfail () =
     let msg =
       "expression type has dictionary type with dictionary keys"
     in
     Console.error_position info e.espan msg
+  in
+
+  let ty = oget e.ety in
+  check_map_key_types mfail ty
+;;
 
 let rec check_closure info (x: VarSet.t) (e: exp) =
   match e.e with
@@ -145,35 +154,35 @@ let check_record_label_uniqueness info decls =
     Console.error_position info Span.default msg
 
 (* let rec is_literal (exp : Syntax.exp) : bool =
-  match exp.e with
-  | EVar _
-  | EOp _
-  | EFun _
-  | EApp _
-  | EIf _
-  | ELet _
-  | EMatch _ ->
+   match exp.e with
+   | EVar _
+   | EOp _
+   | EFun _
+   | EApp _
+   | EIf _
+   | ELet _
+   | EMatch _ ->
     false
-  | ESome exp2 ->
+   | ESome exp2 ->
     is_literal exp2
-  | ETuple es ->
+   | ETuple es ->
     List.for_all is_literal es
-  | EVal _ -> true
-  | ETy (exp2, _) -> is_literal exp2
-  | ERecord map -> StringMap.for_all (fun _ -> is_literal) map
-  | EProject (exp2, _) -> is_literal exp2
+   | EVal _ -> true
+   | ETy (exp2, _) -> is_literal exp2
+   | ERecord map -> StringMap.for_all (fun _ -> is_literal) map
+   | EProject (exp2, _) -> is_literal exp2
 
-(* Verify that the only map keys used are literals *)
-let check_keys info _ (e : exp) =
-  match e.e with
-  (* | EOp (MGet, [_; k]) *)
-  | EOp (MSet, [_; k; _]) ->
+   (* Verify that the only map keys used are literals *)
+   let check_keys info _ (e : exp) =
+   match e.e with
+   (* | EOp (MGet, [_; k]) *)
+   | EOp (MSet, [_; k; _]) ->
     if not (is_literal k) then
       let msg =
         "Only literals may be used as keys into a map"
       in
       Console.error_position info k.espan msg
-  | _ -> () *)
+   | _ -> () *)
 
 (* Ensures every node/edge value in the program actually exists in the network *)
 let check_nodes_and_edges info num_nodes edges _ (e : exp) =
@@ -202,11 +211,32 @@ let check_nodes_and_edges info num_nodes edges _ (e : exp) =
     end
   | _ -> ()
 
+(* Ensure that elements of each subset type are consistently typed,
+   and that they are either EVals or symbolic EVars *)
+let check_subset_type tyname ty : unit =
+  match get_inner_type ty with
+  | TSubset es ->
+    let base_ty = (List.hd es).ety |> oget in
+    if (not @@ List.for_all
+          (fun e ->
+             equal_tys false base_ty (oget e.ety) &&
+             (match e.e with
+              | EVal _ -> true
+              | EVar _ -> true
+              | _ -> false)
+          ) es)
+    then
+      Console.error ("Subset type " ^ (Var.name tyname) ^
+                     "has inconsistent or incorrect elements")
+  | _ -> ()
+;;
+
 let check info (ds: declarations) : unit =
   check_record_label_uniqueness info ds ;
   Visitors.iter_exp_decls (check_types info) ds ;
   (* Visitors.iter_exp_decls (check_closures info) ds ; *) (* Is this still necessary? *)
   (* Visitors.iter_exp_decls (check_keys info) ds; *)
   Visitors.iter_exp_decls (check_nodes_and_edges info
-    (get_nodes ds |> Nv_utils.OCamlUtils.oget) (get_edges ds |> Nv_utils.OCamlUtils.oget)) ds;
+                             (get_nodes ds |> oget) (get_edges ds |> oget)) ds;
+  List.iter (function | DUserTy (x, ty) -> check_subset_type x ty | _ -> ()) ds;
   ()
