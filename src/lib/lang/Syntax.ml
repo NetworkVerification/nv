@@ -828,6 +828,9 @@ let empty_env = {ty= Env.empty; value= Env.empty}
 
 let update_value env x v = {env with value= Env.update env.value x v}
 
+let update_env env x v ty = {value= Env.update env.value x v;
+                             ty = Env.update env.ty x ty}
+
 let deconstructFun exp =
   match exp.e with
   | EFun f ->

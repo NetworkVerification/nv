@@ -276,6 +276,8 @@ val to_value : exp -> value
 
 val update_value : env -> Var.t -> value -> env
 
+val update_env: env -> Var.t -> value -> ty -> env
+
 val lams : var list -> exp -> exp
 
 val apps : exp -> exp list -> exp

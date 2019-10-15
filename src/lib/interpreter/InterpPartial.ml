@@ -1,5 +1,6 @@
 open Nv_datastructures
 open Nv_lang.Syntax
+open Nv_lang
 open Nv_utils.OCamlUtils
 
 (** * Simplifications *)
@@ -206,6 +207,7 @@ let rec interp_exp_partial_opt isapp env expEnv e =
         (* Printf.printf "fancy match failed: %s\n" (Printing.exp_to_string e); *)
         match matchExp branches pe1 expEnv with
         | None ->
+          (* Printf.printf "fancy match failed: %s\n" (Printing.exp_to_string e); *)
           aexp (ematch pe1 (mapBranches (fun (p,e) ->
               (p, interp_exp_partial_opt false env expEnv e)) branches),
                 e.ety, e.espan) (* |> simplify_match *)

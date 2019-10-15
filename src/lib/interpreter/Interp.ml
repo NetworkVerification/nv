@@ -1,5 +1,6 @@
 open Nv_lang
 open Nv_datastructures
+open Nv_utils
 open Syntax
 open Memoization
 open Printing
@@ -42,14 +43,14 @@ let rec interp_exp env e =
       | Some v -> v )
   | EVal v -> v
   | EOp (op, es) ->
-    interp_op env (Nv_utils.OCamlUtils.oget e.ety) op es
+    interp_op env (OCamlUtils.oget e.ety) op es
   | EFun f -> vclosure (env, f)
   | EApp (e1, e2) -> (
       let v1 = interp_exp env e1 in
       let v2 = interp_exp env e2 in
       match v1.v with
       | VClosure (c_env, f) ->
-        interp_exp (update_value c_env f.arg v2) f.body
+        interp_exp (update_env c_env f.arg v2 (OCamlUtils.oget f.argty)) f.body
       | _ -> failwith "bad functional application" )
   | EIf (e1, e2, e3) -> (
       match (interp_exp env e1).v with
@@ -58,7 +59,7 @@ let rec interp_exp env e =
       | _ -> failwith "bad if condition" )
   | ELet (x, e1, e2) ->
     let v1 = interp_exp env e1 in
-    interp_exp (update_value env x v1) e2
+    interp_exp (update_env env x v1 (Nv_utils.OCamlUtils.oget e1.ety)) e2
   | ETuple es -> vtuple (List.map (interp_exp env) es)
   | ESome e -> voption (Some (interp_exp env e))
   | EMatch (e1, branches) -> (
@@ -161,7 +162,7 @@ and interp_op env ty op es =
         | _ -> vmap (BddMap.merge ~op_key:(f.body, env) f_lifted m1 m2)
       )
   | ( MMapFilter
-    , [ {v= VClosure (_, f1)}
+    , [ {v= VClosure (c_env1, f1)}
       ; {v= VClosure (c_env2, f2)}
       ; {v= VMap m} ] ) ->
     let seen = BatSet.PSet.singleton ~cmp:Var.compare f2.arg in
@@ -171,7 +172,7 @@ and interp_op env ty op es =
       match ExpMap.Exceptionless.find f1.body !bddfunc_cache with
       | None -> (
           let bddf = BddFunc.create_value (Nv_utils.OCamlUtils.oget f1.argty) in
-          let env = Env.update Env.empty f1.arg bddf in
+          let env = Env.update (Env.map c_env1.ty (fun typ -> BddFunc.create_value typ)) f1.arg bddf in
           let bddf = BddFunc.eval env f1.body in
           match bddf with
           | BBool bdd ->

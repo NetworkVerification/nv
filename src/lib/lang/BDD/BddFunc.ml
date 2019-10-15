@@ -46,7 +46,7 @@ let create_value (ty: ty) : t =
       let v, idx = aux (i + 1) ty in
       (BOption (B.ithvar i, v), idx)
     | TArrow _ | QVar _ | TVar _ | TMap _ ->
-      failwith "internal error (create_value)"
+      failwith (Printf.sprintf "internal error (create_value) type:%s\n" (Printing.ty_to_string (get_inner_type ty)))
   in
   let ret, _ = aux 0 ty in
   ret

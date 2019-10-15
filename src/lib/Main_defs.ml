@@ -44,15 +44,16 @@ let run_smt_func file cfg info net fs =
     let srp, f = UnboxUnits.unbox_srp srp in
     srp, f :: fs
   in
-  let srp, f = Renaming.alpha_convert_srp srp in
   let srp, fs =
     SmtUtils.smt_config.unboxing <- true;
     let srp, f1 = Profile.time_profile "Unbox options" (fun () -> UnboxOptions.unbox_srp srp) in
     let srp, f2 =
       Profile.time_profile "Flattening Tuples" (fun () -> TupleFlatten.flatten_srp srp)
     in
-    srp, (f2 :: f1 :: f :: fs)
+    srp, (f2 :: f1 :: fs)
   in
+  let srp, f = Renaming.alpha_convert_srp srp in
+  let fs = f :: fs in
   let res = Smt.solveFunc info cfg.query (smt_query_file file) srp in
   match res with
   | Unsat ->

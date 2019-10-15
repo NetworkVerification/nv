@@ -177,6 +177,7 @@ struct
       in
       let node = avalue (vnode i, Some Typing.node_ty, Span.default) in
       let emerge_i = InterpPartial.interp_partial_fun emerge [node] in
+      (* Printf.printf "merge after interp:\n%s\n\n" (Printing.exp_to_string emerge_i); *)
       let idx = ref 0 in
       let merged =
         BatList.fold_left

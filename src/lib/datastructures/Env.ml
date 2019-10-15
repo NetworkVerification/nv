@@ -22,6 +22,9 @@ let bind x entry = M.add x entry empty
 
 let filter env f = M.filter f env
 
+let map env f =
+  M.map f env
+
 let to_string entry_to_string env =
   M.fold
     (fun k v s -> Var.to_string k ^ "=" ^ entry_to_string v ^ ";" ^ s)
