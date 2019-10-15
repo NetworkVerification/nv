@@ -22,7 +22,7 @@ let rec default_value_exp ty =
     exp_of_value (avalue (voption None, Some ty, Span.default))
   | TMap (_, ty2) ->
     aexp(eop MCreate [default_value_exp ty2], Some ty, Span.default)
-  | TSubset es -> List.hd es
+  | TSubset (_, es) -> List.hd es (* For now we just hope this isn't a symbolic *)
   | TVar {contents= Link t} ->
     default_value_exp t
   | TVar _ | QVar _ | TArrow _ ->
@@ -58,7 +58,7 @@ let rec random_value ~hints ~max_map_size ty =
         map := BddMap.update !map k v
       done ;
       vmap !map
-    | TSubset es ->
+    | TSubset (_, es) ->
       (* Note: This will never generate a value corresponding to a symbolic *)
       let vs = List.filter_map (fun e -> match e.e with | EVal v -> Some v | _ -> None) es in
       let index = Random.int (List.length vs) in

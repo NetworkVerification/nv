@@ -67,7 +67,7 @@ type ty =
   | TRecord of ty StringMap.t
   | TNode
   | TEdge
-  | TSubset of exp list
+  | TSubset of ty * exp list
 
 and tyvar = Unbound of tyname * level | Link of ty
 

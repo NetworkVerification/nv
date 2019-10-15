@@ -41,7 +41,10 @@ let rec show_ty ~show_meta ?(show_links=false) ty =
   | TUnit -> "TUnit"
   | TNode -> "TNode"
   | TEdge -> "TEdge"
-  | TSubset es -> "TSubset" ^ show_list (show_exp ~show_meta) es
+  | TSubset (ty, es) ->
+    Printf.sprintf "TSubset{%s}[%s]"
+      (show_list (show_exp ~show_meta) es)
+      (show_ty ty)
 
 and show_exp ~show_meta e =
   if show_meta then

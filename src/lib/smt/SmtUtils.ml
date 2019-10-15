@@ -543,7 +543,7 @@ let rec ty_to_sort (ty: Nv_lang.Syntax.ty) : sort =
   | TOption ty' ->
     let name = Nv_utils.OCamlUtils.oget (datatype_name ty) in
     DataTypeSort (name, [ty_to_sort ty'])
-  | TSubset es -> ty_to_sort ((List.hd es).ety |> oget)
+  | TSubset (ty, _) -> ty_to_sort ty
   | TMap _ -> failwith "unimplemented"
   (*       mk_array_sort ctx (ty_to_sort ctx ty1) (ty_to_sort ctx ty2)*)
   | TVar _ | QVar _ | TArrow _ | TRecord _ ->

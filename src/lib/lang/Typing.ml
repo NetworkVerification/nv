@@ -869,16 +869,19 @@ and infer_declaration i info env aty d : ty Env.t * declaration =
     let ty = oget e'.ety in
     unify info e ty (init_ty aty) ;
     (Env.update env (Var.create "init") ty, DInit e')
-  | DUserTy (x, TSubset es) ->
-    let tvar = fresh_tyvar () in
+  | DUserTy (x, TSubset (ty, es)) ->
+    let rec supertype =
+      fun ty -> match ty with | TSubset (ty, _) -> supertype ty | _ -> ty
+    in
+    let sup = supertype ty in
     let es' =
     List.map (fun e ->
         let e' = infer_exp (i + 1) info env e in
-        let ty = oget e'.ety in
-        unify info e ty tvar;
+        let ty' = oget e'.ety in
+        unify info e sup ty';
         e') es
     in
-    (env, DUserTy (x, TSubset es'))
+    (env, DUserTy (x, TSubset (ty, es')))
   | DATy _ | DUserTy _ | DNodes _ | DEdges _ -> (env, d)
 
 (* ensure patterns do not contain duplicate variables *)

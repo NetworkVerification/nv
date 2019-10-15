@@ -45,8 +45,8 @@ let create_value (ty: ty) : t =
     | TOption ty ->
       let v, idx = aux (i + 1) ty in
       (BOption (B.ithvar i, v), idx)
-    | TSubset es ->
-      aux i ((List.hd es).ety |> oget)
+    | TSubset (ty, _) ->
+      aux i ty
     | TArrow _ | QVar _ | TVar _ | TMap _ ->
       failwith "internal error (create_value)"
   in

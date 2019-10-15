@@ -27,7 +27,7 @@ let rec ty_to_size ty =
   | TRecord tmap -> ty_to_size (TTuple (RecordUtils.get_record_entries tmap))
   | TNode -> ty_to_size (TInt 32) (* Encode as int *)
   | TEdge -> ty_to_size (TTuple [TNode; TNode]) (* Encode as node pair *)
-  | TSubset es -> ty_to_size ((List.hd es).ety |> oget)
+  | TSubset (ty, _) -> ty_to_size ty
   | TArrow _ | TMap _ | TVar _ | QVar _ ->
     failwith ("internal error (ty_to_size): " ^ (PrintingRaw.show_ty false ty))
 

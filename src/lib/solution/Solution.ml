@@ -51,7 +51,7 @@ let rec mask_type_ty ty =
   | TTuple tys -> TTuple (List.map mask_type_ty tys)
   | TMap (kty, vty) -> TMap (kty, mask_type_ty vty)
   | TVar {contents = Link ty} -> mask_type_ty ty
-  | TSubset es -> mask_type_ty ((List.hd es).ety |> oget)
+  | TSubset (ty, _) -> mask_type_ty ty
   | TVar _ | QVar _ | TArrow _ -> failwith "internal error (mask_ty)"
 
 (* This function works correctly, but I think it's almost always a

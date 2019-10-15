@@ -147,7 +147,9 @@ let rec ty_to_string t =
       | _ -> ty_to_string t1
     in
     leftside ^ " -> " ^ ty_to_string t2
-  | TSubset es -> Printf.sprintf "Ty{%s}" @@ sep ";" (exp_to_string_p max_prec) es
+  | TSubset (ty, es) -> Printf.sprintf "Ty{%s}[%s]"
+                          (sep ";" (exp_to_string_p max_prec) es)
+                          (ty_to_string ty)
 
 and tyvar_to_string tv =
   match tv with

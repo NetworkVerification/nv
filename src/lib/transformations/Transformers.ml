@@ -58,7 +58,7 @@ and transform_ty ~(name:string) (transformers:transformers) (ty : ty) : ty =
     | TRecord map -> TRecord (StringMap.map transform_ty map)
     | TArrow (ty1, ty2) -> TArrow (transform_ty ty1, transform_ty ty2)
     | TMap (kty, vty) -> TMap (transform_ty kty, transform_ty vty)
-    | TSubset es -> TSubset (List.map recursors.recurse_exp es)
+    | TSubset (ty, es) -> TSubset (transform_ty ty, List.map recursors.recurse_exp es)
     | TVar {contents= Link ty1} -> transform_ty ty1
     | TVar _ | QVar _ -> failwith @@ name ^ ": transform_ty: encountered TVar or QVar"
 

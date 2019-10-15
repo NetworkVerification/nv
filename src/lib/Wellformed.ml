@@ -15,7 +15,7 @@ let rec has_map ty =
   | TArrow (ty1, ty2) -> has_map ty1 || has_map ty2
   | TOption ty -> has_map ty
   | TRecord map -> StringMap.exists (fun _ -> has_map) map
-  | TSubset es -> has_map ((List.hd es).ety |> oget)
+  | TSubset (ty, _) -> has_map ty
   | TMap _ -> true
 
 (* Ensure that map types don't use maps as keys *)
@@ -30,7 +30,7 @@ let rec check_map_key_types fail ty : unit =
   | TMap (kty, vty) ->
     if (has_map kty) then fail ();
     check_map_key_types kty; check_map_key_types vty
-  | TSubset es -> check_map_key_types ((List.hd es).ety |> oget)
+  | TSubset (ty, _) -> check_map_key_types ty
 
 let check_types info _ (e: exp) =
   let mfail () =
@@ -215,19 +215,17 @@ let check_nodes_and_edges info num_nodes edges _ (e : exp) =
    and that they are either EVals or symbolic EVars *)
 let check_subset_type tyname ty : unit =
   match get_inner_type ty with
-  | TSubset es ->
-    let base_ty = (List.hd es).ety |> oget in
+  | TSubset (_, es) ->
     if (not @@ List.for_all
           (fun e ->
-             equal_tys false base_ty (oget e.ety) &&
              (match e.e with
-              | EVal _ -> true
+              | EVal _
               | EVar _ -> true
               | _ -> false)
           ) es)
     then
       Console.error ("Subset type " ^ (Var.name tyname) ^
-                     "has inconsistent or incorrect elements")
+                     "contains non-value, non-variable entry")
   | _ -> ()
 ;;
 

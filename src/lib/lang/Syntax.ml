@@ -112,7 +112,7 @@ type ty =
   | TRecord of ty StringMap.t
   | TNode
   | TEdge
-  | TSubset of exp list (* Should be either values or symbolic variables *)
+  | TSubset of ty * exp list (* Should be either values or symbolic variables *)
 [@@deriving ord]
 
 and tyvar = Unbound of tyname * level | Link of ty
@@ -337,7 +337,8 @@ let rec equal_tys ~cmp_meta ty1 ty2 =
   | TOption t1, TOption t2 -> equal_tys t1 t2
   | TMap (t1, t2), TMap (s1, s2) ->
     equal_tys t1 s1 && equal_tys t2 s2
-  | TSubset es1, TSubset es2 ->
+  | TSubset (ty1, es1), TSubset (ty2, es2) ->
+    equal_tys ty1 ty2 &&
     List.for_all2 (equal_exps ~cmp_meta) es1 es2
   | (TUnit | TBool | TNode | TEdge | TInt _ | TVar _ | QVar _
     | TArrow _ | TTuple _ | TRecord _ | TOption _ | TMap _ | TSubset _), _ ->
@@ -367,7 +368,8 @@ and equal_inner_tys ~cmp_meta ty1 ty2 =
   | TOption t1, TOption t2 -> equal_inner_tys t1 t2
   | TMap (t1, t2), TMap (s1, s2) ->
     equal_inner_tys t1 s1 && equal_inner_tys t2 s2
-  | TSubset es1, TSubset es2 ->
+  | TSubset (t1, es1), TSubset (t2, es2) ->
+    equal_inner_tys t1 t2 &&
     List.for_all2 (equal_exps ~cmp_meta) es1 es2
   | (TUnit | TBool | TNode | TEdge | TInt _ | TVar _ | QVar _
     | TArrow _ | TTuple _ | TRecord _ | TOption _ | TMap _ | TSubset _), _ ->
@@ -543,7 +545,9 @@ let rec hash_ty ~hash_meta ty =
   | TUnit -> 11
   | TNode -> 12
   | TEdge -> 13
-  | TSubset es -> 14 + List.fold_left (fun acc e -> acc + hash_exp ~hash_meta e) 0 es
+  | TSubset (ty, es) ->
+    14 + hash_ty ty +
+    List.fold_left (fun acc e -> acc + hash_exp ~hash_meta e) 0 es
 
 and hash_value ~hash_meta v : int =
   let cfg = Cmdline.get_cfg () in
