@@ -1,6 +1,6 @@
+include "rip.nv"
 include "../generic-topologies/fattree1000.nv"
 (*include "allSingleFailuresRip.nv"*)
-include "rip.nv"
 
 let f = transRip
 

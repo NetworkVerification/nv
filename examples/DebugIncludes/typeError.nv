@@ -1,12 +1,5 @@
 include "../generic-topologies/fattree1000.nv"
-include "rip.nv"
-
-let transFailure e x =
-  let x = mapIf (fun e1 -> e = e1) (fun v -> None) x in
-  mapIf (fun e1 -> !(e=e1)) (fun v -> transRip v) x
-
-let mergeFailure n x y =
-  combine (fun v1 v2 -> mergeRip v1 v2) x y (Some None) None (Some None) None (* I think those extra args are right? *)
+include "allSingleFailuresRip.nv"
 
 type attribute = dict[tedge, ripRoute]
 
