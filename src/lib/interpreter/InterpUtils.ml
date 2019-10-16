@@ -77,4 +77,4 @@ let build_env (env: Syntax.env) (free_vars: Nv_datastructures.Var.t BatSet.PSet.
        | None -> acc )
     free_vars base
 
-let bddfunc_cache : bool Cudd.Mtbdd.t Collections.ExpMap.t ref = ref Collections.ExpMap.empty
+let bddfunc_cache : bool Cudd.Mtbdd.t Collections.ExpEnvMap.t ref = ref Collections.ExpEnvMap.empty

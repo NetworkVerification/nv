@@ -47,6 +47,15 @@ module ExpSet = BetterSet.Make (struct
     let compare = compare_es
     let to_string = Printing.exp_to_string end)
 
+module ExpEnvMap = BatMap.Make (struct
+    type t = exp * (value Env.t)
+
+    let compare x1 x2 =
+      let cmp1 = compare_exps (fst x1) (fst x2) in
+      if cmp1 = 0 then Env.compare compare_values (snd x1) (snd x2) else cmp1
+  end)
+
+
 (* module HashTy : BatHashtbl.HashedType =
  * struct
  *   type t = Syntax.ty
