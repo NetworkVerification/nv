@@ -1,0 +1,25 @@
+include "../generic-topologies/fattree1000.nv"
+(*include "allSingleFailuresRip.nv"*)
+include "rip.nv"
+
+let f = transRip
+
+let transFailure e x =
+  let x = mapIf (fun e1 -> e = e1) (fun v -> None) x in
+  mapIf (fun e1 -> !(e=e1)) (fun v -> f v) x
+
+let mergeFailure n x y =
+  combine (fun v1 v2 -> mergeRip v1 v2) x y (Some None) None (Some None) None (* I think those extra args are right? *)
+
+type attribute = dict[tedge, option[int]]
+
+let trans e x = transFailure e x
+
+let merge u x y = mergeFailure u x y
+
+let init u =
+  let m = createDict None in
+  if (u = 0n) then
+     map (fun v -> Some 0) m
+  else
+     m
