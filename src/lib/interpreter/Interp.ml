@@ -6,6 +6,7 @@ open Memoization
 open Printing
 open Collections
 open InterpUtils
+open Batteries
 
 (* Interpreter Errors *)
 (* Interpreter Environments *)
@@ -107,9 +108,7 @@ and interp_op env ty op es =
       else
         match v.v with
         | VTuple velts ->
-          let hd, rest = BatList.takedrop lo elts in
-          let tl = BatList.drop (hi - lo + 1) rest in
-          vtuple (hd @ velts @ tl)
+          vtuple (OCamlUtils.replaceSlice lo hi elts velts)
         | _ -> failwith "Bad TSet"
     end
   | MCreate, [v] -> (

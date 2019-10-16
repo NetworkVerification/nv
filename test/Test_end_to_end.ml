@@ -123,7 +123,7 @@ let simulator_tests =
       ("examples/env.nv", true);
       ("examples/failure.nv", true);
       ("examples/failure2.nv", true);
-      ("examples/fattree.nv", true);
+      ("examples/FatTrees/fattree.nv", true);
       ("examples/map.nv", true);
       ("examples/map2.nv", false);
       ("examples/minesweeper.nv", true);
@@ -155,7 +155,7 @@ let compiler_tests =
       ("examples/env.nv", true);
       ("examples/failure.nv", true);
       (* ("examples/failure2.nv", true); *) (* TODO: Enable *)
-      ("examples/fattree.nv", true);
+      ("examples/FatTrees/fattree.nv", true);
       ("examples/map.nv", true);
       ("examples/map2.nv", false);
       ("examples/property.nv", true);
@@ -183,7 +183,7 @@ let unboxed_tests =
       ("examples/env.nv", true);
       ("examples/failure.nv", false);
       ("examples/failure2.nv", false);
-      ("examples/fattree.nv", true);
+      ("examples/FatTrees/fattree.nv", true);
       ("examples/map.nv", true);
       ("examples/map2.nv", false);
       ("examples/minesweeper.nv", false);
@@ -214,7 +214,7 @@ let hiding_tests =
       ("examples/env.nv", true);
       ("examples/failure.nv", false);
       ("examples/failure2.nv", false);
-      ("examples/fattree.nv", true);
+      ("examples/FatTrees/fattree.nv", true);
       ("examples/map.nv", true);
       ("examples/map2.nv", false);
       ("examples/minesweeper.nv", false);
@@ -245,7 +245,7 @@ let slicing_tests =
       ("examples/env.nv", true);
       ("examples/failure.nv", false);
       ("examples/failure2.nv", false);
-      ("examples/fattree.nv", true);
+      ("examples/FatTrees/fattree.nv", true);
       ("examples/map.nv", true);
       ("examples/map2.nv", false);
       ("examples/minesweeper.nv", false);
