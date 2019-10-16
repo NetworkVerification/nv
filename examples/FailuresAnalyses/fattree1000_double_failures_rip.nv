@@ -1,5 +1,5 @@
-include "generic-topologies/fattree1000.nv"
-include "generic-algebras/allSingleFailuresRip.nv"
+include "../generic-topologies/fattree1000.nv"
+include "../generic-algebras/allTwoFailuresRip.nv"
 
 
 let init u =

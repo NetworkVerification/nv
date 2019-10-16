@@ -1,5 +1,5 @@
-include "generic-topologies/fattree1000.nv"
-include "generic-algebras/rip.nv"
+include "../generic-topologies/fattree1000.nv"
+include "../generic-algebras/rip.nv"
 
 type attribute = option[int]
 
