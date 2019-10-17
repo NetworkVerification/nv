@@ -1,7 +1,7 @@
 open Nv_lang
-open Nv_lang.Syntax
 open Nv_datastructures
 open Syntax
+open Collections
 
 (* Maps fresh names back to the original names *)
 let map_back bmap new_name old_name =
@@ -24,11 +24,20 @@ let rec update_pattern (env: Var.t Env.t) (p: pattern) :
   | PTuple ps ->
     let env, ps = BatList.fold_left add_pattern (env, []) ps in
     (PTuple (BatList.rev ps), env)
+  | PRecord map ->
+    let env, map =
+      StringMap.fold
+        (fun k p (env, acc) ->
+           let p', env' = update_pattern env p in
+           env', StringMap.add k p' acc)
+        map
+        (env, StringMap.empty)
+    in
+    (PRecord map, env)
   | POption None -> (p, env)
   | POption (Some p) ->
     let p', env = update_pattern env p in
     (POption (Some p'), env)
-  | PRecord _ -> failwith "Found record during renaming"
 
 and add_pattern (env, ps) p =
   let p', env' = update_pattern env p in
@@ -64,6 +73,11 @@ let rec alpha_convert_exp (env: Var.t Env.t) (e: exp) =
   | ETuple es ->
     etuple (BatList.map (fun e -> alpha_convert_exp env e) es)
     |> wrap e
+  | ERecord map ->
+    erecord (StringMap.map (fun e -> alpha_convert_exp env e) map)
+    |> wrap e
+  | EProject (e, l) ->
+    eproject (alpha_convert_exp env e) l |> wrap e
   | ESome e1 -> esome (alpha_convert_exp env e1) |> wrap e
   | EMatch (e1, bs) ->
     let bs' =
@@ -73,8 +87,6 @@ let rec alpha_convert_exp (env: Var.t Env.t) (e: exp) =
     in
     ematch (alpha_convert_exp env e1) bs' |> wrap e
   | ETy (e1, ty) -> ety (alpha_convert_exp env e1) ty |> wrap e
-  | ERecord _ | EProject _ -> failwith "Found record during renaming"
-
 
 let alpha_convert_declaration bmap (env: Var.t Env.t)
     (d: declaration) =
@@ -139,8 +151,8 @@ let alpha_convert_net net =
         let env = Env.update env x y in
         match ty_exp with
         |  Exp e ->
-           let e = alpha_convert_exp env e in
-           (env, (y, Exp e) :: acc)
+          let e = alpha_convert_exp env e in
+          (env, (y, Exp e) :: acc)
         | Ty ty ->
           (env, (y, Ty ty) :: acc))
       net.symbolics (env, [])
@@ -194,8 +206,8 @@ let alpha_convert_srp (srp : Syntax.srp_unfold) =
       srp.srp_symbolics (env, [])
   in
   let env = AdjGraph.VertexMap.fold (fun _ xs env ->
-                BatList.fold_right (fun (x, _) env ->
-                    Env.update env x x) xs env) srp.srp_labels env
+      BatList.fold_right (fun (x, _) env ->
+          Env.update env x x) xs env) srp.srp_labels env
   in
   let srp' =
     (* TODO: add partitioning? *)

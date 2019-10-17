@@ -1,0 +1,7 @@
+include "../generic-algebras/distance-bv-single.nv"
+include "../generic-topologies/fattree500.nv"
+
+let assert u x =
+  match x with
+  | None -> false
+  | Some k -> if (k = 7u3) then false else true

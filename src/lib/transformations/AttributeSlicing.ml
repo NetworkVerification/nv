@@ -182,7 +182,7 @@ let rewrite_fun (attr_ty : ty) (elts_to_keep : IntSet.t) (assertion : exp) (lead
       (cont : exp -> exp) =
     match e.e with
     | EFun func ->
-      if (count < leading_args) || (* This arg doesn't correspond to an attribute element *)
+      if (count < leading_args) || (* This arg doesn't correspond to an attribute element, or *)
          IntSet.mem ((count - leading_args) mod attr_size) elts_to_keep (* This arg corresponds to an element that we're keeping *)
       then
         rewrite_fun_aux func.body (count + 1) ((func.arg, func.argty, true)::args)
@@ -192,7 +192,7 @@ let rewrite_fun (attr_ty : ty) (elts_to_keep : IntSet.t) (assertion : exp) (lead
              cont result)
       else
         rewrite_fun_aux func.body (count + 1) ((func.arg, func.argty, false)::args)
-          (fun e -> cont e)
+          cont
     | _ ->
       let bind_dummy_vars e =
         args
@@ -238,7 +238,7 @@ let rewrite_fun (attr_ty : ty) (elts_to_keep : IntSet.t) (assertion : exp) (lead
         (* The actual tuple expression that the overall function returns *)
         let final_output =
           aexp
-            ((etuple (List.rev_map2 (fun v ty -> aexp (evar v, Some ty, e.espan)) final_vars sliced_attr_tys)),
+            ((etuple (List.map2 (fun v ty -> aexp (evar v, Some ty, e.espan)) final_vars sliced_attr_tys)),
              Some (TTuple sliced_attr_tys),
              e.espan)
         in

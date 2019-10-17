@@ -1,8 +1,7 @@
 open Cudd
 open Nv_datastructures
 open Nv_utils.PrimitiveCollections
-open Batteries
-
+       
 type node = int
 
 type edge = node * node
@@ -163,7 +162,7 @@ type network =
     interface    : exp option; (* partitioning *)
     symbolics    : (var * ty_or_exp) list;
     defs         : (var * ty option * exp) list;
-    utys         : (ty StringMap.t) list;
+    utys         : (var * ty) list;
     requires     : exp list;
     graph        : AdjGraph.t;
   }
@@ -309,7 +308,11 @@ val get_symbolics : declarations -> (var * ty_or_exp) list
 
 val get_requires : declarations -> exp list
 
+val get_types : declarations -> (var * ty) list
+
 val get_record_types : declarations -> (ty StringMap.t) list
+
+val get_record_types_from_utys: (var * ty) list -> (ty StringMap.t) list
 
 val equal_values : cmp_meta:bool -> value -> value -> bool
 
@@ -318,6 +321,8 @@ val equal_exps : cmp_meta:bool -> exp -> exp -> bool
 val hash_value : hash_meta:bool -> value -> int
 
 val hash_exp : hash_meta:bool -> exp -> int
+
+val hash_ty : ty -> int
 
 (* Operates only on the 'v' element of the value records, ignoring
    all other entries *)

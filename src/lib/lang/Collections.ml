@@ -44,7 +44,16 @@ module ExpMap = BetterMap.Make (struct
 
 module ExpSet = BetterSet.Make (struct
     type t = exp
-
     let compare = compare_es
-    let to_string = Printing.exp_to_string
-  end)
+    let to_string = Printing.exp_to_string end)
+
+(* module HashTy : BatHashtbl.HashedType =
+ * struct
+ *   type t = Syntax.ty
+ *   let equal = Syntax.equal_tys
+ *   let hash = Syntax.hash_ty
+ * end
+ *
+ * module HashTblTy = Hashtbl.Make(HashTy)
+ *
+ *   end) *)

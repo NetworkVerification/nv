@@ -57,6 +57,20 @@ NV is great
 \section{Introduction} 
 \label{sec:introduction}
 
+With the increased number of internet users and the emergence of cloud
+computing, networks have seen significant growth in terms of size and
+complexity. The tools to configure a network, however, have not kept up with
+this trend. As a result, a number of network misconfiguration induced outages
+have made headlines recently.
+
+To tackle the problem researchers have developed a number of static analyses
+that can be used to establish various correctness properties for a network's
+configuration. Despite the remarkable achievements in the area of network
+verification over the past few years, efforts are hindered by the lack of
+suitable abstractions that will facilitate developing and composing network configuration analyses.
+
+
+
 \begin{enumerate}
   \item Introduce the problem: buggy networks, network verification to the rescue.
   \item Existing tools (Batfish, Minesweeper, etc.) have made huge leaps to alleviate the problem but as they operate (almost) directly on top of the complicated configuration languages they suffer from a wide range of problems:
@@ -139,7 +153,6 @@ transformations to improve verification performance. Moreover, arguing about the
   \item Other transformations, slicing based on assertion and compression?
 \end{itemize}
 
-\todo{It's a must that we have proofs of correctness for the transformations of functional expressions on paper. It's a nice bonus if we have them on Coq. Proof assistants tend to work well for this kind of reasoning, variable naming aside.}
 
 
 %=====================================================
@@ -150,8 +163,8 @@ transformations to improve verification performance. Moreover, arguing about the
 %
 %=====================================================
 
-\section{Backends}
-\label{sec:backends}
+\section{Network Analyses}
+\label{sec:analyses}
 
 
 \subsection{Simulation}

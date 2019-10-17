@@ -1,12 +1,12 @@
 open Nv_lang.Collections
-open SmtLang
 open SmtUtils
+open SmtLang
 
 (** ** SMT query optimization *)
 let rec alpha_rename_smt_term (renaming: string StringMap.t)
     (valMap: smt_term StringMap.t) (tm: smt_term) =
   match tm with
-  | Int _ | Bool _ | Constructor _ -> tm
+  | Int _ | Bool _ | Constructor _ | Bv _ -> tm
   | And (tm1, tm2) ->
     mk_and_fast
       (alpha_rename_smt_term renaming valMap tm1)
@@ -17,6 +17,18 @@ let rec alpha_rename_smt_term (renaming: string StringMap.t)
       (alpha_rename_smt_term renaming valMap tm2)
   | Not tm1 ->
     mk_not_fast (alpha_rename_smt_term renaming valMap tm1)
+  | BvAdd (tm1, tm2) ->
+    BvAdd (alpha_rename_smt_term renaming valMap tm1,
+           alpha_rename_smt_term renaming valMap tm2)
+  | BvSub (tm1, tm2) ->
+    BvSub (alpha_rename_smt_term renaming valMap tm1,
+           alpha_rename_smt_term renaming valMap tm2)
+  | BvLt (tm1, tm2) ->
+    BvLt (alpha_rename_smt_term renaming valMap tm1,
+          alpha_rename_smt_term renaming valMap tm2)
+  | BvLeq (tm1, tm2) ->
+    BvLeq (alpha_rename_smt_term renaming valMap tm1,
+          alpha_rename_smt_term renaming valMap tm2)
   | Add (tm1, tm2) ->
     Add (alpha_rename_smt_term renaming valMap tm1,
          alpha_rename_smt_term renaming valMap tm2)
@@ -50,7 +62,6 @@ let rec alpha_rename_smt_term (renaming: string StringMap.t)
     (match StringMap.Exceptionless.find sr valMap with
      | None -> Var sr
      | Some tmv -> tmv)
-  | Bv _ -> failwith "not yet"
   | App (tm1, tms) ->
     App (alpha_rename_smt_term renaming valMap tm1,
          BatList.map (alpha_rename_smt_term renaming valMap) tms)

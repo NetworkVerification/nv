@@ -5,7 +5,6 @@ let mapo f o =
 
 let mapbetter f o1 o2 =
   match (o1, o2) with
-  | (None, None) -> None
   | (None, x) -> x
   | (x, None) -> x
   | (Some x, Some y) -> Some (f x y)

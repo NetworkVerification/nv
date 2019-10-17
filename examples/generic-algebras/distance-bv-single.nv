@@ -1,0 +1,13 @@
+include "../utils.nv"
+
+type attribute = option[int3]
+
+let trans e x =
+    mapo (fun n -> if (n = 7u3) then 7u3 else n +u3 1u3) x
+
+let merge n x1 x2 = mapbetter (fun n1 n2 -> if n1 <u3 n2 then n1 else n2) x1 x2
+
+let init n =
+  match n with
+  | 0n -> Some 0u3
+  | _ -> None

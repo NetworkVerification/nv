@@ -230,7 +230,9 @@ let map_back_sol
   let map_back_mask = (fun v -> map_back_mask ~name:name sol mask_transformer v attr_ty) in
   let map_back_value = map_back_value ~name:name sol map_back_transformer in
   {
-    symbolics = VarMap.mapi (fun x v -> map_back_value v (VarMap.find x symb_tys)) sol.symbolics;
+    symbolics = VarMap.mapi (fun x v ->
+        try map_back_value v (VarMap.find x symb_tys)
+        with | Not_found -> v) sol.symbolics;
     labels = VertexMap.map (fun v -> map_back_value v attr_ty) sol.labels;
     assertions = sol.assertions; (* These transformations shouldn't change the truth value of the assertion *)
     mask = omap map_back_mask sol.mask;
@@ -276,7 +278,7 @@ let transform_network
     assertion = omap transform_exp net.assertion;
     symbolics = List.map transform_symbolic net.symbolics;
     requires = List.map transform_exp net.requires;
-    utys = List.map (fun map -> StringMap.map transform_ty map) net.utys;
+    utys =  List.map (fun (x,m) -> (x, transform_ty m)) net.utys;
     partition = omap transform_exp net.partition;
     interface = omap transform_exp net.interface;
     defs = List.map (fun (x, tyo, e) -> (x, omap transform_ty tyo, transform_exp e)) net.defs;

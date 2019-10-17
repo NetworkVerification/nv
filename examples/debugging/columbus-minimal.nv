@@ -1,0 +1,698 @@
+type ospfType = {ospfAd: int8; weight: int16; areaType:int2; areaId: int;}
+type bgpType = {bgpAd: int8; lp: int; aslen: int; med:int; comms:set[int];}
+type rib = {
+  connected:option[int8];
+  static:option[int8];
+  ospf:option[ospfType];
+  bgp:option[bgpType];
+  selected:option[int2]; }
+type attribute = rib
+
+    symbolic d : (int, int5)
+
+let edges = {
+  0-1; (*usa,FastEthernet0/0 --> nodeid33,FastEthernet1/0*)
+  6-2; (*puertottrico,FastEthernet0/1 --> nodeid50,FastEthernet0/1*)
+  4-8; (*dominica,FastEthernet0/1 --> martinique,FastEthernet0/0*)
+  5-11; (*nodeid22,FastEthernet1/1 --> stttcroix,FastEthernet0/0*)
+  8-4; (*martinique,FastEthernet0/0 --> dominica,FastEthernet0/1*)
+  16-12; (*curacao,FastEthernet1/1 --> stttvincent,FastEthernet0/0*)
+  14-15; (*nodeid38,FastEthernet0/0 --> columbia,FastEthernet0/1*)
+  7-9; (*suriname,FastEthernet0/0 --> nodeid35,FastEthernet0/1*)
+  10-4; (*stttkittstt&ttnevis,FastEthernet0/1 --> dominica,FastEthernet1/0*)
+  13-3; (*nodeid39,FastEthernet1/0 --> peernodeid39_7,FastEthernet0/0*)
+}
+
+let nodes = 17
+
+let ospfIntraArea = 0u2
+let ospfInterArea = 1u2
+let ospfE1 = 2u2
+let ospfE2 = 3u2
+
+let protoConn = 0u8
+let protoStatic = 1u8
+let protoOspf = 2u8
+let protoBgp = 3u8
+
+let isProtocol fib x =
+  match fib with
+  | None -> false
+  | Some y -> x = y
+
+let min x y = if x <u8 y then x else y
+
+let max x y = if x <u8 y then y else x
+
+let pickOption f x y =
+  match (x,y) with
+  | (None, _) -> y  | (_, None) -> x
+  | (Some a, Some b) -> Some (f a b)
+
+let betterOspf o1 o2 =
+  if o1.areaType >u2 o2.areaType then o1
+  else if o2.areaType >u2 o1.areaType then o2
+  else if o1.weight <=u16 o2.weight then o1 else o2
+
+let betterBgp b1 b2 =
+  if b1.lp > b2.lp then b1
+  else if b2.lp > b1.lp then b2
+  else if b1.aslen < b2.aslen then b1
+  else if b2.aslen < b1.aslen then b2
+  else if b1.med >= b2.med then b1 else b2
+
+let betterEqOption o1 o2 =
+  match (o1,o2) with
+  | (_, None) -> true
+  | (None, _) -> false
+  | (Some a, Some b) -> a <=u8 b
+
+let best c s o b =
+  match (c,s,o,b) with
+  | (None,None,None,None) -> None
+  | _ ->
+    let o = match o with | None -> None | Some o -> Some o.ospfAd in
+    let b = match b with | None -> None | Some b -> Some b.bgpAd in
+    let (x,p1) = if betterEqOption c s then (c,0u2) else (s,1u2) in
+    let (y,p2) = if betterEqOption o b then (o,2u2) else (b,3u2) in
+    Some (if betterEqOption x y then p1 else p2)
+
+let mergeValues x y =
+  let c = pickOption min x.connected y.connected in
+  let s = pickOption min x.static y.static in
+  let o = pickOption betterOspf x.ospf y.ospf in
+  let b = pickOption betterBgp x.bgp y.bgp in
+  { connected = c;
+    static = s;
+    ospf = o;
+    bgp = b;
+    selected = best c s o b}
+
+let merge node x y = mergeValues x y
+
+let init node =
+  match node with
+  | 0n ->
+    if (d = (167772246, 31u5)) || (d = (167772162, 31u5)) then
+      let c = Some 0u8 in
+      let s = None in
+      let o = None in
+      let b = None in
+      let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+    else if (d = (3355585280, 24u5)) then
+      let c = Some 0u8 in
+      let s = None in
+      let o = None in
+      let b = Some {bgpAd=20u8; lp=100; aslen=0; med=80; comms={};} in
+      let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+    else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 2n ->
+    if (d = (167772286, 31u5)) || (d = (167772328, 31u5)) || (d = (167772326, 31u5)) then
+      let c = Some 0u8 in
+      let s = None in
+      let o = None in
+      let b = None in
+      let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+    else if (d = (3355600128, 24u5)) then
+      let c = Some 0u8 in
+      let s = None in
+      let o = None in
+      let b = Some {bgpAd=20u8; lp=100; aslen=0; med=80; comms={};} in
+      let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+    else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 4n ->
+    if (d = (167772204, 31u5)) || (d = (167772202, 31u5)) || (d = (167772200, 31u5)) then
+      let c = Some 0u8 in
+      let s = None in
+      let o = None in
+      let b = None in
+      let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+    else if (d = (3355596544, 24u5)) then
+      let c = Some 0u8 in
+      let s = None in
+      let o = None in
+      let b = Some {bgpAd=20u8; lp=100; aslen=0; med=80; comms={};} in
+      let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+    else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 6n ->
+    if (d = (167772234, 31u5)) || (d = (167772328, 31u5)) || (d = (167772324, 31u5)) || (d = (167772354, 31u5)) then
+      let c = Some 0u8 in
+      let s = None in
+      let o = None in
+      let b = None in
+      let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+    else if (d = (3355590400, 24u5)) then
+      let c = Some 0u8 in
+      let s = None in
+      let o = None in
+      let b = Some {bgpAd=20u8; lp=100; aslen=0; med=80; comms={};} in
+      let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+    else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 8n ->
+    if (d = (167772204, 31u5)) || (d = (167772304, 31u5)) then
+      let c = Some 0u8 in
+      let s = None in
+      let o = None in
+      let b = None in
+      let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+    else if (d = (3355594240, 24u5)) then
+      let c = Some 0u8 in
+      let s = None in
+      let o = None in
+      let b = Some {bgpAd=20u8; lp=100; aslen=0; med=80; comms={};} in
+      let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+    else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 12n ->
+    if (d = (167772212, 31u5)) || (d = (167772242, 31u5)) || (d = (167772240, 31u5)) then
+      let c = Some 0u8 in
+      let s = None in
+      let o = None in
+      let b = None in
+      let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+    else if (d = (3355600640, 24u5)) then
+      let c = Some 0u8 in
+      let s = None in
+      let o = None in
+      let b = Some {bgpAd=20u8; lp=100; aslen=0; med=80; comms={};} in
+      let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+    else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 16n ->
+    if (d = (167772350, 31u5)) || (d = (167772344, 31u5)) || (d = (167772354, 31u5)) || (d = (167772352, 31u5)) || (d = (167772240, 31u5)) then
+      let c = Some 0u8 in
+      let s = None in
+      let o = None in
+      let b = None in
+      let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+    else if (d = (3355583744, 24u5)) then
+      let c = Some 0u8 in
+      let s = None in
+      let o = None in
+      let b = Some {bgpAd=20u8; lp=100; aslen=0; med=80; comms={};} in
+      let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+    else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 15n ->
+    if (d = (167772168, 31u5)) || (d = (167772166, 31u5)) then
+      let c = Some 0u8 in
+      let s = None in
+      let o = None in
+      let b = None in
+      let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+    else if (d = (3355594752, 24u5)) then
+      let c = Some 0u8 in
+      let s = None in
+      let o = None in
+      let b = Some {bgpAd=20u8; lp=100; aslen=0; med=80; comms={};} in
+      let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+    else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 14n ->
+    if (d = (167772246, 31u5)) || (d = (167772166, 31u5)) || (d = (167772244, 31u5)) then
+      let c = Some 0u8 in
+      let s = None in
+      let o = None in
+      let b = None in
+      let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+    else if (d = (3355588096, 24u5)) then
+      let c = Some 0u8 in
+      let s = None in
+      let o = None in
+      let b = Some {bgpAd=20u8; lp=100; aslen=0; med=80; comms={};} in
+      let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+    else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 13n ->
+    if (d = (167772248, 31u5)) || (d = (167772230, 31u5)) || (d = (167772198, 31u5)) then
+      let c = Some 0u8 in
+      let s = None in
+      let o = None in
+      let b = None in
+      let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+    else if (d = (3355587840, 24u5)) then
+      let c = Some 0u8 in
+      let s = None in
+      let o = None in
+      let b = Some {bgpAd=20u8; lp=100; aslen=0; med=80; comms={};} in
+      let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+    else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 11n ->
+    if (d = (167772334, 31u5)) || (d = (167772284, 31u5)) || (d = (167772298, 31u5)) || (d = (167772326, 31u5)) then
+      let c = Some 0u8 in
+      let s = None in
+      let o = None in
+      let b = None in
+      let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+    else if (d = (3355595776, 24u5)) then
+      let c = Some 0u8 in
+      let s = None in
+      let o = None in
+      let b = Some {bgpAd=20u8; lp=100; aslen=0; med=80; comms={};} in
+      let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+    else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 10n ->
+    if (d = (167772238, 31u5)) || (d = (167772202, 31u5)) || (d = (167772226, 31u5)) then
+      let c = Some 0u8 in
+      let s = None in
+      let o = None in
+      let b = None in
+      let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+    else if (d = (3355589120, 24u5)) then
+      let c = Some 0u8 in
+      let s = None in
+      let o = None in
+      let b = Some {bgpAd=20u8; lp=100; aslen=0; med=80; comms={};} in
+      let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+    else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 9n ->
+    if (d = (167772260, 31u5)) || (d = (167772210, 31u5)) || (d = (167772258, 31u5)) then
+      let c = Some 0u8 in
+      let s = None in
+      let o = None in
+      let b = None in
+      let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+    else if (d = (3355592448, 24u5)) then
+      let c = Some 0u8 in
+      let s = None in
+      let o = None in
+      let b = Some {bgpAd=20u8; lp=100; aslen=0; med=80; comms={};} in
+      let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+    else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 7n ->
+    if (d = (167772258, 31u5)) then
+      let c = Some 0u8 in
+      let s = None in
+      let o = None in
+      let b = None in
+      let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+    else if (d = (3355595520, 24u5)) then
+      let c = Some 0u8 in
+      let s = None in
+      let o = None in
+      let b = Some {bgpAd=20u8; lp=100; aslen=0; med=80; comms={};} in
+      let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+    else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 1n ->
+    if (d = (167772164, 31u5)) || (d = (167772162, 31u5)) || (d = (167772160, 31u5)) then
+      let c = Some 0u8 in
+      let s = None in
+      let o = None in
+      let b = None in
+      let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+    else if (d = (3355595264, 24u5)) then
+      let c = Some 0u8 in
+      let s = None in
+      let o = None in
+      let b = Some {bgpAd=20u8; lp=100; aslen=0; med=80; comms={};} in
+      let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+    else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 5n ->
+    if (d = (167772302, 31u5)) || (d = (167772300, 31u5)) || (d = (167772298, 31u5)) || (d = (167772304, 31u5)) then
+      let c = Some 0u8 in
+      let s = None in
+      let o = None in
+      let b = None in
+      let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+    else if (d = (3355590656, 24u5)) then
+      let c = Some 0u8 in
+      let s = None in
+      let o = None in
+      let b = Some {bgpAd=20u8; lp=100; aslen=0; med=80; comms={};} in
+      let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+    else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 3n ->
+    if (d = (167772248, 31u5)) then
+      let c = Some 0u8 in
+      let s = None in
+      let o = None in
+      let b = None in
+      let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+    else if (d = (3355591424, 24u5)) || (d = (2147485440, 24u5)) then
+      let c = Some 0u8 in
+      let s = None in
+      let o = None in
+      let b = Some {bgpAd=20u8; lp=100; aslen=0; med=80; comms={};} in
+      let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+    else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | _ -> {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+
+let transferOspf edge o =
+  match o with
+  | None -> None
+  | Some o -> (
+      match edge with
+      | _ -> None
+    )
+
+let transferBgpPol policy x =
+  let b = match x.selected with
+    | None -> None
+    | Some 0u2 -> Some {bgpAd = 0u8; lp = 100; aslen = 0; med = 80; comms = {}}
+    | Some 1u2 -> Some {bgpAd = 1u8; lp = 100; aslen = 0; med = 80; comms = {}}
+    | Some 2u2 -> Some {bgpAd = 110u8; lp = 100; aslen = 0; med = 80; comms = {}}
+    | Some 3u2 -> x.bgp
+  in
+  match b with
+  | None -> None
+  | Some b ->
+    policy x.selected b
+
+let transferBgp e x0 =
+  match e with
+  | (0~1) ->
+    let (prefix, prefixLen) = d in
+    let b = (transferBgpPol (fun prot b ->
+        (if (((prefixLen = 24u5) && ((prefix >= 3355585280) && (prefix < 3355585536)))) then
+           (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms;})
+         else
+           (if (isProtocol prot 3u2) then
+              (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms;})
+            else
+              None)))) x0
+    in
+    (match b with
+     | None -> None
+     | Some b ->
+       (if (((prefixLen = 24u5) && ((prefix >= 2147486208) && (prefix < 2147486464))) || (false)) then
+          (Some {bgpAd= b.bgpAd; lp= 1; aslen= b.aslen; med= b.med;comms= b.comms[6553600:= true];})
+        else
+          (if (((prefixLen = 20u5) && ((prefix >= 2147483648) && (prefix < 2147487744))) || (false)) then
+             None
+           else
+             (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;}))))
+  | (6~2) ->
+    let (prefix, prefixLen) = d in
+    let b = (transferBgpPol (fun prot b ->
+        (if (((prefixLen = 24u5) && ((prefix >= 3355590400) && (prefix < 3355590656)))) then
+           (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms;})
+         else
+           (if (isProtocol prot 3u2) then
+              (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms;})
+            else
+              None)))) x0
+    in
+    (match b with
+     | None -> None
+     | Some b ->
+       (if (((prefixLen = 24u5) && ((prefix >= 2147487232) && (prefix < 2147487488))) || (false)) then
+          (Some {bgpAd= b.bgpAd; lp= 1; aslen= b.aslen; med= b.med;comms= b.comms[6553607:= true];})
+        else
+          (if (((prefixLen = 24u5) && ((prefix >= 2147487488) && (prefix < 2147487744))) || (false)) then
+             (Some {bgpAd= b.bgpAd; lp= 101; aslen= b.aslen; med= b.med;comms= b.comms[6553606:= true];})
+           else
+             (if (((prefixLen = 20u5) && ((prefix >= 2147483648) && (prefix < 2147487744))) || (false)) then
+                None
+              else
+                (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))))
+
+  | (4~8) ->
+    let (prefix, prefixLen) = d in
+    let b = (transferBgpPol (fun prot b ->
+        (if (((prefixLen = 24u5) && ((prefix >= 3355596544) && (prefix < 3355596800)))) then
+           (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms;})
+         else
+           (if (isProtocol prot 3u2) then
+              (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms;})
+            else
+              None)))) x0
+    in
+    (match b with
+     | None -> None
+     | Some b ->
+       (if (((prefixLen = 20u5) && ((prefix >= 2147483648) && (prefix < 2147487744))) || (false)) then
+          None
+        else
+          (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+  | (5~11) ->
+    let (prefix, prefixLen) = d in
+    let b = (transferBgpPol (fun prot b ->
+        (if (((prefixLen = 24u5) && ((prefix >= 3355590656) && (prefix < 3355590912)))) then
+           (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms;})
+         else
+           (if (isProtocol prot 3u2) then
+              (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms;})
+            else
+              None)))) x0
+    in
+    (match b with
+     | None -> None
+     | Some b ->
+       (if (((prefixLen = 20u5) && ((prefix >= 2147483648) && (prefix < 2147487744))) || (false)) then
+          None
+        else
+          (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+  | (8~4) ->
+    let (prefix, prefixLen) = d in
+    let b = (transferBgpPol (fun prot b ->
+        (if (((prefixLen = 24u5) && ((prefix >= 3355594240) && (prefix < 3355594496)))) then
+           (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms;})
+         else
+           (if (isProtocol prot 3u2) then
+              (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms;})
+            else
+              None)))) x0
+    in
+    (match b with
+     | None -> None
+     | Some b ->
+       (if (((prefixLen = 24u5) && ((prefix >= 2147487232) && (prefix < 2147487488))) || (false)) then
+          (Some {bgpAd= b.bgpAd; lp= 1; aslen= b.aslen; med= b.med;comms= b.comms[6553614:= true];})
+        else
+          (if (((prefixLen = 20u5) && ((prefix >= 2147483648) && (prefix < 2147487744))) || (false)) then
+             None
+           else
+             (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;}))))
+  | (16~12) ->
+    let (prefix, prefixLen) = d in
+    let b = (transferBgpPol (fun prot b ->
+        (if (((prefixLen = 24u5) && ((prefix >= 3355583744) && (prefix < 3355584000)))) then
+           (if (((prefixLen = 20u5) && ((prefix >= 2147483648) && (prefix < 2147487744))) || (false)) then
+              None
+            else
+              (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms;}))
+         else
+           (if (isProtocol prot 3u2) then
+              (if (((prefixLen = 20u5) && ((prefix >= 2147483648) && (prefix < 2147487744))) || (false)) then
+                 None
+               else
+                 (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms;}))
+            else
+              None)))) x0
+    in
+    (match b with
+     | None -> None
+     | Some b ->
+       (if (((prefixLen = 20u5) && ((prefix >= 2147483648) && (prefix < 2147487744))) || (false)) then
+          None
+        else
+          (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+  | (14~15) ->
+    let (prefix, prefixLen) = d in
+    let b = (transferBgpPol (fun prot b ->
+        (if (((prefixLen = 24u5) && ((prefix >= 3355588096) && (prefix < 3355588352)))) then
+           (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms;})
+         else
+           (if (isProtocol prot 3u2) then
+              (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms;})
+            else
+              None)))) x0
+    in
+    (match b with
+     | None -> None
+     | Some b ->
+       (if (((prefixLen = 24u5) && ((prefix >= 2147483648) && (prefix < 2147483904))) || (false)) then
+          (Some {bgpAd= b.bgpAd; lp= 1; aslen= b.aslen; med= b.med;comms= b.comms[6553615:= true];})
+        else
+          (if (((prefixLen = 20u5) && ((prefix >= 2147483648) && (prefix < 2147487744))) || (false)) then
+             None
+           else
+             (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;}))))
+  | (7~9) ->
+    let (prefix, prefixLen) = d in
+    let b = (transferBgpPol (fun prot b ->
+        (if (((prefixLen = 24u5) && ((prefix >= 3355595520) && (prefix < 3355595776)))) then
+           (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms;})
+         else
+           (if (isProtocol prot 3u2) then
+              (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms;})
+            else
+              None)))) x0
+    in
+    (match b with
+     | None -> None
+     | Some b ->
+       (if (((prefixLen = 20u5) && ((prefix >= 2147483648) && (prefix < 2147487744))) || (false)) then
+          None
+        else
+          (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+  | (10~4) ->
+    let (prefix, prefixLen) = d in
+    let b = (transferBgpPol (fun prot b ->
+        (if (((prefixLen = 24u5) && ((prefix >= 3355589120) && (prefix < 3355589376)))) then
+           (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms;})
+         else
+           (if (isProtocol prot 3u2) then
+              (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms;})
+            else
+              None)))) x0
+    in
+    (match b with
+     | None -> None
+     | Some b ->
+       (if (((prefixLen = 20u5) && ((prefix >= 2147483648) && (prefix < 2147487744))) || (false)) then
+          None
+        else
+          (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+  | (13~3) ->
+    let (prefix, prefixLen) = d in
+    let b = (transferBgpPol (fun prot b ->
+        (if (((prefixLen = 24u5) && ((prefix >= 3355587840) && (prefix < 3355588096)))) then
+           (if (((prefixLen = 20u5) && ((prefix >= 2147483648) && (prefix < 2147487744))) || (false)) then
+              None
+            else
+              (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms;}))
+         else
+           (if (isProtocol prot 3u2) then
+              (if (((prefixLen = 20u5) && ((prefix >= 2147483648) && (prefix < 2147487744))) || (false)) then
+                 None
+               else
+                 (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms;}))
+            else
+              None)))) x0
+    in
+    b
+
+let trans edge x =
+  let o = transferOspf edge x.ospf in
+  let b = transferBgp edge x in
+  {connected=None; static=None; ospf=o; bgp=b; selected=None}
+
+let assert u x =
+  if (d=(3355592960, 24u5)) then
+    match x.selected with
+    | Some 3u2 ->
+      (match x.bgp with
+       | None -> false
+       | Some b -> b.aslen < 20)
+    | _ -> true
+  else
+    true
+
+(*
+{peerdominicanttrepublic_1=0,
+ usa=1,
+ nodeid50=2,
+ nodeid56=3,
+ dominica=4,
+ nodeid13=5,
+ puertottrico=6,
+ peernodeid45_9=7,
+ martinique=8,
+ guatemala=9,
+ venezuela=10,
+ dominicanttrepublic=11,
+ stttvincent=12,
+ jamaica=13,
+ antigua=14,
+ nodeid49=15,
+ peerstttmartin_14=16,
+ peerpanama_12=17,
+ nodeid41=18,
+ peerstttcroix_13=19,
+ nodeid45=20,
+ peernodeid13_4=21,
+ nodeid46=22,
+ peernodeid13_5=23,
+ nodeid44=24,
+ grenada=25,
+ nicaragua=26,
+ turksttandttcaicos=27,
+ nodeid7=28,
+ nodeid8=29,
+ elttsalvador=30,
+ curacao=31,
+ stttmartin=32,
+ nodeid9=33,
+ columbia=34,
+ honduras=35,
+ nodeid38=36,
+ nodeid39=37,
+ nodeid37=38,
+ nodeid0=39,
+ nodeid1=40,
+ stttcroix=41,
+ ecuador=42,
+ caymanttislands=43,
+ nodeid31=44,
+ stttkittstt&ttnevis=45,
+ nodeid34=46,
+ nodeid35=47,
+ guyana=48,
+ nodeid32=49,
+ suriname=50,
+ nodeid33=1,
+ guadeloupe=52,
+ peernodeid44_8=53,
+ panama=54,
+ bonaire=55,
+ belize=56,
+ nodeid27=57,
+ peernodeid46_10=58,
+ nodeid28=59,
+ nodeid69=60,
+ nodeid26=61,
+ nodeid29=62,
+ peernodeid69_11=63,
+ costattrica=64,
+ nodeid63=65,
+ nodeid62=66,
+ nodeid67=67,
+ peernodeid1_2=68,
+ nodeid24=69,
+ peernodeid1_3=70,
+ peernodeid31_6=71,
+ nodeid22=72,
+ nodeid60=73,
+ peernodeid39_7=74,
+ peerstttvincent_15=75,
+ mexico=76,
+ bahamas=77,
+ nodeid17=78,
+ peercuracao_0=79,
+ nodeid58=80,
+ nodeid14=81,
+ nodeid59=82,
+ nodeid15=83,
+ barbados=84,
+ trinidadttandtttobago=85}*)

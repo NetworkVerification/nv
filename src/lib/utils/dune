@@ -1,6 +1,6 @@
 (library
   (name nv_utils)
-  (public_name nv.utils)
+  (public_name nv_lib.utils)
   (libraries
     batteries
     lru-cache

@@ -7,6 +7,7 @@ open Nv_solution
 open Nv_lang.Syntax
 open Nv_interpreter
 open Nv_transformations
+open Nv_compile
 open Nv_compression.Abstraction
 open BuildAbstractNetwork
 open Nv_utils
@@ -45,17 +46,12 @@ let run_smt_func file cfg info net fs =
   in
   let srp, f = Renaming.alpha_convert_srp srp in
   let srp, fs =
-    if cfg.unbox then
-      begin
-        SmtUtils.smt_config.unboxing <- true;
-        let srp, f1 = Profile.time_profile "Unbox options" (fun () -> UnboxOptions.unbox_srp srp) in
-        let srp, f2 =
-          Profile.time_profile "Flattening Tuples" (fun () -> TupleFlatten.flatten_srp srp)
-        in
-        srp, (f2 :: f1 :: f :: fs)
-      end
-    else
-      srp, f :: fs
+    SmtUtils.smt_config.unboxing <- true;
+    let srp, f1 = Profile.time_profile "Unbox options" (fun () -> UnboxOptions.unbox_srp srp) in
+    let srp, f2 =
+      Profile.time_profile "Flattening Tuples" (fun () -> TupleFlatten.flatten_srp srp)
+    in
+    srp, (f2 :: f1 :: f :: fs)
   in
   let res = Smt.solveFunc info cfg.query (smt_query_file file) srp in
   match res with
@@ -73,18 +69,15 @@ let run_smt_func file cfg info net fs =
 
 let run_smt_classic file cfg info (net : Syntax.network) fs =
   let net, fs =
-    if cfg.unbox then
-      begin
-        SmtUtils.smt_config.unboxing <- true;
-        let net, f1 = Profile.time_profile "Unbox options" (fun () -> UnboxOptions.unbox_net net) in
-        let net, f2 =
-          Profile.time_profile "Flattening Tuples" (fun () -> TupleFlatten.flatten_net net)
-        in
-        net, (f2 :: f1 :: fs)
-      end
-    else net, fs
+    SmtUtils.smt_config.unboxing <- true;
+    let net, f1 = Profile.time_profile "Unbox options" (fun () -> UnboxOptions.unbox_net net) in
+    let net, f2 =
+      Profile.time_profile "Flattening Tuples" (fun () -> TupleFlatten.flatten_net net)
+    in
+    net, (f2 :: f1 :: fs)
   in
-
+  (* let net = {net with trans = InterpPartial.interp_partial net.trans} in
+   * Printf.printf "%s\n" (Printing.network_to_string net); *)
   let net, f = Renaming.alpha_convert_net net in (*TODO: why are we renaming here?*)
   let fs = f :: fs in
 
@@ -170,6 +163,10 @@ let run_smt_classic file cfg info (net : Syntax.network) fs =
 ;;
 
 let run_smt file cfg info (net : Syntax.network) fs =
+  (if cfg.finite_arith then
+     SmtUtils.smt_config.infinite_arith <- false);
+  (if cfg.smt_parallel then
+     SmtUtils.smt_config.parallel <- true);
   if cfg.func then
     run_smt_func file cfg info net fs
   else
@@ -193,11 +190,12 @@ let run_test cfg info net fs =
   | Some sol -> (CounterExample sol, fs)
 
 let run_simulator cfg _ net fs =
+  let net = partialEvalNet net in
   try
     let solution, q =
       match cfg.bound with
       | None ->
-        ( Srp.simulate_net net
+        (Profile.time_profile "Interpreted simulation" (fun () -> Srp.simulate_net net)
         , QueueSet.empty Pervasives.compare )
       | Some b -> Srp.simulate_net_bound net b
     in
@@ -222,6 +220,21 @@ let run_simulator cfg _ net fs =
   with Srp.Require_false ->
     Console.error "required conditions not satisfied"
 
+(** Native simulator - compiles SRP to OCaml *)
+let run_compiled file _ _ net fs =
+   let path = Filename.remove_extension file in
+   let name = Filename.basename path in
+   let name = String.mapi (fun i c -> if i = 0 then Char.uppercase_ascii c else c) name in
+   let newpath = name in
+   let solution = Loader.simulate newpath net in
+     match solution.assertions with
+    | None -> Success (Some solution), fs
+    | Some m ->
+      if AdjGraph.VertexMap.exists (fun _ b -> not b) m then
+        CounterExample solution, fs
+      else
+        Success (Some solution), fs
+
 let compress file info net cfg fs networkOp =
   (* Printf.printf "Number of concrete edges:%d\n" (List.length (oget (get_edges decls))); *)
   let open Nv_compression in
@@ -231,7 +244,6 @@ let compress file info net cfg fs networkOp =
 
   FailuresAbstraction.refinement_breadth := cfg.depth;
   FailuresAbstraction.counterexample_refinement_breadth := cfg.depth;
-  let net, _ = OptimizeBranches.optimize_net net in (* The _ should match the identity function *)
 
   let rec loop (finit: AbstractionMap.abstractionMap)
       (f: AbstractionMap.abstractionMap)
@@ -282,19 +294,6 @@ let compress file info net cfg fs networkOp =
        let n = AdjGraph.nb_vertex slice.net.graph in
        let sources =
          Slicing.findRelevantNodes (Slicing.partialEvalOverNodes n (oget slice.net.assertion)) in
-       (* partially evaluate the functions of the network. *)
-       (* TODO, this should be done outside of this loop, maybe just redone here *)
-       (* Printf.printf "Just before opt\n"; *)
-       (* let optTrans = OptimizeBranches.optimizeExp slice.net.trans in *)
-       (* Printf.printf "trans:%s\n" (Printing.exp_to_string slice.net.trans); *)
-       (* Printf.printf "trans\n"; *)
-       (* (Visitors.iter_exp (fun e -> *)
-       (*      match e.e with *)
-       (*      | EMatch (e, bs) -> *)
-       (*         branchSize bs *)
-       (*      | _ -> ()) optTrans); *)
-       (* flush stdout; *)
-       (* failwith "stop"; *)
        let transMap =
          Profile.time_profile "partial eval trans"
            (fun () ->
@@ -326,8 +325,7 @@ let checkPolicy info cfg file ds =
   let net = Slicing.createNetwork ds in
   SmtCheckProps.checkMonotonicity info cfg.query (smt_query_file file) net
 
-let parse_input (args : string array)
-  : Cmdline.t * Console.info * string * Syntax.network * ((Solution.t -> Solution.t) list) =
+let parse_input (args : string array) =
   let cfg, rest = argparse default "nv" args in
   Cmdline.set_cfg cfg ;
   Cmdline.update_cfg_dependencies ();
@@ -337,11 +335,11 @@ let parse_input (args : string array)
   let ds, info = Input.parse file in (* Parse nv file *)
   let decls = ds in
   (* print_endline @@ Printing.declarations_to_string decls ; *)
-  let decls = ToEdge.toEdge_decl decls :: decls in
+  let decls = (ToEdge.toEdge_decl decls) :: decls in
   let decls = Typing.infer_declarations info decls in
   Typing.check_annot_decls decls ;
   Wellformed.check info decls ;
-  let decls, f = RecordUnrolling.unroll_declarations decls in (* Unroll records done first *)
+  let decls, f = RecordUnrolling.unroll_declarations decls in
   let fs = [f] in
   let decls,fs = (* inlining definitions *)
     if cfg.inline then
@@ -366,17 +364,18 @@ let parse_input (args : string array)
       (decls, f :: fs)
     else decls, fs
   in
-  let decls, fs =
-    if cfg.smt then
-      let decls, f = UnboxEdges.unbox_declarations decls in
-      decls, f :: fs
-    else
-      decls, fs
-  in
   let net = Slicing.createNetwork decls in (* Create something of type network *)
-  let net =
-    if cfg.link_failures > 0 then
-      Failures.buildFailuresNet net cfg.link_failures
-    else net
-  in
-  (cfg, info, file, net, fs)
+    let net =
+      if cfg.link_failures > 0 then
+        Failures.buildFailuresNet net cfg.link_failures
+      else net
+    in
+  let net, fs =
+    if cfg.smt then
+      let net, f = UnboxEdges.unbox_net net in
+      net, f :: fs
+    else
+      net, fs
+    in
+   (* let net, _ = OptimizeBranches.optimize_net net in (\* The _ should match the identity function *\) *)
+   (cfg, info, file, net, fs)

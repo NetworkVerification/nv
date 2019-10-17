@@ -58,6 +58,24 @@ let smt_test filename expected: test =
   }
 ;;
 
+let bv_test filename expected: test =
+  {
+    testname = filename ^ "_bv";
+    args = Array.of_list ["nv"; "-m"; "-unbox"; "-finite-arith"; filename_prefix ^ filename];
+    testfun = run_smt;
+    expected;
+  }
+;;
+
+let parallel_test filename expected: test =
+  {
+    testname = filename ^ "_parallel";
+    args = Array.of_list ["nv"; "-m"; "-unbox"; "-smt-parallel"; filename_prefix ^ filename];
+    testfun = run_smt;
+    expected;
+  }
+;;
+
 let unboxed_test filename expected: test =
   {
     testname = filename ^ "_unboxed";
@@ -81,6 +99,15 @@ let slicing_test filename expected: test =
     testname = filename ^ "_slicing";
     args = Array.of_list ["nv"; "-m"; "-slicing"; filename_prefix ^ filename];
     testfun = run_smt;
+    expected;
+  }
+;;
+
+let compiler_test filename expected: test =
+  {
+    testname = filename ^ "_compiled";
+    args = Array.of_list ["nv"; "-compile"; filename_prefix ^ filename];
+    testfun = (fun _ cfg info decls fs -> run_compiled (filename_prefix ^ filename) cfg info decls fs);
     expected;
   }
 ;;
@@ -117,37 +144,34 @@ let simulator_tests =
     ]
 ;;
 
-let smt_tests =
-  List.map (fun (f,b) -> smt_test f b)
+let compiler_tests =
+  match Sys.getenv_opt "TRAVIS" with
+  | Some "true" -> [] (* These tests are too fragile for travis atm *)
+  | _ ->
+  List.map (fun (f,b) -> compiler_test f b)
     [
-      ("examples/debugging/debug-combine.nv", true);
-      (* Takes forever? *)
-      (* ("examples/batfish.nv", false); *)
+      ("examples/batfish.nv", false);
       ("examples/diamond.nv", true);
-      ("examples/diamond-ospf.nv", true);
       ("examples/env.nv", true);
-      ("examples/failure.nv", false);
-      ("examples/failure2.nv", false);
-      (* ("examples/fattree.nv", true); *)
+      ("examples/failure.nv", true);
+      (* ("examples/failure2.nv", true); *) (* TODO: Enable *)
+      ("examples/fattree.nv", true);
       ("examples/map.nv", true);
       ("examples/map2.nv", false);
-      ("examples/minesweeper.nv", false);
       ("examples/property.nv", true);
       ("examples/set.nv", true);
       ("examples/simple.nv", true);
-      ("examples/symbolic.nv", false);
-      ("examples/symbolic2.nv", false);
+      ("examples/symbolic.nv", true);
+      ("examples/symbolic2.nv", true);
       ("examples/maprecord.nv", true);
       ("examples/maprecordpattern.nv", true);
       ("examples/maprecord2.nv", true);
-      ("examples/record.nv", true);
-      ("examples/recordwith.nv", true);
 
-      ("examples/symbolic3.nv", false);
-      ("examples/symbolicDecls.nv", false);
-      ("examples/ospf-areas.nv", true);
+      ("examples/symbolic3.nv", true);
+      ("examples/symbolicDecls.nv", true);
     ]
 ;;
+
 
 let unboxed_tests =
   List.map (fun (f,b) -> unboxed_test f b)
@@ -242,6 +266,20 @@ let slicing_tests =
     ]
 ;;
 
+let bv_tests =
+  List.map (fun (f,b) -> bv_test f b)
+    [
+      ("examples/bitvectors/fattree125-bv-single.nv", true);
+    ]
+;;
+
+let parallel_tests =
+  List.map (fun (f,b) -> parallel_test f b)
+    [
+      ("examples/bitvectors/fattree125-bv-single.nv", true);
+    ]
+;;
+
 let make_ounit_test test =
   test.testname >:: fun _ ->
     let cfg, info, file, decls, fs = parse_input test.args in
@@ -251,12 +289,15 @@ let make_ounit_test test =
 
 (* Name the test cases and group them together *)
 let tests =
+  Printf.printf "%s\n" (Unix.getcwd ());
   "Test_end_to_end"
   >:::
   List.map make_ounit_test @@
   simulator_tests @
-  smt_tests @
   unboxed_tests @
   hiding_tests @
   slicing_tests @
+  bv_tests @
+  parallel_tests @
+  compiler_tests @
   [] (* So we can easily comment out the last actual test *)

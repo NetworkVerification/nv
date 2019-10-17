@@ -94,12 +94,12 @@ and interp_op env ty op es =
     if n1 < n2 then vbool true else vbool false
   | NLeq, [{v= VNode n1}; {v= VNode n2}] ->
     if n1 <= n2 then vbool true else vbool false
-  | TGet (size, lo, hi), [{v= VTuple elts}] ->
-    assert (List.length elts = size) ; (* Sanity check *)
+  | TGet (_, lo, hi), [{v= VTuple elts}] ->
+    (* assert (List.length elts = size) ; (\* Sanity check *\) *)
     if lo = hi then List.nth elts lo
     else vtuple (elts |> BatList.drop lo  |> BatList.take (hi - lo + 1))
-  | TSet (size, lo, hi), [{v= VTuple elts}; v] ->
-    assert (List.length elts = size) ; (* Sanity check *)
+  | TSet (_, lo, hi), [{v= VTuple elts}; v] ->
+    (* assert (List.length elts = size) ; (\* Sanity check *\) *)
     begin
       if lo = hi then
         vtuple (BatList.modify_at lo (fun _ -> v) elts)
@@ -107,7 +107,7 @@ and interp_op env ty op es =
         match v.v with
         | VTuple velts ->
           let hd, rest = BatList.takedrop lo elts in
-          let _, tl = BatList.takedrop (hi - lo + 1) rest in
+          let tl = BatList.drop (hi - lo + 1) rest in
           vtuple (hd @ velts @ tl)
         | _ -> failwith "Bad TSet"
     end
@@ -166,7 +166,7 @@ and interp_op env ty op es =
       ; {v= VMap m} ] ) ->
     let seen = BatSet.PSet.singleton ~cmp:Var.compare f2.arg in
     let env = build_env c_env2 (Syntax.free seen f2.body) in
-    (* FIXME: Do we need to do something with the env for f1? *)
+    (* FIXME: Do we need to do something with the env for f1? use it for bddf I believe. *)
     let mtbdd =
       match ExpMap.Exceptionless.find f1.body !bddfunc_cache with
       | None -> (

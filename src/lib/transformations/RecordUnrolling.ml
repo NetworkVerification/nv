@@ -57,4 +57,6 @@ let make_toplevel (rtys : ty StringMap.t list) (toplevel_transformer : 'a Transf
 ;;
 
 let unroll_declarations decls = make_toplevel (get_record_types decls) Transformers.transform_declarations decls
-let unroll_net net = make_toplevel net.utys Transformers.transform_network net
+let unroll_net net =
+  let rtys = net.utys |> Syntax.get_record_types_from_utys  in
+  make_toplevel rtys Transformers.transform_network net

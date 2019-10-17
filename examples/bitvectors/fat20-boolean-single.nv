@@ -1,0 +1,8 @@
+include "../generic-algebras/boolean-distance-single.nv"
+include "../generic-topologies/fattree500.nv"
+
+let assert u x =
+  match x with
+  | None -> false
+  | Some (x0,x1,x2) ->
+    ! (x0 && x1 && x2)
