@@ -1,7 +1,6 @@
 (* Partitioning utilities and partition interface definitions *)
 open Batteries
 open Nv_datastructures
-open Nv_utils.PrimitiveCollections
 open Nv_lang.Syntax
 
 (* Return true if an edge is cross-partition, given a partition function *)
@@ -27,7 +26,7 @@ type onetwork =
     assertion       : exp option;
     symbolics       : (var * ty_or_exp) list;
     defs            : (var * ty option * exp) list;
-    utys            : (ty StringMap.t) list;
+    utys            : (var * ty) list;
     requires        : exp list;
     ograph          : OpenAdjGraph.t
   }

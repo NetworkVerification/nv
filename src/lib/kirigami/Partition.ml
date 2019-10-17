@@ -20,7 +20,7 @@ type onetwork =
     assertion       : exp option;
     symbolics       : (var * ty_or_exp) list;
     defs            : (var * ty option * exp) list;
-    utys            : (ty StringMap.t) list;
+    utys            : (var * ty) list;
     requires        : exp list;
     ograph          : OpenAdjGraph.t
   }
