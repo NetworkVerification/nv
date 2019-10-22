@@ -200,7 +200,7 @@ let exp_transformer (recursors : Transformers.recursors) e =
           Some (eop (TSet (size, lo, hi)) (List.map flatten_exp es))
       | Eq ->
         (match es with
-          | [e1; e2] when (match oget e.ety with | TTuple _ -> true | _ -> false) ->
+         | [e1; e2] when (match oget e1.ety with | TTuple _ -> true | _ -> false) ->
             let e1 = flatten_exp e1 in
             let e2 = flatten_exp e2 in
             (match tupleToListSafe e1, tupleToListSafe e2 with

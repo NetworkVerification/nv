@@ -1,0 +1,18 @@
+type attribute = bool
+
+let nodes = 2
+
+let edges = {0=1;}
+
+symbolic d : (int, int)
+require (d = (0,0) || d = (1, 1))
+
+let init n =
+  let (a,b) = d in
+  a = b
+
+let trans n x = x
+
+let merge n x y = x || y
+
+let assert n x = x

@@ -77,8 +77,8 @@ let run_smt_classic file cfg info (net : Syntax.network) fs =
     in
     net, (f2 :: f1 :: fs)
   in
-  (* let net = {net with trans = InterpPartial.interp_partial net.trans} in
-   * Printf.printf "%s\n" (Printing.network_to_string net); *)
+  (* let net = {net with trans = InterpPartial.interp_partial net.trans} in*)
+  (* Printf.printf "%s\n" (Printing.network_to_string net); *)
   let net, f = Renaming.alpha_convert_net net in (*TODO: why are we renaming here?*)
   let fs = f :: fs in
 
