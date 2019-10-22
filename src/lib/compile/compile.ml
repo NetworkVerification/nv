@@ -350,6 +350,7 @@ and map_to_ocaml_string op es ty =
            | _ -> failwith "predicate is not syntactically a function, cannot compile"
          in
          (* NOTE: for now considering that pred is closed (no free variables), as in the interpreter. FIXME. *)
+         (* TODO: use an array from idx to expressions instead and compile BDD dynamically to account for free vars*)
          let bdd_id =
            match Collections.ExpMap.Exceptionless.find pred.body !bddfunc_cache with
            | None ->

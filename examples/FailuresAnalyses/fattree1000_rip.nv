@@ -1,0 +1,14 @@
+include "../generic-topologies/fattree1000.nv"
+include "../generic-algebras/rip.nv"
+
+type attribute = option[int]
+
+let trans e x = transRip x
+
+let merge u x y = mergeRip x y
+
+let init u =
+  if (u = 0n) then
+     Some 0
+  else
+     None

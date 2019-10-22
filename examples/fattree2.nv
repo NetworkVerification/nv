@@ -1,9 +1,0 @@
-include "generic-topologies/fattree20-2.nv"
-include "generic-algebras/distance-allpairs.nv"
-
-let assert node x =
-  if node = 39n then
-  match x[0n] with
-  | Some _ -> true
-  | _ -> false
-  else true

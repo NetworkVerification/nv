@@ -387,24 +387,27 @@ and interp_op_partial env ty op es =
             | _ -> vmap (BddMap.merge ~op_key:(f.body, env) f_lifted m1 m2)
           )
       | ( MMapFilter
-        , [ {v= VClosure (_, f1)}
+        , [ {v= VClosure (c_env1, f1)}
           ; {v= VClosure (c_env2, f2)}
           ; {v= VMap m} ] ) ->
         let seen = BatSet.PSet.singleton ~cmp:Var.compare f2.arg in
         let env = build_env c_env2 (Syntax.free seen f2.body) in
+        let seen1 = Syntax.free (BatSet.PSet.singleton ~cmp:Var.compare f1.arg) f1.body in
+        let usedValEnv = Env.filter c_env1.value (fun x _ -> BatSet.PSet.mem x seen1) in
+        let lookupVal = (f1.body, usedValEnv) in
         let mtbdd =
-          match ExpMap.Exceptionless.find f1.body !bddfunc_cache with
+          match ExpEnvMap.Exceptionless.find lookupVal !bddfunc_cache with
           | None -> (
-              let bddf = BddFunc.create_value (Nv_utils.OCamlUtils.oget f1.argty) in
-              let env = Env.update Env.empty f1.arg bddf in
-              let bddf = BddFunc.eval env f1.body in
-              match bddf with
-              | BBool bdd ->
-                let mtbdd = BddFunc.wrap_mtbdd bdd in
-                bddfunc_cache :=
-                  ExpMap.add f1.body mtbdd !bddfunc_cache ;
-                mtbdd
-              | _ -> failwith "impossible" )
+            let bddf = BddFunc.create_value (Nv_utils.OCamlUtils.oget f1.argty) in
+            let env = Env.update (Env.map usedValEnv (fun v -> BddFunc.eval_value v)) f1.arg bddf in
+            let bddf = BddFunc.eval env f1.body in
+            match bddf with
+            | BBool bdd ->
+              let mtbdd = BddFunc.wrap_mtbdd bdd in
+              bddfunc_cache :=
+                ExpEnvMap.add lookupVal mtbdd !bddfunc_cache ;
+              mtbdd
+            | _ -> failwith "impossible" )
           | Some bddf -> bddf
         in
         let f v = apply c_env2 f2 v in
