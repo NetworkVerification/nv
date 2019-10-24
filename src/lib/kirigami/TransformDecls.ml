@@ -29,7 +29,7 @@ let add_init_branch (aux: Vertex.t) (exp: Syntax.exp) (b: branches) : branches =
  * The expression that is passed in should be a function which has
  * a single parameter of type tnode.
  *)
-let transform_init (e: Syntax.exp) (ograph: OpenAdjGraph.t) ?(intf=EdgeMap.empty) : Syntax.exp =
+let transform_init (e: Syntax.exp) (interfaces: OpenAdjGraph.interfaces) ?(intf=EdgeMap.empty) : Syntax.exp =
   (* check that e has the right format *)
   if not (is_argty_func e TNode) then 
     failwith "Tried to transform init for partitioning, but the type is not (TNode -> A)!"
@@ -43,7 +43,7 @@ let transform_init (e: Syntax.exp) (ograph: OpenAdjGraph.t) ?(intf=EdgeMap.empty
       | Some hyp -> add_init_branch k (e_val hyp)
       | None -> add_init_branch k (eapp e (e_val (vnode v)))
     in
-    let { inputs; outputs;_ } : OpenAdjGraph.t = ograph in
+    let { inputs; outputs;_ } : OpenAdjGraph.interfaces = interfaces in
     (* the default branch runs (original_init node), where original_init = e *)
     let default_branch = addBranch PWild (eapp e (evar node_var)) emptyBranch in
     let input_branches = VertexMap.fold init_branch inputs default_branch in
@@ -57,13 +57,13 @@ let transform_init (e: Syntax.exp) (ograph: OpenAdjGraph.t) ?(intf=EdgeMap.empty
  * The expression that is passed in should be a function which has
  * two parameters of types tedge and attribute
  *)
-let transform_trans (e: Syntax.exp) (ograph: OpenAdjGraph.t) : Syntax.exp =
+let transform_trans (e: Syntax.exp) (intf: OpenAdjGraph.interfaces) : Syntax.exp =
   if not (is_argty_func e TEdge) then 
     failwith "Tried to transform trans for partitioning, but the type is not (TEdge -> A -> A)!"
   else
     (* new function argument *)
     let edge_var = Var.create "edge" in
-    let { inputs; outputs; _ } : OpenAdjGraph.t = ograph in
+    let { inputs; outputs; _ } : OpenAdjGraph.interfaces = intf in
     let in_trans_branch k v b = (* branches for in~base edges: identity function *)
       let edge_pat = exp_to_pattern (e_val (vedge (k, v))) in
       (* return the identity function *)
@@ -74,7 +74,7 @@ let transform_trans (e: Syntax.exp) (ograph: OpenAdjGraph.t) : Syntax.exp =
     let out_trans_branch k v b = (* branches for base~out edges: perform original trans for full edge *)
       let edge_pat = exp_to_pattern (e_val (vedge (v, k))) in
       (* recover the old edge from the OpenAdjGraph's broken edges *)
-      let old_edge = OpenAdjGraph.broken_edge ograph k in
+      let old_edge = OpenAdjGraph.broken_edge intf k in
       let edge_val = e_val (vedge old_edge) in
       (* call the original expression using the old edge *)
       let out_exp = (eapp e edge_val) in
@@ -96,12 +96,12 @@ let merge_branch (input: bool) (n: Vertex.t) (_: Vertex.t) (b: branches) : branc
   let merge_exp = (lams [a1; a2] (if input then (evar a1) else (evar a2))) in 
   addBranch node_pat merge_exp b
 
-let transform_merge (e: Syntax.exp) (ograph: OpenAdjGraph.t) : Syntax.exp =
+let transform_merge (e: Syntax.exp) (intf: OpenAdjGraph.interfaces) : Syntax.exp =
   if not (is_argty_func e TNode) then
     failwith "Tried to transform merge for partitioning, but the type is not (TNode -> A -> A -> A)!"
   else
     let node_var = Var.create "node" in
-    let OpenAdjGraph.{ inputs; outputs; _ } = ograph in
+    let OpenAdjGraph.{ inputs; outputs; _ } = intf in
     let default_branch =
       addBranch PWild e emptyBranch
     in

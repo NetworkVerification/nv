@@ -17,19 +17,10 @@ val is_cross_partition : (AdjGraph.Vertex.t -> int) -> AdjGraph.Edge.t -> bool
 
 (* Graph transformations *)
 (* conversion of Syntax.network to opened network *)
-type onetwork =
-  {
-    attr_type       : ty;
-    init            : exp;
-    trans           : exp;
-    merge           : exp;
-    assertion       : exp option;
-    symbolics       : (var * ty_or_exp) list;
-    defs            : (var * ty option * exp) list;
-    utys            : (var * ty) list;
-    requires        : exp list;
-    ograph          : OpenAdjGraph.t
-  }
+type onetwork = {
+  network         : network;
+  interfaces      : OpenAdjGraph.interfaces;
+}
 
 (** Convert a Syntax.network to an onetwork *)
 val open_network : network -> onetwork

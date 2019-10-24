@@ -13,16 +13,8 @@ let is_cross_partition (f: AdjGraph.Vertex.t -> 'a) edge =
  *)
 type onetwork =
   {
-    attr_type       : ty;
-    init            : exp;
-    trans           : exp;
-    merge           : exp;
-    assertion       : exp option;
-    symbolics       : (var * ty_or_exp) list;
-    defs            : (var * ty option * exp) list;
-    utys            : (var * ty) list;
-    requires        : exp list;
-    ograph          : OpenAdjGraph.t
+    network         : network;
+    interfaces      : OpenAdjGraph.interfaces;
   }
 
 let partition_interface (partition: exp option) (interface: exp option) (graph: AdjGraph.t) : value option AdjGraph.EdgeMap.t =
@@ -51,18 +43,23 @@ let partition_interface (partition: exp option) (interface: exp option) (graph: 
 let open_network (net: network) : onetwork =
   let { attr_type; init; trans; merge; assertion; partition; interface; symbolics; defs; utys; requires; graph } : network = net
   in
-  let ograph = OpenAdjGraph.from_graph graph in
   (* TODO: generate interface set, update ograph *)
   let part_int = partition_interface partition interface graph in
+  let (graph, interfaces) = OpenAdjGraph.partition_graph graph (OpenAdjGraph.intf_empty) AdjGraph.EdgeSet.empty in
   {
+    network = {
     attr_type;
-    init = transform_init init ograph ~intf:part_int; (*TODO: use actual hypotheses from InterfaceSet *)
-    trans = transform_trans trans ograph;
-    merge = transform_merge merge ograph;
+    init = transform_init init interfaces ~intf:part_int;
+    trans = transform_trans trans interfaces;
+    merge = transform_merge merge interfaces;
+    partition = None;
+    interface = None;
     assertion;
     symbolics;
     defs;
     utys;
     requires;
-    ograph;
+    graph;
+    };
+    interfaces
   }
