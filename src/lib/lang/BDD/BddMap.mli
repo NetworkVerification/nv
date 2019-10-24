@@ -17,6 +17,15 @@ val map_when :
   -> t
   -> t
 
+val map_ite :
+  op_key1:exp * value BatSet.PSet.t
+  -> op_key2:exp * value BatSet.PSet.t
+  -> bool Mtbdd.t
+  -> (value -> value)
+  -> (value -> value)
+  -> t
+  -> t
+
 val merge :
   ?opt:value * value * value * value
   -> op_key:exp * value BatSet.PSet.t

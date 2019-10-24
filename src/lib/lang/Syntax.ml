@@ -58,6 +58,7 @@ type op =
   | MSet
   | MMap
   | MMapFilter
+  | MMapIte
   | MMerge
   | MFoldNode
   | MFoldEdge
@@ -702,6 +703,7 @@ and hash_op op =
   | MFoldEdge -> 16
   | TGet (n1, n2, n3) -> 17 + n1 + n2 + n3 + 256 * 5
   | TSet (n1, n2, n3) -> 17 + n1 + n2 + n3 + 256 * 6
+  | MMapIte -> 18
 (* hashconsing information/tables *)
 
 let meta_v : (v, value) Hashcons.meta =
@@ -748,6 +750,7 @@ let arity op =
   | MSet -> 3
   | MMap -> 2
   | MMapFilter -> 3
+  | MMapIte -> 4
   | MMerge -> 3
   | MFoldNode -> 3
   | MFoldEdge -> 3

@@ -49,6 +49,7 @@ type op =
   | MSet
   | MMap
   | MMapFilter
+  | MMapIte
   | MMerge
   | MFoldNode
   | MFoldEdge
