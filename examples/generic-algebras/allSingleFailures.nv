@@ -1,8 +1,8 @@
 (* Compute all possible single link failures by using a map of edges to map link failures to routes. *)
 
-let transFailure transProt e x =
-  let x = mapIf (fun e1 -> e = e1) (fun v -> None) x in
+let transFailure transProt failedProt e x =
+  let x = mapIf (fun e1 -> e = e1) (fun v -> failedProt) x in
   mapIf (fun e1 -> !(e=e1)) (fun v -> transProt e v) x
 
-let mergeFailure mergeProt x y =
-  combine (fun v1 v2 -> mergeProt v1 v2) x y (Some None) None (Some None) None (* I think those extra args are right? *)
+let mergeFailure mergeProt failedProt x y =
+  combine (fun v1 v2 -> mergeProt v1 v2) x y (Some failedProt) None (Some failedProt) None (* I think those extra args are right? *)
