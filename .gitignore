@@ -26,12 +26,13 @@ setup.log
 *.DS_Store
 
 # NV Query output
-*.nv-*-query
+*.nv-.*-query
 
 # Temporary testing files
 output/*
 testfiles/*
 tmp.txt
+*.~
 
 # NV executable
 nv
