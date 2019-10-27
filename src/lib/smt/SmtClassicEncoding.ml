@@ -4,6 +4,7 @@ open Syntax
 open Collections
 open SmtUtils
 open SmtLang
+open Nv_interpreter
 open Nv_utils.OCamlUtils
 
 module type ClassicEncodingSig = SmtEncodingSigs.Encoding with type network_type = Syntax.network
@@ -50,28 +51,71 @@ struct
     in
     loop merge []
 
-  let encode_z3_trans str env trans =
-    let rec loop trans acc =
-      match trans.e with
-      | EFun {arg= x; argty= Some xty; body= exp; _} ->
+  (* let encode_z3_trans str env trans =
+   *   let rec loop trans acc =
+   *     match trans.e with
+   *     | EFun {arg= x; argty= Some xty; body= exp; _} ->
+   *       (match exp.e with
+   *        | EFun _ ->
+   *          loop exp ((x,xty) :: acc)
+   *        | _ ->
+   *          let xstr = BatList.rev_map (fun (x,xty) ->
+   *              mk_constant env (create_vars env str x) (SmtUtils.ty_to_sort xty)
+   *                ~cdescr:"transfer x argument" ~cloc:trans.espan)
+   *              ((x,xty) :: acc) in
+   *          let names = create_strings (Printf.sprintf "%s-result" str) (oget exp.ety) in
+   *          let results =
+   *            lift2 (mk_constant env) names (oget exp.ety |> ty_to_sorts) in
+   *          let es = encode_exp_z3 str env exp in
+   *          ignore(lift2 (fun e result ->
+   *              SmtUtils.add_constraint env (mk_term (mk_eq result.t e.t))) es results);
+   *          (results, xstr))
+   *     | _ -> failwith "internal error"
+   *   in
+   *   loop trans [] *)
+
+  let rec encode_z3_trans_aux trans acc =
+    match trans.e with
+    | EFun {arg= x; argty= Some xty; body= exp; _} ->
+      (match exp.e with
+       | EFun _ ->
+         encode_z3_trans_aux exp ((x,xty) :: acc)
+       | _ ->
+         (BatList.rev_map (fun (x, xty) ->
+              (x, SmtUtils.ty_to_sort xty)) ((x, xty) :: acc), exp))
+    | _ -> failwith "internal error"
+
+  let encode_z3_trans trans =
+    (* get edge argument*)
+    let ex1,ex2,ex1ty,ex2ty,trans = match trans.e with
+      | EFun {arg= ex1; argty= Some ex1ty; body= exp; _} ->
         (match exp.e with
-         | EFun _ ->
-           loop exp ((x,xty) :: acc)
-         | _ ->
-           let xstr = BatList.rev_map (fun (x,xty) ->
-               mk_constant env (create_vars env str x) (SmtUtils.ty_to_sort xty)
-                 ~cdescr:"transfer x argument" ~cloc:trans.espan)
-               ((x,xty) :: acc) in
-           let names = create_strings (Printf.sprintf "%s-result" str) (oget exp.ety) in
-           let results =
-             lift2 (mk_constant env) names (oget exp.ety |> ty_to_sorts) in
-           let es = encode_exp_z3 str env exp in
-           ignore(lift2 (fun e result ->
-               SmtUtils.add_constraint env (mk_term (mk_eq result.t e.t))) es results);
-           (results, xstr))
-      | _ -> failwith "internal error"
+         | EFun {arg= ex2; argty= Some ex2ty; body= exp; _} ->
+           ex1,ex2,ex1ty,ex2ty,exp
+         | _ -> failwith "Expected a function")
+      | _ -> failwith "Expected a function"
     in
-    loop trans []
+    let xs, exp = encode_z3_trans_aux trans [] in
+    let expty = oget exp.ety in
+    let expsorts = ty_to_sorts expty in
+    (* construct new transfer function as a partial function of the edge*)
+    let exp = aexp(efun (funcFull ex2 (Some ex2ty) (Some ex2ty) exp), Some (TArrow(ex2ty,expty)), exp.espan) in
+    let exp = aexp(efun (funcFull ex1 (Some ex1ty) (Some ex1ty) exp), Some (TArrow(ex1ty,expty)), exp.espan) in
+    fun edge str env ->
+    let exp = InterpPartial.interp_partial_fun exp edge in
+    (* Printf.printf "%s\n" (Printing.exp_to_string exp);
+     * failwith "bla"; *)
+    let xstr = BatList.map (fun (x,xsort) ->
+                   mk_constant env (create_vars env str x) xsort
+                     ~cdescr:"transfer x argument" ~cloc:trans.espan) xs
+    in
+    let names = create_strings (Printf.sprintf "%s-result" str) expty in
+    let results =
+      lift2 (mk_constant env) names expsorts in
+    let es = encode_exp_z3 str env exp in
+    ignore(lift2 (fun e result ->
+               SmtUtils.add_constraint env (mk_term (mk_eq result.t e.t))) es results);
+    (results, xstr)
 
   let encode_z3_init str env e =
     (* Printf.printf "%s\n" (Printing.exp_to_string e); *)
@@ -108,44 +152,33 @@ struct
     loop assertion []
 
   let encode_z3 (net: Syntax.network) : SmtUtils.smt_env =
-    let open Nv_interpreter in
     let env = init_solver net.symbolics ~labels:[] in
     let einit = net.init in
     let eassert = net.assertion in
     let emerge = net.merge in
     let etrans = net.trans in
     let nodes = (AdjGraph.nb_vertex net.graph) in
-    let edges = (AdjGraph.edges net.graph) in
     let aty = net.attr_type in
-    (* map each node to the init result variable *)
-    let init_map = ref AdjGraph.VertexMap.empty in
-    for i = 0 to nodes - 1 do
-      let einit_i = Nv_interpreter.InterpPartial.interp_partial_fun einit [vnode i] in
-      (* Printf.printf "%s\n" (Printing.exp_to_string einit); *)
-      let init =
-        encode_z3_init (Printf.sprintf "init-%d" i) env einit_i
-      in
-      (* add_constraint env (mk_term (mk_eq n.t (mk_int i))); *)
-      init_map := AdjGraph.VertexMap.add i init !init_map
-    done ;
-
     (* Map each edge to transfer function result *)
 
     (* incoming_map is a map from vertices to list of incoming edges *)
-    let incoming_map = ref AdjGraph.VertexMap.empty in
+    (* let incoming_map = ref AdjGraph.VertexMap.empty in *)
+    let incoming_map = Array.make nodes [] in
     (* trans_map maps each edge to the variable that holds the result *)
     let trans_map = ref AdjGraph.EdgeMap.empty in
     (* trans_input_map maps each edge to the incoming message variable *)
     let trans_input_map = ref AdjGraph.EdgeMap.empty in
-    BatList.iter
+    let enc_z3_trans = encode_z3_trans etrans in
+    AdjGraph.iter_edges_e
       (fun (i, j) ->
-         ( try
-             let idxs = AdjGraph.VertexMap.find j !incoming_map in
-             incoming_map :=
-               AdjGraph.VertexMap.add j ((i, j) :: idxs) !incoming_map
-           with _ ->
-             incoming_map :=
-               AdjGraph.VertexMap.add j [(i, j)] !incoming_map ) ;
+         (* ( try
+          *     let idxs = AdjGraph.VertexMap.find j !incoming_map in
+          *     incoming_map :=
+          *       AdjGraph.VertexMap.add j ((i, j) :: idxs) !incoming_map
+          *   with _ ->
+          *     incoming_map :=
+          *       AdjGraph.VertexMap.add j [(i, j)] !incoming_map ) ; *)
+        incoming_map.(j) <- (i,j) :: incoming_map.(j);
          let node_value n =
            avalue ((vnode n), Some Typing.node_ty, Span.default)
          in
@@ -157,25 +190,26 @@ struct
                       Some (TTuple [TNode; TNode]), Span.default)]
          in
          (* Printf.printf "etrans:%s\n" (Printing.exp_to_string etrans); *)
-         let etrans_uv = InterpPartial.interp_partial_fun etrans edge in
          let trans, x =
-           encode_z3_trans
+           enc_z3_trans edge
              (Printf.sprintf "trans-%d-%d" i j)
-             env etrans_uv
+             env
          in
          trans_input_map := AdjGraph.EdgeMap.add (i, j) x !trans_input_map ;
          trans_map := AdjGraph.EdgeMap.add (i, j) trans !trans_map )
-      edges ;
-
+      net.graph ;
+    (*`Seutp labelling functions*)
+    let attr_sort = ty_to_sorts aty in
     (* Compute the labelling as the merge of all inputs *)
-    let labelling = ref AdjGraph.VertexMap.empty in
+    let labelling = Array.make nodes (of_list [])  in
     for i = 0 to nodes - 1 do
-      let init = AdjGraph.VertexMap.find i !init_map in
-      let in_edges =
-        try AdjGraph.VertexMap.find i !incoming_map
-        with Not_found -> []
-      in
+      (* compute each init attribute *)
       let node = avalue (vnode i, Some Typing.node_ty, Span.default) in
+      let einit_i = Nv_interpreter.InterpPartial.interp_partial_fun einit [node] in
+      let init = encode_z3_init (Printf.sprintf "init-%d" i) env einit_i in
+      let in_edges = incoming_map.(i) in
+        (* try AdjGraph.VertexMap.find i !incoming_map
+         * with Not_found -> [] *)
       let emerge_i = InterpPartial.interp_partial_fun emerge [node] in
       (* Printf.printf "merge after interp:\n%s\n\n" (Printing.exp_to_string emerge_i); *)
       let idx = ref 0 in
@@ -200,16 +234,16 @@ struct
       let lbl_iv = lift1 Nv_datastructures.Var.create lbl_i in
       add_symbolic env lbl_iv (Ty aty);
       let l = lift2 (fun lbl s -> mk_constant env (create_vars env "" lbl) s)
-          lbl_iv (ty_to_sorts aty)
+          lbl_iv attr_sort
       in
       ignore(lift2 (fun l merged ->
           SmtUtils.add_constraint env (mk_term (mk_eq l.t merged.t))) l merged);
-      labelling := AdjGraph.VertexMap.add i l !labelling
+      labelling.(i) <- l
     done ;
     (* Propagate labels across edges outputs *)
     AdjGraph.EdgeMap.iter
       (fun (i, _) x ->
-         let label = AdjGraph.VertexMap.find i !labelling in
+         let label = labelling.(i) in
          BatList.iter2 (fun label x ->
              SmtUtils.add_constraint env (mk_term (mk_eq label.t x.t))) (to_list label) x)
       !trans_input_map ;
@@ -219,9 +253,7 @@ struct
       | Some eassert ->
         let all_good = ref (mk_bool true) in
         for i = 0 to nodes - 1 do
-          let label =
-            AdjGraph.VertexMap.find i !labelling
-          in
+          let label = labelling.(i) in
           let node = avalue (vnode i, Some Typing.node_ty, Span.default) in
           let eassert_i = InterpPartial.interp_partial_fun eassert [node] in
           let result, x =

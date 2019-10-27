@@ -11831,6 +11831,15 @@ let trans edge x =
   let b = transferBgp edge x in
   {connected=None; static=None; ospf=o; bgp=b; selected=None}
 
+let assert u x =
+  if (d = (3355769856, 24u5)) then
+    match x.selected with
+    | None -> false
+    | _ -> true
+  else
+    true
+
+
 (*
 {metter=0
  ashland=1

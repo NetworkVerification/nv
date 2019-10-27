@@ -863,7 +863,6 @@ let rec to_value e =
   | ESome e1 -> avalue (voption (Some (to_value e1)), e.ety, e.espan)
   | _ -> failwith "internal error (to_value)"
 
-
 let exp_of_v x = exp (EVal (value x))
 
 let rec exp_of_value v =

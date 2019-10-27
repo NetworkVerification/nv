@@ -34,7 +34,8 @@ let partialEvalNet net =
   {net with
    init = InterpPartial.interp_partial_opt net.init;
    trans = InterpPartial.interp_partial_opt net.trans;
-   merge = InterpPartial.interp_partial_opt net.merge
+   merge = InterpPartial.interp_partial_opt net.merge;
+   assertion = omap (InterpPartial.interp_partial_opt) net.assertion
   }
 
 let run_smt_func file cfg info net fs =
@@ -81,7 +82,8 @@ let run_smt_classic file cfg info (net : Syntax.network) fs =
   (* Printf.printf "%s\n" (Printing.network_to_string net); *)
   let net, f = Renaming.alpha_convert_net net in (*TODO: why are we renaming here?*)
   let fs = f :: fs in
-
+  let net, _ = OptimizeBranches.optimize_net net in (* The _ should match the identity function *)
+  let net = Profile.time_profile "Partially Evaluating Network" (fun () -> partialEvalNet net) in
   let get_answer net fs =
     let solve_fun =
       if cfg.hiding then
@@ -378,5 +380,4 @@ let parse_input (args : string array) =
     else
       net, fs
     in
-   (* let net, _ = OptimizeBranches.optimize_net net in (\* The _ should match the identity function *\) *)
    (cfg, info, file, net, fs)
