@@ -11833,9 +11833,9 @@ let trans edge x =
 
 let assert u x =
   if (d = (3355769856, 24u5)) then
-     match x.selected with
-     | None -> false
-     | _ -> true
+    match x.selected with
+    | None -> false
+    | _ -> true
   else
     true
 

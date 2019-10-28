@@ -171,11 +171,12 @@ let exp_transformer (recursors : Transformers.recursors) e =
         | TTuple tys ->
           (* Tuple type, but not directly a tuple expression. We need to name its
              elements, so we have to use a match expression. *)
-          let freshvars = List.map (fun ty -> ty, Nv_datastructures.Var.fresh "TupleFlattenVar") tys in
-          let freshvarexps = List.map (fun (ty, v) -> aexp (evar v, Some ty, e.espan)) freshvars in
-          let pat = PTuple (List.map (fun (_, v) -> PVar v) freshvars) in
+          let freshvarexps, pat = List.fold_left (fun (exps, pats) ty ->
+                                      let v = Nv_datastructures.Var.fresh "TupleFlattenVar" in
+                                      (aexp (evar v, Some ty, e.espan) :: exps, PVar v :: pats)) ([],[]) (List.rev tys)
+          in
           let body = cont freshvarexps in
-          ematch e (addBranch pat body emptyBranch) |> wrap wrapper
+          ematch e (addBranch (PTuple pat) body emptyBranch) |> wrap wrapper
         | _ -> cont [e]
     in
     let rec build_exp lst acc =

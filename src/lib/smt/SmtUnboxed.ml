@@ -206,6 +206,13 @@ struct
             mk_leq ze1.t ze2.t |> mk_term ~tloc:e.espan
           else
             mk_bv_leq ze1.t ze2.t |> mk_term ~tloc:e.espan
+        | TGet (_, lo, hi), [e1] when lo = hi ->
+          (match e1.e with
+           | ETuple es1 ->
+             encode_exp_z3_single descr env (BatList.nth es1 lo)
+           | _ ->
+             let ze1 = encode_exp_z3 descr env e1 in
+             BatList.nth ze1 lo)
         | AtMost _, [e1;e2;e3] ->
           (match e1.e with
            | ETuple es ->
@@ -251,11 +258,20 @@ struct
          let ze2 = encode_exp_z3 descr env e2 in
          lift2 (fun ze1 ze2 -> mk_eq ze1.t ze2.t |> mk_term ~tloc:e.espan) ze1 ze2
        | TGet (_, lo, hi), [e1] when lo < hi ->
-         let ze1 = encode_exp_z3 descr env e1 in
-         ze1 |> BatList.drop lo |> BatList.take (hi - lo + 1)
+         (match e1.e with
+          | ETuple es1 ->
+            let es1 = BatList.drop lo es1 |> BatList.take (hi - lo + 1) in
+            lift1 (encode_exp_z3_single descr env) es1
+          | _ ->
+            let ze1 = encode_exp_z3 descr env e1 in
+            ze1 |> BatList.drop lo |> BatList.take (hi - lo + 1))
        | TGet (_, lo, _), [e1] (*lo = hi*) ->
-         let ze1 = encode_exp_z3 descr env e1 in
-         [BatList.nth ze1 lo]
+         (match e1.e with
+          | ETuple es1 ->
+            encode_exp_z3 descr env (BatList.nth es1 lo)
+          | _ ->
+            let ze1 = encode_exp_z3 descr env e1 in
+            [BatList.nth ze1 lo])
        | TSet (_, lo, hi), [e1; e2] when lo < hi ->
          let ze1 = encode_exp_z3 descr env e1 in
          let ze2 = encode_exp_z3 descr env e2 in

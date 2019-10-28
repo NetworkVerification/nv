@@ -1,0 +1,5284 @@
+type ospfType = {ospfAd: int8; weight: int16; areaType:int2; areaId: int;}
+type bgpType = {bgpAd: int8; lp: int; aslen: int; med:int; comms:set[int];}
+type rib = {
+    connected:option[int8];
+    static:option[int8];
+    ospf:option[ospfType];
+    bgp:option[bgpType];
+    selected:option[int2]; }
+type attribute = rib
+
+let d = (70.0.44.0/24u5)
+
+let edges = {
+  39-15; (*aggregation-23,Serial2 --> core-8,Serial4*)
+  30-25; (*edge-12,Serial1 --> aggregation-10,Serial3*)
+  21-2; (*aggregation-15,Serial0 --> core-0,Serial3*)
+  31-2; (*aggregation-27,Serial1 --> core-0,Serial5*)
+  11-37; (*core-4,Serial1 --> aggregation-40,Serial1*)
+  44-1; (*aggregation-21,Serial1 --> core-1,Serial4*)
+  3-25; (*core-3,Serial2 --> aggregation-10,Serial0*)
+  16-32; (*aggregation-9,Serial4 --> edge-13,Serial0*)
+  10-43; (*edge-24,Serial1 --> aggregation-22,Serial3*)
+  19-5; (*edge-20,Serial1 --> aggregation-17,Serial5*)
+  18-11; (*aggregation-34,Serial1 --> core-4,Serial0*)
+  15-5; (*core-8,Serial3 --> aggregation-17,Serial2*)
+  9-18; (*core-5,Serial0 --> aggregation-34,Serial5*)
+  43-0; (*aggregation-22,Serial5 --> edge-26,Serial1*)
+  5-13; (*aggregation-17,Serial1 --> core-7,Serial3*)
+  40-29; (*edge-31,Serial1 --> aggregation-28,Serial5*)
+  18-27; (*aggregation-34,Serial3 --> edge-38,Serial1*)
+  3-18; (*core-3,Serial0 --> aggregation-34,Serial0*)
+  25-3; (*aggregation-10,Serial0 --> core-3,Serial2*)
+  44-0; (*aggregation-21,Serial5 --> edge-26,Serial0*)
+  42-15; (*aggregation-41,Serial2 --> core-8,Serial1*)
+  13-5; (*core-7,Serial3 --> aggregation-17,Serial1*)
+  28-21; (*edge-18,Serial2 --> aggregation-15,Serial3*)
+  37-4; (*aggregation-40,Serial5 --> edge-44,Serial0*)
+  4-37; (*edge-44,Serial0 --> aggregation-40,Serial5*)
+  17-15; (*aggregation-35,Serial4 --> core-8,Serial0*)
+  9-37; (*core-5,Serial1 --> aggregation-40,Serial2*)
+  38-29; (*edge-30,Serial1 --> aggregation-28,Serial4*)
+  36-21; (*edge-19,Serial2 --> aggregation-15,Serial4*)
+  0-43; (*edge-26,Serial1 --> aggregation-22,Serial5*)
+  17-27; (*aggregation-35,Serial5 --> edge-38,Serial2*)
+  16-7; (*aggregation-9,Serial2 --> core-2,Serial2*)
+  41-35; (*edge-32,Serial2 --> aggregation-29,Serial0*)
+  3-43; (*core-3,Serial4 --> aggregation-22,Serial0*)
+  15-39; (*core-8,Serial4 --> aggregation-23,Serial2*)
+  7-16; (*core-2,Serial2 --> aggregation-9,Serial2*)
+  32-25; (*edge-13,Serial1 --> aggregation-10,Serial4*)
+  33-24; (*edge-14,Serial2 --> aggregation-11,Serial5*)
+  23-27; (*aggregation-33,Serial5 --> edge-38,Serial0*)
+  7-31; (*core-2,Serial5 --> aggregation-27,Serial2*)
+  1-16; (*core-1,Serial2 --> aggregation-9,Serial1*)
+  35-13; (*aggregation-29,Serial2 --> core-7,Serial5*)
+  12-43; (*edge-25,Serial1 --> aggregation-22,Serial4*)
+  13-39; (*core-7,Serial4 --> aggregation-23,Serial1*)
+  37-9; (*aggregation-40,Serial2 --> core-5,Serial1*)
+  0-39; (*edge-26,Serial2 --> aggregation-23,Serial5*)
+  18-34; (*aggregation-34,Serial4 --> edge-36,Serial1*)
+  34-23; (*edge-36,Serial0 --> aggregation-33,Serial3*)
+  28-5; (*edge-18,Serial1 --> aggregation-17,Serial3*)
+  23-26; (*aggregation-33,Serial4 --> edge-37,Serial0*)
+  35-40; (*aggregation-29,Serial5 --> edge-31,Serial2*)
+  37-20; (*aggregation-40,Serial3 --> edge-42,Serial0*)
+  6-2; (*aggregation-39,Serial0 --> core-0,Serial1*)
+  2-21; (*core-0,Serial3 --> aggregation-15,Serial0*)
+  25-30; (*aggregation-10,Serial3 --> edge-12,Serial1*)
+  5-15; (*aggregation-17,Serial2 --> core-8,Serial3*)
+  7-44; (*core-2,Serial4 --> aggregation-21,Serial2*)
+  24-14; (*aggregation-11,Serial0 --> core-6,Serial2*)
+  35-15; (*aggregation-29,Serial3 --> core-8,Serial5*)
+  16-1; (*aggregation-9,Serial1 --> core-1,Serial2*)
+  18-26; (*aggregation-34,Serial2 --> edge-37,Serial1*)
+  17-13; (*aggregation-35,Serial3 --> core-7,Serial0*)
+  14-35; (*core-6,Serial5 --> aggregation-29,Serial1*)
+  12-39; (*edge-25,Serial2 --> aggregation-23,Serial4*)
+  25-11; (*aggregation-10,Serial1 --> core-4,Serial2*)
+  38-31; (*edge-30,Serial0 --> aggregation-27,Serial4*)
+  42-4; (*aggregation-41,Serial5 --> edge-44,Serial1*)
+  44-12; (*aggregation-21,Serial4 --> edge-25,Serial0*)
+  29-3; (*aggregation-28,Serial1 --> core-3,Serial5*)
+  1-44; (*core-1,Serial4 --> aggregation-21,Serial1*)
+  7-23; (*core-2,Serial0 --> aggregation-33,Serial2*)
+  41-31; (*edge-32,Serial0 --> aggregation-27,Serial0*)
+  36-8; (*edge-19,Serial0 --> aggregation-16,Serial4*)
+  43-11; (*aggregation-22,Serial1 --> core-4,Serial4*)
+  23-1; (*aggregation-33,Serial1 --> core-1,Serial0*)
+  18-3; (*aggregation-34,Serial0 --> core-3,Serial0*)
+  27-17; (*edge-38,Serial2 --> aggregation-35,Serial5*)
+  40-35; (*edge-31,Serial2 --> aggregation-29,Serial5*)
+  21-28; (*aggregation-15,Serial3 --> edge-18,Serial2*)
+  24-30; (*aggregation-11,Serial3 --> edge-12,Serial2*)
+  44-7; (*aggregation-21,Serial2 --> core-2,Serial4*)
+  14-5; (*core-6,Serial3 --> aggregation-17,Serial0*)
+  13-35; (*core-7,Serial5 --> aggregation-29,Serial2*)
+  8-11; (*aggregation-16,Serial1 --> core-4,Serial3*)
+  29-11; (*aggregation-28,Serial2 --> core-4,Serial5*)
+  43-12; (*aggregation-22,Serial4 --> edge-25,Serial1*)
+  5-19; (*aggregation-17,Serial5 --> edge-20,Serial1*)
+  44-10; (*aggregation-21,Serial3 --> edge-24,Serial0*)
+  2-31; (*core-0,Serial5 --> aggregation-27,Serial1*)
+  38-35; (*edge-30,Serial2 --> aggregation-29,Serial4*)
+  39-0; (*aggregation-23,Serial5 --> edge-26,Serial2*)
+  37-22; (*aggregation-40,Serial4 --> edge-43,Serial0*)
+  23-2; (*aggregation-33,Serial0 --> core-0,Serial0*)
+  35-38; (*aggregation-29,Serial4 --> edge-30,Serial2*)
+  25-32; (*aggregation-10,Serial4 --> edge-13,Serial1*)
+  6-7; (*aggregation-39,Serial2 --> core-2,Serial1*)
+  28-8; (*edge-18,Serial0 --> aggregation-16,Serial3*)
+  43-9; (*aggregation-22,Serial2 --> core-5,Serial4*)
+  36-5; (*edge-19,Serial1 --> aggregation-17,Serial4*)
+  17-14; (*aggregation-35,Serial2 --> core-6,Serial0*)
+  29-41; (*aggregation-28,Serial0 --> edge-32,Serial1*)
+  31-40; (*aggregation-27,Serial5 --> edge-31,Serial0*)
+  44-2; (*aggregation-21,Serial0 --> core-0,Serial4*)
+  31-7; (*aggregation-27,Serial2 --> core-2,Serial5*)
+  6-1; (*aggregation-39,Serial1 --> core-1,Serial1*)
+  8-3; (*aggregation-16,Serial0 --> core-3,Serial3*)
+  24-33; (*aggregation-11,Serial5 --> edge-14,Serial2*)
+  24-15; (*aggregation-11,Serial2 --> core-8,Serial2*)
+  7-21; (*core-2,Serial3 --> aggregation-15,Serial2*)
+  9-25; (*core-5,Serial2 --> aggregation-10,Serial2*)
+  39-10; (*aggregation-23,Serial3 --> edge-24,Serial2*)
+  8-19; (*aggregation-16,Serial5 --> edge-20,Serial0*)
+  25-33; (*aggregation-10,Serial5 --> edge-14,Serial1*)
+  35-41; (*aggregation-29,Serial0 --> edge-32,Serial2*)
+  42-20; (*aggregation-41,Serial3 --> edge-42,Serial1*)
+  39-12; (*aggregation-23,Serial4 --> edge-25,Serial2*)
+  1-21; (*core-1,Serial3 --> aggregation-15,Serial1*)
+  31-38; (*aggregation-27,Serial4 --> edge-30,Serial0*)
+  11-25; (*core-4,Serial2 --> aggregation-10,Serial1*)
+  24-13; (*aggregation-11,Serial1 --> core-7,Serial2*)
+  29-40; (*aggregation-28,Serial5 --> edge-31,Serial1*)
+  29-9; (*aggregation-28,Serial3 --> core-5,Serial5*)
+  43-10; (*aggregation-22,Serial3 --> edge-24,Serial1*)
+  14-42; (*core-6,Serial1 --> aggregation-41,Serial0*)
+  41-29; (*edge-32,Serial1 --> aggregation-28,Serial0*)
+  43-3; (*aggregation-22,Serial0 --> core-3,Serial4*)
+  21-36; (*aggregation-15,Serial4 --> edge-19,Serial2*)
+  24-32; (*aggregation-11,Serial4 --> edge-13,Serial2*)
+  9-8; (*core-5,Serial3 --> aggregation-16,Serial2*)
+  29-38; (*aggregation-28,Serial4 --> edge-30,Serial1*)
+  2-23; (*core-0,Serial0 --> aggregation-33,Serial0*)
+  31-41; (*aggregation-27,Serial0 --> edge-32,Serial0*)
+  42-22; (*aggregation-41,Serial4 --> edge-43,Serial1*)
+  22-42; (*edge-43,Serial1 --> aggregation-41,Serial4*)
+  0-44; (*edge-26,Serial0 --> aggregation-21,Serial5*)
+  1-31; (*core-1,Serial5 --> aggregation-27,Serial3*)
+  26-18; (*edge-37,Serial1 --> aggregation-34,Serial2*)
+  30-16; (*edge-12,Serial0 --> aggregation-9,Serial3*)
+  4-42; (*edge-44,Serial1 --> aggregation-41,Serial5*)
+  23-7; (*aggregation-33,Serial2 --> core-2,Serial0*)
+  15-35; (*core-8,Serial5 --> aggregation-29,Serial3*)
+  1-23; (*core-1,Serial0 --> aggregation-33,Serial1*)
+  2-44; (*core-0,Serial4 --> aggregation-21,Serial0*)
+  23-34; (*aggregation-33,Serial3 --> edge-36,Serial0*)
+  8-9; (*aggregation-16,Serial2 --> core-5,Serial3*)
+  12-44; (*edge-25,Serial0 --> aggregation-21,Serial4*)
+  19-8; (*edge-20,Serial0 --> aggregation-16,Serial5*)
+  5-14; (*aggregation-17,Serial0 --> core-6,Serial3*)
+  35-14; (*aggregation-29,Serial1 --> core-6,Serial5*)
+  25-9; (*aggregation-10,Serial2 --> core-5,Serial2*)
+  10-39; (*edge-24,Serial2 --> aggregation-23,Serial3*)
+  26-23; (*edge-37,Serial0 --> aggregation-33,Serial4*)
+  32-16; (*edge-13,Serial0 --> aggregation-9,Serial4*)
+  21-7; (*aggregation-15,Serial2 --> core-2,Serial3*)
+  40-31; (*edge-31,Serial0 --> aggregation-27,Serial5*)
+  13-42; (*core-7,Serial1 --> aggregation-41,Serial1*)
+  37-3; (*aggregation-40,Serial0 --> core-3,Serial1*)
+  39-14; (*aggregation-23,Serial0 --> core-6,Serial4*)
+  27-23; (*edge-38,Serial0 --> aggregation-33,Serial5*)
+  15-42; (*core-8,Serial1 --> aggregation-41,Serial2*)
+  21-1; (*aggregation-15,Serial1 --> core-1,Serial3*)
+  16-2; (*aggregation-9,Serial0 --> core-0,Serial2*)
+  27-18; (*edge-38,Serial1 --> aggregation-34,Serial3*)
+  39-13; (*aggregation-23,Serial1 --> core-7,Serial4*)
+  19-21; (*edge-20,Serial2 --> aggregation-15,Serial5*)
+  10-44; (*edge-24,Serial0 --> aggregation-21,Serial3*)
+  2-16; (*core-0,Serial2 --> aggregation-9,Serial0*)
+  9-43; (*core-5,Serial4 --> aggregation-22,Serial2*)
+  14-39; (*core-6,Serial4 --> aggregation-23,Serial0*)
+  30-24; (*edge-12,Serial2 --> aggregation-11,Serial3*)
+  33-16; (*edge-14,Serial0 --> aggregation-9,Serial5*)
+  18-9; (*aggregation-34,Serial5 --> core-5,Serial0*)
+  37-11; (*aggregation-40,Serial1 --> core-4,Serial1*)
+  34-17; (*edge-36,Serial2 --> aggregation-35,Serial0*)
+  4-6; (*edge-44,Serial2 --> aggregation-39,Serial5*)
+  11-43; (*core-4,Serial4 --> aggregation-22,Serial1*)
+  42-14; (*aggregation-41,Serial0 --> core-6,Serial1*)
+  32-24; (*edge-13,Serial2 --> aggregation-11,Serial4*)
+  15-24; (*core-8,Serial2 --> aggregation-11,Serial2*)
+  8-36; (*aggregation-16,Serial4 --> edge-19,Serial0*)
+  31-1; (*aggregation-27,Serial3 --> core-1,Serial5*)
+  13-17; (*core-7,Serial0 --> aggregation-35,Serial3*)
+  2-6; (*core-0,Serial1 --> aggregation-39,Serial0*)
+  20-37; (*edge-42,Serial0 --> aggregation-40,Serial3*)
+  6-4; (*aggregation-39,Serial5 --> edge-44,Serial2*)
+  14-17; (*core-6,Serial0 --> aggregation-35,Serial2*)
+  34-18; (*edge-36,Serial1 --> aggregation-34,Serial4*)
+  17-26; (*aggregation-35,Serial1 --> edge-37,Serial2*)
+  22-37; (*edge-43,Serial0 --> aggregation-40,Serial4*)
+  33-25; (*edge-14,Serial1 --> aggregation-10,Serial5*)
+  21-19; (*aggregation-15,Serial5 --> edge-20,Serial2*)
+  16-30; (*aggregation-9,Serial3 --> edge-12,Serial0*)
+  20-42; (*edge-42,Serial1 --> aggregation-41,Serial3*)
+  1-6; (*core-1,Serial1 --> aggregation-39,Serial1*)
+  15-17; (*core-8,Serial0 --> aggregation-35,Serial4*)
+  5-36; (*aggregation-17,Serial4 --> edge-19,Serial1*)
+  6-20; (*aggregation-39,Serial3 --> edge-42,Serial2*)
+  11-18; (*core-4,Serial0 --> aggregation-34,Serial1*)
+  17-34; (*aggregation-35,Serial0 --> edge-36,Serial2*)
+  26-17; (*edge-37,Serial2 --> aggregation-35,Serial1*)
+  9-29; (*core-5,Serial5 --> aggregation-28,Serial3*)
+  3-37; (*core-3,Serial1 --> aggregation-40,Serial0*)
+  11-8; (*core-4,Serial3 --> aggregation-16,Serial1*)
+  42-13; (*aggregation-41,Serial1 --> core-7,Serial1*)
+  13-24; (*core-7,Serial2 --> aggregation-11,Serial1*)
+  11-29; (*core-4,Serial5 --> aggregation-28,Serial2*)
+  22-6; (*edge-43,Serial2 --> aggregation-39,Serial4*)
+  5-28; (*aggregation-17,Serial3 --> edge-18,Serial1*)
+  16-33; (*aggregation-9,Serial5 --> edge-14,Serial0*)
+  3-8; (*core-3,Serial3 --> aggregation-16,Serial0*)
+  6-22; (*aggregation-39,Serial4 --> edge-43,Serial2*)
+  14-24; (*core-6,Serial2 --> aggregation-11,Serial0*)
+  3-29; (*core-3,Serial5 --> aggregation-28,Serial1*)
+  7-6; (*core-2,Serial1 --> aggregation-39,Serial2*)
+  20-6; (*edge-42,Serial2 --> aggregation-39,Serial3*)
+  8-28; (*aggregation-16,Serial3 --> edge-18,Serial0*)
+}
+
+let nodes = 45
+
+let ospfIntraArea = 0u2
+let ospfInterArea = 1u2
+let ospfE1 = 2u2
+let ospfE2 = 3u2
+
+let protoConn = 0u8
+let protoStatic = 1u8
+let protoOspf = 2u8
+let protoBgp = 3u8
+
+let isProtocol fib x = fib = x
+let min x y = x <u8 y
+
+let pickOption f x y =
+  match (x,y) with
+  | (None, _) -> false  | (_, None) -> true
+  | (Some a, Some b) -> f a b
+
+let betterOspf o1 o2 =
+  if o1.areaType >u2 o2.areaType then true
+  else if o2.areaType >u2 o1.areaType then false
+  else if o1.weight <=u16 o2.weight then true else false
+
+let betterBgp b1 b2 =
+  if b1.lp > b2.lp then true
+  else if b2.lp > b1.lp then false
+  else if b1.aslen < b2.aslen then true
+  else if b2.aslen < b1.aslen then false
+  else if b1.med >= b2.med then true else false
+
+let betterEqOption o1 o2 =
+  match (o1,o2) with
+  | (_, None) -> true
+  | (None, _) -> false
+  | (Some a, Some b) -> a <=u8 b
+
+let best c s o b =
+  match (c,s,o,b) with
+  | (None,None,None,None) -> None
+  | _ -> 
+      let o = match o with | None -> None | Some o -> Some o.ospfAd in
+      let b = match b with | None -> None | Some b -> Some b.bgpAd in
+      let (x,p1) = if betterEqOption c s then (c,0u2) else (s,1u2) in
+      let (y,p2) = if betterEqOption o b then (o,2u2) else (b,3u2) in
+      Some (if betterEqOption x y then p1 else p2)
+
+let mergeValues x y =
+  let c = if (pickOption min x.connected y.connected) then x.connected else y.connected in
+  let s = if (pickOption min x.static y.static) then x.static else y.static in
+  let o = if (pickOption betterOspf x.ospf y.ospf) then x.ospf else y.ospf in
+  let b = if (pickOption betterBgp x.bgp y.bgp) then x.bgp else y.bgp in
+  { connected = c;
+    static = s;
+    ospf = o;
+    bgp = b;
+    selected = best c s o b}
+
+let merge node x y = mergeValues x y
+
+let init node =
+  match node with
+  | 0n -> 
+if (d = (167778048, 31u5)) || (d = (167777280, 31u5)) || (d = (1174411776, 32u5)) || (d = (167778816, 31u5)) || (d = (1174411776, 31u5)) || (d = (1174411778, 31u5)) then
+    let c = Some 0u8 in
+    let s = None in
+    let o = None in
+    let b = None in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else if (d = (1174411776, 24u5)) then
+    let c = None in
+    let s = Some 1u8 in
+    let o = None in
+    let b = Some {bgpAd=20u8; lp=100; aslen=0; med=80; comms={};} in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 1n -> 
+if (d = (167788288, 31u5)) || (d = (167788032, 31u5)) || (d = (167787776, 31u5)) || (d = (167787520, 31u5)) || (d = (167788800, 31u5)) || (d = (167788544, 31u5)) || (d = (1174405376, 32u5)) then
+    let c = Some 0u8 in
+    let s = None in
+    let o = None in
+    let b = None in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 2n -> 
+if (d = (167786752, 31u5)) || (d = (167786496, 31u5)) || (d = (167786240, 31u5)) || (d = (167785984, 31u5)) || (d = (167787264, 31u5)) || (d = (167787008, 31u5)) || (d = (1174405120, 32u5)) then
+    let c = Some 0u8 in
+    let s = None in
+    let o = None in
+    let b = None in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 3n -> 
+if (d = (167791104, 31u5)) || (d = (167790848, 31u5)) || (d = (167790592, 31u5)) || (d = (167791360, 31u5)) || (d = (167791872, 31u5)) || (d = (167791616, 31u5)) || (d = (1174405888, 32u5)) then
+    let c = Some 0u8 in
+    let s = None in
+    let o = None in
+    let b = None in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 4n -> 
+if (d = (167785728, 31u5)) || (d = (167784960, 31u5)) || (d = (1174416386, 31u5)) || (d = (1174416384, 32u5)) || (d = (167784192, 31u5)) || (d = (1174416384, 31u5)) then
+    let c = Some 0u8 in
+    let s = None in
+    let o = None in
+    let b = None in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else if (d = (1174416384, 24u5)) then
+    let c = None in
+    let s = Some 1u8 in
+    let o = None in
+    let b = Some {bgpAd=20u8; lp=100; aslen=0; med=80; comms={};} in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 5n -> 
+if (d = (167798528, 31u5)) || (d = (167796992, 31u5)) || (d = (167795456, 31u5)) || (d = (167776512, 31u5)) || (d = (1174409472, 32u5)) || (d = (167776256, 31u5)) || (d = (167776000, 31u5)) then
+    let c = Some 0u8 in
+    let s = None in
+    let o = None in
+    let b = None in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 6n -> 
+if (d = (167790336, 31u5)) || (d = (167788800, 31u5)) || (d = (167787264, 31u5)) || (d = (167784192, 31u5)) || (d = (167783936, 31u5)) || (d = (167783680, 31u5)) || (d = (1174415104, 32u5)) then
+    let c = Some 0u8 in
+    let s = None in
+    let o = None in
+    let b = None in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 7n -> 
+if (d = (167789824, 31u5)) || (d = (167789568, 31u5)) || (d = (167789312, 31u5)) || (d = (167790336, 31u5)) || (d = (167790080, 31u5)) || (d = (167789056, 31u5)) || (d = (1174405632, 32u5)) then
+    let c = Some 0u8 in
+    let s = None in
+    let o = None in
+    let b = None in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 8n -> 
+if (d = (167793920, 31u5)) || (d = (167790848, 31u5)) || (d = (167792384, 31u5)) || (d = (1174409216, 32u5)) || (d = (167775744, 31u5)) || (d = (167775488, 31u5)) || (d = (167775232, 31u5)) then
+    let c = Some 0u8 in
+    let s = None in
+    let o = None in
+    let b = None in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 9n -> 
+if (d = (167794432, 31u5)) || (d = (167794176, 31u5)) || (d = (167793920, 31u5)) || (d = (167793664, 31u5)) || (d = (167794944, 31u5)) || (d = (167794688, 31u5)) || (d = (1174406400, 32u5)) then
+    let c = Some 0u8 in
+    let s = None in
+    let o = None in
+    let b = None in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 10n -> 
+if (d = (167778304, 31u5)) || (d = (167777536, 31u5)) || (d = (167776768, 31u5)) || (d = (1174411264, 31u5)) || (d = (1174411264, 32u5)) || (d = (1174411266, 31u5)) then
+    let c = Some 0u8 in
+    let s = None in
+    let o = None in
+    let b = None in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else if (d = (1174411264, 24u5)) then
+    let c = None in
+    let s = Some 1u8 in
+    let o = None in
+    let b = Some {bgpAd=20u8; lp=100; aslen=0; med=80; comms={};} in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 11n -> 
+if (d = (167793408, 31u5)) || (d = (167792896, 31u5)) || (d = (167792640, 31u5)) || (d = (167792384, 31u5)) || (d = (167792128, 31u5)) || (d = (167793152, 31u5)) || (d = (1174406144, 32u5)) then
+    let c = Some 0u8 in
+    let s = None in
+    let o = None in
+    let b = None in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 12n -> 
+if (d = (167777792, 31u5)) || (d = (167777024, 31u5)) || (d = (1174411520, 32u5)) || (d = (167778560, 31u5)) || (d = (1174411520, 31u5)) || (d = (1174411522, 31u5)) then
+    let c = Some 0u8 in
+    let s = None in
+    let o = None in
+    let b = None in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else if (d = (1174411520, 24u5)) then
+    let c = None in
+    let s = Some 1u8 in
+    let o = None in
+    let b = Some {bgpAd=20u8; lp=100; aslen=0; med=80; comms={};} in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 13n -> 
+if (d = (167798016, 31u5)) || (d = (167797760, 31u5)) || (d = (167797504, 31u5)) || (d = (167797248, 31u5)) || (d = (167796992, 31u5)) || (d = (167796736, 31u5)) || (d = (1174406912, 32u5)) then
+    let c = Some 0u8 in
+    let s = None in
+    let o = None in
+    let b = None in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 14n -> 
+if (d = (167795200, 31u5)) || (d = (167795968, 31u5)) || (d = (167795712, 31u5)) || (d = (167795456, 31u5)) || (d = (167796480, 31u5)) || (d = (167796224, 31u5)) || (d = (1174406656, 32u5)) then
+    let c = Some 0u8 in
+    let s = None in
+    let o = None in
+    let b = None in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 15n -> 
+if (d = (167799040, 31u5)) || (d = (167798784, 31u5)) || (d = (167798528, 31u5)) || (d = (167798272, 31u5)) || (d = (167799552, 31u5)) || (d = (167799296, 31u5)) || (d = (1174407168, 32u5)) then
+    let c = Some 0u8 in
+    let s = None in
+    let o = None in
+    let b = None in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 16n -> 
+if (d = (167785984, 31u5)) || (d = (167789056, 31u5)) || (d = (167787520, 31u5)) || (d = (167772672, 31u5)) || (d = (167772416, 31u5)) || (d = (167772160, 31u5)) || (d = (1174407424, 32u5)) then
+    let c = Some 0u8 in
+    let s = None in
+    let o = None in
+    let b = None in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 17n -> 
+if (d = (167799296, 31u5)) || (d = (167797760, 31u5)) || (d = (167796224, 31u5)) || (d = (167783424, 31u5)) || (d = (167783168, 31u5)) || (d = (167782912, 31u5)) || (d = (1174414080, 32u5)) then
+    let c = Some 0u8 in
+    let s = None in
+    let o = None in
+    let b = None in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 18n -> 
+if (d = (167794688, 31u5)) || (d = (167793152, 31u5)) || (d = (167791616, 31u5)) || (d = (167782144, 31u5)) || (d = (167782656, 31u5)) || (d = (167782400, 31u5)) || (d = (1174413824, 32u5)) then
+    let c = Some 0u8 in
+    let s = None in
+    let o = None in
+    let b = None in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 19n -> 
+if (d = (167776512, 31u5)) || (d = (1174410240, 31u5)) || (d = (1174410240, 32u5)) || (d = (1174410242, 31u5)) || (d = (167774976, 31u5)) || (d = (167775744, 31u5)) then
+    let c = Some 0u8 in
+    let s = None in
+    let o = None in
+    let b = None in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else if (d = (1174410240, 24u5)) then
+    let c = None in
+    let s = Some 1u8 in
+    let o = None in
+    let b = Some {bgpAd=20u8; lp=100; aslen=0; med=80; comms={};} in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 20n -> 
+if (d = (167785216, 31u5)) || (d = (1174415874, 31u5)) || (d = (1174415872, 32u5)) || (d = (167783680, 31u5)) || (d = (167784448, 31u5)) || (d = (1174415872, 31u5)) then
+    let c = Some 0u8 in
+    let s = None in
+    let o = None in
+    let b = None in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else if (d = (1174415872, 24u5)) then
+    let c = None in
+    let s = Some 1u8 in
+    let o = None in
+    let b = Some {bgpAd=20u8; lp=100; aslen=0; med=80; comms={};} in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 21n -> 
+if (d = (167789312, 31u5)) || (d = (167786240, 31u5)) || (d = (167787776, 31u5)) || (d = (1174408960, 32u5)) || (d = (167774976, 31u5)) || (d = (167774720, 31u5)) || (d = (167774464, 31u5)) then
+    let c = Some 0u8 in
+    let s = None in
+    let o = None in
+    let b = None in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 22n -> 
+if (d = (167785472, 31u5)) || (d = (1174416130, 31u5)) || (d = (1174416128, 32u5)) || (d = (167783936, 31u5)) || (d = (167784704, 31u5)) || (d = (1174416128, 31u5)) then
+    let c = Some 0u8 in
+    let s = None in
+    let o = None in
+    let b = None in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else if (d = (1174416128, 24u5)) then
+    let c = None in
+    let s = Some 1u8 in
+    let o = None in
+    let b = Some {bgpAd=20u8; lp=100; aslen=0; med=80; comms={};} in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 23n -> 
+if (d = (167790080, 31u5)) || (d = (167788544, 31u5)) || (d = (167787008, 31u5)) || (d = (167781888, 31u5)) || (d = (167781632, 31u5)) || (d = (167781376, 31u5)) || (d = (1174413568, 32u5)) then
+    let c = Some 0u8 in
+    let s = None in
+    let o = None in
+    let b = None in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 24n -> 
+if (d = (167798272, 31u5)) || (d = (167795200, 31u5)) || (d = (167796736, 31u5)) || (d = (167774208, 31u5)) || (d = (167773952, 31u5)) || (d = (167773696, 31u5)) || (d = (1174407936, 32u5)) then
+    let c = Some 0u8 in
+    let s = None in
+    let o = None in
+    let b = None in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 25n -> 
+if (d = (167793664, 31u5)) || (d = (167790592, 31u5)) || (d = (167792128, 31u5)) || (d = (167773440, 31u5)) || (d = (167773184, 31u5)) || (d = (167772928, 31u5)) || (d = (1174407680, 32u5)) then
+    let c = Some 0u8 in
+    let s = None in
+    let o = None in
+    let b = None in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 26n -> 
+if (d = (1174414594, 31u5)) || (d = (167782400, 31u5)) || (d = (167781632, 31u5)) || (d = (1174414592, 31u5)) || (d = (167783168, 31u5)) || (d = (1174414592, 32u5)) then
+    let c = Some 0u8 in
+    let s = None in
+    let o = None in
+    let b = None in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else if (d = (1174414592, 24u5)) then
+    let c = None in
+    let s = Some 1u8 in
+    let o = None in
+    let b = Some {bgpAd=20u8; lp=100; aslen=0; med=80; comms={};} in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 27n -> 
+if (d = (1174414850, 31u5)) || (d = (167782656, 31u5)) || (d = (167781888, 31u5)) || (d = (1174414848, 31u5)) || (d = (167783424, 31u5)) || (d = (1174414848, 32u5)) then
+    let c = Some 0u8 in
+    let s = None in
+    let o = None in
+    let b = None in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else if (d = (1174414848, 24u5)) then
+    let c = None in
+    let s = Some 1u8 in
+    let o = None in
+    let b = Some {bgpAd=20u8; lp=100; aslen=0; med=80; comms={};} in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 28n -> 
+if (d = (1174409728, 31u5)) || (d = (1174409728, 32u5)) || (d = (1174409730, 31u5)) || (d = (167774464, 31u5)) || (d = (167776000, 31u5)) || (d = (167775232, 31u5)) then
+    let c = Some 0u8 in
+    let s = None in
+    let o = None in
+    let b = None in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else if (d = (1174409728, 24u5)) then
+    let c = None in
+    let s = Some 1u8 in
+    let o = None in
+    let b = Some {bgpAd=20u8; lp=100; aslen=0; med=80; comms={};} in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 29n -> 
+if (d = (167794432, 31u5)) || (d = (167792896, 31u5)) || (d = (167791360, 31u5)) || (d = (1174412288, 32u5)) || (d = (167780096, 31u5)) || (d = (167779840, 31u5)) || (d = (167780352, 31u5)) then
+    let c = Some 0u8 in
+    let s = None in
+    let o = None in
+    let b = None in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 30n -> 
+if (d = (1174408194, 31u5)) || (d = (167773696, 31u5)) || (d = (167772928, 31u5)) || (d = (167772160, 31u5)) || (d = (1174408192, 32u5)) || (d = (1174408192, 31u5)) then
+    let c = Some 0u8 in
+    let s = None in
+    let o = None in
+    let b = None in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else if (d = (1174408192, 24u5)) then
+    let c = None in
+    let s = Some 1u8 in
+    let o = None in
+    let b = Some {bgpAd=20u8; lp=100; aslen=0; med=80; comms={};} in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 31n -> 
+if (d = (167789824, 31u5)) || (d = (167786752, 31u5)) || (d = (167788288, 31u5)) || (d = (1174412032, 32u5)) || (d = (167779328, 31u5)) || (d = (167779072, 31u5)) || (d = (167779584, 31u5)) then
+    let c = Some 0u8 in
+    let s = None in
+    let o = None in
+    let b = None in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 32n -> 
+if (d = (1174408450, 31u5)) || (d = (167773952, 31u5)) || (d = (167773184, 31u5)) || (d = (167772416, 31u5)) || (d = (1174408448, 32u5)) || (d = (1174408448, 31u5)) then
+    let c = Some 0u8 in
+    let s = None in
+    let o = None in
+    let b = None in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else if (d = (1174408448, 24u5)) then
+    let c = None in
+    let s = Some 1u8 in
+    let o = None in
+    let b = Some {bgpAd=20u8; lp=100; aslen=0; med=80; comms={};} in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 33n -> 
+if (d = (1174408706, 31u5)) || (d = (167774208, 31u5)) || (d = (167773440, 31u5)) || (d = (167772672, 31u5)) || (d = (1174408704, 32u5)) || (d = (1174408704, 31u5)) then
+    let c = Some 0u8 in
+    let s = None in
+    let o = None in
+    let b = None in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else if (d = (1174408704, 24u5)) then
+    let c = None in
+    let s = Some 1u8 in
+    let o = None in
+    let b = Some {bgpAd=20u8; lp=100; aslen=0; med=80; comms={};} in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 34n -> 
+if (d = (1174414338, 31u5)) || (d = (167782144, 31u5)) || (d = (167781376, 31u5)) || (d = (1174414336, 31u5)) || (d = (167782912, 31u5)) || (d = (1174414336, 32u5)) then
+    let c = Some 0u8 in
+    let s = None in
+    let o = None in
+    let b = None in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else if (d = (1174414336, 24u5)) then
+    let c = None in
+    let s = Some 1u8 in
+    let o = None in
+    let b = Some {bgpAd=20u8; lp=100; aslen=0; med=80; comms={};} in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 35n -> 
+if (d = (167799040, 31u5)) || (d = (167797504, 31u5)) || (d = (167795968, 31u5)) || (d = (167780864, 31u5)) || (d = (167781120, 31u5)) || (d = (1174412544, 32u5)) || (d = (167780608, 31u5)) then
+    let c = Some 0u8 in
+    let s = None in
+    let o = None in
+    let b = None in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 36n -> 
+if (d = (1174409984, 31u5)) || (d = (1174409984, 32u5)) || (d = (1174409986, 31u5)) || (d = (167774720, 31u5)) || (d = (167776256, 31u5)) || (d = (167775488, 31u5)) then
+    let c = Some 0u8 in
+    let s = None in
+    let o = None in
+    let b = None in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else if (d = (1174409984, 24u5)) then
+    let c = None in
+    let s = Some 1u8 in
+    let o = None in
+    let b = Some {bgpAd=20u8; lp=100; aslen=0; med=80; comms={};} in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 37n -> 
+if (d = (167794944, 31u5)) || (d = (167793408, 31u5)) || (d = (167791872, 31u5)) || (d = (167784960, 31u5)) || (d = (167784704, 31u5)) || (d = (167784448, 31u5)) || (d = (1174415360, 32u5)) then
+    let c = Some 0u8 in
+    let s = None in
+    let o = None in
+    let b = None in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 38n -> 
+if (d = (1174412800, 32u5)) || (d = (167780608, 31u5)) || (d = (167779840, 31u5)) || (d = (167779072, 31u5)) || (d = (1174412800, 31u5)) || (d = (1174412802, 31u5)) then
+    let c = Some 0u8 in
+    let s = None in
+    let o = None in
+    let b = None in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else if (d = (1174412800, 24u5)) then
+    let c = None in
+    let s = Some 1u8 in
+    let o = None in
+    let b = Some {bgpAd=20u8; lp=100; aslen=0; med=80; comms={};} in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 39n -> 
+if (d = (167798784, 31u5)) || (d = (167797248, 31u5)) || (d = (167795712, 31u5)) || (d = (167778304, 31u5)) || (d = (167778816, 31u5)) || (d = (167778560, 31u5)) || (d = (1174411008, 32u5)) then
+    let c = Some 0u8 in
+    let s = None in
+    let o = None in
+    let b = None in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 40n -> 
+if (d = (167780864, 31u5)) || (d = (1174413056, 32u5)) || (d = (167780096, 31u5)) || (d = (167779328, 31u5)) || (d = (1174413056, 31u5)) || (d = (1174413058, 31u5)) then
+    let c = Some 0u8 in
+    let s = None in
+    let o = None in
+    let b = None in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else if (d = (1174413056, 24u5)) then
+    let c = None in
+    let s = Some 1u8 in
+    let o = None in
+    let b = Some {bgpAd=20u8; lp=100; aslen=0; med=80; comms={};} in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 41n -> 
+if (d = (167781120, 31u5)) || (d = (1174413312, 32u5)) || (d = (167780352, 31u5)) || (d = (167779584, 31u5)) || (d = (1174413312, 31u5)) || (d = (1174413314, 31u5)) then
+    let c = Some 0u8 in
+    let s = None in
+    let o = None in
+    let b = None in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else if (d = (1174413312, 24u5)) then
+    let c = None in
+    let s = Some 1u8 in
+    let o = None in
+    let b = Some {bgpAd=20u8; lp=100; aslen=0; med=80; comms={};} in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 42n -> 
+if (d = (167799552, 31u5)) || (d = (167798016, 31u5)) || (d = (167796480, 31u5)) || (d = (167785728, 31u5)) || (d = (167785472, 31u5)) || (d = (167785216, 31u5)) || (d = (1174415616, 32u5)) then
+    let c = Some 0u8 in
+    let s = None in
+    let o = None in
+    let b = None in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 43n -> 
+if (d = (167794176, 31u5)) || (d = (167791104, 31u5)) || (d = (167792640, 31u5)) || (d = (167778048, 31u5)) || (d = (167777792, 31u5)) || (d = (167777536, 31u5)) || (d = (1174410752, 32u5)) then
+    let c = Some 0u8 in
+    let s = None in
+    let o = None in
+    let b = None in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | 44n -> 
+if (d = (167789568, 31u5)) || (d = (167786496, 31u5)) || (d = (167788032, 31u5)) || (d = (167777280, 31u5)) || (d = (167777024, 31u5)) || (d = (167776768, 31u5)) || (d = (1174410496, 32u5)) then
+    let c = Some 0u8 in
+    let s = None in
+    let o = None in
+    let b = None in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+     else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+  | _ -> {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+
+ let transferOspf edge o =
+   match o with
+   | None -> None
+   | Some o -> (
+   match edge with
+   | _ -> None
+)
+
+ let transferBgp e x0 =
+  match x0.selected with
+  | None -> None
+  | Some prot -> 
+    (let b = if (prot = 3u2) then match x0.bgp with
+                  | None -> ({bgpAd = 20u8; lp = 100; aslen = 0; med = 80; comms = {}})
+                  | Some b -> b
+          else ({bgpAd = 20u8; lp = 100; aslen = 0; med = 80; comms = {}}) in
+  match e with
+   | (0~44) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174411776) && (prefix < 1174412032)))) then
+(if b.comms[131074] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327682:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131074:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131074] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327682:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131074:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262146] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (0~43) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174411776) && (prefix < 1174412032)))) then
+(if b.comms[131074] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327682:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131074:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131074] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327682:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131074:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262146] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (0~39) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174411776) && (prefix < 1174412032)))) then
+(if b.comms[131074] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327682:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131074:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131074] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327682:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131074:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262146] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (1~31) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262147] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (1~6) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262149] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (1~16) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262144] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (1~21) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262145] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (1~44) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262146] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (1~23) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262148] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (2~6) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262149] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (2~31) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262147] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (2~16) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262144] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (2~44) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262146] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (2~21) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262145] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (2~23) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262148] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (3~25) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262144] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (3~29) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262147] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (3~43) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262146] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (3~37) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262149] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (3~8) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262145] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (3~18) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262148] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (4~42) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174416384) && (prefix < 1174416640)))) then
+(if b.comms[131077] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327685:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131077:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131077] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327685:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131077:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262149] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (4~37) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174416384) && (prefix < 1174416640)))) then
+(if b.comms[131077] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327685:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131077:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131077] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327685:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131077:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262149] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (4~6) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174416384) && (prefix < 1174416640)))) then
+(if b.comms[131077] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327685:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131077:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131077] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327685:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131077:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262149] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (5~15) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65537] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262145:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65537:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (5~14) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65537] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262145:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65537:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (5~36) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65537] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262145:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65537:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327681] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (5~13) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65537] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262145:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65537:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (5~28) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65537] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262145:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65537:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327681] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (5~19) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65537] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262145:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65537:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327681] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (6~22) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65541] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262149:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65541:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327685] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (6~1) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65541] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262149:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65541:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (6~20) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65541] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262149:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65541:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327685] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (6~4) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65541] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262149:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65541:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327685] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (6~7) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65541] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262149:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65541:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (6~2) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65541] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262149:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65541:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (7~31) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262147] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (7~44) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262146] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (7~6) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262149] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (7~16) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262144] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (7~21) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262145] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (7~23) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262148] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (8~36) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65537] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262145:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65537:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327681] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (8~19) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65537] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262145:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65537:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327681] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (8~3) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65537] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262145:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65537:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (8~28) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65537] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262145:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65537:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327681] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (8~11) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65537] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262145:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65537:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (8~9) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65537] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262145:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65537:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (9~29) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262147] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (9~18) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262148] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (9~43) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262146] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (9~8) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262145] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (9~37) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262149] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (9~25) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262144] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (10~44) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174411264) && (prefix < 1174411520)))) then
+(if b.comms[131074] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327682:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131074:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131074] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327682:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131074:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262146] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (10~43) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174411264) && (prefix < 1174411520)))) then
+(if b.comms[131074] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327682:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131074:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131074] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327682:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131074:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262146] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (10~39) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174411264) && (prefix < 1174411520)))) then
+(if b.comms[131074] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327682:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131074:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131074] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327682:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131074:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262146] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (11~18) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262148] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (11~29) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262147] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (11~43) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262146] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (11~8) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262145] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (11~25) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262144] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (11~37) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262149] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (12~44) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174411520) && (prefix < 1174411776)))) then
+(if b.comms[131074] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327682:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131074:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131074] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327682:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131074:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262146] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (12~43) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174411520) && (prefix < 1174411776)))) then
+(if b.comms[131074] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327682:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131074:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131074] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327682:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131074:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262146] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (12~39) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174411520) && (prefix < 1174411776)))) then
+(if b.comms[131074] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327682:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131074:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131074] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327682:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131074:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262146] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (13~24) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262144] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (13~42) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262149] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (13~5) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262145] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (13~17) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262148] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (13~35) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262147] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (13~39) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262146] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (14~5) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262145] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (14~42) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262149] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (14~17) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262148] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (14~24) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262144] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (14~35) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262147] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (14~39) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262146] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (15~5) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262145] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (15~42) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262149] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (15~17) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262148] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (15~39) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262146] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (15~35) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262147] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (15~24) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[196608] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[393216:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[196608:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262144] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (16~30) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65536] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262144:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65536:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327680] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (16~1) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65536] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262144:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65536:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (16~32) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65536] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262144:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65536:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327680] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (16~2) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65536] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262144:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65536:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (16~33) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65536] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262144:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65536:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327680] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (16~7) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65536] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262144:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65536:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (17~14) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65540] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262148:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65540:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (17~34) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65540] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262148:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65540:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327684] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (17~27) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65540] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262148:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65540:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327684] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (17~26) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65540] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262148:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65540:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327684] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (17~13) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65540] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262148:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65540:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (17~15) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65540] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262148:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65540:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (18~9) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65540] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262148:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65540:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (18~26) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65540] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262148:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65540:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327684] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (18~3) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65540] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262148:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65540:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (18~34) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65540] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262148:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65540:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327684] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (18~11) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65540] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262148:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65540:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (18~27) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65540] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262148:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65540:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327684] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (19~8) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174410240) && (prefix < 1174410496)))) then
+(if b.comms[131073] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327681:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131073:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131073] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327681:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131073:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262145] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (19~21) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174410240) && (prefix < 1174410496)))) then
+(if b.comms[131073] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327681:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131073:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131073] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327681:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131073:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262145] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (19~5) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174410240) && (prefix < 1174410496)))) then
+(if b.comms[131073] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327681:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131073:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131073] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327681:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131073:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262145] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (20~42) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174415872) && (prefix < 1174416128)))) then
+(if b.comms[131077] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327685:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131077:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131077] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327685:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131077:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262149] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (20~37) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174415872) && (prefix < 1174416128)))) then
+(if b.comms[131077] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327685:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131077:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131077] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327685:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131077:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262149] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (20~6) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174415872) && (prefix < 1174416128)))) then
+(if b.comms[131077] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327685:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131077:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131077] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327685:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131077:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262149] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (21~7) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65537] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262145:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65537:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (21~1) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65537] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262145:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65537:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (21~36) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65537] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262145:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65537:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327681] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (21~19) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65537] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262145:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65537:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327681] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (21~2) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65537] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262145:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65537:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (21~28) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65537] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262145:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65537:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327681] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (22~42) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174416128) && (prefix < 1174416384)))) then
+(if b.comms[131077] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327685:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131077:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131077] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327685:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131077:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262149] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (22~6) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174416128) && (prefix < 1174416384)))) then
+(if b.comms[131077] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327685:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131077:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131077] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327685:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131077:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262149] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (22~37) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174416128) && (prefix < 1174416384)))) then
+(if b.comms[131077] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327685:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131077:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131077] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327685:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131077:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262149] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (23~27) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65540] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262148:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65540:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327684] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (23~1) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65540] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262148:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65540:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (23~2) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65540] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262148:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65540:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (23~26) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65540] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262148:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65540:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327684] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (23~34) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65540] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262148:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65540:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327684] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (23~7) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65540] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262148:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65540:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (24~14) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65536] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262144:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65536:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (24~33) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65536] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262144:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65536:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327680] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (24~15) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65536] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262144:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65536:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (24~32) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65536] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262144:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65536:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327680] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (24~30) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65536] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262144:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65536:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327680] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (24~13) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65536] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262144:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65536:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (25~3) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65536] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262144:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65536:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (25~33) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65536] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262144:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65536:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327680] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (25~9) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65536] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262144:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65536:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (25~32) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65536] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262144:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65536:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327680] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (25~11) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65536] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262144:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65536:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (25~30) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65536] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262144:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65536:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327680] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (26~23) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174414592) && (prefix < 1174414848)))) then
+(if b.comms[131076] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327684:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131076:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131076] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327684:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131076:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262148] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (26~17) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174414592) && (prefix < 1174414848)))) then
+(if b.comms[131076] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327684:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131076:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131076] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327684:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131076:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262148] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (26~18) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174414592) && (prefix < 1174414848)))) then
+(if b.comms[131076] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327684:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131076:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131076] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327684:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131076:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262148] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (27~23) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174414848) && (prefix < 1174415104)))) then
+(if b.comms[131076] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327684:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131076:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131076] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327684:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131076:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262148] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (27~17) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174414848) && (prefix < 1174415104)))) then
+(if b.comms[131076] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327684:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131076:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131076] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327684:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131076:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262148] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (27~18) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174414848) && (prefix < 1174415104)))) then
+(if b.comms[131076] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327684:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131076:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131076] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327684:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131076:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262148] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (28~21) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174409728) && (prefix < 1174409984)))) then
+(if b.comms[131073] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327681:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131073:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131073] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327681:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131073:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262145] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (28~5) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174409728) && (prefix < 1174409984)))) then
+(if b.comms[131073] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327681:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131073:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131073] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327681:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131073:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262145] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (28~8) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174409728) && (prefix < 1174409984)))) then
+(if b.comms[131073] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327681:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131073:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131073] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327681:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131073:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262145] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (29~41) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65539] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262147:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65539:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327683] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (29~3) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65539] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262147:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65539:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (29~38) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65539] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262147:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65539:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327683] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (29~11) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65539] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262147:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65539:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (29~40) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65539] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262147:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65539:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327683] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (29~9) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65539] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262147:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65539:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (30~16) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174408192) && (prefix < 1174408448)))) then
+(if b.comms[131072] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327680:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131072:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131072] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327680:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131072:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262144] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (30~25) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174408192) && (prefix < 1174408448)))) then
+(if b.comms[131072] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327680:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131072:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131072] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327680:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131072:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262144] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (30~24) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174408192) && (prefix < 1174408448)))) then
+(if b.comms[131072] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327680:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131072:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131072] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327680:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131072:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262144] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (31~40) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65539] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262147:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65539:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327683] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (31~1) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65539] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262147:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65539:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (31~7) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65539] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262147:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65539:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (31~38) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65539] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262147:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65539:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327683] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (31~2) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65539] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262147:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65539:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (31~41) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65539] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262147:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65539:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327683] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (32~16) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174408448) && (prefix < 1174408704)))) then
+(if b.comms[131072] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327680:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131072:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131072] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327680:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131072:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262144] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (32~25) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174408448) && (prefix < 1174408704)))) then
+(if b.comms[131072] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327680:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131072:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131072] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327680:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131072:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262144] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (32~24) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174408448) && (prefix < 1174408704)))) then
+(if b.comms[131072] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327680:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131072:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131072] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327680:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131072:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262144] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (33~25) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174408704) && (prefix < 1174408960)))) then
+(if b.comms[131072] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327680:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131072:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131072] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327680:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131072:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262144] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (33~16) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174408704) && (prefix < 1174408960)))) then
+(if b.comms[131072] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327680:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131072:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131072] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327680:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131072:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262144] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (33~24) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174408704) && (prefix < 1174408960)))) then
+(if b.comms[131072] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327680:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131072:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131072] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327680:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131072:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262144] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (34~18) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174414336) && (prefix < 1174414592)))) then
+(if b.comms[131076] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327684:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131076:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131076] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327684:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131076:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262148] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (34~17) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174414336) && (prefix < 1174414592)))) then
+(if b.comms[131076] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327684:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131076:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131076] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327684:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131076:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262148] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (34~23) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174414336) && (prefix < 1174414592)))) then
+(if b.comms[131076] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327684:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131076:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131076] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327684:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131076:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262148] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (35~41) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65539] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262147:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65539:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327683] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (35~15) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65539] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262147:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65539:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (35~14) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65539] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262147:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65539:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (35~13) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65539] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262147:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65539:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (35~38) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65539] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262147:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65539:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327683] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (35~40) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65539] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262147:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65539:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327683] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (36~21) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174409984) && (prefix < 1174410240)))) then
+(if b.comms[131073] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327681:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131073:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131073] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327681:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131073:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262145] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (36~8) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174409984) && (prefix < 1174410240)))) then
+(if b.comms[131073] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327681:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131073:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131073] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327681:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131073:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262145] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (36~5) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174409984) && (prefix < 1174410240)))) then
+(if b.comms[131073] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327681:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131073:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131073] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327681:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131073:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262145] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (37~11) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65541] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262149:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65541:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (37~4) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65541] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262149:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65541:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327685] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (37~3) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65541] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262149:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65541:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (37~22) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65541] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262149:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65541:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327685] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (37~20) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65541] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262149:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65541:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327685] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (37~9) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65541] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262149:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65541:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (38~31) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174412800) && (prefix < 1174413056)))) then
+(if b.comms[131075] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327683:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131075:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131075] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327683:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131075:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262147] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (38~35) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174412800) && (prefix < 1174413056)))) then
+(if b.comms[131075] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327683:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131075:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131075] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327683:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131075:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262147] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (38~29) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174412800) && (prefix < 1174413056)))) then
+(if b.comms[131075] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327683:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131075:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131075] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327683:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131075:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262147] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (39~15) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65538] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262146:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65538:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (39~0) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65538] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262146:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65538:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327682] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (39~12) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65538] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262146:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65538:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327682] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (39~14) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65538] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262146:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65538:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (39~13) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65538] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262146:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65538:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (39~10) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65538] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262146:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65538:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327682] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (40~31) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174413056) && (prefix < 1174413312)))) then
+(if b.comms[131075] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327683:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131075:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131075] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327683:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131075:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262147] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (40~35) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174413056) && (prefix < 1174413312)))) then
+(if b.comms[131075] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327683:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131075:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131075] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327683:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131075:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262147] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (40~29) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174413056) && (prefix < 1174413312)))) then
+(if b.comms[131075] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327683:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131075:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131075] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327683:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131075:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262147] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (41~31) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174413312) && (prefix < 1174413568)))) then
+(if b.comms[131075] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327683:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131075:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131075] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327683:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131075:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262147] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (41~29) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174413312) && (prefix < 1174413568)))) then
+(if b.comms[131075] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327683:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131075:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131075] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327683:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131075:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262147] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (41~35) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (((prefixLen = 24u5) && ((prefix >= 1174413312) && (prefix < 1174413568)))) then
+(if b.comms[131075] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327683:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131075:= true];}))
+else
+(if (isProtocol prot 3u2) then
+(if b.comms[131075] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327683:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[131075:= true];}))
+else
+None))
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[262147] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (42~15) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65541] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262149:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65541:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (42~20) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65541] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262149:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65541:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327685] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (42~4) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65541] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262149:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65541:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327685] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (42~14) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65541] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262149:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65541:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (42~13) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65541] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262149:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65541:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (42~22) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65541] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262149:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65541:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327685] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (43~11) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65538] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262146:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65538:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (43~3) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65538] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262146:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65538:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (43~0) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65538] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262146:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65538:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327682] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (43~12) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65538] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262146:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65538:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327682] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (43~9) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65538] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262146:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65538:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (43~10) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65538] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262146:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65538:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327682] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (44~1) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65538] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262146:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65538:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (44~0) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65538] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262146:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65538:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327682] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (44~2) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65538] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262146:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65538:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (44~12) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65538] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262146:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65538:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327682] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (44~7) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65538] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262146:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65538:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[393216] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+   | (44~10) ->
+     let (prefix, prefixLen) = d in
+     let b = 
+           (if (isProtocol prot 3u2) then
+(if b.comms[65538] then
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[262146:= true];})
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[65538:= true];}))
+else
+None)
+     in
+         (match b with
+         | None -> None
+         | Some b ->
+           (if b.comms[327682] then
+None
+else
+(Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
+
+)
+let trans edge x = 
+  let o = transferOspf edge x.ospf in
+  let b = transferBgp edge x in
+  {connected=None; static=None; ospf=o; bgp=b; selected=None}
+
+let assert node x =
+  if (d = (70.0.44.0/24u5)) then
+    match x.selected with
+    | None -> false
+    | _ -> true
+  else true

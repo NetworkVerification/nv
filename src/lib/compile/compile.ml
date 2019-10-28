@@ -507,7 +507,7 @@ let build_dune_file name =
      (libraries nv_lib))\n \
      (env\n \
      (dev\n \
-     (flags (:standard -warn-error -A -w -a))))" name name
+     (flags (:standard -warn-error -A -w -a -opaque))))" name name
 
 let build_project_file name =
   Printf.sprintf "(lang dune 1.10)\n (name %s)" name
