@@ -8,7 +8,8 @@ type rib = {
     selected:option[int2]; }
 type attribute = rib
 
-symbolic d : (int, int5)
+(*symbolic d : (int, int5))*)
+let d = (70.0.19.0/24u5)
 
 let edges = {
   3-16; (*core-0,Serial0 --> aggregation-8,Serial0*)
@@ -1483,6 +1484,13 @@ let trans edge x =
   let o = transferOspf edge x.ospf in
   let b = transferBgp edge x in
   {connected=None; static=None; ospf=o; bgp=b; selected=None}
+
+let assert node x =
+  if (d = (70.0.19.0/24u5)) then
+    match x.selected with
+    | None -> false
+    | _ -> true
+  else true
 
 (*
 {edge-15=0, core-1=1, edge-18=2, core-0=3, core-3=4, edge-11=5, aggregation-17=6, core-2=7, aggregation-16=8, edge-14=9, edge-19=10, edge-6=11, edge-7=12, aggregation-5=13, aggregation-4=14, aggregation-9=15, aggregation-8=16, aggregation-13=17, aggregation-12=18, edge-10=19}*)

@@ -211,7 +211,8 @@ struct
         (* try AdjGraph.VertexMap.find i !incoming_map
          * with Not_found -> [] *)
       let emerge_i = InterpPartial.interp_partial_fun emerge [node] in
-      (* Printf.printf "merge after interp:\n%s\n\n" (Printing.exp_to_string emerge_i); *)
+      (* Printf.printf "merge after interp:\n%s\n\n" (Printing.exp_to_string emerge_i);
+       * failwith "bla"; *)
       let idx = ref 0 in
       let merged =
         BatList.fold_left
