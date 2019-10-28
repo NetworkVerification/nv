@@ -432,7 +432,7 @@ module SmtLang =
           if smt_config.infinite_arith then
             Printf.sprintf "(set-option :smt.arith.nl false)\n\
                             (check-sat-using (then simplify propagate-values simplify \
-                            solve-eqs ctx-solver-simplify))"
+                            solve-eqs smt))"
           else
             Printf.sprintf "(check-sat-using (then simplify propagate-values simplify \
                             solve-eqs bit-blast smtfd))"

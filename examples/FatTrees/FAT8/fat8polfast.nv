@@ -9,6 +9,7 @@ type rib = {
 type attribute = rib
 
 let d = (70.0.20.0/24u5)
+(*symbolic d : (int, int5)*)
 
 let edges = {
   19-20; (*aggregation-32,Serial5 --> edge-37,Serial0*)
