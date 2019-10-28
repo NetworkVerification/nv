@@ -348,6 +348,8 @@ val equal_inner_tys : ty -> ty -> bool
 
 val free : Var.t BatSet.PSet.t -> exp -> Var.t BatSet.PSet.t
 
+val free_ty : Var.t BatSet.PSet.t -> exp -> (Var.t * ty) BatSet.PSet.t
+
 val free_dead_vars : exp -> exp
 
 (** [get_ty_from_tyexp t] @return the type wrapped by [Ty] or the type

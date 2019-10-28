@@ -2,6 +2,7 @@
 open Cudd
 open Nv_datastructures
 open Nv_utils.PrimitiveCollections
+open Nv_utils
 
 type node = int
 [@@deriving eq, ord]
@@ -1098,6 +1099,24 @@ let unproj_var (x : var) =
 
 open BatSet
 
+let rec pattern_vars p =
+  match p with
+  | PWild | PUnit | PBool _ | PInt _ | POption None | PNode _ ->
+    PSet.create Var.compare
+  | PVar v -> PSet.singleton ~cmp:Var.compare v
+  | PEdge (p1, p2) -> pattern_vars (PTuple [p1; p2])
+  | PTuple ps ->
+    List.fold_left
+      (fun set p -> PSet.union set (pattern_vars p))
+      (PSet.create Var.compare)
+      ps
+  | PRecord map ->
+    StringMap.fold
+      (fun _ p set -> PSet.union set (pattern_vars p))
+      map
+      (PSet.create Var.compare)
+  | POption (Some p) -> pattern_vars p
+
 let rec free (seen: Var.t PSet.t) (e: exp) : Var.t PSet.t =
   match e.e with
   | EVar v ->
@@ -1142,23 +1161,53 @@ let rec free (seen: Var.t PSet.t) (e: exp) : Var.t PSet.t =
     in
     PSet.union (free seen e) bs
 
-and pattern_vars p =
-  match p with
-  | PWild | PUnit | PBool _ | PInt _ | POption None | PNode _ ->
-    PSet.create Var.compare
-  | PVar v -> PSet.singleton ~cmp:Var.compare v
-  | PEdge (p1, p2) -> pattern_vars (PTuple [p1; p2])
-  | PTuple ps ->
+
+let rec free_ty (seen: Var.t PSet.t) (e: exp) : (Var.t * ty) PSet.t =
+  let cmp = fun (a,_) (b,_) -> Var.compare a b in
+  match e.e with
+  | EVar v ->
+    if PSet.mem v seen then PSet.create cmp
+    else PSet.singleton ~cmp:cmp (v, OCamlUtils.oget e.ety)
+  | EVal _ -> PSet.create cmp
+  | EOp (_, es) | ETuple es ->
     List.fold_left
-      (fun set p -> PSet.union set (pattern_vars p))
-      (PSet.create Var.compare)
-      ps
-  | PRecord map ->
+      (fun set e -> PSet.union set (free_ty seen e))
+      (PSet.create cmp)
+      es
+  | ERecord map ->
     StringMap.fold
-      (fun _ p set -> PSet.union set (pattern_vars p))
+      (fun _ e set -> PSet.union set (free_ty seen e))
       map
-      (PSet.create Var.compare)
-  | POption (Some p) -> pattern_vars p
+      (PSet.create cmp)
+  | EFun f -> free_ty (PSet.add f.arg seen) f.body
+  | EApp (e1, e2) -> PSet.union (free_ty seen e1) (free_ty seen e2)
+  | EIf (e1, e2, e3) ->
+    PSet.union (free_ty seen e1)
+      (PSet.union (free_ty seen e2) (free_ty seen e3))
+  | ELet (x, e1, e2) ->
+    let seen = PSet.add x seen in
+    PSet.union (free_ty seen e1) (free_ty seen e2)
+  | ESome e | ETy (e, _) | EProject (e, _) -> free_ty seen e
+  | EMatch (e, bs) ->
+    let bs1 =
+      PatMap.fold
+        (fun p e set ->
+           let seen = PSet.union seen (pattern_vars p) in
+           PSet.union set (free_ty seen e) )
+        bs.pmap
+        (PSet.create cmp)
+    in
+    let bs =
+      BatList.fold_left
+        (fun set (p, e) ->
+           let seen = PSet.union seen (pattern_vars p) in
+           PSet.union set (free_ty seen e) )
+        bs1
+        bs.plist
+    in
+    PSet.union (free_ty seen e) bs
+
+
 
 let rec free_dead_vars (e : exp) =
   match e.e with

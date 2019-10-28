@@ -92,7 +92,7 @@ let build_constructors () =
 
 let is_map_op op =
   match op with
-    | MCreate | MGet | MSet | MMap | MMapFilter | MMerge -> true
+    | MCreate | MGet | MSet | MMap | MMapFilter | MMerge | MMapIte -> true
     | And | Or | Not | UAdd _ | USub _ | Eq | ULess _ | ULeq _ | AtMost _ | NLess | NLeq | TGet _ | TSet _ -> false
     | MFoldEdge | MFoldNode -> failwith "Todo: map folds"
 
@@ -114,6 +114,7 @@ let op_to_ocaml_string op =
   | MSet
   | MMap
   | MMapFilter
+  | MMapIte
   | MMerge -> failwith "Map ops are handled elsewhere"
   | AtMost _ -> failwith "todo: atmost"
   | MFoldEdge
@@ -189,13 +190,13 @@ let getFuncCache (e: exp) : string =
          Collections.printList (fun x -> Var.name x) freeList "(" "," ")"
        in
        Printf.sprintf "(%d, %s)" (get_fresh_exp_id f.body) closure
-       (*FIXME: annoying BatSet printing outputs null character at the end*)
+       (*FIXME: annoying BatSet printing outputs null character at the end so I am using the code above*)
        (* let closure = BatIO.output_string () in
         *   BatSet.PSet.print ~first:"(" ~sep:"," ~last:")"
         *     (fun out x -> BatIO.write_string out (Var.name x))
         *     closure free;
         *   Printf.sprintf "(%d, %s)" f.body.etag (BatInnerIO.close_out closure) *)
-     | _ -> (*assume there are no free variables, but this needs to be fixed. FIXME*)
+     | _ -> (*assume there are no free variables, but this needs to be fixed: always inline*)
        Printf.sprintf "(%d, ())" (get_fresh_exp_id e)
 
 
@@ -344,42 +345,37 @@ and map_to_ocaml_string op es ty =
     | MMapFilter ->
       (match es with
        | [pred; f; m] ->
-         let pred =
-           match pred.e with
-           | EFun f -> f
-           | _ -> failwith "predicate is not syntactically a function, cannot compile"
-         in
-         (* NOTE: for now considering that pred is closed (no free variables), as in the interpreter. FIXME. *)
          (* TODO: use an array from idx to expressions instead and compile BDD dynamically to account for free vars*)
-         let bdd_id =
-           match Collections.ExpMap.Exceptionless.find pred.body !bddfunc_cache with
+         let pred_closure =
+           match pred.e with
+           | EFun predF ->
+             let freeVars = Syntax.free_ty (BatSet.PSet.singleton ~cmp:Var.compare predF.arg) predF.body in
+             let freeList = BatSet.PSet.to_list freeVars in
+             Collections.printList (fun (x, ty) -> Printf.sprintf "(%s,%d)" (Var.name x) (get_fresh_type_id ty)) freeList "(" "," ")"
+           | _ -> failwith "Predicate is not a function expression, try inlining"
+         in
+         let pred_id =
+           match Collections.ExpMap.Exceptionless.find pred !pred_cache with
            | None ->
-             let bddf = BddFunc.create_value (OCamlUtils.oget pred.argty) in
-             let env = Env.update Env.empty pred.arg bddf in
-             let bddf = BddFunc.eval env pred.body in
-             (match bddf with
-              | BBool bdd ->
-                let mtbdd = BddFunc.wrap_mtbdd bdd in
-                let id = fresh_bdd_id () in
-                bddfunc_cache :=
-                  Collections.ExpMap.add pred.body (mtbdd, id) !bddfunc_cache ;
+                let id = fresh_pred_id () in
+                pred_cache :=
+                  Collections.ExpMap.add pred id !pred_cache ;
                 id
-              | _ -> failwith "A boolean bdd was expected but something went wrong")
-           | Some (_, id) -> id
+           | Some id -> id
          in
          (match get_inner_type (OCamlUtils.oget f.ety) with
            | TArrow (_, newty) ->
              (* Get e1's hashcons and closure *)
               let op_key = getFuncCache f in
-              (*FIXME: this needs to be fresh, to avoid the case where it is used
-                 inside f but our separator is not OCaml friendly*)
               let op_key_var = "op_key" in
+              let pred_key = Printf.sprintf "(%d, %s)" pred_id pred_closure in
               (*need the Obj.magic to op_key_var arg here because tuple may
                    have different type/size depending on the free vars*)
               Printf.sprintf "(let %s = %s in \n\
-                               NativeBdd.mapIf %d (Obj.magic %s) (%d) (%s) (%s))"
+                               let pred_key = %s in \n\
+                               NativeBdd.mapIf pred_key (Obj.magic %s) (%d) (%s) (%s))"
                 op_key_var op_key (*first let*)
-                bdd_id op_key_var (get_fresh_type_id newty)
+                pred_key op_key_var (get_fresh_type_id newty)
                 (exp_to_ocaml_string f) (exp_to_ocaml_string m)
             | _ -> failwith ("Wrong type for function argument" ^ (Printing.ty_to_string (OCamlUtils.oget f.ety))))
        | _ -> failwith "Wrong number of arguments to mapIf operation")
@@ -481,7 +477,8 @@ let compile_net net =
 
   (* build bdd and type arrays so that lookups during execution will work *)
   build_type_array ();
-  build_bdd_array ();
+  (*build_bdd_array (); *)
+  build_pred_array ();
 
   Printf.sprintf "%s %s %s %s %s %s %s %s %s %s %s %s"
     tuple_s utys_s attr_s record_cnstrs record_fns symbs_s defs_s init_s trans_s merge_s requires_s assert_s

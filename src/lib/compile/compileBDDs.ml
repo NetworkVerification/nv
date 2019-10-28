@@ -4,9 +4,10 @@ open Cudd
 
 (*TODO: make a module for this*)
 
+(** ** Support for MapIf*)
 (* Expression map cache used to avoid recompiling mapIf predicates. First
    element of the value is the bdd, second one is the identifier used to look it
-   up in the compiled BDDs module *)
+   up in the native BDDs module *)
 let bddfunc_cache : (bool Cudd.Mtbdd.t * int) Collections.ExpMap.t ref = ref Collections.ExpMap.empty
 
 let bddfunc_id = ref 0
@@ -18,6 +19,7 @@ let fresh_bdd_id () =
 
 let bdd_array = ref (BatArray.create 0 ((BddFunc.bdd_of_bool true) |> BddFunc.wrap_mtbdd))
 
+(* dump the expression map into an array indexed by the id for faster lookups during execution. *)
 let build_bdd_array () =
   let arr = BatArray.create (!bddfunc_id) ((BddFunc.bdd_of_bool true) |> BddFunc.wrap_mtbdd) in
   Collections.ExpMap.iter (fun _ (bdd, bdd_id) -> BatArray.set arr bdd_id bdd) !bddfunc_cache;
@@ -25,6 +27,26 @@ let build_bdd_array () =
 
 let get_bdd =
   fun i -> BatArray.get !bdd_array i
+
+let pred_cache : int Collections.ExpMap.t ref = ref Collections.ExpMap.empty
+
+let pred_id = ref 0
+
+let fresh_pred_id () =
+  let x = !pred_id in
+  incr pred_id;
+  x
+
+let pred_array = ref (BatArray.create 0 (e_val (vunit ())))
+
+(* dump the expression map into an array indexed by the id for faster lookups during execution. *)
+let build_pred_array () =
+  let arr = BatArray.create (!pred_id) (e_val (vunit ())) in
+  Collections.ExpMap.iter (fun pred pred_id -> BatArray.set arr pred_id pred) !pred_cache;
+  pred_array := arr
+
+let get_pred =
+  fun i -> BatArray.get !pred_array i
 
 (** ** Type Cache*)
 let type_cache : int Collections.TypeMap.t ref = ref Collections.TypeMap.empty

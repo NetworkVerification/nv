@@ -7,6 +7,7 @@ open BddMap
 open Embeddings
 open CompileBDDs
 open Collections
+open Nv_utils
 
 module B = BddUtils
 
@@ -177,9 +178,27 @@ let equal m1 m2 = BddMap.equal m1.bdd m2.bdd
 (** * MapIf related functions*)
 let mapw_op_cache = ref HashClosureMap.empty
 
-let mapIf (predId: int) (op_key : int * 'f) (vty_new_id: int) (f: 'a1 -> 'a2) (vmap : t) : t =
+let mapw_pred_cache = ref HashClosureMap.empty
+
+(* Given the argument [x], the corrresponding bdd [bddf], a predicate's body [f] and a closure (tuple of values) [clos] returns
+ * an environment to build the BDD. *)
+let build_env (x : Syntax.var) (bddf: BddFunc.t) (f: exp) (clos: 'a) =
+  let freeVars = Syntax.free (BatSet.PSet.singleton ~cmp:Var.compare x) f in
+  let freeList = BatSet.PSet.to_list freeVars in
+  let rec loop list clos acc =
+    match list with
+    | [] -> acc
+    | [y] -> Env.update acc y (BddFunc.eval_value (embed_value_id (fst clos) (snd clos)))
+    | y :: ys ->
+      let elt = Obj.magic (fst clos) in
+      let clos = snd clos in
+      let env = Env.update acc y (BddFunc.eval_value (embed_value_id (fst elt) (snd elt))) in
+      loop ys (Obj.magic clos) env
+  in
+  loop freeList (Obj.magic clos) (Env.bind x bddf)
+
+let mapIf (pred_key: int * 'g) (op_key : int * 'f) (vty_new_id: int) (f: 'a1 -> 'a2) (vmap : t) : t =
   let cfg = Cmdline.get_cfg () in
-  let pred = get_bdd predId in
   let f_embed =
     fun x -> (f (unembed_value_id vmap.val_ty_id x))
              |> embed_value_id vty_new_id
@@ -188,9 +207,29 @@ let mapIf (predId: int) (op_key : int * 'f) (vty_new_id: int) (f: 'a1 -> 'a2) (v
     if Mtbdd.get b then f_embed (Mtbdd.get v) |> Mtbdd.unique B.tbl
     else v
   in
-  (* if cfg.no_caching then {vmap with bdd = (Mapleaf.mapleaf2 g pred (fst vmap.bdd), get_type vty_new_id);
-   *                                   val_ty_id = vty_new_id}
-   * else *)
+
+  let pred =
+    match HashClosureMap.Exceptionless.find pred_key !mapw_pred_cache with
+    | None ->
+      let pred = get_pred (fst pred_key) in
+      let predFun =
+        match pred.e with
+        | EFun predFun -> predFun
+        | _ -> failwith "expected a function"
+      in
+      let bddf = BddFunc.create_value (OCamlUtils.oget predFun.argty) in
+      let env = build_env predFun.arg bddf predFun.body (snd pred_key) in
+      let bddf = BddFunc.eval env predFun.body in
+      (match bddf with
+       | BBool bdd ->
+         let mtbdd = BddFunc.wrap_mtbdd bdd in
+         mapw_pred_cache :=
+           HashClosureMap.add pred_key mtbdd !mapw_pred_cache ;
+         mtbdd
+       | _ -> failwith "A boolean bdd was expected but something went wrong")
+    | Some mtbdd -> mtbdd
+  in
+
   let op =
     match HashClosureMap.Exceptionless.find op_key !mapw_op_cache with
     | None ->
