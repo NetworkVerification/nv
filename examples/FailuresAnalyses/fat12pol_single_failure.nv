@@ -6,7 +6,7 @@ type rib = {
     ospf:option[ospfType];
     bgp:option[bgpType];
     selected:option[int2]; }
-type attribute = rib
+type attribute = dict[tedge,rib]
 
 let d = (1174429440, 24u5)
 
@@ -1800,9 +1800,9 @@ let mergeValues x y =
     bgp = b;
     selected = best c s o b}
 
-let merge node x y = mergeValues x y
+let mergeProt x y = mergeValues x y
 
-let init node =
+let initProt node =
   match node with
   | 0n ->
 if (d = (1174440192, 32u5)) || (d = (167992320, 31u5)) || (d = (167854592, 31u5)) || (d = (167854336, 31u5)) || (d = (167854080, 31u5)) || (d = (167853824, 31u5)) || (d = (167853568, 31u5)) || (d = (167989248, 31u5)) || (d = (167854848, 31u5)) || (d = (167986176, 31u5)) || (d = (167980032, 31u5)) || (d = (167983104, 31u5)) || (d = (167976960, 31u5)) then
@@ -39372,17 +39372,24 @@ else
 (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
 
 )
-let trans edge x =
+let transProt edge x =
   let o = transferOspf edge x.ospf in
   let b = transferBgp edge x in
   {connected=None; static=None; ospf=o; bgp=b; selected=None}
 
-let assert node x =
-    if (d =  (1174429440, 24u5)) then
-      match x.selected with
-      | None -> false
-      | _ -> true
-    else true
+let transFailure transProt e x =
+  let x = mapIf (fun e1 -> e = e1) (fun v -> {connected=None; static=None; ospf=None; bgp=None; selected=None;}) x in
+  mapIf (fun e1 -> !(e=e1)) (fun v -> transProt e v) x
+
+let trans e x =
+  transFailure transProt e x
+
+let merge u x y =
+  combine (fun v1 v2 -> mergeProt v1 v2) x y
+
+let init u =
+  let m = createDict ({connected=None; static=None; ospf=None; bgp=None; selected=None;}) in
+  map (fun v -> initProt u) m
 
 (*
 {aggregation-137=0,
