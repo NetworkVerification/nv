@@ -973,6 +973,7 @@ let canonicalize_type (ty : ty) : ty =
   let (result, _, _) = aux ty (VarMap.empty) 0 in
   result
 
+
 let rec equiv_tys ty1 ty2 =
   equal_tys (canonicalize_type ty1) (canonicalize_type ty2)
 ;;

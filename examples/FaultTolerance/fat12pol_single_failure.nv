@@ -39378,8 +39378,9 @@ let transProt edge x =
   {connected=None; static=None; ospf=o; bgp=b; selected=None}
 
 let transFailure transProt e x =
-  let x = mapIf (fun e1 -> e = e1) (fun v -> {connected=None; static=None; ospf=None; bgp=None; selected=None;}) x in
-  mapIf (fun e1 -> !(e=e1)) (fun v -> transProt e v) x
+  mapIte (fun e1 -> e = e1) (fun v -> {connected=None; static=None; ospf=None; bgp=None; selected=None;}) (fun v -> transProt e v) x
+ (* let x = mapIf (fun e1 -> e = e1) (fun v -> {connected=None; static=None; ospf=None; bgp=None; selected=None;}) x in
+  mapIf (fun e1 -> !(e=e1)) (fun v -> transProt e v) x *)
 
 let trans e x =
   transFailure transProt e x

@@ -172,7 +172,7 @@ let rec ty_to_ocaml_string t =
      Printf.sprintf "(%s) option"
        (ty_to_ocaml_string t)
   | TMap _ ->
-    Printf.sprintf "NativeBdd.t"
+    Printf.sprintf "CompileBDDs.t"
   | TRecord map ->
     record_to_ocaml_record ":" ty_to_ocaml_string map
 
@@ -295,7 +295,7 @@ and map_to_ocaml_string op es ty =
     | MCreate ->
       (match ty with
        | TMap (kty,vty) ->
-          Printf.sprintf "NativeBdd.create ~key_ty_id:(%d) ~val_ty_id:(%d) %s"
+          Printf.sprintf "NativeBdd.create ~key_ty_id:(%d) ~val_ty_id:(%d) (%s)"
             (get_fresh_type_id kty) (get_fresh_type_id vty) (exp_to_ocaml_string (BatList.hd es))
         | _ -> failwith "Wrong type for map operation")
     | MSet ->
@@ -475,11 +475,6 @@ let compile_net net =
   let tuple_s = build_record_types () in
   let record_fns = build_proj_funcs () in
   let record_cnstrs = build_constructors () in
-
-  (* build bdd and type arrays so that lookups during execution will work *)
-  build_type_array ();
-  (*build_bdd_array (); *)
-  build_pred_array ();
 
   Printf.sprintf "%s %s %s %s %s %s %s %s %s %s %s %s"
     tuple_s utys_s attr_s record_cnstrs record_fns symbs_s defs_s init_s trans_s merge_s requires_s assert_s
