@@ -39,6 +39,41 @@ let exp_transformer (recursors: Transformers.recursors) e =
   | ESome e' ->
     Some (etuple [aexp ((e_val (avalue (vbool true, Some TBool, e.espan))), Some TBool, e.espan);
                   recursors.recurse_exp e'])
+  | EMatch ({ety = Some(TOption oty); _} as e', branches) when true ->
+    begin
+      (* For now, require exactly two branches: a None and a Some *)
+      match branchToList branches with
+      | (POption None, noneExp)::(POption Some somePat, someExp)::[]
+      | (POption Some somePat, someExp)::(POption None, noneExp)::[] ->
+        let unboxed = recursors.recurse_exp e' in
+        let noneExp = recursors.recurse_exp noneExp in
+        let someExp =
+          let unboxed_inner_ty =
+            match unboxed.ety with
+            | Some (TTuple [TBool; ty]) -> ty
+            | _ -> failwith "impossible"
+          in
+          let inner_match_exp =
+            aexp (eop (TGet (2, 1, 1)) [unboxed], Some unboxed_inner_ty, e.espan)
+          in
+          aexp
+            (ematch inner_match_exp (addBranch
+                                       (recursors.recurse_pattern somePat oty)
+                                       (recursors.recurse_exp someExp)
+                                       emptyBranch),
+             noneExp.ety,
+             e.espan)
+        in
+        let branches = emptyBranch in
+        let branches = addBranch (PBool true) someExp branches in
+        let branches = addBranch (PBool false) noneExp branches in
+        let outer_match_exp =
+          aexp (eop (TGet (2, 0, 0)) [unboxed], Some TBool, e.espan)
+        in
+        Some (ematch outer_match_exp branches)
+      | _ -> None
+    end
+
   | _ -> None
 ;;
 
