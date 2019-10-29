@@ -188,11 +188,12 @@ let build_env (x : Syntax.var) (bddf: BddFunc.t) (f: exp) (clos: 'a) =
   let rec loop list clos acc =
     match list with
     | [] -> acc
-    | [y] -> Env.update acc y (BddFunc.eval_value (embed_value_id (fst clos) (snd clos)))
+    | [y] ->
+      Env.update acc y (BddFunc.eval_value (embed_value_id (snd clos) (fst clos)))
     | y :: ys ->
       let elt = Obj.magic (fst clos) in
       let clos = snd clos in
-      let env = Env.update acc y (BddFunc.eval_value (embed_value_id (fst elt) (snd elt))) in
+      let env = Env.update acc y (BddFunc.eval_value (embed_value_id (snd elt) (fst elt))) in
       loop ys (Obj.magic clos) env
   in
   loop freeList (Obj.magic clos) (Env.bind x bddf)
@@ -211,6 +212,7 @@ let mapIf (pred_key: int * 'g) (op_key : int * 'f) (vty_new_id: int) (f: 'a1 -> 
   let pred =
     match HashClosureMap.Exceptionless.find pred_key !mapw_pred_cache with
     | None ->
+      (* Printf.printf "edge: %d,%d\n" (fst (fst (Obj.magic clos))) (snd (fst (Obj.magic clos))); *)
       let pred = get_pred (fst pred_key) in
       let predFun =
         match pred.e with
@@ -227,7 +229,8 @@ let mapIf (pred_key: int * 'g) (op_key : int * 'f) (vty_new_id: int) (f: 'a1 -> 
            HashClosureMap.add pred_key mtbdd !mapw_pred_cache ;
          mtbdd
        | _ -> failwith "A boolean bdd was expected but something went wrong")
-    | Some mtbdd -> mtbdd
+    | Some mtbdd ->
+      mtbdd
   in
 
   let op =

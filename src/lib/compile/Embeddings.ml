@@ -16,8 +16,8 @@ let rec embed_value (record_fns: string -> 'a -> 'b) (typ: Syntax.ty) : 'v -> Sy
       fun _ -> Syntax.vunit ()
     | TBool ->
       fun v -> Syntax.vbool (Obj.magic v)
-    | TInt _ ->
-      fun v -> Syntax.vint ((Obj.magic v) |> Integer.of_int)
+    | TInt n ->
+      fun v -> Syntax.vint (Integer.create ~value:(Obj.magic v) ~size:n)
     | TOption ty ->
       let f = embed_value record_fns ty in
         (fun v ->
@@ -41,7 +41,8 @@ let rec embed_value (record_fns: string -> 'a -> 'b) (typ: Syntax.ty) : 'v -> Sy
     | TRecord _ -> failwith "Trecord"
     | TNode ->
       fun v -> Syntax.vint ((Obj.magic v) |> Integer.of_int)
-    | TEdge -> failwith "Tedge"
+    | TEdge -> fun v -> Syntax.vedge ((fst (Obj.magic v)),
+                                      (snd (Obj.magic v)))
     | TVar {contents = Link ty} -> embed_value record_fns ty
     | TVar _ | QVar _ -> failwith ("TVars and QVars should not show up here: " ^ (PrintingRaw.show_ty typ))
 
@@ -94,7 +95,11 @@ let rec unembed_value (record_cnstrs : string -> 'c) (record_proj : string -> 'a
         (match v.v with
           | VNode n -> Obj.magic n
           | _ -> failwith "mistyped value")
-    | TEdge -> failwith "Tedge"
+    | TEdge ->
+      fun v ->
+        (match v.v with
+          | VEdge e -> Obj.magic e
+          | _ -> failwith "mistyped value")
     | TVar {contents = Link ty} -> unembed_value record_cnstrs record_proj ty
     | TVar _ | QVar _ -> failwith ("TVars and QVars should not show up here: " ^ (PrintingRaw.show_ty typ))
 

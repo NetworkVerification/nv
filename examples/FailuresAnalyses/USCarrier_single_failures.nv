@@ -8,7 +8,7 @@ type rib = {
   selected:option[int2]; }
 type attribute = dict[tedge,rib]
 
-symbolic d : (int, int5) = (3355769856, 24u5)
+let d  = (3355769856, 24u5)
 
 let edges = {
   69-92; (*lexingtonid33,FastEthernet1/0 --> highttpoint,FastEthernet0/1*)

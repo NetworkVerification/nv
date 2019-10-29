@@ -5,9 +5,9 @@ include "../generic-algebras/rip.nv"
 type attribute = dict[tedge, option[int]]
 
 let trans e x =
-  transFailure (fun e v -> transRip v) e x
+  transFailure (fun e v -> transRip v) None e x
 
-let merge u x y = mergeFailure mergeRip x y
+let merge u x y = mergeFailure mergeRip None x y
 
 let init u =
   let m = createDict None in
