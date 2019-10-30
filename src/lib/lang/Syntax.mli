@@ -4,6 +4,8 @@ open Nv_utils.PrimitiveCollections
        
 type node = int
 
+val tnode_sz : int
+
 type edge = node * node
 
 type bitwidth = int
@@ -49,6 +51,7 @@ type op =
   | MSet
   | MMap
   | MMapFilter
+  | MMapIte
   | MMerge
   | MFoldNode
   | MFoldEdge
@@ -346,6 +349,8 @@ val equal_tys : ty -> ty -> bool
 val equal_inner_tys : ty -> ty -> bool
 
 val free : Var.t BatSet.PSet.t -> exp -> Var.t BatSet.PSet.t
+
+val free_ty : Var.t BatSet.PSet.t -> exp -> (Var.t * ty) BatSet.PSet.t
 
 val free_dead_vars : exp -> exp
 

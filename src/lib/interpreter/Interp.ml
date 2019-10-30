@@ -187,6 +187,40 @@ and interp_op env ty op es =
     in
     let f v = apply c_env2 f2 v in
     vmap (BddMap.map_when ~op_key:(f2.body, env2) mtbdd f m)
+  | ( MMapIte
+    , [ {v= VClosure (c_env0, p)}
+      ; {v= VClosure (c_env1, f1)}
+      ; {v= VClosure (c_env2, f2)}
+      ; {v= VMap m} ] ) ->
+
+    let seen1 = BatSet.PSet.singleton ~cmp:Var.compare f1.arg in
+    let env1 = build_env c_env1 (Syntax.free seen1 f1.body) in
+
+    let seen2 = BatSet.PSet.singleton ~cmp:Var.compare f2.arg in
+    let env2 = build_env c_env2 (Syntax.free seen2 f2.body) in
+
+    (* Create closure for predicate *)
+    let seen0 = Syntax.free (BatSet.PSet.singleton ~cmp:Var.compare p.arg) p.body in
+    let usedValEnv = Env.filter c_env0.value (fun x _ -> BatSet.PSet.mem x seen0) in
+    let lookupVal = (p.body, usedValEnv) in
+    let mtbdd =
+      match ExpEnvMap.Exceptionless.find lookupVal !bddfunc_cache with
+      | None -> (
+          let bddf = BddFunc.create_value (Nv_utils.OCamlUtils.oget p.argty) in
+          let env = Env.update (Env.map usedValEnv (fun v -> BddFunc.eval_value v)) p.arg bddf in
+          let bddf = BddFunc.eval env p.body in
+          match bddf with
+          | BBool bdd ->
+            let mtbdd = BddFunc.wrap_mtbdd bdd in
+            bddfunc_cache :=
+              ExpEnvMap.add lookupVal mtbdd !bddfunc_cache ;
+            mtbdd
+          | _ -> failwith "impossible" )
+      | Some bddf -> bddf
+    in
+    let f1_fun v = apply c_env1 f1 v in
+    let f2_fun v = apply c_env2 f2 v in
+    vmap (BddMap.map_ite ~op_key1:(f1.body, env1) ~op_key2:(f2.body, env2) mtbdd f1_fun f2_fun m)
   | _, _ ->
     failwith
       (Printf.sprintf "bad operator application: %s"

@@ -23,6 +23,8 @@ let from_var (s, i) = (s, i)
 
 let to_string (s, i) = s ^ delim ^ string_of_int i
 
+let to_string_delim d (s, i) = s ^ d ^ string_of_int i
+
 let of_var_string s =
   try
     let v, i = BatString.rsplit s ~by:"~" in
