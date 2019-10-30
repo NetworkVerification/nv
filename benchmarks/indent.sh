@@ -1,3 +1,3 @@
-for f in **/* ; do
-  ocp-indent -i "$f"
+for f in FatTrees/**/*".nv"; do
+    ocp-indent -i "$f"
 done
