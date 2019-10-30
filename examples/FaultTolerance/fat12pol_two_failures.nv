@@ -6,7 +6,7 @@ type rib = {
     ospf:option[ospfType];
     bgp:option[bgpType];
     selected:option[int2]; }
-type attribute = dict[tedge,rib]
+type attribute = dict[(tedge,tedge),rib]
 
 let d = (1174429440, 24u5)
 
@@ -39370,16 +39370,17 @@ None)
 None
 else
 (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen; med= b.med;comms= b.comms;})))
-
 )
+
 let transProt edge x =
   let o = transferOspf edge x.ospf in
   let b = transferBgp edge x in
   {connected=None; static=None; ospf=o; bgp=b; selected=None}
 
 let transFailure transProt e x =
-  let x = mapIf (fun e1 -> e = e1) (fun v -> {connected=None; static=None; ospf=None; bgp=None; selected=None;}) x in
-  mapIf (fun e1 -> !(e=e1)) (fun v -> transProt e v) x
+  (*mapIte (fun e1 -> let (e1, e2) = e1 in e = e1 || e = e2) (fun v -> {connected=None; static=None; ospf=None; bgp=None; selected=None;}) (fun v -> transProt e v) x*)
+  let x = mapIf (fun e1 -> let (e1, e2) = e1 in e = e1 || e = e2) (fun v -> {connected=None; static=None; ospf=None; bgp=None; selected=None;}) x in
+  mapIf (fun e1 -> let (e1,e2) = e1 in !(e=e1 || e=e2)) (fun v -> transProt e v) x
 
 let trans e x =
   transFailure transProt e x

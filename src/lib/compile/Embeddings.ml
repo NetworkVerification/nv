@@ -5,10 +5,8 @@ open Nv_datastructures
 open PrimitiveCollections
 open Syntax
 open CompileBDDs
-(* open Fix
- * open Memoize *)
 
-
+         
 (** Given an NV type and an OCaml value constructs an NV value*)
 let rec embed_value (record_fns: string -> 'a -> 'b) (typ: Syntax.ty) : 'v -> Syntax.value =
   match typ with
@@ -36,11 +34,11 @@ let rec embed_value (record_fns: string -> 'a -> 'b) (typ: Syntax.ty) : 'v -> Sy
       in
         fun v -> Syntax.vtuple (BatList.map (fun f -> f v) fs)
     | TMap _ -> (* trivial as we represent maps with the same mtbdd + value type*)
-      fun v -> Syntax.vmap (fst (Obj.magic v))
+      fun v -> Syntax.vmap ((Obj.magic v).bdd)
     | TArrow _ -> failwith "Function computed as value"
     | TRecord _ -> failwith "Trecord"
     | TNode ->
-      fun v -> Syntax.vint ((Obj.magic v) |> Integer.of_int)
+      fun v -> Syntax.vint (Integer.create ~value:(Obj.magic v) ~size:(Syntax.tnode_sz))
     | TEdge -> fun v -> Syntax.vedge ((fst (Obj.magic v)),
                                       (snd (Obj.magic v)))
     | TVar {contents = Link ty} -> embed_value record_fns ty
@@ -76,18 +74,20 @@ let rec unembed_value (record_cnstrs : string -> 'c) (record_proj : string -> 'a
       let fs = (*functions that unembed each value of a tuple *)
         BatList.map (fun ty -> unembed_value record_cnstrs record_proj ty) ts
       in
-        fun v ->
-          (match v.v with
-            | VTuple vs ->
-              BatList.fold_left2 (fun acc f v -> Obj.magic (acc (f v))) f_cnstr fs vs
-              |> Obj.magic
-            | _ -> failwith "mistyped value")
-    | TMap (_, vty) ->
+      fun v ->
+        (match v.v with
+         | VTuple vs ->
+           BatList.fold_left2 (fun acc f v -> Obj.magic (acc (f v))) f_cnstr fs vs
+           |> Obj.magic
+         | _ -> failwith "mistyped value")
+    | TMap (kty, vty) ->
       (* this is trivial as OCaml maps are NV maps plus a value type*)
       fun v ->
         (match v.v with
-          | VMap vdd -> Obj.magic (vdd, vty)
-          | _ -> failwith "mistyped value")
+         | VMap vdd ->
+           (* Printf.printf "kty: %s, vty:%s" (Printing.ty_to_string kty) (Printing.ty_to_string vty); *)
+           Obj.magic ({bdd = vdd; key_ty_id = get_type_id kty; val_ty_id = get_type_id vty})
+         | _ -> failwith "mistyped value")
     | TArrow _ -> failwith "Function computed as value"
     | TRecord _ -> failwith "Trecord"
     | TNode ->

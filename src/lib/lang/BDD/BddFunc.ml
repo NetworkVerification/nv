@@ -28,7 +28,7 @@ let create_value (ty: ty) : t =
     | TInt size ->
       (BInt (Array.init size (fun j -> B.ithvar (i + j))), i + size)
     | TNode ->
-      aux i (TInt 32)
+      aux i (TInt tnode_sz)
     | TEdge ->
       aux i (TTuple [TNode; TNode])
     | TTuple ts ->
@@ -252,7 +252,7 @@ and eval_value (v: value) =
     in
     BInt bs
   | VNode n ->
-    eval_value (vint (Integer.create ~size:32 ~value:n))
+    eval_value (vint (Integer.create ~size:(tnode_sz) ~value:n))
   | VEdge (n1, n2) ->
     eval_value (vtuple [vnode n1; vnode n2])
   | VOption None ->

@@ -11,6 +11,7 @@ open Nv_utils
 
 module B = BddUtils
 
+
 (* should I start by trying BatMap? would also set a comparison basis*)
   (* mcreate v : embed value return map.
      mget k m: embed key, get from the map, unembed value.
@@ -19,10 +20,6 @@ module B = BddUtils
      merge: unembed both values, apply f, embed result.
      mapIf p f m: create BDD for predicate p during compilation.
   *)
-
-
-(* BddMap plus the type of the values*)
-type t = {bdd : BddMap.t; key_ty_id : int; val_ty_id: int}
 
 (* Used to cache functions and their closures *)
 module HashClosureMap = BatMap.Make (struct

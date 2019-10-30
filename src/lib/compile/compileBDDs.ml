@@ -2,6 +2,9 @@ open Nv_lang
 open Syntax
 open Cudd
 
+(* BddMap plus the type of the values*)
+type t = {bdd : BddMap.t; key_ty_id : int; val_ty_id: int}
+
 (*TODO: make a module for this*)
 
 (** ** Support for MapIf*)
@@ -67,8 +70,12 @@ let build_type_array () =
 let get_type i =
   BatArray.get !type_array i
 
+let get_type_id ty =
+  Collections.TypeMap.find ty !type_cache
+
 (* Gets a fresh id and adds it to the cache or returns an existing one *)
 let get_fresh_type_id typ =
+  let typ = Typing.canonicalize_type typ in
   match Collections.TypeMap.Exceptionless.find typ !type_cache with
   | None ->
     let new_id = fresh_type_id () in

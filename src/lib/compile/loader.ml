@@ -14,8 +14,14 @@ let load_srp name =
 let simulate name net =
   ignore(Compile.compile_ocaml name net); (* TODO: make this optional *)
   load_srp (name ^ ".plugin");
+
   (* Build symbolics module *)
   let module Symbs = (val (defaultSymbolics net.symbolics)) in
+  (*NOTE: Building Symbs (at least once) must be done before build_type_array, as defaultSymbolics populates type_array.*)
+  (* build bdd and type arrays so that lookups during execution will work *)
+  build_type_array ();
+  (*build_bdd_array (); *)
+  build_pred_array ();
 
   (* Load compiled NV program*)
   let module EnrichedSrp = (val get_srp ()) in

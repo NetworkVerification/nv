@@ -4,6 +4,8 @@ open Nv_utils.PrimitiveCollections
        
 type node = int
 
+val tnode_sz : int
+
 type edge = node * node
 
 type bitwidth = int
