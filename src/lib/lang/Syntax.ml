@@ -559,7 +559,7 @@ let rec hash_value ~hash_meta v : int =
 and hash_v ~hash_meta v =
   match v with
   | VBool b -> if b then 1 else 0
-  | VInt i -> (19 * Integer.to_int i) + 1
+  | VInt i -> (19 * (Integer.to_int i)) + 1
   | VMap m -> (19 * Hashtbl.hash m) + 2
   | VTuple vs ->
     let acc =
