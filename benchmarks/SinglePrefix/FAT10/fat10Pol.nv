@@ -23077,7 +23077,7 @@ let trans edge x =
     {connected=None; static=None; ospf=o; bgp=b; selected=None}
 
 let assert node x =
-  if (d = (1174433280, 24u5) then
+  if (d = (1174433280, 24u5)) then
     match x.selected with
       | None -> false
       | _ -> true

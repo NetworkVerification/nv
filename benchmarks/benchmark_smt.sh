@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+NV="../_build/default/src/exe/main.exe"
+BENCHMARKS="SinglePrefix/FAT4/fat4pol.nv
+SinglePrefix/FAT8/fat8pol.nv
+SinglePrefix/FAT10/fat10pol.nv"
+
+for file in $BENCHMARKS
+do
+    time "$NV" -m "$file";
+done
