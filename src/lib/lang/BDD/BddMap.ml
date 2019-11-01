@@ -121,7 +121,7 @@ let vars_to_value vars ty =
         aux idx tup
       | TNode ->
         (* Was encoded as int, so decode same way *)
-        (match aux idx (TInt 32) with
+        (match aux idx (TInt tnode_sz) with
          | {v = VInt n; _}, i ->  vnode (Integer.to_int n), i
          | _ -> failwith "impossible")
       | TEdge ->
