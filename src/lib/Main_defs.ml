@@ -194,6 +194,7 @@ let run_test cfg info net fs =
 
 let run_simulator cfg _ net fs =
   let net = partialEvalNet net in
+  let net, _ = OptimizeBranches.optimize_net net in (* The _ should match the identity function *)
   try
     let solution, q =
       match cfg.bound with
