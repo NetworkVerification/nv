@@ -164,14 +164,16 @@ let rec ty_to_ocaml_string t =
        (ty_to_ocaml_string t2)
   | TTuple ts ->
     let n = BatList.length ts in
+    record_table := IntSet.add n !record_table; (*add type to record table*)
     let tup_typ = Printf.sprintf ") tup__%d" n in
-      (*TODO:FIXME to apply types to record type.Did I fix that? not sure what I meant...*)
       Collections.printList (fun ty -> Printf.sprintf "%s" (ty_to_ocaml_string ty))
         ts "(" "," tup_typ
   | TOption t ->
      Printf.sprintf "(%s) option"
        (ty_to_ocaml_string t)
-  | TMap _ ->
+  | TMap (kty,vty) ->
+    ignore (ty_to_ocaml_string kty); (* NOTE: doing this for the side effect in the case of TTuple, i.e. adding to record_table *)
+    ignore (ty_to_ocaml_string vty);
     Printf.sprintf "CompileBDDs.t"
   | TRecord map ->
     record_to_ocaml_record ":" ty_to_ocaml_string map
