@@ -513,6 +513,9 @@ and equal_funcs ~cmp_meta f1 f2 =
   in
   b && Var.equals x y && equal_exps ~cmp_meta e1 e2
 
+let hash_map ((vdd, _)) =
+  (Mtbdd.size vdd) (*+ (Mtbdd.nbleaves vdd)*)
+
 let hash_string str =
   let acc = ref 7 in
   for i = 0 to String.length str - 1 do
@@ -560,7 +563,7 @@ and hash_v ~hash_meta v =
   match v with
   | VBool b -> if b then 1 else 0
   | VInt i -> (19 * (Integer.to_int i)) + 1
-  | VMap m -> (19 * Hashtbl.hash m) + 2
+  | VMap m -> (19 * (hash_map m)) + 2
   | VTuple vs ->
     let acc =
       List.fold_left
@@ -586,7 +589,7 @@ and hash_v ~hash_meta v =
   | VRecord map ->
     let acc =
       StringMap.fold
-        (fun l v acc -> acc + + hash_string l + hash_value ~hash_meta v)
+        (fun l v acc -> acc + hash_string l + hash_value ~hash_meta v)
         map 0
     in
     (19 * acc) + 7
