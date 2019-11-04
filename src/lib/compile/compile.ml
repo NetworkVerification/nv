@@ -57,7 +57,8 @@ let build_record_types () =
 let build_proj_func n =
   let lst = BatList.init n (fun i -> i) in
     Collections.printList
-      (fun i -> Printf.sprintf "| \"p%d__%d\" -> Obj.magic (fun x -> x.p%d__%d)" i n i n)
+      (* (fun i -> Printf.sprintf "| \"p%d__%d\" -> Obj.magic (fun x -> x.p%d__%d)" i n i n) *)
+      (fun i -> Printf.sprintf "| (%d,%d) -> Obj.magic (fun x -> x.p%d__%d)" i n i n)
       lst  "" "\n" "\n"
 
 (** Builds a table (function) that maps record projector names to the respective
@@ -81,7 +82,7 @@ let build_constructor n =
   let fun_body =
     Collections.printList (fun i -> Printf.sprintf "p%d__%d" i n) lst  ("{") ("; ") ("}")
   in
-  Printf.sprintf "| \"%s\" -> Obj.magic (%s%s)\n" (string_of_int n) fun_args fun_body
+  Printf.sprintf "| %d -> Obj.magic (%s%s)\n" n fun_args fun_body
 
 (** Builds a table (function) that maps each record to a function that takes as
    arguments a value for each of its fields and creates the record*)

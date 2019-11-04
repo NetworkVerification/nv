@@ -17,8 +17,8 @@ module type NATIVE_SRP =
     val assertion: (int -> attribute -> bool) option
 
     (** Communication between SRP and NV *)
-    val record_fns: string -> 'a -> 'b
-    val record_cnstrs: string -> 'c
+    val record_fns: (int * int) -> 'a -> 'b
+    val record_cnstrs: int -> 'c
   end
 
 module type EnrichedSRPSig = functor (S:PackedSymbolics) -> NATIVE_SRP

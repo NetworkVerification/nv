@@ -43,7 +43,7 @@ let build_default_get_symb (symbs: (var * ty_or_exp) list) =
       (ty, default_value ty)
     ) arr
   in
-  fun (record_cnstrs : string -> 'c) (record_fns: string -> 'a -> 'b) i ->
+  fun (record_cnstrs : int -> 'c) (record_fns: (int * int) -> 'a -> 'b) i ->
     let tyv = BatArray.get arr i in
     unembed_value record_cnstrs record_fns (fst tyv) (snd tyv)
 

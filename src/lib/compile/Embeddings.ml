@@ -8,7 +8,7 @@ open CompileBDDs
 
          
 (** Given an NV type and an OCaml value constructs an NV value*)
-let rec embed_value (record_fns: string -> 'a -> 'b) (typ: Syntax.ty) : 'v -> Syntax.value =
+let rec embed_value (record_fns: (int*int) -> 'a -> 'b) (typ: Syntax.ty) : 'v -> Syntax.value =
   match typ with
     | TUnit ->
       fun _ -> Syntax.vunit ()
@@ -25,7 +25,7 @@ let rec embed_value (record_fns: string -> 'a -> 'b) (typ: Syntax.ty) : 'v -> Sy
     | TTuple ts ->
       let n = BatList.length ts in
       let fs = BatList.mapi (fun i ty ->
-          let proj_fun = Printf.sprintf "p%d__%d" i n in
+          let proj_fun = (i, n) in
           let f_rec = embed_value record_fns ty in
           let proj_val = record_fns proj_fun in
             fun v ->
@@ -45,7 +45,7 @@ let rec embed_value (record_fns: string -> 'a -> 'b) (typ: Syntax.ty) : 'v -> Sy
     | TVar _ | QVar _ -> failwith ("TVars and QVars should not show up here: " ^ (PrintingRaw.show_ty typ))
 
 (** Takes an NV value of type typ and returns an OCaml value.*)
-let rec unembed_value (record_cnstrs : string -> 'c) (record_proj : string -> 'a -> 'b)
+let rec unembed_value (record_cnstrs : int -> 'c) (record_proj : (int * int) -> 'a -> 'b)
     (typ: Syntax.ty) : Syntax.value -> 'v =
   match typ with
     | TUnit ->
@@ -70,7 +70,7 @@ let rec unembed_value (record_cnstrs : string -> 'c) (record_proj : string -> 'a
     | TTuple ts ->
       (*TODO: this case is wrong? fix it*)
       let n = BatList.length ts in
-      let f_cnstr = record_cnstrs (string_of_int n) in (*function that constructs the record*)
+      let f_cnstr = record_cnstrs n in (*function that constructs the record*)
       let fs = (*functions that unembed each value of a tuple *)
         BatList.map (fun ty -> unembed_value record_cnstrs record_proj ty) ts
       in
