@@ -1,0 +1,32 @@
+include "generic-topologies/fattree1000.nv"
+include "utils.nv"
+
+type attribute = dict[tnode, option[int]]
+
+let merge node x y =
+  combine (fun x y -> mapbetter (fun x y -> if x < y then x else y) x y) x y (Some None) None (Some None) None
+
+let filt1 k =
+  (k <=n 10n && k >=n 5n) ||
+  (k <=n 20n && k >=n 15n) ||
+  (k <=n 30n && k >=n 25n) ||
+  (k <=n 40n && k >=n 35n) ||
+  (k <=n 50n && k >=n 45n) ||
+  (k <=n 60n && k >=n 55n) ||
+  (k <=n 70n && k >=n 65n) ||
+  (k <=n 80n && k >=n 75n)
+
+let trans edge x =
+  let m = mapIf filt1 (fun x -> None) x in
+  map (fun x -> mapo (fun x -> x + 1) x) m
+
+let ip_of_node node = node
+
+let init node =
+  let m = createDict None in
+  m[(ip_of_node node) := Some 0]
+
+let assert node x =
+  match x[21n] with
+  | None -> false
+  | Some _ -> true

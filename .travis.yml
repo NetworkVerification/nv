@@ -1,0 +1,18 @@
+language: c
+sudo: required
+addons:
+  apt:
+    packages:
+      - z3
+      - opam
+  homebrew:
+    packages:
+      - z3
+      - opam
+    update: true # Seems like the default brew is out-of-date
+script: bash -ex .travis-opam.sh
+env:
+  - OCAML_VERSION=4.06
+os:
+  # - linux # We can uncomment this if we decide to start supporting linux
+  - osx

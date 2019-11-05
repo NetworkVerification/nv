@@ -1,0 +1,12 @@
+(library
+ (name nv_datastructures)
+ (public_name nv_lib.datastructures)
+ (libraries
+    nv_utils
+    integers
+    ocamlgraph
+    batteries
+    zarith)
+  (preprocess
+    (pps ppx_deriving.std ppx_deriving_argparse))
+)

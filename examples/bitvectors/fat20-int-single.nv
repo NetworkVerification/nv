@@ -1,0 +1,13 @@
+include "../generic-algebras/distance-single.nv"
+include "../generic-topologies/fattree500.nv"
+(*
+let assert u x =
+  match x with
+  | None -> false
+  | Some k -> if (k < 5) then true else false
+*)
+
+let assert u x =
+  match x with
+  | None -> false
+  | Some _ -> true

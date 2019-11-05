@@ -1,0 +1,162 @@
+(*** IMPORTANT NOTE: This NV file is meant to speculate about some potential
+     future features of the language. Don't try to use it as an example; it
+     won't parse ***)
+
+(*** Utility Functions ***)
+let mapo f o =
+  match o with
+  | None -> None
+  | Some x -> Some (f x)
+
+let mapbetter f o1 o2 =
+  match (o1, o2) with
+  | (None, None) -> None
+  | (None, x) -> x
+  | (x, None) -> x
+  | (Some x, Some y) -> Some (f x y)
+
+
+(* I don't want to think about e.g. prefixes and lpms, since that seems orthogonal
+   to how iBGP actually works. So I'm defining a destination to be either a node
+   in the network (presumably a loopback address), or an external address *)
+(* Pretend NV has finite variants. We could implement this using e.g. a record *)
+type dest =
+  | DNode of node
+  | DExternal of int
+
+(*** Definition of RIP as a routing algebra ***)
+module RIP =
+  (* For each reachable destination node, store the next hop and the distance *)
+  type attribute = dict[dest, (node, int) option]
+
+  let init n =
+    let m = createDict None in
+    (* If the distance is 0, we'll assume the next hop value doesn't matter *)
+    m[n := Some (n, 0)]
+
+  let trans edge x =
+    let (n1, n2) = edge in
+    let increment_dist o =
+      match o with
+      | None -> None
+      | Some (_, d) ->
+        (* RIP caps routes at 15 hops *)
+        if d >= 15 then None else Some (n1, d+1)
+    in
+    map increment_dist x
+
+  let pick_best a1 a2 =
+    (* Choose the route with the shorter distance *)
+    let (n1, d1) = a1 in
+    let (n2, d2) = a2 in
+    if d1 < d2 then a1 else a2
+
+  let merge n x y =
+    combine (mapbetter pick_best) x y
+end
+
+(*** Definition of BGP as a routing algebra, ignoring policy details ***)
+
+type bgp_attr = {local_pref: int; AS_len: int; communities: set[int]}
+
+module BGP =
+  type attribute = dict[dest, bgp_attr option]
+
+  let init n = (* initialize dict for each destination you originate *)
+
+  let trans n x = (* policy dependent *)
+
+  let rankBGP a b =
+    if a.local_pref > b.local_pref then a
+    else if b.local_pref > a.local_pref then b
+    else if a.AS_len < b.AS_len then a
+    else b
+
+  let merge n x1 x2 =
+    combine (mapbetter rankBGP) x1 x2
+end
+
+(*** Definition of IBGP using eBGP and RIP ***)
+
+(* We assume that every logical (iBGP) edge is represented as an edge in the
+   topology, in addition to all of the physical edges. The following functions
+   let us disambiguate *)
+let is_physical : edge -> bool = (fun edge -> (* ... *) )
+let is_logical : edge -> bool = (fun edge -> (* ... *) )
+
+(* In practice, I think iBGP uses a full mesh, so is_logical might just be
+   the constant function (fun edge -> true) *)
+
+(*
+  When we're running multiple routing algorithms in parallel, we use a value
+  called administrative distance to select between them. I'm not clear on how
+  it's typically computed, but the details aren't important for how iBGP works.
+*)
+(* In practice we'd have one function for each attribute type *)
+let admin_dist attr = (* ... *)
+
+module IBGP =
+  type annotated_bgp = {attr: bgp_attr; ibgp: bool;}
+  type annotated_rip = {attr: RIP.attribute;}
+
+  (* These are options so that we can return None from the transfer function *)
+  type ibgp_attr = {bgp: annotated_bgp option; rip: annotated_rip option; best_route: int}
+
+  type attribute = ibgp_attr
+
+  let pick_best bgp_attr rip_attr =
+    match bgp_attr, rip_attr with
+    | _, None -> 0
+    | None, _ -> 1
+    | Some bgp_attr, Some rip_attr ->
+      if admin_dist bgp_attr < admin_dist rip_attr
+      then 0 (* BGP is better *)
+      else 1 (* RIP is better *)
+
+  let init n =
+    let bgp_0 = BGP.init n in
+    let rip_0 = RIP.init n in
+    {
+      bgp = Some {attr = bgp_0; ibgp = false;};
+      rip = Some {attr = rip_0;};
+      best_route = pick_best bgp_0 rip_0;
+    }
+
+  (* Return true iff we have a route to dest via some IGP. Here, the only IGP is RIP. *)
+  let has_route ibgp_attr dest =
+    match ibgp_attr.rip[dest] with
+    | None -> false
+    | _ -> true
+
+  let trans edge x =
+    let (u,v) = edge in
+    let trans_rip =
+      if not (is_physical edge) then None (* RIP only operates over physical links, not logical iBGP links *)
+      else mapo (RIP.trans edge) x
+    in
+    let trans_bgp =
+      if not (is_logical edge)          then None (* Don't transfer if these nodes aren't iBGP neighbors *)
+      else if x.bgp.ibgp                then None (* Don't redistribute routes that were learned via iBGP *)
+      else if not (has_route x v)       then None (* The logical link doesn't work if we can't reach the other side *)
+      else if not (has_route v.attr u)  then None (* Magic: We need the link to work in both directions *)
+      else mapo (BGP.trans edge) x                 (* If none of the above are true, call be BGP trans function)
+    in
+    {
+      bgp = {attr = trans_bgp; ibgp = true};
+      rip = {attr = rip};
+      best_route = 0; (* Will be computed after merge *)
+    }
+
+  let merge n x y =
+    let merged_bgp = mapbetter (BGP.merge n) x.bgp y.bgp in
+    let merged_rip = mapbetter (RIP.merge n) x.rip y.rip in
+    {
+      bgp = Some {attr = merged_bgp; ibgp = x.bgp.ibgp || y.bgp.ibgp};
+      rip = Some {attr = rip};
+      best_route = pick_best merged_bgp merged_rip;
+    }
+end
+
+solution IBGP = n
+
+assert (...n...)

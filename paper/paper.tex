@@ -16,6 +16,7 @@
 \usepackage{hyperref}          % hyper-text links
 \usepackage{cleveref}          % smarter type-based cross-references
 \usepackage{apptools}          % customizable appendix
+\usepackage{minted}            % code highlighting
 \usepackage{local}             % user-defined commands stored in local.sty
 
 % break long urls in the bibliography
@@ -56,7 +57,30 @@ NV is great
 \section{Introduction} 
 \label{sec:introduction}
 
-Stuff
+With the increased number of internet users and the emergence of cloud
+computing, networks have seen significant growth in terms of size and
+complexity. The tools to configure a network, however, have not kept up with
+this trend. As a result, a number of network misconfiguration induced outages
+have made headlines recently.
+
+To tackle the problem researchers have developed a number of static analyses
+that can be used to establish various correctness properties for a network's
+configuration. Despite the remarkable achievements in the area of network
+verification over the past few years, efforts are hindered by the lack of
+suitable abstractions that will facilitate developing and composing network configuration analyses.
+
+
+
+\begin{enumerate}
+  \item Introduce the problem: buggy networks, network verification to the rescue.
+  \item Existing tools (Batfish, Minesweeper, etc.) have made huge leaps to alleviate the problem but as they operate (almost) directly on top of the complicated configuration languages they suffer from a wide range of problems:
+    \begin{itemize}
+      \item[Lack of trust] Configuration languages span hundreds of expressions and statements. Faithfully and consistently modeling their only informally defined semantics is a difficult task.
+      \item[Inflexible] The used expressions are not compositional. Adding new language features often requires adding new expressions and updating all analyses backends.
+      \item[Non-transparent semantics] Requires network expertise and peeking into the large codebase of the backends to understand the semantics of commands.
+    \end{itemize}
+  \item PL community has tackled these problems before: translate configurations to an intermediate language and build analyses tools on top of the intermediate language.
+\end{enumerate}
 
 %=====================================================
 %
@@ -69,7 +93,8 @@ Stuff
 \section{Motivating Examples} 
 \label{sec:motivation}
 
-Key ideas
+Perhaps a small BGP configuration nicely demonstrates the key points: route-map complexity, implicit semantics, required network expertise.
+And then the corresponding NV program nicely demonstrates NV strong points.
 
 %=====================================================
 %
@@ -82,33 +107,127 @@ Key ideas
 \section{Language} 
 \label{sec:language}
 
+When designing an intermediate language there is a tension between the language
+constructs needed to faithfully model the source language and the constructs
+that verification techniques can efficiently reason about.
 \begin{enumerate}
-  \item Syntax and overview
-  \item Features, \EG, symbolic variables, requires, types, fixed point etc.
-  \item Semantics: (1) Asychronous semantics (simulation), and (2) Stable path semantics (SMT)
+  \item Syntax, types, standard lambda-calculus semantics.
+  \item Discuss about no recursion, our approach to modeling maps in order to retain completeness in first-order logic, etc.
+  \item Verification features, \EG, symbolic variables, requires.
+  \item Message exchange semantics and SPP?
+  \item Modules.
 \end{enumerate}
 
 %=====================================================
 %
 %
-%  **Tools**
+%  **Translation from configurations**
 %
 %
 %=====================================================
 
-\section{Tools}
-\label{sec:tools}
+\section{Translating vendor configurations}
+\label{sec:translation}
 
+Batfish to NV translation. Define how we map devices/interfaces to nodes/edges,
+policy to expressions and show how OSPF/eBGP is translated.
+
+dataplane and iBGP are going to need a little subsection of their own, even if we don't translate them from Batfish now (or by submission time).
+
+%=====================================================
+%
+%
+%  **Transformations**
+%
+%
+%=====================================================
+\section{Transformations}
+\label{sec:transformations}
+
+Working with a small language with well-studied semantics we can apply many
+transformations to improve verification performance. Moreover, arguing about their correctness is much easier.
+\begin{itemize}
+  \item Partial Evaluation. This is probably the most important transformation for the SMT verifier. Minesweeper does some partial evaluation but presumably more limited.
+  \item Data structures such as options and maps, are convenient for the user to express his routing protocol, but tend to make verification harder. We eliminate most of them, reducing a program to a program that only uses base types and flat/unrolled tuples by a set of transformations: record unrolling, map unrolling, option unboxing, tuple flatenning/unrolling.
+  \item Also renaming and inlining.
+  \item Other transformations, slicing based on assertion and compression?
+\end{itemize}
+
+
+
+%=====================================================
+%
+%
+%  **Backends**
+%
+%
+%=====================================================
+
+\section{Network Analyses}
+\label{sec:analyses}
+
+
+\subsection{Simulation}
+\begin{itemize}
+  \item Simulator.
+  \item BDDs seems like a big deal to discuss.
+  \item Randomized testing / Fuzzing? This is like the simulator but it does a smarter instantiation of symbolic variables. Would be interesting if we gave that a bit more thought, but maybe it is too much to ask.
+\end{itemize}
+
+\subsection{Native Simulation}
+As shown in \cref{sec:transformations} one of the advantages of using a
+conventional programming language based on the well-studied lambda calculus, is
+that we can leverage a large body of research on language transformations. A
+commonly used transformation is \emph{compilation} to assembly; languages like
+OCaml and Haskell owe much of their success to their optimizing compilers that
+can produce very fast assembly-level code. We can apply the same idea when
+simulating NV programs. Instead of using an interpreter of the NV language to
+the compute the effect of the network's policy (i.e. the transfer and merge
+functions) on routing announcements, we compile the network to assembly and
+execute the much faster assembly program. Of course, there is no reason to write
+a compiler to assembly from scratch. We merely have to translate an NV program
+to an OCaml program, at this point we may \emph{reuse} the OCaml compiler to
+produce a fast assembly program that captures the semantics of a given network.
+
+\paragraph{Compilation}
+
+\paragraph{Architecture}
+Before compiling an NV program to an OCaml program, we define an abstract
+interface that the OCaml program should satisfy (\cref{lst:native-srp}). This is
+essentially the type of an SRP, but defined over an abstract OCaml type instead
+of an NV type. The \texttt{record\_fns} function is an auxliary function used to
+convert an OCaml value back to an NV value.
+
+\begin{listing}[ht]
+  \begin{ocamlcode}
+  module type NATIVE_SRP =
+    sig
+      type attribute
+      val init : int -> attribute
+      val trans: int * int -> attribute -> attribute
+      val merge: int -> attribute -> attribute -> attribute
+      val assertion: (int -> attribute -> bool) option
+      val record_fns: string -> 'a -> 'b
+    end
+  \end{ocamlcode}
+\caption{Native SRP type}
+\label{lst:native-srp}
+\end{listing}
+
+Given an NV program, our framework will typecheck, compile it to an OCaml module
+that satisfies the interface of \texttt{NATIVE\_SRP}, and dynamically link this
+module. The simulator that implements the bellman-ford algorithm (or any other
+routing algorithm) is virtually the same as in the case of the interpreted
+simulator, it just operates over OCaml values instead of NV values. Finally the
+computed labels are translated to NV values. This step is not necessary, but can
+be useful if the user wants to run further analyses that utilizes those labels.
+
+
+
+\subsection{SMT-based verification}
 \begin{enumerate}
-  \item Simulator
-  \item SMT encoding (stable)
-  \item SMT encoding (bounded model checker)
-  \item Randomized testing / Fuzzing?
-  \item Symbolic execution 
-  \item Abstraction / symmetries
-  \item Abstraction refinement for failures
-  \item Compiler to P4
-  \item Convergence checking?
+  \item SMT encoding (a few different flavors, we can probably very quickly brush off the boxed version and just discuss classic vs functional encoding).
+  \item Convergence checking? \nick{Is that monotonicity check?}. We can/do have those. An alternative is to make a backend to a proof assistant such as F* (because it uses z3 in the backend and can automatically prove properties such as isotonicity). This is almost like a printer for our language, so it should be easy (it's similar to what we did with Vale an assembly DSL for crypto). We can go a step further and augment the NV-lang to support specs on functions through some special syntax. Then monotonicity/isotonicity is just a spec that the user can write.
 \end{enumerate}
 
 %=====================================================
@@ -122,10 +241,12 @@ Key ideas
 \section{Evaluation}
 \label{sec:evaluation}
 
-\begin{enumerate}
-  \item comparison to Batfish?
-  \item run the tool on real networks to find bugs?
-\end{enumerate}
+\begin{itemize}
+  \item Compare SMT verifier's performance, functional vs classic. Maybe the one with datatypes too?
+  \item Simulator vs compiled simulator.
+  \item Comparisons to Batfish/MineSweeper are going to be difficult to make. Especially Batfish, it's much more mature than NV and models more features. Minesweeper vs SMT verifier would make more sense. We don't have to necessarily beat Minesweeper.
+  \item Non-performance evaluations would also be interesting but difficult to make too.
+\end{itemize}
 
 %=====================================================
 %

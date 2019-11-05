@@ -1,0 +1,64 @@
+(* vim: set syntax=ocaml: *)
+
+(* An example using our notion of assume-guarantee over inputs and outputs.
+ * In order for an open SRP to compose stably, the inputs must guarantee the outputs,
+ * and the outputs must guarantee the inputs.
+ * Hence, we make assumptions about the inputs using require,
+ * and check guarantees on the outputs using assert.
+ *)
+
+type attribute = int
+
+symbolic h1 : int
+symbolic h2 : int
+
+let lab_1 = 1
+let lab_2 = 2
+let add1 x = x + 1
+let min x y = if x < y then x else y
+
+(* SC C *)
+require min lab_2 (add1 h2) = min lab_2 (add1 2) && min lab_1 (add1 h1) = min lab_1 (add1 3)
+
+let nodes = 8
+
+let edges = {
+ 0=1;
+ 2=3;
+ 1-4; (* output of 1 *)
+ 5-2; (* input of 2 *)
+ 2-6; (* output of 2 *)
+ 7-1; (* input of 1 *)
+}
+
+let merge node x y =
+  match node with
+  (* | 5n -> x
+  | 7n -> x
+  | 4n -> y
+  | 6n -> y *)
+  | _ -> min x y
+
+let trans edge x = 
+  match edge with
+  | 5~2 -> x
+  | 7~1 -> x
+  | _ -> add1 x
+
+let init node =
+  match node with
+  (* routing destination *)
+  | 0n -> 0
+  (* annotate input to 2 *)
+  | 5n -> h2
+  (* annotate input to 1 *)
+  | 7n -> h1
+  (* default "unknown" value *)
+  | _ -> 10
+
+let assert node x =
+  match node with
+  | 4n -> min lab_2 x = min lab_2 (add1 h2)
+  | 6n -> min lab_1 x = min lab_1 (add1 h1)
+  | _ -> true
+

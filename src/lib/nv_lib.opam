@@ -1,0 +1,12 @@
+name:         "nv_lib"
+opam-version: "2.0"
+homepage:     "https://github.com/princedpw/nv"
+license:      "GPL 3"
+
+
+depends: [
+  "ocaml"         { >= "4.07.1"           }
+  "dune"          { build & >= "1.9.0"    }
+]
+
+build: [ "dune" "build" "-p" name "-j" jobs ]

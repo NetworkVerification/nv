@@ -54,3 +54,31 @@
 \newtheorem{defn}{Definition}[section]
 \newtheorem{observation}{Observation}
 \newtheorem{lem}[thm]{Lemma}
+
+
+% Code highlighting
+
+\definecolor{lightgray}{gray}{0.98}
+\usemintedstyle{tango}
+
+\newminted[ocamlcode]{ocaml}{
+%bgcolor=lightgray,
+fontfamily=tt,
+fontsize=\footnotesize,
+linenos=false,
+numberblanklines=true,
+numbersep=5pt,
+gobble=0,
+% frame=leftline,
+framerule=0.4pt,
+framesep=2mm,
+funcnamehighlighting=true,
+tabsize=2,
+obeytabs=false,
+escapeinside=//,
+mathescape=true,
+samepage=false, %with this setting you can force the list to appear on the same page
+showspaces=false,
+showtabs =false,
+texcl=false,
+}

@@ -1,0 +1,24 @@
+(library
+  (name nv_smt)
+  (public_name nv_lib.smt)
+  (libraries
+    nv_datastructures
+    nv_interpreter
+    nv_lang
+    nv_utils
+    nv_solution
+    nv_transformations
+    integers
+    str
+    batteries
+    lru-cache
+    zarith)
+  (preprocess
+    (pps ppx_deriving.std ppx_deriving_argparse))
+)
+
+(menhir
+  (modules SMTParser))
+
+(ocamllex
+  (modules SMTLexer))
