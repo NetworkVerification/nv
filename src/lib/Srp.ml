@@ -176,8 +176,11 @@ let simulate_step ({graph= g; trans; merge; _} : srp) s x =
           let compare_routes =
             Interp.interp_closure merge [neighbor; old_attribute_from_x; n_incoming_attribute]
           in
+          let dummy_old =
+            Interp.interp_closure merge [neighbor; old_attribute_from_x; old_attribute_from_x]
+          in
             (*if the merge between new and old value changes something then we need to redo all merges*)
-            if (not (equal_values ~cmp_meta:false compare_routes old_attribute_from_x)) then
+            if (not (equal_values ~cmp_meta:false compare_routes dummy_old)) then
               let best = AdjGraph.VertexMap.fold (fun _ v acc -> Interp.interp_closure merge [neighbor; v; acc])
                   n_received n_incoming_attribute
               in

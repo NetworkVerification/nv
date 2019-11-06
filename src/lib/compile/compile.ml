@@ -310,7 +310,7 @@ and map_to_ocaml_string op es ty =
       (match es with
         | [e1;e2] ->
           Printf.sprintf "(NativeBdd.find %d (%s) (%s))"
-            (get_fresh_type_id ty) (exp_to_ocaml_string e1) (exp_to_ocaml_string e2)
+            (get_fresh_type_id (OCamlUtils.oget e2.ety)) (exp_to_ocaml_string e1) (exp_to_ocaml_string e2)
         | _ -> failwith "Wrong number of arguments to MGet operation")
     | MMap ->
       (match es with
