@@ -36,3 +36,6 @@ tmp.txt
 
 # NV executable
 nv
+
+# Native install files
+*.install
