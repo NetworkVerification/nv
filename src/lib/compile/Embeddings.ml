@@ -33,8 +33,9 @@ let rec embed_value (record_fns: string -> 'a -> 'b) (typ: Syntax.ty) : 'v -> Sy
                 f_rec (Obj.magic (proj_val vrec))) ts
       in
         fun v -> Syntax.vtuple (BatList.map (fun f -> f v) fs)
-    | TMap _ -> (* trivial as we represent maps with the same mtbdd + value type*)
-      fun v -> Syntax.vmap ((Obj.magic v).bdd)
+    | TMap _ -> (* trivial as we represent maps with the same mtbdd + key type id + value type id*)
+      fun v ->
+        Syntax.vmap ((Obj.magic v).bdd)
     | TArrow _ -> failwith "Function computed as value"
     | TRecord _ -> failwith "Trecord"
     | TNode ->
@@ -54,19 +55,22 @@ let rec unembed_value (record_cnstrs : string -> 'c) (record_proj : string -> 'a
       fun v ->
         (match v.v with
           | VBool b -> Obj.magic b
-          | _ -> failwith "mistyped value")
+          | _ -> failwith (Printf.sprintf "mistyped value %s at type %s\n"
+                             (PrintingRaw.show_value ~show_meta:false v) (PrintingRaw.show_ty typ)))
     | TInt _ ->
       fun v ->
         (match v.v with
           | VInt i -> Obj.magic (Integer.to_int i) (*NOTE: We translate UInts to ints but we need to change that *)
-          | _ -> failwith "mistyped value")
+          | _ -> failwith (Printf.sprintf "mistyped value %s at type %s\n"
+                             (PrintingRaw.show_value ~show_meta:false v) (PrintingRaw.show_ty typ)))
     | TOption ty ->
       let f = unembed_value record_cnstrs record_proj ty in
         fun v ->
           (match v.v with
             | VOption None -> Obj.magic None
             | VOption (Some v') -> Obj.magic (Some (f v'))
-            | _ -> failwith "mistyped value")
+            | _ -> failwith (Printf.sprintf "mistyped value %s at type %s\n"
+                             (PrintingRaw.show_value ~show_meta:false v) (PrintingRaw.show_ty typ)))
     | TTuple ts ->
       (*TODO: this case is wrong? fix it*)
       let n = BatList.length ts in
@@ -79,7 +83,8 @@ let rec unembed_value (record_cnstrs : string -> 'c) (record_proj : string -> 'a
          | VTuple vs ->
            BatList.fold_left2 (fun acc f v -> Obj.magic (acc (f v))) f_cnstr fs vs
            |> Obj.magic
-         | _ -> failwith "mistyped value")
+         | _ -> failwith (Printf.sprintf "mistyped value %s at type %s\n"
+                            (PrintingRaw.show_value ~show_meta:false v) (PrintingRaw.show_ty typ)))
     | TMap (kty, vty) ->
       (* this is trivial as OCaml maps are NV maps plus a value type*)
       fun v ->

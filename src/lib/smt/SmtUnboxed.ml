@@ -258,7 +258,13 @@ struct
        | Eq, [e1;e2] ->
          let ze1 = encode_exp_z3 descr env e1 in
          let ze2 = encode_exp_z3 descr env e2 in
-         lift2 (fun ze1 ze2 -> mk_eq ze1.t ze2.t |> mk_term ~tloc:e.espan) ze1 ze2
+         let componentwise_eqs =
+           lift2 (fun ze1 ze2 -> mk_eq ze1.t ze2.t |> mk_term ~tloc:e.espan) ze1 ze2
+         in
+         [List.fold_left
+            (fun acc tm -> mk_and acc.t tm.t |> mk_term ~tloc:e.espan)
+            (List.hd componentwise_eqs)
+            (List.tl componentwise_eqs)]
        | TGet (_, lo, hi), [e1] when lo < hi ->
          (match e1.e with
           | ETuple es1 ->

@@ -32,8 +32,6 @@ let map_cache = ref HashClosureMap.empty
 let create ~(key_ty_id:int) ~(val_ty_id:int) (vnat: 'v) : t =
   let key_ty = get_type key_ty_id in
   let v = embed_value_id val_ty_id vnat in
-  (* let v = embed_value record_fns (get_type val_ty_id) vnat in
-   * Printf.printf "create val_ty_id: %d\n" val_ty_id; *)
   {bdd = BddMap.create key_ty v; key_ty_id=key_ty_id; val_ty_id=val_ty_id}
 
 
@@ -73,10 +71,10 @@ let map (op_key: (int * 'f)) (vty_new_id: int) (f: 'a1 -> 'a2) (vmap: t) : t =
 
 
 (** Takes as input an OCaml map and an ocaml key and returns an ocaml value*)
-let find vty (vmap: t) (k: 'key) : 'v =
+let find _ (vmap: t) (k: 'key) : 'v =
   let k_embed = embed_value_id vmap.key_ty_id k in
   let value = BddMap.find vmap.bdd k_embed in
-  unembed_value_id vty value
+  unembed_value_id vmap.val_ty_id value
 
 
 let update vty (vmap: t) (k: 'key) (v: 'v): t =
@@ -167,8 +165,8 @@ let merge ?(opt=None) (op_key: (int * 'f)) f (vmap1: t) (vmap2: t) = (* (((m1, k
               merge_op_cache := HashMergeMap.add key o !merge_op_cache ;
               o
           | Some op -> op
-      in
-      {vmap1 with bdd = (User.apply_op2 op (fst vmap1.bdd) (fst vmap2.bdd), (snd vmap1.bdd))}
+  in
+  {vmap1 with bdd = (User.apply_op2 op (fst vmap1.bdd) (fst vmap2.bdd), (snd vmap1.bdd))}
 
 let equal m1 m2 = BddMap.equal m1.bdd m2.bdd
 
@@ -249,5 +247,5 @@ let mapIf (pred_key: int * 'g) (op_key : int * 'f) (vty_new_id: int) (f: 'a1 -> 
       op
     | Some op -> op
   in
-  {vmap with bdd = (User.apply_op2 op pred (fst vmap.bdd), get_type vty_new_id);
+  {vmap with bdd = (User.apply_op2 op pred (fst vmap.bdd), snd vmap.bdd);
              val_ty_id = vty_new_id}
