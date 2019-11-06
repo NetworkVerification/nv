@@ -6,7 +6,9 @@ FaultTolerance/SinglePrefix/fat12polTwoLinks.nv
 FaultTolerance/SinglePrefix/fat16polOneLink.nv
 FaultTolerance/SinglePrefix/fat16polTwoLinks.nv
 FaultTolerance/SinglePrefix/fat20polOneLink.nv
-FaultTolerance/SinglePrefix/fat20polTwoLinks.nv"
+FaultTolerance/SinglePrefix/fat20polTwoLinks.nv
+FaultTolerance/SinglePrefix/fat28polOneLink.nv
+FaultTolerance/SinglePrefix/fat28polTwoLinks.nv"
 
 for file in $BENCHMARKS
 do
