@@ -87,11 +87,12 @@ module SrpSimulation (Srp : NATIVE_SRP) : SrpSimulationSig =
     let simulate_step (graph: AdjGraph.t) (s : extendedSolution) (origin : int) =
       let do_neighbor (_, initial_attribute) (s, todo) neighbor =
         let edge = (origin, neighbor) in
+        (* Compute the incoming attribute from origin *)
         let n_incoming_attribute = trans edge initial_attribute in
         let (n_received, n_old_attribute) = get_attribute neighbor s in
         match AdjGraph.VertexMap.Exceptionless.find origin n_received with
         | None ->
-          (* if this is the first message from this node then add it to the received messages of n*)
+          (* If this is the first message from this node then add it to the received messages of n*)
           let new_entry = AdjGraph.VertexMap.add origin n_incoming_attribute n_received in
           (*compute new merge and decide whether best route changed and it needs to be propagated*)
           let n_new_attribute = merge neighbor n_old_attribute n_incoming_attribute in
@@ -99,22 +100,35 @@ module SrpSimulation (Srp : NATIVE_SRP) : SrpSimulationSig =
           then (AdjGraph.VertexMap.add neighbor (new_entry, n_new_attribute) s, todo)
           else (AdjGraph.VertexMap.add neighbor (new_entry, n_new_attribute) s, neighbor :: todo)
         | Some old_attribute_from_x ->
-          (* if n had already received a message from x then we may need to withdraw it*)
-          (*update the route received from x*)
+          (* if n had already received a message from origin then we may need to recompute everything*)
+          (* Withdraw route received from origin *)
           let n_received = AdjGraph.VertexMap.remove origin n_received in
+
+          (* Merge the old route from with the new route from origin *)
           let compare_routes = merge neighbor old_attribute_from_x n_incoming_attribute in
-          let dummy_old = merge neighbor old_attribute_from_x old_attribute_from_x in
-          (*if the merge between new and old value changes something then we need to redo all merges*)
-          if (not (compare_routes = dummy_old)) then
+
+          (* This is a hack because merge may not be selective *)
+          let dummy_new = merge neighbor n_incoming_attribute n_incoming_attribute in
+
+          (*if the merge between new and old route from origin is equal to the new route from origin*)
+          if (compare_routes = dummy_new) then
+            (*we can incrementally compute in this case*)
+            let n_new_attribute = merge neighbor n_old_attribute n_incoming_attribute in
+            let new_entry = AdjGraph.VertexMap.add origin n_incoming_attribute n_received in
+            (*update the todo list if the node's solution changed.*)
+            if (n_old_attribute = n_new_attribute)
+            then (AdjGraph.VertexMap.add neighbor (new_entry, n_new_attribute) s, todo)
+            else (AdjGraph.VertexMap.add neighbor (new_entry, n_new_attribute) s, neighbor :: todo)
+          else
+            (* In this case, we need to do a full merge of all received routes *)
             let best = AdjGraph.VertexMap.fold (fun _ v acc -> merge neighbor v acc)
                 n_received n_incoming_attribute
             in
-            (*also update the received messages for n*)
+            let newTodo = if n_old_attribute = best then todo else neighbor :: todo in
+            (*add the new received route for n from origin*)
             let n_received = AdjGraph.VertexMap.add origin n_incoming_attribute n_received in
-            (AdjGraph.VertexMap.add neighbor (n_received, best) s, neighbor :: todo)
-          else
-            (*we don't need to propagate a change in this case but update the received messages for x*)
-            (AdjGraph.VertexMap.modify neighbor (fun _ -> AdjGraph.VertexMap.add origin n_incoming_attribute n_received, n_old_attribute) s, todo)
+            (AdjGraph.VertexMap.add neighbor (n_received, best) s, newTodo)
+
       in
       let initial_attribute = get_attribute origin s in
       let neighbors = AdjGraph.succ graph origin in

@@ -150,46 +150,55 @@ let get_attribute v s =
   | Some a -> a
 
 let simulate_step ({graph= g; trans; merge; _} : srp) s x =
+  (* Printf.printf "x is:%d\n" x; *)
   let do_neighbor (_, initial_attribute) (s, todo) n =
     let neighbor = vnode n in
     let edge = vedge (x, n) in
+    (* Printf.printf "n is:%d\n" n; *)
     let n_incoming_attribute =
       Interp.interp_closure trans [edge; initial_attribute]
     in
     let (n_received, n_old_attribute) = get_attribute n s in
-      match AdjGraph.VertexMap.Exceptionless.find x n_received with
-        | None ->
-          (* if this is the first message from this node then add it to the received messages of n*)
-          let new_entry = AdjGraph.VertexMap.add x n_incoming_attribute n_received in
-          (*compute new merge and decide whether best route changed and it needs to be propagated*)
-          let n_new_attribute =
-            Interp.interp_closure merge
-              [neighbor; n_old_attribute; n_incoming_attribute]
-          in
-            if equal_values ~cmp_meta:false n_old_attribute n_new_attribute
-            then (AdjGraph.VertexMap.add n (new_entry, n_new_attribute) s, todo)
-            else (AdjGraph.VertexMap.add n (new_entry, n_new_attribute) s, n :: todo)
-        | Some old_attribute_from_x ->
-          (* if n had already received a message from x then we may need to withdraw it*)
-          (*update the route received from x*)
-          let n_received = AdjGraph.VertexMap.remove x n_received in
-          let compare_routes =
-            Interp.interp_closure merge [neighbor; old_attribute_from_x; n_incoming_attribute]
-          in
-          let dummy_old =
-            Interp.interp_closure merge [neighbor; old_attribute_from_x; old_attribute_from_x]
-          in
-            (*if the merge between new and old value changes something then we need to redo all merges*)
-            if (not (equal_values ~cmp_meta:false compare_routes dummy_old)) then
-              let best = AdjGraph.VertexMap.fold (fun _ v acc -> Interp.interp_closure merge [neighbor; v; acc])
-                  n_received n_incoming_attribute
-              in
-              (*also update the received messages for n*)
-              let n_received = AdjGraph.VertexMap.add x n_incoming_attribute n_received in
-                (AdjGraph.VertexMap.add n (n_received, best) s, n :: todo)
-            else
-              (*we don't need to propagate a change in this case but update the received messages for x*)
-              (AdjGraph.VertexMap.modify n (fun _ -> AdjGraph.VertexMap.add x n_incoming_attribute n_received, n_old_attribute) s, todo)
+    match AdjGraph.VertexMap.Exceptionless.find x n_received with
+    | None ->
+      (* if this is the first message from this node then add it to the received messages of n*)
+      let new_entry = AdjGraph.VertexMap.add x n_incoming_attribute n_received in
+      (*compute new merge and decide whether best route changed and it needs to be propagated*)
+      let n_new_attribute =
+        Interp.interp_closure merge
+          [neighbor; n_old_attribute; n_incoming_attribute]
+      in
+      if equal_values ~cmp_meta:false n_old_attribute n_new_attribute
+      then (AdjGraph.VertexMap.add n (new_entry, n_new_attribute) s, todo)
+      else (AdjGraph.VertexMap.add n (new_entry, n_new_attribute) s, n :: todo)
+    | Some old_attribute_from_x ->
+      (*withdraw the route received from x*)
+      let n_received = AdjGraph.VertexMap.remove x n_received in
+      let compare_routes =
+        Interp.interp_closure merge [neighbor; old_attribute_from_x; n_incoming_attribute]
+      in
+      (* Printf.printf "compare_routes is:%s\n" (Printing.value_to_string compare_routes); *)
+      let dummy_new =
+        Interp.interp_closure merge [neighbor; n_incoming_attribute; n_incoming_attribute]
+      in
+      (* Printf.printf "compare_routes is:%s\n" (Printing.value_to_string dummy_new); *)
+      (*if the merge between new and old routes is equal to the new route then we can incrementally merge it*)
+      if (equal_values ~cmp_meta:false compare_routes dummy_new) then
+        let n_new_attribute =
+          Interp.interp_closure merge [neighbor; n_old_attribute; n_incoming_attribute]
+        in
+        let new_entry = AdjGraph.VertexMap.add x n_incoming_attribute n_received in
+        if equal_values ~cmp_meta:false n_old_attribute n_new_attribute
+        then (AdjGraph.VertexMap.add n (new_entry, n_new_attribute) s, todo)
+        else (AdjGraph.VertexMap.add n (new_entry, n_new_attribute) s, n :: todo)
+      else
+        let best = AdjGraph.VertexMap.fold (fun _ v acc -> Interp.interp_closure merge [neighbor; v; acc])
+            n_received n_incoming_attribute
+        in
+        let newTodo = if equal_values ~cmp_meta:false n_old_attribute best then todo else n :: todo in
+        (*also update the received messages for n*)
+        let n_received = AdjGraph.VertexMap.add x n_incoming_attribute n_received in
+        (AdjGraph.VertexMap.add n (n_received, best) s, newTodo)
   in
   let initial_attribute = get_attribute x s in
   let neighbors = AdjGraph.succ g x in

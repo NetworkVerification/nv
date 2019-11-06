@@ -8,7 +8,7 @@ type rib = {
     selected:option[int]; }
 type attribute = rib
 
-symbolic d : (int, int)
+let d = (1174405632, 24)
 
 let edges = {
   0-4;
