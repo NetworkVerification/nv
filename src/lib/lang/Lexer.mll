@@ -50,6 +50,7 @@ rule token = parse
   | "foldEdges"       { FOLDEDGE (position lexbuf) }
   | "map"             { MAP (position lexbuf) }
   | "mapIf"           { MAPIF (position lexbuf) }
+  | "mapIte"           { MAPITE (position lexbuf) }
   | "combine"         { COMBINE (position lexbuf) }
   | "union"           { UNION (position lexbuf) }
   | "inter"           { INTER (position lexbuf) }

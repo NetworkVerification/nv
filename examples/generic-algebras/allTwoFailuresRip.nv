@@ -1,0 +1,22 @@
+(* RIP for all possible single link failures. *)
+include "rip.nv"
+
+type attribute = dict[(tedge,tedge),option[int]]
+
+let transRip (x: option[int]) =
+  match x with
+  | None -> None
+  | Some i -> if (i = 15) then None else Some (i+1)
+
+let mergeRip x y =
+  match (x, y) with
+  | (None, _) -> y
+  | (_, None) -> x
+  | (Some i, Some j) -> if i < j then x else y
+
+let trans e x =
+  let x = mapIf (fun es -> let (e1,e2) = es in e = e1 || e = e2) (fun v -> None) x in
+  mapIf (fun es -> let (e1,e2) = es in !((e=e1) || (e=e2))) (fun v -> transRip v) x
+
+let merge n x y =
+  combine (fun v1 v2 -> mergeRip v1 v2) x y (Some None) None (Some None) None (* I think those extra args are right? *)

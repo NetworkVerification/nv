@@ -2,9 +2,12 @@
 open Cudd
 open Nv_datastructures
 open Nv_utils.PrimitiveCollections
+open Nv_utils
 
 type node = int
 [@@deriving eq, ord]
+
+let tnode_sz = 24
 
 type edge = node * node
 [@@deriving eq, ord]
@@ -58,6 +61,7 @@ type op =
   | MSet
   | MMap
   | MMapFilter
+  | MMapIte
   | MMerge
   | MFoldNode
   | MFoldEdge
@@ -509,6 +513,9 @@ and equal_funcs ~cmp_meta f1 f2 =
   in
   b && Var.equals x y && equal_exps ~cmp_meta e1 e2
 
+let hash_map ((vdd, _)) =
+  (Mtbdd.size vdd) (*+ (Mtbdd.nbleaves vdd)*)
+
 let hash_string str =
   let acc = ref 7 in
   for i = 0 to String.length str - 1 do
@@ -555,8 +562,8 @@ let rec hash_value ~hash_meta v : int =
 and hash_v ~hash_meta v =
   match v with
   | VBool b -> if b then 1 else 0
-  | VInt i -> (19 * Integer.to_int i) + 1
-  | VMap m -> (19 * Hashtbl.hash m) + 2
+  | VInt i -> (19 * (Integer.to_int i)) + 1
+  | VMap m -> (19 * (hash_map m)) + 2
   | VTuple vs ->
     let acc =
       List.fold_left
@@ -582,7 +589,7 @@ and hash_v ~hash_meta v =
   | VRecord map ->
     let acc =
       StringMap.fold
-        (fun l v acc -> acc + + hash_string l + hash_value ~hash_meta v)
+        (fun l v acc -> acc + hash_string l + hash_value ~hash_meta v)
         map 0
     in
     (19 * acc) + 7
@@ -702,6 +709,7 @@ and hash_op op =
   | MFoldEdge -> 16
   | TGet (n1, n2, n3) -> 17 + n1 + n2 + n3 + 256 * 5
   | TSet (n1, n2, n3) -> 17 + n1 + n2 + n3 + 256 * 6
+  | MMapIte -> 18
 (* hashconsing information/tables *)
 
 let meta_v : (v, value) Hashcons.meta =
@@ -748,6 +756,7 @@ let arity op =
   | MSet -> 3
   | MMap -> 2
   | MMapFilter -> 3
+  | MMapIte -> 4
   | MMerge -> 3
   | MFoldNode -> 3
   | MFoldEdge -> 3
@@ -828,6 +837,9 @@ let empty_env = {ty= Env.empty; value= Env.empty}
 
 let update_value env x v = {env with value= Env.update env.value x v}
 
+let update_env env x v ty = {value= Env.update env.value x v;
+                             ty = Env.update env.ty x ty}
+
 let deconstructFun exp =
   match exp.e with
   | EFun f ->
@@ -859,7 +871,6 @@ let rec to_value e =
     avalue (vtuple (BatList.map to_value es), e.ety, e.espan)
   | ESome e1 -> avalue (voption (Some (to_value e1)), e.ety, e.espan)
   | _ -> failwith "internal error (to_value)"
-
 
 let exp_of_v x = exp (EVal (value x))
 
@@ -1093,6 +1104,24 @@ let unproj_var (x : var) =
 
 open BatSet
 
+let rec pattern_vars p =
+  match p with
+  | PWild | PUnit | PBool _ | PInt _ | POption None | PNode _ ->
+    PSet.create Var.compare
+  | PVar v -> PSet.singleton ~cmp:Var.compare v
+  | PEdge (p1, p2) -> pattern_vars (PTuple [p1; p2])
+  | PTuple ps ->
+    List.fold_left
+      (fun set p -> PSet.union set (pattern_vars p))
+      (PSet.create Var.compare)
+      ps
+  | PRecord map ->
+    StringMap.fold
+      (fun _ p set -> PSet.union set (pattern_vars p))
+      map
+      (PSet.create Var.compare)
+  | POption (Some p) -> pattern_vars p
+
 let rec free (seen: Var.t PSet.t) (e: exp) : Var.t PSet.t =
   match e.e with
   | EVar v ->
@@ -1137,23 +1166,53 @@ let rec free (seen: Var.t PSet.t) (e: exp) : Var.t PSet.t =
     in
     PSet.union (free seen e) bs
 
-and pattern_vars p =
-  match p with
-  | PWild | PUnit | PBool _ | PInt _ | POption None | PNode _ ->
-    PSet.create Var.compare
-  | PVar v -> PSet.singleton ~cmp:Var.compare v
-  | PEdge (p1, p2) -> pattern_vars (PTuple [p1; p2])
-  | PTuple ps ->
+
+let rec free_ty (seen: Var.t PSet.t) (e: exp) : (Var.t * ty) PSet.t =
+  let cmp = fun (a,_) (b,_) -> Var.compare a b in
+  match e.e with
+  | EVar v ->
+    if PSet.mem v seen then PSet.create cmp
+    else PSet.singleton ~cmp:cmp (v, OCamlUtils.oget e.ety)
+  | EVal _ -> PSet.create cmp
+  | EOp (_, es) | ETuple es ->
     List.fold_left
-      (fun set p -> PSet.union set (pattern_vars p))
-      (PSet.create Var.compare)
-      ps
-  | PRecord map ->
+      (fun set e -> PSet.union set (free_ty seen e))
+      (PSet.create cmp)
+      es
+  | ERecord map ->
     StringMap.fold
-      (fun _ p set -> PSet.union set (pattern_vars p))
+      (fun _ e set -> PSet.union set (free_ty seen e))
       map
-      (PSet.create Var.compare)
-  | POption (Some p) -> pattern_vars p
+      (PSet.create cmp)
+  | EFun f -> free_ty (PSet.add f.arg seen) f.body
+  | EApp (e1, e2) -> PSet.union (free_ty seen e1) (free_ty seen e2)
+  | EIf (e1, e2, e3) ->
+    PSet.union (free_ty seen e1)
+      (PSet.union (free_ty seen e2) (free_ty seen e3))
+  | ELet (x, e1, e2) ->
+    let seen = PSet.add x seen in
+    PSet.union (free_ty seen e1) (free_ty seen e2)
+  | ESome e | ETy (e, _) | EProject (e, _) -> free_ty seen e
+  | EMatch (e, bs) ->
+    let bs1 =
+      PatMap.fold
+        (fun p e set ->
+           let seen = PSet.union seen (pattern_vars p) in
+           PSet.union set (free_ty seen e) )
+        bs.pmap
+        (PSet.create cmp)
+    in
+    let bs =
+      BatList.fold_left
+        (fun set (p, e) ->
+           let seen = PSet.union seen (pattern_vars p) in
+           PSet.union set (free_ty seen e) )
+        bs1
+        bs.plist
+    in
+    PSet.union (free_ty seen e) bs
+
+
 
 let rec free_dead_vars (e : exp) =
   match e.e with

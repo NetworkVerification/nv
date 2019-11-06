@@ -1,4 +1,0 @@
-include "generic-topologies/fattree125.nv"
-include "generic-algebras/reachability-allpairs.nv"
-
-let assert node x = x[19n]

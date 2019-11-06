@@ -7,6 +7,8 @@ open Nv_datastructures
 open BddMap
 open CompileBDDs
 
+let varname x = Var.to_string_delim "___" x
+
 (** Translating NV records to OCaml records (type or values depending on f)*)
 let record_to_ocaml_record
       (sep: string)
@@ -92,7 +94,7 @@ let build_constructors () =
 
 let is_map_op op =
   match op with
-    | MCreate | MGet | MSet | MMap | MMapFilter | MMerge -> true
+    | MCreate | MGet | MSet | MMap | MMapFilter | MMerge | MMapIte -> true
     | And | Or | Not | UAdd _ | USub _ | Eq | ULess _ | ULeq _ | AtMost _ | NLess | NLeq | TGet _ | TSet _ -> false
     | MFoldEdge | MFoldNode -> failwith "Todo: map folds"
 
@@ -114,6 +116,7 @@ let op_to_ocaml_string op =
   | MSet
   | MMap
   | MMapFilter
+  | MMapIte
   | MMerge -> failwith "Map ops are handled elsewhere"
   | AtMost _ -> failwith "todo: atmost"
   | MFoldEdge
@@ -125,7 +128,7 @@ let op_to_ocaml_string op =
 let rec pattern_to_ocaml_string pattern =
   match pattern with
   | PWild -> "_"
-  | PVar x -> Var.name x
+  | PVar x -> varname x
   | PUnit -> "()"
   | PBool true -> "true"
   | PBool false -> "false"
@@ -149,7 +152,7 @@ let rec ty_to_ocaml_string t =
      ty_to_ocaml_string ty
   | TVar {contents= Unbound _ } -> failwith "unbound var"
   | QVar name ->
-     Printf.sprintf "'%s" (Var.name name)
+     Printf.sprintf "'%s" (varname name)
   | TUnit -> "unit"
   | TBool -> "bool"
   | TInt _ -> "int"
@@ -161,15 +164,17 @@ let rec ty_to_ocaml_string t =
        (ty_to_ocaml_string t2)
   | TTuple ts ->
     let n = BatList.length ts in
+    record_table := IntSet.add n !record_table; (*add type to record table*)
     let tup_typ = Printf.sprintf ") tup__%d" n in
-      (*TODO:FIXME to apply types to record type.Did I fix that? not sure what I meant...*)
       Collections.printList (fun ty -> Printf.sprintf "%s" (ty_to_ocaml_string ty))
         ts "(" "," tup_typ
   | TOption t ->
      Printf.sprintf "(%s) option"
        (ty_to_ocaml_string t)
-  | TMap _ ->
-    Printf.sprintf "NativeBdd.t"
+  | TMap (kty,vty) ->
+    ignore (ty_to_ocaml_string kty); (* NOTE: doing this for the side effect in the case of TTuple, i.e. adding to record_table *)
+    ignore (ty_to_ocaml_string vty);
+    Printf.sprintf "CompileBDDs.t"
   | TRecord map ->
     record_to_ocaml_record ":" ty_to_ocaml_string map
 
@@ -186,16 +191,16 @@ let getFuncCache (e: exp) : string =
        let free = Syntax.free seen f.body in
        let freeList = BatSet.PSet.to_list free in
        let closure =
-         Collections.printList (fun x -> Var.name x) freeList "(" "," ")"
+         Collections.printList (fun x -> varname x) freeList "(" "," ")"
        in
        Printf.sprintf "(%d, %s)" (get_fresh_exp_id f.body) closure
-       (*FIXME: annoying BatSet printing outputs null character at the end*)
+       (*FIXME: annoying BatSet printing outputs null character at the end so I am using the code above*)
        (* let closure = BatIO.output_string () in
         *   BatSet.PSet.print ~first:"(" ~sep:"," ~last:")"
-        *     (fun out x -> BatIO.write_string out (Var.name x))
+        *     (fun out x -> BatIO.write_string out (varname x))
         *     closure free;
         *   Printf.sprintf "(%d, %s)" f.body.etag (BatInnerIO.close_out closure) *)
-     | _ -> (*assume there are no free variables, but this needs to be fixed. FIXME*)
+     | _ -> (*assume there are no free variables, but this needs to be fixed: always inline*)
        Printf.sprintf "(%d, ())" (get_fresh_exp_id e)
 
 
@@ -224,7 +229,7 @@ let rec value_to_ocaml_string v =
 
 and exp_to_ocaml_string e =
     match e.e with
-    | EVar x -> Var.name x
+    | EVar x -> varname x
     | EVal v -> value_to_ocaml_string v
     | EOp (op, es) when is_map_op op ->
       map_to_ocaml_string op es (OCamlUtils.oget e.ety)
@@ -249,7 +254,7 @@ and exp_to_ocaml_string e =
          (exp_to_ocaml_string e3)
     | ELet (x, e1, e2) ->
        Printf.sprintf "(let %s = %s in\n %s)"
-         (Var.name x)
+         (varname x)
          (exp_to_ocaml_string e1)
          (exp_to_ocaml_string e2)
     | ETuple es ->
@@ -278,8 +283,8 @@ and op_args_to_ocaml_string op es =
   | _ -> failwith "Should be a keyword op"
 
 and func_to_ocaml_string f =
-  Printf.sprintf "(fun %s -> %s)" (Var.name f.arg) (exp_to_ocaml_string f.body)
-  (* Printf.sprintf "(fun (%s : %s) -> %s)" (Var.name f.arg) (ty_to_ocaml_string (OCamlUtils.oget f.argty)) (exp_to_ocaml_string f.body) *)
+  Printf.sprintf "(fun %s -> %s)" (varname f.arg) (exp_to_ocaml_string f.body)
+  (* Printf.sprintf "(fun (%s : %s) -> %s)" (varname f.arg) (ty_to_ocaml_string (OCamlUtils.oget f.argty)) (exp_to_ocaml_string f.body) *)
 
 and branch_to_ocaml_string (p, e) =
   Printf.sprintf "| %s -> %s\n"
@@ -292,7 +297,7 @@ and map_to_ocaml_string op es ty =
     | MCreate ->
       (match ty with
        | TMap (kty,vty) ->
-          Printf.sprintf "NativeBdd.create ~key_ty_id:(%d) ~val_ty_id:(%d) %s"
+          Printf.sprintf "NativeBdd.create ~key_ty_id:(%d) ~val_ty_id:(%d) (%s)"
             (get_fresh_type_id kty) (get_fresh_type_id vty) (exp_to_ocaml_string (BatList.hd es))
         | _ -> failwith "Wrong type for map operation")
     | MSet ->
@@ -344,41 +349,36 @@ and map_to_ocaml_string op es ty =
     | MMapFilter ->
       (match es with
        | [pred; f; m] ->
-         let pred =
+         let pred_closure =
            match pred.e with
-           | EFun f -> f
-           | _ -> failwith "predicate is not syntactically a function, cannot compile"
+           | EFun predF ->
+             let freeVars = Syntax.free_ty (BatSet.PSet.singleton ~cmp:Var.compare predF.arg) predF.body in
+             let freeList = BatSet.PSet.to_list freeVars in
+             Collections.printList (fun (x, ty) -> Printf.sprintf "(%s,%d)" (varname x) (get_fresh_type_id ty)) freeList "(" "," ")"
+           | _ -> failwith "Predicate is not a function expression, try inlining"
          in
-         (* NOTE: for now considering that pred is closed (no free variables), as in the interpreter. FIXME. *)
-         let bdd_id =
-           match Collections.ExpMap.Exceptionless.find pred.body !bddfunc_cache with
+         let pred_id =
+           match Collections.ExpMap.Exceptionless.find pred !pred_cache with
            | None ->
-             let bddf = BddFunc.create_value (OCamlUtils.oget pred.argty) in
-             let env = Env.update Env.empty pred.arg bddf in
-             let bddf = BddFunc.eval env pred.body in
-             (match bddf with
-              | BBool bdd ->
-                let mtbdd = BddFunc.wrap_mtbdd bdd in
-                let id = fresh_bdd_id () in
-                bddfunc_cache :=
-                  Collections.ExpMap.add pred.body (mtbdd, id) !bddfunc_cache ;
+                let id = fresh_pred_id () in
+                pred_cache :=
+                  Collections.ExpMap.add pred id !pred_cache ;
                 id
-              | _ -> failwith "A boolean bdd was expected but something went wrong")
-           | Some (_, id) -> id
+           | Some id -> id
          in
          (match get_inner_type (OCamlUtils.oget f.ety) with
            | TArrow (_, newty) ->
              (* Get e1's hashcons and closure *)
               let op_key = getFuncCache f in
-              (*FIXME: this needs to be fresh, to avoid the case where it is used
-                 inside f but our separator is not OCaml friendly*)
               let op_key_var = "op_key" in
+              let pred_key = Printf.sprintf "(%d, %s)" pred_id pred_closure in
               (*need the Obj.magic to op_key_var arg here because tuple may
                    have different type/size depending on the free vars*)
               Printf.sprintf "(let %s = %s in \n\
-                               NativeBdd.mapIf %d (Obj.magic %s) (%d) (%s) (%s))"
+                               let pred_key = %s in \n\
+                               NativeBdd.mapIf (Obj.magic pred_key) (Obj.magic %s) (%d) (%s) (%s))"
                 op_key_var op_key (*first let*)
-                bdd_id op_key_var (get_fresh_type_id newty)
+                pred_key op_key_var (get_fresh_type_id newty)
                 (exp_to_ocaml_string f) (exp_to_ocaml_string m)
             | _ -> failwith ("Wrong type for function argument" ^ (Printing.ty_to_string (OCamlUtils.oget f.ety))))
        | _ -> failwith "Wrong number of arguments to mapIf operation")
@@ -439,7 +439,7 @@ and map_to_ocaml_string op es ty =
 let compile_net net =
   let utys_s =
     Collections.printList
-      (fun (x, ty) -> Printf.sprintf "type %s = %s" (Var.name x) (ty_to_ocaml_string ty))
+      (fun (x, ty) -> Printf.sprintf "type %s = %s" (varname x) (ty_to_ocaml_string ty))
       net.utys "" "\n" "\n\n"
   in
   let attr_s = Printf.sprintf "type attribute = %s\n\n" (ty_to_ocaml_string net.attr_type) in
@@ -448,7 +448,7 @@ let compile_net net =
   let symbs_s =
     Collections.printListi
       (fun i (x, _) ->
-        Printf.sprintf "let %s = S.get_symb record_cnstrs record_fns %d" (Var.name x) i) net.symbolics "" "\n" "\n\n"
+        Printf.sprintf "let %s = S.get_symb record_cnstrs record_fns %d" (varname x) i) net.symbolics "" "\n" "\n\n"
   in
   let requires_s =
     match net.requires with
@@ -461,7 +461,7 @@ let compile_net net =
     Collections.printList
       (fun (x, _, e) ->
          Printf.sprintf "let %s = %s"
-           (Var.name x) (exp_to_ocaml_string e))
+           (varname x) (exp_to_ocaml_string e))
       net.defs "" "\n\n" "\n\n"
   in
   let init_s = Printf.sprintf "let init = %s\n\n" (exp_to_ocaml_string net.init) in
@@ -477,10 +477,6 @@ let compile_net net =
   let tuple_s = build_record_types () in
   let record_fns = build_proj_funcs () in
   let record_cnstrs = build_constructors () in
-
-  (* build bdd and type arrays so that lookups during execution will work *)
-  build_type_array ();
-  build_bdd_array ();
 
   Printf.sprintf "%s %s %s %s %s %s %s %s %s %s %s %s"
     tuple_s utys_s attr_s record_cnstrs record_fns symbs_s defs_s init_s trans_s merge_s requires_s assert_s
@@ -506,7 +502,7 @@ let build_dune_file name =
      (libraries nv_lib))\n \
      (env\n \
      (dev\n \
-     (flags (:standard -warn-error -A -w -a))))" name name
+     (flags (:standard -warn-error -A -w -a -opaque))))" name name
 
 let build_project_file name =
   Printf.sprintf "(lang dune 1.10)\n (name %s)" name

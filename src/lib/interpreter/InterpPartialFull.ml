@@ -6,9 +6,6 @@ open Nv_utils.OCamlUtils
 open InterpUtils
 open Interp
 
-(* This ludicrously named file contains a Full reduction partial interpreter.
-   Not sure how it differs from the regular one. *)
-
 
 (** * Simplifications *)
 let simplify_and v1 e2 =
@@ -26,70 +23,22 @@ let simplify_or v1 e2 =
 let rec simplify_tget lo hi e =
   match e.e with
   | ETuple es ->
-    if lo = hi then List.nth es lo
-    else etuple (es |> BatList.drop lo |> BatList.take (hi - lo + 1))
-  | EMatch (e1, branches) ->
-    (* Push the TGet into the branches *)
-    let new_branches =
-      mapBranches (fun (p, body) -> p, simplify_tget lo hi body) branches
-    in
-    ematch e1 new_branches
-  | _ ->
-    (* If all else fails, write a match statement *)
-    let tys = match e.ety with | Some (TTuple lst) -> lst | _ -> failwith "impossible" in
-    let get_ty =
-      if lo = hi then List.nth tys lo
-      else TTuple (tys |> BatList.drop lo |> BatList.take (hi - lo + 1))
-    in
-
-    let freshvars = List.map (fun ty -> ty, Var.fresh "TGetVar") tys in
-    let pat =
-      PTuple (
-        List.mapi
-          (fun i (_, v) -> if lo <= i && i <= hi then PVar v else PWild)
-          freshvars)
-    in
-
-    let get_exps =
-      freshvars
-      |> BatList.drop lo |> BatList.take (hi - lo + 1)
-      |> List.map (fun (ty, v) -> aexp (evar v, Some ty, e.espan))
-    in
-    let branch_body =
-      if lo = hi then List.hd get_exps
-      else aexp (etuple get_exps, Some get_ty, e.espan)
-    in
-
-    ematch e (addBranch pat branch_body emptyBranch)
-;;
+    Some (if lo = hi then List.nth es lo
+          else etuple (es |> BatList.drop lo |> BatList.take (hi - lo + 1)))
+  | _ -> None
 
 let simplify_tset lo hi tup v =
-  (* If the expression is an actual tuple expression, we don't need a match
-     to unpack its elements. This function computes an expression list corresponding
-     the elements of exp (using a match only if needed) and calls cont on it. *)
-  let curry_elts exp (cont : exp list -> exp) =
-    match exp.e with
-    | ETuple es -> cont es
-    | _ ->
-      match oget exp.ety with
-      | TTuple tys ->
-        let freshvars = List.map (fun ty -> ty, Var.fresh "TSetVar") tys in
-        let freshvarexps = List.map (fun (ty, v) -> aexp (evar v, Some ty, exp.espan)) freshvars in
-        let pat = PTuple (List.map (fun (_, v) -> PVar v) freshvars) in
-        ematch exp (addBranch pat (cont freshvarexps) emptyBranch)
-      | _ -> failwith "Bad TSet"
-  in
-  let cont tup_es v_es =
-    let hd, tl =
-      let hd, rest = BatList.takedrop lo tup_es in
-      hd, BatList.drop (hi - lo + 1) rest
-    in
-    etuple (hd @ v_es @ tl) |> wrap tup
-  in
-  curry_elts tup
-    (fun tup_es ->
-       if lo = hi then cont tup_es [v]
-       else curry_elts v (cont tup_es))
+  match tup.e with
+  | ETuple es ->
+    if lo = hi then
+      Some (etuple (BatList.modify_at lo (fun _ -> v) es))
+    else
+      (match v.e with
+       | ETuple vs ->
+         Some (etuple (replaceSlice lo hi es vs))
+       | _ ->
+         None)
+  | _ -> None
 
 let simplify_exps op pes =
   match op with
@@ -125,13 +74,19 @@ let simplify_exps op pes =
   | TGet (_, lo, hi) ->
     begin
       match pes with
-      | [e] -> simplify_tget lo hi e
+      | [e] ->
+        (match simplify_tget lo hi e with
+         | None -> eop op pes
+         | Some e -> e)
       | _ -> failwith "Bad TGet"
     end
   | TSet (_, lo, hi) ->
     begin
       match pes with
-      | [e1; e2] -> simplify_tset lo hi e1 e2
+      | [e1; e2] ->
+        (match simplify_tset lo hi e1 e2 with
+         | None -> eop op pes
+         | Some e -> e)
       | _ -> failwith "Bad TSet"
     end
   | _ -> eop op pes
@@ -328,44 +283,16 @@ let rec interp_exp_partial (env: Syntax.exp Env.t) e =
   | ESome e' -> (env, aexp (esome (snd (interp_exp_partial env e')), e.ety, e.espan))
   | EMatch (e1, branches) ->
     let _, pe1 = interp_exp_partial env e1 in
-    begin
-      match match_branches branches pe1 with
-      | Match (env2, e) -> interp_exp_partial (Env.updates env env2) e
-      | NoMatch ->
-        failwith
-          ( "exp " ^ (Printing.exp_to_string pe1)
-            ^ " did not match any pattern in match statement")
-      | Delayed ->
-        let pat = popBranch branches |> fst |> fst in
-        (* If our pattern is irrefutable, then we probably have something of the
-           form "match (match e with <branches1>) with <branches2>", and we weren't
-           able to fully evaluate the inner match. In this case we can reverse
-           the order of the matches to hopefully allow further simplification.
-           This duplicates the contents of <branches2> (once for each element of
-           <branches1>), but it will _usually_ give us a significant code decrease.
-           TODO: It would be nice to have a heuristic for determining when this
-           match permutation is likely to actually be helpful. *)
-           (* Note: since this potentially duplicates code, we need to rename afterwards.
-              For the moment I'm disabling it to avoid that. *)
-           match is_irrefutable pat, pe1.e, false with
-           | true, EMatch (e2, branches2), true ->
-          let permuted_match =
-            ematch e2
-              (mapBranches
-                 (fun (p,inner_branch) ->
-                    (p,
-                     ematch inner_branch branches |> wrap e))
-                 branches2)
-            |> wrap e
-          in
-          interp_exp_partial env permuted_match
-        | _ ->
-          (* Permutation won't help us, just recurse the branches *)
-          (env,
-           ematch pe1 (mapBranches (fun (p,e) ->
-               (p, snd (interp_exp_partial env e))) branches)
-           |> wrap e)
-    end
+    (match match_branches branches pe1 with
+     | Match (env2, e) -> interp_exp_partial (Env.updates env env2) e
+     | NoMatch ->
+       failwith
+         ( "exp " ^ (Printing.exp_to_string pe1)
+           ^ " did not match any pattern in match statement")
+     | Delayed ->
+       (env, aexp (ematch pe1 (mapBranches (fun (p,e) ->
+            (p, snd (interp_exp_partial env e))) branches),
+                   e.ety, e.espan)))
   | ERecord _ | EProject _ -> failwith "Record found during partial interpretation"
 
 (* this is same as above, minus the app boolean. see again if we can get rid of that? *)
@@ -460,24 +387,27 @@ and interp_op_partial env ty op es =
             | _ -> vmap (BddMap.merge ~op_key:(f.body, env) f_lifted m1 m2)
           )
       | ( MMapFilter
-        , [ {v= VClosure (_, f1)}
+        , [ {v= VClosure (c_env1, f1)}
           ; {v= VClosure (c_env2, f2)}
           ; {v= VMap m} ] ) ->
         let seen = BatSet.PSet.singleton ~cmp:Var.compare f2.arg in
         let env = build_env c_env2 (Syntax.free seen f2.body) in
+        let seen1 = Syntax.free (BatSet.PSet.singleton ~cmp:Var.compare f1.arg) f1.body in
+        let usedValEnv = Env.filter c_env1.value (fun x _ -> BatSet.PSet.mem x seen1) in
+        let lookupVal = (f1.body, usedValEnv) in
         let mtbdd =
-          match ExpMap.Exceptionless.find f1.body !bddfunc_cache with
+          match ExpEnvMap.Exceptionless.find lookupVal !bddfunc_cache with
           | None -> (
-              let bddf = BddFunc.create_value (Nv_utils.OCamlUtils.oget f1.argty) in
-              let env = Env.update Env.empty f1.arg bddf in
-              let bddf = BddFunc.eval env f1.body in
-              match bddf with
-              | BBool bdd ->
-                let mtbdd = BddFunc.wrap_mtbdd bdd in
-                bddfunc_cache :=
-                  ExpMap.add f1.body mtbdd !bddfunc_cache ;
-                mtbdd
-              | _ -> failwith "impossible" )
+            let bddf = BddFunc.create_value (Nv_utils.OCamlUtils.oget f1.argty) in
+            let env = Env.update (Env.map usedValEnv (fun v -> BddFunc.eval_value v)) f1.arg bddf in
+            let bddf = BddFunc.eval env f1.body in
+            match bddf with
+            | BBool bdd ->
+              let mtbdd = BddFunc.wrap_mtbdd bdd in
+              bddfunc_cache :=
+                ExpEnvMap.add lookupVal mtbdd !bddfunc_cache ;
+              mtbdd
+            | _ -> failwith "impossible" )
           | Some bddf -> bddf
         in
         let f v = apply c_env2 f2 v in

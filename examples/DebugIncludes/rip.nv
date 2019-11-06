@@ -1,0 +1,12 @@
+type ripRoute = option[int]
+
+let transRip (x: ripRoute) =
+  match x with
+  | None -> None
+  | Some i -> if (i = 15) then None else Some (i+1)
+
+let mergeRip x y =
+  match (x, y) with
+  | (None, _) -> y
+  | (_, None) -> x
+  | (Some i, Some j) -> if i < j then x else y

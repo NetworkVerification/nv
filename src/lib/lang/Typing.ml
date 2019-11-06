@@ -345,7 +345,7 @@ let op_typ op =
   | TGet _ | TSet _ ->
     failwith "internal error (op_typ): tuple op"
   (* Map operations *)
-  | MCreate | MGet | MSet | MMap | MMerge | MMapFilter | MFoldNode | MFoldEdge | Eq ->
+  | MCreate | MGet | MSet | MMap | MMerge | MMapFilter | MMapIte | MFoldNode | MFoldEdge | Eq ->
     failwith "internal error (op_typ): map op"
 
 let texp (e, ty, span) = aexp (e, Some ty, span)
@@ -422,6 +422,22 @@ let rec infer_exp i info env (e: exp) : exp =
           unify info e kty (TArrow (keyty, TBool)) ;
           unify info e vty (TArrow (valty, valty)) ;
           texp (eop o [e1; e2; e3], mapty, e.espan)
+        | MMapIte, [e1; e2; e3; e4] ->
+          let e1, kty = infer_exp (i + 1) info env e1 |> textract in
+          let e2, vty1 = infer_exp (i + 1) info env e2 |> textract in
+          let e3, vty2 =
+            infer_exp (i + 1) info env e3 |> textract
+          in
+          let e4, mapty =
+            infer_exp (i + 1) info env e4 |> textract
+          in
+          let keyty = fresh_tyvar () in
+          let valty = fresh_tyvar () in
+          unify info e mapty (TMap (keyty, valty)) ;
+          unify info e kty (TArrow (keyty, TBool)) ;
+          unify info e vty1 (TArrow (valty, valty)) ;
+          unify info e vty2 (TArrow (valty, valty)) ;
+          texp (eop o [e1; e2; e3; e4], mapty, e.espan)
         | MMerge, _ ->
           let (e1, e2, e3), rest =
             match es with
@@ -466,7 +482,7 @@ let rec infer_exp i info env (e: exp) : exp =
               unify info e tyr1 (TOption valty) ;
               [el0; el1; er0; er1]
           in
-          texp (eop o ([e1; e2; e3] @ es), mapty1, e.espan)
+          texp (eop o (e1 :: e2 :: e3 :: es), mapty1, e.espan)
         | MFoldNode, [e1; e2; e3] ->
           let e1, fty = infer_exp (i + 1) info env e1 |> textract in
           let e2, mapty =
@@ -956,6 +972,7 @@ let canonicalize_type (ty : ty) : ty =
   in
   let (result, _, _) = aux ty (VarMap.empty) 0 in
   result
+
 
 let rec equiv_tys ty1 ty2 =
   equal_tys (canonicalize_type ty1) (canonicalize_type ty2)
