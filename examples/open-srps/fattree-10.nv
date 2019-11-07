@@ -1,5 +1,19 @@
 (* vim: set syntax=ocaml: *)
-include "../utils.nv"
+let mapo f o =
+  match o with
+  | None -> None
+  | Some x -> Some (f x)
+
+let mapbetter f o1 o2 =
+  match (o1, o2) with
+  | (None, x) -> x
+  | (x, None) -> x
+  | (Some x, Some y) -> Some (f x y)
+
+let isSome o =
+  match o with
+  | Some _ -> true
+  | None -> false
 
 (* Each node keeps track of who its next hop is to and how long the total route is. *)
 type route = { len: int; nexthop: tnode }
@@ -13,7 +27,7 @@ let exact_route r l n = match r with
   | None -> false
 
 (* predicate that a route r has length at least l and exactly nexthop n *)
-let min_len_route r l n = match r with
+let gt_min_len_route r l n = match r with
   | Some r -> r.len >= l && r.nexthop = n
   | None -> false
 
@@ -36,12 +50,12 @@ symbolic h_7_1 : option[route]
 (* requirements on the hypotheses *)
 (* as the destination is 9n, hypotheses entering 9's pod do not need to be exact *)
 require (exact_route h_0_2 3 0n)
-require (min_len_route h_2_0 4 2n)
-require (min_len_route h_0_6 3 0n)
+require (gt_min_len_route h_2_0 4 2n)
+require (gt_min_len_route h_0_6 3 0n)
 require (exact_route h_6_0 2 6n)
 require (exact_route h_1_3 3 1n)
-require (min_len_route h_3_1 4 3n)
-require (min_len_route h_1_7 3 1n)
+require (gt_min_len_route h_3_1 4 3n)
+require (gt_min_len_route h_1_7 3 1n)
 require (exact_route h_7_1 2 7n)
 
 (* --- Topology ------------------------------------------------------------------ *)
@@ -60,7 +74,7 @@ let nodes = 26
   | /\  \
   2 3 6 7
   |X| |X|
-  6 7 8 9
+  4 5 8 9
 
 *)
 let edges = {
@@ -167,12 +181,12 @@ let assert node x =
   match node with
   (* Check that the outputs satisfy the inputs *)
   | 10n -> exact_route x 3 0n
-  | 12n -> exact_route x 4 2n
-  | 14n -> exact_route x 3 0n
+  | 12n -> gt_min_len_route x 4 2n
+  | 14n -> gt_min_len_route x 3 0n
   | 16n -> exact_route x 2 6n
   | 18n -> exact_route x 3 1n
-  | 20n -> exact_route x 4 3n
-  | 22n -> exact_route x 3 1n
+  | 20n -> gt_min_len_route x 4 3n
+  | 22n -> gt_min_len_route x 3 1n
   | 24n -> exact_route x 2 7n
   (* Check that everyone can reach the destination *)
   | _ -> isSome x
