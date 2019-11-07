@@ -15,14 +15,14 @@ val is_cross_partition : (AdjGraph.Vertex.t -> int) -> AdjGraph.Edge.t -> bool
  * useful to have a default starting value to work from.
  *)
 
-(* Graph transformations *)
-(* conversion of Syntax.network to opened network *)
-type onetwork = {
-  network         : network;
-  interfaces      : OpenAdjGraph.interfaces;
-}
-
-(** Convert a Syntax.network to an onetwork *)
-val open_network : network -> onetwork
+(** Convert a Syntax.network to a partitioned network.
+ * This involves:
+ * - changing the topology
+ * - updating init, trans and merge for the new input/output nodes
+ * - adding symbolic variables to represent hypotheses, with
+ * require clauses providing assumptions on them
+ * - updating or adding assert for the output nodes 
+ *)
+val open_network : network -> network
 (* Create a partition interface from a Syntax.network *)
 val partition_interface: exp option -> exp option -> AdjGraph.t -> value option AdjGraph.EdgeMap.t

@@ -11,17 +11,11 @@ let is_argty_func (e: Syntax.exp) (at: Syntax.ty) : bool =
     (* TODO: what does it mean if the argty is None? *)
     argty == Some at
 
-(* Add a new branch to the given set of branches where the given aux node is added as a pattern to the
+(** Add a new branch to the given set of branches where the given aux node is added as a pattern to the
  * branch, and its resulting expression is the given init expression applied with the given base node.
  *)
-(* let add_init_branch (init: Syntax.exp) (aux: Vertex.t) (base: Vertex.t) (b: branches) : branches = *) 
-(*   let node_pattern = exp_to_pattern (e_val (vnode aux)) in *)
-(*   let init_exp = eapp init (e_val (vnode base)) in *)
-(*   addBranch node_pattern init_exp b *)
-
-let add_init_branch (aux: Vertex.t) (exp: Syntax.exp) (b: branches) : branches =
+let add_init_branch (aux: Vertex.t) (init_exp: Syntax.exp) (b: branches) : branches =
   let node_pattern = exp_to_pattern (e_val (vnode aux)) in
-  let init_exp = exp in
   addBranch node_pattern init_exp b
 
 (* Pass in the original init Syntax.exp and update it to perform
@@ -29,19 +23,19 @@ let add_init_branch (aux: Vertex.t) (exp: Syntax.exp) (b: branches) : branches =
  * The expression that is passed in should be a function which has
  * a single parameter of type tnode.
  *)
-let transform_init (e: Syntax.exp) (interfaces: OpenAdjGraph.interfaces) ?(intf=EdgeMap.empty) : Syntax.exp =
+let transform_init (e: Syntax.exp) (interfaces: OpenAdjGraph.interfaces) (input_exps: Syntax.exp EdgeMap.t) : Syntax.exp =
   (* check that e has the right format *)
   if not (is_argty_func e TNode) then 
     failwith "Tried to transform init for partitioning, but the type is not (TNode -> A)!"
   else
     (* new function argument *)
     let node_var = Var.create "node" in
-    let init_branch k v = 
-      (* if the edge is present in the interface set, then use the specified hypothesis;
+    let init_branch u v = 
+      (* if the edge is present in the interface set, then use the specified expression;
        * this should be true only for the input edges *)
-      match EdgeMap.find_default None (k, v) intf with 
-      | Some hyp -> add_init_branch k (e_val hyp)
-      | None -> add_init_branch k (eapp e (e_val (vnode v)))
+      match EdgeMap.Exceptionless.find (u, v) input_exps with 
+      | Some expression -> add_init_branch u expression
+      | None -> add_init_branch u (eapp e (e_val (vnode v)))
     in
     let { inputs; outputs;_ } : OpenAdjGraph.interfaces = interfaces in
     (* the default branch runs (original_init node), where original_init = e *)
@@ -108,3 +102,8 @@ let transform_merge (e: Syntax.exp) (intf: OpenAdjGraph.interfaces) : Syntax.exp
     let input_branches = VertexMap.fold (merge_branch true) inputs default_branch in
     let output_branches = VertexMap.fold (merge_branch false) outputs input_branches in
       lam node_var (ematch (evar node_var) output_branches)
+
+let transform_assert (e: Syntax.exp option) (_intf: OpenAdjGraph.interfaces) : Syntax.exp option =
+  (* TODO *)
+  e
+

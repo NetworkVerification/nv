@@ -1,11 +1,12 @@
 open Batteries
 open Nv_datastructures
+open Nv_datastructures.AdjGraph
 open Nv_utils.PrimitiveCollections
 open Nv_lang.Syntax
 open TransformDecls
 open Nv_interpreter
 
-let is_cross_partition (f: AdjGraph.Vertex.t -> 'a) edge =
+let is_cross_partition (f: Vertex.t -> 'a) edge =
   (f (fst edge)) <> (f (snd edge))
 
 (* It is possible that a better implementation involves building a new graph using the interface set,
@@ -17,8 +18,15 @@ type onetwork =
     interfaces      : OpenAdjGraph.interfaces;
   }
 
-let partition_interface (partition: exp option) (interface: exp option) (graph: AdjGraph.t) : value option AdjGraph.EdgeMap.t =
-  let open AdjGraph in
+(** Representation of a cut edge with an associated hypothesis and a predicate on that hypothesis *)
+type cut_edge =
+  { u: Vertex.t;
+    v: Vertex.t;
+    h: var;
+    p: exp;
+  }
+
+let partition_interface (partition: exp option) (interface: exp option) (graph: AdjGraph.t) : value option EdgeMap.t =
   match partition with
   | Some parte -> begin
     match interface with
@@ -40,26 +48,46 @@ let partition_interface (partition: exp option) (interface: exp option) (graph: 
   end
   | None -> EdgeMap.empty
 
-let open_network (net: network) : onetwork =
+(** Create a symbolic variable for each cut edge.
+ *  @return a map from edges to hypothesis and predicate information *)
+let create_hyp_vars (interface: value option EdgeMap.t) : (var * exp) EdgeMap.t =
+  let create_hyp_var edge = 
+    let name = Printf.sprintf "hyp_%s" (Edge.to_string edge) in
+    Var.fresh name
+  in
+  let create_predicate var value =
+    eop Eq [(evar var); (e_val value)]
+  in
+  let create_hyp_pred edge maybe_value =
+    let h = create_hyp_var edge in
+    (* generate a predicate; if there is no specific value given, set it to true *)
+    let p = match maybe_value with
+    | Some v -> create_predicate h v
+    | None -> e_val (vbool true)
+  in (h, p)
+  in
+  EdgeMap.mapi create_hyp_pred interface
+
+let open_network (net: network) : network =
   let { attr_type; init; trans; merge; assertion; partition; interface; symbolics; defs; utys; requires; graph } : network = net
   in
-  (* TODO: generate interface set, update ograph *)
   let part_int = partition_interface partition interface graph in
-  let (graph, interfaces) = OpenAdjGraph.partition_graph graph (OpenAdjGraph.intf_empty) AdjGraph.EdgeSet.empty in
+  let edge_hyps = create_hyp_vars part_int in
+  (* map of edges to expressions using the hypotheses (for use in init) *)
+  let input_exps = EdgeMap.map (fun (var, _pred) -> evar var) edge_hyps in
+  let (graph, interfaces) = OpenAdjGraph.partition_graph graph (OpenAdjGraph.intf_empty) EdgeSet.empty in
+  (* TODO: use interface information to add assert/require constraints using new symbolic variables *)
   {
-    network = {
     attr_type;
-    init = transform_init init interfaces ~intf:part_int;
+    init = transform_init init interfaces input_exps;
     trans = transform_trans trans interfaces;
     merge = transform_merge merge interfaces;
     partition = None;
     interface = None;
-    assertion;
-    symbolics;
+    assertion = transform_assert assertion interfaces; (* TODO *)
+    symbolics = EdgeMap.fold (fun _k (v, _) l -> (v, Ty attr_type) :: l) edge_hyps symbolics;
     defs;
     utys;
-    requires;
+    requires = EdgeMap.fold (fun _k (_, p) l -> p :: l) edge_hyps requires;
     graph;
-    };
-    interfaces
   }

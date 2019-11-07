@@ -12,7 +12,7 @@ open Nv_lang
  * | _ -> init x
  * where the edge u~v has been partitioned into u~out and in~v.
  *)
-val transform_init : (Syntax.exp) -> (OpenAdjGraph.interfaces) -> ?intf:Syntax.value option AdjGraph.EdgeMap.t -> (Syntax.exp)
+val transform_init : (Syntax.exp) -> (OpenAdjGraph.interfaces) -> (Syntax.exp AdjGraph.EdgeMap.t) -> (Syntax.exp)
 
 (* Wrap the given trans exp in a new exp of the form:
  * match e with
@@ -32,3 +32,16 @@ val transform_trans : (Syntax.exp) -> (OpenAdjGraph.interfaces) -> (Syntax.exp)
  * where the edge u~v has been partitioned into u~out and in~v.
  *)
 val transform_merge : (Syntax.exp) -> (OpenAdjGraph.interfaces) -> (Syntax.exp)
+
+(* Wrap the given assert exp in a new exp that also checks the input and output nodes
+ * of the partitioned network.
+ * Output nodes are tested against the assumptions on the associated input nodes.
+ * Input nodes do not have any associated checks (since their value is assumed).
+ * The form of the new exp is:
+ * match n with
+ * | out -> p out
+ * | in -> true
+ * | _ -> assert n x
+ * where p is a predicate used in the require clause
+ *)
+val transform_assert : (Syntax.exp option) -> (OpenAdjGraph.interfaces) -> (Syntax.exp option)

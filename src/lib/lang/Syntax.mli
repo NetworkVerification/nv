@@ -66,7 +66,6 @@ type pattern =
   | PRecord of pattern StringMap.t
   | PNode of node
   | PEdge of pattern * pattern
-  (* | PHyp of pattern Partition.Hyp.t *)
 
 module Pat : Map.OrderedType with type t = pattern
 
@@ -349,7 +348,8 @@ val free : Var.t BatSet.PSet.t -> exp -> Var.t BatSet.PSet.t
 
 val free_dead_vars : exp -> exp
 
-(** [get_ty_from_tyexp t] @return the type wrapped by [Ty] or the type
+(** [get_ty_from_tyexp t]
+ * @return the type wrapped by [Ty] or the type
     of the expression wrapped by [Exp]. Fails if the expression has no
     type. *)
 val get_ty_from_tyexp: ty_or_exp -> ty
