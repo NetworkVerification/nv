@@ -1,19 +1,5 @@
 (* vim: set syntax=ocaml: *)
-let mapo f o =
-  match o with
-  | None -> None
-  | Some x -> Some (f x)
-
-let mapbetter f o1 o2 =
-  match (o1, o2) with
-  | (None, x) -> x
-  | (x, None) -> x
-  | (Some x, Some y) -> Some (f x y)
-
-let isSome o =
-  match o with
-  | Some _ -> true
-  | None -> false
+include "../utils.nv"
 
 (* Each node keeps track of who its next hop is to and how long the total route is. *)
 type route = { len: int; nexthop: tnode }
