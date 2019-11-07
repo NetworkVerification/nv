@@ -163,7 +163,7 @@ let init node = if node = dest then
 (* -------- Assert --------------------------------------------------------------- *)
 
 (* Exact assert: SC A and SC B (since the transfer is identity) *)
-(*let assert node x = 
+let assert node x = 
   match node with
   (* Check that the outputs satisfy the inputs *)
   | 10n -> exact_route x 3 0n
@@ -175,7 +175,7 @@ let init node = if node = dest then
   | 22n -> exact_route x 3 1n
   | 24n -> exact_route x 2 7n
   (* Check that everyone can reach the destination *)
-  | _ -> isSome x*)
+  | _ -> isSome x
 
 (* Asserting SC C:
  * How would we check that merging the hypothesis into the base node's solution
@@ -185,9 +185,8 @@ let init node = if node = dest then
  * mapbetter compare_routes hyp base_sol = mapbetter compare_routes output_sol base_sol
  * SC C is instead written in terms of a universal quantifier, where for all a,
  * mapbetter compare_routes hyp a = mapbetter compare_routes output_sol a
- * Would using a symbolic variable, as shown below, give us the result we want?
  *)
-symbolic a : option[route]
+(*symbolic a : option[route]
 let assert node x = 
   match node with
   (* Check that the outputs satisfy the inputs *)
@@ -200,7 +199,7 @@ let assert node x =
   | 22n -> mapbetter compare_routes h_1_7 a = mapbetter compare_routes x a
   | 24n -> mapbetter compare_routes h_7_1 a = mapbetter compare_routes x a
   (* Check that everyone can reach the destination *)
-  | _ -> isSome x
+  | _ -> isSome x*)
 
 
 (* Asserting SC /D/:

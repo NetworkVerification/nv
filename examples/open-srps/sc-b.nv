@@ -9,11 +9,25 @@
 
 type attribute = int
 
+(* Symbolic values representing the hypotheses. *)
 symbolic h1 : int
 symbolic h2 : int
 
-require h2 = 2 && h1 > 1
+(* The predicates on the hypotheses: 
+ * the solution at 2 depends on 1, so we need an exact hypothesis.
+ * the solution at 1 doesn't depend on 2, so we just need a hypothesis 
+ * that's worse than 1's solution. 
+ * i.e. we are /assuming/ that our hypotheses respect this form
+ *)
+let lab_1 = 1 (* solution at 1 *)
+let lab_2 = 2 (* solution at 2 *)
 
+require h2 = lab_2 && h1 > lab_1
+
+(* Topology: a chain of nodes
+ * 0 = 1 = 2 = 3
+ * broken along the 1 = 2 edges
+ *)
 let nodes = 8
 
 let edges = {
@@ -25,16 +39,11 @@ let edges = {
  7-1; (* input of 1 *)
 }
 
-let merge node x y =
-  match node with
-  (* | 5n -> x
-  | 7n -> x
-  | 4n -> y
-  | 6n -> y *)
-  | _ -> if x < y then x else y
+let merge node x y = if x < y then x else y
 
 let trans edge x = 
   match edge with
+  (* input~base edges just perform identity *)
   | 5~2 -> x
   | 7~1 -> x
   | _ -> x + 1
@@ -50,8 +59,13 @@ let init node =
   (* default "unknown" value *)
   | _ -> 10
 
+(* check: we want to guarantee that our outputs
+ * follow the form of our hypotheses.
+ * since we don't care what the output is that's 
+ * sent from the 2 = 3 side, we can use the same looser check
+ *)
 let assert node x =
   match node with
-  | 4n -> x = 2
-  | 6n -> x > 1
+  | 4n -> x = lab_2
+  | 6n -> x > lab_1
   | _ -> true
