@@ -370,13 +370,6 @@ let parse_input (args : string array) =
         Failures.buildFailuresNet net cfg.link_failures
       else net
     in
-  let net, fs =
-    if cfg.smt then
-      let net, f = UnboxEdges.unbox_net net in
-      net, f :: fs
-    else
-      net, fs
-    in
     let net = 
       if cfg.kirigami then
         let open_net = Nv_kirigami.Partition.open_network net in
@@ -384,6 +377,13 @@ let parse_input (args : string array) =
         open_net
       else
         net
+    in
+  let net, fs =
+    if cfg.smt then
+      let net, f = UnboxEdges.unbox_net net in
+      net, f :: fs
+    else
+      net, fs
     in
    (* let net, _ = OptimizeBranches.optimize_net net in (\* The _ should match the identity function *\) *)
    (cfg, info, file, net, fs)
