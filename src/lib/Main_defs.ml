@@ -377,5 +377,13 @@ let parse_input (args : string array) =
     else
       net, fs
     in
+    let net = 
+      if cfg.kirigami then
+        let open_net = Nv_kirigami.Partition.open_network net in
+        Printf.printf "%s" (Printing.network_to_string open_net);
+        open_net
+      else
+        net
+    in
    (* let net, _ = OptimizeBranches.optimize_net net in (\* The _ should match the identity function *\) *)
    (cfg, info, file, net, fs)

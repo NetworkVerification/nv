@@ -55,14 +55,16 @@ let create_hyp_vars (interface: value option EdgeMap.t) : (var * exp) EdgeMap.t 
     let name = Printf.sprintf "hyp_%s" (Edge.to_string edge) in
     Var.fresh name
   in
-  let create_predicate var value =
-    eop Eq [(evar var); (e_val value)]
+  (* the predicate is a function over attr_types that returns booleans *)
+  let create_predicate value =
+    let var = Var.fresh "x" in
+      lam var (eop Eq [(evar var); (e_val value)])
   in
   let create_hyp_pred edge maybe_value =
     let h = create_hyp_var edge in
     (* generate a predicate; if there is no specific value given, set it to true *)
     let p = match maybe_value with
-    | Some v -> create_predicate h v
+    | Some v -> create_predicate v
     | None -> e_val (vbool true)
   in (h, p)
   in
@@ -75,16 +77,16 @@ let open_network (net: network) : network =
   let edge_hyps = create_hyp_vars part_int in
   (* map of edges to expressions using the hypotheses (for use in init) *)
   let input_exps = EdgeMap.map (fun (var, _pred) -> evar var) edge_hyps in
+  let output_preds = EdgeMap.map (fun (_var, pred) -> pred) edge_hyps in
   let (graph, interfaces) = OpenAdjGraph.partition_graph graph (OpenAdjGraph.intf_empty) EdgeSet.empty in
-  (* TODO: use interface information to add assert/require constraints using new symbolic variables *)
   {
     attr_type;
     init = transform_init init interfaces input_exps;
     trans = transform_trans trans interfaces;
-    merge = transform_merge merge interfaces;
+    merge; (* = transform_merge merge interfaces; *)
     partition = None;
     interface = None;
-    assertion = transform_assert assertion interfaces; (* TODO *)
+    assertion = transform_assert assertion interfaces output_preds;
     symbolics = EdgeMap.fold (fun _k (v, _) l -> (v, Ty attr_type) :: l) edge_hyps symbolics;
     defs;
     utys;

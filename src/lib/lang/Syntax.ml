@@ -541,7 +541,6 @@ let rec hash_ty ty =
   | TUnit -> 11
   | TNode -> 12
   | TEdge -> 13
-  (* | THyp t -> 14 + hash_ty t *)
 
 let hash_span (span: Span.t) = let open Span in (19 * span.start) + span.finish
 

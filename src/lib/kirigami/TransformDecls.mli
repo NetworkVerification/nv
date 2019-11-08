@@ -24,6 +24,7 @@ val transform_init : (Syntax.exp) -> (OpenAdjGraph.interfaces) -> (Syntax.exp Ad
  *)
 val transform_trans : (Syntax.exp) -> (OpenAdjGraph.interfaces) -> (Syntax.exp)
 
+(* NOTE: this function appears to be unnecessary in practice *)
 (* Wrap the given merge exp in a new exp of the form:
  * match n with
  * | out -> y
@@ -38,10 +39,11 @@ val transform_merge : (Syntax.exp) -> (OpenAdjGraph.interfaces) -> (Syntax.exp)
  * Output nodes are tested against the assumptions on the associated input nodes.
  * Input nodes do not have any associated checks (since their value is assumed).
  * The form of the new exp is:
+ * let assert n x = 
  * match n with
- * | out -> p out
+ * | out -> p x
  * | in -> true
  * | _ -> assert n x
  * where p is a predicate used in the require clause
  *)
-val transform_assert : (Syntax.exp option) -> (OpenAdjGraph.interfaces) -> (Syntax.exp option)
+val transform_assert : (Syntax.exp option) -> (OpenAdjGraph.interfaces) -> (Syntax.exp AdjGraph.EdgeMap.t) -> (Syntax.exp option)
