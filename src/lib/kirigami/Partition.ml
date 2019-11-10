@@ -26,6 +26,14 @@ type cut_edge =
     p: exp;
   }
 
+(** Transform a value representing an option into an optional value.
+ * Fail if the valye is not an option.
+ *)
+let proj_opt (v: value) : value option =
+  match v with
+  | {v = VOption o; _ } -> o
+  | _ -> failwith "value is not an option"
+
 let partition_interface (partition: exp option) (interface: exp option) (graph: AdjGraph.t) : value option EdgeMap.t =
   match partition with
   | Some parte -> begin
@@ -38,7 +46,8 @@ let partition_interface (partition: exp option) (interface: exp option) (graph: 
           (* interface hypothesis *)
           let intf_app = Interp.apply empty_env (deconstructFun intfe) (vedge (u, v)) in
           if (is_cross_partition partf_app (u, v)) then
-            EdgeMap.add (u, v) (Some intf_app) map
+            (* if intf_app is not an option, fail *)
+            EdgeMap.add (u, v) (proj_opt intf_app) map
           else
             map
         in
@@ -48,23 +57,26 @@ let partition_interface (partition: exp option) (interface: exp option) (graph: 
   end
   | None -> EdgeMap.empty
 
+(** Return a function representing a predicate over attributes,
+ * which compares a given variable to an exact value.
+ *)
+let create_exact_predicate attr_type value =
+  let var = Var.fresh "x" in
+  let body = eop Eq [(evar var); (e_val value)] in
+    efunc (funcFull var (Some attr_type) (Some TBool) body)
+
 (** Create a symbolic variable for each cut edge.
  *  @return a map from edges to hypothesis and predicate information *)
-let create_hyp_vars (interface: value option EdgeMap.t) : (var * exp) EdgeMap.t =
+let create_hyp_vars attr_type (interface: value option EdgeMap.t) : (var * exp) EdgeMap.t =
   let create_hyp_var edge = 
     let name = Printf.sprintf "hyp_%s" (Edge.to_string edge) in
     Var.fresh name
-  in
-  (* the predicate is a function over attr_types that returns booleans *)
-  let create_predicate value =
-    let var = Var.fresh "x" in
-      lam var (eop Eq [(evar var); (e_val value)])
   in
   let create_hyp_pred edge maybe_value =
     let h = create_hyp_var edge in
     (* generate a predicate; if there is no specific value given, set it to true *)
     let p = match maybe_value with
-    | Some v -> create_predicate v
+    | Some v -> create_exact_predicate attr_type v
     | None -> e_val (vbool true)
   in (h, p)
   in
@@ -74,7 +86,7 @@ let open_network (net: network) : network =
   let { attr_type; init; trans; merge; assertion; partition; interface; symbolics; defs; utys; requires; graph } : network = net
   in
   let part_int = partition_interface partition interface graph in
-  let edge_hyps = create_hyp_vars part_int in
+  let edge_hyps = create_hyp_vars attr_type part_int in
   (* map of edges to expressions using the hypotheses (for use in init) *)
   let input_exps = EdgeMap.map (fun (var, _pred) -> evar var) edge_hyps in
   let output_preds = EdgeMap.map (fun (_var, pred) -> pred) edge_hyps in
@@ -90,6 +102,7 @@ let open_network (net: network) : network =
     symbolics = EdgeMap.fold (fun _k (v, _) l -> (v, Ty attr_type) :: l) edge_hyps symbolics;
     defs;
     utys;
-    requires = EdgeMap.fold (fun _k (_, p) l -> p :: l) edge_hyps requires;
+    (* add requires clauses for each hypothesis, applying the predicate to the hypothesis variable *)
+    requires = EdgeMap.fold (fun _k (v, p) l -> (eapp p (evar v)) :: l) edge_hyps requires;
     graph;
   }

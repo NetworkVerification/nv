@@ -13,6 +13,9 @@ let is_argty_func (e: Syntax.exp) (at: Syntax.ty) : bool =
   (* FIXME: this check doesn't seem to be working *)
   true
 
+let amatch v t b =
+  (ematch (aexp (evar v, t, Span.default)) b)
+
 (** Add a new branch to the given set of branches where the given aux node is added as a pattern to the
  * branch, and its resulting expression is the given init expression applied with the given base node.
  *)
@@ -47,7 +50,7 @@ let transform_init (e: Syntax.exp) (interfaces: OpenAdjGraph.interfaces) (input_
   let output_branches = VertexMap.fold init_branch outputs input_branches in
   (* the returned expression should be a function that takes a node as input with the following body:
    * a match with node as the exp and output_branches as the branches *)
-    lam node_var (ematch (evar node_var) output_branches)
+    wrap e (lam node_var (amatch node_var (Some TNode) output_branches))
 
 (* Pass in the original trans Syntax.exp and update it to perform
  * distinct actions for the inputs and outputs of the OpenAdjGraph.
@@ -82,7 +85,7 @@ let transform_trans (e: Syntax.exp) (intf: OpenAdjGraph.interfaces) : Syntax.exp
   let default_branch = addBranch PWild (eapp e (evar edge_var)) emptyBranch in
   let input_branches = VertexMap.fold in_trans_branch inputs default_branch in
   let output_branches = VertexMap.fold out_trans_branch outputs input_branches in
-    lam edge_var (ematch (evar edge_var) output_branches)
+    wrap e (lam edge_var (amatch edge_var (Some TEdge) output_branches))
 
 let merge_branch (input: bool) (n: Vertex.t) (_: Vertex.t) (b: branches) : branches =
   let a1 = Var.fresh "a1" in
@@ -106,7 +109,7 @@ let transform_merge (e: Syntax.exp) (intf: OpenAdjGraph.interfaces) : Syntax.exp
   in
   let input_branches = VertexMap.fold (merge_branch true) inputs default_branch in
   let output_branches = VertexMap.fold (merge_branch false) outputs input_branches in
-    lam node_var (ematch (evar node_var) output_branches)
+    wrap e (lam node_var (amatch node_var (Some TNode) output_branches))
 
 (* Apply the predicate test on the solution for node n *)
 let assert_branch (x: var) (n: Vertex.t) (pred: exp) (b: branches) : branches =
@@ -137,5 +140,6 @@ let transform_assert (e: Syntax.exp option) (intf: OpenAdjGraph.interfaces) (edg
     in
     let output_branches = VertexMap.fold (assert_branch soln_var) outputs_to_preds default_branch in
     let input_branches = VertexMap.fold (fun innode _ b -> addBranch (exp_to_pattern (e_val (vnode innode))) etrue b) inputs output_branches in
-    Some (lams [node_var; soln_var] (ematch (evar node_var) input_branches))
+    let match_exp = amatch node_var (Some TNode) input_branches in
+    Some (wrap e (lams [node_var; soln_var] match_exp))
 
