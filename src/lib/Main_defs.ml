@@ -334,6 +334,11 @@ let parse_input (args : string array) =
   let file = rest.(0) in
   let ds, info = Input.parse file in (* Parse nv file *)
   let decls = ds in
+  let decls = if cfg.kirigami then
+    Nv_kirigami.Partition.open_declarations decls
+  else
+    decls
+  in
   (* print_endline @@ Printing.declarations_to_string decls ; *)
   let decls = (ToEdge.toEdge_decl decls) :: decls in
   let decls = Typing.infer_declarations info decls in
@@ -372,9 +377,9 @@ let parse_input (args : string array) =
     in
     let net = 
       if cfg.kirigami then
-        let open_net = Nv_kirigami.Partition.open_network net in
-        Printf.printf "%s" (Printing.network_to_string open_net);
-        open_net
+        (* let open_net = Nv_kirigami.Partition.open_network net in *)
+        let () = Printf.printf "%s" (Printing.network_to_string net) in net
+        (* open_net *)
       else
         net
     in

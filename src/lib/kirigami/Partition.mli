@@ -26,3 +26,14 @@ val is_cross_partition : (AdjGraph.Vertex.t -> int) -> AdjGraph.Edge.t -> bool
 val open_network : network -> network
 (* Create a partition interface from a Syntax.network *)
 val partition_interface: exp option -> exp option -> AdjGraph.t -> value option AdjGraph.EdgeMap.t
+
+(** Create a new Syntax.declarations list from the given one,
+ * where the partition and interface information is used to create a new network.
+ * This involves:
+ * - changing the topology
+ * - updating init, trans and merge for the new input/output nodes
+ * - adding symbolic variables to represent hypotheses, with
+ * require clauses providing assumptions on them
+ * - updating or adding assert for the output nodes 
+ *)
+val open_declarations : declarations -> declarations
