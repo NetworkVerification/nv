@@ -334,16 +334,19 @@ let parse_input (args : string array) =
   let file = rest.(0) in
   let ds, info = Input.parse file in (* Parse nv file *)
   let decls = ds in
-  let decls = if cfg.kirigami then
-    Nv_kirigami.Partition.open_declarations decls
-  else
-    decls
-  in
   (* print_endline @@ Printing.declarations_to_string decls ; *)
   let decls = (ToEdge.toEdge_decl decls) :: decls in
   let decls = Typing.infer_declarations info decls in
   Typing.check_annot_decls decls ;
   Wellformed.check info decls ;
+  let decls = if cfg.kirigami then
+    (* FIXME: this breaks ToEdge *)
+    let new_decls = Nv_kirigami.Partition.open_declarations decls in
+    let () = Printf.printf "%s" (Printing.declarations_to_string new_decls) in 
+    Typing.infer_declarations info new_decls
+  else
+    decls
+  in
   let decls, f = RecordUnrolling.unroll_declarations decls in
   let fs = [f] in
   let decls,fs = (* inlining definitions *)
@@ -374,14 +377,6 @@ let parse_input (args : string array) =
       if cfg.link_failures > 0 then
         Failures.buildFailuresNet net cfg.link_failures
       else net
-    in
-    let net = 
-      if cfg.kirigami then
-        (* let open_net = Nv_kirigami.Partition.open_network net in *)
-        let () = Printf.printf "%s" (Printing.network_to_string net) in net
-        (* open_net *)
-      else
-        net
     in
   let net, fs =
     if cfg.smt then

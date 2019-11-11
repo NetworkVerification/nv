@@ -34,6 +34,10 @@ let proj_opt (v: value) : value option =
   | {v = VOption o; _ } -> o
   | _ -> failwith "value is not an option"
 
+(* Generate a map of edges to annotations from the given partition and interface expressions
+ * and a list of edges.
+ * @return a map from edges in the original SRP to associated values
+ *)
 let partition_interface_edges (partition: exp option) (interface: exp option) (edges: edge list) : value option EdgeMap.t =
   match partition with
   | Some parte -> begin
@@ -148,6 +152,19 @@ let partition_edge (nodes: int) (edges: edge list) (e: edge) (intf: OpenAdjGraph
   } in
   (new_nodes, new_edges, new_intf)
 
+let get_input_exps (interfaces: OpenAdjGraph.interfaces) (edge_hyps: (var * exp) EdgeMap.t) : (exp EdgeMap.t) =
+  let OpenAdjGraph.{ outputs; inputs; broken } = interfaces in
+  let find_old_edge outn inn =
+    let u = VertexMap.find outn outputs in
+    let v = VertexMap.find inn inputs in
+    (u, v)
+  in
+  (* create an edgemap of input~base keys to hypothesis expression values *)
+  VertexMap.fold (fun (outn: Vertex.t) (inn: Vertex.t) m -> 
+    let (u,v) = find_old_edge outn inn in
+    let (var, _) = EdgeMap.find (u,v) edge_hyps in
+    EdgeMap.add (inn,v) (evar var) m) broken EdgeMap.empty
+
 let open_declarations (decls: declarations) : declarations =
   let partition = get_partition decls in
   if Option.is_some partition then
@@ -157,15 +174,17 @@ let open_declarations (decls: declarations) : declarations =
     let edges = get_edges decls |> Option.get in
     let part_int = partition_interface_edges partition interface edges in
     let edge_hyps = create_hyp_vars attr_type part_int in
-    let input_exps = EdgeMap.map (fun (var, _pred) -> evar var) edge_hyps in
     let output_preds = EdgeMap.map (fun (_var, pred) -> pred) edge_hyps in
     let (new_nodes, new_edges, intf) = EdgeMap.fold (fun e _ (n, es, i) -> begin
       partition_edge n es e i
     end) part_int (nodes, edges, OpenAdjGraph.intf_empty) in
+    let input_exps = get_input_exps intf edge_hyps in
     let trans = get_trans decls |> Option.get in
     let new_trans = transform_trans trans intf in
     let init = get_init decls |> Option.get in
     let new_init = transform_init init intf input_exps in
+    let merge = get_merge decls |> Option.get in
+    let new_merge = transform_merge merge intf in
     let new_symbolics = EdgeMap.fold (fun _ (v, _) l -> DSymbolic (v, Ty attr_type) :: l) edge_hyps [] in
     let assertion = get_assert decls in
     let new_assertion = transform_assert assertion intf output_preds in
@@ -177,6 +196,9 @@ let open_declarations (decls: declarations) : declarations =
     | DEdges _ -> Some (DEdges new_edges)
     | DInit _ -> Some (DInit new_init)
     | DTrans _ -> Some (DTrans new_trans)
+    (* FIXME: merge is screwy; currently an output node on the destination won't update since it
+     * gets initialized with the destination's value, which is already the best *)
+    (* | DMerge _ -> Some (DMerge new_merge) *)
     | DAssert _ -> Some (DAssert (Option.get new_assertion))
     (* remove partition and interface declarations *)
     | DPartition _ -> None
