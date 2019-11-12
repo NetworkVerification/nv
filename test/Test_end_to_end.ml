@@ -61,7 +61,7 @@ let smt_test filename expected: test =
 let bv_test filename expected: test =
   {
     testname = filename ^ "_bv";
-    args = Array.of_list ["nv"; "-m"; "-unbox"; "-finite-arith"; filename_prefix ^ filename];
+    args = Array.of_list ["nv"; "-m"; "-finite-arith"; filename_prefix ^ filename];
     testfun = run_smt;
     expected;
   }
@@ -70,16 +70,7 @@ let bv_test filename expected: test =
 let parallel_test filename expected: test =
   {
     testname = filename ^ "_parallel";
-    args = Array.of_list ["nv"; "-m"; "-unbox"; "-smt-parallel"; filename_prefix ^ filename];
-    testfun = run_smt;
-    expected;
-  }
-;;
-
-let unboxed_test filename expected: test =
-  {
-    testname = filename ^ "_unboxed";
-    args = Array.of_list ["nv"; "-m"; "-unbox"; filename_prefix ^ filename];
+    args = Array.of_list ["nv"; "-m"; "-smt-parallel"; filename_prefix ^ filename];
     testfun = run_smt;
     expected;
   }
@@ -123,7 +114,7 @@ let simulator_tests =
       ("examples/env.nv", true);
       ("examples/failure.nv", true);
       ("examples/failure2.nv", true);
-      ("examples/fattree.nv", true);
+      ("examples/FatTrees/fattree.nv", true);
       ("examples/map.nv", true);
       ("examples/map2.nv", false);
       ("examples/minesweeper.nv", true);
@@ -155,7 +146,7 @@ let compiler_tests =
       ("examples/env.nv", true);
       ("examples/failure.nv", true);
       (* ("examples/failure2.nv", true); *) (* TODO: Enable *)
-      ("examples/fattree.nv", true);
+      ("examples/FatTrees/fattree.nv", true);
       ("examples/map.nv", true);
       ("examples/map2.nv", false);
       ("examples/property.nv", true);
@@ -172,38 +163,6 @@ let compiler_tests =
     ]
 ;;
 
-
-let unboxed_tests =
-  List.map (fun (f,b) -> unboxed_test f b)
-    [
-      ("examples/debugging/debug-combine.nv", true);
-      ("examples/batfish.nv", false);
-      ("examples/diamond.nv", true);
-      ("examples/diamond-ospf.nv", true);
-      ("examples/env.nv", true);
-      ("examples/failure.nv", false);
-      ("examples/failure2.nv", false);
-      ("examples/fattree.nv", true);
-      ("examples/map.nv", true);
-      ("examples/map2.nv", false);
-      ("examples/minesweeper.nv", false);
-      ("examples/property.nv", true);
-      ("examples/set.nv", true);
-      ("examples/simple.nv", true);
-      ("examples/symbolic.nv", false);
-      ("examples/symbolic2.nv", false);
-      ("examples/maprecord.nv", true);
-      ("examples/maprecordpattern.nv", true);
-      ("examples/maprecord2.nv", true);
-      ("examples/record.nv", true);
-      ("examples/recordwith.nv", true);
-
-      ("examples/symbolic3.nv", false);
-      ("examples/symbolicDecls.nv", false);
-      ("examples/ospf-areas.nv", true);
-    ]
-;;
-
 let hiding_tests =
   List.map (fun (f,b) -> hiding_test f b)
     [
@@ -214,7 +173,7 @@ let hiding_tests =
       ("examples/env.nv", true);
       ("examples/failure.nv", false);
       ("examples/failure2.nv", false);
-      ("examples/fattree.nv", true);
+      ("examples/FatTrees/fattree.nv", true);
       ("examples/map.nv", true);
       ("examples/map2.nv", false);
       ("examples/minesweeper.nv", false);
@@ -245,7 +204,7 @@ let slicing_tests =
       ("examples/env.nv", true);
       ("examples/failure.nv", false);
       ("examples/failure2.nv", false);
-      ("examples/fattree.nv", true);
+      ("examples/FatTrees/fattree.nv", true);
       ("examples/map.nv", true);
       ("examples/map2.nv", false);
       ("examples/minesweeper.nv", false);
@@ -294,7 +253,6 @@ let tests =
   >:::
   List.map make_ounit_test @@
   simulator_tests @
-  unboxed_tests @
   hiding_tests @
   slicing_tests @
   bv_tests @

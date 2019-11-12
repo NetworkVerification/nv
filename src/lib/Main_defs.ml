@@ -34,7 +34,8 @@ let partialEvalNet net =
   {net with
    init = InterpPartial.interp_partial_opt net.init;
    trans = InterpPartial.interp_partial_opt net.trans;
-   merge = InterpPartial.interp_partial_opt net.merge
+   merge = InterpPartial.interp_partial_opt net.merge;
+   assertion = omap (InterpPartial.interp_partial_opt) net.assertion
   }
 
 let run_smt_func file cfg info net fs =
@@ -44,15 +45,16 @@ let run_smt_func file cfg info net fs =
     let srp, f = UnboxUnits.unbox_srp srp in
     srp, f :: fs
   in
-  let srp, f = Renaming.alpha_convert_srp srp in
   let srp, fs =
     SmtUtils.smt_config.unboxing <- true;
     let srp, f1 = Profile.time_profile "Unbox options" (fun () -> UnboxOptions.unbox_srp srp) in
     let srp, f2 =
       Profile.time_profile "Flattening Tuples" (fun () -> TupleFlatten.flatten_srp srp)
     in
-    srp, (f2 :: f1 :: f :: fs)
+    srp, (f2 :: f1 :: fs)
   in
+  let srp, f = Renaming.alpha_convert_srp srp in
+  let fs = f :: fs in
   let res = Smt.solveFunc info cfg.query (smt_query_file file) srp in
   match res with
   | Unsat ->
@@ -80,7 +82,8 @@ let run_smt_classic file cfg info (net : Syntax.network) fs =
   (* Printf.printf "%s\n" (Printing.network_to_string net); *)
   let net, f = Renaming.alpha_convert_net net in (*TODO: why are we renaming here?*)
   let fs = f :: fs in
-
+  let net, _ = OptimizeBranches.optimize_net net in (* The _ should match the identity function *)
+  let net = Profile.time_profile "Partially Evaluating Network" (fun () -> partialEvalNet net) in
   let get_answer net fs =
     let solve_fun =
       if cfg.hiding then
@@ -191,6 +194,7 @@ let run_test cfg info net fs =
 
 let run_simulator cfg _ net fs =
   let net = partialEvalNet net in
+  let net, _ = OptimizeBranches.optimize_net net in (* The _ should match the identity function *)
   try
     let solution, q =
       match cfg.bound with
@@ -385,5 +389,4 @@ let parse_input (args : string array) =
     else
       net, fs
     in
-   (* let net, _ = OptimizeBranches.optimize_net net in (\* The _ should match the identity function *\) *)
    (cfg, info, file, net, fs)
