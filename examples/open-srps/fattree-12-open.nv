@@ -1,0 +1,51 @@
+type attribute = option[int]
+
+(* Open SRP version of fattree-12, looking at the spine. *)
+let nodes = 8
+
+let edges = {
+  0=4;
+  0=6;
+  1=4;
+  1=6;
+  2=5;
+  2=7;
+  3=5;
+  3=7;
+}
+
+let mapo f o =
+  match o with
+  | None -> None
+  | Some x -> Some (f x)
+
+let mapbetter f o1 o2 =
+  match (o1, o2) with
+  | (None, x) -> x
+  | (x , None) -> x
+  | (Some x, Some y) -> Some (f x y)
+
+let min x y = if x < y then x else y
+
+let merge node x y =
+  match node with
+  | _ -> mapbetter min x y
+
+let trans edge x =
+  match edge with
+  | _ -> mapo (fun x -> x + 1) x
+
+let init node =
+  match node with
+  | 4 -> Some 3
+  | 5 -> Some 3
+  | 6 -> Some 1
+  | 7 -> Some 1
+  | _ -> None
+
+let assert node x =
+  match x with
+  | None -> false
+  | _ -> true
+
+

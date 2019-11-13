@@ -1,0 +1,77 @@
+(* vim: set syntax=ocaml: *)
+type attribute = option[int]
+
+(* Triangle of nodes
+   We want to see that when we consider a series of dummy disconnected trees, that the results still
+   are the same between all the nodes given some hypothetical input values.
+ *)
+
+(*
+   Original node 2 is disconnected from the triangle.
+   We are looking at nodes 0 and 1.
+        0 ----- 1
+         \     /
+          *   *
+
+            2
+*)
+
+(* 
+   Node 0: original node.
+   Node 1: original node.
+   Node 2: input from original node 2.
+   Node 3: input from original node 2.
+   Node 4: output from node 0 to node 2.
+   Node 5: output from node 1 to node 2.
+*)
+
+(* Transfer equivalence function:
+   mapo (fun x -> x + 1) x
+*)
+let nodes = 6
+(* Three open cases to consider, where we remove one of each edge and adjust the init method accordingly,
+   treating the remaining nodes as dummies *)
+let edges = {
+  0=1;
+  2-0;
+  3-1;
+  0-4;
+  1-5;
+}
+
+let mapo f o =
+  match o with
+  | None -> None
+  | Some x -> Some (f x)
+
+let mapbetter f o1 o2 =
+  match (o1, o2) with
+  | (None, x) -> x
+  | (x , None) -> x
+  | (Some x, Some y) -> Some (f x y)
+
+let min x y = if x < y then x else y
+
+let merge node x y =
+  mapbetter min x y
+
+let trans edge x =
+  match edge with
+  | (0,4) -> x
+  | (1,5) -> x
+  | (2,0) -> x
+  | (3,1) -> x
+  | _ -> mapo (fun x -> x + 1) x
+
+let init node =
+  match node with
+  | 0 -> Some 0
+  | 2 -> Some 2
+  | 3 -> Some 2
+  | _ -> None
+
+let assert node x =
+  match x with
+  | None -> false
+  | _ -> true
+
