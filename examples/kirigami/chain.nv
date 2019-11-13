@@ -7,24 +7,17 @@ type attribute = option[int]
  *)
 
 (*
-    Looking at nodes 0 and 1.
-    0 --- 1 --*    *-- 2 --- 3
+    Topology:
+    0 --- 1 --- 2 --- 3 --- 4 --- ...
  *)
 
-(* Node 0: original node.
-   Node 1: original node.
-   Node 2: input from original node 2.
-   Node 3: output from node 1 to original node 2.
-*)
-
-(* Transfer equivalence function:
-   mapo (fun x -> x + 1) x
-*)
-let nodes = 4
+let nodes = 6
 let edges = {
   0=1;
-  2-1;
-  1-3;
+  1=2;
+  2=3;
+  3=4;
+  4=5;
 }
 
 let mapo f o =
@@ -44,18 +37,17 @@ let merge node x y =
   mapbetter min x y
 
 let trans edge x = 
-  match edge with
-  | (2,1) -> x
-  | (1,3) -> x
-  | _ -> mapo (fun x -> x + 1) x
+  mapo (fun x -> x + 1) x
 
 let init node =
   match node with
+  | 3 -> Some 100
   | 0 -> Some 0
-  | 2 -> Some 3
   | _ -> None
 
 let assert node x =
   match x with
   | None -> false
-  | _ -> true
+  | Some y -> y < 6
+
+

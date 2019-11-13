@@ -20,7 +20,6 @@ type attribute = option[int]
 let nodes = 4
 
 (* Diamond partial mesh network *)
-(* unbroken *)
 let edges = {
  0=1;
  0=2;
