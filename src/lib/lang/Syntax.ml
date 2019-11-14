@@ -7,7 +7,7 @@ open Nv_utils
 type node = int
 [@@deriving eq, ord]
 
-let tnode_sz = 24
+let tnode_sz = 20
 
 type edge = node * node
 [@@deriving eq, ord]
