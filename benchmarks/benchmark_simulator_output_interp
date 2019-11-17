@@ -1,0 +1,53 @@
+All prefixes interpreted simulation.
+
+Processing AllPrefixes/FAT20/fat20PolSim.nv
+Interpreted simulation took: 6.517895 secs to complete
+No counterexamples found
+
+Success: all assertions passed
+
+Entire Program took: 7.913097 secs to complete
+
+real	0m7.951s
+user	0m7.838s
+sys	0m0.105s
+
+
+Processing AllPrefixes/FAT24/fat24PolSim.nv
+Interpreted simulation took: 13.231047 secs to complete
+No counterexamples found
+
+Success: all assertions passed
+
+Entire Program took: 16.066622 secs to complete
+
+real	0m16.099s
+user	0m15.944s
+sys	0m0.144s
+
+
+Processing AllPrefixes/FAT28/fat28PolSim.nv
+Interpreted simulation took: 24.614420 secs to complete
+No counterexamples found
+
+Success: all assertions passed
+
+Entire Program took: 30.185088 secs to complete
+
+real	0m30.228s
+user	0m29.999s
+sys	0m0.215s
+
+
+Processing AllPrefixes/FAT32/fat32PolSim.nv
+Interpreted simulation took: 44.078342 secs to complete
+No counterexamples found
+
+Success: all assertions passed
+
+Entire Program took: 54.293736 secs to complete
+
+real	0m54.347s
+user	0m54.059s
+sys	0m0.278s
+
