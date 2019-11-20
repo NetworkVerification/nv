@@ -11,8 +11,8 @@ let edges = {
 let trans edge x = x + 1
 
 let merge node x y = match node with
-  | 3n -> y (* change to sent value *)
-  | 0n -> x (* keep current value *)
+  | 3n -> x (* change to sent value *)
+  | 0n -> y (* keep current value *)
   | _ -> if x < y then x else y
 
 let init node = match node with
@@ -25,4 +25,4 @@ let assert node x = match node with
   | 0n -> x = 30
   | 1n -> x = 0
   | 2n -> x = 1
-  | 3n -> x = 1
+  | 3n -> x = 2
