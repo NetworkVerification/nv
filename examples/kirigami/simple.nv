@@ -20,10 +20,8 @@ let edges = {
 
 let merge node x y =
   match node with
-  (* | 5n -> x
-  | 7n -> x
   | 4n -> y
-  | 6n -> y *)
+  | 6n -> y 
   | _ -> if x < y then x else y
 
 let trans edge x = 

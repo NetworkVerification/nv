@@ -198,7 +198,7 @@ let open_declarations (decls: declarations) : declarations =
     | DTrans _ -> Some (DTrans new_trans)
     (* FIXME: merge is screwy; currently an output node on the destination won't update since it
      * gets initialized with the destination's value, which is already the best *)
-    (* | DMerge _ -> Some (DMerge new_merge) *)
+    | DMerge _ -> Some (DMerge new_merge)
     | DAssert _ -> Some (DAssert (Option.get new_assertion))
     (* remove partition and interface declarations *)
     | DPartition _ -> None

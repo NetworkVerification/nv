@@ -4,6 +4,12 @@ open Nv_datastructures
 open Nv_datastructures.AdjGraph
 open Syntax
 
+let node_to_pat node =
+  exp_to_pattern (e_val (vnode node))
+
+let edge_to_pat edge =
+  exp_to_pattern (e_val (vedge edge))
+
 (* Return true if the expression is a function which accepts the given arg type as an input *)
 let is_argty_func (e: Syntax.exp) (at: Syntax.ty) : bool =
   let { argty; _ } = Syntax.deconstructFun e in
@@ -37,7 +43,7 @@ let transform_init (e: Syntax.exp) (interfaces: OpenAdjGraph.interfaces) (input_
     | Some exp -> exp
     | None -> (eapp e (e_val (vnode v)))
     in
-    let node_pattern = exp_to_pattern (e_val (vnode u)) in
+    let node_pattern = node_to_pat u in
     addBranch node_pattern exp
   in
   let { inputs; outputs; _ } : OpenAdjGraph.interfaces = interfaces in
@@ -61,16 +67,17 @@ let transform_trans (e: Syntax.exp) (intf: OpenAdjGraph.interfaces) : Syntax.exp
   else
   (* new function argument *)
   let edge_var = Var.fresh "edge" in
+  let x_var = Var.fresh "x" in
   let { inputs; outputs; _ } : OpenAdjGraph.interfaces = intf in
   let in_trans_branch k v b = (* branches for in~base edges: identity function *)
-    let edge_pat = exp_to_pattern (e_val (vedge (k, v))) in
+    let edge_pat = edge_to_pat (k, v) in
     (* return the identity function *)
-    let avar = Var.fresh "a" in
-    let in_exp = (lam avar (evar avar)) in
-    addBranch edge_pat in_exp b
+    (* let avar = Var.fresh "a" in *)
+    (* let in_exp = (lam avar (evar avar)) in *)
+    addBranch edge_pat (evar x_var) b
   in
   let out_trans_branch k v b = (* branches for base~out edges: perform original trans for full edge *)
-    let edge_pat = exp_to_pattern (e_val (vedge (v, k))) in
+    let edge_pat = edge_to_pat (v, k) in
     (* recover the old edge from the OpenAdjGraph's broken edges *)
     let old_edge = OpenAdjGraph.broken_edge intf k in
     let edge_val = e_val (vedge old_edge) in
@@ -78,19 +85,20 @@ let transform_trans (e: Syntax.exp) (intf: OpenAdjGraph.interfaces) : Syntax.exp
      * this needs to be partially evaluated since the old edge doesn't exist anymore,
      * so the compiler will complain the edge isn't supposed to be mentioned
      *)
-    let out_exp = (eapp e edge_val) in
+    let out_exp = (eapp (eapp e edge_val) (evar x_var)) in
     addBranch edge_pat out_exp b 
   in
   (* the default branch runs (original_trans edge), where original_trans = e *)
-  let default_branch = addBranch PWild (eapp e (evar edge_var)) emptyBranch in
+  let orig_trans = (apps e [(evar edge_var); (evar x_var)]) in
+  let default_branch = addBranch PWild orig_trans emptyBranch in
   let input_branches = VertexMap.fold in_trans_branch inputs default_branch in
   let output_branches = VertexMap.fold out_trans_branch outputs input_branches in
-    wrap e (lam edge_var (amatch edge_var (Some TEdge) output_branches))
+    wrap e (lams [edge_var; x_var] (amatch edge_var (Some TEdge) output_branches))
 
 let merge_branch (input: bool) (n: Vertex.t) (_: Vertex.t) (b: branches) : branches =
   let a1 = Var.fresh "a1" in
   let a2 = Var.fresh "a2" in
-  let node_pat = exp_to_pattern (e_val (vnode n)) in
+  let node_pat = node_to_pat n in
   (* create a function that takes 2 attributes and returns either the first (input case)
    * or the second (output case)
    *)
@@ -103,17 +111,17 @@ let transform_merge (e: Syntax.exp) (intf: OpenAdjGraph.interfaces) : Syntax.exp
   failwith "Tried to transform merge for partitioning, but the type is not (TNode -> A -> A -> A)!"
   else
   let node_var = Var.fresh "node" in
-  let OpenAdjGraph.{ inputs; outputs; _ } = intf in
+  let OpenAdjGraph.{ outputs; _ } = intf in
   let default_branch =
     addBranch PWild (eapp e (evar node_var)) emptyBranch
   in
-  let input_branches = VertexMap.fold (merge_branch true) inputs default_branch in
-  let output_branches = VertexMap.fold (merge_branch false) outputs input_branches in
+  (* let input_branches = VertexMap.fold (merge_branch true) inputs default_branch in *)
+  let output_branches = VertexMap.fold (merge_branch false) outputs default_branch in
     wrap e (lam node_var (amatch node_var (Some TNode) output_branches))
 
 (* Apply the predicate test on the solution for node n *)
 let assert_branch (x: var) (n: Vertex.t) (pred: exp) (b: branches) : branches =
-  let node_pat = exp_to_pattern (e_val (vnode n)) in
+  let node_pat = node_to_pat n in
   addBranch node_pat (eapp pred (evar x)) b 
 
 let transform_assert (e: Syntax.exp option) (intf: OpenAdjGraph.interfaces) (edge_preds: exp EdgeMap.t) : Syntax.exp option =
@@ -139,7 +147,7 @@ let transform_assert (e: Syntax.exp option) (intf: OpenAdjGraph.interfaces) (edg
     let outputs_to_preds = VertexMap.mapi (fun o _b -> (get_output_pred o)) outputs
     in
     let output_branches = VertexMap.fold (assert_branch soln_var) outputs_to_preds default_branch in
-    let input_branches = VertexMap.fold (fun innode _ b -> addBranch (exp_to_pattern (e_val (vnode innode))) etrue b) inputs output_branches in
+    let input_branches = VertexMap.fold (fun innode _ b -> addBranch (node_to_pat innode) etrue b) inputs output_branches in
     let match_exp = amatch node_var (Some TNode) input_branches in
     Some (wrap e (lams [node_var; soln_var] match_exp))
 
