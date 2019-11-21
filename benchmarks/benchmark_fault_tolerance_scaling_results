@@ -1,0 +1,427 @@
+How fault tolerance analysis scales.
+
+sh benchmark_fault_tolerance_scaling.sh                                                                                                                                                                                                         (master✱) 
+Processing FaultTolerance/SinglePrefix/USCarrierOneLink.nv
+Inlining took: 0.088437 secs to complete
+Compilation Time took: 0.063907 secs to complete
+Installing /Users/gian/.opam/4.07.1/lib/USCarrierOneLink/META
+Installing /Users/gian/.opam/4.07.1/lib/USCarrierOneLink/dune-package
+Installing /Users/gian/.opam/4.07.1/lib/USCarrierOneLink/opam
+Installing /Users/gian/.opam/4.07.1/lib/USCarrierOneLink/plugin/USCarrierOneLink.ml
+Installing /Users/gian/.opam/4.07.1/lib/USCarrierOneLink/plugin/USCarrierOneLink_plugin.a
+Installing /Users/gian/.opam/4.07.1/lib/USCarrierOneLink/plugin/USCarrierOneLink_plugin.cmxa
+Installing /Users/gian/.opam/4.07.1/lib/USCarrierOneLink/plugin/USCarrierOneLink_plugin.cmxs
+Installing /Users/gian/.opam/4.07.1/lib/USCarrierOneLink/plugin/uSCarrierOneLink_plugin.cmi
+Installing /Users/gian/.opam/4.07.1/lib/USCarrierOneLink/plugin/uSCarrierOneLink_plugin.cmt
+Installing /Users/gian/.opam/4.07.1/lib/USCarrierOneLink/plugin/uSCarrierOneLink_plugin.cmx
+Installing /Users/gian/.opam/4.07.1/lib/USCarrierOneLink/plugin/uSCarrierOneLink_plugin.ml
+Installing /Users/gian/.opam/4.07.1/lib/USCarrierOneLink/plugin/uSCarrierOneLink_plugin__USCarrierOneLink.cmi
+Installing /Users/gian/.opam/4.07.1/lib/USCarrierOneLink/plugin/uSCarrierOneLink_plugin__USCarrierOneLink.cmt
+Installing /Users/gian/.opam/4.07.1/lib/USCarrierOneLink/plugin/uSCarrierOneLink_plugin__USCarrierOneLink.cmx
+Native simulation took: 0.077260 secs to complete
+No counterexamples found
+
+Success: No assertions provided, so none failed
+
+Entire Program took: 3.753209 secs to complete
+
+real	0m3.774s
+user	0m3.143s
+sys	0m0.625s
+
+
+Processing FaultTolerance/SinglePrefix/USCarrierTwoLinks.nv
+Inlining took: 0.090736 secs to complete
+Compilation Time took: 0.065505 secs to complete
+Installing /Users/gian/.opam/4.07.1/lib/USCarrierTwoLinks/META
+Installing /Users/gian/.opam/4.07.1/lib/USCarrierTwoLinks/dune-package
+Installing /Users/gian/.opam/4.07.1/lib/USCarrierTwoLinks/opam
+Installing /Users/gian/.opam/4.07.1/lib/USCarrierTwoLinks/plugin/USCarrierTwoLinks.ml
+Installing /Users/gian/.opam/4.07.1/lib/USCarrierTwoLinks/plugin/USCarrierTwoLinks_plugin.a
+Installing /Users/gian/.opam/4.07.1/lib/USCarrierTwoLinks/plugin/USCarrierTwoLinks_plugin.cmxa
+Installing /Users/gian/.opam/4.07.1/lib/USCarrierTwoLinks/plugin/USCarrierTwoLinks_plugin.cmxs
+Installing /Users/gian/.opam/4.07.1/lib/USCarrierTwoLinks/plugin/uSCarrierTwoLinks_plugin.cmi
+Installing /Users/gian/.opam/4.07.1/lib/USCarrierTwoLinks/plugin/uSCarrierTwoLinks_plugin.cmt
+Installing /Users/gian/.opam/4.07.1/lib/USCarrierTwoLinks/plugin/uSCarrierTwoLinks_plugin.cmx
+Installing /Users/gian/.opam/4.07.1/lib/USCarrierTwoLinks/plugin/uSCarrierTwoLinks_plugin.ml
+Installing /Users/gian/.opam/4.07.1/lib/USCarrierTwoLinks/plugin/uSCarrierTwoLinks_plugin__USCarrierTwoLinks.cmi
+Installing /Users/gian/.opam/4.07.1/lib/USCarrierTwoLinks/plugin/uSCarrierTwoLinks_plugin__USCarrierTwoLinks.cmt
+Installing /Users/gian/.opam/4.07.1/lib/USCarrierTwoLinks/plugin/uSCarrierTwoLinks_plugin__USCarrierTwoLinks.cmx
+Native simulation took: 1.653036 secs to complete
+No counterexamples found
+
+Success: No assertions provided, so none failed
+
+Entire Program took: 5.406021 secs to complete
+
+real	0m5.432s
+user	0m4.750s
+sys	0m0.680s
+
+
+Processing FaultTolerance/SinglePrefix/USCarrierThreeLinks.nv
+Inlining took: 0.092780 secs to complete
+Compilation Time took: 0.065430 secs to complete
+Installing /Users/gian/.opam/4.07.1/lib/USCarrierThreeLinks/META
+Installing /Users/gian/.opam/4.07.1/lib/USCarrierThreeLinks/dune-package
+Installing /Users/gian/.opam/4.07.1/lib/USCarrierThreeLinks/opam
+Installing /Users/gian/.opam/4.07.1/lib/USCarrierThreeLinks/plugin/USCarrierThreeLinks.ml
+Installing /Users/gian/.opam/4.07.1/lib/USCarrierThreeLinks/plugin/USCarrierThreeLinks_plugin.a
+Installing /Users/gian/.opam/4.07.1/lib/USCarrierThreeLinks/plugin/USCarrierThreeLinks_plugin.cmxa
+Installing /Users/gian/.opam/4.07.1/lib/USCarrierThreeLinks/plugin/USCarrierThreeLinks_plugin.cmxs
+Installing /Users/gian/.opam/4.07.1/lib/USCarrierThreeLinks/plugin/uSCarrierThreeLinks_plugin.cmi
+Installing /Users/gian/.opam/4.07.1/lib/USCarrierThreeLinks/plugin/uSCarrierThreeLinks_plugin.cmt
+Installing /Users/gian/.opam/4.07.1/lib/USCarrierThreeLinks/plugin/uSCarrierThreeLinks_plugin.cmx
+Installing /Users/gian/.opam/4.07.1/lib/USCarrierThreeLinks/plugin/uSCarrierThreeLinks_plugin.ml
+Installing /Users/gian/.opam/4.07.1/lib/USCarrierThreeLinks/plugin/uSCarrierThreeLinks_plugin__USCarrierThreeLinks.cmi
+Installing /Users/gian/.opam/4.07.1/lib/USCarrierThreeLinks/plugin/uSCarrierThreeLinks_plugin__USCarrierThreeLinks.cmt
+Installing /Users/gian/.opam/4.07.1/lib/USCarrierThreeLinks/plugin/uSCarrierThreeLinks_plugin__USCarrierThreeLinks.cmx
+Native simulation took: 78.139380 secs to complete
+No counterexamples found
+
+Success: No assertions provided, so none failed
+
+Entire Program took: 83.263360 secs to complete
+
+Processing FaultTolerance/SinglePrefix/fat12polOneLink.nv
+Inlining took: 0.383220 secs to complete
+Compilation Time took: 0.167541 secs to complete
+Installing /Users/gian/.opam/4.07.1/lib/Fat12polOneLink/META
+Installing /Users/gian/.opam/4.07.1/lib/Fat12polOneLink/dune-package
+Installing /Users/gian/.opam/4.07.1/lib/Fat12polOneLink/opam
+Installing /Users/gian/.opam/4.07.1/lib/Fat12polOneLink/plugin/Fat12polOneLink.ml
+Installing /Users/gian/.opam/4.07.1/lib/Fat12polOneLink/plugin/Fat12polOneLink_plugin.a
+Installing /Users/gian/.opam/4.07.1/lib/Fat12polOneLink/plugin/Fat12polOneLink_plugin.cmxa
+Installing /Users/gian/.opam/4.07.1/lib/Fat12polOneLink/plugin/Fat12polOneLink_plugin.cmxs
+Installing /Users/gian/.opam/4.07.1/lib/Fat12polOneLink/plugin/fat12polOneLink_plugin.cmi
+Installing /Users/gian/.opam/4.07.1/lib/Fat12polOneLink/plugin/fat12polOneLink_plugin.cmt
+Installing /Users/gian/.opam/4.07.1/lib/Fat12polOneLink/plugin/fat12polOneLink_plugin.cmx
+Installing /Users/gian/.opam/4.07.1/lib/Fat12polOneLink/plugin/fat12polOneLink_plugin.ml
+Installing /Users/gian/.opam/4.07.1/lib/Fat12polOneLink/plugin/fat12polOneLink_plugin__Fat12polOneLink.cmi
+Installing /Users/gian/.opam/4.07.1/lib/Fat12polOneLink/plugin/fat12polOneLink_plugin__Fat12polOneLink.cmt
+Installing /Users/gian/.opam/4.07.1/lib/Fat12polOneLink/plugin/fat12polOneLink_plugin__Fat12polOneLink.cmx
+Native simulation took: 0.200084 secs to complete
+No counterexamples found
+
+Success: No assertions provided, so none failed
+
+Entire Program took: 10.406973 secs to complete
+
+real	0m10.436s
+user	0m8.967s
+sys	0m1.293s
+
+
+Processing FaultTolerance/SinglePrefix/fat12polTwoLinks.nv
+Inlining took: 0.367320 secs to complete
+Compilation Time took: 0.172387 secs to complete
+Installing /Users/gian/.opam/4.07.1/lib/Fat12polTwoLinks/META
+Installing /Users/gian/.opam/4.07.1/lib/Fat12polTwoLinks/dune-package
+Installing /Users/gian/.opam/4.07.1/lib/Fat12polTwoLinks/opam
+Installing /Users/gian/.opam/4.07.1/lib/Fat12polTwoLinks/plugin/Fat12polTwoLinks.ml
+Installing /Users/gian/.opam/4.07.1/lib/Fat12polTwoLinks/plugin/Fat12polTwoLinks_plugin.a
+Installing /Users/gian/.opam/4.07.1/lib/Fat12polTwoLinks/plugin/Fat12polTwoLinks_plugin.cmxa
+Installing /Users/gian/.opam/4.07.1/lib/Fat12polTwoLinks/plugin/Fat12polTwoLinks_plugin.cmxs
+Installing /Users/gian/.opam/4.07.1/lib/Fat12polTwoLinks/plugin/fat12polTwoLinks_plugin.cmi
+Installing /Users/gian/.opam/4.07.1/lib/Fat12polTwoLinks/plugin/fat12polTwoLinks_plugin.cmt
+Installing /Users/gian/.opam/4.07.1/lib/Fat12polTwoLinks/plugin/fat12polTwoLinks_plugin.cmx
+Installing /Users/gian/.opam/4.07.1/lib/Fat12polTwoLinks/plugin/fat12polTwoLinks_plugin.ml
+Installing /Users/gian/.opam/4.07.1/lib/Fat12polTwoLinks/plugin/fat12polTwoLinks_plugin__Fat12polTwoLinks.cmi
+Installing /Users/gian/.opam/4.07.1/lib/Fat12polTwoLinks/plugin/fat12polTwoLinks_plugin__Fat12polTwoLinks.cmt
+Installing /Users/gian/.opam/4.07.1/lib/Fat12polTwoLinks/plugin/fat12polTwoLinks_plugin__Fat12polTwoLinks.cmx
+Native simulation took: 0.794848 secs to complete
+No counterexamples found
+
+Success: No assertions provided, so none failed
+
+Entire Program took: 10.737032 secs to complete
+
+real	0m10.767s
+user	0m9.453s
+sys	0m1.261s
+
+
+Processing FaultTolerance/SinglePrefix/fat12polThreeLinks.nv
+Inlining took: 0.368186 secs to complete
+Compilation Time took: 0.164278 secs to complete
+Installing /Users/gian/.opam/4.07.1/lib/Fat12polThreeLinks/META
+Installing /Users/gian/.opam/4.07.1/lib/Fat12polThreeLinks/dune-package
+Installing /Users/gian/.opam/4.07.1/lib/Fat12polThreeLinks/opam
+Installing /Users/gian/.opam/4.07.1/lib/Fat12polThreeLinks/plugin/Fat12polThreeLinks.ml
+Installing /Users/gian/.opam/4.07.1/lib/Fat12polThreeLinks/plugin/Fat12polThreeLinks_plugin.a
+Installing /Users/gian/.opam/4.07.1/lib/Fat12polThreeLinks/plugin/Fat12polThreeLinks_plugin.cmxa
+Installing /Users/gian/.opam/4.07.1/lib/Fat12polThreeLinks/plugin/Fat12polThreeLinks_plugin.cmxs
+Installing /Users/gian/.opam/4.07.1/lib/Fat12polThreeLinks/plugin/fat12polThreeLinks_plugin.cmi
+Installing /Users/gian/.opam/4.07.1/lib/Fat12polThreeLinks/plugin/fat12polThreeLinks_plugin.cmt
+Installing /Users/gian/.opam/4.07.1/lib/Fat12polThreeLinks/plugin/fat12polThreeLinks_plugin.cmx
+Installing /Users/gian/.opam/4.07.1/lib/Fat12polThreeLinks/plugin/fat12polThreeLinks_plugin.ml
+Installing /Users/gian/.opam/4.07.1/lib/Fat12polThreeLinks/plugin/fat12polThreeLinks_plugin__Fat12polThreeLinks.cmi
+Installing /Users/gian/.opam/4.07.1/lib/Fat12polThreeLinks/plugin/fat12polThreeLinks_plugin__Fat12polThreeLinks.cmt
+Installing /Users/gian/.opam/4.07.1/lib/Fat12polThreeLinks/plugin/fat12polThreeLinks_plugin__Fat12polThreeLinks.cmx
+Native simulation took: 2.152492 secs to complete
+No counterexamples found
+
+Success: No assertions provided, so none failed
+
+Entire Program took: 12.054597 secs to complete
+
+real	0m12.093s
+user	0m10.763s
+sys	0m1.277s
+
+
+Processing FaultTolerance/SinglePrefix/fat16polOneLink.nv
+Inlining took: 1.037357 secs to complete
+Compilation Time took: 0.349424 secs to complete
+Installing /Users/gian/.opam/4.07.1/lib/Fat16polOneLink/META
+Installing /Users/gian/.opam/4.07.1/lib/Fat16polOneLink/dune-package
+Installing /Users/gian/.opam/4.07.1/lib/Fat16polOneLink/opam
+Installing /Users/gian/.opam/4.07.1/lib/Fat16polOneLink/plugin/Fat16polOneLink.ml
+Installing /Users/gian/.opam/4.07.1/lib/Fat16polOneLink/plugin/Fat16polOneLink_plugin.a
+Installing /Users/gian/.opam/4.07.1/lib/Fat16polOneLink/plugin/Fat16polOneLink_plugin.cmxa
+Installing /Users/gian/.opam/4.07.1/lib/Fat16polOneLink/plugin/Fat16polOneLink_plugin.cmxs
+Installing /Users/gian/.opam/4.07.1/lib/Fat16polOneLink/plugin/fat16polOneLink_plugin.cmi
+Installing /Users/gian/.opam/4.07.1/lib/Fat16polOneLink/plugin/fat16polOneLink_plugin.cmt
+Installing /Users/gian/.opam/4.07.1/lib/Fat16polOneLink/plugin/fat16polOneLink_plugin.cmx
+Installing /Users/gian/.opam/4.07.1/lib/Fat16polOneLink/plugin/fat16polOneLink_plugin.ml
+Installing /Users/gian/.opam/4.07.1/lib/Fat16polOneLink/plugin/fat16polOneLink_plugin__Fat16polOneLink.cmi
+Installing /Users/gian/.opam/4.07.1/lib/Fat16polOneLink/plugin/fat16polOneLink_plugin__Fat16polOneLink.cmt
+Installing /Users/gian/.opam/4.07.1/lib/Fat16polOneLink/plugin/fat16polOneLink_plugin__Fat16polOneLink.cmx
+Native simulation took: 0.525855 secs to complete
+No counterexamples found
+
+Success: No assertions provided, so none failed
+
+Entire Program took: 24.879211 secs to complete
+
+real	0m24.929s
+user	0m22.339s
+sys	0m2.520s
+
+
+Processing FaultTolerance/SinglePrefix/fat16polTwoLinks.nv
+Inlining took: 1.083098 secs to complete
+Compilation Time took: 0.357899 secs to complete
+Installing /Users/gian/.opam/4.07.1/lib/Fat16polTwoLinks/META
+Installing /Users/gian/.opam/4.07.1/lib/Fat16polTwoLinks/dune-package
+Installing /Users/gian/.opam/4.07.1/lib/Fat16polTwoLinks/opam
+Installing /Users/gian/.opam/4.07.1/lib/Fat16polTwoLinks/plugin/Fat16polTwoLinks.ml
+Installing /Users/gian/.opam/4.07.1/lib/Fat16polTwoLinks/plugin/Fat16polTwoLinks_plugin.a
+Installing /Users/gian/.opam/4.07.1/lib/Fat16polTwoLinks/plugin/Fat16polTwoLinks_plugin.cmxa
+Installing /Users/gian/.opam/4.07.1/lib/Fat16polTwoLinks/plugin/Fat16polTwoLinks_plugin.cmxs
+Installing /Users/gian/.opam/4.07.1/lib/Fat16polTwoLinks/plugin/fat16polTwoLinks_plugin.cmi
+Installing /Users/gian/.opam/4.07.1/lib/Fat16polTwoLinks/plugin/fat16polTwoLinks_plugin.cmt
+Installing /Users/gian/.opam/4.07.1/lib/Fat16polTwoLinks/plugin/fat16polTwoLinks_plugin.cmx
+Installing /Users/gian/.opam/4.07.1/lib/Fat16polTwoLinks/plugin/fat16polTwoLinks_plugin.ml
+Installing /Users/gian/.opam/4.07.1/lib/Fat16polTwoLinks/plugin/fat16polTwoLinks_plugin__Fat16polTwoLinks.cmi
+Installing /Users/gian/.opam/4.07.1/lib/Fat16polTwoLinks/plugin/fat16polTwoLinks_plugin__Fat16polTwoLinks.cmt
+Installing /Users/gian/.opam/4.07.1/lib/Fat16polTwoLinks/plugin/fat16polTwoLinks_plugin__Fat16polTwoLinks.cmx
+Native simulation took: 2.011583 secs to complete
+No counterexamples found
+
+Success: No assertions provided, so none failed
+
+Entire Program took: 26.440357 secs to complete
+
+real	0m26.492s
+user	0m23.811s
+sys	0m2.569s
+
+
+Processing FaultTolerance/SinglePrefix/fat16polThreeLinks.nv
+Inlining took: 1.045131 secs to complete
+Compilation Time took: 0.349984 secs to complete
+Installing /Users/gian/.opam/4.07.1/lib/Fat16polThreeLinks/META
+Installing /Users/gian/.opam/4.07.1/lib/Fat16polThreeLinks/dune-package
+Installing /Users/gian/.opam/4.07.1/lib/Fat16polThreeLinks/opam
+Installing /Users/gian/.opam/4.07.1/lib/Fat16polThreeLinks/plugin/Fat16polThreeLinks.ml
+Installing /Users/gian/.opam/4.07.1/lib/Fat16polThreeLinks/plugin/Fat16polThreeLinks_plugin.a
+Installing /Users/gian/.opam/4.07.1/lib/Fat16polThreeLinks/plugin/Fat16polThreeLinks_plugin.cmxa
+Installing /Users/gian/.opam/4.07.1/lib/Fat16polThreeLinks/plugin/Fat16polThreeLinks_plugin.cmxs
+Installing /Users/gian/.opam/4.07.1/lib/Fat16polThreeLinks/plugin/fat16polThreeLinks_plugin.cmi
+Installing /Users/gian/.opam/4.07.1/lib/Fat16polThreeLinks/plugin/fat16polThreeLinks_plugin.cmt
+Installing /Users/gian/.opam/4.07.1/lib/Fat16polThreeLinks/plugin/fat16polThreeLinks_plugin.cmx
+Installing /Users/gian/.opam/4.07.1/lib/Fat16polThreeLinks/plugin/fat16polThreeLinks_plugin.ml
+Installing /Users/gian/.opam/4.07.1/lib/Fat16polThreeLinks/plugin/fat16polThreeLinks_plugin__Fat16polThreeLinks.cmi
+Installing /Users/gian/.opam/4.07.1/lib/Fat16polThreeLinks/plugin/fat16polThreeLinks_plugin__Fat16polThreeLinks.cmt
+Installing /Users/gian/.opam/4.07.1/lib/Fat16polThreeLinks/plugin/fat16polThreeLinks_plugin__Fat16polThreeLinks.cmx
+Native simulation took: 6.285060 secs to complete
+No counterexamples found
+
+Success: No assertions provided, so none failed
+
+Entire Program took: 30.802865 secs to complete
+
+real	0m30.846s
+user	0m28.065s
+sys	0m2.621s
+
+
+Processing FaultTolerance/SinglePrefix/fat20polOneLink.nv
+Inlining took: 2.112305 secs to complete
+Compilation Time took: 1.615462 secs to complete
+Installing /Users/gian/.opam/4.07.1/lib/Fat20polOneLink/META
+Installing /Users/gian/.opam/4.07.1/lib/Fat20polOneLink/dune-package
+Installing /Users/gian/.opam/4.07.1/lib/Fat20polOneLink/opam
+Installing /Users/gian/.opam/4.07.1/lib/Fat20polOneLink/plugin/Fat20polOneLink.ml
+Installing /Users/gian/.opam/4.07.1/lib/Fat20polOneLink/plugin/Fat20polOneLink_plugin.a
+Installing /Users/gian/.opam/4.07.1/lib/Fat20polOneLink/plugin/Fat20polOneLink_plugin.cmxa
+Installing /Users/gian/.opam/4.07.1/lib/Fat20polOneLink/plugin/Fat20polOneLink_plugin.cmxs
+Installing /Users/gian/.opam/4.07.1/lib/Fat20polOneLink/plugin/fat20polOneLink_plugin.cmi
+Installing /Users/gian/.opam/4.07.1/lib/Fat20polOneLink/plugin/fat20polOneLink_plugin.cmt
+Installing /Users/gian/.opam/4.07.1/lib/Fat20polOneLink/plugin/fat20polOneLink_plugin.cmx
+Installing /Users/gian/.opam/4.07.1/lib/Fat20polOneLink/plugin/fat20polOneLink_plugin.ml
+Installing /Users/gian/.opam/4.07.1/lib/Fat20polOneLink/plugin/fat20polOneLink_plugin__Fat20polOneLink.cmi
+Installing /Users/gian/.opam/4.07.1/lib/Fat20polOneLink/plugin/fat20polOneLink_plugin__Fat20polOneLink.cmt
+Installing /Users/gian/.opam/4.07.1/lib/Fat20polOneLink/plugin/fat20polOneLink_plugin__Fat20polOneLink.cmx
+Native simulation took: 1.004298 secs to complete
+No counterexamples found
+
+Success: No assertions provided, so none failed
+
+Entire Program took: 54.312698 secs to complete
+
+real	0m54.373s
+user	0m49.611s
+sys	0m4.511s
+
+
+Processing FaultTolerance/SinglePrefix/fat20polTwoLinks.nv
+Inlining took: 2.129927 secs to complete
+Compilation Time took: 1.589878 secs to complete
+Installing /Users/gian/.opam/4.07.1/lib/Fat20polTwoLinks/META
+Installing /Users/gian/.opam/4.07.1/lib/Fat20polTwoLinks/dune-package
+Installing /Users/gian/.opam/4.07.1/lib/Fat20polTwoLinks/opam
+Installing /Users/gian/.opam/4.07.1/lib/Fat20polTwoLinks/plugin/Fat20polTwoLinks.ml
+Installing /Users/gian/.opam/4.07.1/lib/Fat20polTwoLinks/plugin/Fat20polTwoLinks_plugin.a
+Installing /Users/gian/.opam/4.07.1/lib/Fat20polTwoLinks/plugin/Fat20polTwoLinks_plugin.cmxa
+Installing /Users/gian/.opam/4.07.1/lib/Fat20polTwoLinks/plugin/Fat20polTwoLinks_plugin.cmxs
+Installing /Users/gian/.opam/4.07.1/lib/Fat20polTwoLinks/plugin/fat20polTwoLinks_plugin.cmi
+Installing /Users/gian/.opam/4.07.1/lib/Fat20polTwoLinks/plugin/fat20polTwoLinks_plugin.cmt
+Installing /Users/gian/.opam/4.07.1/lib/Fat20polTwoLinks/plugin/fat20polTwoLinks_plugin.cmx
+Installing /Users/gian/.opam/4.07.1/lib/Fat20polTwoLinks/plugin/fat20polTwoLinks_plugin.ml
+Installing /Users/gian/.opam/4.07.1/lib/Fat20polTwoLinks/plugin/fat20polTwoLinks_plugin__Fat20polTwoLinks.cmi
+Installing /Users/gian/.opam/4.07.1/lib/Fat20polTwoLinks/plugin/fat20polTwoLinks_plugin__Fat20polTwoLinks.cmt
+Installing /Users/gian/.opam/4.07.1/lib/Fat20polTwoLinks/plugin/fat20polTwoLinks_plugin__Fat20polTwoLinks.cmx
+Native simulation took: 4.815863 secs to complete
+No counterexamples found
+
+Success: No assertions provided, so none failed
+
+Entire Program took: 57.851931 secs to complete
+
+real	0m57.897s
+user	0m53.070s
+sys	0m4.576s
+
+
+Processing FaultTolerance/SinglePrefix/fat20polThreeLinks.nv
+Inlining took: 2.078599 secs to complete
+Compilation Time took: 1.556515 secs to complete
+Installing /Users/gian/.opam/4.07.1/lib/Fat20polThreeLinks/META
+Installing /Users/gian/.opam/4.07.1/lib/Fat20polThreeLinks/dune-package
+Installing /Users/gian/.opam/4.07.1/lib/Fat20polThreeLinks/opam
+Installing /Users/gian/.opam/4.07.1/lib/Fat20polThreeLinks/plugin/Fat20polThreeLinks.ml
+Installing /Users/gian/.opam/4.07.1/lib/Fat20polThreeLinks/plugin/Fat20polThreeLinks_plugin.a
+Installing /Users/gian/.opam/4.07.1/lib/Fat20polThreeLinks/plugin/Fat20polThreeLinks_plugin.cmxa
+Installing /Users/gian/.opam/4.07.1/lib/Fat20polThreeLinks/plugin/Fat20polThreeLinks_plugin.cmxs
+Installing /Users/gian/.opam/4.07.1/lib/Fat20polThreeLinks/plugin/fat20polThreeLinks_plugin.cmi
+Installing /Users/gian/.opam/4.07.1/lib/Fat20polThreeLinks/plugin/fat20polThreeLinks_plugin.cmt
+Installing /Users/gian/.opam/4.07.1/lib/Fat20polThreeLinks/plugin/fat20polThreeLinks_plugin.cmx
+Installing /Users/gian/.opam/4.07.1/lib/Fat20polThreeLinks/plugin/fat20polThreeLinks_plugin.ml
+Installing /Users/gian/.opam/4.07.1/lib/Fat20polThreeLinks/plugin/fat20polThreeLinks_plugin__Fat20polThreeLinks.cmi
+Installing /Users/gian/.opam/4.07.1/lib/Fat20polThreeLinks/plugin/fat20polThreeLinks_plugin__Fat20polThreeLinks.cmt
+Installing /Users/gian/.opam/4.07.1/lib/Fat20polThreeLinks/plugin/fat20polThreeLinks_plugin__Fat20polThreeLinks.cmx
+Native simulation took: 15.020230 secs to complete
+No counterexamples found
+
+Success: No assertions provided, so none failed
+
+Entire Program took: 68.735257 secs to complete
+
+real	1m8.782s
+user	1m3.996s
+sys	0m4.531s
+
+
+Processing FaultTolerance/SinglePrefix/fat28polOneLink.nv
+Inlining took: 6.046469 secs to complete
+Compilation Time took: 2.028850 secs to complete
+Installing /Users/gian/.opam/4.07.1/lib/Fat28polOneLink/META
+Installing /Users/gian/.opam/4.07.1/lib/Fat28polOneLink/dune-package
+Installing /Users/gian/.opam/4.07.1/lib/Fat28polOneLink/opam
+Installing /Users/gian/.opam/4.07.1/lib/Fat28polOneLink/plugin/Fat28polOneLink.ml
+Installing /Users/gian/.opam/4.07.1/lib/Fat28polOneLink/plugin/Fat28polOneLink_plugin.a
+Installing /Users/gian/.opam/4.07.1/lib/Fat28polOneLink/plugin/Fat28polOneLink_plugin.cmxa
+Installing /Users/gian/.opam/4.07.1/lib/Fat28polOneLink/plugin/Fat28polOneLink_plugin.cmxs
+Installing /Users/gian/.opam/4.07.1/lib/Fat28polOneLink/plugin/fat28polOneLink_plugin.cmi
+Installing /Users/gian/.opam/4.07.1/lib/Fat28polOneLink/plugin/fat28polOneLink_plugin.cmt
+Installing /Users/gian/.opam/4.07.1/lib/Fat28polOneLink/plugin/fat28polOneLink_plugin.cmx
+Installing /Users/gian/.opam/4.07.1/lib/Fat28polOneLink/plugin/fat28polOneLink_plugin.ml
+Installing /Users/gian/.opam/4.07.1/lib/Fat28polOneLink/plugin/fat28polOneLink_plugin__Fat28polOneLink.cmi
+Installing /Users/gian/.opam/4.07.1/lib/Fat28polOneLink/plugin/fat28polOneLink_plugin__Fat28polOneLink.cmt
+Installing /Users/gian/.opam/4.07.1/lib/Fat28polOneLink/plugin/fat28polOneLink_plugin__Fat28polOneLink.cmx
+Native simulation took: 3.680973 secs to complete
+No counterexamples found
+
+Success: No assertions provided, so none failed
+
+Entire Program took: 225.245012 secs to complete
+
+real	3m45.489s
+user	3m31.341s
+sys	0m12.605s
+
+
+Processing FaultTolerance/SinglePrefix/fat28polTwoLinks.nv
+Inlining took: 5.959170 secs to complete
+Compilation Time took: 2.050180 secs to complete
+Installing /Users/gian/.opam/4.07.1/lib/Fat28polTwoLinks/META
+Installing /Users/gian/.opam/4.07.1/lib/Fat28polTwoLinks/dune-package
+Installing /Users/gian/.opam/4.07.1/lib/Fat28polTwoLinks/opam
+Installing /Users/gian/.opam/4.07.1/lib/Fat28polTwoLinks/plugin/Fat28polTwoLinks.ml
+Installing /Users/gian/.opam/4.07.1/lib/Fat28polTwoLinks/plugin/Fat28polTwoLinks_plugin.a
+Installing /Users/gian/.opam/4.07.1/lib/Fat28polTwoLinks/plugin/Fat28polTwoLinks_plugin.cmxa
+Installing /Users/gian/.opam/4.07.1/lib/Fat28polTwoLinks/plugin/Fat28polTwoLinks_plugin.cmxs
+Installing /Users/gian/.opam/4.07.1/lib/Fat28polTwoLinks/plugin/fat28polTwoLinks_plugin.cmi
+Installing /Users/gian/.opam/4.07.1/lib/Fat28polTwoLinks/plugin/fat28polTwoLinks_plugin.cmt
+Installing /Users/gian/.opam/4.07.1/lib/Fat28polTwoLinks/plugin/fat28polTwoLinks_plugin.cmx
+Installing /Users/gian/.opam/4.07.1/lib/Fat28polTwoLinks/plugin/fat28polTwoLinks_plugin.ml
+Installing /Users/gian/.opam/4.07.1/lib/Fat28polTwoLinks/plugin/fat28polTwoLinks_plugin__Fat28polTwoLinks.cmi
+Installing /Users/gian/.opam/4.07.1/lib/Fat28polTwoLinks/plugin/fat28polTwoLinks_plugin__Fat28polTwoLinks.cmt
+Installing /Users/gian/.opam/4.07.1/lib/Fat28polTwoLinks/plugin/fat28polTwoLinks_plugin__Fat28polTwoLinks.cmx
+Native simulation took: 25.209875 secs to complete
+No counterexamples found
+
+Success: No assertions provided, so none failed
+
+Entire Program took: 246.591415 secs to complete
+
+real	4m6.687s
+user	3m52.969s
+sys	0m12.004s
+
+Processing benchmarks/FaultTolerance/SinglePrefix/Fat28PolThreeLinks.nv
+Inlining took: 6.092914 secs to complete
+Compilation Time took: 2.076422 secs to complete
+Installing /Users/gian/.opam/4.07.1/lib/Fat28PolThreeLinks/META
+Installing /Users/gian/.opam/4.07.1/lib/Fat28PolThreeLinks/dune-package
+Installing /Users/gian/.opam/4.07.1/lib/Fat28PolThreeLinks/opam
+Installing /Users/gian/.opam/4.07.1/lib/Fat28PolThreeLinks/plugin/Fat28PolThreeLinks.ml
+Installing /Users/gian/.opam/4.07.1/lib/Fat28PolThreeLinks/plugin/Fat28PolThreeLinks_plugin.a
+Installing /Users/gian/.opam/4.07.1/lib/Fat28PolThreeLinks/plugin/Fat28PolThreeLinks_plugin.cmxa
+Installing /Users/gian/.opam/4.07.1/lib/Fat28PolThreeLinks/plugin/Fat28PolThreeLinks_plugin.cmxs
+Installing /Users/gian/.opam/4.07.1/lib/Fat28PolThreeLinks/plugin/fat28PolThreeLinks_plugin.cmi
+Installing /Users/gian/.opam/4.07.1/lib/Fat28PolThreeLinks/plugin/fat28PolThreeLinks_plugin.cmt
+Installing /Users/gian/.opam/4.07.1/lib/Fat28PolThreeLinks/plugin/fat28PolThreeLinks_plugin.cmx
+Installing /Users/gian/.opam/4.07.1/lib/Fat28PolThreeLinks/plugin/fat28PolThreeLinks_plugin.ml
+Installing /Users/gian/.opam/4.07.1/lib/Fat28PolThreeLinks/plugin/fat28PolThreeLinks_plugin__Fat28PolThreeLinks.cmi
+Installing /Users/gian/.opam/4.07.1/lib/Fat28PolThreeLinks/plugin/fat28PolThreeLinks_plugin__Fat28PolThreeLinks.cmt
+Installing /Users/gian/.opam/4.07.1/lib/Fat28PolThreeLinks/plugin/fat28PolThreeLinks_plugin__Fat28PolThreeLinks.cmx
+Native simulation took: 63.654770 secs to complete
+No counterexamples found
+
+Success: No assertions provided, so none failed
+
+Entire Program took: 278.590747 secs to complete
+_build/default/src/exe/main.exe -compile -inline   265.45s user 11.57s system 99% cpu 4:38.69 total

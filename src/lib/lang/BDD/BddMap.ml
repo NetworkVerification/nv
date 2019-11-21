@@ -166,7 +166,10 @@ let map ~op_key (f: value -> value) ((vdd, ty): t) : t =
       match ExpMap.Exceptionless.find op_key !map_cache with
       | None ->
         let o =
-          User.make_op1 ~memo:(Memo.Cache (Cache.create1 ())) g
+          User.make_op1
+            ~memo:(Cudd.Memo.Global)
+            (* ~memo:(Memo.Cache (Cache.create1 ~maxsize:4096 ())) *)
+            g
         in
         map_cache := ExpMap.add op_key o !map_cache ;
         o
@@ -227,7 +230,8 @@ let map_when ~op_key (pred: bool Mtbdd.t) (f: value -> value)
         in
         let op =
           User.make_op2
-            ~memo:(Memo.Cache (Cache.create2 ()))
+            ~memo:(Cudd.Memo.Global)
+            (* ~memo:(Memo.Cache (Cache.create2 ~maxsize:4096 ())) *)
             ~commutative:false ~idempotent:false ~special g
         in
         mapw_op_cache := ExpMap.add op_key op !mapw_op_cache ;
@@ -253,7 +257,8 @@ let map_ite ~op_key1 ~op_key2 (pred: bool Mtbdd.t) (f1: value -> value) (f2: val
       | None ->
         let op =
           User.make_op2
-            ~memo:(Memo.Cache (Cache.create2 ()))
+            ~memo:(Cudd.Memo.Global)
+            (* ~memo:(Memo.Cache (Cache.create2 ())) *)
             ~commutative:false ~idempotent:false g
         in
         let newMap = ExpMap.singleton op_key2 op in
@@ -264,7 +269,8 @@ let map_ite ~op_key1 ~op_key2 (pred: bool Mtbdd.t) (f1: value -> value) (f2: val
          | None ->
            let op =
              User.make_op2
-               ~memo:(Memo.Cache (Cache.create2 ()))
+               ~memo:(Cudd.Memo.Global)
+               (* ~memo:(Memo.Cache (Cache.create2 ())) *)
                ~commutative:false ~idempotent:false g
            in
            mapite_op_cache := ExpMap.modify op_key1 (fun map2 -> ExpMap.add op_key2 op map2) !mapite_op_cache ;
@@ -335,10 +341,12 @@ let merge ?opt ~op_key (f: value -> value -> value) ((x, tyx): t)
               then Some right
               else None
         in
-        let o =
-          User.make_op2
-            ~memo:(Memo.Cache (Cache.create2 ()))
+        let o = User.make_op2
+            ~memo:(Cudd.Memo.Global)
             ~commutative:false ~idempotent:false ~special g
+          (* User.make_op2
+           *   ~memo:(Memo.Cache (Cache.create2 ~maxsize:4096 ()))
+           *   ~commutative:false ~idempotent:false ~special g *)
         in
         merge_op_cache := MergeMap.add key o !merge_op_cache ;
         o

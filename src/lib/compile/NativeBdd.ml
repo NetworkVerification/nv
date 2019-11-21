@@ -61,7 +61,7 @@ let map (op_key: (int * 'f)) (vty_new_id: int) (f: 'a1 -> 'a2) (vmap: t) : t =
     match HashClosureMap.Exceptionless.find op_key !map_cache with
     | None ->
       let o =
-        User.make_op1 ~memo:(Memo.Cache (Cudd.Cache.create1 ())) g
+        User.make_op1 ~memo:(Cudd.Memo.Global) g
       in
       map_cache := HashClosureMap.add op_key o !map_cache ;
       o
@@ -159,7 +159,7 @@ let merge ?(opt=None) (op_key: (int * 'f)) f (vmap1: t) (vmap2: t) = (* (((m1, k
                       else None
             in
             let o =
-              User.make_op2 ~memo:(Memo.Cache (Cudd.Cache.create2 ()))
+              User.make_op2 ~memo:(Cudd.Memo.Global)
                 ~commutative:false ~idempotent:false ~special g
             in
               merge_op_cache := HashMergeMap.add key o !merge_op_cache ;
@@ -240,7 +240,7 @@ let mapIf (pred_key: int * 'g) (op_key : int * 'f) (vty_new_id: int) (f: 'a1 -> 
       in
       let op =
         User.make_op2
-          ~memo:(Memo.Cache (Cudd.Cache.create2 ()))
+          ~memo:(Cudd.Memo.Global)
           ~commutative:false ~idempotent:false ~special g
       in
       mapw_op_cache := HashClosureMap.add op_key op !mapw_op_cache ;

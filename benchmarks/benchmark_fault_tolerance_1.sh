@@ -8,7 +8,7 @@ FaultTolerance/SinglePrefix/sp12OneLink.nv"
 SMT_BENCHMARKS="SinglePrefix/FAT8/sp8.nv
 SinglePrefix/FAT10/sp10.nv
 SinglePrefix/FAT12/sp12.nv
-SinglePrefix/FAT10/fat10pol.nv"
+SinglePrefix/FAT12/fat12pol.nv"
 
 for file in $BENCHMARKS
 do
