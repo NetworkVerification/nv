@@ -107,8 +107,19 @@ let compare_routes r1 r2 =
   if (r1.len = r2.len && r1.nexthop <n r2.nexthop) then r1 else r2
 
 (* merge compares two routes and selects the best *)
-let merge node x y = mapbetter compare_routes x y
-(* NOTE: this definition shows that the SMT encoding of the output's solution
+let merge node x y = match node with
+  | 10n -> y
+  | 12n -> y
+  | 14n -> y
+  | 16n -> y
+  | 18n -> y
+  | 20n -> y
+  | 22n -> y
+  | 24n -> y
+  | _ -> mapbetter compare_routes x y
+(* NOTE: in this particular case, we don't need the specific cases for
+ * the output nodes, since they are initialized to None, so the merge
+ * works the same way
  * is the same as setting the output's solution to trans(L(base)),
  * because the base node is the output's only choice and its initial value is None
  *)
