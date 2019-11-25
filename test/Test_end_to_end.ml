@@ -257,5 +257,5 @@ let tests =
   slicing_tests @
   bv_tests @
   parallel_tests @
-  compiler_tests @
+  (* compiler_tests @ *)
   [] (* So we can easily comment out the last actual test *)
