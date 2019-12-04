@@ -6,7 +6,7 @@ open Nv_utils
 
 (* TODO: optimize variable ordering  *)
 type t = mtbdd
-  
+
 module B = BddUtils
 
 (* let res = User.map_op2
@@ -66,7 +66,7 @@ let value_to_bdd (v: value) : Bdd.vt =
       aux tup idx
     | VNode n ->
       (* Encode same way as we encode ints *)
-      aux (vint (Integer.create ~value:n ~size:32)) idx
+      aux (vint (Integer.create ~value:n ~size:tnode_sz)) idx
     | VEdge (e1, e2) ->
       (* Encode same way as we encode tuples of nodes *)
       let tup = vtuple [vnode e1; vnode e2] in
