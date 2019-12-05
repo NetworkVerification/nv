@@ -1,0 +1,33 @@
+include "utils.nv"
+
+module FaultToleranceOpt (S : SRP) = struct
+  type attribute = dict[tedge, option[S.attribute]]
+
+  let nodes = S.nodes
+  let edges = S.edges
+
+  let init n = createDict (Some (S.init n))
+
+  let trans e x =
+    mapIf
+      (fun e' -> e' = e)
+      (fun _ -> None)
+      (fun attr -> mapo (S.trans e) attr)
+      x
+
+  let merge e x1 x2 =
+    combine (mapbetter S.merge) x1 x2
+
+  let assert n x =
+    foldEdge
+      (* Having the && outside the match makes this more amenable to slicing *)
+      (fun k v acc -> acc && match v with | None -> false | Some v -> S.assert n v)
+      true
+      x
+
+end
+
+(* TODO: Define the SRP signature, then define a new signature which is that
+   plus a "default value", then define another fault tolerance functor which
+   uses the default value instead of wrapping the attribute in an option
+*)

@@ -2,19 +2,8 @@
      future features of the language. Don't try to use it as an example; it
      won't parse ***)
 
-(*** Utility Functions ***)
-let mapo f o =
-  match o with
-  | None -> None
-  | Some x -> Some (f x)
-
-let mapbetter f o1 o2 =
-  match (o1, o2) with
-  | (None, None) -> None
-  | (None, x) -> x
-  | (x, None) -> x
-  | (Some x, Some y) -> Some (f x y)
-
+include "../utils.nv"
+include "rip.nv"
 
 (* I don't want to think about e.g. prefixes and lpms, since that seems orthogonal
    to how iBGP actually works. So I'm defining a destination to be either a node
@@ -25,35 +14,7 @@ type dest =
   | DExternal of int
 
 (*** Definition of RIP as a routing algebra ***)
-module RIP =
-  (* For each reachable destination node, store the next hop and the distance *)
-  type attribute = dict[dest, (node, int) option]
 
-  let init n =
-    let m = createDict None in
-    (* If the distance is 0, we'll assume the next hop value doesn't matter *)
-    m[n := Some (n, 0)]
-
-  let trans edge x =
-    let (n1, n2) = edge in
-    let increment_dist o =
-      match o with
-      | None -> None
-      | Some (_, d) ->
-        (* RIP caps routes at 15 hops *)
-        if d >= 15 then None else Some (n1, d+1)
-    in
-    map increment_dist x
-
-  let pick_best a1 a2 =
-    (* Choose the route with the shorter distance *)
-    let (n1, d1) = a1 in
-    let (n2, d2) = a2 in
-    if d1 < d2 then a1 else a2
-
-  let merge n x y =
-    combine (mapbetter pick_best) x y
-end
 
 (*** Definition of BGP as a routing algebra, ignoring policy details ***)
 

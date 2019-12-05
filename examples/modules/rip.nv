@@ -1,0 +1,34 @@
+include "../utils.nv"
+
+module RIPAlgebra = struct
+  (* For each reachable destination node, store the distance *)
+  type attribute = dict[dest, int option]
+
+  let init n =
+    let m = createDict None in
+    m[n := Some 0]
+
+  let trans edge x =
+    let increment_dist o =
+      match o with
+      | None -> None
+      | Some d ->
+        (* RIP caps routes at 15 hops *)
+        if d >= 15 then None else Some (d+1)
+    in
+    map increment_dist x
+
+  let pick_best d1 d2 =
+    if d1 < d2 then d1 else d2
+
+  let merge n x y =
+    combine (mapbetter pick_best) x y
+end
+
+(* Okay, this didn't actually end up being a functor *)
+module RIP = struct
+  import RIPAlgebra (* Re-exports all the definitions in RIP_Algebra *)
+
+  let nodes = 2 (* User-defined *)
+  let edges = {0~1;} (* User-defined *)
+end
