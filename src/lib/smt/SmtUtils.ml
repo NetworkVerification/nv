@@ -21,7 +21,7 @@ type smt_options =
 
 let smt_config : smt_options =
   { verbose = false;
-    optimize = true;
+    optimize = false;
     encoding = Classic;
     unboxing = false;
     parallel = false;
@@ -537,7 +537,11 @@ let rec ty_to_sort (ty: Nv_lang.Syntax.ty) : sort =
   | TVar {contents= Link t} -> ty_to_sort t
   | TUnit -> UnitSort
   | TBool -> BoolSort
-  | TInt _ -> IntSort
+  | TInt n ->
+    if smt_config.infinite_arith then
+      IntSort
+    else
+      BitVecSort n
   | TNode -> ty_to_sort (TInt 32)
   | TEdge -> ty_to_sort (TTuple [TNode; TNode])
   | TTuple ts -> (
