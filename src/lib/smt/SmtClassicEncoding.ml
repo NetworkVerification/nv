@@ -19,9 +19,15 @@ struct
     VarMap.iter
       (fun v e ->
          let names = create_vars env "" v in
-         mk_constant env names (SmtUtils.ty_to_sort (Syntax.get_ty_from_tyexp e))
+         let sort = SmtUtils.ty_to_sort (Syntax.get_ty_from_tyexp e) in
+         let symb = mk_constant env names sort
            ~cdescr:"Symbolic variable decl"
-         |> ignore ) sym_vars ;
+         in
+           match sort with
+             | IntSort ->
+               SmtUtils.add_constraint env (mk_term (mk_leq (mk_int 0) symb.t))
+             | _ -> ()
+      ) sym_vars ;
     (* add the require clauses *)
     BatList.iter
       (fun e ->
