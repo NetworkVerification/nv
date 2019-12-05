@@ -1,0 +1,46 @@
+(* vim: set syntax=ocaml: *)
+
+(* In this example, we want to check
+ * the property that every path to the
+ * destination 0 goes through the node
+ * 1 instead of 2.
+ *)
+
+let nodes = 5
+(* Topology:
+ *        2
+ *       / \
+ * 4 -- 3   0
+ *       \ /
+ *        1
+ *)
+let edges = {
+  0=1;
+  0=2;
+  1=3;
+  2=3;
+  3=4;
+}
+
+type attribute = (int, int)
+
+let min x y = if x < y then x else y
+
+let merge node x y = 
+  let (x1, x2) = x in
+  let (y1, y2) = y in
+  (min x1 y1, min x2 y2)
+
+let trans edge x =
+  let (x1, x2) = x in
+  (x1 + 1, x2 + 1)
+
+let init node =
+  match node with
+  | 0n -> (0, 15)
+  | 1n -> (15, 0)
+  | _ -> (15, 15)
+
+let assert node x =
+  let (x1, x2) = x in
+  x1 <= 3 && x2 <= 2

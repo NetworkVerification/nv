@@ -1,0 +1,19 @@
+(* vim: set syntax=ocaml: *)
+
+include "topology.nv"
+
+let prop x = x < 3
+
+require (h_1_2 = 2)
+require (h_2_1 = 3)
+
+let assert n x = 
+  match n with
+  (* check that w's output satisfies h_1_2's property *)
+  | 3n -> (x = 2)
+  (* check that v's output satisfies h_2_1's property *)
+  | 5n -> (x = 3)
+  (* don't test the property on the inputs *)
+  | 4n -> true
+  | 6n -> true
+  | _ -> prop x

@@ -1,0 +1,49 @@
+(* vim: set syntax=ocaml: *)
+
+(* Simple example with 3 nodes v, w, and x,
+ * where v is partitioned into its own partition.
+ *)
+
+type attribute = int
+
+let nodes = 7
+
+(* v -/- w -- x *)
+(* 2 -/- 1 -- 0 *)
+
+(* 0 = x
+ * 1 = w
+ * 2 = v
+ *)
+let edges = {
+  0=1;
+  1-3; (* output of w *)
+  4-2; (* input of v *)
+  2-5; (* output of v *)
+  6-1; (* input of w *)
+}
+
+symbolic h_1_2 : int
+symbolic h_2_1 : int
+
+(* Merge *)
+let min x y = if x < y then x else y
+
+let merge n x y = match n with
+  | _ -> min x y
+
+(* Transfer *)
+let trans edge x = match edge with
+  | 4~2 -> x
+  | 6~1 -> x
+  | _ -> x + 1
+
+(* Init *)
+let init n = match n with
+  | 0n -> 0
+  | 1n -> 15
+  | 2n -> 15
+  | 3n -> 15
+  | 4n -> h_1_2
+  | 5n -> 15
+  | 6n -> h_2_1

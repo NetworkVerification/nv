@@ -1,0 +1,29 @@
+symbolic h : int
+
+require h < 1
+
+let nodes = 3
+let edges = {
+  0-1;
+  1-2;
+}
+
+type attribute = int
+
+let merge n x y = if x < y then x else y
+
+let trans e x =
+  match e with
+  | 0~1 -> x
+  | 1~2 -> x + 1
+
+let init n = match n with
+  | 0n -> h
+  | 1n -> 15
+  | 2n -> 15
+
+let assert n x =
+  match n with
+  | 2n -> x >= 1
+  | 1n -> x < 3
+  | 0n -> true

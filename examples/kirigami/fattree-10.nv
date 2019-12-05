@@ -35,7 +35,7 @@ symbolic h_7_1 : option[route]
 
 (* requirements on the hypotheses *)
 (* as the destination is 9n, hypotheses entering 9's pod do not need to be exact *)
-require (exact_route h_0_2 3 0n)
+(* require (exact_route h_0_2 3 0n)
 require (gt_min_len_route h_2_0 4 2n)
 require (gt_min_len_route h_0_6 3 0n)
 require (exact_route h_6_0 2 6n)
@@ -43,6 +43,15 @@ require (exact_route h_1_3 3 1n)
 require (gt_min_len_route h_3_1 4 3n)
 require (gt_min_len_route h_1_7 3 1n)
 require (exact_route h_7_1 2 7n)
+*)
+require (isSome h_0_2)
+require (isSome h_2_0)
+require (isSome h_0_6)
+require (isSome h_6_0)
+require (isSome h_1_3)
+require (isSome h_3_1)
+require (isSome h_1_7)
+require (isSome h_7_1)
 
 (* --- Topology ------------------------------------------------------------------ *)
 (* 10 node fattree, partitioned along the 4 bidirectional spine-pod edges *)
@@ -177,14 +186,14 @@ let init node = if node = dest then
 let assert node x = 
   match node with
   (* Check that the outputs satisfy the inputs *)
-  | 10n -> exact_route x 3 0n
+  (*| 10n -> exact_route x 3 0n
   | 12n -> gt_min_len_route x 4 2n
   | 14n -> gt_min_len_route x 3 0n
   | 16n -> exact_route x 2 6n
   | 18n -> exact_route x 3 1n
   | 20n -> gt_min_len_route x 4 3n
   | 22n -> gt_min_len_route x 3 1n
-  | 24n -> exact_route x 2 7n
+  | 24n -> exact_route x 2 7n*)
   (* Check that everyone can reach the destination *)
   | _ -> isSome x
 
