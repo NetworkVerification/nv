@@ -1,6 +1,12 @@
 include "utils.nv"
+include "SRPSig.nv"
 
-module FaultToleranceOpt (S : SRP) = struct
+(* Implements our fault tolerance analysis by wrapping the attribute in
+   an option type. If your attribute type already has some "default" value
+   that behaves like None, you can use the other functor below. I'd recommend
+   looking at that one first because it's simple *)
+module FaultToleranceOpt (S : SRP) : SRP =
+struct
   type attribute = dict[tedge, option[S.attribute]]
 
   let nodes = S.nodes
@@ -18,16 +24,49 @@ module FaultToleranceOpt (S : SRP) = struct
   let merge e x1 x2 =
     combine (mapbetter S.merge) x1 x2
 
-  let assert n x =
-    foldEdge
-      (* Having the && outside the match makes this more amenable to slicing *)
-      (fun k v acc -> acc && match v with | None -> false | Some v -> S.assert n v)
-      true
-      x
-
+  let assert =
+    mapo
+      (fun f -> fun n x ->
+         foldEdge
+           (* Having the && outside the match makes this more amenable to slicing *)
+           (fun k v acc -> acc && match v with | None -> false | Some v -> f n v)
+           true
+           x
+      )
+      S.assert
 end
 
-(* TODO: Define the SRP signature, then define a new signature which is that
-   plus a "default value", then define another fault tolerance functor which
-   uses the default value instead of wrapping the attribute in an option
-*)
+(* An SRP with a designated "default" attribute type, which should basically
+   be an identity for the merge function. *)
+module type SRPWithDefault =
+sig
+  include SRP
+
+  val default: attribute
+end
+
+module FaultTolerance (S : SRPWithDefault) : SRP =
+struct
+  type attribute = dict[tedge, S.attribute]
+
+  let nodes = S.nodes
+  let edges = S.edges
+
+  let init n = createDict (S.init n)
+
+  let trans e x =
+    mapIf
+      (fun e' -> e' = e)
+      (fun _ -> S.default)
+      (fun attr -> S.trans e attr)
+      x
+
+  let merge e x1 x2 =
+    combine (S.merge) x1 x2
+
+  let assert n x =
+    foldEdge
+      (fun k v acc -> acc && S.assert n v)
+      true
+      x
+end

@@ -1,0 +1,14 @@
+(* In practice this definition will probably be built in *)
+module type SRP =
+sig
+  (* Something topological. Maybe type tnode and type tedge? *)
+  (* Symbolics? How do we declare those? *)
+
+  type attribute
+
+  val init : tnode -> attribute
+  val trans : tedge -> attribute -> attribute
+  val merge : tnode -> attribute -> attribute -> attribute
+
+  val assert : option[tnode -> attribute -> bool]
+end
