@@ -1,33 +1,43 @@
 include "../utils.nv"
 
-module RIPAlgebra = struct
-  (* For each reachable destination node, store the distance *)
-  type attribute = dict[dest, int option]
+(* I don't want to think about e.g. prefixes and lpms, So I'm defining a
+   destination to be either a node in the network (presumably a loopback address),
+   or an external address *)
+(* Pretend NV has finite variants. We could implement this using e.g. a record *)
+type dest =
+  | DNode of node
+  | DExternal of int
+
+module RIPSingle = struct
+  type attribute = int option
+
+  let trans edge x =
+    match x with
+    | None -> None
+    | Some d ->
+      (* RIP caps routes at 15 hops *)
+      if d >= 15 then None else Some (d+1)
+
+  let merge n x y =
+    mapbetter (fun x y -> if x < y then x else y) x y
+end
+
+module RIPMulti = struct
+  type attribute = dict[dest, RIP.attribute]
 
   let init n =
     let m = createDict None in
     m[n := Some 0]
 
   let trans edge x =
-    let increment_dist o =
-      match o with
-      | None -> None
-      | Some d ->
-        (* RIP caps routes at 15 hops *)
-        if d >= 15 then None else Some (d+1)
-    in
-    map increment_dist x
+    map (RIPSingle.trans edge) x
 
-  let pick_best d1 d2 =
-    if d1 < d2 then d1 else d2
-
-  let merge n x y =
-    combine (mapbetter pick_best) x y
+  let merge n x y = combine (RIPSingle.merge n) x y
 end
 
 (* Okay, this didn't actually end up being a functor *)
 module RIP = struct
-  import RIPAlgebra (* Re-exports all the definitions in RIP_Algebra *)
+  include RIPMulti (* Re-exports all the definitions in RIPMulti *)
 
   let nodes = 2 (* User-defined *)
   let edges = {0~1;} (* User-defined *)
