@@ -100,7 +100,7 @@ module IBGP =
       else if x.bgp.ibgp                then None (* Don't redistribute routes that were learned via iBGP *)
       else if not (has_route x v)       then None (* The logical link doesn't work if we can't reach the other side *)
       else if not (has_route v.attr u)  then None (* Magic: We need the link to work in both directions *)
-      else mapo (BGP.trans edge) x                 (* If none of the above are true, call be BGP trans function)
+      else mapo (BGP.trans edge) x                 (* If none of the above are true, call be BGP trans function *)
     in
     {
       bgp = {attr = trans_bgp; ibgp = true};

@@ -65,8 +65,11 @@ struct
     combine (S.merge) x1 x2
 
   let assert n x =
-    foldEdge
-      (fun k v acc -> acc && S.assert n v)
-      true
-      x
+    mapo
+      (fun f -> fun n x ->
+         foldEdge
+           (fun k v acc -> acc && f n v)
+           true
+           x)
+      S.assert
 end

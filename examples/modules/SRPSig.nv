@@ -1,7 +1,10 @@
 (* In practice this definition will probably be built in *)
 module type SRP =
 sig
-  (* Something topological. Maybe type tnode and type tedge? *)
+  (* Something topological. Maybe like this? *)
+  val nodes : int
+  val edges : set[tedge]
+
   (* Symbolics? How do we declare those? *)
 
   type attribute
@@ -10,5 +13,6 @@ sig
   val trans : tedge -> attribute -> attribute
   val merge : tnode -> attribute -> attribute -> attribute
 
+  (* This is probably the most general thing? *)
   val assert : option[tnode -> attribute -> bool]
 end
