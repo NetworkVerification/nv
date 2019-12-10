@@ -1,14 +1,7 @@
 include "../utils.nv"
+include "SRPSig.nv"
 
-(* I don't want to think about e.g. prefixes and lpms, So I'm defining a
-   destination to be either a node in the network (presumably a loopback address),
-   or an external address *)
-(* Pretend NV has finite variants. We could implement this using e.g. a record *)
-type dest =
-  | DNode of node
-  | DExternal of int
-
-module RIPSingle = struct
+module RIP = struct
   type attribute = int option
 
   let trans edge x =
@@ -30,13 +23,13 @@ module RIPMulti = struct
     m[n := Some 0]
 
   let trans edge x =
-    map (RIPSingle.trans edge) x
+    map (RIP.trans edge) x
 
-  let merge n x y = combine (RIPSingle.merge n) x y
+  let merge n x y = combine (RIP.merge n) x y
 end
 
 (* Okay, this didn't actually end up being a functor *)
-module RIP = struct
+module RIPSRP : SRP = struct
   include RIPMulti (* Re-exports all the definitions in RIPMulti *)
 
   let nodes = 2 (* User-defined *)

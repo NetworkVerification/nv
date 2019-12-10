@@ -1,45 +1,32 @@
 include "../utils.nv"
 include "SRPSig.nv"
 include "rip.nv"
+include "bgp.nv"
 
-(*** Definition of BGP as a routing algebra, ignoring policy details ***)
-
-type bgp_attr = {local_pref: int; AS_len: int; communities: set[int]}
-
-module BGPSingle =
-type attribute = dict[dest, bgp_attr option]
-
-let init n = createDict None (* initialize dict for each destination you originate *)
-
-let trans n x = x (* policy dependent *)
-
-let rankBGP a b =
-  if a.local_pref > b.local_pref then a
-  else if b.local_pref > a.local_pref then b
-  else if a.AS_len < b.AS_len then a
-  else b
-
-let merge n x1 x2 =
-  combine (mapbetter rankBGP) x1 x2
-end
-
-module type SRPReach =
+module type IBGPArg =
 sig
   include SRP
 
-  val reachable : tnode -> tnode -> bool
+  (* Can the node reach the dest in the given solution? *)
+  val reachable : dict[tnode, attribute] -> tnode -> dest -> bool
+  (* Administrative distance, i.e. a "ranking" of the path *)
+
+  val admin_dist : attribute
+end
+
+module RIPArg =
+struct
+  include RIPMulti
+
+  let reachable sol n d = match sol[n][d] with | None -> false | _ -> true
 end
 
 (*** Definition of IBGP using eBGP and RIP ***)
-
-(* In practice, I think iBGP uses a full mesh, so is_logical might just be
-   the constant function (fun edge -> true) *)
-
-(*
-  When we're running multiple routing algorithms in parallel, we use a value
-  called administrative distance to select between them. I'm not clear on how
-  it's typically computed, but the details aren't important for how iBGP works.
+(* When we're running multiple routing algorithms in parallel, we use a value
+   called administrative distance to select between them. I'm not clear on how
+   it's typically computed, but the details aren't important for how iBGP works.
 *)
+
 (* In practice we'd have one function for each attribute type *)
 let admin_dist attr = (* ... *)
 
