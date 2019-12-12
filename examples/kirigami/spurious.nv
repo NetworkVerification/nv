@@ -1,0 +1,34 @@
+include "../utils.nv"
+
+type attribute = option[int]
+
+let nodes = 6
+
+symbolic h_0_1 : option[int]
+symbolic h_1_0 : option[int]
+require (isSome h_0_1)
+require (isSome h_1_0)
+
+let edges = {
+  0-2;
+  3-1;
+  1-4;
+  5-0;
+}
+
+let init node = match node with
+  | 3n -> h_0_1
+  | 5n -> h_1_0
+  | _ -> None
+
+let trans edge x = match edge with
+  | 3~1 -> x
+  | 5~0 -> x
+  | _ -> mapo (fun x -> x + 1) x
+
+let merge node x y = mapbetter (fun x y -> if x < y then x else y) x y
+
+let assert node x = match node with
+  | 2n -> isSome x
+  | 4n -> isSome x
+  | _ -> isSome x
