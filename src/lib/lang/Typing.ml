@@ -29,7 +29,7 @@ let assert_ty aty = TArrow (node_ty, TArrow (aty, TBool))
 (* partitioning *)
 let partition_ty = TArrow (node_ty, TInt 8)
 
-let interface_ty aty = TArrow (edge_ty, TOption aty)
+let interface_ty aty = TArrow (edge_ty, TOption (TArrow (aty, TBool)))
 (* end partitioning *)
 
 (* Region-like levels for efficient implementation of type generalization *)

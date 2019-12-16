@@ -27,18 +27,26 @@ type cut_edge =
   }
 
 (** Transform a value representing an option into an optional value.
- * Fail if the valye is not an option.
+ * Fail if the value is not an option.
  *)
 let proj_opt (v: value) : value option =
   match v with
   | {v = VOption o; _ } -> o
   | _ -> failwith "value is not an option"
 
+(** Extract the closure value of the interface and
+ * convert it to a simple expression of a function.
+ *)
+let extract_intf_closure (value: value) : exp =
+  match value.v with
+  | VClosure (_env, func) -> efunc func
+  | _ -> failwith "intf value was not a closure"
+
 (* Generate a map of edges to annotations from the given partition and interface expressions
  * and a list of edges.
  * @return a map from edges in the original SRP to associated values
  *)
-let partition_interface_edges (partition: exp option) (interface: exp option) (edges: edge list) : value option EdgeMap.t =
+let partition_interface_edges (partition: exp option) (interface: exp option) (edges: edge list) : exp option EdgeMap.t =
   match partition with
   | Some parte -> begin
     match interface with
@@ -51,7 +59,8 @@ let partition_interface_edges (partition: exp option) (interface: exp option) (e
           let intf_app = Interp.apply empty_env (deconstructFun intfe) (vedge e) in
           if (is_cross_partition partf_app e) then
             (* if intf_app is not an option, fail *)
-            EdgeMap.add e (proj_opt intf_app) map
+            let intf_pred = (proj_opt intf_app) |> Option.map extract_intf_closure in
+            EdgeMap.add e intf_pred map
           else
             map
         in
@@ -61,7 +70,7 @@ let partition_interface_edges (partition: exp option) (interface: exp option) (e
   end
   | None -> EdgeMap.empty
 
-let partition_interface (partition: exp option) (interface: exp option) (graph: AdjGraph.t) : value option EdgeMap.t =
+let partition_interface (partition: exp option) (interface: exp option) (graph: AdjGraph.t) : exp option EdgeMap.t =
   match partition with
   | Some parte -> begin
     match interface with
@@ -74,7 +83,8 @@ let partition_interface (partition: exp option) (interface: exp option) (graph: 
           let intf_app = Interp.apply empty_env (deconstructFun intfe) (vedge (u, v)) in
           if (is_cross_partition partf_app (u, v)) then
             (* if intf_app is not an option, fail *)
-            EdgeMap.add (u, v) (proj_opt intf_app) map
+            let intf_pred = (proj_opt intf_app) |> Option.map extract_intf_closure in
+            EdgeMap.add (u, v) intf_pred map
           else
             map
         in
@@ -94,18 +104,18 @@ let create_exact_predicate attr_type value =
 
 (** Create a symbolic variable for each cut edge.
  *  @return a map from edges to hypothesis and predicate information *)
-let create_hyp_vars attr_type (interface: value option EdgeMap.t) : (var * exp) EdgeMap.t =
+let create_hyp_vars attr_type (interface: exp option EdgeMap.t) : (var * exp) EdgeMap.t =
   let create_hyp_var edge = 
     let name = Printf.sprintf "hyp_%s" (Edge.to_string edge) in
     Var.fresh name
   in
-  let create_hyp_pred edge maybe_value =
+  let create_hyp_pred edge maybe_pred =
     let h = create_hyp_var edge in
     (* generate a predicate; if there is no specific value given, set it to true *)
-    let p = match maybe_value with
-    | Some v -> create_exact_predicate attr_type v
+    let p = match maybe_pred with
+    | Some pred -> pred (* the interface is an efun *)
     | None -> e_val (vbool true)
-  in (h, p)
+    in (h, p)
   in
   EdgeMap.mapi create_hyp_pred interface
 
