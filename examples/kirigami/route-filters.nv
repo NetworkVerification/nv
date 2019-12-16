@@ -77,7 +77,6 @@ require (pred h_2_3)
 require (pred h_3_2)
 
 let init node = match node with
-  | _ -> None
   | 0n -> Some 0
   | 5n -> h_0_1
   | 7n -> h_1_0
@@ -89,3 +88,33 @@ let init node = match node with
   | 19n -> h_3_1
   | 21n -> h_2_3
   | 23n -> h_3_2
+  | _ -> None
+
+let trans edge x = match edge with
+  | 5~1 -> x
+  | 7~0 -> x
+  | 9~2 -> x
+  | 11~0 -> x
+  | 13~2 -> x
+  | 15~1 -> x
+  | 17~3 -> x
+  | 19~1 -> x
+  | 21~3 -> x
+  | 23~2 -> x
+  | _ -> mapo (fun x -> x + 1) x
+
+let merge node x y = match node with
+  | _ -> mapbetter (fun x y -> if x < y then x else y) x y
+
+let assert node x = match node with
+  | 4n -> (pred x)
+  | 6n -> (pred x)
+  | 8n -> (pred x)
+  | 10n -> (pred x)
+  | 12n -> (pred x)
+  | 14n -> (pred x)
+  | 16n -> (pred x)
+  | 18n -> (pred x)
+  | 20n -> (pred x)
+  | 22n -> (pred x)
+  | _ -> isSome x
