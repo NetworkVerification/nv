@@ -29,7 +29,6 @@ type ty =
   | TRecord of ty StringMap.t
   | TNode
   | TEdge
-  (* | THyp of ty *)
 
 and tyvar = Unbound of tyname * level | Link of ty
 
@@ -366,3 +365,7 @@ val bool_of_val: value -> bool option
 val proj_var: int -> var -> var
 
 val unproj_var: var -> (int * var)
+
+val get_ty_vars : ty -> var list
+
+val get_exp_vars : exp -> var list

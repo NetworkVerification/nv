@@ -83,6 +83,49 @@ let process_includes (fname : string) : string list =
   List.rev imports
 ;;
 
+module VarG = Graph.Persistent.Digraph.Concrete(struct
+  type t = Syntax.var
+  let compare = Pervasives.compare
+  let equal = (fun a b -> compare a b = 0)
+  let hash = Hashtbl.hash
+end)
+
+module VarSort = Graph.Topological.Make(VarG)
+
+let sort_decls ds =
+  let open Syntax in
+  let open Nv_datastructures.AdjGraph in
+  (* Add a dependency from each item in vars to k in g *)
+  let add_dep (k: var) (vars: var list) (g: VarG.t) = List.fold_left (fun g v -> VarG.add_edge g v k) g vars in
+  (* Ordering:
+   * - Sort the user-defined types
+   * - Sort the symbolics based on which depends on another
+   * - Sort the let bindings based on which depends on another
+   * - Add links from the let bindings to all other declarations
+   *)
+  let extend_map_list k newv m = Map.modify_opt k (fun oldv -> match oldv with
+    | Some old -> Some (newv @ old)
+    | None -> Some (newv)) m
+  in
+  let handle_decl d m = match d with
+  (* TODO: also add types sorting? *)
+  | DUserTy (v, t) -> let deps = get_ty_vars t in
+    extend_map_list v deps m
+  | DLet (v, _, e) -> let vars = get_exp_vars e in
+    extend_map_list v vars m
+  | DSymbolic (v, t_or_e) -> let deps = match t_or_e with
+    | Ty t -> (get_ty_vars t)
+    | Exp e -> (get_exp_vars e)
+    in extend_map_list v deps m
+  | _ -> m
+  in
+  (* map out all the variable relationships *)
+  let dep_map : (var, var list) Map.t = Map.fold handle_decl Map.empty ds in
+  (* TODO: add edges for all other declarations *)
+  let dep_graph : VarG.t = Map.foldi add_dep dep_map VarG.empty in
+  (* return the newly sorted declarations *)
+  VarSort.fold List.cons dep_graph []
+
 let parse fname =
   let files_to_parse = process_includes fname in
   let t = Console.read_files files_to_parse in

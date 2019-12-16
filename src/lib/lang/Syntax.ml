@@ -219,7 +219,6 @@ type network =
     graph : AdjGraph.t;
   }
 
-(* TODO: add partitioning? *)
 type srp_unfold =
   { srp_attr : ty;
     srp_constraints : exp AdjGraph.VertexMap.t;
@@ -1113,6 +1112,36 @@ let unproj_var (x : var) =
   let (s,i) = Var.from_var x in
   let name, n = BatString.split s "-proj-" in
   (int_of_string n, Var.to_var (name, i))
+
+let rec get_ty_vars (t: ty) : var list =
+  match t with
+  | TVar tv -> begin match !tv with
+    | Unbound (tn, _) -> [tn]
+    | Link t -> get_ty_vars t
+  end
+  | QVar n -> [n]
+  | TArrow (t1, t2) -> (get_ty_vars t1) @ (get_ty_vars t2)
+  | TTuple ts -> List.fold_left (fun l t -> (get_ty_vars t) @ l) [] ts
+  | TOption t -> get_ty_vars t
+  | TMap (t1, t2) -> (get_ty_vars t1) @ (get_ty_vars t2)
+  | TRecord tm -> StringMap.fold (fun _s t l -> (get_ty_vars t) @ l) tm []
+  | _ -> []
+
+let rec get_exp_vars (e: exp) : var list =
+  match e.e with
+  | EVar v -> [v]
+  | EOp (_, es) -> List.fold_left (fun l e -> (get_exp_vars e) @ l) [] es
+  | EFun func -> get_exp_vars func.body
+  | EApp (e1, e2) -> get_exp_vars e1 @ get_exp_vars e2
+  | EIf (e1, e2, e3) -> get_exp_vars e1 @ get_exp_vars e2 @ get_exp_vars e3
+  | ELet (v, e1, e2) -> [v] @ get_exp_vars e1 @ get_exp_vars e2
+  | ETuple es -> List.fold_left (fun l e -> (get_exp_vars e) @ l) [] es
+  | ESome e -> get_exp_vars e
+  | EMatch (e, bs) -> get_exp_vars e @ foldBranches (fun (_, e) l -> get_exp_vars e @ l) [] bs
+  | ETy (e, t) -> get_exp_vars e @ get_ty_vars t
+  | ERecord em -> StringMap.fold (fun _s e l -> (get_exp_vars e) @ l) em []
+  | EProject (e, _s) -> get_exp_vars e
+  | _ -> []
 
 open BatSet
 
