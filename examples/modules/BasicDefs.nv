@@ -6,7 +6,7 @@ type dest =
   | DNode of node
   | DExternal of int
 
-
+(* I'm thinking we should just always use AlgebraWithDefault *)
 module type Algebra =
 sig
   type attribute
@@ -35,8 +35,6 @@ sig
   val edges : set[tedge]
 
   (* Symbolics? How do we declare those? *)
-
-  type attribute
 
   val init : tnode -> attribute
   (* This is probably the most general thing? *)

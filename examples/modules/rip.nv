@@ -1,6 +1,9 @@
 include "../utils.nv"
 include "SRPSig.nv"
 
+type attribute = (dest, bgp_route)
+
+
 module RIP = struct
   type attribute = int option
 
@@ -16,7 +19,7 @@ module RIP = struct
 end
 
 module RIPMulti = struct
-  type attribute = dict[dest, RIP.attribute]
+  type attribute = dict[tnode, RIP.attribute]
 
   let init n =
     let m = createDict None in

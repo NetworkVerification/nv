@@ -5,9 +5,9 @@ struct
   type bgp_attr = {local_pref: int; AS_len: int; communities: set[int]}
   type attribute = option[bgp_attr]
 
-  let trans n x =
+  let trans e x policyTrans =
     (* Policy dependent *)
-    {x with AS_len = AS_len + 1}
+    policyTrans e {x with AS_len = AS_len + 1}
 
   let rankBGP a b =
     if a.local_pref > b.local_pref then a

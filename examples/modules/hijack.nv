@@ -4,7 +4,8 @@ module type HijackArg =
 sig
   include SRP
 
-  val newEdge : tedge
+  val connectionPoint : tnode
+  val newTrans : attribute -> attribute
 end
 
 module Hijack (S: HijackArg) =
@@ -15,7 +16,7 @@ struct
 
   (* The new node is node number S.nodes *)
   let nodes = S.nodes + 1
-  let edges = S.edges[S.newEdge := true]
+  let edges = S.edges[S.nodes~S.connectionPoint := true]
 
   (* We need to be able to cast between nodes and ints for this, unless we
      say S.nodes has type node and is the value of the highest-valued node
@@ -23,13 +24,22 @@ struct
   let init n =
     if n = S.nodes then attr else S.init n
 
-
   let trans e x =
-    if e = S.newEdge then ??? else S.trans e x
+    if e = S.newEdge then S.newTrans x else S.trans e x
 
   let merge n x y =
     if n = S.nodes then attr else S.merge n x y
 
   let assert n x =
-    if n = S.nodes then ??? else assert 
+    if n = S.nodes then ??? else assert
 end
+
+module Compose (S1 : SRP) (S2 : SRP) =
+struct
+  type attribute = (S1.attribute, S2.attribute)
+  type node = S1.node + S2.node
+
+  let init n =
+    (S1.init n, S2.init (n - S1.nodes))
+
+  let assert (sol : dict[tnode, attr]) =

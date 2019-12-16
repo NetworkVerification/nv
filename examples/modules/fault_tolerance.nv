@@ -37,7 +37,7 @@ struct
 end
 
 (* An SRP with a designated "default" attribute type, which should basically
-   be an identity for the merge function. *)
+   be an identity for the merge function (i.e. indicates no route). *)
 module type SRPWithDefault =
 sig
   include SRP
