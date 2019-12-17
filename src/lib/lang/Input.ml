@@ -138,7 +138,8 @@ let sort_decls ds =
    *)
   let (decl_to_vars, var_to_decl) = List.fold_left get_decl_vars (Map.empty, Map.empty) ds in
   let map_vars_to_decls vars : declaration list =
-    (* if a variable is not in var_to_decls, we just ignore it *)
+    (* if a variable is not in var_to_decls, we just ignore it,
+     * as it's probably initialized inside the declaration itself *)
     List.filter_map (fun v -> Map.Exceptionless.find v var_to_decl) vars
   in
   let decl_to_decls = Map.map map_vars_to_decls decl_to_vars in
@@ -150,6 +151,6 @@ let parse fname =
   let files_to_parse = process_includes fname in
   let t = Console.read_files files_to_parse in
   let ds = List.concat (List.map read_from_file files_to_parse) in
-  print_endline @@ Printing.declarations_to_string ds; 
+  (* print_endline @@ Printing.declarations_to_string ds; *) 
   let ds = sort_decls ds in
   (ds, t)
