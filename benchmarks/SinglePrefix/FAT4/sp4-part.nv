@@ -2,45 +2,54 @@
 
 include "sp4.nv"
 
-(* FIXME: doesn't yet get bound correctly for interface *)
-let isSelected x = match x.selected with
-  | None -> false
-  | _ -> true
-
+(* split along spine-pod edges *)
 let partition node = match node with
-  | 0n -> 0u8
   | 1n -> 0u8
-  | 2n -> 0u8
   | 3n -> 0u8
+  | 4n -> 0u8
+  | 7n -> 0u8
   | _ -> 1u8
 
-let interface edge = match edge with
-  (* 0 edges *)
-  | 0~17 -> Some (fun x -> match x.selected with | None -> false | _ -> true)
-  | 0~18 -> Some (fun x -> match x.selected with | None -> false | _ -> true)
-  | 17~0 -> Some (fun x -> match x.selected with | None -> false | _ -> true)
-  | 18~0 -> Some (fun x -> match x.selected with | None -> false | _ -> true)
+let interface edge = 
+  let isSelected x = match x.selected with
+  | None -> false
+  | _ -> true
+  in
+  match edge with
   (* 1 edges *)
-  | 8~1 -> Some (fun x -> match x.selected with | None -> false | _ -> true)
-  | 1~8 -> Some (fun x -> match x.selected with | None -> false | _ -> true)
-  | 1~14 -> Some (fun x -> match x.selected with | None -> false | _ -> true)
-  | 1~16 -> Some (fun x -> match x.selected with | None -> false | _ -> true)
-  | 1~18 -> Some (fun x -> match x.selected with | None -> false | _ -> true)
-  | 14~1 -> Some (fun x -> match x.selected with | None -> false | _ -> true)
-  | 16~1 -> Some (fun x -> match x.selected with | None -> false | _ -> true)
-  | 18~1 -> Some (fun x -> match x.selected with | None -> false | _ -> true)
-  (* 2 edges *)
-  | 2~6 -> Some (fun x -> match x.selected with | None -> false | _ -> true)
-  | 2~8 -> Some (fun x -> match x.selected with | None -> false | _ -> true)
-  | 6~2 -> Some (fun x -> match x.selected with | None -> false | _ -> true)
-  | 8~2 -> Some (fun x -> match x.selected with | None -> false | _ -> true)
+  | 8~1 -> Some isSelected
+  | 1~8 -> Some isSelected
+  | 1~14 -> Some isSelected
+  | 1~16 -> Some isSelected
+  | 1~18 -> Some isSelected
+  | 14~1 -> Some isSelected
+  | 16~1 -> Some isSelected
+  | 18~1 -> Some isSelected
   (* 3 edges *)
-  | 3~8 -> Some (fun x -> match x.selected with | None -> false | _ -> true)
-  | 3~14 -> Some (fun x -> match x.selected with | None -> false | _ -> true)
-  | 3~16 -> Some (fun x -> match x.selected with | None -> false | _ -> true)
-  | 3~18 -> Some (fun x -> match x.selected with | None -> false | _ -> true)
-  | 8~3 -> Some (fun x -> match x.selected with | None -> false | _ -> true)
-  | 14~3 -> Some (fun x -> match x.selected with | None -> false | _ -> true)
-  | 16~3 -> Some (fun x -> match x.selected with | None -> false | _ -> true)
-  | 18~3 -> Some (fun x -> match x.selected with | None -> false | _ -> true)
+  | 3~8 -> Some isSelected
+  | 3~14 -> Some isSelected
+  | 3~16 -> Some isSelected
+  | 3~18 -> Some isSelected
+  | 8~3 -> Some isSelected
+  | 14~3 -> Some isSelected
+  | 16~3 -> Some isSelected
+  | 18~3 -> Some isSelected
+  (* 4 edges *)
+  | 6~4 -> Some isSelected
+  | 4~6 -> Some isSelected
+  | 4~13 -> Some isSelected
+  | 4~15 -> Some isSelected
+  | 4~17 -> Some isSelected
+  | 13~4 -> Some isSelected
+  | 15~4 -> Some isSelected
+  | 17~4 -> Some isSelected
+  (* 7 edges *)
+  | 6~7 -> Some isSelected
+  | 7~6 -> Some isSelected
+  | 7~13 -> Some isSelected
+  | 7~15 -> Some isSelected
+  | 7~17 -> Some isSelected
+  | 13~7 -> Some isSelected
+  | 15~7 -> Some isSelected
+  | 17~7 -> Some isSelected
   | _ -> None
