@@ -205,7 +205,9 @@ module SmtLang =
       | Int i1, Int i2 -> mk_bool (i1 = i2)
       | _ ->  Eq (t1, t2)
 
-    let mk_lt t1 t2 = Lt (t1, t2)
+    let mk_lt t1 t2 =
+      if t2 = (Int "0") then Bool false
+      else Lt(t1,t2)
 
     let mk_leq t1 t2 = Leq (t1, t2)
 
@@ -231,8 +233,12 @@ module SmtLang =
          | Bool false, Bool false -> Bool false
          | Int i1, Int i2 when i1 = i2 -> t2
          | Bv i1, Bv i2 when i1 = i2 -> t2
+         (* this did not help at all..*)
+         (* | t2, Ite (t1', t2', t3') when t2 = t2' ->
+          *   mk_ite (mk_or_fast t1 t1') t2 t3' *)
          | _, _ ->
-           mk_ite t1 t2 t3)
+           (* if t2 = t3 then t2
+            * else *) mk_ite t1 t2 t3)
 
     let mk_atMost t1 t2 t3 = AtMost (t1, t2, t3)
 
@@ -425,7 +431,8 @@ module SmtLang =
                           solve-eqs bit-blast psat))\n"
         else
           if smt_config.infinite_arith then
-            Printf.sprintf "(check-sat-using (then simplify propagate-values simplify \
+            Printf.sprintf "(set-option :smt.arith.nl false)\n\
+                            (check-sat-using (then simplify propagate-values simplify \
                             solve-eqs smt))"
           else
             Printf.sprintf "(check-sat-using (then simplify propagate-values simplify \
@@ -531,7 +538,11 @@ let rec ty_to_sort (ty: Nv_lang.Syntax.ty) : sort =
   | TVar {contents= Link t} -> ty_to_sort t
   | TUnit -> UnitSort
   | TBool -> BoolSort
-  | TInt _ -> IntSort
+  | TInt n ->
+    if smt_config.infinite_arith then
+      IntSort
+    else
+      BitVecSort n
   | TNode -> ty_to_sort (TInt 32)
   | TEdge -> ty_to_sort (TTuple [TNode; TNode])
   | TTuple ts -> (

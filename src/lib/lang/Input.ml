@@ -50,6 +50,7 @@ let adjust_filename source_fname dest_fname =
    in order. Do not include the same file more than once *)
 let process_includes (fname : string) : string list =
   let rec process_includes_aux (seen, imports) fname =
+    print_endline @@ "Processing " ^ fname;
     if List.mem fname seen then (seen, imports) else
       (* Get any imports in this file *)
       let lines =
@@ -59,7 +60,9 @@ let process_includes (fname : string) : string list =
       let includes =
         Enum.take_while
           (fun s -> String.starts_with s "include")
-          (Enum.filter (fun s -> String.trim s <> "") lines)
+          (Enum.filter (fun s -> (not @@ String.starts_with s "(*") &&
+                                 String.trim s <> "")
+             lines)
       in
       let imported_fnames = Enum.map (fun s ->
           if Str.string_match (Str.regexp "include[ ]*\\\"\\(.+\\)\\\"") s 0 then

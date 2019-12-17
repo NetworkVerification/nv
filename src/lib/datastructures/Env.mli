@@ -30,6 +30,8 @@ val updates : 'a t -> 'a t -> 'a t
 
 val filter : 'a t -> (Var.t -> 'a -> bool) -> 'a t
 
+val map : 'a t -> ('a -> 'b) -> 'b t
+
 (* convert environment to a string *)
 
 val to_string : ('a -> string) -> 'a t -> string

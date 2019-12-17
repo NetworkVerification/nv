@@ -1,5 +1,6 @@
 open Nv_datastructures
 open Nv_lang.Syntax
+open Nv_lang
 open Nv_utils.OCamlUtils
 
 (** * Simplifications *)
@@ -106,11 +107,10 @@ let isMapOp op =
   | MCreate | MGet | MSet | MMap | MMerge | MFoldNode | MFoldEdge | MMapFilter -> true
   | _ -> false
 
-let rec matchExpPat pat pe1 penv  =
+let rec matchExpPat pat pe1 penv =
   match pat, pe1.e with
   | PWild, _ -> Some penv
-  | PVar x, EVar y ->
-    Some (Env.update penv x y)
+  | PVar x, _ -> Some (Env.update penv x pe1)
   | PTuple ps, ETuple es ->
     (match ps, es with
      | [], []-> Some penv
@@ -144,7 +144,7 @@ let rec interp_exp_partial_opt isapp env expEnv e =
         (match Env.lookup_opt expEnv x with
          | None -> e
          | Some y ->
-           aexp (evar y, e.ety, e.espan))
+           aexp (y, e.ety, e.espan))
       | Some v ->
         aexp (e_val v, v.vty, v.vspan))
   | EVal _ -> e
@@ -206,6 +206,7 @@ let rec interp_exp_partial_opt isapp env expEnv e =
         (* Printf.printf "fancy match failed: %s\n" (Printing.exp_to_string e); *)
         match matchExp branches pe1 expEnv with
         | None ->
+          (* Printf.printf "fancy match failed: %s\n" (Printing.exp_to_string e); *)
           aexp (ematch pe1 (mapBranches (fun (p,e) ->
               (p, interp_exp_partial_opt false env expEnv e)) branches),
                 e.ety, e.espan) (* |> simplify_match *)
@@ -239,12 +240,10 @@ and interp_op_partial_opt env expEnv _ op es =
         if n1 < n2 then vbool true else vbool false
       | NLeq, [{v= VNode n1}; {v= VNode n2}] ->
         if n1 <= n2 then vbool true else vbool false
-      | TGet (size, lo, hi), [{v= VTuple lst}] ->
-        assert (List.length lst = size) ; (* Sanity check *)
+      | TGet (_, lo, hi), [{v= VTuple lst}] ->
         if lo = hi then List.nth lst lo
         else vtuple (lst |> BatList.drop lo |> BatList.take (hi - lo + 1))
-      | TSet (size, lo, hi), [{v= VTuple lst}; v] ->
-        assert (List.length lst = size) ; (* Sanity check *)
+      | TSet (_, lo, hi), [{v= VTuple lst}; v] ->
         if lo = hi then
           vtuple @@ BatList.modify_at lo (fun _ -> v) lst
         else
@@ -253,7 +252,7 @@ and interp_op_partial_opt env expEnv _ op es =
           begin
             match v.v with
             | VTuple mid ->
-              vtuple (hd @ mid @ tl)
+              vtuple (hd @ (mid @ tl))
             | _ -> failwith ""
           end
       | _, _ ->
@@ -332,9 +331,9 @@ let rec interp_exp_partial isapp env e =
 and interp_op_partial env op es =
   let pes = BatList.map (interp_exp_partial false env) es in
   if BatList.exists (fun pe -> not (is_value pe)) pes then
-    simplify_exps op pes
-  else
-  if isMapOp op then
+  (*   simplify_exps op pes
+   * else
+   * if isMapOp op then *)
     eop op pes
   else
     begin
@@ -370,7 +369,7 @@ and interp_op_partial env op es =
           begin
             match v.v with
             | VTuple mid ->
-              vtuple (hd @ mid @ tl)
+              vtuple (hd @ (mid @ tl))
             | _ -> failwith ""
           end
       | _, _ ->
@@ -386,7 +385,7 @@ let interp_partial_opt =
 (* let interp_partial_closure cl (args: value list) = *)
 (*   interp_partial (Syntax.apply_closure cl args) *)
 
-let interp_partial = Memoization.MemoizeExp.memoize ~size:1000 interp_partial
+(* let interp_partial = Memoization.MemoizeExp.memoize ~size:1000 interp_partial *)
 (* let interp_partial_opt = MemoizeExp.memoize ~size:1000 interp_partial_opt *)
 
 let interp_partial_fun (fn : Nv_lang.Syntax.exp) (args: value list) =

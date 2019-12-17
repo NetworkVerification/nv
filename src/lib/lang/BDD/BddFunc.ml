@@ -28,7 +28,7 @@ let create_value (ty: ty) : t =
     | TInt size ->
       (BInt (Array.init size (fun j -> B.ithvar (i + j))), i + size)
     | TNode ->
-      aux i (TInt 32)
+      aux i (TInt tnode_sz)
     | TEdge ->
       aux i (TTuple [TNode; TNode])
     | TTuple ts ->
@@ -48,7 +48,7 @@ let create_value (ty: ty) : t =
     | TSubset (ty, _) ->
       aux i ty
     | TArrow _ | QVar _ | TVar _ | TMap _ ->
-      failwith "internal error (create_value)"
+      failwith (Printf.sprintf "internal error (create_value) type:%s\n" (Printing.ty_to_string (get_inner_type ty)))
   in
   let ret, _ = aux 0 ty in
   ret
@@ -156,7 +156,7 @@ let rec eval (env: t Env.t) (e: exp) : t =
       match Env.lookup_opt env x with
       | None -> failwith "internal error (eval)"
       | Some v -> v )
-  | EVal v -> eval_value env v
+  | EVal v -> eval_value v
   | EOp (op, es) -> (
       match (op, es) with
       | And, [e1; e2] -> eval_bool_op2 env Bdd.dand e1 e2
@@ -242,7 +242,7 @@ and eval_bool_op2 env f e1 e2 =
   | BBool b1, BBool b2 -> BBool (f b1 b2)
   | _ -> failwith "internal error (eval)"
 
-and eval_value env (v: value) =
+and eval_value (v: value) =
   match v.v with
   | VUnit -> BBool (bdd_of_bool true) (* Encode as boolean *)
   | VBool b -> BBool (bdd_of_bool b)
@@ -254,9 +254,9 @@ and eval_value env (v: value) =
     in
     BInt bs
   | VNode n ->
-    eval_value env (vint (Integer.create ~size:32 ~value:n))
+    eval_value (vint (Integer.create ~size:(tnode_sz) ~value:n))
   | VEdge (n1, n2) ->
-    eval_value env (vtuple [vnode n1; vnode n2])
+    eval_value (vtuple [vnode n1; vnode n2])
   | VOption None ->
     let ty =
       match get_inner_type (oget v.vty) with
@@ -264,7 +264,7 @@ and eval_value env (v: value) =
       | _ -> failwith "internal error (eval_value)"
     in
     let dv = BddMap.default_value ty in
-    BOption (Bdd.dfalse B.mgr, eval_value env dv)
-  | VOption (Some v) -> BOption (Bdd.dtrue B.mgr, eval_value env v)
-  | VTuple vs -> BTuple (List.map (eval_value env) vs)
+    BOption (Bdd.dfalse B.mgr, eval_value dv)
+  | VOption (Some v) -> BOption (Bdd.dtrue B.mgr, eval_value v)
+  | VTuple vs -> BTuple (List.map eval_value vs)
   | VMap _ | VClosure _ | VRecord _ -> failwith "internal error (eval_value)"

@@ -1,0 +1,113 @@
+All prefixes native simulation.
+$ sh benchmark_simulator.sh                                                                                                                                                                                                                       (master✱)
+Processing AllPrefixes/FAT20/fat20PolSim.nv
+Compilation Time took: 0.136776 secs to complete
+Installing /Users/gian/.opam/4.07.1/lib/Fat20PolSim/META
+Installing /Users/gian/.opam/4.07.1/lib/Fat20PolSim/dune-package
+Installing /Users/gian/.opam/4.07.1/lib/Fat20PolSim/opam
+Installing /Users/gian/.opam/4.07.1/lib/Fat20PolSim/plugin/Fat20PolSim.ml
+Installing /Users/gian/.opam/4.07.1/lib/Fat20PolSim/plugin/Fat20PolSim_plugin.a
+Installing /Users/gian/.opam/4.07.1/lib/Fat20PolSim/plugin/Fat20PolSim_plugin.cmxa
+Installing /Users/gian/.opam/4.07.1/lib/Fat20PolSim/plugin/Fat20PolSim_plugin.cmxs
+Installing /Users/gian/.opam/4.07.1/lib/Fat20PolSim/plugin/fat20PolSim_plugin.cmi
+Installing /Users/gian/.opam/4.07.1/lib/Fat20PolSim/plugin/fat20PolSim_plugin.cmt
+Installing /Users/gian/.opam/4.07.1/lib/Fat20PolSim/plugin/fat20PolSim_plugin.cmx
+Installing /Users/gian/.opam/4.07.1/lib/Fat20PolSim/plugin/fat20PolSim_plugin.ml
+Installing /Users/gian/.opam/4.07.1/lib/Fat20PolSim/plugin/fat20PolSim_plugin__Fat20PolSim.cmi
+Installing /Users/gian/.opam/4.07.1/lib/Fat20PolSim/plugin/fat20PolSim_plugin__Fat20PolSim.cmt
+Installing /Users/gian/.opam/4.07.1/lib/Fat20PolSim/plugin/fat20PolSim_plugin__Fat20PolSim.cmx
+Native simulation took: 4.140155 secs to complete
+No counterexamples found
+
+Success: No assertions provided, so none failed
+
+Entire Program took: 32.340742 secs to complete
+
+real	0m32.374s
+user	0m30.629s
+sys	0m1.667s
+
+
+Processing AllPrefixes/FAT24/fat24PolSim.nv
+Compilation Time took: 0.253082 secs to complete
+Installing /Users/gian/.opam/4.07.1/lib/Fat24PolSim/META
+Installing /Users/gian/.opam/4.07.1/lib/Fat24PolSim/dune-package
+Installing /Users/gian/.opam/4.07.1/lib/Fat24PolSim/opam
+Installing /Users/gian/.opam/4.07.1/lib/Fat24PolSim/plugin/Fat24PolSim.ml
+Installing /Users/gian/.opam/4.07.1/lib/Fat24PolSim/plugin/Fat24PolSim_plugin.a
+Installing /Users/gian/.opam/4.07.1/lib/Fat24PolSim/plugin/Fat24PolSim_plugin.cmxa
+Installing /Users/gian/.opam/4.07.1/lib/Fat24PolSim/plugin/Fat24PolSim_plugin.cmxs
+Installing /Users/gian/.opam/4.07.1/lib/Fat24PolSim/plugin/fat24PolSim_plugin.cmi
+Installing /Users/gian/.opam/4.07.1/lib/Fat24PolSim/plugin/fat24PolSim_plugin.cmt
+Installing /Users/gian/.opam/4.07.1/lib/Fat24PolSim/plugin/fat24PolSim_plugin.cmx
+Installing /Users/gian/.opam/4.07.1/lib/Fat24PolSim/plugin/fat24PolSim_plugin.ml
+Installing /Users/gian/.opam/4.07.1/lib/Fat24PolSim/plugin/fat24PolSim_plugin__Fat24PolSim.cmi
+Installing /Users/gian/.opam/4.07.1/lib/Fat24PolSim/plugin/fat24PolSim_plugin__Fat24PolSim.cmt
+Installing /Users/gian/.opam/4.07.1/lib/Fat24PolSim/plugin/fat24PolSim_plugin__Fat24PolSim.cmx
+Native simulation took: 9.363986 secs to complete
+No counterexamples found
+
+Success: No assertions provided, so none failed
+
+Entire Program took: 84.807745 secs to complete
+
+real	1m24.846s
+user	1m22.105s
+sys	0m2.643s
+
+
+Processing AllPrefixes/FAT28/fat28PolSim.nv
+Compilation Time took: 0.388535 secs to complete
+Installing /Users/gian/.opam/4.07.1/lib/Fat28PolSim/META
+Installing /Users/gian/.opam/4.07.1/lib/Fat28PolSim/dune-package
+Installing /Users/gian/.opam/4.07.1/lib/Fat28PolSim/opam
+Installing /Users/gian/.opam/4.07.1/lib/Fat28PolSim/plugin/Fat28PolSim.ml
+Installing /Users/gian/.opam/4.07.1/lib/Fat28PolSim/plugin/Fat28PolSim_plugin.a
+Installing /Users/gian/.opam/4.07.1/lib/Fat28PolSim/plugin/Fat28PolSim_plugin.cmxa
+Installing /Users/gian/.opam/4.07.1/lib/Fat28PolSim/plugin/Fat28PolSim_plugin.cmxs
+Installing /Users/gian/.opam/4.07.1/lib/Fat28PolSim/plugin/fat28PolSim_plugin.cmi
+Installing /Users/gian/.opam/4.07.1/lib/Fat28PolSim/plugin/fat28PolSim_plugin.cmt
+Installing /Users/gian/.opam/4.07.1/lib/Fat28PolSim/plugin/fat28PolSim_plugin.cmx
+Installing /Users/gian/.opam/4.07.1/lib/Fat28PolSim/plugin/fat28PolSim_plugin.ml
+Installing /Users/gian/.opam/4.07.1/lib/Fat28PolSim/plugin/fat28PolSim_plugin__Fat28PolSim.cmi
+Installing /Users/gian/.opam/4.07.1/lib/Fat28PolSim/plugin/fat28PolSim_plugin__Fat28PolSim.cmt
+Installing /Users/gian/.opam/4.07.1/lib/Fat28PolSim/plugin/fat28PolSim_plugin__Fat28PolSim.cmx
+Native simulation took: 18.391534 secs to complete
+No counterexamples found
+
+Success: No assertions provided, so none failed
+
+Entire Program took: 245.727343 secs to complete
+
+real	4m5.785s
+user	4m1.622s
+sys	0m3.942s
+
+
+Processing AllPrefixes/FAT32/fat32PolSim.nv
+Compilation Time took: 0.610718 secs to complete
+Installing /Users/gian/.opam/4.07.1/lib/Fat32PolSim/META
+Installing /Users/gian/.opam/4.07.1/lib/Fat32PolSim/dune-package
+Installing /Users/gian/.opam/4.07.1/lib/Fat32PolSim/opam
+Installing /Users/gian/.opam/4.07.1/lib/Fat32PolSim/plugin/Fat32PolSim.ml
+Installing /Users/gian/.opam/4.07.1/lib/Fat32PolSim/plugin/Fat32PolSim_plugin.a
+Installing /Users/gian/.opam/4.07.1/lib/Fat32PolSim/plugin/Fat32PolSim_plugin.cmxa
+Installing /Users/gian/.opam/4.07.1/lib/Fat32PolSim/plugin/Fat32PolSim_plugin.cmxs
+Installing /Users/gian/.opam/4.07.1/lib/Fat32PolSim/plugin/fat32PolSim_plugin.cmi
+Installing /Users/gian/.opam/4.07.1/lib/Fat32PolSim/plugin/fat32PolSim_plugin.cmt
+Installing /Users/gian/.opam/4.07.1/lib/Fat32PolSim/plugin/fat32PolSim_plugin.cmx
+Installing /Users/gian/.opam/4.07.1/lib/Fat32PolSim/plugin/fat32PolSim_plugin.ml
+Installing /Users/gian/.opam/4.07.1/lib/Fat32PolSim/plugin/fat32PolSim_plugin__Fat32PolSim.cmi
+Installing /Users/gian/.opam/4.07.1/lib/Fat32PolSim/plugin/fat32PolSim_plugin__Fat32PolSim.cmt
+Installing /Users/gian/.opam/4.07.1/lib/Fat32PolSim/plugin/fat32PolSim_plugin__Fat32PolSim.cmx
+Native simulation took: 34.768155 secs to complete
+No counterexamples found
+
+Success: No assertions provided, so none failed
+
+Entire Program took: 580.264557 secs to complete
+
+real	9m40.308s
+user	9m34.433s
+sys	0m5.750s
+

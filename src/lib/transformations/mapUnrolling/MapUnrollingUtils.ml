@@ -1,3 +1,4 @@
+open Batteries
 open Nv_lang
 open Syntax
 open Collections
@@ -183,6 +184,27 @@ let add_keys_for_nodes_and_edges decls maplist =
     ) maplist
 ;;
 
+(* Sort the maplist so that if type A contains type B, then A appears before B.
+   More specifically, we let the "size" of a map type be the number of map types
+   that it contains in its key type, then sort by size in reverse order *)
+let topsort_maplist maplist =
+  let rec num_maps acc ty =
+    match ty with
+    | TInt _ | TBool | TNode | TEdge | TUnit | TSubset _ -> acc
+    | TOption ty
+    | TVar {contents=Link ty} -> num_maps acc ty
+    | TTuple tys -> List.fold_left num_maps acc tys
+    | TRecord tmap -> StringMap.fold (fun _ ty acc -> num_maps acc ty) tmap acc
+    | TMap (_, kty) -> num_maps (acc+1) kty
+    | TArrow _ -> failwith "Arrow inside map"
+    | TVar _ | QVar _ -> failwith "Unbound TVar or QVar inside map"
+  in
+  let cmp (mty1, _) (mty2, _) =
+    (num_maps 0 mty2) - (num_maps 0 mty1)
+  in
+  List.sort cmp maplist
+;;
+
 (* Given a program on which type inference has been run, goes through
    it and returns a list of each map type which appears in that program,
    combined with the set of keys used for that map type. *)
@@ -190,3 +212,4 @@ let collect_map_types_and_keys (decls : declarations) : maplist =
   let symbolics = List.map fst (get_symbolics decls) in
   BatList.fold_left (BatPervasives.flip (collect_in_decl symbolics)) [] decls
   |> add_keys_for_nodes_and_edges decls
+  |> topsort_maplist

@@ -7,8 +7,10 @@ open BddMap
 open Embeddings
 open CompileBDDs
 open Collections
+open Nv_utils
 
 module B = BddUtils
+
 
 (* should I start by trying BatMap? would also set a comparison basis*)
   (* mcreate v : embed value return map.
@@ -18,10 +20,6 @@ module B = BddUtils
      merge: unembed both values, apply f, embed result.
      mapIf p f m: create BDD for predicate p during compilation.
   *)
-
-
-(* BddMap plus the type of the values*)
-type t = {bdd : BddMap.t; key_ty_id : int; val_ty_id: int}
 
 (* Used to cache functions and their closures *)
 module HashClosureMap = BatMap.Make (struct
@@ -34,8 +32,6 @@ let map_cache = ref HashClosureMap.empty
 let create ~(key_ty_id:int) ~(val_ty_id:int) (vnat: 'v) : t =
   let key_ty = get_type key_ty_id in
   let v = embed_value_id val_ty_id vnat in
-  (* let v = embed_value record_fns (get_type val_ty_id) vnat in
-   * Printf.printf "create val_ty_id: %d\n" val_ty_id; *)
   {bdd = BddMap.create key_ty v; key_ty_id=key_ty_id; val_ty_id=val_ty_id}
 
 
@@ -65,7 +61,7 @@ let map (op_key: (int * 'f)) (vty_new_id: int) (f: 'a1 -> 'a2) (vmap: t) : t =
     match HashClosureMap.Exceptionless.find op_key !map_cache with
     | None ->
       let o =
-        User.make_op1 ~memo:(Memo.Cache (Cudd.Cache.create1 ())) g
+        User.make_op1 ~memo:(Cudd.Memo.Global) g
       in
       map_cache := HashClosureMap.add op_key o !map_cache ;
       o
@@ -75,10 +71,10 @@ let map (op_key: (int * 'f)) (vty_new_id: int) (f: 'a1 -> 'a2) (vmap: t) : t =
 
 
 (** Takes as input an OCaml map and an ocaml key and returns an ocaml value*)
-let find vty (vmap: t) (k: 'key) : 'v =
+let find _ (vmap: t) (k: 'key) : 'v =
   let k_embed = embed_value_id vmap.key_ty_id k in
   let value = BddMap.find vmap.bdd k_embed in
-  unembed_value_id vty value
+  unembed_value_id vmap.val_ty_id value
 
 
 let update vty (vmap: t) (k: 'key) (v: 'v): t =
@@ -163,23 +159,42 @@ let merge ?(opt=None) (op_key: (int * 'f)) f (vmap1: t) (vmap2: t) = (* (((m1, k
                       else None
             in
             let o =
-              User.make_op2 ~memo:(Memo.Cache (Cudd.Cache.create2 ()))
+              User.make_op2 ~memo:(Cudd.Memo.Global)
                 ~commutative:false ~idempotent:false ~special g
             in
               merge_op_cache := HashMergeMap.add key o !merge_op_cache ;
               o
           | Some op -> op
-      in
-      {vmap1 with bdd = (User.apply_op2 op (fst vmap1.bdd) (fst vmap2.bdd), (snd vmap1.bdd))}
+  in
+  {vmap1 with bdd = (User.apply_op2 op (fst vmap1.bdd) (fst vmap2.bdd), (snd vmap1.bdd))}
 
 let equal m1 m2 = BddMap.equal m1.bdd m2.bdd
 
 (** * MapIf related functions*)
 let mapw_op_cache = ref HashClosureMap.empty
 
-let mapIf (predId: int) (op_key : int * 'f) (vty_new_id: int) (f: 'a1 -> 'a2) (vmap : t) : t =
+let mapw_pred_cache = ref HashClosureMap.empty
+
+(* Given the argument [x], the corrresponding bdd [bddf], a predicate's body [f] and a closure (tuple of values) [clos] returns
+ * an environment to build the BDD. *)
+let build_env (x : Syntax.var) (bddf: BddFunc.t) (f: exp) (clos: 'a) =
+  let freeVars = Syntax.free (BatSet.PSet.singleton ~cmp:Var.compare x) f in
+  let freeList = BatSet.PSet.to_list freeVars in
+  let rec loop list clos acc =
+    match list with
+    | [] -> acc
+    | [y] ->
+      Env.update acc y (BddFunc.eval_value (embed_value_id (snd clos) (fst clos)))
+    | y :: ys ->
+      let elt = Obj.magic (fst clos) in
+      let clos = snd clos in
+      let env = Env.update acc y (BddFunc.eval_value (embed_value_id (snd elt) (fst elt))) in
+      loop ys (Obj.magic clos) env
+  in
+  loop freeList (Obj.magic clos) (Env.bind x bddf)
+
+let mapIf (pred_key: int * 'g) (op_key : int * 'f) (vty_new_id: int) (f: 'a1 -> 'a2) (vmap : t) : t =
   let cfg = Cmdline.get_cfg () in
-  let pred = get_bdd predId in
   let f_embed =
     fun x -> (f (unembed_value_id vmap.val_ty_id x))
              |> embed_value_id vty_new_id
@@ -188,9 +203,31 @@ let mapIf (predId: int) (op_key : int * 'f) (vty_new_id: int) (f: 'a1 -> 'a2) (v
     if Mtbdd.get b then f_embed (Mtbdd.get v) |> Mtbdd.unique B.tbl
     else v
   in
-  (* if cfg.no_caching then {vmap with bdd = (Mapleaf.mapleaf2 g pred (fst vmap.bdd), get_type vty_new_id);
-   *                                   val_ty_id = vty_new_id}
-   * else *)
+
+  let pred =
+    match HashClosureMap.Exceptionless.find pred_key !mapw_pred_cache with
+    | None ->
+      (* Printf.printf "edge: %d,%d\n" (fst (fst (Obj.magic clos))) (snd (fst (Obj.magic clos))); *)
+      let pred = get_pred (fst pred_key) in
+      let predFun =
+        match pred.e with
+        | EFun predFun -> predFun
+        | _ -> failwith "expected a function"
+      in
+      let bddf = BddFunc.create_value (OCamlUtils.oget predFun.argty) in
+      let env = build_env predFun.arg bddf predFun.body (snd pred_key) in
+      let bddf = BddFunc.eval env predFun.body in
+      (match bddf with
+       | BBool bdd ->
+         let mtbdd = BddFunc.wrap_mtbdd bdd in
+         mapw_pred_cache :=
+           HashClosureMap.add pred_key mtbdd !mapw_pred_cache ;
+         mtbdd
+       | _ -> failwith "A boolean bdd was expected but something went wrong")
+    | Some mtbdd ->
+      mtbdd
+  in
+
   let op =
     match HashClosureMap.Exceptionless.find op_key !mapw_op_cache with
     | None ->
@@ -203,12 +240,12 @@ let mapIf (predId: int) (op_key : int * 'f) (vty_new_id: int) (f: 'a1 -> 'a2) (v
       in
       let op =
         User.make_op2
-          ~memo:(Memo.Cache (Cudd.Cache.create2 ()))
+          ~memo:(Cudd.Memo.Global)
           ~commutative:false ~idempotent:false ~special g
       in
       mapw_op_cache := HashClosureMap.add op_key op !mapw_op_cache ;
       op
     | Some op -> op
   in
-  {vmap with bdd = (User.apply_op2 op pred (fst vmap.bdd), get_type vty_new_id);
+  {vmap with bdd = (User.apply_op2 op pred (fst vmap.bdd), snd vmap.bdd);
              val_ty_id = vty_new_id}

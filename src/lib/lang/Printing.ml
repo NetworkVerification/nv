@@ -9,7 +9,8 @@ open Nv_utils
 let is_keyword_op op =
   match op with
   | And | Or | Not | UAdd _ | USub _ | Eq | ULess _ | ULeq _ | MGet | NLess | NLeq -> false
-  | TGet _| TSet _| MCreate | MSet | MMap | MMerge | MFoldNode | MFoldEdge | MMapFilter | AtMost _ -> true
+  | TGet _| TSet _| MCreate | MSet | MMap | MMerge | MFoldNode
+  | MFoldEdge | MMapFilter | MMapIte | AtMost _ -> true
 
 (* set to true if you want to print universal quanifiers explicitly *)
 let quantifiers = true
@@ -38,6 +39,7 @@ let prec_op op =
   | MFoldNode -> 5
   | MFoldEdge -> 5
   | MMapFilter -> 5
+  | MMapIte -> 5
   | AtMost _ -> 6
 
 
@@ -97,6 +99,7 @@ let op_to_string op =
   | MSet -> "set"
   | MMap -> "map"
   | MMapFilter -> "mapIf"
+  | MMapIte -> "mapIte"
   | MMerge -> "combine"
   | MFoldNode -> "foldNodes"
   | MFoldEdge -> "foldEdges"

@@ -1,0 +1,35 @@
+include "SRPSig.nv"
+
+module type HijackArg =
+sig
+  include SRP
+
+  val newEdge : tedge
+end
+
+module Hijack (S: HijackArg) =
+struct
+  type attribute = S.attribute
+
+      symbolic attr : attribute
+
+  (* The new node is node number S.nodes *)
+  let nodes = S.nodes + 1
+  let edges = S.edges[S.newEdge := true]
+
+  (* We need to be able to cast between nodes and ints for this, unless we
+     say S.nodes has type node and is the value of the highest-valued node
+     (minus 1) *)
+  let init n =
+    if n = S.nodes then attr else S.init n
+
+
+  let trans e x =
+    if e = S.newEdge then ??? else S.trans e x
+
+  let merge n x y =
+    if n = S.nodes then attr else S.merge n x y
+
+  let assert n x =
+    if n = S.nodes then ??? else assert 
+end

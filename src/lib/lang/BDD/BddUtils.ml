@@ -20,12 +20,12 @@ let rec ty_to_size ty =
   match get_inner_type ty with
   | TUnit -> 1 (* I don't understand how Cudd BDDs work, so encode TUnit as false *)
   | TBool -> 1
-  | TInt _ -> 32 (* TODO: why is this 32?*)
+  | TInt n -> n
   | TOption tyo -> 1 + ty_to_size tyo
   | TTuple ts ->
     List.fold_left (fun acc t -> acc + ty_to_size t) 0 ts
   | TRecord tmap -> ty_to_size (TTuple (RecordUtils.get_record_entries tmap))
-  | TNode -> ty_to_size (TInt 32) (* Encode as int *)
+  | TNode -> ty_to_size (TInt tnode_sz) (* Encode as int *)
   | TEdge -> ty_to_size (TTuple [TNode; TNode]) (* Encode as node pair *)
   | TSubset (ty, _) -> ty_to_size ty
   | TArrow _ | TMap _ | TVar _ | QVar _ ->

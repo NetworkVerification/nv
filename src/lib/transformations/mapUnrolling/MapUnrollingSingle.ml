@@ -224,6 +224,46 @@ let exp_transformer (target : ty) (keys : keys) (recursors : Transformers.recurs
           List.map2 make_result all_keys freshvars
         in
         Some (ematch (unroll_exp map) (addBranch pattern (aexp ((etuple result), Some (unrolled_target), e.espan)) emptyBranch))
+      | MMapIte, [p; f1; f2; map] when has_target_type map ->
+        let key_ty =
+          match target (* Type of the map we're unrolling *) with
+          | TMap (ty, _) -> ty
+          | _ -> failwith "impossible"
+        in
+        let f1' = unroll_exp f1 in
+        let f2' = unroll_exp f2 in
+        let p' = unroll_exp p in
+        let all_keys =
+          List.map (fun v -> aexp (evar v, Some key_ty, e.espan)) symb_keys @
+          const_keys
+        in
+        let freshvars =
+          List.map (fun _ -> Var.fresh "UnrollingMapFilterVar") all_keys
+        in
+        let pattern =
+          PTuple (List.map (fun var -> PVar var) freshvars)
+        in
+        let val_ty =
+          match target (* Type of the map we're unrolling *) with
+          | TMap (_, ty) -> ty
+          | _ -> failwith "impossible"
+        in
+        let make_result k var =
+          let if_exp =
+            eif
+              (aexp (eapp p' k, Some (TBool), e.espan))
+              (aexp (eapp f1' var, Some (val_ty), e.espan))
+              (aexp (eapp f2' var, Some (val_ty), e.espan))
+          in
+          aexp (if_exp, Some (val_ty), e.espan)
+        in
+        let freshvars =
+          List.map (fun var -> aexp (evar var, Some (val_ty), e.espan)) freshvars
+        in
+        let result =
+          List.map2 make_result all_keys freshvars
+        in
+        Some (ematch (unroll_exp map) (addBranch pattern (aexp ((etuple result), Some (unrolled_target), e.espan)) emptyBranch))
       | MMerge, f :: map1 :: map2 :: _ when has_target_type map1 && has_target_type map2 ->
         (* Should be redundant, since I think typing assumes the arguments to
            MMerge have the same type *)
@@ -306,9 +346,9 @@ let exp_transformer (target : ty) (keys : keys) (recursors : Transformers.recurs
       (* Do some extra work to make sure all map operations have the right number of arguments *)
       | (MCreate, [_] | MGet, [_; _] | MSet, [_;_;_] | MMap, [_;_]
         | MMapFilter, [_;_;_] | MMerge, _::_::_::_ | MFoldNode, [_;_;_]
-        | MFoldEdge, [_;_;_]) ->
+        | MFoldEdge, [_;_;_] | MMapIte, [_;_;_;_]) ->
         None
-      | (MCreate| MGet| MSet| MMap| MMapFilter| MMerge| MFoldNode| MFoldEdge), _ ->
+      | (MCreate| MGet| MSet| MMap| MMapFilter| MMapIte | MMerge | MFoldNode| MFoldEdge), _ ->
         failwith @@ "Failed to unroll map: Incorrect number of arguments to map operation : "
                     ^ Printing.exp_to_string e
       | (AtMost _ | And | Or | Not | UAdd _ | USub _ | ULess _ | ULeq _ | NLess | NLeq | Eq | TGet _ | TSet _), _ -> None

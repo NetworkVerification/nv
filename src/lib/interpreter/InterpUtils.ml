@@ -64,7 +64,8 @@ let rec match_branches branches v env =
   (* Syntax.iterBranches (fun (p,e) ->  Printf.printf "%s\n" (Printing.pattern_to_string p)) branches;
    * Printf.printf "val: %s\n" (Printing.value_to_string v); *)
   match Syntax.lookUpPat (val_to_pat v) branches with
-  | Found e -> Some (env, e)
+  | Found e ->
+    Some (env, e)
   | Rest ls -> match_branches_lst ls v env
 
 let build_env (env: Syntax.env) (free_vars: Nv_datastructures.Var.t BatSet.PSet.t) :
@@ -77,4 +78,4 @@ let build_env (env: Syntax.env) (free_vars: Nv_datastructures.Var.t BatSet.PSet.
        | None -> acc )
     free_vars base
 
-let bddfunc_cache : bool Cudd.Mtbdd.t Collections.ExpMap.t ref = ref Collections.ExpMap.empty
+let bddfunc_cache : bool Cudd.Mtbdd.t Collections.ExpEnvMap.t ref = ref Collections.ExpEnvMap.empty

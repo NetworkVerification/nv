@@ -70,7 +70,7 @@ let value_to_bdd (v: value) : Bdd.vt =
       aux tup idx
     | VNode n ->
       (* Encode same way as we encode ints *)
-      aux (vint (Integer.create ~value:n ~size:32)) idx
+      aux (vint (Integer.create ~value:n ~size:tnode_sz)) idx
     | VEdge (e1, e2) ->
       (* Encode same way as we encode tuples of nodes *)
       let tup = vtuple [vnode e1; vnode e2] in
@@ -125,7 +125,7 @@ let vars_to_value vars ty =
         aux idx tup
       | TNode ->
         (* Was encoded as int, so decode same way *)
-        (match aux idx (TInt 32) with
+        (match aux idx (TInt tnode_sz) with
          | {v = VInt n; _}, i ->  vnode (Integer.to_int n), i
          | _ -> failwith "impossible")
       | TEdge ->
@@ -172,7 +172,10 @@ let map ~op_key (f: value -> value) ((vdd, ty): t) : t =
       match ExpMap.Exceptionless.find op_key !map_cache with
       | None ->
         let o =
-          User.make_op1 ~memo:(Memo.Cache (Cache.create1 ())) g
+          User.make_op1
+            ~memo:(Cudd.Memo.Global)
+            (* ~memo:(Memo.Cache (Cache.create1 ~maxsize:4096 ())) *)
+            g
         in
         map_cache := ExpMap.add op_key o !map_cache ;
         o
@@ -233,12 +236,52 @@ let map_when ~op_key (pred: bool Mtbdd.t) (f: value -> value)
         in
         let op =
           User.make_op2
-            ~memo:(Memo.Cache (Cache.create2 ()))
+            ~memo:(Cudd.Memo.Global)
+            (* ~memo:(Memo.Cache (Cache.create2 ~maxsize:4096 ())) *)
             ~commutative:false ~idempotent:false ~special g
         in
         mapw_op_cache := ExpMap.add op_key op !mapw_op_cache ;
         op
       | Some op -> op
+    in
+    (User.apply_op2 op pred vdd, ty)
+
+let mapite_op_cache = ref ExpMap.empty
+
+(* For map_ite we have two operations hence we maintain a map from expressions to another map for the cache *)
+let map_ite ~op_key1 ~op_key2 (pred: bool Mtbdd.t) (f1: value -> value) (f2: value -> value)
+    ((vdd, ty): t) : t =
+  let cfg = Cmdline.get_cfg () in
+  let g b v =
+    if Mtbdd.get b then f1 (Mtbdd.get v) |> Mtbdd.unique B.tbl
+    else f2 (Mtbdd.get v) |> Mtbdd.unique B.tbl
+  in
+  if cfg.no_caching then (Mapleaf.mapleaf2 g pred vdd, ty)
+  else
+    let op =
+      match ExpMap.Exceptionless.find op_key1 !mapite_op_cache with
+      | None ->
+        let op =
+          User.make_op2
+            ~memo:(Cudd.Memo.Global)
+            (* ~memo:(Memo.Cache (Cache.create2 ())) *)
+            ~commutative:false ~idempotent:false g
+        in
+        let newMap = ExpMap.singleton op_key2 op in
+        mapite_op_cache := ExpMap.add op_key1 newMap !mapite_op_cache ;
+        op
+      | Some map2 ->
+        (match ExpMap.Exceptionless.find op_key2 map2 with
+         | None ->
+           let op =
+             User.make_op2
+               ~memo:(Cudd.Memo.Global)
+               (* ~memo:(Memo.Cache (Cache.create2 ())) *)
+               ~commutative:false ~idempotent:false g
+           in
+           mapite_op_cache := ExpMap.modify op_key1 (fun map2 -> ExpMap.add op_key2 op map2) !mapite_op_cache ;
+           op
+         | Some op -> op)
     in
     (User.apply_op2 op pred vdd, ty)
 
@@ -304,10 +347,12 @@ let merge ?opt ~op_key (f: value -> value -> value) ((x, tyx): t)
               then Some right
               else None
         in
-        let o =
-          User.make_op2
-            ~memo:(Memo.Cache (Cache.create2 ()))
+        let o = User.make_op2
+            ~memo:(Cudd.Memo.Global)
             ~commutative:false ~idempotent:false ~special g
+          (* User.make_op2
+           *   ~memo:(Memo.Cache (Cache.create2 ~maxsize:4096 ()))
+           *   ~commutative:false ~idempotent:false ~special g *)
         in
         merge_op_cache := MergeMap.add key o !merge_op_cache ;
         o
