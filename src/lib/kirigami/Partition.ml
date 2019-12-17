@@ -104,7 +104,7 @@ let create_exact_predicate attr_type value =
 
 (** Create a symbolic variable for each cut edge.
  *  @return a map from edges to hypothesis and predicate information *)
-let create_hyp_vars attr_type (interface: exp option EdgeMap.t) : (var * exp) EdgeMap.t =
+let create_hyp_vars _attr_type (interface: exp option EdgeMap.t) : (var * exp) EdgeMap.t =
   let create_hyp_var edge = 
     let name = Printf.sprintf "hyp_%s" (Edge.to_string edge) in
     Var.fresh name
@@ -176,6 +176,7 @@ let get_input_exps (interfaces: OpenAdjGraph.interfaces) (edge_hyps: (var * exp)
     EdgeMap.add (inn,v) (evar var) m) broken EdgeMap.empty
 
 let open_declarations (decls: declarations) : declarations =
+  let open Nv_transformations in
   let partition = get_partition decls in
   if Option.is_some partition then
     let attr_type = get_attr_type decls |> Option.get in
@@ -199,7 +200,6 @@ let open_declarations (decls: declarations) : declarations =
     let assertion = get_assert decls in
     let new_assertion = transform_assert assertion intf output_preds in
     let new_requires = EdgeMap.fold (fun _ (v, p) l -> DRequire (eapp p (evar v)) :: l) edge_hyps [] in
-    let added_decls = new_symbolics @ new_requires in
     (* replace relevant old decls *)
     let new_decls = List.filter_map (fun d -> match d with
     | DNodes _ -> Some (DNodes new_nodes)
@@ -216,7 +216,8 @@ let open_declarations (decls: declarations) : declarations =
     | _ -> Some d) decls in
     (* add the assertion in at the end if there wasn't an assert in the original decls *)
     let add_assert = if Option.is_none assertion then [DAssert (Option.get new_assertion)] else [] in
-    added_decls @ new_decls @ add_assert
+    (* also add requires at the end so they can use any bindings earlier in the file *)
+    new_symbolics @ new_decls @ new_requires @ add_assert
   else
     (* no partition provided; do nothing *)
     decls
