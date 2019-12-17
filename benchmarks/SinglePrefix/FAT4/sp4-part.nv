@@ -1,0 +1,46 @@
+(* Partitioned version of sp4.nv *)
+
+include "sp4.nv"
+
+(* FIXME: doesn't yet get bound correctly for interface *)
+let isSelected x = match x.selected with
+  | None -> false
+  | _ -> true
+
+let partition node = match node with
+  | 0n -> 0u8
+  | 1n -> 0u8
+  | 2n -> 0u8
+  | 3n -> 0u8
+  | _ -> 1u8
+
+let interface edge = match edge with
+  (* 0 edges *)
+  | 0~17 -> Some (fun x -> match x.selected with | None -> false | _ -> true)
+  | 0~18 -> Some (fun x -> match x.selected with | None -> false | _ -> true)
+  | 17~0 -> Some (fun x -> match x.selected with | None -> false | _ -> true)
+  | 18~0 -> Some (fun x -> match x.selected with | None -> false | _ -> true)
+  (* 1 edges *)
+  | 8~1 -> Some (fun x -> match x.selected with | None -> false | _ -> true)
+  | 1~8 -> Some (fun x -> match x.selected with | None -> false | _ -> true)
+  | 1~14 -> Some (fun x -> match x.selected with | None -> false | _ -> true)
+  | 1~16 -> Some (fun x -> match x.selected with | None -> false | _ -> true)
+  | 1~18 -> Some (fun x -> match x.selected with | None -> false | _ -> true)
+  | 14~1 -> Some (fun x -> match x.selected with | None -> false | _ -> true)
+  | 16~1 -> Some (fun x -> match x.selected with | None -> false | _ -> true)
+  | 18~1 -> Some (fun x -> match x.selected with | None -> false | _ -> true)
+  (* 2 edges *)
+  | 2~6 -> Some (fun x -> match x.selected with | None -> false | _ -> true)
+  | 2~8 -> Some (fun x -> match x.selected with | None -> false | _ -> true)
+  | 6~2 -> Some (fun x -> match x.selected with | None -> false | _ -> true)
+  | 8~2 -> Some (fun x -> match x.selected with | None -> false | _ -> true)
+  (* 3 edges *)
+  | 3~8 -> Some (fun x -> match x.selected with | None -> false | _ -> true)
+  | 3~14 -> Some (fun x -> match x.selected with | None -> false | _ -> true)
+  | 3~16 -> Some (fun x -> match x.selected with | None -> false | _ -> true)
+  | 3~18 -> Some (fun x -> match x.selected with | None -> false | _ -> true)
+  | 8~3 -> Some (fun x -> match x.selected with | None -> false | _ -> true)
+  | 14~3 -> Some (fun x -> match x.selected with | None -> false | _ -> true)
+  | 16~3 -> Some (fun x -> match x.selected with | None -> false | _ -> true)
+  | 18~3 -> Some (fun x -> match x.selected with | None -> false | _ -> true)
+  | _ -> None
