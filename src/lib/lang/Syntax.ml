@@ -1113,6 +1113,7 @@ let unproj_var (x : var) =
   let name, n = BatString.split s "-proj-" in
   (int_of_string n, Var.to_var (name, i))
 
+(** Get the variables referenced by the given type. *)
 let rec get_ty_vars (t: ty) : var list =
   match t with
   | TVar tv -> begin match !tv with
@@ -1127,6 +1128,7 @@ let rec get_ty_vars (t: ty) : var list =
   | TRecord tm -> StringMap.fold (fun _s t l -> (get_ty_vars t) @ l) tm []
   | _ -> []
 
+(** Get the variables referenced by the given expression. *)
 let rec get_exp_vars (e: exp) : var list =
   match e.e with
   | EVar v -> [v]

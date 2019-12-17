@@ -1,0 +1,20 @@
+include "utils.nv"
+let nodes = 3
+let edges = {
+  0=1;
+  1=2;
+}
+
+let merge n x y = mapbetter min x y
+
+let min x y = if x < y then x else y
+
+let trans edge x = mapo (fun x -> x + 1) x
+
+let init n = match n with
+  | 0n -> Some 0
+  | _ -> None
+
+type attribute = option[int]
+
+let assert n x = isSome x
