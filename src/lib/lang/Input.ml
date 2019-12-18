@@ -150,7 +150,9 @@ let sort_decls ds =
 let parse fname =
   let files_to_parse = process_includes fname in
   let t = Console.read_files files_to_parse in
-  let ds = List.concat (List.map read_from_file files_to_parse) in
+  let old_ds = List.concat (List.map read_from_file files_to_parse) in
   (* print_endline @@ Printing.declarations_to_string ds; *) 
-  let ds = sort_decls ds in
+  let ds = sort_decls old_ds in
+  (* check that the lists have equal length *)
+  assert (List.compare_lengths old_ds ds = 0);
   (ds, t)
