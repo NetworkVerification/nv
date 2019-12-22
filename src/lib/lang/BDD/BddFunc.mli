@@ -11,6 +11,8 @@ type t =
 
 val bdd_of_bool: bool -> Cudd.Man.v Cudd.Bdd.t
 
+val value_mtbdd_bool_mtbdd : value Cudd.Mtbdd.unique Cudd.Vdd.t -> bool Cudd.Mtbdd.unique Cudd.Vdd.t
+
 val create_value : ty -> t
 
 val eval : t Nv_datastructures.Env.t -> exp -> t

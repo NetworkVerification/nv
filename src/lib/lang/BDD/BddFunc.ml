@@ -62,6 +62,15 @@ let wrap_mtbdd bdd =
 let bdd_of_mtbdd (map: bool Cudd.Mtbdd.unique Cudd.Vdd.t) =
   Mtbdd.guard_of_leaf B.tbl_bool map true
 
+(* Value mtbdd to bool mtbdd*)
+let value_mtbdd_bool_mtbdd (map: value Cudd.Mtbdd.unique Cudd.Vdd.t) =
+  Mapleaf.mapleaf1 (fun v ->
+      match (Mtbdd.get v).v with
+        | VBool b ->
+          b |> Mtbdd.unique B.tbl_bool
+        | _ -> failwith "not a bool mtbdd") map
+
+(* Given a type creates a BDD representing all possible values of that type*)
 let create_value (ty: ty) : t =
   let rec aux i ty =
     match get_inner_type ty with
@@ -91,7 +100,38 @@ let create_value (ty: ty) : t =
       failwith (Printf.sprintf "internal error (create_value) type:%s\n" (Printing.ty_to_string (get_inner_type ty)))
   in
   let ret, _ = aux 0 ty in
-  ret
+    ret
+
+let constrain_bdd (x : t) (typ: Syntax.ty) : Bdd.vt =
+  let rec aux x idx ty =
+    match x, get_inner_type ty with
+      | BBool b, TBool ->
+        let var = B.ithvar idx in
+          (Bdd.eq var b, idx + 1)
+      | BInt xs, TInt size ->
+        (Array.fold_lefti (fun acc i b1 ->
+             Bdd.dand acc (Bdd.eq b1 (B.ithvar(i+idx)))) (Bdd.dtrue B.mgr) xs, idx + size)
+      | x, TNode ->
+        aux x idx (TInt tnode_sz)
+      | x, TEdge ->
+        aux x idx (TTuple [TNode; TNode])
+      | Tuple xs, TTuple ts ->
+        List.fold_left2
+          (fun (bdd_acc, idx) v ty ->
+             let bdd, i = aux v idx ty in
+               (Bdd.dand bdd_acc bdd, i))
+          (Bdd.dtrue B.mgr, idx) xs ts
+      | x, TRecord map ->
+        aux x idx (TTuple (RecordUtils.get_record_entries map))
+      | BOption (tag, x), TOption ty ->
+        let t = Bdd.eq tag (B.ithvar idx) in
+        let v, idx = aux x (idx + 1) ty in
+          (Bdd.dand t v, idx)
+      | _, _ ->
+        failwith (Printf.sprintf "internal error (constrain_bdd)\n")
+  in
+  let ret, _ = aux x 0 typ in
+    ret
 
 (** Is x a BDD value?*)
 let rec isBdd (x: t) =
@@ -319,7 +359,7 @@ let eval_int_op2 f f_lifted (x: t) (y: t) : t =
         ) (fst m1), snd m1)
     | BMap _, BInt _ | BInt _, BMap _ ->
       failwith "currently not lifting operations between maps and predicate key"
-    | _ -> failwith "internal error (eval)"
+    | _ -> failwith "internal error (eval_int_op2)"
 
 (* Used for matches over maps*)
 let eval_branch_mapLift env matches key_ty =
@@ -374,12 +414,93 @@ let eval_branch_mapLift env matches key_ty =
       | Some (matchEnv, c) -> Some (Env.updates env matchEnv, c)
 
 
+let rec t_to_bdd (x : t) =
+  match x with
+    | BInt _ | BBool _ -> x
+    | BOption (tag, x) ->
+      BOption (tag, t_to_bdd x)
+    | Tuple ls ->
+      Tuple (List.map t_to_bdd ls)
+    | Value v -> eval_value v
+    | BMap _ -> failwith "failing for now"
+
+let eval_tget lo hi x =
+  let eval_tget_v lo hi v =
+    match v.v with
+      | VTuple elts ->
+        if lo = hi then List.nth elts lo
+         else vtuple (elts |> BatList.drop lo  |> BatList.take (hi - lo + 1))
+      | _ -> failwith "expected a tuple"
+  in
+  match x with
+    | Value v ->
+      Value (eval_tget_v lo hi v)
+    | Tuple elts ->
+      if lo = hi then List.nth elts lo
+      else Tuple (elts |> BatList.drop lo  |> BatList.take (hi - lo + 1))
+    | BMap m ->
+      BMap (Mapleaf.mapleaf1
+              (fun v -> eval_tget_v lo hi (Mtbdd.get v) |> Mtbdd.unique B.tbl) (fst m),
+            snd m)
+    | _ -> failwith "Impossible"
+
+let eval_tset lo hi xs x =
+  match xs, x with
+    | Value vs, Value v  ->
+      (match vs.v with
+        | VTuple elts ->
+          if lo = hi then
+            Value (vtuple (BatList.modify_at lo (fun _ -> v) elts))
+          else
+            (match v.v with
+              | VTuple velts ->
+                Value (vtuple (OCamlUtils.replaceSlice lo hi elts velts))
+              | _ -> failwith "Bad TSet")
+        | _ -> failwith "Expected a tuple")
+    | Value vs, x ->
+      (match vs.v with
+        | VTuple elts ->
+          let elts = List.map (fun v -> Value v) elts in
+          if lo = hi then
+            Tuple (BatList.modify_at lo (fun _ -> x) elts)
+          else
+            (match x with
+              | Tuple newElts ->
+                Tuple (OCamlUtils.replaceSlice lo hi elts newElts)
+                  (* more cases likely apply but unimportant as this should always be lo=hi*)
+              | _ -> failwith "Bad TSet")
+        | _ -> failwith "Expected a tuple")
+    | Tuple elts, x ->
+      if lo = hi then
+        Tuple (BatList.modify_at lo (fun _ -> x) elts)
+      else
+        (match x with
+          | Tuple newElts ->
+            Tuple (OCamlUtils.replaceSlice lo hi elts newElts)
+          (* more cases likely apply but unimportant as this should always be lo=hi*)
+          | _ -> failwith "Bad TSet")
+    | BMap m, Value v ->
+      BMap (Mapleaf.mapleaf1
+              (fun vs ->
+                 (match (Mtbdd.get vs).v with
+                   | VTuple elts ->
+                     if lo = hi then
+                       vtuple (BatList.modify_at lo (fun _ -> v) elts)
+                     else
+                       (match v.v with
+                         | VTuple velts ->
+                           vtuple (OCamlUtils.replaceSlice lo hi elts velts)
+                         | _ -> failwith "Bad TSet")
+                   | _ -> failwith "Expected a tuple") |> Mtbdd.unique B.tbl
+              ) (fst m), snd m)
+    | _ -> failwith "Impossible"
+
 let rec eval (env: t Env.t) (e: exp) : t =
   match e.e with
     | ETy (e1, _) -> eval env e1
     | EVar x -> (
         match Env.lookup_opt env x with
-          | None -> failwith "internal error (eval)"
+          | None -> failwith "internal error (eval - lookup failed)"
           | Some v -> v )
     | EVal v -> Value v
     | EOp (op, es) -> (
@@ -398,8 +519,27 @@ let rec eval (env: t Env.t) (e: exp) : t =
             eval_int_op2 (fun i1 i2 -> vbool (Integer.lt i1 i2)) lt (eval env e1) (eval env e2)
           | NLeq, [e1; e2] ->
             eval_int_op2 (fun i1 i2 -> vbool (Integer.leq i1 i2)) leq (eval env e1) (eval env e2)
+          | TGet (_, lo, hi), [e1] ->
+            eval_tget lo hi (eval env e1)
+          | MGet, [e1;e2] ->
+            let v1 = eval env e1 in
+            let v2 = eval env e2 in
+            let m = match v1 with
+              | BMap m -> m
+              | Value v -> (match v.v with | VMap m -> m | _ -> failwith "mistyped")
+              | _ -> failwith "mistyped evaluation"
+            in
+            (match v2 with
+              | Value v ->
+                Value (BddMap.find m v)
+              | _ ->
+                let k = t_to_bdd v2 in
+                let newm =
+                  Mtbdd.constrain (fst m) (constrain_bdd k (snd m))
+                in
+                  BMap (newm, (snd m)))
           | USub _, [_; _] -> failwith "subtraction not implemented"
-          | _ -> failwith "unimplemented" )
+ )
     | EIf (e1, e2, e3) ->
       eval_ite env e1 e2 e3
     | ELet (x, e1, e2) ->
@@ -600,7 +740,7 @@ and eval_bool_op1 env f f_lifted e1 =
               | VBool b1 -> vbool (f b1) |> Mtbdd.unique B.tbl
               | _ -> failwith "Mistyped boolean computation"
           ) (fst m1), snd m1)
-      | _ -> failwith "internal error (eval)"
+      | _ -> failwith "internal error (eval_bool_op1)"
 
 and eval_bool_op2 env f f_lifted e1 e2 =
   let v1 = eval env e1 in
@@ -633,7 +773,7 @@ and eval_bool_op2 env f f_lifted e1 e2 =
           ) (fst m1), snd m1)
       | BMap _, BBool _ | BBool _, BMap _ ->
         failwith "currently not lifting operations between maps and predicate key"
-      | _ -> failwith "internal error (eval)"
+      | _ -> failwith "internal error (eval_bool_op2)"
 
 and eval_ite env e1 e2 e3 =
   let g = eval env e1 in
