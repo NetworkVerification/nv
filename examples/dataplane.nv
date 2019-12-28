@@ -11,7 +11,8 @@ type ribEntry = option[bgp]
 type packet = { srcIp: int; dstIp: int; }
 type packets = set[packet]
 
-type attribute = (packets, dict[prefix,ribEntry])
+type attr = {dataplane:packets; controlplane:dict[prefix,ribEntry];}
+type attribute = attr
 
 let nodes = 4
 
@@ -80,22 +81,28 @@ let initRoute node =
 (* Combined functions *)
 
 let merge node x y =
-  let (psx, labx) = x in
-  let (psy, laby) = y in
-  (mergePackets node psx psy, combine mergeRoute labx laby)
+  let psx = x.dataplane in
+  let psy = y.dataplane in
+  let labx = x.controlplane in
+  let laby = y.controlplane in
+  {dataplane=mergePackets node psx psy;
+   controlplane=combine mergeRoute labx laby}
 
 let trans edge x =
-  let (ps, rib) = x in
-  (transPackets edge rib ps, map (transRoute edge) rib)
+  let ps = x.dataplane in
+  let rib = x.controlplane in
+  {dataplane = transPackets edge rib ps;
+   controlplane = map (transRoute edge) rib}
 
 let init node =
-  (initPackets node, initRoute node)
+  {dataplane = initPackets node;
+   controlplane = initRoute node}
 
 let assert node x =
   match node with
   | 1n ->
      (
-       let (ps, rib) = x in
+       let ps = x.dataplane in
        match ps[{ srcIp = 1; dstIp=0; }] with
        | true ->
           true

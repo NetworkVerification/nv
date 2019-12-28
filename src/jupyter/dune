@@ -1,0 +1,13 @@
+(library
+  (name nv_jupyter)
+  (public_name nv_jupyter)
+  (modes byte)
+ (libraries
+   jupyter
+   jupyter.notebook
+   jupyter.comm
+   batteries
+   cudd
+   integers
+   nv_lib)
+)

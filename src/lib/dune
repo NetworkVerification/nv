@@ -1,7 +1,7 @@
 (library
   (name nv_lib)
   (public_name nv_lib)
-  (modes native)
+; (modes native)
   (libraries
     nv_lang
     nv_smt

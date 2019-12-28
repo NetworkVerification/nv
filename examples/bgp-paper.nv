@@ -1,0 +1,41 @@
+type bgp = {length:int;
+            lp:int;
+            med:int;
+            comms:set[int];
+            origin: tnode}
+
+type attribute = option[bgp]
+
+let nodes = 5
+let edges = {0=1;0=2;1=4;2=4;1=3;2=3;}
+
+symbolic route : option[bgp]
+
+let init (u : tnode) = match u with
+| 0n -> Some {length=0; lp=100; med=80; comms={}; origin=0n}
+| 4n -> route
+| _ -> None
+
+let trans (e: tedge) x =
+  match x with
+  | None -> None
+  | Some b -> Some {b with length = b.length+1}
+
+let isBetter x y =
+  match (x,y) with
+  | (None, _) -> false
+  | (_, None) -> true
+  | (Some b1, Some b2) ->
+    if b1.lp > b2.lp then true
+    else if b2.lp > b1.lp then false
+    else if b1.length < b2.length then true
+    else if b2.length < b1.length then false
+    else if b1.med <= b2.med then true else false
+
+let merge (u: tnode) x y =
+  if isBetter x y then x else y
+
+let assert (u : tnode) x =
+  match x with
+  | None -> false
+  | Some b -> if !(u = 4n) then b.origin = 0n else true
