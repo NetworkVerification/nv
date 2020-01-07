@@ -13,10 +13,10 @@ require (pred_2_1 h_2_1)
 (* should fail on node 5 *)
 let assert n x = 
   match n with
-  (* check that w's output satisfies h_1_2's property *)
+  (* check that v's output satisfies h_1_2's property *)
   | 3n -> (pred_1_2 x)
-  (* check that v's output satisfies h_2_1's property *)
-  (* | 5n -> if (pred_2_1 x) then (pred_2_1 h_2_1) else true *)
+  (* check that u's output satisfies h_2_1's property *)
+  | 5n -> if (pred_2_1 x) then (pred_2_1 h_2_1) else true
   | 5n -> (pred_2_1 x)
   (* don't test the property on the inputs *)
   | 4n -> true
