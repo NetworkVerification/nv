@@ -10,6 +10,8 @@ type t =
 
 type map_back = t -> t
 
+val print_masked_type : ty -> t -> string
+
 val print_solution : t -> unit
 
 val mask_type_ty : ty -> ty

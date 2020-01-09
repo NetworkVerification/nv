@@ -1,0 +1,42 @@
+(* I don't want to think about e.g. prefixes and lpms, So I'm defining a
+   destination to be either a node in the network (presumably a loopback address),
+   or an external address *)
+(* Pretend NV has finite variants. We could implement this using e.g. a record *)
+type dest =
+  | DNode of node
+  | DExternal of int
+
+(* I'm thinking we should just always use AlgebraWithDefault *)
+module type Algebra =
+sig
+  type attribute
+
+  val trans : tedge -> attribute -> attribute
+  val merge : tnode -> attribute -> attribute -> attribute
+end
+
+(* Is this useful? Sometimes, but maybe not enough *)
+module type AlgebraWithDefault =
+sig
+  type attribute
+
+  val trans : tedge -> attribute -> attribute
+  val merge : tnode -> attribute -> attribute -> attribute
+
+  val default : attribute
+end
+
+(* In practice this definition will probably be built in *)
+module type SRP =
+sig
+  include Algebra
+  (* Something topological. Maybe like this? *)
+  val nodes : int
+  val edges : set[tedge]
+
+  (* Symbolics? How do we declare those? *)
+
+  val init : tnode -> attribute
+  (* This is probably the most general thing? *)
+  val assert : option[tnode -> attribute -> bool]
+end
