@@ -30,6 +30,8 @@ symbolic h_2_1 : int
 let min x y = if x < y then x else y
 
 let merge n x y = match n with
+  | 3n -> min x y
+  | 5n -> min x y
   | _ -> min x y
 
 (* Transfer *)
