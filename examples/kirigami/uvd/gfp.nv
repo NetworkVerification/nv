@@ -7,7 +7,7 @@ include "topology.nv"
 let prop x = x < 3
 
 let pred_1_2 x = (x >= 1 && x <= 2)
-let pred_2_1 x = true
+let pred_2_1 x = x > 0
 
 require (pred_1_2 h_1_2)
 require (pred_2_1 h_2_1)

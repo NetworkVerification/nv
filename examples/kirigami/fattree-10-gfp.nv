@@ -23,6 +23,10 @@ let max_len_route r l n = match r with
   | Some r -> r.len <= l && r.nexthop = n
   | None -> false
 
+let some_route r l n = match r with
+  | Some _ -> true
+  | None -> false
+
 let any_route r l n = true
 
 (* --- Hypotheses ----------------------------------------------------------------- *)
@@ -42,14 +46,14 @@ symbolic h_1_7 : option[route]
 symbolic h_7_1 : option[route]
 
 (* requirements on the hypotheses *)
-let pred_0_2 x = max_len_route x 3 0n
+let pred_0_2 x = any_route x 3 0n
 let pred_2_0 x = any_route x 4 2n
 let pred_0_6 x = any_route x 3 0n
-let pred_6_0 x = max_len_route x 2 6n
-let pred_1_3 x = max_len_route x 3 1n
+let pred_6_0 x = some_route x 2 6n
+let pred_1_3 x = any_route x 3 1n
 let pred_3_1 x = any_route x 4 3n
 let pred_1_7 x = any_route x 3 1n
-let pred_7_1 x = max_len_route x 2 7n
+let pred_7_1 x = some_route x 2 7n
 
 (* as the destination is 9n, hypotheses entering 9's pod do not need to be exact *)
 require (pred_0_2 h_0_2)
