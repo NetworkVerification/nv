@@ -1,0 +1,188 @@
+(* vim: set syntax=ocaml: *)
+(* Partitioned version of sp20.nv *)
+include "../../../examples/utils.nv"
+include "sp20.nv"
+
+(* destination: node 0 *)
+(* (1174456064, 24u5) *)
+
+(* split along spine-pod edges *)
+let partition node = match node with
+  | 1n -> 0u8
+  | 3n -> 0u8
+  | 4n -> 0u8
+  | 7n -> 0u8
+  | _ -> 1u8
+
+let interface edge = 
+  let any x = true in
+  let nothingButBgp x =
+    match x with
+    | {connected = c; static = s; ospf = o; bgp = b; selected = sel} ->
+    (* only have bgp routes *)
+    c = None && s = None && o = None
+  in
+  let hasOnlyBgp x = 
+    match x with
+    | {connected = c; static = s; ospf = o; bgp = b; selected = sel} ->
+    (* connected, static and ospf aren't transferred,
+     * so transfer won't maintain their values
+     *)
+    c = None && s = None && o = None && isSome b
+  in
+  match edge with
+  (* 1 edges - 1 gets the route to 10 via 8 *)
+  | 1~8 -> Some nothingButBgp
+  | 1~14 -> Some hasOnlyBgp
+  | 1~16 -> Some hasOnlyBgp
+  | 1~18 -> Some hasOnlyBgp
+  | 8~1 -> Some hasOnlyBgp
+  | 14~1 -> Some nothingButBgp
+  | 16~1 -> Some nothingButBgp
+  | 18~1 -> Some nothingButBgp
+  (* 3 edges - 3 gets the route to 10 via 8 *)
+  | 3~8 -> Some nothingButBgp
+  | 3~14 -> Some hasOnlyBgp
+  | 3~16 -> Some hasOnlyBgp
+  | 3~18 -> Some hasOnlyBgp
+  | 8~3 -> Some hasOnlyBgp
+  | 14~3 -> Some nothingButBgp
+  | 16~3 -> Some nothingButBgp
+  | 18~3 -> Some nothingButBgp
+  (* 4 edges - 4 gets the route to 10 via 6 *)
+  | 4~6 -> Some nothingButBgp
+  | 4~13 -> Some hasOnlyBgp
+  | 4~15 -> Some hasOnlyBgp
+  | 4~17 -> Some hasOnlyBgp
+  | 6~4 -> Some hasOnlyBgp
+  | 13~4 -> Some nothingButBgp
+  | 15~4 -> Some nothingButBgp
+  | 17~4 -> Some nothingButBgp
+  (* 7 edges - 7 gets the route to 10 via 6 *)
+  | 7~6 -> Some nothingButBgp
+  | 7~13 -> Some hasOnlyBgp
+  | 7~15 -> Some hasOnlyBgp
+  | 7~17 -> Some hasOnlyBgp
+  | 6~7 -> Some hasOnlyBgp
+  | 13~7 -> Some nothingButBgp
+  | 15~7 -> Some nothingButBgp
+  | 17~7 -> Some nothingButBgp
+  | _ -> None
+
+(* {edge-199=0, edge-198=1, aggregation-185=2, aggregation-184=3,
+   aggregation-183=4, aggregation-182=5, aggregation-189=6, aggregation-188=7,
+   aggregation-187=8, aggregation-186=9, aggregation-181=10, aggregation-180=11,
+   aggregation-169=12, aggregation-289=13, aggregation-168=14, aggregation-284=15,
+   aggregation-163=16, aggregation-283=17, aggregation-162=18, aggregation-282=19,
+   aggregation-161=20, aggregation-281=21, aggregation-160=22, aggregation-288=23,
+   aggregation-167=24, aggregation-287=25, aggregation-166=26, aggregation-286=27,
+   aggregation-165=28, aggregation-285=29, aggregation-164=30, aggregation-280=31,
+   core-92=32, aggregation-149=33, core-91=34, aggregation-269=35,
+   aggregation-148=36, core-90=37, aggregation-389=38, aggregation-268=39,
+   aggregation-147=40, aggregation-388=41, aggregation-267=42, aggregation-146=43,
+   aggregation-383=44, aggregation-262=45, aggregation-141=46, core-99=47,
+   aggregation-382=48, aggregation-261=49, aggregation-140=50, core-98=51,
+   aggregation-381=52, aggregation-260=53, core-97=54, aggregation-380=55,
+   core-96=56, aggregation-387=57, aggregation-266=58, aggregation-145=59,
+   core-95=60, aggregation-386=61, aggregation-265=62, aggregation-144=63,
+   core-94=64, aggregation-385=65, aggregation-264=66, aggregation-143=67,
+   core-93=68, aggregation-384=69, aggregation-263=70, aggregation-142=71,
+   edge-250=72, edge-492=73, edge-371=74, edge-491=75, edge-370=76, edge-252=77,
+   edge-494=78, edge-373=79, edge-131=80, edge-251=81, edge-493=82, edge-372=83,
+   edge-130=84, edge-490=85, aggregation-369=86, aggregation-248=87,
+   aggregation-127=88, aggregation-489=89, aggregation-368=90, aggregation-247=91,
+   aggregation-126=92, aggregation-488=93, aggregation-367=94, aggregation-246=95,
+   aggregation-125=96, aggregation-487=97, aggregation-366=98, aggregation-245=99,
+   aggregation-124=100, edge-119=101, edge-239=102, edge-118=103,
+   aggregation-129=104, aggregation-249=105, aggregation-128=106, edge-357=107,
+   aggregation-482=108, edge-478=109, edge-236=110, edge-115=111,
+   aggregation-361=112, aggregation-240=113, aggregation-481=114, edge-356=115,
+   edge-477=116, edge-235=117, edge-114=118, aggregation-360=119,
+   aggregation-480=120, edge-359=121, edge-238=122, edge-117=123, edge-479=124,
+   edge-358=125, edge-237=126, edge-116=127, edge-111=128, edge-353=129,
+   edge-474=130, edge-232=131, aggregation-365=132, aggregation-244=133,
+   aggregation-123=134, aggregation-486=135, edge-110=136, edge-352=137,
+   edge-473=138, edge-231=139, aggregation-364=140, aggregation-243=141,
+   aggregation-122=142, aggregation-485=143, edge-113=144, edge-355=145,
+   edge-476=146, edge-234=147, aggregation-363=148, aggregation-242=149,
+   aggregation-121=150, aggregation-484=151, edge-112=152, edge-354=153,
+   edge-475=154, edge-233=155, aggregation-362=156, aggregation-241=157,
+   aggregation-120=158, aggregation-483=159, edge-272=160, edge-393=161,
+   edge-151=162, edge-271=163, edge-392=164, edge-150=165, edge-274=166,
+   edge-395=167, edge-153=168, edge-273=169, edge-394=170, edge-152=171,
+   edge-270=172, edge-391=173, edge-390=174, aggregation-468=175,
+   aggregation-347=176, aggregation-226=177, aggregation-105=178,
+   aggregation-467=179, aggregation-346=180, aggregation-225=181,
+   aggregation-104=182, aggregation-466=183, aggregation-345=184,
+   aggregation-224=185, aggregation-103=186, aggregation-465=187,
+   aggregation-344=188, aggregation-223=189, aggregation-102=190,
+   aggregation-109=191, aggregation-229=192, aggregation-108=193,
+   aggregation-349=194, aggregation-228=195, aggregation-107=196,
+   aggregation-469=197, aggregation-348=198, aggregation-227=199,
+   aggregation-106=200, edge-258=201, edge-379=202, edge-137=203,
+   aggregation-460=204, edge-257=205, edge-499=206, edge-378=207, edge-136=208,
+   edge-139=209, edge-259=210, edge-138=211, edge-254=212, aggregation-464=213,
+   edge-496=214, edge-375=215, edge-133=216, aggregation-343=217,
+   aggregation-222=218, aggregation-101=219, edge-253=220, aggregation-463=221,
+   edge-495=222, edge-374=223, edge-132=224, aggregation-342=225,
+   aggregation-221=226, aggregation-100=227, aggregation-462=228, edge-256=229,
+   edge-498=230, edge-377=231, edge-135=232, aggregation-341=233,
+   aggregation-220=234, edge-255=235, edge-497=236, edge-376=237, edge-134=238,
+   aggregation-340=239, aggregation-461=240, edge-294=241, edge-173=242,
+   edge-293=243, edge-172=244, edge-296=245, edge-175=246, edge-295=247,
+   edge-174=248, edge-290=249, edge-292=250, edge-171=251, edge-291=252,
+   edge-170=253, aggregation-325=254, aggregation-446=255, aggregation-204=256,
+   aggregation-324=257, aggregation-445=258, aggregation-203=259,
+   aggregation-323=260, aggregation-444=261, aggregation-202=262,
+   aggregation-322=263, aggregation-443=264, aggregation-201=265,
+   aggregation-329=266, aggregation-208=267, aggregation-328=268,
+   aggregation-449=269, aggregation-207=270, aggregation-327=271,
+   aggregation-448=272, aggregation-206=273, aggregation-326=274,
+   aggregation-447=275, aggregation-205=276, edge-159=277, edge-279=278,
+   edge-158=279, edge-276=280, edge-397=281, edge-155=282, aggregation-321=283,
+   aggregation-442=284, aggregation-200=285, edge-275=286, edge-396=287,
+   edge-154=288, aggregation-320=289, aggregation-441=290, edge-278=291,
+   edge-399=292, edge-157=293, aggregation-440=294, edge-277=295, edge-398=296,
+   edge-156=297, aggregation-209=298, edge-195=299, edge-194=300, edge-197=301,
+   edge-196=302, edge-191=303, edge-190=304, edge-193=305, edge-192=306,
+   aggregation-303=307, aggregation-424=308, aggregation-302=309,
+   aggregation-423=310, aggregation-301=311, aggregation-422=312,
+   aggregation-300=313, aggregation-421=314, aggregation-307=315,
+   aggregation-428=316, aggregation-306=317, aggregation-427=318,
+   aggregation-305=319, aggregation-426=320, aggregation-304=321,
+   aggregation-425=322, edge-298=323, edge-177=324, aggregation-420=325,
+   edge-297=326, edge-176=327, edge-179=328, edge-299=329, edge-178=330,
+   aggregation-309=331, aggregation-308=332, aggregation-429=333,
+   aggregation-402=334, aggregation-401=335, aggregation-400=336,
+   aggregation-406=337, aggregation-405=338, aggregation-404=339,
+   aggregation-403=340, aggregation-409=341, aggregation-408=342,
+   aggregation-407=343, edge-419=344, edge-416=345, edge-415=346, edge-418=347,
+   edge-417=348, edge-412=349, edge-411=350, edge-414=351, edge-413=352,
+   edge-410=353, edge-450=354, edge-317=355, edge-438=356, edge-316=357,
+   edge-437=358, edge-319=359, edge-318=360, edge-439=361, edge-313=362,
+   edge-434=363, edge-312=364, edge-433=365, edge-315=366, edge-436=367,
+   edge-314=368, edge-435=369, edge-430=370, edge-311=371, edge-432=372,
+   edge-310=373, edge-431=374, core-1=375, core-0=376, core-3=377, core-2=378,
+   core-5=379, core-4=380, core-7=381, core-6=382, core-9=383, core-8=384,
+   edge-470=385, edge-351=386, edge-472=387, edge-230=388, edge-350=389,
+   edge-471=390, edge-339=391, edge-218=392, edge-338=393, edge-459=394,
+   edge-217=395, edge-219=396, edge-335=397, edge-456=398, edge-214=399,
+   edge-334=400, edge-455=401, edge-213=402, edge-337=403, edge-458=404,
+   edge-216=405, edge-336=406, edge-457=407, edge-215=408, edge-331=409,
+   edge-452=410, edge-210=411, edge-330=412, edge-451=413, edge-333=414,
+   edge-454=415, edge-212=416, edge-332=417, edge-453=418, edge-211=419,
+   core-81=420, core-80=421, core-89=422, core-88=423, core-87=424, core-86=425,
+   core-85=426, core-84=427, core-83=428, core-82=429, core-70=430, core-78=431,
+   core-77=432, core-76=433, core-75=434, core-74=435, core-73=436, core-72=437,
+   core-71=438, core-79=439, core-67=440, core-66=441, core-65=442, core-64=443,
+   core-63=444, core-62=445, core-61=446, core-60=447, core-69=448, core-68=449,
+   core-56=450, core-55=451, core-54=452, core-53=453, core-52=454, core-51=455,
+   core-50=456, core-59=457, core-58=458, core-57=459, core-45=460, core-44=461,
+   core-43=462, core-42=463, core-41=464, core-40=465, core-49=466, core-48=467,
+   core-47=468, core-46=469, core-34=470, core-33=471, core-32=472, core-31=473,
+   core-30=474, core-39=475, core-38=476, core-37=477, core-36=478, core-35=479,
+   core-23=480, core-22=481, core-21=482, core-20=483, core-29=484, core-28=485,
+   core-27=486, core-26=487, core-25=488, core-24=489, core-12=490, core-11=491,
+   core-10=492, core-19=493, core-18=494, core-17=495, core-16=496, core-15=497,
+   core-14=498,
+   core-13=499}*)
