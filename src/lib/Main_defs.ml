@@ -346,7 +346,7 @@ let parse_input (args : string array) =
   let decls = if cfg.kirigami then
     (* FIXME: this breaks ToEdge *)
     let new_decls = Nv_kirigami.Partition.open_declarations decls in
-    let () = Printf.printf "%s" (Printing.declarations_to_string new_decls) in 
+    (* print_endline @@ Printing.declarations_to_string new_decls; *)
     Typing.infer_declarations info new_decls
   else
     decls

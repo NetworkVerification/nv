@@ -21,7 +21,7 @@ let interface edge =
   let any x = true in
   let nothingButBgp x =
     match x with
-    | {connected = c; static = s; ospf = o; bgp = b; selected = sel} ->
+    | {connected = c; static = s; ospf = o; _} ->
     (* only have bgp routes *)
     c = None && s = None && o = None
   in
