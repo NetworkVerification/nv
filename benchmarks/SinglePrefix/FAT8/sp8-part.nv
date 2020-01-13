@@ -24,10 +24,12 @@ let partition node = match node with
 
 let interface edge =
 let nothingButBgp x = 
-  x.connected = None && x.static = None && x.ospf = None
+  match x with | { connected = c; static = s; ospf = o; _ } ->
+  c = None && s = None && o = None
 in
 let hasOnlyBgp x = 
-  x.connected = None && x.static = None && x.ospf = None && isSome x.bgp
+  match x with | { connected = c; static = s; ospf = o; bgp = b; _ } ->
+  c = None && s = None && o = None && isSome b
 in
 match edge with
   | 54~6 -> Some nothingButBgp
@@ -48,16 +50,16 @@ match edge with
   | 11~68 -> Some nothingButBgp
   | 25~66 -> Some nothingButBgp
   | 52~39 -> Some nothingButBgp
-  | 53~56 -> Some nothingButBgp
+  | 53~56 -> Some hasOnlyBgp
   | 40~28 -> Some nothingButBgp
   | 39~55 -> Some nothingButBgp
   | 72~14 -> Some nothingButBgp
   | 6~54 -> Some nothingButBgp
   | 57~77 -> Some nothingButBgp
-  | 53~67 -> Some nothingButBgp
+  | 53~67 -> Some hasOnlyBgp
   | 58~70 -> Some nothingButBgp
-  | 50~72 -> Some nothingButBgp
-  | 47~40 -> Some nothingButBgp
+  | 50~72 -> Some hasOnlyBgp
+  | 47~40 -> Some hasOnlyBgp
   | 56~77 -> Some nothingButBgp
   | 70~62 -> Some nothingButBgp
   | 46~28 -> Some nothingButBgp
@@ -88,7 +90,7 @@ match edge with
   | 70~9 -> Some nothingButBgp
   | 39~52 -> Some nothingButBgp
   | 11~57 -> Some nothingButBgp
-  | 44~49 -> Some nothingButBgp
+  | 44~49 -> Some hasOnlyBgp
   | 52~60 -> Some nothingButBgp
   | 69~46 -> Some nothingButBgp
   | 57~59 -> Some nothingButBgp
@@ -102,7 +104,7 @@ match edge with
   | 25~70 -> Some nothingButBgp
   | 72~25 -> Some nothingButBgp
   | 71~50 -> Some nothingButBgp
-  | 50~71 -> Some nothingButBgp
+  | 50~71 -> Some hasOnlyBgp
   | 61~43 -> Some nothingButBgp
   | 69~41 -> Some nothingButBgp
   | 38~56 -> Some nothingButBgp
@@ -121,7 +123,7 @@ match edge with
   | 34~52 -> Some nothingButBgp
   | 71~25 -> Some nothingButBgp
   | 70~50 -> Some nothingButBgp
-  | 47~46 -> Some nothingButBgp
+  | 47~46 -> Some hasOnlyBgp
   | 66~50 -> Some nothingButBgp
   | 70~25 -> Some nothingButBgp
   | 71~14 -> Some nothingButBgp
@@ -174,12 +176,12 @@ match edge with
   | 55~44 -> Some nothingButBgp
   | 39~54 -> Some nothingButBgp
   | 49~44 -> Some nothingButBgp
-  | 47~41 -> Some nothingButBgp
+  | 47~41 -> Some hasOnlyBgp
   | 17~55 -> Some nothingButBgp
-  | 47~43 -> Some nothingButBgp
+  | 47~43 -> Some hasOnlyBgp
   | 59~67 -> Some nothingButBgp
-  | 50~66 -> Some nothingButBgp
-  | 50~70 -> Some nothingButBgp
+  | 50~66 -> Some hasOnlyBgp
+  | 50~70 -> Some hasOnlyBgp
   | 49~78 -> Some nothingButBgp
   | 14~72 -> Some nothingButBgp
   | 55~78 -> Some nothingButBgp
@@ -188,7 +190,7 @@ match edge with
   | 35~40 -> Some nothingButBgp
   | 25~72 -> Some nothingButBgp
   | 11~56 -> Some nothingButBgp
-  | 44~55 -> Some nothingButBgp
+  | 44~55 -> Some hasOnlyBgp
   | 70~30 -> Some nothingButBgp
   | 56~15 -> Some nothingButBgp
   | 40~61 -> Some nothingButBgp
@@ -215,7 +217,7 @@ match edge with
   | 65~52 -> Some nothingButBgp
   | 56~32 -> Some nothingButBgp
   | 46~69 -> Some nothingButBgp
-  | 44~54 -> Some nothingButBgp
+  | 44~54 -> Some hasOnlyBgp
   | 19~43 -> Some nothingButBgp
   | 41~61 -> Some nothingButBgp
   | 56~59 -> Some nothingButBgp
@@ -234,11 +236,11 @@ match edge with
   | 40~75 -> Some nothingButBgp
   | 32~56 -> Some nothingButBgp
   | 41~75 -> Some nothingButBgp
-  | 44~52 -> Some nothingButBgp
+  | 44~52 -> Some hasOnlyBgp
   | 75~40 -> Some nothingButBgp
   | 55~65 -> Some nothingButBgp
   | 57~38 -> Some nothingButBgp
-  | 53~68 -> Some nothingButBgp
+  | 53~68 -> Some hasOnlyBgp
   | 14~66 -> Some nothingButBgp
   | 28~46 -> Some nothingButBgp
   | 15~57 -> Some nothingButBgp
@@ -253,7 +255,7 @@ match edge with
   | 52~65 -> Some nothingButBgp
   | 72~62 -> Some nothingButBgp
   | 58~71 -> Some nothingButBgp
-  | 53~57 -> Some nothingButBgp
+  | 53~57 -> Some hasOnlyBgp
   | 15~68 -> Some nothingButBgp
   | 77~67 -> Some nothingButBgp
   | 59~57 -> Some nothingButBgp

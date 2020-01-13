@@ -12,7 +12,7 @@ def find_edges(text):
     prog = re.compile(r"(\d*)-(\d*); "\
             r"\(\*(core|aggregation)-\d*,Serial\d* --> (core|aggregation)-\d*,Serial\d*\*\)")
     matches = prog.finditer(text)
-    return [match.group(1, 2) for match in matches]
+    return [match.group(1, 2) for match in matches].sort()
 
 def find_nodes(text):
     """Return the spine nodes."""
@@ -20,7 +20,7 @@ def find_nodes(text):
     # find all core nodes
     matches = prog.finditer(text)
     # return the (\d*) match
-    return [match.group(1) for match in matches]
+    return [match.group(1) for match in matches].sort()
 
 def write_preamble(spname):
     """
