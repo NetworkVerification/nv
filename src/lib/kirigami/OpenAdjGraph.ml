@@ -104,7 +104,7 @@ let map_vertices_to_parts vertices (partf: Vertex.t -> int) : (int VertexMap.t *
  *)
 let repeat elem times =
   let rec aux e n l =
-    if n = 0 then e :: l else aux e (n - 1) (e :: l)
+    if n = 0 then l else aux e (n - 1) (e :: l)
   in
   aux elem times []
 
@@ -119,17 +119,17 @@ let divide_vertices vmap nlists =
   let update_list v ix l =
     List.mapi (fun lix a -> if (lix = ix) then v :: a else a) l
   in
-  VertexMap.fold update_list vmap initial
+  (* flip each sublist back so that the nodes are in ascending order *)
+  List.map (fun l -> List.rev l) (VertexMap.fold update_list vmap initial)
 
 (** Return the remapped form of the given edge along with Some SRP.
  *  If the new edge is cross-partition, return None as the SRP.
  *)
 let remap_edge edge (vlists: Vertex.t list list) =
   let (u, v) = edge in
-  (* get the first *)
   let find_endpoint v =
     List.hd (List.filteri_map 
-    (fun i l -> Option.map (fun j -> (i, j)) (List.index_of v l)) vlists)
+    (fun j l -> Option.map (fun i -> (i, j)) (List.index_of v l)) vlists)
   in
   let (newu, usrp) = find_endpoint u in
   let (newv, vsrp) = find_endpoint v in
@@ -148,9 +148,9 @@ let divide_edges (edges: Edge.t list) (vlists: Vertex.t list list) =
   (* map the (e, i) pair to the corresponding list *)
   let map_edges_to_lists l (e, i) = 
     (* TODO: handle None (cross-partition) case *)
-    List.rev @@ List.mapi (fun j a -> if (i = Some j) then e :: a else a) l
+    List.mapi (fun j a -> if (i = Some j) then e :: a else a) l
   in
-  List.fold_left map_edges_to_lists initial new_edges
+  List.map (fun l -> List.rev l) (List.fold_left map_edges_to_lists initial new_edges)
 
 (* How to create new node-edge groups
  * 1. Get original nodes and edges
