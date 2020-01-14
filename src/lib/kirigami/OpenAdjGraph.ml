@@ -122,6 +122,11 @@ let divide_vertices vmap nlists =
   (* flip each sublist back so that the nodes are in ascending order *)
   List.map (fun l -> List.rev l) (VertexMap.fold update_list vmap initial)
 
+(* Type for distinguishing cross edges from internal edges *)
+type srp_edge_index =
+  | Internal of int
+  | Cross of int * int
+
 (** Return the remapped form of the given edge along with Some SRP.
  *  If the new edge is cross-partition, return None as the SRP.
  *)
@@ -135,9 +140,9 @@ let remap_edge edge (vlists: Vertex.t list list) =
   let (newv, vsrp) = find_endpoint v in
   if (usrp != vsrp) then 
     (* cross-partition case *)
-    ((newu, newv), None)
+    ((newu, newv), Cross (usrp, vsrp))
   else
-    ((newu, newv), Some usrp)
+    ((newu, newv), Internal usrp)
 
 (** Map each edge in edges to one of the lists of lists, based on
  *  where its endpoints lie.
@@ -147,8 +152,30 @@ let divide_edges (edges: Edge.t list) (vlists: Vertex.t list list) =
   let new_edges = List.map (fun e -> remap_edge e vlists) edges in
   (* map the (e, i) pair to the corresponding list *)
   let map_edges_to_lists l (e, i) = 
-    (* TODO: handle None (cross-partition) case *)
-    List.mapi (fun j a -> if (i = Some j) then e :: a else a) l
+    (* Add the edge to the relevant list(s).
+     * Internal edges get added to the single list that matches their 
+     * srp_edge_index.
+     * A cross edge (u,v) instead gets split and added to two lists:
+     * one for the (u, y) edge and another for the (x, v) edge.
+     *)
+    let add_edge j a = match i with
+      | Internal i' -> if i' = j then e :: a else a
+      | Cross (i1, i2) -> begin 
+        (* output case *)
+        if i1 = j then 
+          (* new node number *)
+          let outnode = (List.length (List.at vlists i1))
+          in (fst e, outnode) :: a
+        else 
+          (* input case *)
+          if i2 = j then
+          (* new node number *)
+          let innode = (List.length (List.at vlists i2))
+          in (innode, snd e) :: a
+          else a
+      end
+    in
+    List.mapi add_edge l
   in
   List.map (fun l -> List.rev l) (List.fold_left map_edges_to_lists initial new_edges)
 

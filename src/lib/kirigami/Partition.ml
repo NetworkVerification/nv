@@ -170,8 +170,11 @@ let get_input_exps (interfaces: OpenAdjGraph.interfaces) (edge_hyps: (var * exp)
     let (var, _) = EdgeMap.find (u,v) edge_hyps in
     EdgeMap.add (inn,v) (evar var) m) broken EdgeMap.empty
 
+(** Create a new set of declarations representing a network which has been
+ * opened along the edges described by the partition and interface declarations.
+ * @return a new list of declarations
+ *)
 let open_declarations (decls: declarations) : declarations =
-  let open Nv_transformations in
   let partition = get_partition decls in
   if Option.is_some partition then
     let attr_type = get_attr_type decls |> Option.get in
@@ -216,3 +219,35 @@ let open_declarations (decls: declarations) : declarations =
   else
     (* no partition provided; do nothing *)
     decls
+
+(** Create a list of lists of declarations representing a network which has been
+ * opened along the edges described by the partition and interface declarations.
+ * @return a new list of lists of declarations
+ *)
+let divide_decls (decls: declarations) : declarations list =
+  let partition = get_partition decls in
+  if Option.is_some partition then
+    let attr_type = get_attr_type decls |> Option.get in
+    let interface = get_interface decls in
+    let nodes = get_nodes decls |> Option.get in
+    let edges = get_edges decls |> Option.get in
+    let part_int = partition_interface_edges partition interface edges in
+    let edge_hyps = create_hyp_vars attr_type part_int in
+    let output_preds = EdgeMap.map (fun (_var, pred) -> pred) edge_hyps in
+    let (new_nodes, new_edges, intf) = EdgeMap.fold (fun e _ (n, es, i) -> begin
+      partition_edge n es e i
+    end) part_int (nodes, edges, OpenAdjGraph.intf_empty) in
+    let input_exps = get_input_exps intf edge_hyps in
+    let trans = get_trans decls |> Option.get in
+    let new_trans = transform_trans trans intf in
+    let init = get_init decls |> Option.get in
+    let new_init = transform_init init intf input_exps in
+    let merge = get_merge decls |> Option.get in
+    let new_merge = transform_merge merge intf in
+    let new_symbolics = EdgeMap.fold (fun _ (v, _) l -> DSymbolic (v, Ty attr_type) :: l) edge_hyps [] in
+    let assertion = get_assert decls in
+    let new_assertion = transform_assert assertion intf output_preds in
+    let new_requires = EdgeMap.fold (fun _ (v, p) l -> DRequire (eapp p (evar v)) :: l) edge_hyps [] in
+    [decls]
+  else
+    [decls]
