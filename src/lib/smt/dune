@@ -1,6 +1,6 @@
 (library
   (name nv_smt)
-  (public_name nv_lib.smt)
+  (public_name nv.smt)
   (libraries
     nv_datastructures
     nv_interpreter
