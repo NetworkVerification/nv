@@ -1,6 +1,6 @@
 (* Testing for SRP interpreter *)
 
-open Nv_lib
+open Nv
 open Nv_lang
 open Nv_datastructures
 open Syntax

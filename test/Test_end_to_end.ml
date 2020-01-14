@@ -1,5 +1,5 @@
 open OUnit2
-open Nv_lib
+open Nv
 open Nv_lang
 open Nv_solution
 open Main_defs
