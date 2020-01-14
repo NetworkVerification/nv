@@ -104,7 +104,7 @@ let map_vertices_to_parts vertices (partf: Vertex.t -> int) : (int VertexMap.t *
  *)
 let repeat elem times =
   let rec aux e n l =
-    if n = 0 then l else aux e (n - 1) (e :: l)
+    if n = 0 then e :: l else aux e (n - 1) (e :: l)
   in
   aux elem times []
 
