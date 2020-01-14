@@ -117,7 +117,7 @@ let divide_vertices vmap nlists =
   in
   (* add the vertex to the corresponding list *)
   let update_list v ix l =
-    List.rev @@ List.mapi (fun lix a -> if (lix = ix) then v :: a else a) l
+    List.mapi (fun lix a -> if (lix = ix) then v :: a else a) l
   in
   VertexMap.fold update_list vmap initial
 
