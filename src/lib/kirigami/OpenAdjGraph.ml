@@ -65,7 +65,7 @@ let partition_graph (g: AdjGraph.t) (intf: interfaces) (es: EdgeSet.t) : (AdjGra
   EdgeSet.fold (fun e (g, i) -> partition_edge g i e) es (g, intf)
 
 (* Perform a sequence of three updates: remove an output, remove an input, add an edge *)
-let compose_edge (graph: AdjGraph.t) (intf: interfaces) (outnode: Vertex.t) (innode: Vertex.t) : (AdjGraph.t * interfaces) =
+let compose_edge graph intf outnode innode : (AdjGraph.t * interfaces) =
   let u = from_node intf outnode in
   let v = to_node intf innode in
   (* Perform the updates to the internal graph *)
@@ -86,3 +86,77 @@ let compose_edge (graph: AdjGraph.t) (intf: interfaces) (outnode: Vertex.t) (inn
       ignore (VertexMap.remove outnode intf.broken); intf.broken
     end;
   }
+
+(** Map each vertex in the  list of vertices to a number.
+ *  Return the map and the highest number computed.
+ *)
+let map_vertices_to_parts vertices (partf: Vertex.t -> int) : (int VertexMap.t * int) =
+  let add_vertex (m, a) v =
+    let vnum = partf v in
+    (* add the vertex and its mapping,
+     * and increase the map number if it is the new largest mapping *)
+    (VertexMap.add v vnum m, max vnum a)
+  in
+  List.fold_left add_vertex (VertexMap.empty, 0) vertices
+
+(** Create a list by inserting the given element the given number
+ * of times.
+ *)
+let repeat elem times =
+  let rec aux e n l =
+    if n = 0 then l else aux e (n - 1) (e :: l)
+  in
+  aux elem times []
+
+(** Return a list of [n] lists of vertices, divided according to their mappings.
+ *  The index of the old index in the returned list corresponds to its new index
+ *  in the partitioned network.
+ *)
+let divide_vertices vmap nlists =
+  let initial = repeat [] nlists
+  in
+  (* add the vertex to the corresponding list *)
+  let update_list v ix l =
+    List.rev @@ List.mapi (fun lix a -> if (lix = ix) then v :: a else a) l
+  in
+  VertexMap.fold update_list vmap initial
+
+(** Return the remapped form of the given edge along with Some SRP.
+ *  If the new edge is cross-partition, return None as the SRP.
+ *)
+let remap_edge edge (vlists: Vertex.t list list) =
+  let (u, v) = edge in
+  (* get the first *)
+  let find_endpoint v =
+    List.hd (List.filteri_map 
+    (fun i l -> Option.map (fun j -> (i, j)) (List.index_of v l)) vlists)
+  in
+  let (newu, usrp) = find_endpoint u in
+  let (newv, vsrp) = find_endpoint v in
+  if (usrp != vsrp) then 
+    (* cross-partition case *)
+    ((newu, newv), None)
+  else
+    ((newu, newv), Some usrp)
+
+(** Map each edge in edges to one of the lists of lists, based on
+ *  where its endpoints lie.
+ *)
+let divide_edges (edges: Edge.t list) (vlists: Vertex.t list list) =
+  let initial = repeat [] (List.length vlists) in
+  let new_edges = List.map (fun e -> remap_edge e vlists) edges in
+  (* map the (e, i) pair to the corresponding list *)
+  let map_edges_to_lists l (e, i) = 
+    (* TODO: handle None (cross-partition) case *)
+    List.rev @@ List.mapi (fun j a -> if (i = Some j) then e :: a else a) l
+  in
+  List.fold_left map_edges_to_lists initial new_edges
+
+(* How to create new node-edge groups
+ * 1. Get original nodes and edges
+ * 2. Map each node through partition to get its new SRP
+ * 3. Create a map from each old node index to its new index starting from 0.
+ * 4. Map each edge using the node map to its new SRP,
+ *    or if it's cross-partition, to a new output-input pair
+ * 5. Add edges according to the old-new node renaming map.
+ *)

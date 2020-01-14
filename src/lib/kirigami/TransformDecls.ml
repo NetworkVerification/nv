@@ -10,15 +10,6 @@ let node_to_pat node =
 let edge_to_pat edge =
   exp_to_pattern (e_val (vedge edge))
 
-(* Return true if the expression is a function which accepts the given arg type as an input *)
-let is_argty_func (e: Syntax.exp) (at: Syntax.ty) : bool =
-  let { argty; _ } = Syntax.deconstructFun e in
-  (* wrap the given arg type in an option, since functions don't always specify the argtype *)
-  (* TODO: what does it mean if the argty is None? *)
-  (* argty == Some at *)
-  (* FIXME: this check doesn't seem to be working *)
-  true
-
 let amatch v t b =
   (ematch (aexp (evar v, t, Span.default)) b)
 
@@ -29,10 +20,6 @@ let amatch v t b =
  *)
 let transform_init (e: Syntax.exp) (interfaces: OpenAdjGraph.interfaces) (input_exps: Syntax.exp EdgeMap.t) : Syntax.exp =
   (* check that e has the right format *)
-  if not (is_argty_func e TNode) then 
-    let () = Printf.printf "%s" (Printing.ty_to_string (Option.get e.ety)) in
-  failwith "Tried to transform init for partitioning, but the type is not (TNode -> A)!"
-  else
   (* new function argument *)
   let node_var = Var.fresh "node" in
   let add_init_branch u v = 
@@ -61,10 +48,6 @@ let transform_init (e: Syntax.exp) (interfaces: OpenAdjGraph.interfaces) (input_
  * two parameters of types tedge and attribute
  *)
 let transform_trans (e: Syntax.exp) (intf: OpenAdjGraph.interfaces) : Syntax.exp =
-  if not (is_argty_func e TEdge) then 
-    let () = Printf.printf "%s" (Printing.ty_to_string (Option.get e.ety)) in
-  failwith "Tried to transform trans for partitioning, but the type is not (TEdge -> A -> A)!"
-  else
   (* new function argument *)
   let edge_var = Var.fresh "edge" in
   let x_var = Var.fresh "x" in
@@ -106,10 +89,6 @@ let merge_branch (input: bool) (n: Vertex.t) (_: Vertex.t) (b: branches) : branc
   addBranch node_pat merge_exp b
 
 let transform_merge (e: Syntax.exp) (intf: OpenAdjGraph.interfaces) : Syntax.exp =
-  if not (is_argty_func e TNode) then
-    let () = Printf.printf "%s" (Printing.ty_to_string (Option.get e.ety)) in
-  failwith "Tried to transform merge for partitioning, but the type is not (TNode -> A -> A -> A)!"
-  else
   let node_var = Var.fresh "node" in
   let OpenAdjGraph.{ outputs; _ } = intf in
   let default_branch =
@@ -125,9 +104,6 @@ let assert_branch (x: var) (n: Vertex.t) (pred: exp) (b: branches) : branches =
   addBranch node_pat (eapp pred (evar x)) b 
 
 let transform_assert (e: Syntax.exp option) (intf: OpenAdjGraph.interfaces) (edge_preds: exp EdgeMap.t) : Syntax.exp option =
-  if not (Option.is_none e || is_argty_func (Option.get e) TNode) then
-    failwith "Tried to transform assert for partitioning, but the type is not (TNode -> A -> Bool)!"
-  else
     let { inputs; outputs; _ } : OpenAdjGraph.interfaces = intf in
     let node_var = Var.fresh "node" in
     let soln_var = Var.fresh "x" in

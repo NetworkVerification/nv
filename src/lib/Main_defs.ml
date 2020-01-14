@@ -345,6 +345,7 @@ let parse_input (args : string array) =
   Wellformed.check info decls ;
   let decls = if cfg.kirigami then
     (* FIXME: this breaks ToEdge *)
+    (* NOTE: we partition after checking well-formedness so we can reuse edges that don't exist *)
     let new_decls = Nv_kirigami.Partition.open_declarations decls in
     (* print_endline @@ Printing.declarations_to_string new_decls; *)
     Typing.infer_declarations info new_decls
