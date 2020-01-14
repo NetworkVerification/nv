@@ -12,11 +12,6 @@ let is_cross_partition (f: Vertex.t -> 'a) edge =
 (* It is possible that a better implementation involves building a new graph using the interface set,
  * as indexing newly-added nodes could break on AdjGraph implementation change
  *)
-type onetwork =
-  {
-    network         : network;
-    interfaces      : OpenAdjGraph.interfaces;
-  }
 
 (** Representation of a cut edge with an associated hypothesis and a predicate on that hypothesis *)
 type cut_edge =
