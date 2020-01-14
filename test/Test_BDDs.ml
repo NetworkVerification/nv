@@ -1,6 +1,6 @@
 open BatSet
 open OUnit2
-open Nv_lib
+open Nv
 open Nv_lang
 open Nv_datastructures
 open Syntax
