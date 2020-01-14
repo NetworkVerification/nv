@@ -1,4 +1,4 @@
 (test
   (name test)
-  (libraries oUnit nv_lib)
+  (libraries oUnit nv)
 )
