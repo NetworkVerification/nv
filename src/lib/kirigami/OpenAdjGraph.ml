@@ -64,29 +64,6 @@ let partition_edge (g: AdjGraph.t) (intf: interfaces) (e: Edge.t) : (AdjGraph.t 
 let partition_graph (g: AdjGraph.t) (intf: interfaces) (es: EdgeSet.t) : (AdjGraph.t * interfaces) =
   EdgeSet.fold (fun e (g, i) -> partition_edge g i e) es (g, intf)
 
-(* Perform a sequence of three updates: remove an output, remove an input, add an edge *)
-let compose_edge graph intf outnode innode : (AdjGraph.t * interfaces) =
-  let u = from_node intf outnode in
-  let v = to_node intf innode in
-  (* Perform the updates to the internal graph *)
-  let update_graph g =
-    remove_vertex g outnode |>
-    (fun g -> remove_vertex g innode) |>
-    (fun g -> add_edge g u v)
-  in
-  update_graph graph,
-  {
-    inputs = begin
-      ignore (VertexMap.remove innode intf.inputs); intf.inputs
-    end;
-    outputs = begin
-      ignore (VertexMap.remove outnode intf.outputs); intf.outputs
-    end;
-    broken = begin
-      ignore (VertexMap.remove outnode intf.broken); intf.broken
-    end;
-  }
-
 (** Map each vertex in the  list of vertices to a number.
  *  Return the map and the highest number computed.
  *)
@@ -99,21 +76,12 @@ let map_vertices_to_parts vertices (partf: Vertex.t -> int) : (int VertexMap.t *
   in
   List.fold_left add_vertex (VertexMap.empty, 0) vertices
 
-(** Create a list by inserting the given element the given number
- * of times.
- *)
-let repeat elem times =
-  let rec aux e n l =
-    if n = 0 then l else aux e (n - 1) (e :: l)
-  in
-  aux elem times []
-
 (** Return a list of [n] lists of vertices, divided according to their mappings.
  *  The index of the old index in the returned list corresponds to its new index
  *  in the partitioned network.
  *)
 let divide_vertices vmap nlists =
-  let initial = repeat [] nlists
+  let initial = List.make nlists []
   in
   (* add the vertex to the corresponding list *)
   let update_list v ix l =
@@ -144,40 +112,70 @@ let remap_edge edge (vlists: Vertex.t list list) =
   else
     ((newu, newv), Internal usrp)
 
+type interfaces_alt = {
+  inputs: vertex_vertex_map;
+  outputs: vertex_vertex_map;
+  outs_broken: Edge.t VertexMap.t;
+  broken_ins: Vertex.t EdgeMap.t;
+}
+
+let intf_alt_empty : interfaces_alt = {
+  inputs = VertexMap.empty;
+  outputs = VertexMap.empty;
+  outs_broken = VertexMap.empty;
+  broken_ins = EdgeMap.empty;
+}
+
 (** Map each edge in edges to one of the lists of lists, based on
  *  where its endpoints lie.
  *)
-let divide_edges (edges: Edge.t list) (vlists: Vertex.t list list) =
-  let initial = repeat [] (List.length vlists) in
+let divide_edges (edges: Edge.t list) (vlists: Vertex.t list list) : ((int * Edge.t list * interfaces_alt) list) =
+  (* Set up initial: each index has:
+   * - an int indicating # of nodes,
+   * - a list of edges,
+   * - an interfaces struct
+   * Cf. repr of an OpenAdjGraph.t
+   *)
+  let initial = List.map (fun l -> (List.length l, [], intf_alt_empty)) vlists in
   let new_edges = List.map (fun e -> remap_edge e vlists) edges in
   (* map the (e, i) pair to the corresponding list *)
-  let map_edges_to_lists l (e, i) = 
+  let map_edges_to_lists list_of_lists (edge, i) : (int * Edge.t list * interfaces_alt) list = 
     (* Add the edge to the relevant list(s).
      * Internal edges get added to the single list that matches their 
      * srp_edge_index.
      * A cross edge (u,v) instead gets split and added to two lists:
      * one for the (u, y) edge and another for the (x, v) edge.
      *)
-    let add_edge j a = match i with
-      | Internal i' -> if i' = j then e :: a else a
+    let add_edge j (nodes, list_of_edges, intf) : (int * Edge.t list * interfaces_alt) = match i with
+      | Internal i' -> if i' = j then (nodes, edge :: list_of_edges, intf) else (nodes, list_of_edges, intf)
       | Cross (i1, i2) -> begin 
+        let (u, v) = edge in
         (* output case *)
         if i1 = j then 
           (* new node number *)
-          let outnode = (List.length (List.at vlists i1))
-          in (fst e, outnode) :: a
+          let outnode = nodes in
+          let new_intf = {
+            intf with outputs = VertexMap.add outnode u intf.outputs;
+                      outs_broken = VertexMap.add outnode edge intf.outs_broken;
+          }
+          in (nodes + 1, (Edge.create u () outnode) :: list_of_edges, new_intf)
         else 
           (* input case *)
           if i2 = j then
           (* new node number *)
-          let innode = (List.length (List.at vlists i2))
-          in (innode, snd e) :: a
-          else a
+          let innode = nodes in
+          let new_intf = {
+            intf with inputs = VertexMap.add innode v intf.inputs;
+                      broken_ins = EdgeMap.add edge innode intf.broken_ins;
+          }
+          in (nodes + 1, (Edge.create innode () v) :: list_of_edges, new_intf)
+          (* neither case, continue *)
+          else (nodes, list_of_edges, intf)
       end
     in
-    List.mapi add_edge l
+    List.mapi add_edge list_of_lists
   in
-  List.map (fun l -> List.rev l) (List.fold_left map_edges_to_lists initial new_edges)
+  List.map (fun (n, l, intf) -> (n, List.rev l, intf)) (List.fold_left map_edges_to_lists initial new_edges)
 
 (* How to create new node-edge groups
  * 1. Get original nodes and edges
@@ -187,3 +185,8 @@ let divide_edges (edges: Edge.t list) (vlists: Vertex.t list list) =
  *    or if it's cross-partition, to a new output-input pair
  * 5. Add edges according to the old-new node renaming map.
  *)
+let partition_edges (nodes: Vertex.t list) (edges: Edge.t list) (partf: Vertex.t -> int) =
+  let (node_srp_map, num_srps) = map_vertices_to_parts nodes partf in
+  let divided_nodes = divide_vertices node_srp_map (num_srps + 1) in
+  divide_edges edges divided_nodes
+

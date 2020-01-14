@@ -329,29 +329,7 @@ let checkPolicy info cfg file ds =
   let net = Slicing.createNetwork ds in
   SmtCheckProps.checkMonotonicity info cfg.query (smt_query_file file) net
 
-let parse_input (args : string array) =
-  let cfg, rest = argparse default "nv" args in
-  Cmdline.set_cfg cfg ;
-  Cmdline.update_cfg_dependencies ();
-  let cfg = Cmdline.get_cfg () in
-  if cfg.debug then Printexc.record_backtrace true ;
-  let file = rest.(0) in
-  let ds, info = Input.parse file in (* Parse nv file *)
-  let decls = ds in
-  (* print_endline @@ Printing.declarations_to_string decls ; *)
-  let decls = (ToEdge.toEdge_decl decls) :: decls in
-  let decls = Typing.infer_declarations info decls in
-  Typing.check_annot_decls decls ;
-  Wellformed.check info decls ;
-  let decls = if cfg.kirigami then
-    (* FIXME: this breaks ToEdge *)
-    (* NOTE: we partition after checking well-formedness so we can reuse edges that don't exist *)
-    let new_decls = Nv_kirigami.Partition.open_declarations decls in
-    (* print_endline @@ Printing.declarations_to_string new_decls; *)
-    Typing.infer_declarations info new_decls
-  else
-    decls
-  in
+let parse_input_aux cfg info file decls =
   let decls, f = RecordUnrolling.unroll_declarations decls in
   let fs = [f] in
   let decls,fs = (* inlining definitions *)
@@ -391,3 +369,30 @@ let parse_input (args : string array) =
       net, fs
     in
    (cfg, info, file, net, fs)
+
+let parse_input (args : string array) : 
+  (Cmdline.t * Console.info * string * Syntax.network * Solution.map_back list) list 
+=
+  let cfg, rest = argparse default "nv" args in
+  Cmdline.set_cfg cfg ;
+  Cmdline.update_cfg_dependencies ();
+  let cfg = Cmdline.get_cfg () in
+  if cfg.debug then Printexc.record_backtrace true ;
+  let file = rest.(0) in
+  let ds, info = Input.parse file in (* Parse nv file *)
+  let decls = ds in
+  (* print_endline @@ Printing.declarations_to_string decls ; *)
+  let decls = (ToEdge.toEdge_decl decls) :: decls in
+  let decls = Typing.infer_declarations info decls in
+  Typing.check_annot_decls decls ;
+  Wellformed.check info decls ;
+  if cfg.kirigami then
+    (* FIXME: this breaks ToEdge *)
+    (* NOTE: we partition after checking well-formedness so we can reuse edges that don't exist *)
+    let new_decls = Nv_kirigami.Partition.divide_decls decls in
+    List.map (fun d ->
+      print_endline @@ Printing.declarations_to_string d;
+      let new_d = Typing.infer_declarations info d in
+      parse_input_aux cfg info file new_d) new_decls
+  else
+    [parse_input_aux cfg info file decls]

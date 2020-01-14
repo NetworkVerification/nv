@@ -18,14 +18,14 @@ let amatch v t b =
  * The expression that is passed in should be a function which has
  * a single parameter of type tnode.
  *)
-let transform_init (e: Syntax.exp) (interfaces: OpenAdjGraph.interfaces) (input_exps: Syntax.exp EdgeMap.t) : Syntax.exp =
+let transform_init (e: Syntax.exp) (interfaces: OpenAdjGraph.interfaces_alt) (input_exps: Syntax.exp EdgeMap.t) : Syntax.exp =
+  let { inputs; outputs; _ } : OpenAdjGraph.interfaces_alt = interfaces in
   (* check that e has the right format *)
   (* new function argument *)
   let node_var = Var.fresh "node" in
   let add_init_branch u v = 
     (* if the edge is present in the interface set, then use the specified expression;
-     * this should be true only for the input edges *)
-    (* input_exps lists base-base edges, so we need to convert from output-base or input-base *)
+     * this should be true only for the input edges since input_exps lists input~base edges *)
     let exp = match EdgeMap.Exceptionless.find (u, v) input_exps with 
     | Some exp -> exp
     | None -> (eapp e (e_val (vnode v)))
@@ -33,7 +33,6 @@ let transform_init (e: Syntax.exp) (interfaces: OpenAdjGraph.interfaces) (input_
     let node_pattern = node_to_pat u in
     addBranch node_pattern exp
   in
-  let { inputs; outputs; _ } : OpenAdjGraph.interfaces = interfaces in
   (* the default branch runs (original_init node), where original_init = e *)
   let default_branch = addBranch PWild (eapp e (evar node_var)) emptyBranch in
   let input_branches = VertexMap.fold add_init_branch inputs default_branch in
@@ -47,11 +46,11 @@ let transform_init (e: Syntax.exp) (interfaces: OpenAdjGraph.interfaces) (input_
  * The expression that is passed in should be a function which has
  * two parameters of types tedge and attribute
  *)
-let transform_trans (e: Syntax.exp) (intf: OpenAdjGraph.interfaces) : Syntax.exp =
+let transform_trans (e: Syntax.exp) (intf: OpenAdjGraph.interfaces_alt) : Syntax.exp =
   (* new function argument *)
   let edge_var = Var.fresh "edge" in
   let x_var = Var.fresh "x" in
-  let { inputs; outputs; _ } : OpenAdjGraph.interfaces = intf in
+  let { inputs; outputs; outs_broken } : OpenAdjGraph.interfaces_alt = intf in
   let in_trans_branch k v b = (* branches for in~base edges: identity function *)
     let edge_pat = edge_to_pat (k, v) in
     (* return the identity function *)
@@ -62,7 +61,7 @@ let transform_trans (e: Syntax.exp) (intf: OpenAdjGraph.interfaces) : Syntax.exp
   let out_trans_branch k v b = (* branches for base~out edges: perform original trans for full edge *)
     let edge_pat = edge_to_pat (v, k) in
     (* recover the old edge from the OpenAdjGraph's broken edges *)
-    let old_edge = OpenAdjGraph.broken_edge intf k in
+    let old_edge = VertexMap.find k outs_broken in
     let edge_val = e_val (vedge old_edge) in
     (* call the original expression using the old edge;
      * this needs to be partially evaluated since the old edge doesn't exist anymore,
@@ -88,9 +87,9 @@ let merge_branch (input: bool) (n: Vertex.t) (_: Vertex.t) (b: branches) : branc
   let merge_exp = (lams [a1; a2] (if input then (evar a1) else (evar a2))) in 
   addBranch node_pat merge_exp b
 
-let transform_merge (e: Syntax.exp) (intf: OpenAdjGraph.interfaces) : Syntax.exp =
+let transform_merge (e: Syntax.exp) (intf: OpenAdjGraph.interfaces_alt) : Syntax.exp =
   let node_var = Var.fresh "node" in
-  let OpenAdjGraph.{ outputs; _ } = intf in
+  let { outputs; _ } : OpenAdjGraph.interfaces_alt = intf in
   let default_branch =
     addBranch PWild (eapp e (evar node_var)) emptyBranch
   in
@@ -103,8 +102,8 @@ let assert_branch (x: var) (n: Vertex.t) (pred: exp) (b: branches) : branches =
   let node_pat = node_to_pat n in
   addBranch node_pat (eapp pred (evar x)) b 
 
-let transform_assert (e: Syntax.exp option) (intf: OpenAdjGraph.interfaces) (edge_preds: exp EdgeMap.t) : Syntax.exp option =
-    let { inputs; outputs; _ } : OpenAdjGraph.interfaces = intf in
+let transform_assert (e: Syntax.exp option) (intf: OpenAdjGraph.interfaces_alt) (edge_preds: exp EdgeMap.t) : Syntax.exp option =
+    let { inputs; outputs; outs_broken } : OpenAdjGraph.interfaces_alt = intf in
     let node_var = Var.fresh "node" in
     let soln_var = Var.fresh "x" in
     let etrue = e_val (vbool true) in
@@ -116,7 +115,7 @@ let transform_assert (e: Syntax.exp option) (intf: OpenAdjGraph.interfaces) (edg
     in
     (* helper function to associate an output with an edge predicate *)
     let get_output_pred n =
-      let edge = OpenAdjGraph.broken_edge intf n in
+      let edge = VertexMap.find n outs_broken in
       EdgeMap.find edge edge_preds
     in
     (* re-map every output to point to its corresponding predicate *)

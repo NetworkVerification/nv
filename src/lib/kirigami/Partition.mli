@@ -37,3 +37,9 @@ val partition_interface: exp option -> exp option -> AdjGraph.t -> exp option Ad
  * - updating or adding assert for the output nodes 
  *)
 val open_declarations : declarations -> declarations
+
+(** Create a list of Syntax.declarations,
+ * where a new set of declarations for a given network is produced
+ * for each possible partition in the given declarations.
+ *)
+val divide_decls : declarations -> declarations list

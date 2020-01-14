@@ -13,7 +13,15 @@ type interfaces = {
   broken: vertex_vertex_map;
 }
 
+type interfaces_alt = {
+  inputs: vertex_vertex_map;
+  outputs: vertex_vertex_map;
+  outs_broken: Edge.t VertexMap.t;
+  broken_ins: Vertex.t EdgeMap.t;
+}
+
 val intf_empty : interfaces
+val intf_alt_empty : interfaces_alt
 
 type t = AdjGraph.t * interfaces
 
@@ -31,9 +39,12 @@ val broken_edge : interfaces -> Vertex.t -> Edge.t
 val input_nodes : interfaces -> Vertex.t Enum.t
 (** output_nodes g returns an enumeration over the output nodes *)
 val output_nodes : interfaces -> Vertex.t Enum.t
-(** compose_edge g out in removes the output and input node pair and composes the edge they refer to *)
-val compose_edge : AdjGraph.t -> interfaces -> Vertex.t -> Vertex.t -> t
 
-val map_vertices_to_parts : Vertex.t list -> (Vertex.t -> int) -> (int VertexMap.t * int)
-val divide_vertices : int VertexMap.t -> int -> Vertex.t list list
-val divide_edges : Edge.t list -> (Vertex.t list list) -> (Edge.t list list)
+(** partition_edges lv le part intf returns the edges and nodes divided across a list,
+ *  with an interfaces structure for each one.
+ *)
+val partition_edges : 
+  Vertex.t list 
+  -> Edge.t list 
+  -> (Vertex.t -> int) 
+  -> ((int * Edge.t list * interfaces_alt) list)

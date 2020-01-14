@@ -1099,6 +1099,11 @@ let bool_of_val (v : value) : bool option =
   | VBool b -> Some b
   | _ -> None
 
+let int_of_val (v : value) : int option =
+  match v.v with
+  | VInt i -> Some (Integer.to_int i)
+  | _ -> None
+
 let proj_var (n: int) (x: var) =
   let (s,i) = Var.from_var x in
   Var.to_var (Printf.sprintf "%s-proj-%d" s n,i)
