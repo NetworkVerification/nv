@@ -126,6 +126,43 @@ let intf_alt_empty : interfaces_alt = {
   broken_ins = EdgeMap.empty;
 }
 
+(** Add the edge to the relevant list(s).
+ * Internal edges get added to the single list that matches their 
+ * srp_edge_index.
+ * A cross edge (u,v) instead gets split and added to two lists:
+ * one for the (u, y) edge and another for the (x, v) edge.
+ *)
+let map_edges_to_lists list_of_lists (edge, i) : (int * Edge.t list * interfaces_alt) list = 
+  let add_edge j (nodes, list_of_edges, intf) : (int * Edge.t list * interfaces_alt) =
+    match i with
+    | Internal i' -> if i' = j then (nodes, edge :: list_of_edges, intf) else (nodes, list_of_edges, intf)
+    | Cross (i1, i2) -> begin 
+      let (u, v) = edge in
+      (* output case *)
+      if i1 = j then 
+        (* new node number *)
+        let outnode = nodes in
+        let new_intf = {
+          intf with outputs = VertexMap.add outnode u intf.outputs;
+                    outs_broken = VertexMap.add outnode edge intf.outs_broken;
+        }
+        in (nodes + 1, (Edge.create u () outnode) :: list_of_edges, new_intf)
+      else 
+        (* input case *)
+        if i2 = j then
+        (* new node number *)
+        let innode = nodes in
+        let new_intf = {
+          intf with inputs = VertexMap.add innode v intf.inputs;
+                    broken_ins = EdgeMap.add edge innode intf.broken_ins;
+        }
+        in (nodes + 1, (Edge.create innode () v) :: list_of_edges, new_intf)
+        (* neither case, continue *)
+        else (nodes, list_of_edges, intf)
+    end
+  in
+  List.mapi add_edge list_of_lists
+
 (** Map each edge in edges to one of the lists of lists, based on
  *  where its endpoints lie.
  *)
@@ -138,43 +175,6 @@ let divide_edges (edges: Edge.t list) (vlists: Vertex.t list list) : ((int * Edg
    *)
   let initial = List.map (fun l -> (List.length l, [], intf_alt_empty)) vlists in
   let new_edges = List.map (fun e -> remap_edge e vlists) edges in
-  (* map the (e, i) pair to the corresponding list *)
-  let map_edges_to_lists list_of_lists (edge, i) : (int * Edge.t list * interfaces_alt) list = 
-    (* Add the edge to the relevant list(s).
-     * Internal edges get added to the single list that matches their 
-     * srp_edge_index.
-     * A cross edge (u,v) instead gets split and added to two lists:
-     * one for the (u, y) edge and another for the (x, v) edge.
-     *)
-    let add_edge j (nodes, list_of_edges, intf) : (int * Edge.t list * interfaces_alt) = match i with
-      | Internal i' -> if i' = j then (nodes, edge :: list_of_edges, intf) else (nodes, list_of_edges, intf)
-      | Cross (i1, i2) -> begin 
-        let (u, v) = edge in
-        (* output case *)
-        if i1 = j then 
-          (* new node number *)
-          let outnode = nodes in
-          let new_intf = {
-            intf with outputs = VertexMap.add outnode u intf.outputs;
-                      outs_broken = VertexMap.add outnode edge intf.outs_broken;
-          }
-          in (nodes + 1, (Edge.create u () outnode) :: list_of_edges, new_intf)
-        else 
-          (* input case *)
-          if i2 = j then
-          (* new node number *)
-          let innode = nodes in
-          let new_intf = {
-            intf with inputs = VertexMap.add innode v intf.inputs;
-                      broken_ins = EdgeMap.add edge innode intf.broken_ins;
-          }
-          in (nodes + 1, (Edge.create innode () v) :: list_of_edges, new_intf)
-          (* neither case, continue *)
-          else (nodes, list_of_edges, intf)
-      end
-    in
-    List.mapi add_edge list_of_lists
-  in
   List.map (fun (n, l, intf) -> (n, List.rev l, intf)) (List.fold_left map_edges_to_lists initial new_edges)
 
 (* How to create new node-edge groups

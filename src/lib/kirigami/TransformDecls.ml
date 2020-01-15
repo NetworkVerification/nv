@@ -20,14 +20,13 @@ let amatch v t b =
  *)
 let transform_init (e: Syntax.exp) (interfaces: OpenAdjGraph.interfaces_alt) (input_exps: Syntax.exp EdgeMap.t) : Syntax.exp =
   let { inputs; outputs; _ } : OpenAdjGraph.interfaces_alt = interfaces in
-  (* check that e has the right format *)
-  (* new function argument *)
   let node_var = Var.fresh "node" in
   let add_init_branch u v = 
     (* if the edge is present in the interface set, then use the specified expression;
      * this should be true only for the input edges since input_exps lists input~base edges *)
     let exp = match EdgeMap.Exceptionless.find (u, v) input_exps with 
     | Some exp -> exp
+    (* output case: make the init the same as the base node *)
     | None -> (eapp e (e_val (vnode v)))
     in
     let node_pattern = node_to_pat u in
@@ -102,8 +101,8 @@ let assert_branch (x: var) (n: Vertex.t) (pred: exp) (b: branches) : branches =
   let node_pat = node_to_pat n in
   addBranch node_pat (eapp pred (evar x)) b 
 
-let transform_assert (e: Syntax.exp option) (intf: OpenAdjGraph.interfaces_alt) (edge_preds: exp EdgeMap.t) : Syntax.exp option =
-    let { inputs; outputs; outs_broken } : OpenAdjGraph.interfaces_alt = intf in
+let transform_assert (e: Syntax.exp option) (intf: OpenAdjGraph.interfaces_alt) (output_preds: exp VertexMap.t) : Syntax.exp option =
+    let { inputs; outputs; _ } : OpenAdjGraph.interfaces_alt = intf in
     let node_var = Var.fresh "node" in
     let soln_var = Var.fresh "x" in
     let etrue = e_val (vbool true) in
@@ -113,13 +112,8 @@ let transform_assert (e: Syntax.exp option) (intf: OpenAdjGraph.interfaces_alt) 
     in
     let default_branch = addBranch PWild e emptyBranch
     in
-    (* helper function to associate an output with an edge predicate *)
-    let get_output_pred n =
-      let edge = VertexMap.find n outs_broken in
-      EdgeMap.find edge edge_preds
-    in
     (* re-map every output to point to its corresponding predicate *)
-    let outputs_to_preds = VertexMap.mapi (fun o _b -> (get_output_pred o)) outputs
+    let outputs_to_preds = VertexMap.mapi (fun o _b -> (VertexMap.find o output_preds)) outputs
     in
     let output_branches = VertexMap.fold (assert_branch soln_var) outputs_to_preds default_branch in
     let input_branches = VertexMap.fold (fun innode _ b -> addBranch (node_to_pat innode) etrue b) inputs output_branches in
