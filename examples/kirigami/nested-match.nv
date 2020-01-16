@@ -1,0 +1,44 @@
+(* Code to test that partitioning
+ * won't cause issues when nodes and edges
+ * are relabelled.
+ *)
+
+type attribute = int
+
+let nodes = 3
+let edges = {
+    0=1;
+    1=2;
+}
+
+let internal_trans e x = match e with
+| 0~1 -> x + 1
+| 1~0 -> x + 1
+| 1~2 -> x + 2
+| 2~1 -> x + 2
+
+let trans e x = internal_trans e x
+
+let internal_merge n x y = match n with
+| 2n -> 6
+| 1n -> if x < y then x else y
+| 0n -> if x < y then x else y
+
+let merge n x y = internal_merge n x y
+
+let init n = match n with
+| 0n -> 0
+| _ -> 10
+
+let assert n x = true
+
+let partition n = match n with
+| 0n -> 0u8
+| 1n -> 1u8
+| 2n -> 2u8
+
+let interface e = match e with
+| 0~1 -> Some (fun a -> a = 1)
+| 1~0 -> Some (fun a -> a > 0)
+| 1~2 -> Some (fun a -> a = 3)
+| 2~1 -> Some (fun a -> a > 1)

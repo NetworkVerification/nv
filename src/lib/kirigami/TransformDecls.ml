@@ -45,11 +45,11 @@ let transform_init (e: Syntax.exp) (interfaces: OpenAdjGraph.interfaces_alt) (in
  * The expression that is passed in should be a function which has
  * two parameters of types tedge and attribute
  *)
-let transform_trans (e: Syntax.exp) (intf: OpenAdjGraph.interfaces_alt) : Syntax.exp =
+let transform_trans (e: Syntax.exp) (intf: OpenAdjGraph.interfaces_alt) (edge_map: Edge.t EdgeMap.t) : Syntax.exp =
   (* new function argument *)
   let edge_var = Var.fresh "edge" in
   let x_var = Var.fresh "x" in
-  let { inputs; outputs; outs_broken } : OpenAdjGraph.interfaces_alt = intf in
+  let { inputs; outputs; _ } : OpenAdjGraph.interfaces_alt = intf in
   let in_trans_branch k v b = (* branches for in~base edges: identity function *)
     let edge_pat = edge_to_pat (k, v) in
     (* return the identity function *)
@@ -57,13 +57,14 @@ let transform_trans (e: Syntax.exp) (intf: OpenAdjGraph.interfaces_alt) : Syntax
     (* let in_exp = (lam avar (evar avar)) in *)
     addBranch edge_pat (evar x_var) b
   in
-  let out_trans_branch k v b = (* branches for base~out edges: perform original trans for full edge *)
-    let edge_pat = edge_to_pat (v, k) in
+  let out_trans_branch old_edge new_edge b =
+  (* let out_trans_branch k v b = (1* branches for base~out edges: perform original trans for full edge *1) *)
+    let edge_pat = edge_to_pat new_edge in
     (* recover the old edge from the OpenAdjGraph's broken edges *)
-    let old_edge = VertexMap.find k outs_broken in
+    (* let old_edge = VertexMap.find k outs_broken in *)
     let edge_val = e_val (vedge old_edge) in
     (* call the original expression using the old edge;
-     * this needs to be partially evaluated since the old edge doesn't exist anymore,
+     * this needs to be done after checking wellformedness since the old edge doesn't exist anymore,
      * so the compiler will complain the edge isn't supposed to be mentioned
      *)
     let out_exp = (eapp (eapp e edge_val) (evar x_var)) in
@@ -75,7 +76,8 @@ let transform_trans (e: Syntax.exp) (intf: OpenAdjGraph.interfaces_alt) : Syntax
   (* input branches use the identity function *)
   let input_branches = VertexMap.fold in_trans_branch inputs default_branch in
   (* output branches perform the original transfer *)
-  let output_branches = VertexMap.fold out_trans_branch outputs input_branches in
+  (* let output_branches = VertexMap.fold out_trans_branch outputs input_branches in *)
+  let output_branches = EdgeMap.fold out_trans_branch edge_map input_branches in 
     wrap e (lams [edge_var; x_var] (amatch edge_var (Some TEdge) output_branches))
 
 let merge_branch (input: bool) (n: Vertex.t) (_: Vertex.t) (b: branches) : branches =

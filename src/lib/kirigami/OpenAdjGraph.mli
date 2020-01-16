@@ -42,7 +42,8 @@ val output_nodes : interfaces -> Vertex.t Enum.t
 
 type partitioned_srp = {
   nodes: int;
-  edges: Edge.t list;
+  (* first edge is the new edge, second edge is the old edge *)
+  edges: (Edge.t * Edge.t) list;
   intf: interfaces_alt;
   preds: Nv_lang.Syntax.exp EdgeMap.t
 }

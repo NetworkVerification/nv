@@ -220,22 +220,10 @@ let divide_decls (decls: declarations) : declarations list =
     let partitioned_srps = OpenAdjGraph.partition_edges node_list edges partf interfacef in
     let create_new_decls parted_srp : declarations =
       let { nodes; edges; intf; preds; } : OpenAdjGraph.partitioned_srp = parted_srp in
-      (* FIXME: currently, the broken_ins and outs_broken will end up being over
-       * different sets of edges.
-       * This is fine until we need to find edges from broken_ins when getting
-       * the predicate for a given output when transforming the assertion.
-       * We need to generate predicates for both the inputs and the outputs,
-       * over the different broken edges.
-       * e.g. an edge 0~1 is broken. SRP S contains 0 and SRP T contains 1
-       * - we add an input node x_0_1 and edge with hypothesis h_0_1 to T
-       * - we add an output node y_0_1 and edge to S
-       * - we generate a predicate p from the interface
-       * - h_0_1 is constrained by p
-       * - the solution y_0_1 is constrained by the *SAME* p
-       * This final step is not currently happening because p is only generated in S.
-       * One possible solution to try would be to add a new function to generate output_preds
-       * using the interface similarly to how part_int is generated from intf.broken_ins.
-       *)
+      (* separate the old edges and the new edges *)
+      let (old_edges, new_edges) = List.fold_left (fun (oldl, newl) (o, n) -> (o :: oldl, n :: newl))
+        ([], []) edges in
+      let edge_map = List.fold_left (fun (k, v) m -> EdgeMap.add k v m) EdgeMap.empty edges in
       let filter_preds vmap =
         EdgeMap.filter (fun (u, v) _ -> match (VertexMap.Exceptionless.find u vmap) with
           | Some v' -> v' = v
@@ -261,7 +249,7 @@ let divide_decls (decls: declarations) : declarations list =
       (* let output_preds = EdgeMap.map (fun (_var, pred) -> pred) edge_hyps in *)
       let input_exps = EdgeMap.map (fun (v, _) -> (evar v)) edge_hyps in
       let trans = get_trans decls |> Option.get in
-      let new_trans = transform_trans trans intf in
+      let new_trans = transform_trans trans intf edge_map in
       let init = get_init decls |> Option.get in
       let new_init = transform_init init intf input_exps in
       let merge = get_merge decls |> Option.get in
@@ -273,7 +261,7 @@ let divide_decls (decls: declarations) : declarations list =
       (* replace relevant old decls *)
       let new_decls = List.filter_map (fun d -> match d with
       | DNodes _ -> Some (DNodes nodes)
-      | DEdges _ -> Some (DEdges edges)
+      | DEdges _ -> Some (DEdges new_edges)
       | DInit _ -> Some (DInit new_init)
       | DTrans _ -> Some (DTrans new_trans)
       (* FIXME: merge is screwy; currently an output node on the destination won't update since it

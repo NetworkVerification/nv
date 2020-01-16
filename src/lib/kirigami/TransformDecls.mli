@@ -22,7 +22,7 @@ val transform_init : (exp) -> (OpenAdjGraph.interfaces_alt) -> (exp EdgeMap.t) -
  * where the edge u~v has been partitioned into u~out and in~v.
  * Note that the `trans u~v a` case is pulled from the previous exp.
  *)
-val transform_trans : (exp) -> (OpenAdjGraph.interfaces_alt) -> (exp)
+val transform_trans : (exp) -> (OpenAdjGraph.interfaces_alt) -> (Edge.t EdgeMap.t) -> (exp)
 
 (* NOTE: this function appears to be unnecessary in practice *)
 (* Wrap the given merge exp in a new exp of the form:
