@@ -151,11 +151,12 @@ let transform_symbolic ~(name:string) (transformers:transformers) (x, toe) =
   x, toe'
 ;;
 
-let transform_decl ~(name:string) (transformers:transformers) (d : declaration) =
+let rec transform_decl ~(name:string) (transformers:transformers) (d : declaration) =
   let transform_ty = transform_ty ~name:name transformers in
   let transform_exp = transform_exp ~name:name transformers in
   let transform_symbolic = transform_symbolic ~name:name transformers in
   match d with
+  | DModule (x, ds) -> DModule (x, List.map (transform_decl ~name:name transformers) ds)
   | DLet (x, tyo, e) -> DLet (x, omap transform_ty tyo, transform_exp e)
   | DInit e -> DInit (transform_exp e)
   | DAssert e -> DAssert (transform_exp e)
@@ -167,7 +168,7 @@ let transform_decl ~(name:string) (transformers:transformers) (d : declaration) 
   | DUserTy (x, ty) -> DUserTy (x, transform_ty ty)
   | DPartition e -> DPartition (transform_exp e)
   | DInterface e -> DInterface (transform_exp e)
-  | DNodes _ | DEdges _ -> d
+  | DNodes _ | DEdges _ | DSolve _ -> d
 ;;
 
 let rec map_back_value

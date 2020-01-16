@@ -200,10 +200,12 @@ type declaration =
   | DInterface of exp (* interface hypotheses *)
   | DNodes of int
   | DEdges of (node * node) list
+  | DModule of var * declarations
+  | DSolve of var * var_or_network (* Not 100% sure this is the right type *)
 
-type declarations = declaration list
+and declarations = declaration list
 
-type network =
+and network =
   { attr_type : ty;
     init : exp;
     trans : exp;
@@ -217,6 +219,8 @@ type network =
     requires : exp list;
     graph : AdjGraph.t;
   }
+
+and var_or_network = Var of var | Network of network
 
 (* TODO: add partitioning? *)
 type srp_unfold =

@@ -119,12 +119,16 @@ let rec collect_in_exp (symbolics : var list) (exp : Syntax.exp) (acc : maplist)
     collect_in_exp e acc
 ;;
 
-let collect_in_decl (symbolics : var list) (d : declaration) (acc : maplist) : maplist =
+let rec collect_in_decl (symbolics : var list) (d : declaration) (acc : maplist) : maplist =
   (* print_endline @@ "Collecting in decl " ^ Printing.declaration_to_string d; *)
   let add_if_map_type = add_if_map_type symbolics in
   let collect_in_exp = collect_in_exp symbolics in
   let collect_in_ty = collect_in_ty symbolics in
   match d with
+  | DModule (_, ds) ->
+    BatList.fold_left (BatPervasives.flip (collect_in_decl symbolics)) [] ds
+  | DSolve (_, Network _) ->
+    failwith "Not yet implemented"
   | DLet (_, tyo, exp) ->
     add_if_map_type (Nv_utils.OCamlUtils.oget tyo, None) acc
     |> collect_in_exp exp
@@ -147,7 +151,8 @@ let collect_in_decl (symbolics : var list) (d : declaration) (acc : maplist) : m
   | DRequire exp ->
     collect_in_exp exp acc
   | DNodes _
-  | DEdges _ ->
+  | DEdges _
+  | DSolve (_, Var _) ->
     acc
 ;;
 

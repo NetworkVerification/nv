@@ -293,6 +293,12 @@ let closure_to_string c = closure_to_string_p max_prec c
 (* TODO: should the let statements use the identifiers defined in Syntax instead? *)
 let rec declaration_to_string d =
   match d with
+  | DModule (id, ds) ->
+    Printf.sprintf "module %s =\n%s\nend" (Var.to_string id) (declarations_to_string ds)
+  | DSolve (x, Var y) ->
+    Printf.sprintf "solution %s = %s" (Var.to_string y) (Var.to_string x)
+  | DSolve (x, Network net) ->
+    Printf.sprintf "solution %s = %s" (network_to_string net) (Var.to_string x)
   | DLet (x, tyo, e) ->
     let ty_str =
       match tyo with
@@ -324,14 +330,13 @@ let rec declaration_to_string d =
   | DUserTy (name, ty) ->
     Printf.sprintf "type %s = %s" (Var.to_string name) (ty_to_string ty)
 
-let rec declarations_to_string ds =
+and declarations_to_string ds =
   match ds with
   | [] -> ""
   | d :: ds ->
     declaration_to_string d ^ "\n" ^ declarations_to_string ds
 
-let network_to_string ?(show_topology=false) (net : Syntax.network) =
-
+and network_to_string ?(show_topology=false) (net : Syntax.network) =
   (** User types **)
   let utypes =
     OCamlUtils.printList (fun (x, ty) ->
