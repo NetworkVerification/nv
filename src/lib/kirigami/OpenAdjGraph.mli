@@ -40,6 +40,13 @@ val input_nodes : interfaces -> Vertex.t Enum.t
 (** output_nodes g returns an enumeration over the output nodes *)
 val output_nodes : interfaces -> Vertex.t Enum.t
 
+type partitioned_srp = {
+  nodes: int;
+  edges: Edge.t list;
+  intf: interfaces_alt;
+  preds: Nv_lang.Syntax.exp EdgeMap.t
+}
+
 (** partition_edges lv le part intf returns the edges and nodes divided across a list,
  *  with an interfaces structure for each one.
  *)
@@ -47,4 +54,5 @@ val partition_edges :
   Vertex.t list 
   -> Edge.t list 
   -> (Vertex.t -> int) 
-  -> ((int * Edge.t list * interfaces_alt) list)
+  -> (Edge.t -> Nv_lang.Syntax.exp)
+  -> (partitioned_srp list)

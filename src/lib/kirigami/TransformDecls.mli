@@ -46,4 +46,4 @@ val transform_merge : (exp) -> (OpenAdjGraph.interfaces_alt) -> (exp)
  * | _ -> assert n x
  * where p is a predicate used in the require clause
  *)
-val transform_assert : (exp option) -> (OpenAdjGraph.interfaces_alt) -> (exp VertexMap.t) -> (exp option)
+val transform_assert : (exp option) -> (OpenAdjGraph.interfaces_alt) -> (exp EdgeMap.t) -> (exp option)
