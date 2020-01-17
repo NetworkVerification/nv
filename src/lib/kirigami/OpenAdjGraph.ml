@@ -129,7 +129,8 @@ let intf_alt_empty : interfaces_alt = {
 }
 
 type partitioned_srp = {
-  nodes: int;
+  (* first node is the new node, second node is the old node *)
+  nodes: (Node.t * Node.t) list;
   (* first edge is the new edge, second edge is the old edge *)
   edges: (Edge.t * Edge.t) list;
   intf: interfaces_alt;
