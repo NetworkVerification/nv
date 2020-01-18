@@ -102,7 +102,7 @@ let transform_merge (e: Syntax.exp) (intf: SrpRemapping.interface) : Syntax.exp 
     wrap e (lam node_var (amatch node_var (Some TNode) output_branches))
 
 (* Apply the predicate test on the solution for node n *)
-let assert_branch (x: var) (outn, _basen: Edge.t)  (pred: exp) (b: branches) : branches =
+let assert_branch (x: var) (_basen, outn: Edge.t)  (pred: exp) (b: branches) : branches =
   let node_pat = node_to_pat outn in
   addBranch node_pat (eapp pred (evar x)) b 
 
