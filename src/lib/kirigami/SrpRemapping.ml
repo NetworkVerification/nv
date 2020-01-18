@@ -1,12 +1,13 @@
 (* Convert all edges and nodes in the program to new values,
    after the SRP has been split *)
+open Batteries
 open Nv_datastructures.AdjGraph
 open Nv_lang.Syntax
 
 (** A type for keeping track of the input to base and output to base relationships. *)
 type interface = {
   (* Key: input node, value: base node *)
-  inputs: Vertex.t VertexMap.t
+  inputs: Vertex.t VertexMap.t;
   (* Key: output node, value: base node *)
   outputs: Vertex.t VertexMap.t;
 }
@@ -29,15 +30,15 @@ let empty_interface : interface = {
  *)
 type partitioned_srp = {
   (* the number of nodes in the network *)
-  nodes: int,
+  nodes: int;
   (* the edges in the network *)
-  edges: Edge.t list,
+  edges: Edge.t list;
   (* keys are old nodes, values are Some new node or None *)
-  node_map: (Vertex.t option) VertexMap.t
+  node_map: (Vertex.t option) VertexMap.t;
   (* keys are old edges, values are Some new edge or None *)
-  edge_map: (Edge.t option) EdgeMap.t
+  edge_map: (Edge.t option) EdgeMap.t;
   intf: interface;
-  preds: Syntax.exp EdgeMap.t
+  preds: exp EdgeMap.t;
 }
 
 let create_partitioned_srp nodes edges node_map edge_map intf preds =
@@ -62,16 +63,18 @@ let map_vertices_to_parts vertices (partf: Vertex.t -> int) : (int VertexMap.t *
  *  be Some v, where v is the new name for u.
  *  If not, its value will be None.
  *)
-let divide_vertices vmap nlists : (int * (Vertex.t VertexMap.t)) list =
-  let initial = List.make nlists (0, VertexMap.empty)
-  in
+let divide_vertices vmap nlists : (int * (Vertex.t option VertexMap.t)) list =
+  let initial = List.make nlists (0, VertexMap.empty) in
   (* add the vertex to the corresponding map and set it to None elsewhere *)
-  let update_maps vertex srp_ix (n, vmaps) =
-    List.mapi (fun lix a -> 
-      (n + if (lix = srp_ix) then 1 else 0,
-      VertexMap.add a (if (lix = srp_ix) then Some lix else None) vmaps))
+  let place_vertex vertex srp_ix l =
+    List.mapi (fun lix (n, vmaps) -> 
+      (
+      n + (if (lix = srp_ix) then 1 else 0),
+      (* the new vertex is the old total number *)
+      VertexMap.add vertex (if (lix = srp_ix) then Some n else None) vmaps
+    )) l
   in
-  VertexMap.fold update_maps vmap initial
+  VertexMap.fold place_vertex vmap initial
 
 
 (* Type for distinguishing cross edges from internal edges *)
@@ -83,13 +86,13 @@ type srp_edge =
 
 (** Return the remapped form of the given edge along with the SRPs it belongs to.
  *)
-let remap_edge edge (vmaps: Vertex.t VertexMap.t list) : (Edge.t * srp_edge) =
+let remap_edge edge (vmaps: (int * (Vertex.t option VertexMap.t)) list) : (Edge.t * srp_edge) =
   let (u, v) = edge in
   (* For the given old vertex, find the associated new vertex *)
   let find_endpoint vertex =
     let wrap_srp j = Option.map (fun i -> (i, j)) in
-    let found = (List.filteri_map (fun j m -> wrap_srp (VertexMap.find_default None vertex m)) vmaps) in
-    assert (List.length found 1);  (* only one SRP should contain the endpoint *)
+    let found = (List.filteri_map (fun j (_, m) -> wrap_srp j (VertexMap.find_default None vertex m)) vmaps) in
+    assert ((List.length found) = 1);  (* only one SRP should contain the endpoint *)
     List.hd found
   in
   let (newu, usrp) = find_endpoint u in
@@ -110,7 +113,8 @@ let map_edges_to_parts predf partitions (old_edge, (edge, srp_edge)) =
   let add_edge j partition =
     match srp_edge with
     | Internal i' -> {
-      partition with edge_map = EdgeMap.add old_edge (if i' = j then Some edge else None) partition.edge_map;
+      partition with edges = if i' = j then edge :: partition.edges else partition.edges;
+                     edge_map = EdgeMap.add old_edge (if i' = j then Some edge else None) partition.edge_map;
     }
     | Cross (i1, i2) -> begin
       let pred = predf old_edge in
@@ -118,33 +122,33 @@ let map_edges_to_parts predf partitions (old_edge, (edge, srp_edge)) =
       (* output case *)
       if i1 = j then
         (* new node number *)
-        let outnode = nodes in
+        let outnode = partition.nodes in
         let new_edge = Edge.create u () outnode in
-        let new_intf : interfaces_alt = {
-          intf with outputs = VertexMap.add outnode u intf.outputs;
+        let new_intf = {
+          partition.intf with outputs = VertexMap.add outnode u partition.intf.outputs;
         }
         in {
           partition with nodes = partition.nodes + 1;
                          edges = new_edge :: partition.edges;
                          edge_map = EdgeMap.add old_edge (Some new_edge) partition.edge_map;
                          intf = new_intf;
-                         preds = EdgeMap.add new_edge pred preds;
+                         preds = EdgeMap.add new_edge pred partition.preds;
         }
       else
         (* input case *)
         if i2 = j then
         (* new node number *)
-        let innode = nodes in
+        let innode = partition.nodes in
         let new_edge = Edge.create innode () v in
         let new_intf = {
-          intf with inputs = VertexMap.add innode v intf.inputs;
+          partition.intf with inputs = VertexMap.add innode v partition.intf.inputs;
         }
         in {
           partition with nodes = partition.nodes + 1;
                          edges = new_edge :: partition.edges;
                          edge_map = EdgeMap.add old_edge (Some new_edge) partition.edge_map;
                          intf = new_intf;
-                         preds = EdgeMap.add new_edge pred preds;
+                         preds = EdgeMap.add new_edge pred partition.preds;
         }
         (* neither case, mark edge as absent and continue *)
         else {
@@ -154,17 +158,23 @@ let map_edges_to_parts predf partitions (old_edge, (edge, srp_edge)) =
   in
   List.mapi add_edge partitions
 
-(** Map each edge in edges to a map from it to a new edge, based on
- *  where its endpoints lie.
+(** Map each edge in edges to a partitioned_srp based on where its endpoints lie. *)
+let divide_edges 
+  (edges: Edge.t list)
+  (predf: Edge.t -> exp)
+  (vmaps: (int * (Vertex.t option VertexMap.t)) list)
+  : (partitioned_srp list) 
+=
+  let new_partition (n, m) = create_partitioned_srp n [] m EdgeMap.empty empty_interface EdgeMap.empty in
+  let initial = List.map new_partition vmaps in
+  let new_edges = List.map (fun e -> (e, remap_edge e vmaps)) edges in
+  List.fold_left (map_edges_to_parts predf) initial new_edges
+
+(** Generate a list of partitioned_srp from the given list of nodes and edges,
+ * along with their partitioning function and interface function.
  *)
-let divide_edges (edges: Edge.t list) (predf: Edge.t -> Syntax.exp) (vlists: Vertex.t list list) : (partitioned_srp list) =
-  (* Set up initial: each index has:
-   * - an int indicating # of nodes,
-   * - a list of edges,
-   * - an interfaces struct
-   * Cf. repr of an OpenAdjGraph.t
-   *)
-  let initial = List.map (fun l -> create_partitioned_srp (List.length l, [], VertexMap.empty, VertexMap.empty, intf_empty, EdgeMap.empty)) vlists in (* FIXME: may not use vlists anymore here *)
-  let new_edges = List.map (fun e -> (e, remap_edge e vlists)) edges in
-  let mapped = List.fold_left (map_edges_to_lists predf) initial new_edges in
-  List.map (fun (n, l, intf, preds) -> create_partitioned_srp n (List.rev l) intf preds) mapped
+let partition_edges (nodes: Vertex.t list) (edges: Edge.t list) (partf: Vertex.t -> int) (intf: Edge.t -> exp) =
+  let (node_srp_map, num_srps) = map_vertices_to_parts nodes partf in
+  (* add 1 to num_srps to convert from max partition # to number of SRPS *)
+  let divided_nodes = divide_vertices node_srp_map (num_srps + 1) in 
+  divide_edges edges intf divided_nodes

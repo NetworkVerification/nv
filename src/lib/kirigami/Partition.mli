@@ -22,7 +22,7 @@ val open_network : network -> network
  * require clauses providing assumptions on them
  * - updating or adding assert for the output nodes 
  *)
-val open_declarations : declarations -> declarations
+(* val open_declarations : declarations -> declarations *)
 
 (** Create a list of Syntax.declarations,
  * where a new set of declarations for a given network is produced

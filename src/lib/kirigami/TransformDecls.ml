@@ -18,8 +18,8 @@ let amatch v t b =
  * The expression that is passed in should be a function which has
  * a single parameter of type tnode.
  *)
-let transform_init (e: Syntax.exp) (interfaces: OpenAdjGraph.interfaces_alt) (input_exps: Syntax.exp EdgeMap.t) : Syntax.exp =
-  let { inputs; outputs; _ } : OpenAdjGraph.interfaces_alt = interfaces in
+let transform_init (e: Syntax.exp) (interfaces: SrpRemapping.interface) (input_exps: Syntax.exp EdgeMap.t) : Syntax.exp =
+  let { inputs; outputs; _ } : SrpRemapping.interface = interfaces in
   let node_var = Var.fresh "node" in
   let add_init_branch u v = 
     (* if the edge is present in the interface set, then use the specified expression;
@@ -45,11 +45,11 @@ let transform_init (e: Syntax.exp) (interfaces: OpenAdjGraph.interfaces_alt) (in
  * The expression that is passed in should be a function which has
  * two parameters of types tedge and attribute
  *)
-let transform_trans (e: Syntax.exp) (intf: OpenAdjGraph.interfaces_alt) (edge_map: Edge.t EdgeMap.t) : Syntax.exp =
+let transform_trans (e: Syntax.exp) (intf: SrpRemapping.interface) (edge_map: Edge.t option EdgeMap.t) : Syntax.exp =
   (* new function argument *)
   let edge_var = Var.fresh "edge" in
   let x_var = Var.fresh "x" in
-  let { inputs; outputs; _ } : OpenAdjGraph.interfaces_alt = intf in
+  let { inputs; _ } : SrpRemapping.interface = intf in
   let in_trans_branch k v b = (* branches for in~base edges: identity function *)
     let edge_pat = edge_to_pat (k, v) in
     (* return the identity function *)
@@ -58,17 +58,18 @@ let transform_trans (e: Syntax.exp) (intf: OpenAdjGraph.interfaces_alt) (edge_ma
     addBranch edge_pat (evar x_var) b
   in
   let out_trans_branch old_edge new_edge b =
-  (* let out_trans_branch k v b = (1* branches for base~out edges: perform original trans for full edge *1) *)
-    let edge_pat = edge_to_pat new_edge in
-    (* recover the old edge from the OpenAdjGraph's broken edges *)
-    (* let old_edge = VertexMap.find k outs_broken in *)
-    let edge_val = e_val (vedge old_edge) in
-    (* call the original expression using the old edge;
-     * this needs to be done after checking wellformedness since the old edge doesn't exist anymore,
-     * so the compiler will complain the edge isn't supposed to be mentioned
-     *)
-    let out_exp = (eapp (eapp e edge_val) (evar x_var)) in
-    addBranch edge_pat out_exp b 
+    match new_edge with
+    | Some new_edge -> begin
+      let edge_pat = edge_to_pat new_edge in
+      let edge_val = e_val (vedge old_edge) in
+      (* call the original expression using the old edge;
+       * this needs to be done after checking wellformedness since the old edge doesn't exist anymore,
+       * so the compiler will complain the edge isn't supposed to be mentioned
+       *)
+      let out_exp = (eapp (eapp e edge_val) (evar x_var)) in
+      addBranch edge_pat out_exp b 
+    end
+    | None -> b
   in
   (* the default branch runs (original_trans edge), where original_trans = e *)
   let orig_trans = (apps e [(evar edge_var); (evar x_var)]) in
@@ -90,9 +91,9 @@ let merge_branch (input: bool) (n: Vertex.t) (_: Vertex.t) (b: branches) : branc
   let merge_exp = (lams [a1; a2] (if input then (evar a1) else (evar a2))) in 
   addBranch node_pat merge_exp b
 
-let transform_merge (e: Syntax.exp) (intf: OpenAdjGraph.interfaces_alt) : Syntax.exp =
+let transform_merge (e: Syntax.exp) (intf: SrpRemapping.interface) : Syntax.exp =
   let node_var = Var.fresh "node" in
-  let { outputs; _ } : OpenAdjGraph.interfaces_alt = intf in
+  let { outputs; _ } : SrpRemapping.interface = intf in
   let default_branch =
     addBranch PWild (eapp e (evar node_var)) emptyBranch
   in
@@ -105,8 +106,8 @@ let assert_branch (x: var) (outn, _basen: Edge.t)  (pred: exp) (b: branches) : b
   let node_pat = node_to_pat outn in
   addBranch node_pat (eapp pred (evar x)) b 
 
-let transform_assert (e: Syntax.exp option) (intf: OpenAdjGraph.interfaces_alt) (output_preds: exp EdgeMap.t) : Syntax.exp option =
-    let { inputs; _ } : OpenAdjGraph.interfaces_alt = intf in
+let transform_assert (e: Syntax.exp option) (intf: SrpRemapping.interface) (output_preds: exp EdgeMap.t) : Syntax.exp option =
+    let { inputs; _ } : SrpRemapping.interface = intf in
     let node_var = Var.fresh "node" in
     let soln_var = Var.fresh "x" in
     let etrue = e_val (vbool true) in
