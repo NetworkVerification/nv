@@ -195,12 +195,12 @@ let divide_decls (decls: declarations) : declarations list =
       let trans = get_trans decls |> Option.get in
       let new_trans = transform_trans trans intf edge_map in
       let init = get_init decls |> Option.get in
-      let new_init = transform_init init intf input_exps in
+      let new_init = transform_init init intf input_exps node_map in
       let merge = get_merge decls |> Option.get in
-      let new_merge = transform_merge merge intf in
+      let new_merge = transform_merge merge intf node_map in
       let new_symbolics = EdgeMap.fold (fun _ (v, _) l -> DSymbolic (v, Ty attr_type) :: l) edge_hyps [] in
       let assertion = get_assert decls in
-      let new_assertion = transform_assert assertion intf output_preds in
+      let new_assertion = transform_assert assertion intf output_preds node_map in
       let new_requires = EdgeMap.fold (fun _ (v, p) l -> DRequire (eapp p (evar v)) :: l) edge_hyps [] in
       (* replace relevant old decls *)
       let new_decls = List.filter_map (fun d -> match d with

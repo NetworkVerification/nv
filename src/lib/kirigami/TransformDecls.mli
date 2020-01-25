@@ -12,7 +12,7 @@ open Nv_lang.Syntax
  * | _ -> init x
  * where the edge u~v has been partitioned into u~out and in~v.
  *)
-val transform_init : (exp) -> (SrpRemapping.interface) -> (exp EdgeMap.t) -> (exp)
+val transform_init : (exp) -> (SrpRemapping.interface) -> (exp EdgeMap.t) -> (Vertex.t option VertexMap.t) -> (exp)
 
 (* Wrap the given trans exp in a new exp of the form:
  * match e with
@@ -32,7 +32,7 @@ val transform_trans : (exp) -> (SrpRemapping.interface) -> (Edge.t option EdgeMa
  * | _ -> merge n x y
  * where the edge u~v has been partitioned into u~out and in~v.
  *)
-val transform_merge : (exp) -> (SrpRemapping.interface) -> (exp)
+val transform_merge : (exp) -> (SrpRemapping.interface) -> (Vertex.t option VertexMap.t) -> (exp)
 
 (* Wrap the given assert exp in a new exp that also checks the input and output nodes
  * of the partitioned network.
@@ -46,4 +46,4 @@ val transform_merge : (exp) -> (SrpRemapping.interface) -> (exp)
  * | _ -> assert n x
  * where p is a predicate used in the require clause
  *)
-val transform_assert : (exp option) -> (SrpRemapping.interface) -> (exp EdgeMap.t) -> (exp option)
+val transform_assert : (exp option) -> (SrpRemapping.interface) -> (exp EdgeMap.t) -> (Vertex.t option VertexMap.t) -> (exp option)

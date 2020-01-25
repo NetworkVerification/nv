@@ -385,7 +385,7 @@ let parse_input (args : string array) :
   let decls = (ToEdge.toEdge_decl decls) :: decls in
   let decls = Typing.infer_declarations info decls in
   Typing.check_annot_decls decls ;
-  Wellformed.check info decls ;
+  if not cfg.no_wellformed then Wellformed.check info decls ;
   if cfg.kirigami then
     (* FIXME: this breaks ToEdge *)
     (* NOTE: we partition after checking well-formedness so we can reuse edges that don't exist *)

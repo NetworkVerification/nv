@@ -19,16 +19,20 @@ let empty_interface : interface = {
 }
 
 (** A type for transforming the declarations over the old SRP
- *  to declarations for the new partitioned SRP.
- *  The nodes and edges maps help us to remap nodes and edges.
- *  If an old node or edge is not a value in the map,
- *  then we know it has been removed and we can drop it from
- *  the SRP.
- *  The predicates help us keep track of the `interface` predicates
- *  associated with a given new edge, since both inputs and outputs
- *  have associated predicates (required on the hypotheses and 
- *  asserted on the output solutions, respectively).
- *)
+ ** to declarations for the new partitioned SRP.
+ ** The nodes and edges maps help us to remap nodes and edges.
+ ** If an old node or edge is not a value in the map,
+ ** then we know it has been removed and we can drop it from
+ ** the SRP.
+ ** The predicates help us keep track of the `interface` predicates
+ ** associated with a given new edge, since both inputs and outputs
+ ** have associated predicates (required on the hypotheses and
+ ** asserted on the output solutions, respectively).
+ **
+ ** Invariants:
+ ** - every value in node_map and edge_map is a valid node or edge
+ **   in the new SRP
+ **)
 type partitioned_srp = {
   (* the number of nodes in the network *)
   nodes: int;
