@@ -7,7 +7,6 @@ open Collections
 let map_back bmap new_name old_name =
   bmap := Collections.VarMap.add new_name old_name !bmap
 
-(* TODO: Make sure this doesn't have to be Var.to_string *)
 let fresh x = Var.fresh (Var.name x)
 
 let rec update_pattern (env: Var.t Env.t) (p: pattern) :
@@ -88,9 +87,25 @@ let rec alpha_convert_exp (env: Var.t Env.t) (e: exp) =
     ematch (alpha_convert_exp env e1) bs' |> wrap e
   | ETy (e1, ty) -> ety (alpha_convert_exp env e1) ty |> wrap e
 
-let alpha_convert_declaration bmap (env: Var.t Env.t)
+let rec alpha_convert_declaration bmap (env: Var.t Env.t)
     (d: declaration) =
   match d with
+  | DModule (x, ds) ->
+    let y = fresh x in
+    let env = Env.update env x y in
+    env, DModule (y, alpha_convert_aux bmap env ds)
+  | DSolve (x, m) ->
+    let y = fresh x in
+    let env = Env.update env x y in
+    let env, z =
+      match m with
+      | Var m ->
+        let z = fresh m in
+        let env = Env.update env m z in
+        env, Var z
+      | Network net -> env, Network net
+    in
+    env, DSolve (y, z)
   | DLet (x, tyo, e) ->
     let y = fresh x in
     let env = Env.update env x y in
@@ -116,7 +131,7 @@ let alpha_convert_declaration bmap (env: Var.t Env.t)
   | DRequire e -> (env, DRequire (alpha_convert_exp env e))
   | DATy _ | DUserTy _ | DNodes _ | DEdges _ -> (env, d)
 
-let rec alpha_convert_aux bmap env (ds: declarations) : declarations =
+and alpha_convert_aux bmap env (ds: declarations) : declarations =
   match ds with
   | [] -> []
   | d :: ds' ->

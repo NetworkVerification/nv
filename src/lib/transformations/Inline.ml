@@ -148,8 +148,14 @@ and inline_branch env (p, e) =
   let env' = remove_all env p in
   (p, inline_exp env' e)
 
-let inline_declaration (env: exp Env.t) (d: declaration) =
+let rec inline_declaration (env: exp Env.t) (d: declaration) =
   match d with
+  (* We shouldn't need to worry about scoping here because Renaming should make
+     names globally unique. I hope. *)
+  | DModule (x, ds) ->
+    let env, ds = inline_declarations_aux env ds in
+    env, Some (DModule (x, ds))
+  | DSolve _ -> failwith "Not yet implemented"
   | DLet (x, _, e) ->
     let e = inline_exp env e in
     (* TODO: always inline? check size of exp? *)
@@ -174,18 +180,20 @@ let inline_declaration (env: exp Env.t) (d: declaration) =
   | DRequire e -> (env, Some (DRequire (inline_exp env e)))
   | DATy _ | DUserTy _ | DNodes _ | DEdges _ -> (env, Some d)
 
-let rec inline_declarations_aux env (ds: declarations) : declarations =
+and inline_declarations_aux env (ds: declarations) =
   match ds with
-  | [] -> []
+  | [] -> env, []
   | d :: ds' ->
     let env', d' = inline_declaration env d in
     match d' with
     | None -> inline_declarations_aux env' ds'
-    | Some d' -> d' :: inline_declarations_aux env' ds'
+    | Some d' ->
+      let env, ds = inline_declarations_aux env' ds' in
+      env, d' :: ds
 ;;
 
 let inline_declarations (ds: declarations) =
-  inline_declarations_aux Env.empty ds
+  snd @@ inline_declarations_aux Env.empty ds
 (* match get_attr_type ds with
    | None ->
    failwith "attribute type not declared: type attribute = ..."
