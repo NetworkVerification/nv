@@ -285,6 +285,7 @@ struct
     | ETy (e, _) -> encode_exp_z3 descr env e
     | EFun _ | EApp _ -> failwith "function in smt encoding"
     | ERecord _ | EProject _ -> failwith "record or projection in smt encoding"
+    | EModProject _ -> failwith "Module projection in smt encoding"
 
   and encode_branches_z3 descr env names bs (t: ty) =
     match isEmptyBranch bs with

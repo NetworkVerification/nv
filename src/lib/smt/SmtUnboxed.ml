@@ -323,7 +323,7 @@ struct
     | ETy (e, _) -> encode_exp_z3 descr env e
     | EFun _ | EApp _ ->
       failwith "function in smt encoding"
-    | ERecord _ | EProject _ -> failwith "record in smt encoding"
+    | ERecord _ | EProject _ | EModProject _ -> failwith "record in smt encoding"
     | _ ->
       (* Printf.printf "expr: %s\n" (Syntax.show_exp ~show_meta:false e); *)
       [encode_exp_z3_single descr env e]

@@ -195,7 +195,7 @@ let rec eval (env: t Env.t) (e: exp) : t =
           (env, x) bs
       in
       x )
-  | EFun _ | EApp _ | ERecord _ | EProject _ -> failwith "internal error (eval)"
+  | EFun _ | EApp _ | ERecord _ | EProject _ | EModProject _-> failwith "internal error (eval)"
 
 and eval_branch env bddf p : t Env.t * Bdd.vt =
   match (p, bddf) with

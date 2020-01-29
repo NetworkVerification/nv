@@ -58,6 +58,7 @@ let prec_exp e =
   | ETy (_, _) -> max_prec
   | ERecord _ -> 0
   | EProject _ -> 0
+  | EModProject _ -> 0
 
 let rec sep s f xs =
   match xs with
@@ -254,6 +255,7 @@ and exp_to_string_p prec e =
     | ETy (e, t) -> exp_to_string_p prec e ^ ty_to_string t
     | ERecord map -> print_record "=" (exp_to_string_p prec) map
     | EProject (e, l) -> exp_to_string_p prec e ^ "." ^ l
+    | EModProject (x, e) -> Var.to_string x ^ "." ^ exp_to_string_p prec e
   in
   if p > prec then "(" ^ s ^ ")" else s
 

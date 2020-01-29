@@ -104,6 +104,7 @@ and e = private
   | ETy of exp * ty
   | ERecord of exp StringMap.t
   | EProject of exp * string
+  | EModProject of var * exp
 
 and exp = private
   {e: e; ety: ty option; espan: Span.t; etag: int; ehkey: int}

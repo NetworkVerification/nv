@@ -211,7 +211,7 @@ let rec interp_exp_partial_opt isapp env expEnv e =
               (p, interp_exp_partial_opt false env expEnv e)) branches),
                 e.ety, e.espan) (* |> simplify_match *)
         | Some (penv, e) -> interp_exp_partial_opt false env penv e)
-  | ERecord _ | EProject _ -> failwith "Record found during partial interpretation"
+  | ERecord _ | EProject _ | EModProject _-> failwith "Record found during partial interpretation"
 
 and interp_op_partial_opt env expEnv _ op es =
   let pes = BatList.map (interp_exp_partial_opt false env expEnv) es in
@@ -326,7 +326,7 @@ let rec interp_exp_partial isapp env e =
           (p, interp_exp_partial false env e)) branches),
             e.ety, e.espan) (* |> simplify_match *)
 
-  | ERecord _ | EProject _ -> failwith "Record found during partial interpretation"
+  | ERecord _ | EProject _ | EModProject _ -> failwith "Record found during partial interpretation"
 
 and interp_op_partial env op es =
   let pes = BatList.map (interp_exp_partial false env) es in

@@ -293,7 +293,7 @@ let rec interp_exp_partial (env: Syntax.exp Env.t) e =
        (env, aexp (ematch pe1 (mapBranches (fun (p,e) ->
             (p, snd (interp_exp_partial env e))) branches),
                    e.ety, e.espan)))
-  | ERecord _ | EProject _ -> failwith "Record found during partial interpretation"
+  | ERecord _ | EProject _ | EModProject _ -> failwith "Record found during partial interpretation"
 
 (* this is same as above, minus the app boolean. see again if we can get rid of that? *)
 and interp_op_partial env ty op es =

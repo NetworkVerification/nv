@@ -86,6 +86,7 @@ let rec check_closure info (x: VarSet.t) (e: exp) =
          check_closure info (VarSet.union set x) e )
       bs
   | ETy (e, _) -> check_closure info x e
+  | EModProject (_, e) -> check_closure info x e (* ????? *)
 
 and pattern_vars (p: pattern) =
   match p with

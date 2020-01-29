@@ -138,6 +138,7 @@ and transform_exp ~(name:string) (transformers:transformers) (e : exp) : exp =
       | EMatch (test, branches) ->
         ematch (transform_exp test)
           (mapBranches (fun (p, b) -> (transform_pattern p (oget test.ety), transform_exp b)) branches)
+      | EModProject _ -> failwith "Should be removed from program by now"
   in
   aexp (e', omap transform_ty e.ety, e.espan)
 ;;

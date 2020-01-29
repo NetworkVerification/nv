@@ -161,6 +161,7 @@ and e =
   | ETy of exp * ty
   | ERecord of exp StringMap.t
   | EProject of exp * string
+  | EModProject of var * exp
 [@@deriving ord]
 
 and exp =
@@ -657,6 +658,8 @@ and hash_e ~hash_meta e =
      + 11)
   | EProject (e, label) ->
     (19 * hash_exp ~hash_meta e + hash_string label + 12)
+  | EModProject (x, e) ->
+    19 * (hash_var x + 19 * hash_exp ~hash_meta e) + 13
 
 and hash_var x = hash_string (Var.to_string x)
 
@@ -830,6 +833,8 @@ let etuple es = exp (ETuple es)
 
 let eproject e l = exp (EProject (e,l))
 
+let emodproject x e = exp (EModProject (x,e))
+
 let erecord map = exp (ERecord map)
 
 let esome e = exp (ESome e)
@@ -865,7 +870,8 @@ let rec is_value e =
   | EIf _
   | ELet _
   | EMatch _
-  | EProject _ ->
+  | EProject _
+  | EModProject _ ->
     false
 
 let rec to_value e =
@@ -917,6 +923,7 @@ let rec exp_to_pattern e =
   | EVar x -> PVar x
   | ERecord rs -> PRecord (StringMap.map exp_to_pattern rs)
   | EProject _
+  | EModProject _
   | EOp _
   | EFun _
   | EApp _
@@ -935,7 +942,8 @@ let rec exp_to_value (e : exp) : value =
   | EIf _
   | ELet _
   | EMatch _
-  | EProject _ ->
+  | EProject _
+  | EModProject _ ->
     failwith "Not a literal"
   | ESome exp2 ->
     voption (Some (exp_to_value exp2))
@@ -1147,7 +1155,7 @@ let rec free (seen: Var.t PSet.t) (e: exp) : Var.t PSet.t =
   | ELet (x, e1, e2) ->
     let seen = PSet.add x seen in
     PSet.union (free seen e1) (free seen e2)
-  | ESome e | ETy (e, _) | EProject (e, _) -> free seen e
+  | ESome e | ETy (e, _) | EProject (e, _) | EModProject (_, e) -> free seen e
   | EMatch (e, bs) ->
     let bs1 =
       PatMap.fold
@@ -1193,7 +1201,7 @@ let rec free_ty (seen: Var.t PSet.t) (e: exp) : (Var.t * ty) PSet.t =
   | ELet (x, e1, e2) ->
     let seen = PSet.add x seen in
     PSet.union (free_ty seen e1) (free_ty seen e2)
-  | ESome e | ETy (e, _) | EProject (e, _) -> free_ty seen e
+  | ESome e | ETy (e, _) | EProject (e, _) | EModProject (_, e) -> free_ty seen e
   | EMatch (e, bs) ->
     let bs1 =
       PatMap.fold
@@ -1253,6 +1261,7 @@ let rec free_dead_vars (e : exp) =
     ematch e1
       (mapBranches (fun (ps, e) -> (ps, free_dead_vars e)) branches)
   | EProject (e, l) -> eproject (free_dead_vars e) l
+  | EModProject (x, e) -> emodproject x (free_dead_vars e)
 
 let compare_vs = compare_value
 let compare_es = compare_exp
