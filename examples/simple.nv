@@ -2,7 +2,7 @@
    Implements shortest paths on a 2-node network
    with the destination at node 0. *)
 
-type attribute = int
+type attribute = (int, int)
 
 (* Number of nodes in network topology;
    nodes are numbered 0..nodes-1
@@ -24,18 +24,23 @@ let edges = {
    so one can customize the merge to the node you want.
  *)
 let merge node x y =
-  if x < y then x else y
+  let (x, a) = x in let (y, b) = y in
+  if x < y then (x,b) else (y,a)
 
 (* The trans function;
    It must have type  (UInt32 * UInt32) -> A -> A;
    The first argument is the edge (u,v) along which the transformation occurs.
  *)
-let trans edge x = x + 1
+let trans edge x = let (x,y) = x in (x + 1, y+1)
 
 (* The initial state of the network;
    A map from nodes to initial values with type A.
  *)
 let init node =
   match node with
-  | 0n -> 0
-  | _ -> 10
+  | 0n -> (0, 500)
+  | _ -> (10, 500)
+
+let assert n x =
+  let (x, a) = x in
+  x < 10

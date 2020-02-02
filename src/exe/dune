@@ -1,4 +1,8 @@
 (executable
   (name main)
-  ; (public_name nv)
-  (libraries nv_lib findlib.dynload))
+  (libraries nv findlib.dynload))
+
+; Added to match https://github.com/ocaml/dune/blob/master/example/sample-projects/hello_world/bin/dune
+(install
+  (section bin)
+  (files (main.exe as nv)))

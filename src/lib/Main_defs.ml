@@ -125,7 +125,7 @@ let run_smt_classic file cfg info (net : Syntax.network) fs =
 
   (* Return the first slice that returns a counterexample, or the result of the
      last slice if all of them succeed *)
-  (* List.iter (fun (net, _) -> print_endline @@ Printing.network_to_string net) slices; *)
+  (* List.iter (fun f -> print_endline @@ Printing.network_to_string (fst @@ f ())) slices; *)
   let count = ref (-1) in
   let rec solve_slices slices =
     match slices with

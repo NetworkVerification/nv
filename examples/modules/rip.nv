@@ -1,0 +1,40 @@
+include "../utils.nv"
+include "SRPSig.nv"
+
+type attribute = (dest, bgp_route)
+
+
+module RIP = struct
+  type attribute = int option
+
+  let trans edge x =
+    match x with
+    | None -> None
+    | Some d ->
+      (* RIP caps routes at 15 hops *)
+      if d >= 15 then None else Some (d+1)
+
+  let merge n x y =
+    mapbetter (fun x y -> if x < y then x else y) x y
+end
+
+module RIPMulti = struct
+  type attribute = dict[tnode, RIP.attribute]
+
+  let init n =
+    let m = createDict None in
+    m[n := Some 0]
+
+  let trans edge x =
+    map (RIP.trans edge) x
+
+  let merge n x y = combine (RIP.merge n) x y
+end
+
+(* Okay, this didn't actually end up being a functor *)
+module RIPSRP : SRP = struct
+  include RIPMulti (* Re-exports all the definitions in RIPMulti *)
+
+  let nodes = 2 (* User-defined *)
+  let edges = {0~1;} (* User-defined *)
+end

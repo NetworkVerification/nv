@@ -47,6 +47,16 @@ let rec combine3 lst1 lst2 lst3 =
   | hd1::tl1, hd2::tl2, hd3::tl3 -> (hd1,hd2,hd3)::combine3 tl1 tl2 tl3
   | _ -> raise (Invalid_argument "combine3: lists have different lengths")
 
+let sublist lo hi lst =
+  lst |> BatList.drop lo |> BatList.take (hi - lo + 1)
+
+let replace_sublist lo hi sub full =
+  let sub_ref = ref sub in
+  let pop () =
+    let hd = List.hd !sub_ref in
+    sub_ref := List.tl !sub_ref; hd
+  in
+  List.mapi (fun i e -> if i < lo || i > hi then e else pop ()) full
 
 let replaceSlice lo hi ls slice =
   BatList.fold_righti (fun i x (vs, acc) ->
@@ -57,16 +67,16 @@ let replaceSlice lo hi ls slice =
     ) ls (BatList.rev slice, []) |> snd
 
 let printList (printer: 'a -> string) (ls: 'a list) (first : string)
-              (sep : string) (last : string) =
+    (sep : string) (last : string) =
   let buf = Buffer.create 500 in
   let rec loop ls =
     match ls with
     | [] -> ()
     | [l] -> Buffer.add_string buf (printer l)
     | l :: ls ->
-       Buffer.add_string buf (printer l);
-       Buffer.add_string buf sep;
-       loop ls
+      Buffer.add_string buf (printer l);
+      Buffer.add_string buf sep;
+      loop ls
   in
   Buffer.add_string buf first;
   loop ls;
@@ -74,16 +84,16 @@ let printList (printer: 'a -> string) (ls: 'a list) (first : string)
   Buffer.contents buf
 
 let printListi (printer: int -> 'a -> string) (ls: 'a list) (first : string)
-              (sep : string) (last : string) =
+    (sep : string) (last : string) =
   let buf = Buffer.create 500 in
   let rec loop i ls =
     match ls with
     | [] -> ()
     | [l] -> Buffer.add_string buf (printer i l)
     | l :: ls ->
-       Buffer.add_string buf (printer i l);
-       Buffer.add_string buf sep;
-       loop (i+1) ls
+      Buffer.add_string buf (printer i l);
+      Buffer.add_string buf sep;
+      loop (i+1) ls
   in
   Buffer.add_string buf first;
   loop 0 ls;

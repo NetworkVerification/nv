@@ -35,39 +35,37 @@ let extract_dtuple depresult =
 let extract_dbase depresult =
   match depresult with
   | DBase s -> s
-  | _ -> failwith "extract_dtuple: Not a DBase"
+  | _ -> failwith "extract_dbase: Not a DBase"
 ;;
 
 let transitive_closure (m : attrdepmap) : attrdepmap =
-  let seen = ref IntSet.empty in
-  let computed = ref IntMap.empty in
-  let rec compute_one_index index =
-    (* Memoization: see if we've already fully computed index's dependencies *)
-    match IntMap.Exceptionless.find index !computed with
-    | None ->
-      (* Avoid infinite loops *)
-      if IntSet.mem index !seen then IntSet.empty else
-        begin
-          seen := IntSet.add index !seen;
-          let immediate_dependencies = IntMap.find index m in
-          let transitive_dependencies =
-            immediate_dependencies
-            |> IntSet.elements
-            |> List.map (fun n -> compute_one_index n)
-            |> List.fold_left IntSet.union immediate_dependencies
-          in
-          computed := IntMap.add index transitive_dependencies !computed;
-          transitive_dependencies
-        end
-    | Some s -> s
-  in
+  (* Writing our own transitive closure algorithm is bug-prone, so instead
+     we'll turn out map into a graph, then use a library function *)
+  let module G = Graph.Pack.Digraph in
+  let g = G.create ~size:(IntMap.cardinal m) () in
+  (* Vertices are attribute elements, identified by their index, and edges
+     indicate dependencies. We'd like to just refer to vertex objects by their
+     label (i.e. index), but that's expensive, so we create the objects
+     separately.
+  *)
+  let vs = List.init (IntMap.cardinal m) (fun n -> G.V.create n) in
+  List.iter (G.add_vertex g) vs;
+  let to_vertex (n : int) = List.nth vs n in
+  (* Add all the edges *)
   IntMap.iter
-    (fun index _ ->
-       seen := IntSet.empty;
-       ignore @@ compute_one_index index)
-    m
-  ;
-  !computed
+    (fun k deps -> IntSet.iter
+        (fun n ->
+           G.add_edge g (to_vertex k) (to_vertex n))
+        deps)
+    m;
+  let g = G.transitive_closure g in
+  (* Turn the graph back into an IntMap *)
+  G.fold_vertex
+    (fun v acc ->
+       let vdeps = List.map G.V.label (G.succ g v) in
+       IntMap.add (G.V.label v) (IntSet.of_list vdeps) acc
+    )
+    g IntMap.empty
 ;;
 
 (* Given a map of argument numbers to attribute elements and dependencies of
@@ -99,16 +97,16 @@ let attribute_dependencies (net : Syntax.network) : attrdepmap =
   let init_argmap = IntMap.empty in
   let trans_argmap =
     (* First two arguments to trans are nodes, not attribute elements *)
-    2--(attr_size+2)
+    2--(attr_size+1)
     |> Enum.foldi (fun i argnum acc -> IntMap.add argnum i acc) IntMap.empty
   in
   let merge_argmap =
     (* First argument to merge is a node, not attribute element *)
     let first_n_args =
-      1--(attr_size+1)
+      1--(attr_size)
       |> Enum.foldi (fun i argnum acc -> IntMap.add argnum i acc) IntMap.empty
     in
-    (attr_size+1)--(2*attr_size+1)
+    (attr_size+1)--(2*attr_size)
     |> Enum.foldi (fun i argnum acc -> IntMap.add argnum i acc) first_n_args
   in
   let init_deps = compute_dependencies net.init |> extract_dtuple |> process_dependencies init_argmap in
