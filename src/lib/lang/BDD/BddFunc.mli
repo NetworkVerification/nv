@@ -4,11 +4,14 @@ open Syntax
 type t =
   | BBool of Bdd.vt
   | BInt of Bdd.vt array
-  | BTuple of t list
   | BOption of Bdd.vt * t
-
+  | Tuple of t list
+  | BMap of BddMap.t
+  | Value of Syntax.value
 
 val bdd_of_bool: bool -> Cudd.Man.v Cudd.Bdd.t
+
+val value_mtbdd_bool_mtbdd : value Cudd.Mtbdd.unique Cudd.Vdd.t -> bool Cudd.Mtbdd.unique Cudd.Vdd.t
 
 val create_value : ty -> t
 

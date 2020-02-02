@@ -174,13 +174,21 @@ and interp_op env ty op es =
       match ExpEnvMap.Exceptionless.find lookupVal !bddfunc_cache with
       | None -> (
         let bddf = BddFunc.create_value (Nv_utils.OCamlUtils.oget f1.argty) in
-        let env = Env.update (Env.map usedValEnv (fun v -> BddFunc.eval_value v)) f1.arg bddf in
+        let env = Env.update (Env.map usedValEnv (fun v -> BddFunc.Value v)) f1.arg bddf in
         let bddf = BddFunc.eval env f1.body in
+        let bddf = match bddf with
+          | Value v -> BddFunc.eval_value v
+          | _ -> bddf
+        in
         match bddf with
         | BBool bdd ->
           let mtbdd = BddFunc.wrap_mtbdd bdd in
           bddfunc_cache :=
             ExpEnvMap.add lookupVal mtbdd !bddfunc_cache ;
+          mtbdd
+        | BMap mtbdd ->
+          let mtbdd = (BddFunc.value_mtbdd_bool_mtbdd (fst mtbdd)) in
+          bddfunc_cache := ExpEnvMap.add lookupVal mtbdd !bddfunc_cache ;
           mtbdd
         | _ -> failwith "impossible" )
       | Some bddf -> bddf
