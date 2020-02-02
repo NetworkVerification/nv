@@ -8,6 +8,11 @@
    jupyter.comm
    batteries
    cudd
+   ppx_deriving_yojson
+   lwt
+   lwt.unix
+   lwt_ppx
    integers
    nv_lib)
+  (preprocess (pps ppx_deriving_yojson))
 )
