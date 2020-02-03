@@ -43,6 +43,7 @@ opam install -y \
   fileutils \
   parmap \
   fix \
+  jupyter \\
   dune
 ```
 
