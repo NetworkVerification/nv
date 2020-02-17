@@ -38,7 +38,6 @@ type ty =
   | TRecord of ty StringMap.t
   | TNode
   | TEdge
-  (* | THyp of ty *)
 [@@deriving ord, eq]
 
 and tyvar = Unbound of tyname * level | Link of ty
@@ -79,7 +78,6 @@ type pattern =
   | PRecord of pattern StringMap.t
   | PNode of node
   | PEdge of pattern * pattern
-  (* | PHyp of pattern Partition.Hyp.t *)
 [@@deriving ord, eq]
 
 module Pat =
@@ -688,9 +686,6 @@ and hash_pattern p =
      + 8)
   | PNode n -> (19 * n) + 9
   | PEdge (p1, p2) -> (19 * (hash_pattern p1 + 19 * hash_pattern p2)) + 10
-  (* | PHyp Partition.Hyp.None -> 11 *)
-  (* | PHyp Partition.Hyp.Infer -> 12 *)
-  (* | PHyp (Partition.Hyp.Annotate p) -> (19 * hash_pattern p) + 13 *)
 
 and hash_patterns ps =
   List.fold_left (fun acc p -> acc + hash_pattern p) 0 ps
@@ -1102,6 +1097,11 @@ let get_ty_from_tyexp (et : ty_or_exp) : ty =
 let bool_of_val (v : value) : bool option =
   match v.v with
   | VBool b -> Some b
+  | _ -> None
+
+let int_of_val (v : value) : int option =
+  match v.v with
+  | VInt i -> Some (Integer.to_int i)
   | _ -> None
 
 let proj_var (n: int) (x: var) =

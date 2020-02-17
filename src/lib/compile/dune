@@ -1,6 +1,6 @@
 (library
  (name nv_compile)
- (public_name nv_lib.compile)
+ (public_name nv.compile)
   (libraries
     nv_lang
     nv_solution

@@ -2,6 +2,7 @@
 type t =
   { debug: bool       [@short "-d"]    (** enable a debugging backtrace for nv     *)
   ; verbose: bool     [@short "-v"]    (** print out the srp solution              *)
+  ; no_wellformed: bool                (** don't check if the network is well-formed *)
   ; simulate: bool    [@short "-s"]    (** simulate the network on given inputs    *)
   ; bound: int option                  (** bound the number of simulation steps    *)
   ; random_test: bool [@short "-r"]    (** perform randomized network testing      *)
@@ -39,6 +40,7 @@ type t =
 let default =
   { debug= false
   ; verbose= false
+  ; no_wellformed = false
   ; simulate= false
   ; bound= None
   ; random_test= false

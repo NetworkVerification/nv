@@ -362,6 +362,8 @@ val get_ty_from_tyexp: ty_or_exp -> ty
 
 val bool_of_val: value -> bool option
 
+val int_of_val : value -> int option
+
 val proj_var: int -> var -> var
 
 val unproj_var: var -> (int * var)

@@ -4,6 +4,10 @@ include "../../../examples/utils.nv"
 include "sp4.nv"
 
 (* destination: node 10 *)
+(* 70.0.19.0/24u5 or (1174409984, 24u5)*)
+(* 10's pod includes itself and 6, 8 and 2 *) 
+
+(* all true: 11 and 12 (in pod with 13 and 14) fail P assert *)
 
 (* split along spine-pod edges *)
 let partition node = match node with
@@ -14,50 +18,56 @@ let partition node = match node with
   | _ -> 1u8
 
 let interface edge = 
-  (* let isSome o = match o with
-    | None -> false
-    | _ -> true
-  in *)
-  let hasSomeBest x = 
+  let any x = true in
+  let nothingButBgp x =
+    match x with
+    | {connected = c; static = s; ospf = o; _} ->
+    (* only have bgp routes *)
+    c = None && s = None && o = None
+  in
+  let hasOnlyBgp x = 
     match x with
     | {connected = c; static = s; ospf = o; bgp = b; selected = sel} ->
-    (isSome c || isSome s || isSome o || isSome b) && isSome sel
+    (* connected, static and ospf aren't transferred,
+     * so transfer won't maintain their values
+     *)
+    c = None && s = None && o = None && isSome b
   in
   match edge with
-  (* 1 edges *)
-  | 8~1 -> Some hasSomeBest
-  | 1~8 -> Some hasSomeBest
-  | 1~14 -> Some hasSomeBest
-  | 1~16 -> Some hasSomeBest
-  | 1~18 -> Some hasSomeBest
-  | 14~1 -> Some hasSomeBest
-  | 16~1 -> Some hasSomeBest
-  | 18~1 -> Some hasSomeBest
-  (* 3 edges *)
-  | 3~8 -> Some hasSomeBest
-  | 3~14 -> Some hasSomeBest
-  | 3~16 -> Some hasSomeBest
-  | 3~18 -> Some hasSomeBest
-  | 8~3 -> Some hasSomeBest
-  | 14~3 -> Some hasSomeBest
-  | 16~3 -> Some hasSomeBest
-  | 18~3 -> Some hasSomeBest
-  (* 4 edges *)
-  | 6~4 -> Some hasSomeBest
-  | 4~6 -> Some hasSomeBest
-  | 4~13 -> Some hasSomeBest
-  | 4~15 -> Some hasSomeBest
-  | 4~17 -> Some hasSomeBest
-  | 13~4 -> Some hasSomeBest
-  | 15~4 -> Some hasSomeBest
-  | 17~4 -> Some hasSomeBest
-  (* 7 edges *)
-  | 6~7 -> Some hasSomeBest
-  | 7~6 -> Some hasSomeBest
-  | 7~13 -> Some hasSomeBest
-  | 7~15 -> Some hasSomeBest
-  | 7~17 -> Some hasSomeBest
-  | 13~7 -> Some hasSomeBest
-  | 15~7 -> Some hasSomeBest
-  | 17~7 -> Some hasSomeBest
+  (* 1 edges - 1 gets the route to 10 via 8 *)
+  | 1~8 -> Some nothingButBgp
+  | 1~14 -> Some hasOnlyBgp
+  | 1~16 -> Some hasOnlyBgp
+  | 1~18 -> Some hasOnlyBgp
+  | 8~1 -> Some hasOnlyBgp
+  | 14~1 -> Some nothingButBgp
+  | 16~1 -> Some nothingButBgp
+  | 18~1 -> Some nothingButBgp
+  (* 3 edges - 3 gets the route to 10 via 8 *)
+  | 3~8 -> Some nothingButBgp
+  | 3~14 -> Some hasOnlyBgp
+  | 3~16 -> Some hasOnlyBgp
+  | 3~18 -> Some hasOnlyBgp
+  | 8~3 -> Some hasOnlyBgp
+  | 14~3 -> Some nothingButBgp
+  | 16~3 -> Some nothingButBgp
+  | 18~3 -> Some nothingButBgp
+  (* 4 edges - 4 gets the route to 10 via 6 *)
+  | 4~6 -> Some nothingButBgp
+  | 4~13 -> Some hasOnlyBgp
+  | 4~15 -> Some hasOnlyBgp
+  | 4~17 -> Some hasOnlyBgp
+  | 6~4 -> Some hasOnlyBgp
+  | 13~4 -> Some nothingButBgp
+  | 15~4 -> Some nothingButBgp
+  | 17~4 -> Some nothingButBgp
+  (* 7 edges - 7 gets the route to 10 via 6 *)
+  | 7~6 -> Some nothingButBgp
+  | 7~13 -> Some hasOnlyBgp
+  | 7~15 -> Some hasOnlyBgp
+  | 7~17 -> Some hasOnlyBgp
+  | 6~7 -> Some hasOnlyBgp
+  | 13~7 -> Some nothingButBgp
+  | 15~7 -> Some nothingButBgp
+  | 17~7 -> Some nothingButBgp
   | _ -> None

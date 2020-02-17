@@ -12,11 +12,6 @@ let is_cross_partition (f: Vertex.t -> 'a) edge =
 (* It is possible that a better implementation involves building a new graph using the interface set,
  * as indexing newly-added nodes could break on AdjGraph implementation change
  *)
-type onetwork =
-  {
-    network         : network;
-    interfaces      : OpenAdjGraph.interfaces;
-  }
 
 (** Representation of a cut edge with an associated hypothesis and a predicate on that hypothesis *)
 type cut_edge =
@@ -26,118 +21,90 @@ type cut_edge =
     p: exp;
   }
 
-(** Transform a value representing an option into an optional value.
- * Fail if the value is not an option.
+(** Helper function to extract the edge predicate
+ *  from the interface expression.
  *)
-let proj_opt (v: value) : value option =
-  match v with
-  | {v = VOption o; _ } -> o
-  | _ -> failwith "value is not an option"
+let interp_interface intfe e : exp option = 
+  let intf_app = Interp.apply empty_env (deconstructFun intfe) (vedge e) in
+    (* if intf_app is not an option, or if the value it contains is not a function,
+     * fail *)
+  match intf_app with
+  | {v = VOption o; _} -> begin match o with
+    | Some {v = VClosure (_env, func); _ } -> Some (efunc func)
+    | Some _ -> failwith "expected a closure, got something else instead!"
+    (* infer case *)
+    | None -> None
+    end
+  | _ -> failwith "intf value is not an option; did you type check the input?"
 
-(** Extract the closure value of the interface and
- * convert it to a simple expression of a function.
+(** Helper function to extract the partition index
+ *  from the partition expression.
  *)
-let extract_intf_closure (value: value) : exp =
-  match value.v with
-  | VClosure (_env, func) -> efunc func
-  | _ -> failwith "intf value was not a closure"
+let interp_partition parte node : int =
+  let value = Interp.apply empty_env (deconstructFun parte) (vnode node)
+  in (int_of_val value) |> Option.get
 
 (* Generate a map of edges to annotations from the given partition and interface expressions
  * and a list of edges.
+ * If the interface is absent, use None for each value.
  * @return a map from edges in the original SRP to associated values
  *)
-let partition_interface_edges (partition: exp option) (interface: exp option) (edges: edge list) : exp option EdgeMap.t =
+let map_edges_to_interface (partition: exp option) (interface: exp option) (edges: edge list) : exp option EdgeMap.t =
   match partition with
   | Some parte -> begin
-    match interface with
-    (* Add each cross-partition edge to the interface *)
-    | Some intfe -> 
-        let get_edge_hyp map e = 
-          (* partition testing function *)
-          let partf_app node = Interp.apply empty_env (deconstructFun parte) (vnode node) in
-          (* interface hypothesis *)
-          let intf_app = Interp.apply empty_env (deconstructFun intfe) (vedge e) in
-          if (is_cross_partition partf_app e) then
-            (* if intf_app is not an option, fail *)
-            let intf_pred = (proj_opt intf_app) |> Option.map extract_intf_closure in
-            EdgeMap.add e intf_pred map
-          else
-            map
-        in
-        List.fold_left get_edge_hyp EdgeMap.empty edges
-    (* Mark every edge as to be inferred *)
-    | None -> List.fold_left (fun m e -> EdgeMap.add e None m) EdgeMap.empty edges
+      let get_edge_hyp map e = 
+        (* Add each cross-partition edge to the interface *)
+        if (is_cross_partition (interp_partition parte) e) then
+          let intf_pred = match interface with
+          | Some intfe -> interp_interface intfe e
+          | None -> None
+          in
+          EdgeMap.add e intf_pred map
+        else
+          map
+      in
+      List.fold_left get_edge_hyp EdgeMap.empty edges
   end
   | None -> EdgeMap.empty
 
-let partition_interface (partition: exp option) (interface: exp option) (graph: AdjGraph.t) : exp option EdgeMap.t =
-  match partition with
-  | Some parte -> begin
-    match interface with
-    (* Add each cross-partition edge to the interface *)
-    | Some intfe -> 
-        let get_edge_hyp u v map = 
-          (* partition testing function *)
-          let partf_app node = Interp.apply empty_env (deconstructFun parte) (vnode node) in
-          (* interface hypothesis *)
-          let intf_app = Interp.apply empty_env (deconstructFun intfe) (vedge (u, v)) in
-          if (is_cross_partition partf_app (u, v)) then
-            (* if intf_app is not an option, fail *)
-            let intf_pred = (proj_opt intf_app) |> Option.map extract_intf_closure in
-            EdgeMap.add (u, v) intf_pred map
-          else
-            map
-        in
-        fold_edges get_edge_hyp graph EdgeMap.empty
-    (* Mark every edge as to be inferred *)
-    | None -> fold_edges (fun u v m -> EdgeMap.add (u, v) None m) graph EdgeMap.empty
-  end
-  | None -> EdgeMap.empty
-
-(** Return a function representing a predicate over attributes,
- * which compares a given variable to an exact value.
- *)
-let create_exact_predicate attr_type value =
-  let var = Var.fresh "x" in
-  let body = eop Eq [(evar var); (e_val value)] in
-    efunc (funcFull var (Some attr_type) (Some TBool) body)
+(** Helper function to unwrap the predicate. *)
+let unwrap_pred maybe_pred = match maybe_pred with
+| Some pred -> pred (* the interface is an efun *)
+| None -> e_val (vbool true)
 
 (** Create a symbolic variable for each cut edge.
+ *  This function maps each edge's optional predicate
+ *  into a pair: a hypothesis variable and a predicate we can
+ *  apply to that hypothesis variable.
  *  @return a map from edges to hypothesis and predicate information *)
-let create_hyp_vars _attr_type (interface: exp option EdgeMap.t) : (var * exp) EdgeMap.t =
-  let create_hyp_var edge = 
-    let name = Printf.sprintf "hyp_%s" (Edge.to_string edge) in
-    Var.fresh name
-  in
+let create_hyp_vars (interface: exp option EdgeMap.t) : (var * exp) EdgeMap.t =
   let create_hyp_pred edge maybe_pred =
-    let h = create_hyp_var edge in
-    (* generate a predicate; if there is no specific value given, set it to true *)
-    let p = match maybe_pred with
-    | Some pred -> pred (* the interface is an efun *)
-    | None -> e_val (vbool true)
-    in (h, p)
+    (* generate the var *)
+    let name = Printf.sprintf "hyp_%s" (Edge.to_string edge) in
+    (Var.fresh name, unwrap_pred maybe_pred)
   in
   EdgeMap.mapi create_hyp_pred interface
 
+(* FIXME: this code is currently broken by the changes to interfaces *)
 let open_network (net: network) : network =
   let { attr_type; init; trans; merge; assertion; partition; interface; symbolics; defs; utys; requires; graph } : network = net
   in
-  let part_int = partition_interface partition interface graph in
-  let edge_hyps = create_hyp_vars attr_type part_int in
+  let part_int = map_edges_to_interface partition interface (fold_edges_e List.cons graph []) in
+  let edge_hyps = create_hyp_vars part_int in
   (* map of edges to expressions using the hypotheses (for use in init) *)
-  let input_exps = EdgeMap.map (fun (var, _pred) -> evar var) edge_hyps in
-  let output_preds = EdgeMap.map (fun (_var, pred) -> pred) edge_hyps in
+  let _input_exps = EdgeMap.map (fun (var, _pred) -> evar var) edge_hyps in
+  let _output_preds = EdgeMap.map (fun (_var, pred) -> pred) edge_hyps in
   (* pass in set of edges to partitioner *)
   let edges = EdgeMap.fold (fun k _ s -> EdgeSet.add k s) part_int EdgeSet.empty in
-  let (graph, interfaces) = OpenAdjGraph.partition_graph graph (OpenAdjGraph.intf_empty) edges in
+  let (graph, _interfaces) = OpenAdjGraph.partition_graph graph (OpenAdjGraph.intf_empty) edges in
   {
     attr_type;
-    init = transform_init init interfaces input_exps;
-    trans = transform_trans trans interfaces;
+    init = init; (* FIXME: transform_init init interfaces input_exps; *)
+    trans = trans; (* FIXME: transform_trans trans interfaces; *)
     merge; (* = transform_merge merge interfaces; *)
     partition = None;
     interface = None;
-    assertion = transform_assert assertion interfaces output_preds;
+    assertion = assertion; (* FIXME: transform_assert assertion interfaces output_preds; *)
     symbolics = EdgeMap.fold (fun _k (v, _) l -> (v, Ty attr_type) :: l) edge_hyps symbolics;
     defs;
     utys;
@@ -149,75 +116,111 @@ let open_network (net: network) : network =
 (* Return a new version of the nodes and edges where edge e has been replaced
  * by an output-input pair.
  *)
-let partition_edge (nodes: int) (edges: edge list) (e: edge) (intf: OpenAdjGraph.interfaces) : (int * edge list * OpenAdjGraph.interfaces) =
+let partition_edge (nodes: int) (edges: edge list) (e: edge)
+  ({outputs; inputs; outs_broken; broken_ins}: OpenAdjGraph.interfaces_alt) 
+  : (int * edge list * OpenAdjGraph.interfaces_alt) 
+=
   let (u,v) = e in
   let (outnode, innode) = (nodes, nodes + 1) in
   let parted_edges = [(u, outnode); (innode, v)] in
   let new_nodes = nodes + 2 in
   let new_edges = (List.remove edges e) @ parted_edges in
-  let new_intf = OpenAdjGraph.{
-    inputs = VertexMap.add innode v intf.inputs;
-    outputs = VertexMap.add outnode u intf.outputs;
-    broken = VertexMap.add outnode innode intf.broken;
+  let new_intf : OpenAdjGraph.interfaces_alt = {
+    inputs = VertexMap.add innode v inputs;
+    outputs = VertexMap.add outnode u outputs;
+    outs_broken = VertexMap.add outnode e outs_broken;
+    broken_ins = EdgeMap.add e innode broken_ins;
   } in
   (new_nodes, new_edges, new_intf)
 
-let get_input_exps (interfaces: OpenAdjGraph.interfaces) (edge_hyps: (var * exp) EdgeMap.t) : (exp EdgeMap.t) =
-  let OpenAdjGraph.{ outputs; inputs; broken } = interfaces in
-  let find_old_edge outn inn =
-    let u = VertexMap.find outn outputs in
-    let v = VertexMap.find inn inputs in
-    (u, v)
-  in
+(** Create a new map from the given map of cut edges to hypothesis-predicate pairs,
+ *  where each key is an input~base edge, and each value is an expression using the hypothesis.
+ *  This is then used to add the input cases to the init function.
+ *)
+let get_input_exps ({ broken_ins; _}: OpenAdjGraph.interfaces_alt) (edge_hyps: (var * exp) EdgeMap.t) : (exp EdgeMap.t) =
   (* create an edgemap of input~base keys to hypothesis expression values *)
-  VertexMap.fold (fun (outn: Vertex.t) (inn: Vertex.t) m -> 
-    let (u,v) = find_old_edge outn inn in
+  let add_edge_to_hyp (u, v) inn m =
     let (var, _) = EdgeMap.find (u,v) edge_hyps in
-    EdgeMap.add (inn,v) (evar var) m) broken EdgeMap.empty
+    EdgeMap.add (inn,v) (evar var) m
+  in
+  EdgeMap.fold add_edge_to_hyp broken_ins EdgeMap.empty
 
-let open_declarations (decls: declarations) : declarations =
-  let open Nv_transformations in
+(** Create a list of lists of declarations representing a network which has been
+ * opened along the edges described by the partition and interface declarations.
+ * @return a new list of lists of declarations
+ *)
+let divide_decls (decls: declarations) : declarations list =
   let partition = get_partition decls in
-  if Option.is_some partition then
+  match partition with
+  | Some parte -> begin
     let attr_type = get_attr_type decls |> Option.get in
+    (* get the parameters for partition_edges *)
     let interface = get_interface decls in
     let nodes = get_nodes decls |> Option.get in
     let edges = get_edges decls |> Option.get in
-    let part_int = partition_interface_edges partition interface edges in
-    let edge_hyps = create_hyp_vars attr_type part_int in
-    let output_preds = EdgeMap.map (fun (_var, pred) -> pred) edge_hyps in
-    let (new_nodes, new_edges, intf) = EdgeMap.fold (fun e _ (n, es, i) -> begin
-      partition_edge n es e i
-    end) part_int (nodes, edges, OpenAdjGraph.intf_empty) in
-    let input_exps = get_input_exps intf edge_hyps in
-    let trans = get_trans decls |> Option.get in
-    let new_trans = transform_trans trans intf in
-    let init = get_init decls |> Option.get in
-    let new_init = transform_init init intf input_exps in
-    let merge = get_merge decls |> Option.get in
-    let new_merge = transform_merge merge intf in
-    let new_symbolics = EdgeMap.fold (fun _ (v, _) l -> DSymbolic (v, Ty attr_type) :: l) edge_hyps [] in
-    let assertion = get_assert decls in
-    let new_assertion = transform_assert assertion intf output_preds in
-    let new_requires = EdgeMap.fold (fun _ (v, p) l -> DRequire (eapp p (evar v)) :: l) edge_hyps [] in
-    (* replace relevant old decls *)
-    let new_decls = List.filter_map (fun d -> match d with
-    | DNodes _ -> Some (DNodes new_nodes)
-    | DEdges _ -> Some (DEdges new_edges)
-    | DInit _ -> Some (DInit new_init)
-    | DTrans _ -> Some (DTrans new_trans)
-    (* FIXME: merge is screwy; currently an output node on the destination won't update since it
-     * gets initialized with the destination's value, which is already the best *)
-    | DMerge _ -> Some (DMerge new_merge)
-    | DAssert _ -> Some (DAssert (Option.get new_assertion))
-    (* remove partition and interface declarations *)
-    | DPartition _ -> None
-    | DInterface _ -> None
-    | _ -> Some d) decls in
-    (* add the assertion in at the end if there wasn't an assert in the original decls *)
-    let add_assert = if Option.is_none assertion then [DAssert (Option.get new_assertion)] else [] in
-    (* also add requires at the end so they can use any bindings earlier in the file *)
-    new_symbolics @ new_decls @ new_requires @ add_assert
-  else
-    (* no partition provided; do nothing *)
-    decls
+    let partf : (Vertex.t -> int) = interp_partition parte in
+    let intf_opt : (Edge.t -> exp option) = 
+      match interface with
+        | Some intfe -> (interp_interface intfe)
+        | None -> fun (_: Edge.t) -> None
+    in
+    let interfacef = unwrap_pred % intf_opt in
+    let node_list = List.range 0 `To (nodes - 1) in
+    let partitioned_srps = SrpRemapping.partition_edges node_list edges partf interfacef in
+    let create_new_decls parted_srp : declarations =
+      (* TODO: the node_map and edge_map describe how to remap each node and edge in the new SRP.
+       * To transform more cleanly, we can run a toplevel transformer on the SRP, replacing
+       * each edge and node in the map with the new value if it's Some, and removing it if it's None
+       * (where the edge/node is explicitly used).
+       * We can then add code to handle adding in the new input and output nodes to the SRP.
+       * (the input and output edges are handled by edge_map).
+       *)
+      let { nodes; edges; node_map; edge_map; intf; preds; } : SrpRemapping.partitioned_srp = parted_srp in
+      (* filter all predicate edges out that do not appear in the given vertex->vertex map *)
+      let filter_preds vmap =
+        EdgeMap.filter (fun (u, v) _ -> begin
+          (* match on both binding arrangements, since outputs go output~base but preds goes base~output *)
+          (* there's no risk of mismatching, since outputs and inputs all have only one neighbour *)
+          let is_pred_in_vmap u' v' = (u' = u && v' = v ) || (u' = v && v' = u) in
+            VertexMap.exists is_pred_in_vmap vmap
+        end) preds
+      in
+      let edge_hyps = EdgeMap.mapi (fun edge p -> begin
+        let name = Printf.sprintf "hyp_%s" (Edge.to_string edge) in
+        (Var.fresh name, p)
+      end) (filter_preds intf.inputs) in
+      let output_preds = filter_preds intf.outputs in
+      let input_exps = EdgeMap.map (fun (v, _) -> (evar v)) edge_hyps in
+      (* TODO: remap decls using node_map and edge_map *)
+      let trans = get_trans decls |> Option.get in
+      let new_trans = transform_trans trans intf edge_map in
+      let init = get_init decls |> Option.get in
+      let new_init = transform_init init intf input_exps node_map in
+      let merge = get_merge decls |> Option.get in
+      let new_merge = transform_merge merge intf node_map in
+      let new_symbolics = EdgeMap.fold (fun _ (v, _) l -> DSymbolic (v, Ty attr_type) :: l) edge_hyps [] in
+      let assertion = get_assert decls in
+      let new_assertion = transform_assert assertion intf output_preds node_map in
+      let new_requires = EdgeMap.fold (fun _ (v, p) l -> DRequire (eapp p (evar v)) :: l) edge_hyps [] in
+      (* replace relevant old decls *)
+      let new_decls = List.filter_map (fun d -> match d with
+      | DNodes _ -> Some (DNodes nodes)
+      | DEdges _ -> Some (DEdges edges)
+      | DInit _ -> Some (DInit new_init)
+      | DTrans _ -> Some (DTrans new_trans)
+      (* FIXME: merge is screwy; currently an output node on the destination won't update since it
+       * gets initialized with the destination's value, which is already the best *)
+      | DMerge _ -> Some (DMerge new_merge)
+      | DAssert _ -> Some (DAssert (Option.get new_assertion))
+      (* remove partition and interface declarations *)
+      | DPartition _ -> None
+      | DInterface _ -> None
+      | _ -> Some d) decls in
+      (* add the assertion in at the end if there wasn't an assert in the original decls *)
+      let add_assert = if Option.is_none assertion then [DAssert (Option.get new_assertion)] else [] in
+      (* also add requires at the end so they can use any bindings earlier in the file *)
+      new_symbolics @ new_decls @ new_requires @ add_assert
+    in
+    List.map create_new_decls partitioned_srps
+  end
+  | None -> [decls]

@@ -1,5 +1,5 @@
 (* vim: set syntax=ocaml: *)
-include "../utils.nv"
+include "../../utils.nv"
 
 (* Each node keeps track of who its next hop is to and how long the total route is. *)
 type route = { len: int; nexthop: tnode }

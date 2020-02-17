@@ -1,5 +1,5 @@
 (* vim: set syntax=ocaml: *)
-include "../utils.nv"
+include "../../utils.nv"
 
 (* Each node keeps track of who its next hop is to and how long the total route is. *)
 type route = { len: int; nexthop: tnode }
@@ -103,7 +103,31 @@ let update_route node r =
   { len = new_len; nexthop = node }
 
 (* update the route if it exists, using the source node and ignoring the sink *)
-let transfer_route src snk x = mapo (fun r -> update_route src r) x
+let transfer_route src snk x = match (src, snk) with
+  | (0n, 2n) -> mapo (fun r -> update_route 0n r) x
+  | (0n, 6n) -> mapo (fun r -> update_route 0n r) x
+  | (1n, 3n) -> mapo (fun r -> update_route 1n r) x
+  | (1n, 7n) -> mapo (fun r -> update_route 1n r) x
+  | (2n, 0n) -> mapo (fun r -> update_route 2n r) x
+  | (2n, 4n) -> mapo (fun r -> update_route 2n r) x
+  | (2n, 5n) -> mapo (fun r -> update_route 2n r) x
+  | (3n, 1n) -> mapo (fun r -> update_route 3n r) x
+  | (3n, 4n) -> mapo (fun r -> update_route 3n r) x
+  | (3n, 5n) -> mapo (fun r -> update_route 3n r) x
+  | (4n, 2n) -> mapo (fun r -> update_route 4n r) x
+  | (4n, 3n) -> mapo (fun r -> update_route 4n r) x
+  | (5n, 2n) -> mapo (fun r -> update_route 5n r) x
+  | (5n, 3n) -> mapo (fun r -> update_route 5n r) x
+  | (6n, 0n) -> mapo (fun r -> update_route 6n r) x
+  | (6n, 8n) -> mapo (fun r -> update_route 6n r) x
+  | (6n, 9n) -> mapo (fun r -> update_route 6n r) x
+  | (7n, 1n) -> mapo (fun r -> update_route 7n r) x
+  | (7n, 8n) -> mapo (fun r -> update_route 7n r) x
+  | (7n, 9n) -> mapo (fun r -> update_route 7n r) x
+  | (8n, 6n) -> mapo (fun r -> update_route 8n r) x
+  | (8n, 7n) -> mapo (fun r -> update_route 8n r) x
+  | (9n, 6n) -> mapo (fun r -> update_route 9n r) x
+  | (9n, 7n) -> mapo (fun r -> update_route 9n r) x
 
 (* the final trans function in the partitioned SRP uses the original trans for all non-input edges
  * and the identity function for the others *)
@@ -115,5 +139,15 @@ let init node = if node = dest then
   Some { len = 0; nexthop = node } else None
 
 (* -------- Assert --------------------------------------------------------------- *)
-let assert node x = isSome x
+let assert node x = match node with
+  | 0n -> isSome x
+  | 1n -> isSome x
+  | 2n -> isSome x
+  | 3n -> isSome x
+  | 4n -> isSome x
+  | 5n -> isSome x
+  | 6n -> isSome x
+  | 7n -> isSome x
+  | 8n -> isSome x
+  | 9n -> isSome x
 

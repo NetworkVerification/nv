@@ -1,9 +1,11 @@
-open Nv_lib.Main_defs
+open Nv.Main_defs
 open Nv_solution
+open Nv_lang
 
 let main_func () =
   Printexc.record_backtrace true;
-let cfg, info, file, net, fs = parse_input Sys.argv in
+  let inputs = parse_input Sys.argv in
+  List.iter (fun ((cfg: Cmdline.t), info, file, net, fs) ->
   (* if cfg.check_monotonicity then *)
   (*   checkPolicy info cfg file decls; *)
   let networkOp =
@@ -26,7 +28,7 @@ let cfg, info, file, net, fs = parse_input Sys.argv in
          Solution.print_solution (apply_all sol fs)
       | Success None, _ ->
          Printf.printf "No counterexamples found\n"
-    end
+    end) inputs
 
 let main =
   Nv_utils.Profile.time_profile_absolute "Entire Program" main_func
