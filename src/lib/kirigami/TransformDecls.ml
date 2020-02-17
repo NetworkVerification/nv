@@ -145,11 +145,14 @@ let merge_branch (n: Vertex.t) (_: Vertex.t) (b: branches) : branches =
 
 let transform_merge (e: Syntax.exp) (intf: SrpRemapping.interface) (node_map) : Syntax.exp =
   let node_var = Var.fresh "node" in
-  let { outputs; _ } : SrpRemapping.interface = intf in
+  let { outputs; inputs } : SrpRemapping.interface = intf in
   (* let default_branch = addBranch PWild e emptyBranch in *)
   let map_match = match_of_node_map node_map emptyBranch in
   let base_branches = mapBranches (fun (pat, exp) -> (pat, eapp e exp)) map_match in
-  let output_branches = VertexMap.fold merge_branch outputs base_branches in
+  (* FIXME: bad merge impl for inputs; left as-is for now since it's not actually called,
+   * just present to stop there from being complaints about missing branches in the match *)
+  let input_branches = VertexMap.fold merge_branch inputs base_branches in
+  let output_branches = VertexMap.fold merge_branch outputs input_branches in
     wrap e (lam node_var (amatch node_var (Some TNode) output_branches))
 
 (* Apply the predicate test on the solution for node n *)
