@@ -226,18 +226,18 @@ let run_simulator cfg _ net fs =
 
 (** Native simulator - compiles SRP to OCaml *)
 let run_compiled file _ _ net fs =
-   let path = Filename.remove_extension file in
-   let name = Filename.basename path in
-   let name = String.mapi (fun i c -> if i = 0 then Char.uppercase_ascii c else c) name in
-   let newpath = name in
-   let solution = Loader.simulate newpath net in
-     match solution.assertions with
-    | None -> Success (Some solution), fs
-    | Some m ->
-      if AdjGraph.VertexMap.exists (fun _ b -> not b) m then
-        CounterExample solution, fs
-      else
-        Success (Some solution), fs
+  let path = Filename.remove_extension file in
+  let name = Filename.basename path in
+  let name = String.mapi (fun i c -> if i = 0 then Char.uppercase_ascii c else c) name in
+  let newpath = name in
+  let solution = Loader.simulate newpath net in
+  match solution.assertions with
+  | None -> Success (Some solution), fs
+  | Some m ->
+    if AdjGraph.VertexMap.exists (fun _ b -> not b) m then
+      CounterExample solution, fs
+    else
+      Success (Some solution), fs
 
 let compress file info net cfg fs networkOp =
   (* Printf.printf "Number of concrete edges:%d\n" (List.length (oget (get_edges decls))); *)
@@ -356,23 +356,23 @@ let parse_input_aux cfg info file decls =
     else decls, fs
   in
   let net = Slicing.createNetwork decls in (* Create something of type network *)
-    let net =
-      if cfg.link_failures > 0 then
-        Failures.buildFailuresNet net cfg.link_failures
-      else net
-    in
+  let net =
+    if cfg.link_failures > 0 then
+      Failures.buildFailuresNet net cfg.link_failures
+    else net
+  in
   let net, fs =
     if cfg.smt then
       let net, f = UnboxEdges.unbox_net net in
       net, f :: fs
     else
       net, fs
-    in
-   (cfg, info, file, net, fs)
+  in
+  (cfg, info, file, net, fs)
 
-let parse_input (args : string array) : 
-  (Cmdline.t * Console.info * string * Syntax.network * Solution.map_back list) list 
-=
+let parse_input (args : string array) :
+  (Cmdline.t * Console.info * string * Syntax.network * Solution.map_back list) list
+  =
   let cfg, rest = argparse default "nv" args in
   Cmdline.set_cfg cfg ;
   Cmdline.update_cfg_dependencies ();
@@ -391,8 +391,8 @@ let parse_input (args : string array) :
     (* NOTE: we partition after checking well-formedness so we can reuse edges that don't exist *)
     let new_decls = Nv_kirigami.Partition.divide_decls decls in
     List.map (fun d ->
-      print_endline @@ Printing.declarations_to_string d;
-      let new_d = Typing.infer_declarations info d in
-      parse_input_aux cfg info file new_d) new_decls
+        (* print_endline @@ Printing.declarations_to_string d; *)
+        let new_d = Typing.infer_declarations info d in
+        parse_input_aux cfg info file new_d) new_decls
   else
     [parse_input_aux cfg info file decls]
