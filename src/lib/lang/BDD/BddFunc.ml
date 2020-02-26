@@ -243,7 +243,15 @@ let rec eq (x: t) (y: t) : t =
       if Bdd.is_true tag_eq then eq b1 b2
       else if Bdd.is_false tag_eq then Value (vbool false)
       else failwith "this case cannot happen I think.."
-    | _,_ -> failwith "impossible cases"
+    | Tuple bs, Value v | Value v, Tuple bs ->
+      (match v.v with
+        | VTuple vs ->
+          eq_list bs (List.map (fun v -> Value v) vs) (Value (vbool true))
+        | VEdge (n1, n2) ->
+          eq_list bs [Value (vnode n1); Value (vnode n2)] (Value (vbool true))
+        | _ -> failwith "mistyped equality")
+    | _,_ ->
+      failwith "impossible cases"
 (* TODO: Handle VTuple/Tuple case if it can show up.*)
 
 and eq_list xs ys acc =
