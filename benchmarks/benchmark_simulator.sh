@@ -11,3 +11,9 @@ do
     time "$NV" -compile "$file";
     echo "\n";
 done
+
+for file in $BENCHMARKS
+do
+    time "$NV" -simulate "$file";
+    echo "\n";
+done

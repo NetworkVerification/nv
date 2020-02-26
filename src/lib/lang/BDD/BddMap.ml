@@ -3,23 +3,11 @@ open Cudd
 open BatSet
 open Nv_datastructures
 open Nv_utils
+open TotalMap
+    
 
-(* TODO: optimize variable ordering  *)
-type t = mtbdd
-  
-module B = BddUtils
 
-(* let res = User.map_op2
-   ~commutative:true ~idempotent:true
-   ~special:(fun bdd1 bdd2 ->
-    if Vdd.is_cst bdd1 && Vdd.dval bdd1 = false then Some(bdd1)
-    else if Vdd.is_cst bdd2 && Vdd.dval bdd2 = false then Some(bdd2)
-    else None)
-   (fun b1 b2 -> b1 && b2) *)
 
-let create ~key_ty:ty (v: value) : t =
-  B.set_size (B.ty_to_size ty) ;
-  (Mtbdd.cst B.mgr B.tbl v, ty)
 
 let rec default_value ty =
   match ty with
@@ -42,112 +30,6 @@ let rec default_value ty =
   | TVar _ | QVar _ | TArrow _ ->
     failwith "internal error (default_value)"
 
-let value_to_bdd (v: value) : Bdd.vt =
-  let rec aux v idx =
-    match v.v with
-    | VUnit -> (* Encode unit as if it were a true boolean *)
-      let var = B.ithvar idx in
-      var, idx + 1
-    | VBool b ->
-      let var = B.ithvar idx in
-      ((if b then var else Bdd.dnot var), idx + 1)
-    | VInt i ->
-      B.mk_int i idx, idx + Integer.size i
-    | VTuple vs ->
-      let base = Bdd.dtrue B.mgr in
-      List.fold_left
-        (fun (bdd_acc, idx) v ->
-           let bdd, i = aux v idx in
-           (Bdd.dand bdd_acc bdd, i) )
-        (base, idx) vs
-    | VRecord map ->
-      (* Convert this to a tuple type, then encode that *)
-      let tup = vtuple (RecordUtils.get_record_entries map) in
-      aux tup idx
-    | VNode n ->
-      (* Encode same way as we encode ints *)
-      aux (vint (Integer.create ~value:n ~size:32)) idx
-    | VEdge (e1, e2) ->
-      (* Encode same way as we encode tuples of nodes *)
-      let tup = vtuple [vnode e1; vnode e2] in
-      aux tup idx
-    | VOption None ->
-      let var = B.ithvar idx in
-      let tag = Bdd.eq var (Bdd.dfalse B.mgr) in
-      let dv = default_value (Nv_utils.OCamlUtils.oget v.vty) in
-      let value, idx = aux dv (idx + 1) in
-      (Bdd.dand tag value, idx)
-    | VOption (Some dv) ->
-      let var = B.ithvar idx in
-      let tag = Bdd.eq var (Bdd.dtrue B.mgr) in
-      let value, idx = aux dv (idx + 1) in
-      (Bdd.dand tag value, idx)
-    | VMap _ | VClosure _ ->
-      failwith "internal error (value_to_bdd)"
-  in
-  let bdd, _ = aux v 0 in
-  bdd
-
-let vars_to_value vars ty =
-  let open RecordUtils in
-  let rec aux idx ty =
-    let v, i =
-      match get_inner_type ty with
-      | TUnit -> vunit (), idx + 1 (* Same as a bool *)
-      | TBool ->
-        (vbool (B.tbool_to_bool vars.(idx)), idx + 1)
-      | TInt size ->
-        let acc = ref (Integer.create ~value:0 ~size:size) in
-        for i = 0 to size-1 do
-          let bit = B.tbool_to_bool vars.(idx + i) in
-          if bit then
-            let add = Integer.shift_left (Integer.create ~value:1 ~size:size) i in
-            acc := Integer.add !acc add
-        done ;
-        (vint !acc, idx + size)
-      | TTuple ts ->
-        let vs, i =
-          List.fold_left
-            (fun (vs, idx) ty ->
-               let v, i = aux idx ty in
-               (v :: vs, i) )
-            ([], idx) ts
-        in
-        (vtuple (List.rev vs), i)
-      | TRecord map ->
-        (* This will have been encoded as if it's a tuple.
-           So get the tuple type and use that to decode *)
-        let tup = TTuple (get_record_entries map) in
-        aux idx tup
-      | TNode ->
-        (* Was encoded as int, so decode same way *)
-        (match aux idx (TInt tnode_sz) with
-         | {v = VInt n; _}, i ->  vnode (Integer.to_int n), i
-         | _ -> failwith "impossible")
-      | TEdge ->
-        (* Was encoded as tuple of nodes *)
-        (match aux idx (TTuple [TNode; TNode]) with
-         | {v = VTuple [{v= VNode n1; _}; {v= VNode n2; _}]; _}, i -> vedge (n1, n2), i
-         | _ -> failwith "impossible")
-      | TOption tyo ->
-        let tag = B.tbool_to_bool vars.(idx) in
-        let v, i = aux (idx + 1) tyo in
-        let v =
-          if tag then voption (Some v)
-          else voption None
-        in
-        (v, i)
-      | TArrow _ | TMap _ | TVar _ | QVar _ ->
-        failwith "internal error (bdd_to_value)"
-    in
-    let ty =
-      match ty with
-      | TRecord map -> TTuple (get_record_entries map)
-      | _ -> ty
-    in
-    (annotv ty v, i)
-  in
-  fst (aux 0 ty)
 
 module ExpMap = BatMap.Make (struct
     type t = exp * value PSet.t
