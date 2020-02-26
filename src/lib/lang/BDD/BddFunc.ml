@@ -252,7 +252,6 @@ let rec eq (x: t) (y: t) : t =
         | _ -> failwith "mistyped equality")
     | _,_ ->
       failwith "impossible cases"
-(* TODO: Handle VTuple/Tuple case if it can show up.*)
 
 and eq_list xs ys acc =
   match xs, ys with
