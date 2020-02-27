@@ -198,6 +198,7 @@
 %token <Nv_datastructures.Span.t> TOPTION
 %token <Nv_datastructures.Span.t> TDICT
 %token <Nv_datastructures.Span.t> ATTRIBUTE
+%token <Nv_datastructures.Span.t> SOLUTION
 %token <Nv_datastructures.Span.t> TYPE
 %token <Nv_datastructures.Span.t> COLON
 %token <Nv_datastructures.Span.t> TBOOL
@@ -278,6 +279,7 @@ letvars:
 ;
 
 component:
+    | LET letvars EQ SOLUTION expr      { DSolve (fst $2, $5) }
     | LET letvars EQ expr               { global_let $2 $4 $4.espan (Span.extend $1 $4.espan) }
     | SYMBOLIC ID EQ expr               { DSymbolic (snd $2, Exp $4) }
     | SYMBOLIC ID COLON ty              { DSymbolic (snd $2, Ty $4) }

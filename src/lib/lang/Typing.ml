@@ -115,7 +115,8 @@ let check_annot_decl (d: declaration) =
   | DAssert e
   | DPartition e (* partitioning *)
   | DInterface e (* partitioning *)
-  | DRequire e ->
+  | DRequire e
+  | DSolve (_, e) ->
     check_annot e
   | DNodes _ | DEdges _ | DATy _ | DSymbolic _ | DUserTy _ -> ()
 
@@ -360,7 +361,7 @@ let textract e =
   | Some ty -> (e, ty)
 
 let rec infer_exp i info env record_types (e: exp) : exp =
-  let _infer_exp = infer_exp in
+  let _infer_exp = infer_exp in (* Alias in case we need to modify the usually-static args *)
   let infer_exp = infer_exp (i + 1) info env record_types in
   let infer_value = infer_value info env record_types in
   let exp =
@@ -855,6 +856,7 @@ let rec infer_declarations_aux i info env record_types aty (ds: declarations) :
     d' :: infer_declarations_aux (i + 1) info env' record_types aty ds'
 
 and infer_declaration i info env record_types aty d : ty Env.t * declaration =
+  let _infer_exp = infer_exp in (* Alias in case we need to modify the usually-static args *)
   let infer_exp = infer_exp (i+1) info env record_types in
   let open Nv_utils.OCamlUtils in
   match d with
@@ -911,6 +913,18 @@ and infer_declaration i info env record_types aty d : ty Env.t * declaration =
     let ty = oget e'.ety in
     unify info e ty (init_ty aty) ;
     (Env.update env (Var.create "init") ty, DInit e')
+  | DSolve (x, e) ->
+    let solve_aty = fresh_tyvar () in
+    let sty = solve_ty solve_aty in
+    let record_types_extended =
+      (* Put sty at the end so that we only find it if the use hasn't declared
+         a matching type *)
+      (record_types @ [match sty with | TRecord m -> m
+                                      | _ -> failwith "impossible"])
+    in
+    let e' = _infer_exp (i + 1) info env record_types_extended e in
+    unify info e (oget e'.ety) sty ;
+    (Env.update env x (TMap (TNode, solve_aty)), DSolve (x, e'))
   | DATy _ | DUserTy _ | DNodes _ | DEdges _ -> (env, d)
 
 let canonicalize_type (ty : ty) : ty =

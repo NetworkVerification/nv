@@ -169,6 +169,9 @@ let inline_declaration (env: exp Env.t) (d: declaration) =
   | DTrans e -> (env, Some (DTrans (inline_exp env e)))
   | DInit e -> (env, Some (DInit (inline_exp env e)))
   | DAssert e -> (env, Some (DAssert (inline_exp env e)))
+  | DSolve (x, e) ->
+    (* Like with symbolics, inline within e but don't inline x in future expressions *)
+    (env, Some (DSolve (x, inline_exp env e)))
   | DPartition e -> (env, Some (DPartition (inline_exp env e))) (* partitioning *)
   | DInterface e -> (env, Some (DInterface (inline_exp env e))) (* partitioning *)
   | DRequire e -> (env, Some (DRequire (inline_exp env e)))

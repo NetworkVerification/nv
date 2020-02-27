@@ -66,6 +66,7 @@ rule token = parse
   | "tedge"           { TEDGE (position lexbuf) }
   | "type"            { TYPE (position lexbuf) }
   | "attribute"       { ATTRIBUTE (position lexbuf) }
+  | "solution"        { SOLUTION (position lexbuf) }
   | id as s           { ID (position lexbuf, Nv_datastructures.Var.create s) }
   | node as s         { NODE (position lexbuf, int_of_string (String.rchop ~n:1 s)) }
   | num width as n    { NUM (position lexbuf, Nv_datastructures.Integer.of_string n) }

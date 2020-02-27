@@ -1,7 +1,7 @@
 open Cudd
 open Nv_datastructures
 open Nv_utils.PrimitiveCollections
-       
+
 type node = int
 
 val tnode_sz : int
@@ -145,6 +145,7 @@ type declaration =
   | DTrans of exp
   | DInit of exp
   | DAssert of exp
+  | DSolve of var * exp
   | DRequire of exp
   | DPartition of exp (* partition ids *)
   | DInterface of exp (* interface hypotheses *)
@@ -298,6 +299,8 @@ val get_trans : declarations -> exp option
 val get_init : declarations -> exp option
 
 val get_assert : declarations -> exp option
+
+val get_solves : declarations -> (var * exp) list
 
 val get_partition : declarations -> exp option
 

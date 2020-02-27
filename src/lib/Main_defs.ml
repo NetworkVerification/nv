@@ -343,6 +343,7 @@ let parse_input (args : string array) =
   let decls = Typing.infer_declarations info decls in
   Typing.check_annot_decls decls ;
   Wellformed.check info decls ;
+  print_endline @@ Printing.declarations_to_string decls ;
   let decls, f = RecordUnrolling.unroll_declarations decls in
   let fs = [f] in
   let decls,fs = (* inlining definitions *)

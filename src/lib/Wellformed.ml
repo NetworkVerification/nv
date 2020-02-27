@@ -143,6 +143,7 @@ let check_record_label_uniqueness info decls =
         name
     in
     Console.error_position info Span.default msg
+;;
 
 (* let rec is_literal (exp : Syntax.exp) : bool =
   match exp.e with

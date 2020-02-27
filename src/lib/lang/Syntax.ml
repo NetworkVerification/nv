@@ -195,6 +195,7 @@ type declaration =
   | DTrans of exp
   | DInit of exp
   | DAssert of exp
+  | DSolve of var * exp
   | DRequire of exp
   | DPartition of exp (* partition ids *)
   | DInterface of exp (* interface hypotheses *)
@@ -1023,6 +1024,9 @@ let get_init ds =
 let get_assert ds =
   get_decl ds (fun d ->
       match d with DAssert e -> Some e | _ -> None )
+
+let get_solves ds =
+  List.filter_map (fun d -> match d with | DSolve (var, e) -> Some (var, e) | _ -> None ) ds
 
 (* partitioning *)
 let get_partition ds =
