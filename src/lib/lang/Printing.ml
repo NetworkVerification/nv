@@ -334,7 +334,6 @@ let rec declarations_to_string ds =
     declaration_to_string d ^ "\n" ^ declarations_to_string ds
 
 let network_to_string ?(show_topology=false) (net : Syntax.network) =
-
   (** User types **)
   let utypes =
     OCamlUtils.printList (fun (x, ty) ->
@@ -355,10 +354,10 @@ let network_to_string ?(show_topology=false) (net : Syntax.network) =
   let symbs =
     OCamlUtils.printList
       (fun (var, toe) ->
-        Printf.sprintf "symbolic %s %s" (Var.to_string var)
-          (match toe with
-           | Ty ty -> ": " ^ ty_to_string ty
-           | Exp e -> "= " ^ exp_to_string e))
+         Printf.sprintf "symbolic %s %s" (Var.to_string var)
+           (match toe with
+            | Ty ty -> ": " ^ ty_to_string ty
+            | Exp e -> "= " ^ exp_to_string e))
       net.symbolics "" "\n" "\n"
   in
   (** Requires **)
@@ -369,28 +368,36 @@ let network_to_string ?(show_topology=false) (net : Syntax.network) =
   (** Additional declarations **)
   let udefs =
     OCamlUtils.printList
-    (fun (var, tyo, e) ->
-       Printf.sprintf "let %s%s = %s"
-         (Var.to_string var)
-         (match tyo with None -> "" | Some ty -> " : " ^ ty_to_string ty)
-         (exp_to_string e))
-    net.defs "" "\n" "\n"
+      (fun (var, tyo, e) ->
+         Printf.sprintf "let %s%s = %s"
+           (Var.to_string var)
+           (match tyo with None -> "" | Some ty -> " : " ^ ty_to_string ty)
+           (exp_to_string e))
+      net.defs "" "\n" "\n"
+  in
+  let solves =
+    BatString.concat "\n" @@
+    BatList.map (fun (e, {init; trans; merge} : exp * solve_arg) ->
+        Printf.sprintf "let %s = solution {init: %s; trans: %s; merge: %s}"
+          (exp_to_string e) (exp_to_string init) (exp_to_string trans) (exp_to_string merge))
+      net.solves
   in
   Printf.sprintf "%s %s %s %s %s %s \
                   let init = %s\n \
                   let trans = %s\n \
                   let merge = %s\n \
-                  %s\
+                  %s\n \
+                  %s \
                   %s \
                   %s"
     utypes attr top symbs reqs udefs (exp_to_string net.init)
-    (exp_to_string net.trans) (exp_to_string net.merge)
+    (exp_to_string net.trans) (exp_to_string net.merge) solves
     (match net.partition with
-      | None -> ""
-      | Some e -> Printf.sprintf "let partition = %s\n" (exp_to_string e))
+     | None -> ""
+     | Some e -> Printf.sprintf "let partition = %s\n" (exp_to_string e))
     (match net.interface with
-      | None -> ""
-      | Some e -> Printf.sprintf "let interface = %s\n" (exp_to_string e))
+     | None -> ""
+     | Some e -> Printf.sprintf "let interface = %s\n" (exp_to_string e))
     (match net.assertion with
-      | None -> ""
-      | Some e -> Printf.sprintf "let assert = %s\n" (exp_to_string e))
+     | None -> ""
+     | Some e -> Printf.sprintf "let assert = %s\n" (exp_to_string e))

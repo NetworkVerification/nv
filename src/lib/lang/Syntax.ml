@@ -212,6 +212,7 @@ type network =
     trans : exp;
     merge : exp;
     assertion : exp option;
+    solves : (exp * solve_arg) list;
     partition : exp option; (* partitioning *)
     interface : exp option; (* partitioning *)
     symbolics : (var * ty_or_exp) list;
@@ -222,6 +223,7 @@ type network =
   }
 
 (* TODO: add partitioning? *)
+(* TODO: Definitely add solves *)
 type srp_unfold =
   { srp_attr : ty;
     srp_constraints : exp AdjGraph.VertexMap.t;

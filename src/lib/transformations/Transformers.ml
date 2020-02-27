@@ -273,12 +273,21 @@ let transform_network
   let transform_symbolic = transform_symbolic ~name:name transformers in
   let attr_ty = net.attr_type in
   let symb_tys = get_symbolic_types net.symbolics in
+  let transform_solves =
+    List.map
+      (fun (e, ({init; trans; merge} : solve_arg)) ->
+         let e, init, trans, merge =
+           transform_exp e, transform_exp init, transform_exp trans, transform_exp merge
+         in
+         (e, {init; trans; merge}))
+  in
   {
     attr_type = transform_ty net.attr_type;
     init = transform_exp net.init;
     trans = transform_exp net.trans;
     merge = transform_exp net.merge;
     assertion = omap transform_exp net.assertion;
+    solves = transform_solves net.solves;
     symbolics = List.map transform_symbolic net.symbolics;
     requires = List.map transform_exp net.requires;
     utys =  List.map (fun (x,m) -> (x, transform_ty m)) net.utys;

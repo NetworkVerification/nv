@@ -10,6 +10,22 @@ let map_back bmap new_name old_name =
 (* TODO: Make sure this doesn't have to be Var.to_string *)
 let fresh x = Var.fresh (Var.name x)
 
+let rec rename_solve_vars bmap env e =
+  match e.e with
+  | EVar x ->
+    let y = fresh x in
+    map_back bmap y x ;
+    let env = Env.update env x y in
+    env, evar y |> wrap e
+  | ETuple es ->
+    let env', es' =
+      List.fold_left
+        (fun (env, acc) e -> let env', y = rename_solve_vars bmap env e in env', y :: acc)
+        (env, []) es
+    in
+    env', etuple (List.rev es') |> wrap e
+  | _ -> failwith "Bad DSolve"
+
 let rec update_pattern (env: Var.t Env.t) (p: pattern) :
   pattern * Var.t Env.t =
   match p with
@@ -111,21 +127,7 @@ let alpha_convert_declaration bmap (env: Var.t Env.t)
     let init, trans, merge =
       alpha_convert_exp env init, alpha_convert_exp env trans, alpha_convert_exp env merge
     in
-    let rec rename env e =
-      match e.e with
-      | EVar x ->
-        let y = fresh x in
-        map_back bmap y x ;
-        let env = Env.update env x y in
-        env, evar y |> wrap e
-      | ETuple es ->
-        let env', es' =
-          List.fold_left (fun (env, acc) e -> let env', y = rename env e in env', y :: acc) (env, []) es
-        in
-        env', etuple (List.rev es') |> wrap e
-      | _ -> failwith "Bad DSolve"
-    in
-    let env, y = rename env x in
+    let env, y = rename_solve_vars bmap env x in
     (env, DSolve (y, {init; trans; merge}))
   | DMerge e -> (env, DMerge (alpha_convert_exp env e))
   | DTrans e -> (env, DTrans (alpha_convert_exp env e))
@@ -184,6 +186,14 @@ let alpha_convert_net net =
         let e = alpha_convert_exp env exp in
         (env, (y, tyo, e) :: acc)) net.defs (env, [])
   in
+  let env, solves =
+    BatList.fold_right (fun (x, {init; trans; merge} : exp * solve_arg) (env, acc) ->
+        let init, trans, merge =
+          alpha_convert_exp env init, alpha_convert_exp env trans, alpha_convert_exp env merge
+        in
+        let env, y = rename_solve_vars bmap env x in
+        (env, (y, {init; trans; merge}) :: acc)) net.solves (env, [])
+  in
   let net' =
     { attr_type = net.attr_type;
       init = alpha_convert_exp env net.init;
@@ -192,6 +202,7 @@ let alpha_convert_net net =
       assertion = (match net.assertion with
           | None -> None
           | Some e -> Some (alpha_convert_exp env e));
+      solves = solves;
       (* partitioning *)
       partition = (match net.partition with
           | None -> None

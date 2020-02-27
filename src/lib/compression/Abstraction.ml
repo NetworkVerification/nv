@@ -418,6 +418,7 @@ module BuildAbstractNetwork =
          trans = transhat;
          merge = mergehat;
          assertion = Some asserthat;
+         solves = failwith "IDK";
          partition = None; (* TODO: partitioning *)
          interface = None; (* TODO: partitioning *)
          symbolics = symbolics @ slice.net.symbolics;
