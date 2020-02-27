@@ -1,11 +1,11 @@
 (* vim: set syntax=ocaml: *)
 (* Partitioned version of sp4.nv *)
 include "../../../examples/utils.nv"
-include "sp4.nv"
+include "sp4-nomap.nv"
 
 (* destination: node 10 *)
 (* 70.0.19.0/24u5 or (1174409984, 24u5)*)
-(* 10's pod includes itself and 6, 8 and 2 *) 
+(* 10's pod includes itself and 6, 8 and 2 *)
 
 (* all true: 11 and 12 (in pod with 13 and 14) fail P assert *)
 
@@ -17,21 +17,21 @@ let partition node = match node with
   | 7n -> 0u8
   | _ -> 1u8
 
-let interface edge = 
+let interface edge =
   let any x = true in
   let nothingButBgp x =
     match x with
     | {connected = c; static = s; ospf = o; _} ->
-    (* only have bgp routes *)
-    c = None && s = None && o = None
+      (* only have bgp routes *)
+      c = None && s = None && o = None
   in
-  let hasOnlyBgp x = 
+  let hasOnlyBgp x =
     match x with
     | {connected = c; static = s; ospf = o; bgp = b; selected = sel} ->
-    (* connected, static and ospf aren't transferred,
-     * so transfer won't maintain their values
-     *)
-    c = None && s = None && o = None && isSome b
+      (* connected, static and ospf aren't transferred,
+       * so transfer won't maintain their values
+      *)
+      c = None && s = None && o = None && isSome b
   in
   match edge with
   (* 1 edges - 1 gets the route to 10 via 8 *)
