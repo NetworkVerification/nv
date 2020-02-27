@@ -108,12 +108,24 @@ let alpha_convert_declaration bmap (env: Var.t Env.t)
     let env = Env.update env x y in
     (env, DSymbolic (y, Ty ty))
   | DSolve (x, {init; trans; merge}) ->
-    let y = fresh x in
-    map_back bmap y x ;
-    let env = Env.update env x y in
     let init, trans, merge =
       alpha_convert_exp env init, alpha_convert_exp env trans, alpha_convert_exp env merge
     in
+    let rec rename env e =
+      match e.e with
+      | EVar x ->
+        let y = fresh x in
+        map_back bmap y x ;
+        let env = Env.update env x y in
+        env, evar y |> wrap e
+      | ETuple es ->
+        let env', es' =
+          List.fold_left (fun (env, acc) e -> let env', y = rename env e in env', y :: acc) (env, []) es
+        in
+        env', etuple (List.rev es') |> wrap e
+      | _ -> failwith "Bad DSolve"
+    in
+    let env, y = rename env x in
     (env, DSolve (y, {init; trans; merge}))
   | DMerge e -> (env, DMerge (alpha_convert_exp env e))
   | DTrans e -> (env, DTrans (alpha_convert_exp env e))

@@ -146,8 +146,8 @@ let collect_in_decl (symbolics : var list) (d : declaration) (acc : maplist) : m
   | DInterface exp (* partitioning *)
   | DRequire exp ->
     collect_in_exp exp acc
-  | DSolve (_, {init; trans; merge}) ->
-    collect_in_exp init @@ collect_in_exp trans @@ collect_in_exp merge acc
+  | DSolve (e, {init; trans; merge}) ->
+    List.fold_right collect_in_exp [e; init; trans; merge] acc
   | DNodes _
   | DEdges _ ->
     acc

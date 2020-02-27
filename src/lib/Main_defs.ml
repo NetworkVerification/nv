@@ -30,7 +30,7 @@ let smt_query_file =
     lazy (open_out (file ^ "-" ^
                     (string_of_int count) ^ "-query"))
 
-let partialEvalNet net =
+let partialEvalNet (net : network) =
   {net with
    init = InterpPartial.interp_partial_opt net.init;
    trans = InterpPartial.interp_partial_opt net.trans;
@@ -343,7 +343,6 @@ let parse_input (args : string array) =
   let decls = Typing.infer_declarations info decls in
   Typing.check_annot_decls decls ;
   Wellformed.check info decls ;
-  print_endline @@ Printing.declarations_to_string decls ;
   let decls, f = RecordUnrolling.unroll_declarations decls in
   let fs = [f] in
   let decls,fs = (* inlining definitions *)

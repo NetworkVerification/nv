@@ -197,7 +197,7 @@ type declaration =
   | DTrans of exp
   | DInit of exp
   | DAssert of exp
-  | DSolve of var * solve_arg
+  | DSolve of exp (* Should be a var or tuple of vars *) * solve_arg
   | DRequire of exp
   | DPartition of exp (* partition ids *)
   | DInterface of exp (* interface hypotheses *)

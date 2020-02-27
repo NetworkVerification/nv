@@ -30,8 +30,8 @@ let iter_exp_decl f d =
   | DRequire e
   | DSymbolic (_, Exp e) ->
     iter_exp (f d) e
-  | DSolve (_, {init; trans; merge}) ->
-    iter_exp (f d) init; iter_exp (f d) trans; iter_exp (f d) merge
+  | DSolve (e, {init; trans; merge}) ->
+    List.iter (iter_exp (f d)) [e; init; trans; merge]
   | DATy _ | DNodes _ | DEdges _ | DSymbolic _ | DUserTy _ -> ()
 
 let rec iter_exp_decls f ds = BatList.iter (iter_exp_decl f) ds

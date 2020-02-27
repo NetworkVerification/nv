@@ -147,7 +147,7 @@ type declaration =
   | DTrans of exp
   | DInit of exp
   | DAssert of exp
-  | DSolve of var * solve_arg
+  | DSolve of exp (* Should be a var or tuple of vars *) * solve_arg
   | DRequire of exp
   | DPartition of exp (* partition ids *)
   | DInterface of exp (* interface hypotheses *)
@@ -302,7 +302,7 @@ val get_init : declarations -> exp option
 
 val get_assert : declarations -> exp option
 
-val get_solves : declarations -> (var * solve_arg) list
+val get_solves : declarations -> (exp * solve_arg) list
 
 val get_partition : declarations -> exp option
 
