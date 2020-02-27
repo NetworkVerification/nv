@@ -3,6 +3,7 @@ open Nv_lang
 open Nv_datastructures
 open Nv_datastructures.AdjGraph
 open Syntax
+open Nv_interpreter
 
 let node_to_exp n = e_val (vnode n)
 
@@ -28,6 +29,21 @@ let match_of_node_map (m: Vertex.t option VertexMap.t) b =
   in
   VertexMap.fold add_node_branch m b
 
+(* Return a Let declaration of a function that maps from old nodes to new nodes. *)
+let node_map_decl fnname (m: Vertex.t option VertexMap.t) =
+  let node_var = Var.create "n" in
+  let branches = match_of_node_map m emptyBranch in
+  DLet
+    (
+      Var.create fnname,
+      None,
+      efun
+        {arg = node_var; argty = None; resty = None;
+         body =
+           ematch (evar node_var) branches
+        }
+    )
+
 (** Add match branches using the given map of old edges to new edges. *)
 let match_of_edge_map (m: Edge.t option EdgeMap.t) b =
   let add_edge_branch old_edge new_edge branches =
@@ -36,6 +52,21 @@ let match_of_edge_map (m: Edge.t option EdgeMap.t) b =
     | None -> branches
   in
   EdgeMap.fold add_edge_branch m b
+
+(* Return a Let declaration of a function that maps from old edges to new edges. *)
+let edge_map_decl fnname (m: Edge.t option EdgeMap.t) =
+  let edge_var = Var.create "e" in
+  let branches = match_of_edge_map m emptyBranch in
+  DLet
+    (
+      Var.create fnname,
+      None,
+      efun
+        {arg = edge_var; argty = None; resty = None;
+         body =
+           ematch (evar edge_var) branches
+        }
+    )
 
 (* Pass in the original init Syntax.exp and update it to perform
  * distinct actions for the inputs and outputs of the OpenAdjGraph.
@@ -92,51 +123,43 @@ let transform_trans (e: Syntax.exp) (intf: SrpRemapping.interface) (edge_map: Ed
   let edge_var = Var.fresh "edge" in
   let x_var = Var.fresh "x" in
   let { inputs; outputs } : SrpRemapping.interface = intf in
-  let in_trans_branch k v b = (* branches for in~base edges: identity function *)
-    let edge_pat = edge_to_pat (k, v) in
-    (* return the identity function *)
-    (* let avar = Var.fresh "a" in *)
-    (* let in_exp = (lam avar (evar avar)) in *)
-    addBranch edge_pat (evar x_var) b
-  in
-  let out_trans_branch old_edge new_edge b =
-    match new_edge with
-    | Some new_edge -> begin
-        let edge_pat = edge_to_pat new_edge in
-        let edge_val = e_val (vedge old_edge) in
-        (* call the original expression using the old edge;
-         * this needs to be done after checking wellformedness since the old edge doesn't exist anymore,
-         * so the compiler will complain the edge isn't supposed to be mentioned
-        *)
-        let out_exp = (eapp (eapp e edge_val) (evar x_var)) in
-        addBranch edge_pat out_exp b
-      end
-    | None -> b
-  in
-  (* the default branch runs (original_trans edge), where original_trans = e *)
-  (* NOTE: 2020-02-25 update: orig_trans now applies the given edge,
-   * which is remapped from before *)
   let orig_trans edge = (apps e [edge; (evar x_var)]) in
-  let base_map_match = match_of_edge_map edge_map emptyBranch in
-  let base_branches = mapBranches (fun (pat,exp) -> (pat, orig_trans exp)) base_map_match in
-  (* let default_branch = addBranch PWild orig_trans emptyBranch in *)
-  (* input branches use the identity function *)
-  let input_branches = VertexMap.fold in_trans_branch inputs base_branches in
-  (* output branches perform the original transfer *)
-  (* let output_branches = VertexMap.fold out_trans_branch outputs input_branches in *)
-  (* use only the outputs in the edge map, since we've already added the inputs *)
-  let filter_output_edges _ (maybe_edge: Edge.t option) : bool =
-    let maybe_bool = Option.bind maybe_edge (fun (u, v) -> begin
-          (* if there is some edge, look for it in outputs *)
-          Option.map (fun u' -> u' = u) (VertexMap.Exceptionless.find v outputs)
-        end) in
-    Option.default false maybe_bool
+  (* function to remap edge_map mappings to the correct trans expressions *)
+  let remap_branch (pat, exp) = match pat with
+    | (PEdge (PNode u, PNode v)) -> begin
+        (* handle if the nodes are base~base, input~base, or base~output *)
+        let new_exp = match VertexMap.Exceptionless.find v outputs with
+          | Some u' -> if (u = u') then (orig_trans exp)
+          (* call the original exp using the old edge *)
+            else failwith "outputs stored edge did not match edge in edge_map"
+          | None -> begin
+              (* not a base~output edge, check input~base case *)
+              match VertexMap.Exceptionless.find u inputs with
+              | Some v' -> if (v = v') then (evar x_var) else
+                  failwith "inputs stored edge did not match edge in edge_map"
+              | None -> (orig_trans exp) (* must be a base~base edge *)
+            end
+        in
+        (pat, new_exp)
+      end
+    | _ -> failwith "bad match pattern"
   in
-  let output_map = EdgeMap.filter filter_output_edges edge_map in
-  let output_branches = EdgeMap.fold out_trans_branch output_map input_branches in
-  wrap e (lams [edge_var; x_var] (amatch edge_var (Some TEdge) output_branches))
+  let edge_map_match = match_of_edge_map edge_map emptyBranch in
+  let branches = mapBranches remap_branch edge_map_match in
+  wrap e (lams [edge_var; x_var] (amatch edge_var (Some TEdge) branches))
 
-let merge_branch (n: Vertex.t) (_: Vertex.t) (b: branches) : branches =
+let in_merge_branch (n: Vertex.t) (_: Vertex.t) (b: branches) : branches =
+  let a1 = Var.fresh "a1" in
+  let a2 = Var.fresh "a2" in
+  let node_pat = node_to_pat n in
+  (* create a function that takes 2 attributes and returns the first one *)
+  (* FIXME: this is a *brittle and dangerous solution*, since it relies on an
+   * implementation detail to ignore the fact that we expect merge to be
+   * commutative *)
+  let merge_exp = (lams [a1; a2] (evar a1)) in
+  addBranch node_pat merge_exp b
+
+let out_merge_branch (n: Vertex.t) (_: Vertex.t) (b: branches) : branches =
   let a1 = Var.fresh "a1" in
   let a2 = Var.fresh "a2" in
   let node_pat = node_to_pat n in
@@ -155,8 +178,8 @@ let transform_merge (e: Syntax.exp) (intf: SrpRemapping.interface) (node_map) : 
   let base_branches = mapBranches (fun (pat, exp) -> (pat, eapp e exp)) map_match in
   (* FIXME: bad merge impl for inputs; left as-is for now since it's not actually called,
    * just present to stop there from being complaints about missing branches in the match *)
-  let input_branches = VertexMap.fold merge_branch inputs base_branches in
-  let output_branches = VertexMap.fold merge_branch outputs input_branches in
+  let input_branches = VertexMap.fold in_merge_branch inputs base_branches in
+  let output_branches = VertexMap.fold out_merge_branch outputs input_branches in
   wrap e (lam node_var (amatch node_var (Some TNode) output_branches))
 
 (* Apply the predicate test on the solution for node n *)
@@ -169,7 +192,7 @@ let transform_assert
     (intf: SrpRemapping.interface)
     (output_preds: exp EdgeMap.t)
     node_map
-  : Syntax.exp option =
+  : Syntax.exp =
   let { inputs; _ } : SrpRemapping.interface = intf in
   let node_var = Var.fresh "node" in
   let soln_var = Var.fresh "x" in
@@ -193,5 +216,5 @@ let transform_assert
   let match_exp = amatch node_var (Some TNode) input_branches in
   let lambda = lams [node_var; soln_var] match_exp in
   match e with
-  | Some e -> Some (wrap e lambda)
-  | None -> Some lambda
+  | Some e -> (wrap e lambda)
+  | None -> lambda

@@ -5,6 +5,7 @@ open Nv_utils.PrimitiveCollections
 open Nv_lang.Syntax
 open TransformDecls
 open Nv_interpreter
+open Nv_utils.OCamlUtils
 
 let is_cross_partition (f: Vertex.t -> 'a) edge =
   (f (fst edge)) <> (f (snd edge))
@@ -97,6 +98,40 @@ let get_input_exps ({ broken_ins; _}: OpenAdjGraph.interfaces_alt) (edge_hyps: (
   in
   EdgeMap.fold add_edge_to_hyp broken_ins EdgeMap.empty
 
+(* filter all predicate edges out that do not appear in the given vertex->vertex map *)
+let filter_preds vmap preds =
+  (* match on both binding arrangements:
+   * since outputs go output~base but preds goes base~output,
+   * there's no risk of mismatching, since outputs and input all
+   * have only one neighbor
+  *)
+  let find_pred_in_vmap (u, v) _ =
+    let is_pred_in_vmap u' v' = (u' = u && v' = v ) || (u' = v && v' = u) in
+    VertexMap.exists is_pred_in_vmap vmap
+  in
+  EdgeMap.filter find_pred_in_vmap preds
+
+let transform_declaration parted_srp edge_hyps decl =
+  let { nodes; edges; node_map; edge_map; intf; preds; } : SrpRemapping.partitioned_srp = parted_srp in
+  match decl with
+  | DNodes _ -> Some (DNodes nodes)
+  | DEdges _ -> Some (DEdges edges)
+  | DInit init -> begin
+      let input_exps = EdgeMap.map (fun (v, _) -> (evar v)) edge_hyps in
+      Some (DInit (transform_init init intf input_exps node_map))
+    end
+  | DTrans trans -> Some (DTrans (transform_trans trans intf edge_map))
+  (* FIXME: merge is screwy; currently an output node on the destination won't update since it
+    * gets initialized with the destination's value, which is already the best *)
+  | DMerge merge -> Some (DMerge (transform_merge merge intf node_map))
+  | DAssert assertion -> begin
+      let output_preds = filter_preds intf.outputs preds in
+      Some (DAssert (transform_assert (Some assertion) intf output_preds node_map))
+    end
+  | DPartition _ -> None
+  | DInterface _ -> None
+  | _ -> Some decl
+
 (** Create a list of lists of declarations representing a network which has been
  * opened along the edges described by the partition and interface declarations.
  * @return a new list of lists of declarations
@@ -105,11 +140,16 @@ let divide_decls (decls: declarations) : declarations list =
   let partition = get_partition decls in
   match partition with
   | Some parte -> begin
+      (* Give names to remap functions *)
+      (* let node_remap_fn = "remapNode" in
+       * let edge_remap_fn = "remapEdge" in *)
       let attr_type = get_attr_type decls |> Option.get in
       (* get the parameters for partition_edges *)
       let interface = get_interface decls in
       let nodes = get_nodes decls |> Option.get in
+      let node_list = List.range 0 `To (nodes - 1) in
       let edges = get_edges decls |> Option.get in
+      (* interpret partition and interface functions *)
       let partf : (Vertex.t -> int) = interp_partition parte in
       let intf_opt : (Edge.t -> exp option) =
         match interface with
@@ -117,59 +157,30 @@ let divide_decls (decls: declarations) : declarations list =
         | None -> fun (_: Edge.t) -> None
       in
       let interfacef = unwrap_pred % intf_opt in
-      let node_list = List.range 0 `To (nodes - 1) in
       let partitioned_srps = SrpRemapping.partition_edges node_list edges partf interfacef in
       let create_new_decls parted_srp : declarations =
-        (* TODO: the node_map and edge_map describe how to remap each node and edge in the new SRP.
+        (* TODO: node_map and edge_map describe how to remap each node and edge in the new SRP.
          * To transform more cleanly, we can run a toplevel transformer on the SRP, replacing
-         * each edge and node in the map with the new value if it's Some, and removing it if it's None
-         * (where the edge/node is explicitly used).
+         * each edge and node in the map with the new value if it's Some,
+         * and removing it if it's None * (where the edge/node is explicitly used).
          * We can then add code to handle adding in the new input and output nodes to the SRP.
          * (the input and output edges are handled by edge_map).
         *)
-        let { nodes; edges; node_map; edge_map; intf; preds; } : SrpRemapping.partitioned_srp = parted_srp in
-        (* filter all predicate edges out that do not appear in the given vertex->vertex map *)
-        let filter_preds vmap =
-          EdgeMap.filter (fun (u, v) _ -> begin
-                (* match on both binding arrangements, since outputs go output~base but preds goes base~output *)
-                (* there's no risk of mismatching, since outputs and inputs all have only one neighbour *)
-                let is_pred_in_vmap u' v' = (u' = u && v' = v ) || (u' = v && v' = u) in
-                VertexMap.exists is_pred_in_vmap vmap
-              end) preds
-        in
+        let { node_map; intf; preds; _ } : SrpRemapping.partitioned_srp = parted_srp in
         let edge_hyps = EdgeMap.mapi (fun edge p -> begin
+              (* FIXME: the edge name is now the old name *)
               let name = Printf.sprintf "hyp_%s" (Edge.to_string edge) in
               (Var.fresh name, p)
-            end) (filter_preds intf.inputs) in
-        let output_preds = filter_preds intf.outputs in
-        let input_exps = EdgeMap.map (fun (v, _) -> (evar v)) edge_hyps in
-        (* TODO: remap decls using node_map and edge_map *)
-        let trans = get_trans decls |> Option.get in
-        let new_trans = transform_trans trans intf edge_map in
-        let init = get_init decls |> Option.get in
-        let new_init = transform_init init intf input_exps node_map in
-        let merge = get_merge decls |> Option.get in
-        let new_merge = transform_merge merge intf node_map in
+            end) (filter_preds intf.inputs preds) in
         let new_symbolics = EdgeMap.fold (fun _ (v, _) l -> DSymbolic (v, Ty attr_type) :: l) edge_hyps [] in
-        let assertion = get_assert decls in
-        let new_assertion = transform_assert assertion intf output_preds node_map in
         let new_requires = EdgeMap.fold (fun _ (v, p) l -> DRequire (eapp p (evar v)) :: l) edge_hyps [] in
         (* replace relevant old decls *)
-        let new_decls = List.filter_map (fun d -> match d with
-            | DNodes _ -> Some (DNodes nodes)
-            | DEdges _ -> Some (DEdges edges)
-            | DInit _ -> Some (DInit new_init)
-            | DTrans _ -> Some (DTrans new_trans)
-            (* FIXME: merge is screwy; currently an output node on the destination won't update since it
-             * gets initialized with the destination's value, which is already the best *)
-            | DMerge _ -> Some (DMerge new_merge)
-            | DAssert _ -> Some (DAssert (Option.get new_assertion))
-            (* remove partition and interface declarations *)
-            | DPartition _ -> None
-            | DInterface _ -> None
-            | _ -> Some d) decls in
+        let new_decls = List.filter_map (transform_declaration parted_srp edge_hyps) decls in
         (* add the assertion in at the end if there wasn't an assert in the original decls *)
-        let add_assert = if Option.is_none assertion then [DAssert (Option.get new_assertion)] else [] in
+        let add_assert = match get_assert new_decls with
+          | Some _ -> []
+          | None -> [DAssert (transform_assert None intf (filter_preds intf.outputs preds) node_map)]
+        in
         (* also add requires at the end so they can use any bindings earlier in the file *)
         new_symbolics @ new_decls @ new_requires @ add_assert
       in

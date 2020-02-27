@@ -143,7 +143,7 @@ and value =
 [@@deriving ord]
 
 and mtbdd = (value Mtbdd.t * ty)
-    [@compare fun _ _ -> failwith "Map value comparison not supported"]
+            [@compare fun _ _ -> failwith "Map value comparison not supported"]
 [@@deriving ord]
 
 and e =
@@ -178,7 +178,7 @@ and branches = { pmap  : exp PatMap.t;
 and func = {arg: var; argty: ty option; resty: ty option; body: exp}
 
 and closure = (env * func)
-    [@compare fun _ _ -> failwith "Map value comparison not supported"]
+              [@compare fun _ _ -> failwith "Map value comparison not supported"]
 [@@deriving ord]
 
 and env = {ty: ty Env.t; value: value Env.t}
@@ -304,7 +304,7 @@ let branchSize b =
 
 let equal_spans (s1: Span.t) (s2: Span.t) =
   let open Span in
-    s1.start = s2.start && s1.finish = s2.finish
+  s1.start = s2.start && s1.finish = s2.finish
 
 let equal_opt e o1 o2 =
   match (o1, o2) with
@@ -991,7 +991,7 @@ let rec tupleToList (e : exp) =
   | _ -> failwith "Not a tuple type"
 
 let rec tupleToListSafe (e : exp) =
-    match e.e with
+  match e.e with
   | ETuple es -> es
   | ETy (e, _) -> tupleToListSafe e
   | EVal v ->
@@ -1081,8 +1081,8 @@ let get_record_types_from_utys uty =
   BatList.fold_left
     (fun acc (_, ty) ->
        match ty with
-         | TRecord lst -> lst :: acc
-         | _ -> acc
+       | TRecord lst -> lst :: acc
+       | _ -> acc
     )
     [] uty
 
@@ -1117,9 +1117,9 @@ let unproj_var (x : var) =
 let rec get_ty_vars (t: ty) : var list =
   match t with
   | TVar tv -> begin match !tv with
-    | Unbound (tn, _) -> [tn]
-    | Link t -> get_ty_vars t
-  end
+      | Unbound (tn, _) -> [tn]
+      | Link t -> get_ty_vars t
+    end
   | QVar n -> [n]
   | TArrow (t1, t2) -> (get_ty_vars t1) @ (get_ty_vars t2)
   | TTuple ts -> List.fold_left (fun l t -> (get_ty_vars t) @ l) [] ts

@@ -1,7 +1,7 @@
 open Cudd
 open Nv_datastructures
 open Nv_utils.PrimitiveCollections
-       
+
 type node = int
 
 val tnode_sz : int

@@ -329,21 +329,7 @@ let checkPolicy info cfg file ds =
   let net = Slicing.createNetwork ds in
   SmtCheckProps.checkMonotonicity info cfg.query (smt_query_file file) net
 
-let parse_input_aux cfg info file decls =
-  let decls, f = RecordUnrolling.unroll_declarations decls in
-  let fs = [f] in
-  let decls,fs = (* inlining definitions *)
-    if cfg.inline then
-      (* Note! Must rename before inling otherwise inling is unsound *)
-      let decls, f = Renaming.alpha_convert_declarations decls in
-      (Profile.time_profile "Inlining" (
-          fun () ->
-            Inline.inline_declarations decls |>
-            (* TODO: We could probably propagate type information through inlining *)
-            Typing.infer_declarations info), f :: fs)
-    else
-      (decls,fs)
-  in
+let parse_input_aux cfg info file decls fs =
   let decls, fs =
     if cfg.unroll then
       let decls, f = (* unrolling maps *)
@@ -386,6 +372,20 @@ let parse_input (args : string array) :
   let decls = Typing.infer_declarations info decls in
   Typing.check_annot_decls decls ;
   if not cfg.no_wellformed then Wellformed.check info decls ;
+  let decls, f = RecordUnrolling.unroll_declarations decls in
+  let fs = [f] in
+  let decls,fs = (* inlining definitions *)
+    if cfg.inline then
+      (* Note! Must rename before inling otherwise inling is unsound *)
+      let decls, f = Renaming.alpha_convert_declarations decls in
+      (Profile.time_profile "Inlining" (
+          fun () ->
+            Inline.inline_declarations decls |>
+            (* TODO: We could probably propagate type information through inlining *)
+            Typing.infer_declarations info), f :: fs)
+    else
+      (decls,fs)
+  in
   if cfg.kirigami then
     (* FIXME: this breaks ToEdge *)
     (* NOTE: we partition after checking well-formedness so we can reuse edges that don't exist *)
@@ -393,6 +393,6 @@ let parse_input (args : string array) :
     List.map (fun d ->
         (* print_endline @@ Printing.declarations_to_string d; *)
         let new_d = Typing.infer_declarations info d in
-        parse_input_aux cfg info file new_d) new_decls
+        parse_input_aux cfg info file new_d fs) new_decls
   else
-    [parse_input_aux cfg info file decls]
+    [parse_input_aux cfg info file decls fs]

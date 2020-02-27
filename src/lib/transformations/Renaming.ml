@@ -210,7 +210,6 @@ let alpha_convert_srp (srp : Syntax.srp_unfold) =
           Env.update env x x) xs env) srp.srp_labels env
   in
   let srp' =
-    (* TODO: add partitioning? *)
     { srp_attr = srp.srp_attr;
       srp_constraints = AdjGraph.VertexMap.map (alpha_convert_exp env) srp.srp_constraints;
       srp_labels = srp.srp_labels;
