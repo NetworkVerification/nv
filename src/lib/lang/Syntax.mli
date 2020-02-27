@@ -136,16 +136,18 @@ val optimizeBranches: branches -> branches
 val branchToList: branches -> (PatMap.key * exp) list
 val branchSize: branches -> unit
 
+type solve_arg = {init : exp; trans: exp; merge: exp}
+
 type declaration =
   | DLet of var * ty option * exp
   | DSymbolic of var * ty_or_exp
   | DATy of ty (* Declaration of the attribute type *)
-  | DUserTy of var * ty (* Declaration of a user-defined type *)
+  | DUserTy of var * ty (* Declaration of a record type *)
   | DMerge of exp
   | DTrans of exp
   | DInit of exp
   | DAssert of exp
-  | DSolve of var * exp
+  | DSolve of var * solve_arg
   | DRequire of exp
   | DPartition of exp (* partition ids *)
   | DInterface of exp (* interface hypotheses *)
@@ -300,7 +302,7 @@ val get_init : declarations -> exp option
 
 val get_assert : declarations -> exp option
 
-val get_solves : declarations -> (var * exp) list
+val get_solves : declarations -> (var * solve_arg) list
 
 val get_partition : declarations -> exp option
 

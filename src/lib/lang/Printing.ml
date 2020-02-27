@@ -307,7 +307,9 @@ let rec declaration_to_string d =
   | DMerge e -> "let merge = " ^ exp_to_string e
   | DTrans e -> "let trans = " ^ exp_to_string e
   | DAssert e -> "let assert = " ^ exp_to_string e
-  | DSolve (x, e) -> Printf.sprintf "let %s = solution %s" (Var.to_string x) (exp_to_string e)
+  | DSolve (x, {init;trans;merge}) ->
+    Printf.sprintf "let %s = solution {init: %s; trans: %s; merge: %s}"
+      (Var.to_string x) (exp_to_string init) (exp_to_string trans) (exp_to_string merge)
   | DPartition e -> "let partition = " ^ exp_to_string e (* partitioning *)
   | DInterface e -> "let interface = " ^ exp_to_string e (* partitioning *)
   | DRequire e -> "require " ^ exp_to_string e

@@ -161,7 +161,9 @@ let transform_decl ~(name:string) (transformers:transformers) (d : declaration) 
   | DAssert e -> DAssert (transform_exp e)
   | DTrans e -> DTrans (transform_exp e)
   | DMerge e -> DMerge (transform_exp e)
-  | DSolve (x, e) -> DSolve (x, transform_exp e)
+  | DSolve (x, {init; trans; merge}) ->
+    let init, trans, merge = transform_exp init, transform_exp trans, transform_exp merge in
+    DSolve (x, {init; trans; merge})
   | DSymbolic (x, toe) -> let (x, toe') = transform_symbolic (x, toe) in DSymbolic (x, toe')
   | DRequire e -> DRequire (transform_exp e)
   | DATy ty -> DATy (transform_ty ty)

@@ -186,6 +186,8 @@ and env = {ty: ty Env.t; value: value Env.t}
 
 and ty_or_exp = Ty of ty | Exp of exp
 
+type solve_arg = {init : exp; trans: exp; merge: exp}
+
 type declaration =
   | DLet of var * ty option * exp
   | DSymbolic of var * ty_or_exp
@@ -195,7 +197,7 @@ type declaration =
   | DTrans of exp
   | DInit of exp
   | DAssert of exp
-  | DSolve of var * exp
+  | DSolve of var * solve_arg
   | DRequire of exp
   | DPartition of exp (* partition ids *)
   | DInterface of exp (* interface hypotheses *)

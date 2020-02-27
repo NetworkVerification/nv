@@ -143,6 +143,15 @@
       (b1 * 16777216) + (b2 * 65536) + (b3 * 256) + b4
       |> Integer.of_int
 
+  let make_dsolve x r =
+    let (init, trans, merge) =
+      match r.e with
+      | ERecord m ->
+        StringMap.find "init" m, StringMap.find "trans" m, StringMap.find "merge" m
+      | _ -> failwith "solution must take a direct record expression"
+    in
+    DSolve (x, {init; trans; merge})
+
 %}
 
 %token <Nv_datastructures.Span.t * Nv_datastructures.Var.t> ID
@@ -279,7 +288,7 @@ letvars:
 ;
 
 component:
-    | LET letvars EQ SOLUTION expr      { DSolve (fst $2, $5) }
+    | LET letvars EQ SOLUTION expr      { make_dsolve (fst $2) $5 }
     | LET letvars EQ expr               { global_let $2 $4 $4.espan (Span.extend $1 $4.espan) }
     | SYMBOLIC ID EQ expr               { DSymbolic (snd $2, Exp $4) }
     | SYMBOLIC ID COLON ty              { DSymbolic (snd $2, Ty $4) }

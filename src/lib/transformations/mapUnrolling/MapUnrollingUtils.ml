@@ -144,10 +144,10 @@ let collect_in_decl (symbolics : var list) (d : declaration) (acc : maplist) : m
   | DAssert exp
   | DPartition exp (* partitioning *)
   | DInterface exp (* partitioning *)
-  | DRequire exp
-  | DSolve (_, exp) ->
-    (* Not sure if we need to do something special here for solve *)
+  | DRequire exp ->
     collect_in_exp exp acc
+  | DSolve (_, {init; trans; merge}) ->
+    collect_in_exp init @@ collect_in_exp trans @@ collect_in_exp merge acc
   | DNodes _
   | DEdges _ ->
     acc

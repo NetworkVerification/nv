@@ -115,9 +115,10 @@ let check_annot_decl (d: declaration) =
   | DAssert e
   | DPartition e (* partitioning *)
   | DInterface e (* partitioning *)
-  | DRequire e
-  | DSolve (_, e) ->
+  | DRequire e ->
     check_annot e
+  | DSolve (_, {init; trans; merge}) ->
+    check_annot init; check_annot trans; check_annot merge
   | DNodes _ | DEdges _ | DATy _ | DSymbolic _ | DUserTy _ -> ()
 
 let rec check_annot_decls (ds: declarations) =
@@ -913,18 +914,16 @@ and infer_declaration i info env record_types aty d : ty Env.t * declaration =
     let ty = oget e'.ety in
     unify info e ty (init_ty aty) ;
     (Env.update env (Var.create "init") ty, DInit e')
-  | DSolve (x, e) ->
+  | DSolve (x, {init; trans; merge}) ->
     let solve_aty = fresh_tyvar () in
-    let sty = solve_ty solve_aty in
-    let record_types_extended =
-      (* Put sty at the end so that we only find it if the use hasn't declared
-         a matching type *)
-      (record_types @ [match sty with | TRecord m -> m
-                                      | _ -> failwith "impossible"])
-    in
-    let e' = _infer_exp (i + 1) info env record_types_extended e in
-    unify info e (oget e'.ety) sty ;
-    (Env.update env x (TMap (TNode, solve_aty)), DSolve (x, e'))
+    let init' = infer_exp init in
+    let trans' = infer_exp trans in
+    let merge' = infer_exp merge in
+    unify info init (oget init'.ety) (init_ty solve_aty) ;
+    unify info trans (oget trans'.ety) (trans_ty solve_aty) ;
+    unify info merge (oget merge'.ety) (merge_ty solve_aty) ;
+    (Env.update env x (TMap (TNode, solve_aty)),
+     DSolve (x, {init = init'; trans = trans'; merge = merge'}))
   | DATy _ | DUserTy _ | DNodes _ | DEdges _ -> (env, d)
 
 let canonicalize_type (ty : ty) : ty =
