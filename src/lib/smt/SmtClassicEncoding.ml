@@ -135,6 +135,7 @@ struct
         SmtUtils.add_constraint env (mk_term (mk_eq result.t e.t))) es results);
     results
 
+  (* Currently unused, but might be if we split up assertions *)
   let encode_z3_assert str env _node assertion =
     let rec loop assertion acc =
       match assertion.e with
@@ -266,35 +267,45 @@ struct
   let encode_z3 (net: Syntax.network) : SmtUtils.smt_env =
     let env = init_solver net.symbolics ~labels:[] in
     (* let eassert = net.assertion in
-    let einit = net.init in
-    let emerge = net.merge in
-    let etrans = net.trans in
-    let nodes = (AdjGraph.nb_vertex net.graph) in
-    let aty = net.attr_type in *)
+       let einit = net.init in
+       let emerge = net.merge in
+       let etrans = net.trans in
+       let nodes = (AdjGraph.nb_vertex net.graph) in
+       let aty = net.attr_type in *)
 
     List.iteri (encode_solve env net.graph) net.solves;
 
     (* add assertions at the end *)
-    (* ( match eassert with
-      | None -> ()
-      | Some eassert ->
-        let all_good = ref (mk_bool true) in
-        for i = 0 to nodes - 1 do
+    (* TODO: It would be nice to say _which_ assertion failed, if there were
+       multiple. But that requires use to change net.assertion to a list instead
+       of an option, which has big repercussions. *)
+    (match net.assertion with
+     | None -> ()
+     | Some eassert ->
+       (* I'm assuming we'll never have more than one expression as a result of
+          encode_exp_z3, since it has boolean type this. If so we'll have to be cleverer. *)
+       let z3_assert = encode_exp_z3 "assertion" env eassert |> to_list |> List.hd in
+       let assert_var = mk_constant env "assertion" (ty_to_sort TBool) in
+       SmtUtils.add_constraint env (mk_term (mk_eq assert_var.t z3_assert.t));
+       SmtUtils.add_constraint env (mk_term (mk_not assert_var.t))
+       (* let all_good = ref (mk_bool true) in
+          for i = 0 to nodes - 1 do
           let label = labelling.(i) in
           let node = avalue (vnode i, Some Typing.node_ty, Span.default) in
           let eassert_i = InterpPartial.interp_partial_fun eassert [node] in
           let result, x =
-            encode_z3_assert (SmtUtils.assert_var i) env i eassert_i
+           encode_z3_assert (SmtUtils.assert_var i) env i eassert_i
           in
           BatList.iter2 (fun x label ->
-              SmtUtils.add_constraint env (mk_term (mk_eq x.t label.t))) x (to_list label);
+             SmtUtils.add_constraint env (mk_term (mk_eq x.t label.t))) x (to_list label);
           let assertion_holds =
-            lift1 (fun result -> mk_eq result.t (mk_bool true) |> mk_term) result
-            |> combine_term in
+           lift1 (fun result -> mk_eq result.t (mk_bool true) |> mk_term) result
+           |> combine_term in
           all_good :=
-            mk_and !all_good assertion_holds.t
-        done ;
-        SmtUtils.add_constraint env (mk_term (mk_not !all_good))); *)
+           mk_and !all_good assertion_holds.t
+          done ;
+          SmtUtils.add_constraint env (mk_term (mk_not !all_good)) *)
+    );
     (* add the symbolic variable constraints *)
     add_symbolic_constraints env net.requires (env.symbolics (*@ sym_vars*));
     env
