@@ -15,7 +15,8 @@ open OCamlUtils
 type t =
   { symbolics: value VarMap.t
   ; labels: value VertexMap.t
-  ; assertions: bool VertexMap.t option
+  (* ; assertions: bool VertexMap.t option *)
+  ; assertions: bool option
   ; mask: value option }
 
 type map_back = t -> t
@@ -185,15 +186,11 @@ let print_solution (solution : t) =
       print_string [green; Bold] "Success: " ;
       Printf.printf "No assertions provided, so none failed\n"
     | Some m ->
-      let all_pass = AdjGraph.VertexMap.for_all (fun _ b -> b) m in
+      let all_pass = m in
       if all_pass then (
         print_string [green; Bold] "Success: " ;
         Printf.printf "all assertions passed\n" )
       else
-        AdjGraph.VertexMap.iter
-          (fun k v ->
-             if not v then (
-               print_string [red; Bold] "Failed: " ;
-               Printf.printf "assertion for node %d\n" k ) )
-          m ) ;
+        print_string [red; Bold] "Failed: " ;
+      Printf.printf "assertion failed\n" ) ;
   print_newline ()

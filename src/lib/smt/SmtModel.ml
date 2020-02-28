@@ -25,6 +25,7 @@ let eval_model (symbolics: Syntax.ty_or_exp VarMap.t)
     (num_nodes: int)
     (eassert: Syntax.exp option)
     (renaming: string StringMap.t * smt_term StringMap.t) : command list =
+  ignore num_nodes; ignore eassert; (* Redundant with the new asserts *)
   let renaming, valMap = renaming in
   let var x = "Var:" ^ x in
   let find_renamed_term str =
@@ -51,13 +52,13 @@ let eval_model (symbolics: Syntax.ty_or_exp VarMap.t)
     match eassert with
     | None -> base
     | Some _ ->
-      AdjGraph.fold_vertices (fun u acc ->
-          let assu = (SmtUtils.assert_var u) ^ "-result" in
-          let tm = find_renamed_term assu in
-          let ev = mk_eval tm |> mk_command in
-          let ec = mk_echo ("\"" ^ (var assu) ^ "\"")
-                   |> mk_command in
-          ec :: ev :: acc) num_nodes base
+      (* AdjGraph.fold_vertices (fun u acc -> *)
+      let assu = "assertion" in
+      let tm = find_renamed_term assu in
+      let ev = mk_eval tm |> mk_command in
+      let ec = mk_echo ("\"" ^ (var assu) ^ "\"") |> mk_command in
+      ec :: ev :: base
+      (* ec :: ev :: acc) num_nodes base *)
   in
   (* Compute eval statements for symbolic variables *)
   let symbols =
@@ -108,17 +109,18 @@ let translate_model (m : (string, string) BatMap.t) : Nv_solution.Solution.t =
       match k with
       | k when BatString.starts_with k "label" ->
         {sol with labels= AdjGraph.VertexMap.add (SmtUtils.node_of_label_var k) nvval sol.labels}
-      | k when BatString.starts_with k "assert-" ->
-        {sol with assertions=
-                    match sol.assertions with
-                    | None ->
-                      Some (AdjGraph.VertexMap.add (SmtUtils.node_of_assert_var k)
-                              (nvval |> Syntax.bool_of_val |> Nv_utils.OCamlUtils.oget)
-                              AdjGraph.VertexMap.empty)
-                    | Some m ->
-                      Some (AdjGraph.VertexMap.add (SmtUtils.node_of_assert_var k)
-                              (nvval |> Syntax.bool_of_val |> Nv_utils.OCamlUtils.oget) m)
-        }
+      | "assertion" ->
+        {sol with assertions = Some false}
+      (* {sol with assertions=
+                          match sol.assertions with
+                          | None ->
+                            Some (AdjGraph.VertexMap.add (SmtUtils.node_of_assert_var k)
+                                    (nvval |> Syntax.bool_of_val |> Nv_utils.OCamlUtils.oget)
+                                    AdjGraph.VertexMap.empty)
+                          | Some m ->
+                            Some (AdjGraph.VertexMap.add (SmtUtils.node_of_assert_var k)
+                                    (nvval |> Syntax.bool_of_val |> Nv_utils.OCamlUtils.oget) m)
+              } *)
       | k ->
         let k_var = Var.of_var_string k in
         {sol with symbolics= VarMap.add k_var nvval sol.symbolics}) m
@@ -150,17 +152,18 @@ let translate_model_unboxed (m : (string, string) BatMap.t) : Nv_solution.Soluti
                AdjGraph.VertexMap.modify_def
                  [] (SmtUtils.node_of_label_var k) (fun xs -> (i,nvval) :: xs) labels,
                assertions ))
-        | k when BatString.starts_with k "assert-" ->
-          ( symbolics,
-            labels,
-            match assertions with
-            | None ->
-              Some (AdjGraph.VertexMap.add (SmtUtils.node_of_assert_var k)
-                      (nvval |> Syntax.bool_of_val |> Nv_utils.OCamlUtils.oget)
-                      AdjGraph.VertexMap.empty)
-            | Some m ->
-              Some (AdjGraph.VertexMap.add (SmtUtils.node_of_assert_var k)
-                      (nvval |> Syntax.bool_of_val |> Nv_utils.OCamlUtils.oget) m) )
+        | "assertion" ->
+          (symbolics, labels, Some false)
+        (* ( symbolics,
+           labels,
+           match assertions with
+           | None ->
+            Some (AdjGraph.VertexMap.add (SmtUtils.node_of_assert_var k)
+                    (nvval |> Syntax.bool_of_val |> Nv_utils.OCamlUtils.oget)
+                    AdjGraph.VertexMap.empty)
+           | Some m ->
+            Some (AdjGraph.VertexMap.add (SmtUtils.node_of_assert_var k)
+                    (nvval |> Syntax.bool_of_val |> Nv_utils.OCamlUtils.oget) m) ) *)
         | k ->
           ( let new_symbolics = VarMap.add (Var.of_var_string k) nvval symbolics in
             new_symbolics, labels, assertions )

@@ -97,8 +97,7 @@ let get_sat query chan info env solver renaming nodes eassert reply =
   | UNSAT -> Unsat
   | SAT ->
     ask_for_model query chan info env solver renaming nodes eassert
-  | UNKNOWN ->
-    Unknown
+  | UNKNOWN -> Unknown
   | _ -> failwith "unexpected answer from solver\n"
 
 let refineModel (model : Nv_solution.Solution.t) info query chan env solver renaming

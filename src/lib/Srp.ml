@@ -242,7 +242,7 @@ let simulate_net (net: Syntax.network) : Nv_solution.Solution.t =
     net_to_state net ~throw_requires:true
   in
   let vals = simulate_init srp state |> AdjGraph.VertexMap.map (fun (_,v) -> v) in
-  let asserts = check_assertions srp vals in
+  let asserts = check_assertions srp vals |> AdjGraph.VertexMap.for_all (fun _ b -> b) in
   {labels= vals; symbolics= syms; assertions= Some asserts; mask= None}
 
 let simulate_net_bound net k : (Nv_solution.Solution.t * queue) =
@@ -251,5 +251,5 @@ let simulate_net_bound net k : (Nv_solution.Solution.t * queue) =
   in
   let vals, q = simulate_init_bound srp state k in
   let vals = AdjGraph.VertexMap.map (fun (_,v) -> v) vals in
-  let asserts = check_assertions srp vals in
+  let asserts = check_assertions srp vals |> AdjGraph.VertexMap.for_all (fun _ b -> b) in
   ({labels= vals; symbolics= syms; assertions= Some asserts; mask= None}, q)

@@ -64,7 +64,7 @@ let run_smt_func file cfg info net fs =
     match solution.assertions with
     | None -> Success (Some solution), fs
     | Some m ->
-      if AdjGraph.VertexMap.exists (fun _ b -> not b) m then
+      if not m then
         CounterExample solution, fs
       else
         Success (Some solution), fs
@@ -100,7 +100,8 @@ let run_smt_classic file cfg info (net : Syntax.network) fs =
       match solution.assertions with
       | None -> Success (Some solution), fs
       | Some m ->
-        if AdjGraph.VertexMap.exists (fun _ b -> not b) m then
+        (* if AdjGraph.VertexMap.exists (fun _ b -> not b) m then *)
+        if not m then
           CounterExample solution, fs
         else
           Success (Some solution), fs
@@ -218,7 +219,7 @@ let run_simulator cfg _ net fs =
     match solution.assertions with
     | None -> Success (Some solution), fs
     | Some m ->
-      if AdjGraph.VertexMap.exists (fun _ b -> not b) m then
+      if not m then
         CounterExample solution, fs
       else
         Success (Some solution), fs
@@ -235,7 +236,7 @@ let run_compiled file _ _ net fs =
   match solution.assertions with
   | None -> Success (Some solution), fs
   | Some m ->
-    if AdjGraph.VertexMap.exists (fun _ b -> not b) m then
+    if m then
       CounterExample solution, fs
     else
       Success (Some solution), fs

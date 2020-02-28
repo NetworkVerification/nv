@@ -5,7 +5,8 @@ open Nv_lang.Syntax
 type t =
   { symbolics: value VarMap.t
   ; labels: value VertexMap.t
-  ; assertions: bool VertexMap.t option
+  (* ; assertions: bool VertexMap.t option *)
+  ; assertions: bool option
   ; mask: value option  }
 
 type map_back = t -> t

@@ -204,7 +204,7 @@ module SrpSimulation (Srp : NATIVE_SRP) : SrpSimulationSig =
       Embeddings.build_unembed_cache record_cnstrs record_fns;
       let s = srp_to_state graph in
       let vals = simulate_init graph s |> AdjGraph.VertexMap.map (fun (_,v) -> v) in
-      let asserts = check_assertions vals in
+      let asserts = check_assertions vals |> OCamlUtils.omap (AdjGraph.VertexMap.for_all (fun _ b -> b)) in
       let open Solution in
       let val_proj = ocaml_to_nv_value attr_ty in
         { labels = AdjGraph.VertexMap.map (fun v -> val_proj v) vals;
