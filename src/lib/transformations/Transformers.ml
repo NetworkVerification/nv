@@ -275,11 +275,11 @@ let transform_network
   let symb_tys = get_symbolic_types net.symbolics in
   let transform_solves =
     List.map
-      (fun (e, ({init; trans; merge} : solve_arg)) ->
-         let e, init, trans, merge =
-           transform_exp e, transform_exp init, transform_exp trans, transform_exp merge
+      (fun (ty, e, ({init; trans; merge} : solve_arg)) ->
+         let ty, e, init, trans, merge =
+           transform_ty ty, transform_exp e, transform_exp init, transform_exp trans, transform_exp merge
          in
-         (e, {init; trans; merge}))
+         (ty, e, {init; trans; merge}))
   in
   {
     attr_type = transform_ty net.attr_type;

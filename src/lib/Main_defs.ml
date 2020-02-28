@@ -84,6 +84,7 @@ let run_smt_classic file cfg info (net : Syntax.network) fs =
   let fs = f :: fs in
   let net, _ = OptimizeBranches.optimize_net net in (* The _ should match the identity function *)
   let net = Profile.time_profile "Partially Evaluating Network" (fun () -> partialEvalNet net) in
+  (* print_endline @@ Printing.network_to_string net; *)
   let get_answer net fs =
     let solve_fun =
       if cfg.hiding then
@@ -226,18 +227,18 @@ let run_simulator cfg _ net fs =
 
 (** Native simulator - compiles SRP to OCaml *)
 let run_compiled file _ _ net fs =
-   let path = Filename.remove_extension file in
-   let name = Filename.basename path in
-   let name = String.mapi (fun i c -> if i = 0 then Char.uppercase_ascii c else c) name in
-   let newpath = name in
-   let solution = Loader.simulate newpath net in
-     match solution.assertions with
-    | None -> Success (Some solution), fs
-    | Some m ->
-      if AdjGraph.VertexMap.exists (fun _ b -> not b) m then
-        CounterExample solution, fs
-      else
-        Success (Some solution), fs
+  let path = Filename.remove_extension file in
+  let name = Filename.basename path in
+  let name = String.mapi (fun i c -> if i = 0 then Char.uppercase_ascii c else c) name in
+  let newpath = name in
+  let solution = Loader.simulate newpath net in
+  match solution.assertions with
+  | None -> Success (Some solution), fs
+  | Some m ->
+    if AdjGraph.VertexMap.exists (fun _ b -> not b) m then
+      CounterExample solution, fs
+    else
+      Success (Some solution), fs
 
 let compress file info net cfg fs networkOp =
   (* Printf.printf "Number of concrete edges:%d\n" (List.length (oget (get_edges decls))); *)
@@ -326,7 +327,7 @@ let compress file info net cfg fs networkOp =
 
 let checkPolicy info cfg file ds =
   let ds, _ = Renaming.alpha_convert_declarations ds in
-  let net = Slicing.createNetwork ds in
+  let net = createNetwork ds in
   SmtCheckProps.checkMonotonicity info cfg.query (smt_query_file file) net
 
 let parse_input (args : string array) =
@@ -368,17 +369,17 @@ let parse_input (args : string array) =
       (decls, f :: fs)
     else decls, fs
   in
-  let net = Slicing.createNetwork decls in (* Create something of type network *)
-    let net =
-      if cfg.link_failures > 0 then
-        Failures.buildFailuresNet net cfg.link_failures
-      else net
-    in
+  let net = createNetwork decls in (* Create something of type network *)
+  let net =
+    if cfg.link_failures > 0 then
+      Failures.buildFailuresNet net cfg.link_failures
+    else net
+  in
   let net, fs =
     if cfg.smt then
       let net, f = UnboxEdges.unbox_net net in
       net, f :: fs
     else
       net, fs
-    in
-   (cfg, info, file, net, fs)
+  in
+  (cfg, info, file, net, fs)

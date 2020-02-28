@@ -126,41 +126,6 @@ let sliceDestination symb (pre: Prefix.t) =
           e_val (vtuple [vint (fst pre); vint (snd pre)]))),
    BatList.map (fun (s,v) -> DSymbolic (s,v)) ls2)
 
-let createNetwork decls =
-  let open Syntax in
-  match
-    ( get_merge decls
-    , get_trans decls
-    , get_init decls
-    , get_nodes decls
-    , get_edges decls
-    , get_attr_type decls
-    , get_symbolics decls
-    , get_lets decls
-    , get_types decls
-    , get_requires decls)
-  with
-  | Some emerge, Some etrans, Some einit, Some n, Some es,
-    Some aty, symb, defs, utys, erequires ->
-    { attr_type = aty;
-      init = einit;
-      trans = etrans;
-      merge = emerge;
-      assertion = get_assert decls;
-      solves = get_solves decls;
-      partition = get_partition decls; (* partitioning *)
-      interface = get_interface decls; (* partitioning *)
-      symbolics = symb;
-      defs = defs;
-      requires = erequires;
-      utys = utys;
-      graph = List.fold_left AdjGraph.add_edge_e (AdjGraph.create n) es
-    }
-  | _ ->
-    Console.error
-      "missing definition of nodes, edges, merge, trans, or init"
-
-
 (* Need to have inlined definitions before calling this *)
 let createSlices _info net =
   let open Syntax in
@@ -189,13 +154,16 @@ let createSlices _info net =
                                      (DMerge net.merge); (DTrans net.trans);
                                      (DAssert (Nv_utils.OCamlUtils.oget net.assertion))]) (* |> *)
         (* Typing.infer_declarations info *) in
+        let solves =
+          (List.map (fun (e, (r : solve_arg)) -> extract_aty r, e, r)) (get_solves decls)
+        in
       { net =
           { attr_type = net.attr_type;
             init = Nv_utils.OCamlUtils.oget (get_init decls);
             trans = Nv_utils.OCamlUtils.oget (get_trans decls);
             merge = Nv_utils.OCamlUtils.oget (get_merge decls);
             assertion = (get_assert decls);
-            solves = get_solves decls;
+            solves = solves;
             partition = (get_partition decls); (* partitioning *)
             interface = (get_interface decls); (* partitioning *)
             symbolics = get_symbolics decls;

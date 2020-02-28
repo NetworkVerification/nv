@@ -377,9 +377,10 @@ let network_to_string ?(show_topology=false) (net : Syntax.network) =
   in
   let solves =
     BatString.concat "\n" @@
-    BatList.map (fun (e, {init; trans; merge} : exp * solve_arg) ->
-        Printf.sprintf "let %s = solution {init: %s; trans: %s; merge: %s}"
-          (exp_to_string e) (exp_to_string init) (exp_to_string trans) (exp_to_string merge))
+    BatList.map (fun (ty, e, {init; trans; merge} : ty * exp * solve_arg) ->
+        Printf.sprintf "let %s = solution<%s> {init: %s; trans: %s; merge: %s}"
+          (exp_to_string e) (ty_to_string ty) (exp_to_string init)
+          (exp_to_string trans) (exp_to_string merge))
       net.solves
   in
   Printf.sprintf "%s %s %s %s %s %s \

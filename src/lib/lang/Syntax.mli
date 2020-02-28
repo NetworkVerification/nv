@@ -162,7 +162,7 @@ type network =
     trans        : exp;
     merge        : exp;
     assertion    : exp option;
-    solves       : (exp * solve_arg) list;
+    solves       : (ty * exp * solve_arg) list;
     partition    : exp option; (* partitioning *)
     interface    : exp option; (* partitioning *)
     symbolics    : (var * ty_or_exp) list;
@@ -370,3 +370,7 @@ val bool_of_val: value -> bool option
 val proj_var: int -> var -> var
 
 val unproj_var: var -> (int * var)
+
+val extract_aty : solve_arg -> ty
+
+val createNetwork: declarations -> network

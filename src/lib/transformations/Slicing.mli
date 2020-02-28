@@ -43,6 +43,4 @@ val findRelevantNodes: (AdjGraph.Vertex.t, Nv_lang.Syntax.exp) Hashtbl.t -> AdjG
 
 val groupPrefixesByVertices: AdjGraph.VertexSet.t PrefixMap.t -> PrefixSetSet.t
 
-val createNetwork: Nv_lang.Syntax.declarations -> Nv_lang.Syntax.network
-
 val createSlices: Nv_lang.Console.info -> Nv_lang.Syntax.network -> network_slice list

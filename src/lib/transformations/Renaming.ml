@@ -187,12 +187,12 @@ let alpha_convert_net net =
         (env, (y, tyo, e) :: acc)) net.defs (env, [])
   in
   let env, solves =
-    BatList.fold_right (fun (x, {init; trans; merge} : exp * solve_arg) (env, acc) ->
+    BatList.fold_right (fun (ty, x, {init; trans; merge} : ty * exp * solve_arg) (env, acc) ->
         let init, trans, merge =
           alpha_convert_exp env init, alpha_convert_exp env trans, alpha_convert_exp env merge
         in
         let env, y = rename_solve_vars bmap env x in
-        (env, (y, {init; trans; merge}) :: acc)) net.solves (env, [])
+        (env, (ty, y, {init; trans; merge}) :: acc)) net.solves (env, [])
   in
   let net' =
     { attr_type = net.attr_type;

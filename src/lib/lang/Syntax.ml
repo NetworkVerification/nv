@@ -212,7 +212,7 @@ type network =
     trans : exp;
     merge : exp;
     assertion : exp option;
-    solves : (exp * solve_arg) list;
+    solves : (ty * exp * solve_arg) list;
     partition : exp option; (* partitioning *)
     interface : exp option; (* partitioning *)
     symbolics : (var * ty_or_exp) list;
@@ -1270,3 +1270,52 @@ let compare_exps e1 e2 =
   let cfg = Cmdline.get_cfg () in
   if cfg.hashcons then e1.etag - e2.etag
   else Pervasives.compare e1 e2
+
+let rec extract_aty (s : solve_arg) =
+  let init = s.init in
+  let rec aux ty acc =
+    match ty with
+    | TArrow (a, rest) -> aux rest (a::acc)
+    | _ -> ty::acc
+  in
+  match init.ety with
+  | Some (TArrow (_, rest)) ->
+    let elts = (List.rev (aux rest [])) in
+    if List.length elts = 1 then List.hd elts else TTuple elts
+  | _ -> failwith "Bad init"
+;;
+
+let createNetwork decls =
+  match
+    ( get_merge decls
+    , get_trans decls
+    , get_init decls
+    , get_nodes decls
+    , get_edges decls
+    , get_attr_type decls
+    , get_symbolics decls
+    , get_lets decls
+    , get_types decls
+    , get_requires decls)
+  with
+  | Some emerge, Some etrans, Some einit, Some n, Some es,
+    Some aty, symb, defs, utys, erequires ->
+    let solves =
+      (List.map (fun (e, (r : solve_arg)) -> extract_aty r, e, r)) (get_solves decls)
+    in
+    { attr_type = aty;
+      init = einit;
+      trans = etrans;
+      merge = emerge;
+      assertion = get_assert decls;
+      solves = solves;
+      partition = get_partition decls; (* partitioning *)
+      interface = get_interface decls; (* partitioning *)
+      symbolics = symb;
+      defs = defs;
+      requires = erequires;
+      utys = utys;
+      graph = List.fold_left AdjGraph.add_edge_e (AdjGraph.create n) es
+    }
+  | _ ->
+    failwith "This should be refactored soon."
