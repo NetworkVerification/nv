@@ -23,8 +23,6 @@ let merge_ty aty = TArrow (node_ty, TArrow (aty, TArrow (aty, aty)))
 
 let trans_ty aty = TArrow (edge_ty, TArrow (aty, aty))
 
-let assert_ty aty = TArrow (node_ty, TArrow (aty, TBool))
-
 let solve_ty aty = TRecord (StringMap.add "init" (init_ty aty) @@
                             StringMap.add "trans" (trans_ty aty) @@
                             StringMap.add "merge" (merge_ty aty) @@
@@ -891,7 +889,7 @@ and infer_declaration i info env record_types aty d : ty Env.t * declaration =
   | DAssert e ->
     let e' = infer_exp e in
     let ty = oget e'.ety in
-    unify info e ty (assert_ty aty) ;
+    unify info e ty TBool ;
     (Env.update env (Var.create "assert") ty, DAssert e')
   (* partitioning *)
   | DPartition e ->

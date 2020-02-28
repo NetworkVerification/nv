@@ -301,7 +301,7 @@ val get_trans : declarations -> exp option
 
 val get_init : declarations -> exp option
 
-val get_assert : declarations -> exp option
+val get_asserts : declarations -> exp list
 
 val get_solves : declarations -> (exp * solve_arg) list
 

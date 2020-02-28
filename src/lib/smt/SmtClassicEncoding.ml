@@ -158,7 +158,7 @@ struct
     in
     loop assertion []
 
-  let encode_algebra env graph count ((aty : ty), (e : exp), ({init; trans; merge} : solve_arg)) =
+  let encode_solve env graph count ((aty : ty), (e : exp), ({init; trans; merge} : solve_arg)) =
     let einit, etrans, emerge = init, trans, merge in
     let nodes = AdjGraph.nb_vertex graph in
 
@@ -272,7 +272,7 @@ struct
     let nodes = (AdjGraph.nb_vertex net.graph) in
     let aty = net.attr_type in *)
 
-    List.iteri (encode_algebra env net.graph) net.solves;
+    List.iteri (encode_solve env net.graph) net.solves;
 
     (* add assertions at the end *)
     (* ( match eassert with

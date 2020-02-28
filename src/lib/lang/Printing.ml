@@ -306,7 +306,7 @@ let rec declaration_to_string d =
     "symbolic " ^ Var.to_string x ^ " : " ^ ty_to_string ty
   | DMerge e -> "let merge = " ^ exp_to_string e
   | DTrans e -> "let trans = " ^ exp_to_string e
-  | DAssert e -> "let assert = " ^ exp_to_string e
+  | DAssert e -> "assert " ^ exp_to_string e
   | DSolve (x, {init;trans;merge}) ->
     Printf.sprintf "let %s = solution {init: %s; trans: %s; merge: %s}"
       (exp_to_string x) (exp_to_string init) (exp_to_string trans) (exp_to_string merge)
@@ -401,4 +401,4 @@ let network_to_string ?(show_topology=false) (net : Syntax.network) =
      | Some e -> Printf.sprintf "let interface = %s\n" (exp_to_string e))
     (match net.assertion with
      | None -> ""
-     | Some e -> Printf.sprintf "let assert = %s\n" (exp_to_string e))
+     | Some e -> Printf.sprintf "assert %s\n" (exp_to_string e))

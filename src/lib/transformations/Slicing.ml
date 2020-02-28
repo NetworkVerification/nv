@@ -154,15 +154,20 @@ let createSlices _info net =
                                      (DMerge net.merge); (DTrans net.trans);
                                      (DAssert (Nv_utils.OCamlUtils.oget net.assertion))]) (* |> *)
         (* Typing.infer_declarations info *) in
-        let solves =
-          (List.map (fun (e, (r : solve_arg)) -> extract_aty r, e, r)) (get_solves decls)
-        in
+      let solves =
+        (List.map (fun (e, (r : solve_arg)) -> extract_aty r, e, r)) (get_solves decls)
+      in
+      let assertion =
+        match get_asserts decls with
+        | [] -> None
+        | hd::tl -> Some (List.fold_left (fun e1 e2 -> eop And [e1; e2] |> wrap e1) hd tl)
+      in
       { net =
           { attr_type = net.attr_type;
             init = Nv_utils.OCamlUtils.oget (get_init decls);
             trans = Nv_utils.OCamlUtils.oget (get_trans decls);
             merge = Nv_utils.OCamlUtils.oget (get_merge decls);
-            assertion = (get_assert decls);
+            assertion = assertion;
             solves = solves;
             partition = (get_partition decls); (* partitioning *)
             interface = (get_interface decls); (* partitioning *)

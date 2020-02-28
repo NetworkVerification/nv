@@ -1025,9 +1025,8 @@ let get_trans ds =
 let get_init ds =
   get_decl ds (fun d -> match d with DInit e -> Some e | _ -> None)
 
-let get_assert ds =
-  get_decl ds (fun d ->
-      match d with DAssert e -> Some e | _ -> None )
+let get_asserts ds =
+  BatList.filter_map (fun d -> match d with DAssert e -> Some e | _ -> None ) ds
 
 let get_solves ds =
   List.filter_map (fun d -> match d with | DSolve (var, e) -> Some (var, e) | _ -> None ) ds
@@ -1303,11 +1302,16 @@ let createNetwork decls =
     let solves =
       (List.map (fun (e, (r : solve_arg)) -> extract_aty r, e, r)) (get_solves decls)
     in
+    let assertion =
+      match get_asserts decls with
+      | [] -> None
+      | hd::tl -> Some (List.fold_left (fun e1 e2 -> eop And [e1; e2] |> wrap e1) hd tl)
+    in
     { attr_type = aty;
       init = einit;
       trans = etrans;
       merge = emerge;
-      assertion = get_assert decls;
+      assertion = assertion;
       solves = solves;
       partition = get_partition decls; (* partitioning *)
       interface = get_interface decls; (* partitioning *)

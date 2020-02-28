@@ -50,7 +50,6 @@
   let merge_identifier = "merge"
   let trans_identifier = "trans"
   let init_identifier = "init"
-  let assert_identifier = "assert"
   (* partitioning identifiers *)
   let partition_identifier = "partition"
   let interface_identifier = "interface"
@@ -63,8 +62,6 @@
       DTrans e
     else if Var.name id = init_identifier then
       DInit e
-    else if Var.name id = assert_identifier then
-      DAssert e
     (* partitioning cases *)
     else if Var.name id = partition_identifier then
       DPartition e
@@ -208,6 +205,7 @@
 %token <Nv_datastructures.Span.t> TDICT
 %token <Nv_datastructures.Span.t> ATTRIBUTE
 %token <Nv_datastructures.Span.t> SOLUTION
+%token <Nv_datastructures.Span.t> ASSERT
 %token <Nv_datastructures.Span.t> TYPE
 %token <Nv_datastructures.Span.t> COLON
 %token <Nv_datastructures.Span.t> TBOOL
@@ -295,12 +293,12 @@ component:
     | SYMBOLIC ID COLON ty EQ expr      { let ety = exp (ety $6 $4) $6.espan in
                                           DSymbolic (snd $2, Exp ety) }
     | REQUIRE expr                      { DRequire $2 }
+    | ASSERT expr                       { DAssert $2 }
     | LET EDGES EQ LBRACE RBRACE        { DEdges [] }
     | LET EDGES EQ LBRACE edges RBRACE  { DEdges $5 }
     | LET NODES EQ NUM                  { DNodes (Nv_datastructures.Integer.to_int (snd $4)) }
     | TYPE ATTRIBUTE EQ ty              { DATy $4 }
     | TYPE ID EQ ty                     { (add_user_type (snd $2) $4; DUserTy (snd $2, $4)) }
-
 ;
 
 components:
