@@ -286,7 +286,7 @@ let tests =
   (* simulator_tests @ *)
   smt_tests @
   hiding_tests @
-  slicing_tests @
+  (* slicing_tests @ *)
   bv_tests @
   parallel_tests @
   (* compiler_tests @ *)

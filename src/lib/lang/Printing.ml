@@ -307,9 +307,10 @@ let rec declaration_to_string d =
   | DMerge e -> "let merge = " ^ exp_to_string e
   | DTrans e -> "let trans = " ^ exp_to_string e
   | DAssert e -> "assert " ^ exp_to_string e
-  | DSolve (x, {init;trans;merge}) ->
-    Printf.sprintf "let %s = solution {init: %s; trans: %s; merge: %s}"
-      (exp_to_string x) (exp_to_string init) (exp_to_string trans) (exp_to_string merge)
+  | DSolve {aty; var_names; init;trans;merge} ->
+    Printf.sprintf "let %s = solution<%s> {init: %s; trans: %s; merge: %s}"
+      (exp_to_string var_names) (match aty with | None -> "None" | Some ty -> ty_to_string ty)
+      (exp_to_string init) (exp_to_string trans) (exp_to_string merge)
   | DPartition e -> "let partition = " ^ exp_to_string e (* partitioning *)
   | DInterface e -> "let interface = " ^ exp_to_string e (* partitioning *)
   | DRequire e -> "require " ^ exp_to_string e
@@ -377,10 +378,10 @@ let network_to_string ?(show_topology=false) (net : Syntax.network) =
   in
   let solves =
     BatString.concat "\n" @@
-    BatList.map (fun (ty, e, {init; trans; merge} : ty * exp * solve_arg) ->
+    BatList.map (fun {aty; var_names; init; trans; merge} ->
         Printf.sprintf "let %s = solution<%s> {init: %s; trans: %s; merge: %s}"
-          (exp_to_string e) (ty_to_string ty) (exp_to_string init)
-          (exp_to_string trans) (exp_to_string merge))
+          (exp_to_string var_names) (match aty with | None -> "None" | Some ty -> ty_to_string ty)
+          (exp_to_string init) (exp_to_string trans) (exp_to_string merge))
       net.solves
   in
   Printf.sprintf "%s %s %s %s %s %s \

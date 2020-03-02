@@ -186,7 +186,8 @@ and env = {ty: ty Env.t; value: value Env.t}
 
 and ty_or_exp = Ty of ty | Exp of exp
 
-type solve_arg = {init : exp; trans: exp; merge: exp}
+(* var_names should be an exp that uses only the EVar and ETuple constructors *)
+type solve = {aty: ty option; var_names: exp; init : exp; trans: exp; merge: exp}
 
 type declaration =
   | DLet of var * ty option * exp
@@ -197,7 +198,7 @@ type declaration =
   | DTrans of exp
   | DInit of exp
   | DAssert of exp
-  | DSolve of exp (* Should be a var or tuple of vars *) * solve_arg
+  | DSolve of solve
   | DRequire of exp
   | DPartition of exp (* partition ids *)
   | DInterface of exp (* interface hypotheses *)
@@ -212,7 +213,7 @@ type network =
     trans : exp;
     merge : exp;
     assertion : exp option;
-    solves : (ty * exp * solve_arg) list;
+    solves : solve list;
     partition : exp option; (* partitioning *)
     interface : exp option; (* partitioning *)
     symbolics : (var * ty_or_exp) list;
@@ -1029,7 +1030,7 @@ let get_asserts ds =
   BatList.filter_map (fun d -> match d with DAssert e -> Some e | _ -> None ) ds
 
 let get_solves ds =
-  List.filter_map (fun d -> match d with | DSolve (var, e) -> Some (var, e) | _ -> None ) ds
+  List.filter_map (fun d -> match d with | DSolve a -> Some a | _ -> None ) ds
 
 (* partitioning *)
 let get_partition ds =
@@ -1270,20 +1271,6 @@ let compare_exps e1 e2 =
   if cfg.hashcons then e1.etag - e2.etag
   else Pervasives.compare e1 e2
 
-let rec extract_aty (s : solve_arg) =
-  let init = s.init in
-  let rec aux ty acc =
-    match ty with
-    | TArrow (a, rest) -> aux rest (a::acc)
-    | _ -> ty::acc
-  in
-  match init.ety with
-  | Some (TArrow (_, rest)) ->
-    let elts = (List.rev (aux rest [])) in
-    if List.length elts = 1 then List.hd elts else TTuple elts
-  | _ -> failwith "Bad init"
-;;
-
 let createNetwork decls =
   match
     ( get_merge decls
@@ -1299,9 +1286,6 @@ let createNetwork decls =
   with
   | Some emerge, Some etrans, Some einit, Some n, Some es,
     Some aty, symb, defs, utys, erequires ->
-    let solves =
-      (List.map (fun (e, (r : solve_arg)) -> extract_aty r, e, r)) (get_solves decls)
-    in
     let assertion =
       match get_asserts decls with
       | [] -> None
@@ -1312,7 +1296,7 @@ let createNetwork decls =
       trans = etrans;
       merge = emerge;
       assertion = assertion;
-      solves = solves;
+      solves = get_solves decls;
       partition = get_partition decls; (* partitioning *)
       interface = get_interface decls; (* partitioning *)
       symbolics = symb;

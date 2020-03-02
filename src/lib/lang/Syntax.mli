@@ -136,7 +136,8 @@ val optimizeBranches: branches -> branches
 val branchToList: branches -> (PatMap.key * exp) list
 val branchSize: branches -> unit
 
-type solve_arg = {init : exp; trans: exp; merge: exp}
+(* var_names should be an exp that uses only the EVar and ETuple constructors *)
+type solve = {aty: ty option; var_names: exp; init : exp; trans: exp; merge: exp}
 
 type declaration =
   | DLet of var * ty option * exp
@@ -147,7 +148,7 @@ type declaration =
   | DTrans of exp
   | DInit of exp
   | DAssert of exp
-  | DSolve of exp (* Should be a var or tuple of vars *) * solve_arg
+  | DSolve of solve
   | DRequire of exp
   | DPartition of exp (* partition ids *)
   | DInterface of exp (* interface hypotheses *)
@@ -162,7 +163,7 @@ type network =
     trans        : exp;
     merge        : exp;
     assertion    : exp option;
-    solves       : (ty * exp * solve_arg) list;
+    solves       : solve list;
     partition    : exp option; (* partitioning *)
     interface    : exp option; (* partitioning *)
     symbolics    : (var * ty_or_exp) list;
@@ -303,7 +304,7 @@ val get_init : declarations -> exp option
 
 val get_asserts : declarations -> exp list
 
-val get_solves : declarations -> (exp * solve_arg) list
+val get_solves : declarations -> solve list
 
 val get_partition : declarations -> exp option
 
@@ -370,7 +371,5 @@ val bool_of_val: value -> bool option
 val proj_var: int -> var -> var
 
 val unproj_var: var -> (int * var)
-
-val extract_aty : solve_arg -> ty
 
 val createNetwork: declarations -> network

@@ -159,7 +159,8 @@ struct
     in
     loop assertion []
 
-  let encode_solve env graph count ((aty : ty), (e : exp), ({init; trans; merge} : solve_arg)) =
+  let encode_solve env graph count {aty; var_names; init; trans; merge} =
+    let aty = oget aty in
     let einit, etrans, emerge = init, trans, merge in
     let nodes = AdjGraph.nb_vertex graph in
 
@@ -168,7 +169,7 @@ struct
        for node i *)
     let label_vars : var E.t array =
       let aty_len = match aty with | TTuple tys -> List.length tys | _ -> 1 in
-      match e.e with
+      match var_names.e with
       | ETuple es ->
         (* Sanity check *)
         assert (aty_len * nodes = List.length es);

@@ -147,7 +147,7 @@
         StringMap.find "init" m, StringMap.find "trans" m, StringMap.find "merge" m
       | _ -> failwith "solution must take a direct record expression"
     in
-    DSolve (evar x, {init; trans; merge})
+    DSolve ({aty = None; var_names = evar x; init; trans; merge})
 
 %}
 

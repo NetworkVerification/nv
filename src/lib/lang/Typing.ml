@@ -115,8 +115,8 @@ let check_annot_decl (d: declaration) =
   | DInterface e (* partitioning *)
   | DRequire e ->
     check_annot e
-  | DSolve (e, {init; trans; merge}) ->
-    check_annot e; check_annot init; check_annot trans; check_annot merge
+  | DSolve {var_names; init; trans; merge; _} ->
+    check_annot var_names; check_annot init; check_annot trans; check_annot merge
   | DNodes _ | DEdges _ | DATy _ | DSymbolic _ | DUserTy _ -> ()
 
 let rec check_annot_decls (ds: declarations) =
@@ -912,19 +912,20 @@ and infer_declaration i info env record_types aty d : ty Env.t * declaration =
     let ty = oget e'.ety in
     unify info e ty (init_ty aty) ;
     (Env.update env (Var.create "init") ty, DInit e')
-  | DSolve (e, {init; trans; merge}) ->
+  | DSolve {aty; var_names; init; trans; merge} ->
     (* Note: This only works before map unrolling *)
-    let solve_aty = fresh_tyvar () in
+    let solve_aty = match aty with | Some ty -> ty | None -> fresh_tyvar () in
     let init' = infer_exp init in
     let trans' = infer_exp trans in
     let merge' = infer_exp merge in
     unify info init (oget init'.ety) (init_ty solve_aty) ;
     unify info trans (oget trans'.ety) (trans_ty solve_aty) ;
     unify info merge (oget merge'.ety) (merge_ty solve_aty) ;
-    let var = match e.e with | EVar x -> x | _ -> failwith "bad DSolve" in
+    let var = match var_names.e with | EVar x -> x | _ -> failwith "bad DSolve" in
     let ety = TMap (TNode, solve_aty) in
     (Env.update env var ety,
-     DSolve (aexp (e, (Some ety), e.espan), {init = init'; trans = trans'; merge = merge'}))
+     DSolve {aty = Some solve_aty; var_names = aexp (evar var, (Some ety), var_names.espan);
+             init = init'; trans = trans'; merge = merge'})
   | DATy _ | DUserTy _ | DNodes _ | DEdges _ -> (env, d)
 
 let canonicalize_type (ty : ty) : ty =

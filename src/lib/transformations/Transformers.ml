@@ -161,9 +161,11 @@ let transform_decl ~(name:string) (transformers:transformers) (d : declaration) 
   | DAssert e -> DAssert (transform_exp e)
   | DTrans e -> DTrans (transform_exp e)
   | DMerge e -> DMerge (transform_exp e)
-  | DSolve (e, {init; trans; merge}) ->
-    let init, trans, merge = transform_exp init, transform_exp trans, transform_exp merge in
-    DSolve (transform_exp e, {init; trans; merge})
+  | DSolve {aty; var_names; init; trans; merge} ->
+    let var_names, init, trans, merge =
+      transform_exp var_names, transform_exp init, transform_exp trans, transform_exp merge
+    in
+    DSolve {aty = omap transform_ty aty; var_names; init; trans; merge}
   | DSymbolic (x, toe) -> let (x, toe') = transform_symbolic (x, toe) in DSymbolic (x, toe')
   | DRequire e -> DRequire (transform_exp e)
   | DATy ty -> DATy (transform_ty ty)
@@ -275,11 +277,11 @@ let transform_network
   let symb_tys = get_symbolic_types net.symbolics in
   let transform_solves =
     List.map
-      (fun (ty, e, ({init; trans; merge} : solve_arg)) ->
-         let ty, e, init, trans, merge =
-           transform_ty ty, transform_exp e, transform_exp init, transform_exp trans, transform_exp merge
+      (fun {aty; var_names; init; trans; merge} ->
+         let aty, var_names, init, trans, merge =
+           omap transform_ty aty, transform_exp var_names, transform_exp init, transform_exp trans, transform_exp merge
          in
-         (ty, e, {init; trans; merge}))
+         {aty; var_names; init; trans; merge})
   in
   {
     attr_type = transform_ty net.attr_type;

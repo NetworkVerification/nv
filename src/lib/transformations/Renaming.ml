@@ -123,12 +123,12 @@ let alpha_convert_declaration bmap (env: Var.t Env.t)
     map_back bmap y x ;
     let env = Env.update env x y in
     (env, DSymbolic (y, Ty ty))
-  | DSolve (x, {init; trans; merge}) ->
+  | DSolve {aty; var_names; init; trans; merge} ->
     let init, trans, merge =
       alpha_convert_exp env init, alpha_convert_exp env trans, alpha_convert_exp env merge
     in
-    let env, y = rename_solve_vars bmap env x in
-    (env, DSolve (y, {init; trans; merge}))
+    let env, y = rename_solve_vars bmap env var_names in
+    (env, DSolve {aty; var_names = y; init; trans; merge})
   | DMerge e -> (env, DMerge (alpha_convert_exp env e))
   | DTrans e -> (env, DTrans (alpha_convert_exp env e))
   | DInit e -> (env, DInit (alpha_convert_exp env e))
@@ -187,12 +187,12 @@ let alpha_convert_net net =
         (env, (y, tyo, e) :: acc)) net.defs (env, [])
   in
   let env, solves =
-    BatList.fold_right (fun (ty, x, {init; trans; merge} : ty * exp * solve_arg) (env, acc) ->
+    BatList.fold_right (fun {aty; var_names; init; trans; merge} (env, acc) ->
         let init, trans, merge =
           alpha_convert_exp env init, alpha_convert_exp env trans, alpha_convert_exp env merge
         in
-        let env, y = rename_solve_vars bmap env x in
-        (env, (ty, y, {init; trans; merge}) :: acc)) net.solves (env, [])
+        let env, y = rename_solve_vars bmap env var_names in
+        (env, {aty; var_names = y; init; trans; merge} :: acc)) net.solves (env, [])
   in
   let net' =
     { attr_type = net.attr_type;
