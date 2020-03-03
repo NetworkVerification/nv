@@ -46,31 +46,26 @@ let create_state n cl : state =
   loop n (QueueSet.empty Pervasives.compare) AdjGraph.VertexMap.empty
 
 type info =
-  { mutable env: Syntax.env
-  ; (* environment *)
-    mutable m: Syntax.closure option
-  ; (* merge *)
-    mutable t: Syntax.closure option
-  ; (* assert *)
-    mutable a: Syntax.closure option
-  ; (* trans *)
-    mutable ns: Syntax.node option
-  ; (* nodes *)
-    mutable es: Syntax.edge list option
-  ; (* edges *)
-    mutable init: Syntax.closure option (* initial state *)
-  ; mutable syms: value VarMap.t }
+  { mutable env: Syntax.env; (* environment *)
+    mutable syms: value VarMap.t; (* Defined symbolics *)
+    mutable merge: Syntax.closure option;
+    mutable trans: Syntax.closure option;
+    mutable init: Syntax.closure option;
+    mutable assertion: Syntax.closure option;
+    nodes: int;
+    edges: Syntax.edge list;
+  }
 
 exception Require_false
 
 let net_to_srp net ~throw_requires =
   let info =
     { env= empty_env
-    ; m= None
-    ; t= None
-    ; a= None
-    ; ns= None
-    ; es= None
+    ; merge= None
+    ; trans= None
+    ; assertion= None
+    ; nodes= AdjGraph.nb_vertex net.Syntax.graph
+    ; edges= AdjGraph.edges net.Syntax.graph
     ; init= None
     ; syms= VarMap.empty }
   in
@@ -98,43 +93,29 @@ let net_to_srp net ~throw_requires =
       let v = Interp.interp_exp env e in
       info.env <- update_value env x v) net.defs;
   info.init <- get_func net.Syntax.init;
-  info.m <- get_func net.Syntax.merge;
-  info.t <- get_func net.Syntax.trans;
-  info.a <- (match net.Syntax.assertion with
-             | Some a -> get_func a
-             | None -> None);
-  info.ns <- Some (AdjGraph.nb_vertex net.Syntax.graph);
-  info.es <- Some (AdjGraph.edges net.Syntax.graph);
+  info.merge <- get_func net.Syntax.merge;
+  info.trans <- get_func net.Syntax.trans;
+  info.assertion <- (match net.Syntax.assertion with
+      | Some a -> get_func a
+      | None -> None);
   (* process requires *)
   BatList.iter (fun e ->
       match (Interp.interp_exp info.env e).v with
       | VBool true -> ()
       | _ ->
-         if throw_requires then raise Require_false
-         else
-           Console.warning
-             "requires condition not satisified by initial state" ) net.requires;
+        if throw_requires then raise Require_false
+        else
+          Console.warning
+            "requires condition not satisified by initial state" ) net.requires;
   match info with
-  | { env= _
-    ; m= Some mf
-    ; t= Some tf
-    ; a
-    ; ns= Some n
-    ; es= Some es
-    ; init= Some cl
-    ; _ } ->
-      let srp =
-        { graph= List.fold_left AdjGraph.add_edge_e (AdjGraph.create n) es
-        ; trans= tf
-        ; merge= mf
-        ; assertion= a }
-      in
-      (srp, cl, info.syms)
-  | {m= None; _} -> Console.error "missing merge function"
-  | {t= None; _} -> Console.error "missing trans function"
-  | {ns= None; _} -> Console.error "missing nodes declaration"
-  | {es= None; _} -> Console.error "missing edges declaration"
-  | {init= None; _} -> Console.error "missing init declaration"
+  | { env= _; merge = Some merge; trans = Some trans; init = Some init;
+      nodes; edges; assertion; _} ->
+    let srp =
+      { graph = List.fold_left AdjGraph.add_edge_e (AdjGraph.create nodes) edges;
+        trans; merge; assertion; }
+    in
+    (srp, init, info.syms)
+  | _ -> failwith "impossible"
 
 let net_to_state net ~throw_requires =
   let srp, init, syms = net_to_srp net ~throw_requires in
@@ -209,8 +190,8 @@ let rec simulate_init srp ((s, q): state) =
   match QueueSet.pop q with
   | None -> s
   | Some (next, rest) ->
-      let s', more = simulate_step srp s next in
-      simulate_init srp (s', QueueSet.add_all rest more)
+    let s', more = simulate_step srp s next in
+    simulate_init srp (s', QueueSet.add_all rest more)
 
 (* simulate for at most k steps *)
 let simulate_init_bound srp ((s, q): state) k =
@@ -220,8 +201,8 @@ let simulate_init_bound srp ((s, q): state) k =
       match QueueSet.pop q with
       | None -> (s, q)
       | Some (next, rest) ->
-          let s', more = simulate_step srp s next in
-          loop s' (QueueSet.add_all rest more) (k - 1)
+        let s', more = simulate_step srp s next in
+        loop s' (QueueSet.add_all rest more) (k - 1)
   in
   loop s q k
 
@@ -229,10 +210,10 @@ let check_assertion (srp : srp) node v =
   match srp.assertion with
   | None -> true
   | Some a ->
-      let v = Interp.interp_closure a [vnode node; v] in
-      match v.v with
-      | VBool b -> b
-      | _ -> failwith "internal error (check_assertion)"
+    let v = Interp.interp_closure a [vnode node; v] in
+    match v.v with
+    | VBool b -> b
+    | _ -> failwith "internal error (check_assertion)"
 
 let check_assertions srp vals =
   AdjGraph.VertexMap.mapi (fun n v -> check_assertion srp n v) vals
