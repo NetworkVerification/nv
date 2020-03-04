@@ -8,7 +8,7 @@ type testfun =
   string ->
   Cmdline.t ->
   Console.info ->
-  Syntax.network ->
+  Syntax.declarations ->
   (Solution.t -> Solution.t) list ->
   Main_defs.answer * ((Solution.t -> Solution.t) list)
 
@@ -283,7 +283,7 @@ let tests =
   "Test_end_to_end"
   >:::
   List.map make_ounit_test @@
-  (* simulator_tests @ *)
+  simulator_tests @
   smt_tests @
   hiding_tests @
   (* slicing_tests @ *)

@@ -5,6 +5,7 @@ open Nv_utils
 open Nv_interpreter
 open Nv_lang.Syntax
 open Nv_lang.Collections
+open OCamlUtils
 
 type srp =
   { graph: AdjGraph.t
@@ -222,7 +223,7 @@ let simulate_net (net: Syntax.network) : Nv_solution.Solution.t =
   let srp, state, syms =
     net_to_state net ~throw_requires:true
   in
-  let vals = simulate_init srp state |> AdjGraph.VertexMap.map (fun (_,v) -> v) in
+  let vals = simulate_init srp state |> AdjGraph.VertexMap.map snd in
   let asserts = check_assertions srp vals |> AdjGraph.VertexMap.for_all (fun _ b -> b) in
   {labels= vals; symbolics= syms; assertions= Some asserts; mask= None}
 
@@ -231,6 +232,20 @@ let simulate_net_bound net k : (Nv_solution.Solution.t * queue) =
     net_to_state net ~throw_requires:true
   in
   let vals, q = simulate_init_bound srp state k in
-  let vals = AdjGraph.VertexMap.map (fun (_,v) -> v) vals in
+  let vals = AdjGraph.VertexMap.map snd vals in
   let asserts = check_assertions srp vals |> AdjGraph.VertexMap.for_all (fun _ b -> b) in
   ({labels= vals; symbolics= syms; assertions= Some asserts; mask= None}, q)
+
+let simulate_solve graph env (solve : Syntax.solve) : value AdjGraph.VertexMap.t =
+  let get_func e =
+    match (Interp.interp_exp env e).v with
+    | VClosure cl -> Some cl
+    | _ -> failwith "must evaluate to a closure"
+  in
+  let trans, merge, init =
+    get_func solve.trans |> oget, get_func solve.merge |> oget, get_func solve.init |> oget
+  in
+  let srp = {graph; trans; merge; assertion = None} in
+  let state = create_state (AdjGraph.nb_vertex graph) init in
+  simulate_init srp state
+  |> AdjGraph.VertexMap.map snd

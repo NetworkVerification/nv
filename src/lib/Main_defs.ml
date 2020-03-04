@@ -38,8 +38,23 @@ let partialEvalNet (net : network) =
    assertion = omap (InterpPartial.interp_partial_opt) net.assertion
   }
 
-let run_smt_func file cfg info net fs =
+let mk_net cfg decls =
+  let net = createNetwork decls in (* Create something of type network *)
+  let net =
+    if cfg.link_failures > 0 then
+      Failures.buildFailuresNet net cfg.link_failures
+    else net
+  in
+  net
+;;
+
+let run_smt_func file cfg info decls fs =
   SmtUtils.smt_config.encoding <- Functional;
+  let net = mk_net cfg decls in
+  let net, fs =
+    let net, f = UnboxEdges.unbox_net net in
+    net, f :: fs
+  in
   let srp = SmtSrp.network_to_srp net in
   let srp, fs =
     let srp, f = UnboxUnits.unbox_srp srp in
@@ -69,7 +84,12 @@ let run_smt_func file cfg info net fs =
       else
         Success (Some solution), fs
 
-let run_smt_classic file cfg info (net : Syntax.network) fs =
+let run_smt_classic file cfg info decls fs =
+  let net = mk_net cfg decls in
+  let net, fs =
+    let net, f = UnboxEdges.unbox_net net in
+    net, f :: fs
+  in
   let net, fs =
     SmtUtils.smt_config.unboxing <- true;
     let net, f1 = Profile.time_profile "Unbox options" (fun () -> UnboxOptions.unbox_net net) in
@@ -167,17 +187,18 @@ let run_smt_classic file cfg info (net : Syntax.network) fs =
   | Some n -> solve_parallel n slices
 ;;
 
-let run_smt file cfg info (net : Syntax.network) fs =
+let run_smt file cfg info decls fs =
   (if cfg.finite_arith then
      SmtUtils.smt_config.infinite_arith <- false);
   (if cfg.smt_parallel then
      SmtUtils.smt_config.parallel <- true);
   if cfg.func then
-    run_smt_func file cfg info net fs
+    run_smt_func file cfg info decls fs
   else
-    run_smt_classic file cfg info net fs
+    run_smt_classic file cfg info decls fs
 
-let run_test cfg info net fs =
+let run_test cfg info decls fs =
+  let net = mk_net cfg decls in
   let (sol, stats), fs =
     if cfg.smart_gen then
       let net, f = Renaming.alpha_convert_net net in
@@ -194,16 +215,18 @@ let run_test cfg info net fs =
   | None -> (Success None, [])
   | Some sol -> (CounterExample sol, fs)
 
-let run_simulator cfg _ net fs =
+let run_simulator cfg _ decls fs =
+  (* let net = mk_net cfg decls in
   let net = partialEvalNet net in
-  let net, _ = OptimizeBranches.optimize_net net in (* The _ should match the identity function *)
+  let net, _ = OptimizeBranches.optimize_net net in (* The _ should match the identity function *) *)
   try
     let solution, q =
       match cfg.bound with
       | None ->
-        (Profile.time_profile "Interpreted simulation" (fun () -> Srp.simulate_net net)
+        (Profile.time_profile "Interpreted simulation"
+           (fun () -> Simulator.simulate_declarations ~throw_requires:true decls)
         , QueueSet.empty Pervasives.compare )
-      | Some b -> Srp.simulate_net_bound net b
+      | Some b -> ignore b; failwith "Don't know what this means" (* Srp.simulate_net_bound net b *)
     in
     ( match QueueSet.pop q with
       | None -> ()
@@ -227,7 +250,8 @@ let run_simulator cfg _ net fs =
     Console.error "required conditions not satisfied"
 
 (** Native simulator - compiles SRP to OCaml *)
-let run_compiled file _ _ net fs =
+let run_compiled file cfg _ decls fs =
+  let net = mk_net cfg decls in
   let path = Filename.remove_extension file in
   let name = Filename.basename path in
   let name = String.mapi (fun i c -> if i = 0 then Char.uppercase_ascii c else c) name in
@@ -370,17 +394,4 @@ let parse_input (args : string array) =
       (decls, f :: fs)
     else decls, fs
   in
-  let net = createNetwork decls in (* Create something of type network *)
-  let net =
-    if cfg.link_failures > 0 then
-      Failures.buildFailuresNet net cfg.link_failures
-    else net
-  in
-  let net, fs =
-    if cfg.smt then
-      let net, f = UnboxEdges.unbox_net net in
-      net, f :: fs
-    else
-      net, fs
-  in
-  (cfg, info, file, net, fs)
+  (cfg, info, file, decls, fs)

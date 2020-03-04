@@ -1,4 +1,3 @@
-open Srp
 open Nv_lang
 open Syntax
 open Nv_solution
@@ -47,11 +46,21 @@ let simulate_declaration ~(throw_requires: bool) (graph : AdjGraph.t) (state : s
         | _ ->
           {state with failed = Some e}
       end
-    | DSolve solve -> failwith ""
+    | DSolve solve ->
+      let results = Srp.simulate_solve graph {ty = Env.empty; value = env} solve in
+      begin
+        match solve.var_names.e with
+        | EVar x ->
+          let xty = TMap(TNode, oget solve.aty) in
+          let bdd_base = BddMap.create ~key_ty:TNode (Generators.default_value xty) in
+          let bdd_full = AdjGraph.VertexMap.fold (fun n v acc -> BddMap.update acc (vnode n) v) results bdd_base in
+          let mapval = avalue (vmap bdd_full, Some xty, solve.var_names.espan) in
+          {state with env = Env.update env x mapval; sols = x :: state.sols}
+        | _ -> failwith "Not implemented" (* Only happens if we did map unrolling *)
+      end
     | DATy _ | DUserTy _ | DPartition _ | DInterface _ | DNodes _ | DEdges _ -> state
     | DInit _ | DTrans _ | DMerge _ -> state (* Deprecated *)
 ;;
-
 
 let simulate_declarations ~(throw_requires: bool) (decls : declarations) : Solution.t =
   let graph =
@@ -60,5 +69,22 @@ let simulate_declarations ~(throw_requires: bool) (decls : declarations) : Solut
     List.fold_left AdjGraph.add_edge_e (AdjGraph.create n) es
   in
   let final_state = List.fold_left (simulate_declaration ~throw_requires graph) empty_state decls in
-  ignore final_state; (* Turn final_state into a solution somehow *)
-  failwith ""
+  let symbolics =
+    let open Collections in
+    VarMap.empty
+    |> List.fold_right (fun x acc -> VarMap.add x (Env.lookup final_state.env x) acc) final_state.sols
+    |> List.fold_right (fun x acc -> VarMap.add x (Env.lookup final_state.env x) acc) final_state.syms
+  in
+  let assertions =
+    match final_state.failed with
+    | Some _ -> Some false
+    | None ->
+      match get_asserts decls with
+      | [] -> None
+      | _ -> Some true
+  in
+  let sol : Solution.t =
+    (* FIXME: We need to overhaul the Solution.t type soon since we're only really using two fields *)
+    {labels = AdjGraph.VertexMap.empty; symbolics; assertions; mask = None}
+  in
+  sol
