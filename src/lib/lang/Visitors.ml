@@ -21,9 +21,6 @@ let rec iter_exp f (e: exp) =
 let iter_exp_decl f d =
   match d with
   | DLet (_, _, e)
-  | DMerge e
-  | DTrans e
-  | DInit e
   | DAssert e
   | DPartition e (* partitioning *)
   | DInterface e (* partitioning *)
@@ -32,7 +29,7 @@ let iter_exp_decl f d =
     iter_exp (f d) e
   | DSolve {var_names; init; trans; merge; _} ->
     List.iter (iter_exp (f d)) [var_names; init; trans; merge]
-  | DATy _ | DNodes _ | DEdges _ | DSymbolic _ | DUserTy _ -> ()
+  | DNodes _ | DEdges _ | DSymbolic _ | DUserTy _ -> ()
 
 let rec iter_exp_decls f ds = BatList.iter (iter_exp_decl f) ds
 

@@ -107,9 +107,6 @@ let check_annot_decl (d: declaration) =
   match d with
   | DLet (_, _, e)
   | DSymbolic (_, Exp e)
-  | DMerge e
-  | DTrans e
-  | DInit e
   | DAssert e
   | DPartition e (* partitioning *)
   | DInterface e (* partitioning *)
@@ -117,7 +114,7 @@ let check_annot_decl (d: declaration) =
     check_annot e
   | DSolve {var_names; init; trans; merge; _} ->
     check_annot var_names; check_annot init; check_annot trans; check_annot merge
-  | DNodes _ | DEdges _ | DATy _ | DSymbolic _ | DUserTy _ -> ()
+  | DNodes _ | DEdges _ | DSymbolic _ | DUserTy _ -> ()
 
 let rec check_annot_decls (ds: declarations) =
   match ds with
@@ -876,16 +873,6 @@ and infer_declaration i info env record_types aty d : ty Env.t * declaration =
         ( Env.update env x ty
         , DSymbolic (x, Exp (texp (e1, ty, e1.espan))) )
       | Ty ty -> (Env.update env x ty, DSymbolic (x, e1)) )
-  | DMerge e ->
-    let e' = infer_exp e in
-    let ty = oget e'.ety in
-    unify info e ty (merge_ty aty) ;
-    (Env.update env (Var.create "merge") ty, DMerge e')
-  | DTrans e ->
-    let e' = infer_exp e in
-    let ty = oget e'.ety in
-    unify info e ty (trans_ty aty) ;
-    (Env.update env (Var.create "trans") ty, DTrans e')
   | DAssert e ->
     let e' = infer_exp e in
     let ty = oget e'.ety in
@@ -907,11 +894,6 @@ and infer_declaration i info env record_types aty d : ty Env.t * declaration =
     let e' = infer_exp e in
     let ty = oget e'.ety in
     unify info e ty TBool ; (env, DRequire e')
-  | DInit e ->
-    let e' = infer_exp e in
-    let ty = oget e'.ety in
-    unify info e ty (init_ty aty) ;
-    (Env.update env (Var.create "init") ty, DInit e')
   | DSolve {aty; var_names; init; trans; merge} ->
     (* Note: This only works before map unrolling *)
     let solve_aty = match aty with | Some ty -> ty | None -> fresh_tyvar () in
@@ -926,7 +908,7 @@ and infer_declaration i info env record_types aty d : ty Env.t * declaration =
     (Env.update env var ety,
      DSolve {aty = Some solve_aty; var_names = aexp (evar var, (Some ety), var_names.espan);
              init = init'; trans = trans'; merge = merge'})
-  | DATy _ | DUserTy _ | DNodes _ | DEdges _ -> (env, d)
+  | DUserTy _ | DNodes _ | DEdges _ -> (env, d)
 
 let canonicalize_type (ty : ty) : ty =
   let rec aux ty map count =

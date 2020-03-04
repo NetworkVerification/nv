@@ -142,11 +142,7 @@ type solve = {aty: ty option; var_names: exp; init : exp; trans: exp; merge: exp
 type declaration =
   | DLet of var * ty option * exp
   | DSymbolic of var * ty_or_exp
-  | DATy of ty (* Declaration of the attribute type *)
   | DUserTy of var * ty (* Declaration of a record type *)
-  | DMerge of exp
-  | DTrans of exp
-  | DInit of exp
   | DAssert of exp
   | DSolve of solve
   | DRequire of exp

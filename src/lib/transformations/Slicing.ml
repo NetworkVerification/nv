@@ -148,11 +148,12 @@ let createSlices _info net =
       let ds = PrefixMap.find pre relevantSlices in
       let dstPre, symb = sliceDestination net.symbolics pre in
       let decls =
-        Inline.inline_declarations ((DATy net.attr_type) :: dstPre :: (DNodes n)
+        ignore (dstPre, symb); failwith "I don't know what to do here"
+        (* Inline.inline_declarations ((DATy net.attr_type) :: dstPre :: (DNodes n)
                                     :: (DEdges (AdjGraph.edges (net.graph))) :: symb @
                                     [(DInit net.init);
                                      (DMerge net.merge); (DTrans net.trans);
-                                     (DAssert (Nv_utils.OCamlUtils.oget net.assertion))]) (* |> *)
+                                     (DAssert (Nv_utils.OCamlUtils.oget net.assertion))]) (* |> *) *)
         (* Typing.infer_declarations info *) in
       let assertion =
         match get_asserts decls with

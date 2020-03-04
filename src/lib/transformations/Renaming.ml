@@ -129,14 +129,11 @@ let alpha_convert_declaration bmap (env: Var.t Env.t)
     in
     let env, y = rename_solve_vars bmap env var_names in
     (env, DSolve {aty; var_names = y; init; trans; merge})
-  | DMerge e -> (env, DMerge (alpha_convert_exp env e))
-  | DTrans e -> (env, DTrans (alpha_convert_exp env e))
-  | DInit e -> (env, DInit (alpha_convert_exp env e))
   | DAssert e -> (env, DAssert (alpha_convert_exp env e))
   | DPartition e -> (env, DPartition (alpha_convert_exp env e)) (* partitioning *)
   | DInterface e -> (env, DInterface (alpha_convert_exp env e)) (* partitioning *)
   | DRequire e -> (env, DRequire (alpha_convert_exp env e))
-  | DATy _ | DUserTy _ | DNodes _ | DEdges _ -> (env, d)
+  | DUserTy _ | DNodes _ | DEdges _ -> (env, d)
 
 let rec alpha_convert_aux bmap env (ds: declarations) : declarations =
   match ds with

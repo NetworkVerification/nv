@@ -65,7 +65,6 @@ rule token = parse
   | "tnode"           { TNODE (position lexbuf) }
   | "tedge"           { TEDGE (position lexbuf) }
   | "type"            { TYPE (position lexbuf) }
-  | "attribute"       { ATTRIBUTE (position lexbuf) }
   | "solution"        { SOLUTION (position lexbuf) }
   | "assert"          { ASSERT (position lexbuf) }
   | id as s           { ID (position lexbuf, Nv_datastructures.Var.create s) }

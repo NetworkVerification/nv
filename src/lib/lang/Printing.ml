@@ -304,8 +304,6 @@ let rec declaration_to_string d =
     "symbolic " ^ Var.to_string x ^ " = " ^ exp_to_string e
   | DSymbolic (x, Ty ty) ->
     "symbolic " ^ Var.to_string x ^ " : " ^ ty_to_string ty
-  | DMerge e -> "let merge = " ^ exp_to_string e
-  | DTrans e -> "let trans = " ^ exp_to_string e
   | DAssert e -> "assert " ^ exp_to_string e
   | DSolve {aty; var_names; init;trans;merge} ->
     Printf.sprintf "let %s = solution<%s> {init: %s; trans: %s; merge: %s}"
@@ -323,8 +321,6 @@ let rec declaration_to_string d =
       )
       es ""
     ^ "}"
-  | DInit e -> "let init = " ^ exp_to_string e
-  | DATy t -> "type attribute = " ^ ty_to_string t
   | DUserTy (name, ty) ->
     Printf.sprintf "type %s = %s" (Var.to_string name) (ty_to_string ty)
 

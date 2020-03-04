@@ -157,10 +157,7 @@ let transform_decl ~(name:string) (transformers:transformers) (d : declaration) 
   let transform_symbolic = transform_symbolic ~name:name transformers in
   match d with
   | DLet (x, tyo, e) -> DLet (x, omap transform_ty tyo, transform_exp e)
-  | DInit e -> DInit (transform_exp e)
   | DAssert e -> DAssert (transform_exp e)
-  | DTrans e -> DTrans (transform_exp e)
-  | DMerge e -> DMerge (transform_exp e)
   | DSolve {aty; var_names; init; trans; merge} ->
     let var_names, init, trans, merge =
       transform_exp var_names, transform_exp init, transform_exp trans, transform_exp merge
@@ -168,7 +165,6 @@ let transform_decl ~(name:string) (transformers:transformers) (d : declaration) 
     DSolve {aty = omap transform_ty aty; var_names; init; trans; merge}
   | DSymbolic (x, toe) -> let (x, toe') = transform_symbolic (x, toe) in DSymbolic (x, toe')
   | DRequire e -> DRequire (transform_exp e)
-  | DATy ty -> DATy (transform_ty ty)
   | DUserTy (x, ty) -> DUserTy (x, transform_ty ty)
   | DPartition e -> DPartition (transform_exp e)
   | DInterface e -> DInterface (transform_exp e)

@@ -47,23 +47,14 @@
   let local_let (id,params) body body_span span =
     (id, make_fun params body body_span span)
 
-  let merge_identifier = "merge"
-  let trans_identifier = "trans"
-  let init_identifier = "init"
   (* partitioning identifiers *)
   let partition_identifier = "partition"
   let interface_identifier = "interface"
 
   let global_let (id,params) body body_span span =
     let e = make_fun params body body_span span in
-    if Var.name id = merge_identifier then
-      DMerge e
-    else if Var.name id = trans_identifier then
-      DTrans e
-    else if Var.name id = init_identifier then
-      DInit e
     (* partitioning cases *)
-    else if Var.name id = partition_identifier then
+    if Var.name id = partition_identifier then
       DPartition e
     else if Var.name id = interface_identifier then
       DInterface e
@@ -203,7 +194,6 @@
 %token <Nv_datastructures.Span.t> COMBINE
 %token <Nv_datastructures.Span.t> TOPTION
 %token <Nv_datastructures.Span.t> TDICT
-%token <Nv_datastructures.Span.t> ATTRIBUTE
 %token <Nv_datastructures.Span.t> SOLUTION
 %token <Nv_datastructures.Span.t> ASSERT
 %token <Nv_datastructures.Span.t> TYPE
@@ -297,7 +287,6 @@ component:
     | LET EDGES EQ LBRACE RBRACE        { DEdges [] }
     | LET EDGES EQ LBRACE edges RBRACE  { DEdges $5 }
     | LET NODES EQ NUM                  { DNodes (Nv_datastructures.Integer.to_int (snd $4)) }
-    | TYPE ATTRIBUTE EQ ty              { DATy $4 }
     | TYPE ID EQ ty                     { (add_user_type (snd $2) $4; DUserTy (snd $2, $4)) }
 ;
 

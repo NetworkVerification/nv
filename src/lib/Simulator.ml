@@ -58,8 +58,7 @@ let simulate_declaration ~(throw_requires: bool) (graph : AdjGraph.t) (state : s
           {state with env = Env.update env x mapval; sols = x :: state.sols}
         | _ -> failwith "Not implemented" (* Only happens if we did map unrolling *)
       end
-    | DATy _ | DUserTy _ | DPartition _ | DInterface _ | DNodes _ | DEdges _ -> state
-    | DInit _ | DTrans _ | DMerge _ -> state (* Deprecated *)
+    | DUserTy _ | DPartition _ | DInterface _ | DNodes _ | DEdges _ -> state
 ;;
 
 let simulate_declarations ~(throw_requires: bool) (decls : declarations) : Solution.t =

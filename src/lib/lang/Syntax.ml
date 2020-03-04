@@ -192,11 +192,7 @@ type solve = {aty: ty option; var_names: exp; init : exp; trans: exp; merge: exp
 type declaration =
   | DLet of var * ty option * exp
   | DSymbolic of var * ty_or_exp
-  | DATy of ty (* Declaration of the attribute type *)
   | DUserTy of var * ty (* Declaration of a record type *)
-  | DMerge of exp
-  | DTrans of exp
-  | DInit of exp
   | DAssert of exp
   | DSolve of solve
   | DRequire of exp
@@ -1015,16 +1011,16 @@ let get_lets ds =
   BatList.filter_map (fun d -> match d with DLet (x,ty,e) -> Some (x,ty,e) | _ -> None) ds
 
 let get_attr_type ds =
-  get_decl ds (fun d -> match d with DATy ty -> Some ty | _ -> None)
+  get_decl ds (fun d -> match d with DUserTy(x, ty) when Var.name x = "attribute" -> Some ty | _ -> None)
 
 let get_merge ds =
-  get_decl ds (fun d -> match d with DMerge e -> Some e | _ -> None)
+  get_decl ds (fun d -> match d with DLet(x, _, e) when Var.name x = "merge" -> Some e | _ -> None)
 
 let get_trans ds =
-  get_decl ds (fun d -> match d with DTrans e -> Some e | _ -> None)
+  get_decl ds (fun d -> match d with DLet(x, _, e) when Var.name x = "trans" -> Some e | _ -> None)
 
 let get_init ds =
-  get_decl ds (fun d -> match d with DInit e -> Some e | _ -> None)
+  get_decl ds (fun d -> match d with DLet(x, _, e) when Var.name x = "merge" -> Some e | _ -> None)
 
 let get_asserts ds =
   BatList.filter_map (fun d -> match d with DAssert e -> Some e | _ -> None ) ds
