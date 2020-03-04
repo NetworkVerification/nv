@@ -85,34 +85,32 @@ let run_smt_func file cfg info decls fs =
         Success (Some solution), fs
 
 let run_smt_classic file cfg info decls fs =
-  let net = mk_net cfg decls in
-  let net, fs =
-    let net, f = UnboxEdges.unbox_net net in
-    net, f :: fs
+  let decls, fs =
+    let decls, f = UnboxEdges.unbox_declarations decls in
+    decls, f :: fs
   in
-  let net, fs =
+  let decls, fs =
     SmtUtils.smt_config.unboxing <- true;
-    let net, f1 = Profile.time_profile "Unbox options" (fun () -> UnboxOptions.unbox_net net) in
-    let net, f2 =
-      Profile.time_profile "Flattening Tuples" (fun () -> TupleFlatten.flatten_net net)
+    let decls, f1 = Profile.time_profile "Unbox options" (fun () -> UnboxOptions.unbox_declarations decls) in
+    let decls, f2 =
+      Profile.time_profile "Flattening Tuples" (fun () -> TupleFlatten.flatten_declarations decls)
     in
-    net, (f2 :: f1 :: fs)
+    decls, (f2 :: f1 :: fs)
   in
-  (* let net = {net with trans = InterpPartial.interp_partial net.trans} in*)
-  (* Printf.printf "%s\n" (Printing.network_to_string net); *)
-  let net, f = Renaming.alpha_convert_net net in (*TODO: why are we renaming here?*)
+  (* Printf.printf "%s\n" (Printing.declarations_to_string decls); *)
+  let decls, f = Renaming.alpha_convert_declarations decls in (*TODO: why are we renaming here?*)
   let fs = f :: fs in
-  let net, _ = OptimizeBranches.optimize_net net in (* The _ should match the identity function *)
-  let net = Profile.time_profile "Partially Evaluating Network" (fun () -> partialEvalNet net) in
-  (* print_endline @@ Printing.network_to_string net; *)
-  let get_answer net fs =
+  let decls, _ = OptimizeBranches.optimize_declarations decls in (* The _ should match the identity function *)
+  (* let decls = Profile.time_profile "Partially Evaluating Network" (fun () -> partialEvalNet net) in *)
+  (* Printf.printf "%s\n" (Printing.declarations_to_string decls); *)
+  let get_answer decls fs =
     let solve_fun =
       if cfg.hiding then
         (SmtHiding.solve_hiding ~starting_vars:[] ~full_chan:(smt_query_file file))
       else
         Smt.solveClassic
     in
-    match solve_fun info cfg.query (smt_query_file file) net with
+    match solve_fun info cfg.query (smt_query_file file) decls with
     | Unsat ->
       (Success None, [])
     | Unknown -> Console.error "SMT returned unknown"
@@ -130,24 +128,25 @@ let run_smt_classic file cfg info decls fs =
   (* Attribute Slicing requires the net to have an assertion and for its attribute
      to be a tuple type. *)
   let slices =
-    match cfg.slicing, net.assertion, net.attr_type with
-    | true, Some _, TTuple _ ->
-      AttributeSlicing.slice_network net
-      |> List.map (dmap (fun (net, f) -> net, f :: fs))
-    | _ ->
-      [fun () -> (net, fs)]
+    (* Disable slicing until we figure out it works in the new model *)
+    (* match cfg.slicing, net.assertion, net.attr_type with
+       | true, Some _, TTuple _ ->
+       AttributeSlicing.slice_network net
+       |> List.map (dmap (fun (net, f) -> net, f :: fs))
+       | _ -> *)
+    [fun () -> (decls, fs)]
   in
   let slices =
     List.map
-      (dmap (fun (net, fs) ->
-           let net, f = UnboxUnits.unbox_net net in
-           net, f :: fs))
+      (dmap (fun (decls, fs) ->
+           let decls, f = UnboxUnits.unbox_declarations decls in
+           decls, f :: fs))
       slices
   in
 
   (* Return the first slice that returns a counterexample, or the result of the
      last slice if all of them succeed *)
-  (* List.iter (fun f -> print_endline @@ Printing.network_to_string (fst @@ f ())) slices; *)
+  (* List.iter (fun f -> print_endline @@ Printing.declarations_to_string (fst @@ f ())) slices; *)
   let count = ref (-1) in
   let rec solve_slices slices =
     match slices with
@@ -217,8 +216,8 @@ let run_test cfg info decls fs =
 
 let run_simulator cfg _ decls fs =
   (* let net = mk_net cfg decls in
-  let net = partialEvalNet net in
-  let net, _ = OptimizeBranches.optimize_net net in (* The _ should match the identity function *) *)
+     let net = partialEvalNet net in
+     let net, _ = OptimizeBranches.optimize_net net in (* The _ should match the identity function *) *)
   try
     let solution, q =
       match cfg.bound with

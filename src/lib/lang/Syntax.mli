@@ -314,6 +314,8 @@ val get_edges : declarations -> (node * node) list option
 
 val get_nodes : declarations -> int option
 
+val get_graph : declarations -> AdjGraph.t option
+
 val get_symbolics : declarations -> (var * ty_or_exp) list
 
 val get_requires : declarations -> exp list

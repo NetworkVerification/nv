@@ -3,6 +3,7 @@
 open Nv_lang.Collections
 open Nv_solution.Solution
 open Nv_utils.Profile
+open Nv_utils.OCamlUtils
 open SolverUtil
 open SmtUtils
 open SmtLang
@@ -128,7 +129,7 @@ let solver = lazy(let solver = start_solver [] in
                   ask_solver solver "(set-option :model_evaluator.completion true)\n";
                   solver)
 
-let solve info query chan net_or_srp nodes eassert requires =
+let solve info query chan net_or_srp nodes assertions requires =
   let solver = Lazy.force solver in
   let print_and_ask q =
     if query then
@@ -155,14 +156,14 @@ let solve info query chan net_or_srp nodes eassert requires =
       let q = check_sat info in
       print_and_ask q;
       let reply = solver |> parse_reply in
-      get_sat query chan info env solver renaming nodes eassert reply
+      get_sat query chan info env solver renaming nodes assertions reply
     | Some _ ->
       let q = check_sat info in
       (* ask if it is satisfiable *)
       print_and_ask q;
       let reply = solver |> parse_reply in
       (* check the reply *)
-      let isSat = get_sat query chan info env solver renaming nodes eassert reply in
+      let isSat = get_sat query chan info env solver renaming nodes assertions reply in
       (* In order to minimize refinement iterations, once we get a
          counter-example we try to minimize it by only keeping failures
          on single links. If it works then we found an actual
@@ -172,21 +173,21 @@ let solve info query chan net_or_srp nodes eassert requires =
       | Unsat -> Unsat
       | Unknown -> Unknown
       | Sat model1 ->
-        refineModel model1 info query chan env solver renaming nodes eassert requires
+        refineModel model1 info query chan env solver renaming nodes assertions requires
   in
   print_and_ask "(push)";
   let ret = solve_aux () in
   print_and_ask "(pop)";
   ret
 
-let solveClassic info query chan net =
+let solveClassic info query chan decls =
   let open Nv_lang.Syntax in
   let module ExprEnc = (val expr_encoding smt_config) in
   let module Enc =
     (val (module SmtClassicEncoding.ClassicEncoding(ExprEnc) : SmtClassicEncoding.ClassicEncodingSig))
   in
-  solve info query chan (fun () -> Enc.encode_z3 net)
-    (Nv_datastructures.AdjGraph.nb_vertex net.graph) net.assertion net.requires
+  solve info query chan (fun () -> Enc.encode_z3 decls)
+    (Nv_datastructures.AdjGraph.nb_vertex (get_graph decls |> oget)) (get_asserts decls) (get_requires decls)
 
 let solveFunc info query chan srp =
   let open Nv_lang.Syntax in
@@ -194,8 +195,9 @@ let solveFunc info query chan srp =
   let module Enc =
     (val (module SmtFunctionalEncoding.FunctionalEncoding(ExprEnc) : SmtFunctionalEncoding.FunctionalEncodingSig))
   in
+  let asn = match srp.srp_assertion with None -> [] | Some e -> [e] in
   solve info query chan (fun () -> Enc.encode_z3 srp)
-    (Nv_datastructures.AdjGraph.nb_vertex srp.srp_graph) srp.srp_assertion srp.srp_requires
+    (Nv_datastructures.AdjGraph.nb_vertex srp.srp_graph) asn srp.srp_requires
 
 (** For quickcheck smart value generation *)
 let symvar_assign info (net: Nv_lang.Syntax.network) : Nv_lang.Syntax.value VarMap.t option =
@@ -214,7 +216,7 @@ let symvar_assign info (net: Nv_lang.Syntax.network) : Nv_lang.Syntax.value VarM
   | UNSAT  | UNKNOWN -> None
   | SAT ->
     (* build model question *)
-    let model = eval_model env.symbolics 0 None (StringMap.empty, StringMap.empty) in
+    let model = eval_model env.symbolics 0 [] (StringMap.empty, StringMap.empty) in
     let model_question = commands_to_smt smt_config.verbose info model in
     ask_solver solver model_question;
     (* get answer *)

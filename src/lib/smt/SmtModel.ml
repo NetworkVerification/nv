@@ -6,6 +6,7 @@ open Nv_datastructures
 open SmtUtils
 open SmtLang
 open SolverUtil
+open Batteries
 
 let prefix_if_needed varname =
   if
@@ -23,9 +24,9 @@ let prefix_if_needed varname =
 (** Emits the code that evaluates the model returned by Z3. *)
 let eval_model (symbolics: Syntax.ty_or_exp VarMap.t)
     (num_nodes: int)
-    (eassert: Syntax.exp option)
+    (assertions: Syntax.exp list)
     (renaming: string StringMap.t * smt_term StringMap.t) : command list =
-  ignore num_nodes; ignore eassert; (* Redundant with the new asserts *)
+  ignore num_nodes;
   let renaming, valMap = renaming in
   let var x = "Var:" ^ x in
   let find_renamed_term str =
@@ -48,17 +49,13 @@ let eval_model (symbolics: Syntax.ty_or_exp VarMap.t)
   let base = [(mk_echo ("\"end_of_model\"") |> mk_command)] in
   (* StringMap.iter (fun k v -> Printf.printf "(%s, %s)" k v) renaming; *)
   (* Compute eval statements for assertions *)
-  let assertions =
-    match eassert with
-    | None -> base
-    | Some _ ->
-      (* AdjGraph.fold_vertices (fun u acc -> *)
-      let assu = "assertion" in
+  let assertion_cmds =
+  List.fold_lefti (fun acc i _ ->
+      let assu = Printf.sprintf "assert-%d" i in
       let tm = find_renamed_term assu in
       let ev = mk_eval tm |> mk_command in
       let ec = mk_echo ("\"" ^ (var assu) ^ "\"") |> mk_command in
-      ec :: ev :: base
-      (* ec :: ev :: acc) num_nodes base *)
+      ec :: ev :: acc) base assertions
   in
   (* Compute eval statements for symbolic variables *)
   let symbols =
@@ -68,7 +65,7 @@ let eval_model (symbolics: Syntax.ty_or_exp VarMap.t)
         let tm = find_renamed_term z3name in
         let ev = mk_eval tm |> mk_command in
         let ec = mk_echo ("\"" ^ (var sv) ^ "\"") |> mk_command in
-        ec :: ev :: acc) symbolics assertions in
+        ec :: ev :: acc) symbolics assertion_cmds in
   symbols
 
 let rec parse_model (solver: solver_proc) =
@@ -109,7 +106,8 @@ let translate_model (m : (string, string) BatMap.t) : Nv_solution.Solution.t =
       match k with
       | k when BatString.starts_with k "label" ->
         {sol with labels= AdjGraph.VertexMap.add (SmtUtils.node_of_label_var k) nvval sol.labels}
-      | "assertion" ->
+      | k when BatString.starts_with k "assert" ->
+        (* If we had assertions and also got a model, then certainly some assertion failed *)
         {sol with assertions = Some false}
       (* {sol with assertions=
                           match sol.assertions with
@@ -152,7 +150,8 @@ let translate_model_unboxed (m : (string, string) BatMap.t) : Nv_solution.Soluti
                AdjGraph.VertexMap.modify_def
                  [] (SmtUtils.node_of_label_var k) (fun xs -> (i,nvval) :: xs) labels,
                assertions ))
-        | "assertion" ->
+        | k when BatString.starts_with k "assert" ->
+          (* If we had assertions and also got a model, then certainly some assertion failed *)
           (symbolics, labels, Some false)
         (* ( symbolics,
            labels,

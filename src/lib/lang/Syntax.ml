@@ -1051,6 +1051,11 @@ let get_edges ds =
 let get_nodes ds =
   get_decl ds (fun d -> match d with DNodes i -> Some i | _ -> None)
 
+let get_graph ds =
+  match get_nodes ds, get_edges ds with
+  | Some n, Some es -> Some (List.fold_left AdjGraph.add_edge_e (AdjGraph.create n) es)
+  | _ -> None
+
 let get_symbolics ds =
   List.fold_left
     (fun acc d ->
@@ -1276,15 +1281,14 @@ let createNetwork decls =
     ( get_merge decls
     , get_trans decls
     , get_init decls
-    , get_nodes decls
-    , get_edges decls
+    , get_graph decls
     , get_attr_type decls
     , get_symbolics decls
     , get_lets decls
     , get_types decls
     , get_requires decls)
   with
-  | Some emerge, Some etrans, Some einit, Some n, Some es,
+  | Some emerge, Some etrans, Some einit, Some graph,
     Some aty, symb, defs, utys, erequires ->
     let assertion =
       match get_asserts decls with
@@ -1303,7 +1307,7 @@ let createNetwork decls =
       defs = defs;
       requires = erequires;
       utys = utys;
-      graph = List.fold_left AdjGraph.add_edge_e (AdjGraph.create n) es
+      graph = graph;
     }
   | _ ->
     failwith "This should be refactored soon."

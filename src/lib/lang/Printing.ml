@@ -89,8 +89,8 @@ let rec ty_to_string t =
   | TUnit -> "unit"
   | TBool -> "bool"
   | TInt i -> "int" ^ string_of_int i
-  | TNode -> "node"
-  | TEdge -> "edge"
+  | TNode -> "tnode"
+  | TEdge -> "tedge"
   | TTuple ts ->
     if List.is_empty ts then "TEmptyTuple"
     else "(" ^ sep "," ty_to_string ts ^ ")"
