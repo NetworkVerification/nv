@@ -19,7 +19,7 @@ module ValueSet = BetterSet.Make (struct
     let compare v1 v2 =
       let cfg = Cmdline.get_cfg () in
       if cfg.hashcons then v1.vtag - v2.vtag else compare v1 v2
-    let to_string = Printing.value_to_string
+    let to_string = Printing.value_to_string ~show_types:false
   end)
 
 module ValueMap = BetterMap.Make (struct
@@ -28,7 +28,7 @@ module ValueMap = BetterMap.Make (struct
     let compare v1 v2 =
       let cfg = Cmdline.get_cfg () in
       if cfg.hashcons then v1.vtag - v2.vtag else compare v1 v2
-    let to_string = Printing.value_to_string
+    let to_string = Printing.value_to_string ~show_types:false
   end)
 ;;
 
@@ -39,13 +39,14 @@ module ExpMap = BetterMap.Make (struct
       let cfg = Cmdline.get_cfg () in
       if cfg.hashcons then e1.etag - e2.etag else
         compare e1 e2
-    let to_string = Printing.exp_to_string
+    let to_string = Printing.exp_to_string ~show_types:false
   end)
 
 module ExpSet = BetterSet.Make (struct
     type t = exp
     let compare = compare_es
-    let to_string = Printing.exp_to_string end)
+    let to_string = Printing.exp_to_string ~show_types:false
+  end)
 
 module ExpEnvMap = BatMap.Make (struct
     type t = exp * (value Env.t)

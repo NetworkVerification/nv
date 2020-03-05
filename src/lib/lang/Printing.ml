@@ -157,22 +157,28 @@ let rec pattern_to_string pattern =
 
 let ty_env_to_string env = Nv_datastructures.Env.to_string ty_to_string env.ty
 
-let glob = ref false
-let rec value_env_to_string env =
-  Nv_datastructures.Env.to_string (value_to_string_p max_prec) env.value
+let tyo_to_string tyo =
+  match tyo with
+  | None -> "None"
+  | Some ty -> ty_to_string ty
 
-and env_to_string env =
+let glob = ref false
+let rec value_env_to_string ~show_types env =
+  Nv_datastructures.Env.to_string (value_to_string_p ~show_types max_prec) env.value
+
+and env_to_string ?(show_types=false) env =
   let open Nv_datastructures in
   if env.ty = Env.empty && env.value = Env.empty then " "
   else
-    "[" ^ ty_env_to_string env ^ "|" ^ value_env_to_string env ^ "] "
+    "[" ^ ty_env_to_string env ^ "|" ^ value_env_to_string ~show_types env ^ "] "
 
-and func_to_string_p prec {arg= x; argty= _; resty= _; body} =
+and func_to_string_p ~show_types prec {arg= x; argty; resty= _; body} =
   let s_arg = Var.to_string x in
-  let s = "fun " ^ s_arg ^ " -> " ^ exp_to_string_p max_prec body in
+  let arg_str = if show_types then Printf.sprintf "(%s : %s)" s_arg (tyo_to_string argty) else s_arg in
+  let s = Printf.sprintf "fun %s -> %s " arg_str (exp_to_string_p ~show_types max_prec body) in
   if prec < max_prec then "(" ^ s ^ ")" else s
 
-and closure_to_string_p prec
+and closure_to_string_p ~show_types prec
     (env, {arg= x; argty= argt; resty= rest; body}) =
   let s_arg =
     match argt with
@@ -183,31 +189,32 @@ and closure_to_string_p prec
     match rest with None -> "" | Some t -> " : " ^ ty_to_string t
   in
   let s =
-    "fun" ^ env_to_string env ^ s_arg ^ s_res ^ " -> "
-    ^ exp_to_string_p prec body
+    "fun" ^ env_to_string ~show_types env ^ s_arg ^ s_res ^ " -> "
+    ^ exp_to_string_p ~show_types prec body
   in
   if prec < max_prec then "(" ^ s ^ ")" else s
 
-and map_to_string sep_s term_s m =
+and map_to_string ~show_types sep_s term_s m =
   let binding_to_string (k, v) =
-    value_to_string_p max_prec k
+    value_to_string_p ~show_types max_prec k
     ^ sep_s
-    ^ value_to_string_p max_prec v
+    ^ value_to_string_p ~show_types max_prec v
   in
   let bs, default = BddMap.bindings m in
   "["
   ^ term term_s binding_to_string bs
   ^ "default:="
-  ^ value_to_string_p max_prec default
+  ^ value_to_string_p ~show_types max_prec default
   ^ "]"
 
-and value_to_string_p prec v =
+and value_to_string_p ~show_types prec v =
+  let value_to_string_p = value_to_string_p ~show_types in
   match v.v with
   | VUnit -> "VUnit"
   | VBool true -> "true"
   | VBool false -> "false"
   | VInt i -> Integer.to_string i
-  | VMap m -> map_to_string ":=" "," m
+  | VMap m -> map_to_string ~show_types ":=" "," m
   | VTuple vs ->
     if List.is_empty vs then "VEmptyTuple" else
       "(" ^ comma_sep (value_to_string_p max_prec) vs ^ ")"
@@ -216,19 +223,21 @@ and value_to_string_p prec v =
   | VOption (Some v) ->
     let s = "Some(" ^ value_to_string_p max_prec v ^ ")" in
     if max_prec > prec then "(" ^ s ^ ")" else s
-  | VClosure cl -> closure_to_string_p prec cl
+  | VClosure cl -> closure_to_string_p ~show_types prec cl
   | VRecord map -> print_record "=" (value_to_string_p prec) map
   | VNode n -> Printf.sprintf "%dn" n
   | VEdge (n1, n2) -> Printf.sprintf "%d~%d" n1 n2
 
-and exp_to_string_p prec e =
+and exp_to_string_p ~show_types prec e =
+  let exp_to_string_p = exp_to_string_p ~show_types in
+  let value_to_string_p = value_to_string_p ~show_types in
   let p = prec_exp e in
   let s =
     match e.e with
     | EVar x -> Var.to_string x
     | EVal v -> value_to_string_p prec v
-    | EOp (op, es) -> op_args_to_string prec p op es
-    | EFun f -> func_to_string_p prec f
+    | EOp (op, es) -> op_args_to_string ~show_types prec p op es
+    | EFun f -> func_to_string_p ~show_types prec f
     | EApp (e1, e2) ->
       exp_to_string_p prec e1 ^ " " ^ exp_to_string_p p e2 ^ " "
     | EIf (e1, e2, e3) ->
@@ -249,23 +258,29 @@ and exp_to_string_p prec e =
       "(match "
       ^ exp_to_string_p max_prec e1
       ^ " with " ^ "\n"
-      ^ branches_to_string prec (branchToList bs)
+      ^ branches_to_string ~show_types prec (branchToList bs)
       ^ ")"
     | ETy (e, t) -> exp_to_string_p prec e ^ ty_to_string t
     | ERecord map -> print_record "=" (exp_to_string_p prec) map
     | EProject (e, l) -> exp_to_string_p prec e ^ "." ^ l
   in
-  if p > prec then "(" ^ s ^ ")" else s
+  if show_types then
+    Printf.sprintf "(%s : %s)" s (tyo_to_string e.ety)
+  else if p > prec then
+    "(" ^ s ^ ")"
+  else
+    s
 
-and branch_to_string prec (p, e) =
-  " | " ^ pattern_to_string p ^ " -> " ^ exp_to_string_p prec e
+and branch_to_string ~show_types prec (p, e) =
+  " | " ^ pattern_to_string p ^ " -> " ^ exp_to_string_p ~show_types prec e
 
-and branches_to_string prec bs =
+and branches_to_string ~show_types prec bs =
   match bs with
   | [] -> ""
-  | b :: bs -> branch_to_string prec b ^ "\n" ^ branches_to_string prec bs
+  | b :: bs -> branch_to_string ~show_types prec b ^ "\n" ^ branches_to_string ~show_types prec bs
 
-and op_args_to_string prec p op es =
+and op_args_to_string ~show_types prec p op es =
+  let exp_to_string_p = exp_to_string_p ~show_types in
   if is_keyword_op op then
     op_to_string op ^ "("
     ^ comma_sep (exp_to_string_p max_prec) es
@@ -282,16 +297,17 @@ and op_args_to_string prec p op es =
       ^ comma_sep (exp_to_string_p max_prec) es
       ^ ")"
 
-let value_to_string v = value_to_string_p max_prec v
+let value_to_string ?(show_types=false) v = value_to_string_p ~show_types max_prec v
 
-let exp_to_string e = exp_to_string_p max_prec e
+let exp_to_string ?(show_types=false) e = exp_to_string_p ~show_types max_prec e
 
-let func_to_string f = func_to_string_p max_prec f
+let func_to_string ?(show_types=false) f = func_to_string_p ~show_types max_prec f
 
-let closure_to_string c = closure_to_string_p max_prec c
+let closure_to_string ?(show_types=false) c = closure_to_string_p ~show_types max_prec c
 
 (* TODO: should the let statements use the identifiers defined in Syntax instead? *)
-let rec declaration_to_string d =
+let rec declaration_to_string ?(show_types=false) d =
+  let exp_to_string = exp_to_string ~show_types in
   match d with
   | DLet (x, tyo, e) ->
     let ty_str =
@@ -306,7 +322,7 @@ let rec declaration_to_string d =
     "symbolic " ^ Var.to_string x ^ " : " ^ ty_to_string ty
   | DAssert e -> "assert " ^ exp_to_string e
   | DSolve {aty; var_names; init;trans;merge} ->
-    Printf.sprintf "let %s = solution<%s> {init: %s; trans: %s; merge: %s}"
+    Printf.sprintf "let %s = solution<%s> {init = %s; trans = %s; merge = %s}"
       (exp_to_string var_names) (match aty with | None -> "None" | Some ty -> ty_to_string ty)
       (exp_to_string init) (exp_to_string trans) (exp_to_string merge)
   | DPartition e -> "let partition = " ^ exp_to_string e (* partitioning *)
@@ -324,13 +340,14 @@ let rec declaration_to_string d =
   | DUserTy (name, ty) ->
     Printf.sprintf "type %s = %s" (Var.to_string name) (ty_to_string ty)
 
-let rec declarations_to_string ds =
+let rec declarations_to_string ?(show_types=false) ds =
   match ds with
   | [] -> ""
   | d :: ds ->
-    declaration_to_string d ^ "\n" ^ declarations_to_string ds
+    declaration_to_string ~show_types d ^ "\n" ^ declarations_to_string ~show_types ds
 
-let network_to_string ?(show_topology=false) (net : Syntax.network) =
+let network_to_string ?(show_types=false) ?(show_topology=false) (net : Syntax.network) =
+  let exp_to_string = exp_to_string ~show_types in
   (** User types **)
   let utypes =
     OCamlUtils.printList (fun (x, ty) ->

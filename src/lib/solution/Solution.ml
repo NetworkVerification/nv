@@ -172,7 +172,7 @@ let print_solution (solution : t) =
       solution.symbolics ;
     let print_fun =
       match solution.mask with
-      | None -> Printing.value_to_string
+      | None -> Printing.value_to_string ~show_types:false
       | Some m -> print_masked m
     in
     AdjGraph.VertexMap.iter
