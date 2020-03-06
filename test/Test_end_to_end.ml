@@ -128,7 +128,8 @@ let simulator_tests =
       ("examples/maprecord2.nv", true);
       ("examples/record.nv", true);
       ("examples/recordwith.nv", true);
-
+      ("examples/doubleRip.nv", true);
+      ("examples/doubleRipFalse.nv", false);
       ("examples/symbolic3.nv", true);
       ("examples/symbolicDecls.nv", true);
       ("examples/ospf-areas.nv", true);
@@ -157,7 +158,8 @@ let compiler_tests =
       ("examples/maprecord.nv", true);
       ("examples/maprecordpattern.nv", true);
       ("examples/maprecord2.nv", true);
-
+      ("examples/doubleRip.nv", true);
+      ("examples/doubleRipFalse.nv", false);
       ("examples/symbolic3.nv", true);
       ("examples/symbolicDecls.nv", true);
     ]
@@ -187,7 +189,8 @@ let smt_tests =
       ("examples/maprecord2.nv", true);
       ("examples/record.nv", true);
       ("examples/recordwith.nv", true);
-
+      ("examples/doubleRip.nv", true);
+      ("examples/doubleRipFalse.nv", false);
       ("examples/symbolic3.nv", false);
       ("examples/symbolicDecls.nv", false);
       ("examples/ospf-areas.nv", true);
@@ -218,7 +221,8 @@ let hiding_tests =
       ("examples/maprecord2.nv", true);
       ("examples/record.nv", true);
       ("examples/recordwith.nv", true);
-
+      ("examples/doubleRip.nv", true);
+      ("examples/doubleRipFalse.nv", false);
       ("examples/symbolic3.nv", false);
       ("examples/symbolicDecls.nv", false);
       ("examples/ospf-areas.nv", true);
@@ -249,7 +253,8 @@ let slicing_tests =
       ("examples/maprecord2.nv", true);
       ("examples/record.nv", true);
       ("examples/recordwith.nv", true);
-
+      ("examples/doubleRip.nv", true);
+      ("examples/doubleRipFalse.nv", false);
       ("examples/symbolic3.nv", false);
       ("examples/symbolicDecls.nv", false);
       ("examples/ospf-areas.nv", true);

@@ -843,15 +843,15 @@ and valid_patterns env p =
   | p :: ps -> valid_patterns (valid_pattern env p) ps
 
 
-let rec infer_declarations_aux i info env record_types aty (ds: declarations) :
+let rec infer_declarations_aux i info env record_types (ds: declarations) :
   declarations =
   match ds with
   | [] -> []
   | d :: ds' ->
-    let env', d' = infer_declaration (i + 1) info env record_types aty d in
-    d' :: infer_declarations_aux (i + 1) info env' record_types aty ds'
+    let env', d' = infer_declaration (i + 1) info env record_types d in
+    d' :: infer_declarations_aux (i + 1) info env' record_types ds'
 
-and infer_declaration i info env record_types aty d : ty Env.t * declaration =
+and infer_declaration i info env record_types d : ty Env.t * declaration =
   let _infer_exp = infer_exp in (* Alias in case we need to modify the usually-static args *)
   let infer_exp = infer_exp (i+1) info env record_types in
   let open Nv_utils.OCamlUtils in
@@ -884,11 +884,12 @@ and infer_declaration i info env record_types aty d : ty Env.t * declaration =
     let ty = oget e'.ety in
     unify info e ty partition_ty ;
     (Env.update env (Var.create "partition") ty, DPartition e')
-  | DInterface e ->
-    let e' = infer_exp e in
+  | DInterface _ ->
+    failwith "Not implemented (requires knowing the attribute type)"
+    (* let e' = infer_exp e in
     let ty = oget e'.ety in
     unify info e ty (interface_ty aty) ;
-    (Env.update env (Var.create "interface") ty, DInterface e')
+    (Env.update env (Var.create "interface") ty, DInterface e') *)
   (* end partitioning *)
   | DRequire e ->
     let e' = infer_exp e in
@@ -977,8 +978,4 @@ let rec equiv_tys ty1 ty2 =
 
 let infer_declarations info (ds: declarations) : declarations =
   let record_types = get_record_types ds in
-  match get_attr_type ds with
-  | None ->
-    Console.error
-      "attribute type not declared: type attribute = ..."
-  | Some ty -> infer_declarations_aux 0 info Env.empty record_types ty ds
+  infer_declarations_aux 0 info Env.empty record_types ds
