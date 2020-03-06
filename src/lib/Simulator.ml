@@ -9,13 +9,13 @@ open Nv_utils.OCamlUtils
    variables for later reporting. We also track if an assertion has been failed,
    and if so, which one. We only store the first assertion failure since we terminate
    simulation when we see it. *)
-type sym_state = {env : value Env.t; syms : var list; sols : var list; failed : exp option}
-let empty_state = {env = Env.empty; syms = []; sols = []; failed = None}
+type sym_state = {env : value Env.t; syms : var list; sols : var list; assertions : bool list}
+let empty_state = {env = Env.empty; syms = []; sols = []; assertions = []}
 
 let simulate_declaration ~(throw_requires: bool) (graph : AdjGraph.t) (state : sym_state) (d : declaration) : sym_state =
-  match state.failed with
-  | Some _ -> state (* Stop simulating once an assertion fails *)
-  | None ->
+  match state.assertions with
+  | false::_ -> state (* Stop simulating once an assertion fails *)
+  | _ ->
     let env = state.env in
     let evaluate = Interp.interp_exp {ty = Env.empty; value = env} in
     match d with
@@ -41,10 +41,12 @@ let simulate_declaration ~(throw_requires: bool) (graph : AdjGraph.t) (state : s
       end
     | DAssert e ->
       begin
-        match evaluate e with
-        | {v = VBool true} -> state
-        | _ ->
-          {state with failed = Some e}
+        let result =
+          match evaluate e with
+          | {v = VBool b} -> b
+          | _ -> failwith "Bad assert"
+        in
+        {state with assertions = result :: state.assertions}
       end
     | DSolve solve ->
       let results = Srp.simulate_solve graph {ty = Env.empty; value = env} solve in
@@ -69,21 +71,23 @@ let simulate_declarations ~(throw_requires: bool) (decls : declarations) : Solut
   in
   let final_state = List.fold_left (simulate_declaration ~throw_requires graph) empty_state decls in
   let symbolics =
-    let open Collections in
-    VarMap.empty
-    |> List.fold_right (fun x acc -> VarMap.add x (Env.lookup final_state.env x) acc) final_state.sols
-    |> List.fold_right (fun x acc -> VarMap.add x (Env.lookup final_state.env x) acc) final_state.syms
+    List.fold_right
+      (fun x acc -> Collections.VarMap.add x (Env.lookup final_state.env x) acc)
+      final_state.syms Collections.VarMap.empty
+  in
+  let solves =
+    List.fold_right
+      (fun x acc -> Collections.VarMap.add x {Solution.sol_val = (Env.lookup final_state.env x); mask = None} acc)
+      final_state.sols Collections.VarMap.empty
   in
   let assertions =
-    match final_state.failed with
-    | Some _ -> Some false
-    | None ->
-      match get_asserts decls with
-      | [] -> None
-      | _ -> Some true
+    let num_asserts = List.length @@ get_asserts decls in
+    let rec pad count lst =
+      if count = 0 then lst else pad (count-1) (true::lst)
+    in
+    pad (num_asserts - List.length final_state.assertions) final_state.assertions
   in
   let sol : Solution.t =
-    (* FIXME: We need to overhaul the Solution.t type soon since we're only really using two fields *)
-    {labels = AdjGraph.VertexMap.empty; symbolics; assertions; mask = None}
+    {labels = AdjGraph.VertexMap.empty; symbolics; solves; assertions;}
   in
   sol

@@ -77,12 +77,12 @@ let run_smt_func file cfg info decls fs =
   | Unknown -> Console.error "SMT returned unknown"
   | Sat solution ->
     match solution.assertions with
-    | None -> Success (Some solution), fs
-    | Some m ->
-      if not m then
-        CounterExample solution, fs
-      else
+    | [] -> Success (Some solution), fs
+    | lst ->
+      if List.for_all (fun b -> b) lst then
         Success (Some solution), fs
+      else
+        CounterExample solution, fs
 
 let run_smt_classic file cfg info decls fs =
   let decls, fs =
@@ -116,13 +116,12 @@ let run_smt_classic file cfg info decls fs =
     | Unknown -> Console.error "SMT returned unknown"
     | Sat solution ->
       match solution.assertions with
-      | None -> Success (Some solution), fs
-      | Some m ->
-        (* if AdjGraph.VertexMap.exists (fun _ b -> not b) m then *)
-        if not m then
-          CounterExample solution, fs
-        else
+      | [] -> Success (Some solution), fs
+      | lst ->
+        if List.for_all (fun b -> b) lst then
           Success (Some solution), fs
+        else
+          CounterExample solution, fs
   in
 
   (* Attribute Slicing requires the net to have an assertion and for its attribute
@@ -239,12 +238,12 @@ let run_simulator cfg _ decls fs =
         print_newline () ;
     );
     match solution.assertions with
-    | None -> Success (Some solution), fs
-    | Some m ->
-      if not m then
-        CounterExample solution, fs
-      else
+    | [] -> Success (Some solution), fs
+    | lst ->
+      if List.for_all (fun b -> b) lst then
         Success (Some solution), fs
+      else
+        CounterExample solution, fs
   with Srp.Require_false ->
     Console.error "required conditions not satisfied"
 
@@ -257,12 +256,12 @@ let run_compiled file cfg _ decls fs =
   let newpath = name in
   let solution = Loader.simulate newpath net in
   match solution.assertions with
-  | None -> Success (Some solution), fs
-  | Some m ->
-    if m then
-      CounterExample solution, fs
-    else
+  | [] -> Success (Some solution), fs
+  | lst ->
+    if List.for_all (fun b -> b) lst then
       Success (Some solution), fs
+    else
+      CounterExample solution, fs
 
 let compress file info net cfg fs networkOp =
   (* Printf.printf "Number of concrete edges:%d\n" (List.length (oget (get_edges decls))); *)
