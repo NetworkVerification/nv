@@ -12,12 +12,13 @@ open OCamlUtils
    with a boolean in place of each base value. A value of false indicates that
    the value at that location in each attribute is bogus -- i.e. it was not
    needed to produce the counterexample *)
+type sol = {sol_val: value; mask : value option}
 type t =
-  { symbolics: value VarMap.t
-  ; labels: value VertexMap.t
-  (* ; assertions: bool VertexMap.t option *)
-  ; assertions: bool option
-  ; mask: value option }
+  { symbolics: value VarMap.t;
+    solves: sol VarMap.t;
+    assertions: bool list; (* One for each assert statement *)
+    labels: value VertexMap.t; (* Deprecated -- included only for backwards compatibility *)
+  }
 
 type map_back = t -> t
 
@@ -61,7 +62,7 @@ let rec mask_type_ty ty =
    (value_to_mask one_attr).vty |> oget *)
 
 (* Prints the mask itself; useful for seeing which parts of a value are hidden *)
-let print_masked_type unmasked_type sol =
+let print_masked_type unmasked_ty sol =
   let print_if_true ty m =
     if m then Printing.ty_to_string ty else "_"
   in
@@ -114,8 +115,8 @@ let print_masked_type unmasked_type sol =
       failwith "print_masked_type: Nonsense type"
   in
   match sol.mask with
-  | None -> Printing.ty_to_string unmasked_type
-  | Some mask -> construct_string unmasked_type mask
+  | None -> Printing.ty_to_string unmasked_ty
+  | Some mask -> construct_string unmasked_ty mask
 ;;
 
 (* Print a value with only the parts where the mask is true. *)
@@ -170,27 +171,29 @@ let print_solution (solution : t) =
       (fun k v ->
          Printf.printf "%s:%s\n" (Nv_datastructures.Var.name k) (Nv_lang.Printing.value_to_string v) )
       solution.symbolics ;
-    let print_fun =
-      match solution.mask with
-      | None -> Printing.value_to_string ~show_types:false
-      | Some m -> print_masked m
+    let print_fun {sol_val; mask} =
+      match mask with
+      | None -> Printing.value_to_string ~show_types:false sol_val
+      | Some m -> print_masked m sol_val
     in
     AdjGraph.VertexMap.iter
       (fun k v ->
          Printf.printf "Label(%d):%s\n"
            k
-           (print_fun v) )
-      solution.labels ) ;
+           (Printing.value_to_string ~show_types:false v) )
+      solution.labels;
+    print_endline @@ VarMap.to_string print_fun solution.solves;
+  ) ;
   ( match solution.assertions with
-    | None ->
+    | [] ->
       print_string [green; Bold] "Success: " ;
       Printf.printf "No assertions provided, so none failed\n"
-    | Some m ->
-      let all_pass = m in
+    | asns ->
+      let all_pass = List.for_all (fun x -> x) asns in
       if all_pass then (
         print_string [green; Bold] "Success: " ;
         Printf.printf "all assertions passed\n" )
       else
         (print_string [red; Bold] "Failed: " ;
-         Printf.printf "assertion failed\n") ) ;
+         List.iteri (fun i b -> if not b then Printf.printf "Assertion %d" i) asns) ) ;
   print_newline ()

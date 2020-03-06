@@ -159,6 +159,8 @@ struct
     in
     loop assertion []
 
+  let prefix_solve v = let s, i = Var.from_var v in Var.to_var ("solve-" ^ s, i)
+
   let encode_solve env graph count {aty; var_names; init; trans; merge} =
     let aty = oget aty in
     let einit, etrans, emerge = init, trans, merge in
@@ -174,12 +176,12 @@ struct
         (* Sanity check *)
         assert (aty_len * nodes = List.length es);
         let varnames =
-          List.map (fun e -> match e.e with | EVar x -> x | _ -> failwith "") es
+          List.map (fun e -> match e.e with | EVar x -> prefix_solve x | _ -> failwith "") es
         in
-        Array.map of_list @@ Array.of_list @@ List.ntake aty_len varnames
+        varnames |> List.ntake aty_len |> Array.of_list |> Array.map of_list
       | EVar x ->
         (* Not sure if this can happen, but if it does it's in networks with only one node *)
-        Array.map of_list @@ Array.make 1 [x]
+        Array.map of_list @@ Array.make 1 [prefix_solve x]
       | _ -> failwith "internal error (encode_algebra)"
     in
     (* Map each edge to transfer function result *)

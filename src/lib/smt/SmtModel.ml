@@ -50,12 +50,12 @@ let eval_model (symbolics: Syntax.ty_or_exp VarMap.t)
   (* StringMap.iter (fun k v -> Printf.printf "(%s, %s)" k v) renaming; *)
   (* Compute eval statements for assertions *)
   let assertion_cmds =
-  List.fold_lefti (fun acc i _ ->
-      let assu = Printf.sprintf "assert-%d" i in
-      let tm = find_renamed_term assu in
-      let ev = mk_eval tm |> mk_command in
-      let ec = mk_echo ("\"" ^ (var assu) ^ "\"") |> mk_command in
-      ec :: ev :: acc) base assertions
+    List.fold_lefti (fun acc i _ ->
+        let assu = Printf.sprintf "assert-%d" i in
+        let tm = find_renamed_term assu in
+        let ev = mk_eval tm |> mk_command in
+        let ec = mk_echo ("\"" ^ (var assu) ^ "\"") |> mk_command in
+        ec :: ev :: acc) base assertions
   in
   (* Compute eval statements for symbolic variables *)
   let symbols =
@@ -101,31 +101,28 @@ let parse_val (s : string) : Syntax.value =
     end
 
 let translate_model (m : (string, string) BatMap.t) : Nv_solution.Solution.t =
-  BatMap.foldi (fun k v sol ->
-      let nvval = parse_val v in
-      match k with
-      | k when BatString.starts_with k "label" ->
-        {sol with labels= AdjGraph.VertexMap.add (SmtUtils.node_of_label_var k) nvval sol.labels}
-      | k when BatString.starts_with k "assert" ->
-        (* If we had assertions and also got a model, then certainly some assertion failed *)
-        {sol with assertions = Some false}
-      (* {sol with assertions=
-                          match sol.assertions with
-                          | None ->
-                            Some (AdjGraph.VertexMap.add (SmtUtils.node_of_assert_var k)
-                                    (nvval |> Syntax.bool_of_val |> Nv_utils.OCamlUtils.oget)
-                                    AdjGraph.VertexMap.empty)
-                          | Some m ->
-                            Some (AdjGraph.VertexMap.add (SmtUtils.node_of_assert_var k)
-                                    (nvval |> Syntax.bool_of_val |> Nv_utils.OCamlUtils.oget) m)
-              } *)
-      | k ->
-        let k_var = Var.of_var_string k in
-        {sol with symbolics= VarMap.add k_var nvval sol.symbolics}) m
-    {symbolics = VarMap.empty;
-     labels = AdjGraph.VertexMap.empty;
-     assertions= None;
-     mask = None}
+  let sol =
+    BatMap.foldi (fun k v sol ->
+        let nvval = parse_val v in
+        match k with
+        | k when BatString.starts_with k "label" ->
+          failwith "Labels deprecated in SMT"
+        (* {sol with labels= AdjGraph.VertexMap.add (SmtUtils.node_of_label_var k) nvval sol.labels} *)
+        | k when BatString.starts_with k "assert" ->
+          let asn = match nvval.v with | VBool b -> b | _ -> failwith "Bad assert" in
+          {sol with assertions = asn :: sol.assertions}
+        | k when BatString.starts_with k "solve" ->
+          let kvar = unsolve_var (Var.of_var_string k) in
+          {sol with solves = VarMap.add kvar {sol_val = nvval; mask = None} sol.solves}
+        | k ->
+          let k_var = Var.of_var_string k in
+          {sol with symbolics= VarMap.add k_var nvval sol.symbolics}) m
+      {symbolics = VarMap.empty;
+       solves = VarMap.empty;
+       labels = AdjGraph.VertexMap.empty;
+       assertions= []}
+  in
+  {sol with assertions = List.rev sol.assertions}
 
 let box_vals (xs : (int * Syntax.value) list) =
   match xs with
@@ -135,43 +132,46 @@ let box_vals (xs : (int * Syntax.value) list) =
             |> BatList.map (fun (_,y) -> y))
 
 let translate_model_unboxed (m : (string, string) BatMap.t) : Nv_solution.Solution.t =
-  let (symbolics, labels, assertions) =
-    BatMap.foldi (fun k v (symbolics, labels, assertions) ->
+  let (symbolics, solves, assertions) =
+    BatMap.foldi (fun k v (symbolics, solves, assertions) ->
         let nvval = parse_val v in
         match k with
         | k when BatString.starts_with k "label" ->
+          failwith "Labels deprecated in SMT"
+        (* (match SmtUtils.proj_of_var k with
+                   | None ->
+                     ( symbolics,
+                       AdjGraph.VertexMap.add (SmtUtils.node_of_label_var k) [(0,nvval)] labels,
+                       assertions )
+                   | Some i ->
+                     ( symbolics,
+                       AdjGraph.VertexMap.modify_def
+                         [] (SmtUtils.node_of_label_var k) (fun xs -> (i,nvval) :: xs) labels,
+                       assertions )) *)
+        | k when BatString.starts_with k "assert" ->
+          let asn = match nvval.v with | VBool b -> b | _ -> failwith "Bad assert" in
+          (symbolics, solves, asn :: assertions)
+        | k when BatString.starts_with k "solve" ->
+          let kname = unsolve_var (Var.of_var_string k) in
           (match SmtUtils.proj_of_var k with
            | None ->
              ( symbolics,
-               AdjGraph.VertexMap.add (SmtUtils.node_of_label_var k) [(0,nvval)] labels,
+               VarMap.add kname [(0,nvval)] solves,
                assertions )
            | Some i ->
              ( symbolics,
-               AdjGraph.VertexMap.modify_def
-                 [] (SmtUtils.node_of_label_var k) (fun xs -> (i,nvval) :: xs) labels,
+               VarMap.modify_def [] kname (fun xs -> (i,nvval) :: xs) solves,
                assertions ))
-        | k when BatString.starts_with k "assert" ->
-          (* If we had assertions and also got a model, then certainly some assertion failed *)
-          (symbolics, labels, Some false)
-        (* ( symbolics,
-           labels,
-           match assertions with
-           | None ->
-            Some (AdjGraph.VertexMap.add (SmtUtils.node_of_assert_var k)
-                    (nvval |> Syntax.bool_of_val |> Nv_utils.OCamlUtils.oget)
-                    AdjGraph.VertexMap.empty)
-           | Some m ->
-            Some (AdjGraph.VertexMap.add (SmtUtils.node_of_assert_var k)
-                    (nvval |> Syntax.bool_of_val |> Nv_utils.OCamlUtils.oget) m) ) *)
         | k ->
           ( let new_symbolics = VarMap.add (Var.of_var_string k) nvval symbolics in
-            new_symbolics, labels, assertions )
-      ) m (VarMap.empty,AdjGraph.VertexMap.empty, None)
+            new_symbolics, solves, assertions )
+      ) m (VarMap.empty, VarMap.empty, [])
   in
+  let box lst = {sol_val = box_vals lst; mask = None} in
   { symbolics = symbolics;
-    labels = AdjGraph.VertexMap.map box_vals labels;
-    assertions = assertions;
-    mask = None; }
+    solves = VarMap.map box solves;
+    assertions = List.rev assertions;
+    labels = AdjGraph.VertexMap.empty}
 
 
 (* Model Refiners *)
