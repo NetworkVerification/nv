@@ -191,6 +191,6 @@ let print_solution (solution : t) =
         print_string [green; Bold] "Success: " ;
         Printf.printf "all assertions passed\n" )
       else
-        print_string [red; Bold] "Failed: " ;
-      Printf.printf "assertion failed\n" ) ;
+        (print_string [red; Bold] "Failed: " ;
+         Printf.printf "assertion failed\n") ) ;
   print_newline ()
