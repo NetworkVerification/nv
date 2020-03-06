@@ -20,3 +20,5 @@ let init node =
   match node with
   | 0n -> m[3 := Some 0]
   | 1n -> m[5 := Some 0]
+
+let sol = solution {init = init; trans = trans; merge = merge}

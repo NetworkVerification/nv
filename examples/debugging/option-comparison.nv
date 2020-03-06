@@ -10,4 +10,8 @@ let trans edge x = x
 
 let init node = createDict None
 
-let assert n x = x[3] = None
+let assert_node n x = x[3] = None
+
+let sol = solution {init = init; trans = trans; merge = merge}
+
+assert foldNodes (fun k v acc -> acc && assert_node k v) sol true

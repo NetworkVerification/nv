@@ -5,3 +5,5 @@ let trans e x = x
 let merge n x1 x2 = x1 union x2
 
 let init n = {n}
+
+let sol = solution {init = init; trans = trans; merge = merge}

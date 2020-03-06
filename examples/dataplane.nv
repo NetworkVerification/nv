@@ -98,7 +98,7 @@ let init node =
   {dataplane = initPackets node;
    controlplane = initRoute node}
 
-let assert node x =
+let assert_node node x =
   match node with
   | 1n ->
      (
@@ -108,3 +108,7 @@ let assert node x =
           true
        | false -> false)
   | _ -> true
+
+let sol = solution {init = init; trans = trans; merge = merge}
+
+assert foldNodes (fun k v acc -> acc && assert_node k v) sol true

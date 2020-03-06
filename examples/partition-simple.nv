@@ -47,3 +47,5 @@ let init node =
   match node with
   | 0n -> 0
   | _ -> 10
+
+let sol = solution {init = init; trans = trans; merge = merge}

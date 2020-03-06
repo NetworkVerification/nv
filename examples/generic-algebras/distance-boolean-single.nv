@@ -43,3 +43,5 @@ let init n =
   match n with
   | 0n -> Some (false,false,false)
   | _ -> None
+
+let sol = solution {init = init; trans = trans; merge = merge}

@@ -16160,9 +16160,13 @@ let transferRoute edge x =
 let trans edge x =
    transferRoute edge x
 
-let assert node x =
+let assert_node node x =
     if (d = (1174427648, 24)) then
       match x with
       | (None, None, None, None, None) -> false
       | _ -> true
     else true
+
+let sol = solution {init = init; trans = trans; merge = merge}
+
+assert foldNodes (fun k v acc -> acc && assert_node k v) sol true

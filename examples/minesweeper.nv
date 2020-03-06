@@ -64,7 +64,11 @@ let init node =
   | 2n -> if d = 5 then Some 0 else None
   | _ -> if d = 6 then Some 0 else None
 
-let assert n x =
+let assert_node n x =
   match x with
   | None -> false
   | _ -> true
+
+let sol = solution {init = init; trans = trans; merge = merge}
+
+assert foldNodes (fun k v acc -> acc && assert_node k v) sol true

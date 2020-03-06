@@ -97,8 +97,12 @@ let init node =
  in (d[node := p], node == 1n)
 
 (* check if a node was successfully attacked *)
-let assert node x =
+let assert_node node x =
   let (_, attacked) in x in
     attacked
 
 (* vim: set syntax=ocaml ts=2 sts=2 sw=2: *)
+
+let sol = solution {init = init; trans = trans; merge = merge}
+
+assert foldNodes (fun k v acc -> acc && assert_node k v) sol true

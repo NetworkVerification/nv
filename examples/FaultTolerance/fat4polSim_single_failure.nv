@@ -1442,3 +1442,5 @@ let trans e x =
  aggregation-13=17,
  aggregation-12=18,
  edge-10=19}*)
+
+let sol = solution {init = init; trans = trans; merge = merge}

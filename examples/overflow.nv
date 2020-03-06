@@ -47,7 +47,11 @@ let init node =
 
 (* Ensure that only node 0 has distance 0 from itself.
    This will fail for node 4 only if we successfully detect overflow *)
-let assert node x =
+let assert_node node x =
   match x with
   | Some (0u2) -> node = 0n
   | _ -> true
+
+let sol = solution {init = init; trans = trans; merge = merge}
+
+assert foldNodes (fun k v acc -> acc && assert_node k v) sol true

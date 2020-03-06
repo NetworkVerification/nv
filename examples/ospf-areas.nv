@@ -26,7 +26,7 @@ let trans edge x =
   let area = area edge in
   match area with
   | 0 ->
-    let m = createDict (createDict None) in
+    let m = (createDict (createDict None) : dict[int, dict[int, option[int]]]) in
       let db = x[0] in
         m[0 := map (fun o -> mapo (fun c -> c + 1) o) db]
   | 1 ->
@@ -35,10 +35,12 @@ let trans edge x =
         m[1 := map (fun o -> mapo (fun c -> c + 1) o) db]
 
 let init node =
-  let m = createDict (createDict None) in
+  let m = (createDict (createDict None) : dict[int, dict[int, option[int]]]) in
   match node with
   | 0n -> let n = createDict None in
     m[1 := n[3 := Some 0]]
   | 1n -> m
   | 2n -> let n = createDict None in
     m[0 := n[5 := Some 0]]
+
+let sol = solution {init = init; trans = trans; merge = merge}

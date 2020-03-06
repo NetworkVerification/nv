@@ -41,6 +41,10 @@ let init node =
   | 0n -> (0, 500)
   | _ -> (10, 500)
 
-let assert n x =
+let assert_node n x =
   let (x, a) = x in
   x < 10
+
+let sol = solution {init = init; trans = trans; merge = merge}
+
+assert foldNodes (fun k v acc -> acc && assert_node k v) sol true

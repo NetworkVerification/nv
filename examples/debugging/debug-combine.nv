@@ -43,3 +43,5 @@ let init node =
     match node with
     | 0n -> d[0 := Some 1]
     | 1n -> d
+
+let sol = solution {init = init; trans = trans; merge = merge}

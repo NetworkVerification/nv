@@ -17945,3 +17945,5 @@ radford=160, hagerstown=161, peerandrews_1=162, peerfayetteville_7=163,
 herndon=164, greensboro=165, maitland=166, peerkingsport_9=167, danville=168,
 walterboro=169, canton=170, copperhill=171, spartanburg=172,
 pensacola=173}*)
+
+let sol = solution {init = init; trans = trans; merge = merge}

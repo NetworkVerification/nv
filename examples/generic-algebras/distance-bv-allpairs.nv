@@ -13,3 +13,5 @@ let merge n x1 x2 =
 let init n =
   let m = createDict None in
   m[n := Some 0u3]
+
+let sol = solution {init = init; trans = trans; merge = merge}

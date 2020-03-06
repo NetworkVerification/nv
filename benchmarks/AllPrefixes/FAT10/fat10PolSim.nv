@@ -21716,3 +21716,5 @@ let trans edge x =
    edge-51=116, aggregation-46=117, edge-52=118, aggregation-45=119, edge-53=120,
    aggregation-48=121, edge-54=122, aggregation-47=123,
    edge-50=124}*)
+
+let sol = solution {init = init; trans = trans; merge = merge}

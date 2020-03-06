@@ -8999,3 +8999,5 @@ let transferRoute edge x =
 
 let trans edge x =
   map (transferRoute edge) x
+
+let sol = solution {init = init; trans = trans; merge = merge}

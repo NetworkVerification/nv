@@ -240,3 +240,5 @@ let trans edge x =
 
 (*
 {aggregation-3=0, core-0=1, edge-2=2, aggregation-1=3, edge-4=4}*)
+
+let sol = solution {init = init; trans = trans; merge = merge}

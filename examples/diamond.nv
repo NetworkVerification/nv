@@ -24,3 +24,5 @@ let init node =
   match node with
   | 0n -> Some 0
   | _ -> None
+
+let sol = solution {init = init; trans = trans; merge = merge}

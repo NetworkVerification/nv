@@ -12586,7 +12586,7 @@ let transferRoute edge x =
 let trans edge x =
    transferRoute edge x
 
-let assert node x =
+let assert_node node x =
     if (d = (1174436352, 24)) then
       match x with
       | (None, None, None, None, None) -> false
@@ -12595,3 +12595,7 @@ let assert node x =
 
 (*
 {edge-122=0, edge-121=1, edge-124=2, edge-123=3, aggregation-79=4, aggregation-78=5, aggregation-75=6, aggregation-77=7, aggregation-76=8, edge-33=9, edge-34=10, edge-114=11, edge-111=12, edge-110=13, edge-113=14, edge-112=15, edge-120=16, aggregation-68=17, edge-30=18, aggregation-67=19, edge-31=20, edge-32=21, aggregation-69=22, aggregation-66=23, aggregation-65=24, aggregation-116=25, aggregation-115=26, aggregation-119=27, aggregation-118=28, aggregation-117=29, aggregation-95=30, edge-84=31, aggregation-97=32, edge-80=33, aggregation-96=34, edge-81=35, aggregation-99=36, edge-82=37, aggregation-98=38, edge-83=39, aggregation-105=40, aggregation-109=41, aggregation-108=42, aggregation-107=43, aggregation-106=44, edge-90=45, aggregation-89=46, aggregation-86=47, edge-91=48, aggregation-85=49, edge-92=50, aggregation-88=51, edge-93=52, aggregation-87=53, edge-94=54, aggregation-39=55, aggregation-38=56, edge-62=57, aggregation-35=58, edge-63=59, edge-64=60, aggregation-37=61, aggregation-36=62, edge-60=63, edge-61=64, aggregation-28=65, aggregation-27=66, aggregation-29=67, edge-73=68, edge-74=69, aggregation-26=70, aggregation-25=71, edge-70=72, edge-71=73, edge-72=74, core-1=75, core-0=76, core-3=77, edge-44=78, core-2=79, core-5=80, core-4=81, core-7=82, edge-104=83, core-23=84, edge-103=85, core-22=86, core-6=87, core-9=88, core-21=89, core-8=90, core-20=91, edge-100=92, edge-102=93, edge-101=94, core-24=95, edge-40=96, aggregation-57=97, edge-41=98, aggregation-56=99, edge-42=100, aggregation-59=101, edge-43=102, aggregation-58=103, aggregation-55=104, aggregation-49=105, core-12=106, core-11=107, core-10=108, core-19=109, core-18=110, core-17=111, core-16=112, core-15=113, core-14=114, core-13=115, edge-51=116, aggregation-46=117, edge-52=118, aggregation-45=119, edge-53=120, aggregation-48=121, edge-54=122, aggregation-47=123, edge-50=124}*)
+
+let sol = solution {init = init; trans = trans; merge = merge}
+
+assert foldNodes (fun k v acc -> acc && assert_node k v) sol true

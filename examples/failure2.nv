@@ -38,7 +38,11 @@ let init node =
   | 0n -> Some 0
   | _ -> None
 
-let assert node x =
+let assert_node node x =
   match x with
   | None -> false
   | _ -> true
+
+let sol = solution {init = init; trans = trans; merge = merge}
+
+assert foldNodes (fun k v acc -> acc && assert_node k v) sol true

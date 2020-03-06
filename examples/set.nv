@@ -16,3 +16,5 @@ let init node =
   match node with
   | 0n -> m[3 := true]
   | 1n -> m[5 := true]
+
+let sol = solution {init = init; trans = trans; merge = merge}

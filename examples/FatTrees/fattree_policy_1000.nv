@@ -26,7 +26,11 @@ let init node =
   let m = createDict None in
   m[(ip_of_node node) := Some 0]
 
-let assert node x =
+let assert_node node x =
   match x[21n] with
   | None -> false
   | Some _ -> true
+
+let sol = solution {init = init; trans = trans; merge = merge}
+
+assert foldNodes (fun k v acc -> acc && assert_node k v) sol true

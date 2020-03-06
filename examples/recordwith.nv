@@ -24,3 +24,5 @@ let init node =
   match node with
   | 0n -> { base with even = true; }
   | _ -> { base with dist = 10; }
+
+let sol = solution {init = init; trans = trans; merge = merge}

@@ -22529,7 +22529,7 @@ let trans edge x =
   let b = transferBgp edge x in
   {connected=None; static=None; ospf=o; bgp=b; selected=None}
 
-let assert node x =
+let assert_node node x =
   if (d =  (1174429440, 24u5)) then
     match x.selected with
       | None -> false
@@ -22576,3 +22576,7 @@ let assert node x =
    core-16=173, core-15=174, core-14=175, core-13=176, aggregation-48=177,
    edge-54=178,
    aggregation-41=179}*)
+
+let sol = solution {init = init; trans = trans; merge = merge}
+
+assert foldNodes (fun k v acc -> acc && assert_node k v) sol true

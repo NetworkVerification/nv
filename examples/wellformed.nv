@@ -11,3 +11,5 @@ let merge node x y = None
 let trans edge x = None
 
 let init node = None
+
+let sol = solution {init = init; trans = trans; merge = merge}

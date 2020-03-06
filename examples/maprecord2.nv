@@ -17,3 +17,5 @@ let init node =
   match node with
   | 0n -> m[{ val = 2; isNone = false } := true]
   | 1n -> m[{ isNone = false; val = 7;} := true]
+
+let sol = solution {init = init; trans = trans; merge = merge}

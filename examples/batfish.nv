@@ -93,7 +93,12 @@ let mergeValues x y =
 let merge node x y = combine mergeValues x y
 
 let init node =
-  let d = createDict (None,None,None,None,None) in
+  let d = (createDict (None,None,None,None,None) : dict[(int,int),
+                                                        (option[int],
+                                                         option[int],
+                                                         option[(int, int, int, int)],
+                                                         option[(int,int,int,int,set[int])],
+                                                         option[int])]) in
   match node with
   | 0n ->
       let c = Some 0 in
@@ -157,7 +162,7 @@ let init node =
       let c = None in
       let s = Some 1 in
       let o = None in
-      let b = Some (20, 100, 0, 80, {}) in
+      let b = Some (20, 100, 0, 80, ({} : set[int])) in
       let fib = best c s o b in
       let d = d[(1174405632,24) := (c,s,o,b,fib)] in
       let c = Some 0 in
@@ -281,10 +286,14 @@ let transferRoute edge x =
 let trans edge x =
   map (transferRoute edge) x
 
-let assert node x =
+let assert_node node x =
  match node with
  | 0n ->
      (match x[(1174405888,32)] with
      | (None, None, None, None, None) -> false
      | _ -> false)
  | _ -> true
+
+let sol = solution {init = init; trans = trans; merge = merge}
+
+assert foldNodes (fun k v acc -> acc && assert_node k v) sol true

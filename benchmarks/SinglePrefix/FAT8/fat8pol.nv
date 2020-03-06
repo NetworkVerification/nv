@@ -12053,7 +12053,7 @@ let trans edge x =
   let b = transferBgp edge x in
     {connected=None; static=None; ospf=o; bgp=b; selected=None}
 
-let assert node x =
+let assert_node node x =
   if (d = (70.0.20.0/24u5)) then
     match x.selected with
       | None -> false
@@ -12076,3 +12076,7 @@ aggregation-59=62, aggregation-58=63, edge-55=64, aggregation-49=65, core-12=66,
 core-11=67, core-10=68, aggregation-40=69, core-15=70, core-14=71, core-13=72,
 edge-52=73, edge-53=74, aggregation-48=75, edge-54=76, aggregation-42=77,
 aggregation-41=78, aggregation-43=79}*)
+
+let sol = solution {init = init; trans = trans; merge = merge}
+
+assert foldNodes (fun k v acc -> acc && assert_node k v) sol true
