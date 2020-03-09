@@ -597,12 +597,6 @@ let symbolic_of_proj_var s =
 let symbolic_var (s: Var.t) =
   Var.to_string s
 
-let solve_var (v : Var.t) =
-  let s, i = Var.from_var v in Var.to_var ("solve-" ^ s, i)
-
-let unsolve_var (v : Var.t) =
-  let s, i = Var.from_var v in Var.to_var (BatString.lchop ~n:6 s, i)
-
 (* parses the initial reply of the solver *)
 let rec parse_reply (solver: solver_proc) =
   let r = get_reply solver in

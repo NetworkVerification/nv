@@ -8,19 +8,6 @@ open SmtLang
 open SolverUtil
 open Batteries
 
-let prefix_if_needed varname =
-  if
-    BatString.starts_with varname "label-" ||
-    BatString.starts_with varname "merge-" ||
-    BatString.starts_with varname "trans-" ||
-    BatString.starts_with varname "init-"  ||
-    BatString.starts_with varname "assert-"
-  then
-    varname
-  else
-    "symbolic-" ^ varname
-;;
-
 (** Emits the code that evaluates the model returned by Z3. *)
 let eval_model (symbolics: Syntax.ty_or_exp VarMap.t)
     (num_nodes: int)
@@ -61,7 +48,7 @@ let eval_model (symbolics: Syntax.ty_or_exp VarMap.t)
   let symbols =
     VarMap.fold (fun sv _ acc ->
         let sv = SmtUtils.symbolic_var sv in
-        let z3name = prefix_if_needed sv in
+        let z3name = sv in
         let tm = find_renamed_term z3name in
         let ev = mk_eval tm |> mk_command in
         let ec = mk_echo ("\"" ^ (var sv) ^ "\"") |> mk_command in
@@ -112,7 +99,7 @@ let translate_model (m : (string, string) BatMap.t) : Nv_solution.Solution.t =
           let asn = match nvval.v with | VBool b -> b | _ -> failwith "Bad assert" in
           {sol with assertions = asn :: sol.assertions}
         | k when BatString.starts_with k "solve" ->
-          let kvar = unsolve_var (Var.of_var_string k) in
+          let kvar = Var.of_var_string k in
           {sol with solves = VarMap.add kvar {sol_val = nvval; mask = None} sol.solves}
         | k ->
           let k_var = Var.of_var_string k in
@@ -152,17 +139,8 @@ let translate_model_unboxed (m : (string, string) BatMap.t) : Nv_solution.Soluti
           let asn = match nvval.v with | VBool b -> b | _ -> failwith "Bad assert" in
           (symbolics, solves, asn :: assertions)
         | k when BatString.starts_with k "solve" ->
-          let kname = unsolve_var (Var.of_var_string k) in
+          let kname = Var.of_var_string k in
           (symbolics, VarMap.add kname nvval solves, assertions)
-          (* (match SmtUtils.proj_of_var k with
-           | None ->
-             ( symbolics,
-               VarMap.add kname [(0,nvval)] solves,
-               assertions )
-           | Some i ->
-             ( symbolics,
-               VarMap.modify_def [] kname (fun xs -> (i,nvval) :: xs) solves,
-               assertions )) *)
         | k ->
           ( let new_symbolics = VarMap.add (Var.of_var_string k) nvval symbolics in
             new_symbolics, solves, assertions )

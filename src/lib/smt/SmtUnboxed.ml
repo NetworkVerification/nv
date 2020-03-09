@@ -109,18 +109,9 @@ struct
            (Printing.ty_to_string ty))
 
   let create_vars (env: smt_env) descr (x: Syntax.var) =
-    let name =
-      if is_symbolic env.symbolics x then
-        begin
-          let str = Var.to_string x in
-          if BatString.starts_with str "label-" then
-            str
-          else
-            "symbolic-" ^ str
-        end
-      else create_name descr x
-    in
-    name
+    if is_symbolic env.symbolics x
+    then Var.to_string x
+    else create_name descr x
 
   let mk_constant =
     mk_constant

@@ -17,18 +17,7 @@ struct
   let create_strings str _ = str
 
   let create_vars env descr x =
-    let name =
-      if is_symbolic env.SmtUtils.symbolics x then
-        begin
-          let str = Var.to_string x in
-          if BatString.starts_with str "label-" then
-            str
-          else
-            "symbolic-" ^ str
-        end
-      else create_name descr x
-    in
-    name
+    ignore env; create_name descr x
 
   let to_list x = [x]
 
@@ -166,18 +155,7 @@ struct
     (* Printf.printf "expr: %s\n" (Printing.exp_to_string e) ; *)
     match e.e with
     | EVar x ->
-      let name =
-        if is_symbolic env.SmtUtils.symbolics x then
-          begin
-            (*symbolic_var x*)
-            let str = Var.to_string x in
-            if BatString.starts_with str "label-" then
-              str
-            else
-              "symbolic-" ^ str
-          end
-        else create_name descr x
-      in
+      let name = create_vars env descr x in
       (mk_var name) |> (mk_term ~tloc:e.espan)
     | EVal v -> encode_value_z3 descr env v
     | EOp (op, es) -> (

@@ -233,11 +233,8 @@ let map_back_sol
   let map_back_mask = map_back_mask ~name:name sol mask_transformer in
   let map_back_value = map_back_value ~name:name sol map_back_transformer in
   let solves =
-    print_endline @@ VarMap.to_string (fun _ -> "...") sol.solves;
-    print_endline @@ VarMap.to_string Printing.ty_to_string solve_tys;
     VarMap.mapi
       (fun v {Solution.sol_val; mask} ->
-         let open Nv_datastructures in print_endline @@ Printf.sprintf "v: %s, un: %s" (Var.to_string v) (Var.to_string (snd @@ unproj_var v));
          let aty = VarMap.find v solve_tys in
          {Solution.sol_val = map_back_value sol_val aty;
           mask = omap (fun v -> map_back_mask v aty) mask})

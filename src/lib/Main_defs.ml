@@ -98,9 +98,12 @@ let run_smt_classic file cfg info decls fs =
     decls, (f2 :: f1 :: fs)
   in
   (* Printf.printf "%s\n" (Printing.declarations_to_string decls); *)
-  let decls, f = Renaming.alpha_convert_declarations decls in (*TODO: why are we renaming here?*)
-  let fs = f :: fs in
-  let decls, _ = OptimizeBranches.optimize_declarations decls in (* The _ should match the identity function *)
+  let decls, fs =
+    let decls, f = Renaming.alpha_convert_declarations decls in (*TODO: why are we renaming here?*)
+    let decls, _ = OptimizeBranches.optimize_declarations decls in (* The _ should match the identity function *)
+    let decls, f' = RenameForSMT.rename_declarations decls in (* Maybe we should wrap this into the previous renaming... *)
+    decls, f' :: f :: fs
+  in
   (* let decls = Profile.time_profile "Partially Evaluating Network" (fun () -> partialEvalNet net) in *)
   (* Printf.printf "%s\n" (Printing.declarations_to_string decls); *)
   let get_answer decls fs =
