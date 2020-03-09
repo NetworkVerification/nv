@@ -21,7 +21,7 @@ type smt_options =
 
 let smt_config : smt_options =
   { verbose = false;
-    optimize = false;
+    optimize = true;
     encoding = Classic;
     unboxing = false;
     parallel = false;

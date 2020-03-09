@@ -1,8 +1,5 @@
 include "generic-algebras/rip.nv"
 
-(* TODO: Shouldn't need this declaration, get rid of it *)
-type attribute = attributeRip
-
 let nodes = 5
 
 (* Fewer edges than doubleRip.nv, to make the assertion false *)

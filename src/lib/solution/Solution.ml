@@ -200,5 +200,10 @@ let print_solution (solution : t) =
         Printf.printf "all assertions passed\n" )
       else
         (print_string [red; Bold] "Failed: " ;
-         List.iteri (fun i b -> if not b then Printf.printf "Assertion %d" i) asns) ) ;
-  print_newline ()
+         asns
+         |> BatList.mapi (fun i b -> Printf.sprintf "Assertion %d" i, b)
+         |> BatList.filter_map (fun (s, b) -> if not b then Some s else None)
+         |> BatString.concat ", "
+         |> print_endline))
+      ;
+      print_newline ()
