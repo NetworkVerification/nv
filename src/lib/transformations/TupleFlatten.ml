@@ -318,7 +318,6 @@ let unproj_symbolics_and_solves (sol : Solution.t) =
       )
       (unproj_sym_solve sol.solves)
   in
-  print_endline @@ "New solves: " ^ VarMap.to_string Solution.sol_to_string solves;
   {sol with symbolics = symbs; solves = solves;}
 ;;
 

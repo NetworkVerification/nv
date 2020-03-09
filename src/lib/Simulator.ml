@@ -54,7 +54,7 @@ let simulate_declaration ~(throw_requires: bool) (graph : AdjGraph.t) (state : s
         match solve.var_names.e with
         | EVar x ->
           let xty = TMap(TNode, oget solve.aty) in
-          let bdd_base = BddMap.create ~key_ty:TNode (Generators.default_value xty) in
+          let bdd_base = BddMap.create ~key_ty:TNode (Generators.default_value (oget solve.aty)) in
           let bdd_full = AdjGraph.VertexMap.fold (fun n v acc -> BddMap.update acc (vnode n) v) results bdd_base in
           let mapval = avalue (vmap bdd_full, Some xty, solve.var_names.espan) in
           {state with env = Env.update env x mapval; sols = x :: state.sols}
