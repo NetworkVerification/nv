@@ -153,7 +153,8 @@ let translate_model_unboxed (m : (string, string) BatMap.t) : Nv_solution.Soluti
           (symbolics, solves, asn :: assertions)
         | k when BatString.starts_with k "solve" ->
           let kname = unsolve_var (Var.of_var_string k) in
-          (match SmtUtils.proj_of_var k with
+          (symbolics, VarMap.add kname nvval solves, assertions)
+          (* (match SmtUtils.proj_of_var k with
            | None ->
              ( symbolics,
                VarMap.add kname [(0,nvval)] solves,
@@ -161,13 +162,13 @@ let translate_model_unboxed (m : (string, string) BatMap.t) : Nv_solution.Soluti
            | Some i ->
              ( symbolics,
                VarMap.modify_def [] kname (fun xs -> (i,nvval) :: xs) solves,
-               assertions ))
+               assertions )) *)
         | k ->
           ( let new_symbolics = VarMap.add (Var.of_var_string k) nvval symbolics in
             new_symbolics, solves, assertions )
       ) m (VarMap.empty, VarMap.empty, [])
   in
-  let box lst = {sol_val = box_vals lst; mask = None} in
+  let box v = {sol_val = v; mask = None} in
   { symbolics = symbolics;
     solves = VarMap.map box solves;
     assertions = List.rev assertions;

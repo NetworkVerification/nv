@@ -152,7 +152,8 @@ let update_symbolics bmap smap =
     smap VarMap.empty
 
 let adjust_solution bmap (s: Nv_solution.Solution.t) =
-  {s with symbolics= update_symbolics bmap s.symbolics}
+  {s with symbolics= update_symbolics bmap s.symbolics;
+          solves = update_symbolics bmap s.solves}
 
 let rec alpha_convert_declarations (ds: declarations) =
   (* Var.reset () ; *)

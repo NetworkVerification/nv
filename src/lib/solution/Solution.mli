@@ -12,6 +12,8 @@ type t =
 
 type map_back = t -> t
 
+val sol_to_string : sol -> string
+
 val print_masked_type : ty -> sol -> string
 
 val print_solution : t -> unit

@@ -1105,7 +1105,10 @@ let proj_var (n: int) (x: var) =
 
 let unproj_var (x : var) =
   let (s,i) = Var.from_var x in
-  let name, n = BatString.split s "-proj-" in
+  let name, n =
+    try BatString.split s "-proj-"
+    with | Not_found -> (s, "-1")
+  in
   (int_of_string n, Var.to_var (name, i))
 
 open BatSet

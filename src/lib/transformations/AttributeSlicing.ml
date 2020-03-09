@@ -273,7 +273,9 @@ let map_back_val old_aty elements v =
 ;;
 
 let map_back old_aty elements (sol : Solution.t) =
-  let mask_type = Solution.mask_type_ty old_aty in
+  ignore (old_aty, elements, sol);
+  failwith "Not yet implemented"
+  (* let mask_type = Solution.mask_type_ty old_aty in
   let _, some_label = AdjGraph.VertexMap.choose sol.labels in
   {
     sol with
@@ -281,7 +283,7 @@ let map_back old_aty elements (sol : Solution.t) =
     (* Take advantage of the fact that the default bool value is false, and the
        values we want to mask are precisely those which use a default value *)
     mask = Some (map_back_val mask_type elements (Solution.value_to_mask some_label));
-  }
+  } *)
 ;;
 
 (* Create a new network whose attribute is a tuple whose elements correspond

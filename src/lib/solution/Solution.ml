@@ -22,6 +22,11 @@ type t =
 
 type map_back = t -> t
 
+let sol_to_string sol =
+  Printf.sprintf "{sol_val = %s; mask = %s}"
+    (Printing.value_to_string sol.sol_val)
+    (match sol.mask with | None -> "None" | Some m -> Printing.value_to_string m)
+
 let rec value_to_mask v =
   let true_val = avalue (vbool true, Some TBool, v.vspan) in
   match v.v with

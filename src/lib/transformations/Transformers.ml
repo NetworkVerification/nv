@@ -176,6 +176,7 @@ let rec map_back_value
     (sol : Solution.t) (map_back_transformer : map_back_transformer) (v : value) (orig_ty : ty) =
   let map_back_value = map_back_value ~name:name sol map_back_transformer in
   let map_back_transformer = map_back_transformer map_back_value sol in
+  let orig_ty = get_inner_type orig_ty in
   match map_back_transformer v orig_ty with
   | Some v -> v
   | None ->
@@ -199,6 +200,7 @@ let rec map_back_mask
     (sol : Solution.t) (mask_transformer : mask_transformer) (v : value) (orig_ty : ty) =
   let map_back_mask = map_back_value ~name:name sol mask_transformer in
   let mask_transformer = mask_transformer map_back_mask sol in
+  let orig_ty = get_inner_type orig_ty in
   match mask_transformer v orig_ty with
   | Some v -> v
   | None ->
@@ -226,17 +228,29 @@ let rec map_back_mask
 let map_back_sol
     ~(name:string)
     (map_back_transformer : map_back_transformer) (mask_transformer : mask_transformer) (symb_tys : ty VarMap.t)
-    (attr_ty : ty) (sol : Solution.t)
+    (solve_tys : ty VarMap.t) (sol : Solution.t)
   : Solution.t =
-  let map_back_mask = (fun v -> map_back_mask ~name:name sol mask_transformer v attr_ty) in
+  let map_back_mask = map_back_mask ~name:name sol mask_transformer in
   let map_back_value = map_back_value ~name:name sol map_back_transformer in
+  let solves =
+    print_endline @@ VarMap.to_string (fun _ -> "...") sol.solves;
+    print_endline @@ VarMap.to_string Printing.ty_to_string solve_tys;
+    VarMap.mapi
+      (fun v {Solution.sol_val; mask} ->
+         let open Nv_datastructures in print_endline @@ Printf.sprintf "v: %s, un: %s" (Var.to_string v) (Var.to_string (snd @@ unproj_var v));
+         let aty = VarMap.find v solve_tys in
+         {Solution.sol_val = map_back_value sol_val aty;
+          mask = omap (fun v -> map_back_mask v aty) mask})
+      sol.solves
+  in
   {
     symbolics = VarMap.mapi (fun x v ->
         try map_back_value v (VarMap.find x symb_tys)
         with | Not_found -> v) sol.symbolics;
-    labels = VertexMap.map (fun v -> map_back_value v attr_ty) sol.labels;
+    (* labels = VertexMap.map (fun v -> map_back_value v attr_ty) sol.labels; *)
+    labels = sol.labels;
     assertions = sol.assertions; (* These transformations shouldn't change the truth value of the assertion *)
-    mask = omap map_back_mask sol.mask;
+    solves = solves;
   }
 ;;
 
@@ -248,16 +262,26 @@ let get_symbolic_types symbs =
     symbs
 ;;
 
+let get_solve_types solves =
+  let rec add_tys acc e =
+    match e.e with
+    | EVar x -> VarMap.add x (oget e.ety) acc
+    | ETuple es -> List.fold_left add_tys acc es
+    | _ -> failwith "Bad DSolve"
+  in
+  List.fold_left (fun acc s -> add_tys acc s.var_names) VarMap.empty solves
+;;
+
 let transform_declarations
     ~(name:string)
     (ty_transformer : ty transformer) (pattern_transformer : pattern_transformer) (value_transformer : value transformer)
     (exp_transformer : exp transformer) (map_back_transformer : map_back_transformer) (mask_transformer : mask_transformer)
     (ds : declarations) =
-  let attr_ty = get_attr_type ds |> oget in
   let symb_tys = get_symbolics ds |> get_symbolic_types in
+  let solve_tys = get_solves ds |> get_solve_types in
   let transformers = {ty_transformer; pattern_transformer; value_transformer; exp_transformer} in
   List.map (transform_decl ~name:name transformers) ds,
-  map_back_sol ~name:name map_back_transformer mask_transformer symb_tys attr_ty
+  map_back_sol ~name:name map_back_transformer mask_transformer symb_tys solve_tys
 ;;
 
 let transform_network
@@ -269,8 +293,8 @@ let transform_network
   let transform_ty = transform_ty ~name:name transformers in
   let transform_exp = transform_exp ~name:name transformers in
   let transform_symbolic = transform_symbolic ~name:name transformers in
-  let attr_ty = net.attr_type in
   let symb_tys = get_symbolic_types net.symbolics in
+  let solve_tys = get_symbolic_types net.symbolics in
   let transform_solves =
     List.map
       (fun {aty; var_names; init; trans; merge} ->
@@ -294,7 +318,7 @@ let transform_network
     defs = List.map (fun (x, tyo, e) -> (x, omap transform_ty tyo, transform_exp e)) net.defs;
     graph = net.graph;
   },
-  map_back_sol ~name:name map_back_transformer mask_transformer symb_tys attr_ty
+  map_back_sol ~name:name map_back_transformer mask_transformer symb_tys solve_tys
 
 let transform_srp
     ~(name:string)
@@ -317,4 +341,6 @@ let transform_srp
     srp_requires = BatList.map transform_exp srp.srp_requires;
     srp_graph = srp.srp_graph
   },
-  map_back_sol ~name:name map_back_transformer mask_transformer symb_tys attr_ty
+  (ignore (attr_ty, symb_tys, map_back_transformer, mask_transformer);
+   failwith "Can't do map_back for srp_unfold")
+(* map_back_sol ~name:name map_back_transformer mask_transformer symb_tys attr_ty *)
