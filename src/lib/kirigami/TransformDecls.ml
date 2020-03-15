@@ -150,7 +150,7 @@ let in_merge_branch (n: Vertex.t) (_: Vertex.t) (b: branches) : branches =
   let merge_exp = (lams [a1; a2] (evar a1)) in
   addBranch node_pat merge_exp b
 
-let transform_merge (e: Syntax.exp) (intf: SrpRemapping.interface) (node_map) : Syntax.exp =
+let transform_merge (e: exp) (intf: SrpRemapping.interface) (node_map) : exp =
   let node_var = Var.fresh "node" in
   let { inputs; _ } : SrpRemapping.interface = intf in
   (* let default_branch = addBranch PWild e emptyBranch in *)
@@ -162,16 +162,11 @@ let transform_merge (e: Syntax.exp) (intf: SrpRemapping.interface) (node_map) : 
   wrap e (lam node_var (amatch node_var (Some TNode) input_branches))
 
 (* Apply the predicate test on the solution for node n *)
-let assert_branch (x: var) (_basen, outn: Edge.t)  (pred: exp) (b: branches) : branches =
+let assert_branch (x: var) (outn: Vertex.t)  (pred: exp) (b: branches) : branches =
   let node_pat = node_to_pat outn in
   addBranch node_pat (eapp pred (evar x)) b
 
-let transform_assert
-    (e: Syntax.exp option)
-    (intf: SrpRemapping.interface)
-    (output_preds: exp EdgeMap.t)
-    node_map
-  : Syntax.exp =
+let transform_assert (e: exp option) (intf: SrpRemapping.interface) node_map : exp =
   let { inputs; outputs } : SrpRemapping.interface = intf in
   let node_var = Var.fresh "node" in
   let soln_var = Var.fresh "x" in
@@ -190,7 +185,14 @@ let transform_assert
   let map_match = match_of_node_map node_map emptyBranch in
   let remap_branch (pat, exp) =
     (* TODO: if the pattern is for an output, conjoin the assertion from output_preds *)
-    (pat, apply_assert exp (evar soln_var))
+    let out_pred = match pat with
+      | PNode n -> begin match VertexMap.Exceptionless.find n outputs with
+          | Some e -> (eapp e (evar soln_var))
+          | None -> etrue
+        end
+      | _ -> etrue
+    in
+    (pat, eop And [(apply_assert exp (evar soln_var)); out_pred])
   in
   let base_branches = mapBranches remap_branch map_match in
   (* re-map every output to point to its corresponding predicate *)

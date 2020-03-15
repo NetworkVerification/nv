@@ -391,7 +391,7 @@ let parse_input (args : string array) :
     (* NOTE: we partition after checking well-formedness so we can reuse edges that don't exist *)
     let new_decls = Nv_kirigami.Partition.divide_decls decls in
     List.map (fun d ->
-        (* print_endline @@ Printing.declarations_to_string d; *)
+        print_endline @@ Printing.declarations_to_string d;
         let new_d = Typing.infer_declarations info d in
         parse_input_aux cfg info file new_d fs) new_decls
   else

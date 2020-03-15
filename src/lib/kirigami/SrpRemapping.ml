@@ -9,8 +9,13 @@ open Nv_transformations
 type interface = {
   (* Key: input node, value: base node *)
   inputs: Vertex.t VertexMap.t;
-  (* Key: output node, value: base node *)
-  outputs: Vertex.t VertexMap.t;
+  (* Key: base node, value: predicate expression over the base node *)
+  (* FIXME: the predicate needs to be the value expected *after* the transfer
+   * function is applied.
+   * This is hard to do in the current state of NV, but will be easier
+   * once we integrate the solve branch.
+  *)
+  outputs: exp VertexMap.t
 }
 
 let empty_interface : interface = {
@@ -127,6 +132,14 @@ let map_edges_to_parts predf partitions (old_edge, (edge, srp_edge)) =
         (* output case *)
         if i1 = j then
           (* new node number *)
+          (* TODO: skip adding an output; instead, just log the predicate associated with the base node *)
+          let new_intf = {
+            partition.intf with outputs = VertexMap.add u pred partition.intf.outputs;
+          }
+          in {
+            partition with intf = new_intf;
+          }
+          (*
           let outnode = partition.nodes in
           let new_edge = Edge.create u () outnode in
           let new_intf = {
@@ -139,6 +152,7 @@ let map_edges_to_parts predf partitions (old_edge, (edge, srp_edge)) =
                            intf = new_intf;
                            preds = EdgeMap.add new_edge pred partition.preds;
           }
+           *)
         else
           (* input case *)
         if i2 = j then

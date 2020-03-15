@@ -112,7 +112,7 @@ let filter_preds vmap preds =
   EdgeMap.filter find_pred_in_vmap preds
 
 let transform_declaration parted_srp edge_hyps decl =
-  let { nodes; edges; node_map; edge_map; intf; preds; } : SrpRemapping.partitioned_srp = parted_srp in
+  let { nodes; edges; node_map; edge_map; intf; } : SrpRemapping.partitioned_srp = parted_srp in
   match decl with
   | DNodes _ -> Some (DNodes nodes)
   | DEdges _ -> Some (DEdges edges)
@@ -125,8 +125,8 @@ let transform_declaration parted_srp edge_hyps decl =
     * gets initialized with the destination's value, which is already the best *)
   | DMerge merge -> Some (DMerge (transform_merge merge intf node_map))
   | DAssert assertion -> begin
-      let output_preds = filter_preds intf.outputs preds in
-      Some (DAssert (transform_assert (Some assertion) intf output_preds node_map))
+      (* let output_preds = filter_preds intf.outputs preds in *)
+      Some (DAssert (transform_assert (Some assertion) intf node_map))
     end
   | DPartition _ -> None
   | DInterface _ -> None
@@ -179,7 +179,7 @@ let divide_decls (decls: declarations) : declarations list =
         (* add the assertion in at the end if there wasn't an assert in the original decls *)
         let add_assert = match get_assert new_decls with
           | Some _ -> []
-          | None -> [DAssert (transform_assert None intf (filter_preds intf.outputs preds) node_map)]
+          | None -> [DAssert (transform_assert None intf node_map)]
         in
         (* also add requires at the end so they can use any bindings earlier in the file *)
         new_symbolics @ new_decls @ new_requires @ add_assert
