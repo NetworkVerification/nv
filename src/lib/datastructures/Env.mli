@@ -32,6 +32,10 @@ val filter : 'a t -> (Var.t -> 'a -> bool) -> 'a t
 
 val map : 'a t -> ('a -> 'b) -> 'b t
 
+(** Combines the values of two environments. Assumes that they have the same domain and
+  f is total over it.*)
+val combineValues : ('a -> 'b -> 'c) -> 'a t -> 'b t -> 'c t
+
 (* convert environment to a string *)
 
 val to_string : ('a -> string) -> 'a t -> string
@@ -43,3 +47,5 @@ val to_list : 'a t -> (Var.t * 'a) list
 val compare : ('a -> 'a -> int) -> 'a t -> 'a t -> int
 
 val equal : ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
+
+val hash: 'a t -> int

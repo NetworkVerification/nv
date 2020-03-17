@@ -1,5 +1,5 @@
 open OUnit2
-open Nv_lib
+open Nv
 open Nv_lang
 open Nv_solution
 open Main_defs
@@ -257,5 +257,5 @@ let tests =
   slicing_tests @
   bv_tests @
   parallel_tests @
-  compiler_tests @
+  (* compiler_tests @ *)
   [] (* So we can easily comment out the last actual test *)

@@ -1,5 +1,6 @@
 (* Abstract syntax of SRP attribute processing expressions *)
 open Cudd
+open Batteries
 open Nv_datastructures
 open Nv_utils.PrimitiveCollections
 open Nv_utils
@@ -143,7 +144,7 @@ and value =
 [@@deriving ord]
 
 and mtbdd = (value Mtbdd.t * ty)
-    [@compare fun _ _ -> failwith "Map value comparison not supported"]
+            [@compare fun _ _ -> failwith "Map value comparison not supported"]
 [@@deriving ord]
 
 and e =
@@ -178,7 +179,7 @@ and branches = { pmap  : exp PatMap.t;
 and func = {arg: var; argty: ty option; resty: ty option; body: exp}
 
 and closure = (env * func)
-    [@compare fun _ _ -> failwith "Map value comparison not supported"]
+              [@compare fun _ _ -> failwith "Map value comparison not supported"]
 [@@deriving ord]
 
 and env = {ty: ty Env.t; value: value Env.t}
@@ -973,28 +974,24 @@ let apply_closure cl (args: value list) =
   apps (exp_of_v (VClosure cl)) (List.map (fun a -> e_val a) args)
 
 (* Requires that e is of type TTuple *)
-let rec tupleToList (e : exp) =
+let rec tupleToListCore (e : exp) =
   match e.e with
-  | ETuple es -> es
-  | ETy (e, _) -> tupleToList e
-  | EVal v ->
-    (match v.v with
-     | VTuple vs ->
-       BatList.map (fun v -> aexp(e_val v, v.vty, v.vspan)) vs
-     | _ -> failwith "Not a tuple type")
-  | _ -> failwith "Not a tuple type"
+  | ETuple es -> Some es
+  | ETy (e, _) -> tupleToListCore e
+  | EVal {v = VTuple vs} -> Some (BatList.map (fun v -> aexp(e_val v, v.vty, v.vspan)) vs)
+  | EOp (TGet (size, lo, hi), [{e = ETuple es}]) when List.length es = size ->
+    Some (es |> BatList.drop lo |> BatList.take (hi-lo+1))
+  | _ -> None
 
-let rec tupleToListSafe (e : exp) =
-    match e.e with
-  | ETuple es -> es
-  | ETy (e, _) -> tupleToListSafe e
-  | EVal v ->
-    (match v.v with
-     | VTuple vs ->
-       BatList.map (fun v -> aexp(e_val v, v.vty, v.vspan)) vs
-     | _ -> [e])
-  | _ -> [e]
+let tupleToList (e : exp) =
+  match tupleToListCore e with
+  | Some es -> es
+  | None -> failwith "Not a tuple type"
 
+let tupleToListSafe (e : exp) =
+  match tupleToListCore e with
+  | Some es -> es
+  | None -> [e]
 
 let get_decl ds f =
   try
@@ -1075,8 +1072,8 @@ let get_record_types_from_utys uty =
   BatList.fold_left
     (fun acc (_, ty) ->
        match ty with
-         | TRecord lst -> lst :: acc
-         | _ -> acc
+       | TRecord lst -> lst :: acc
+       | _ -> acc
     )
     [] uty
 

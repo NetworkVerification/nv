@@ -1,0 +1,28 @@
+type attribute = int
+
+let nodes = 3
+
+let edges = {
+  0=1;
+  1=2;
+  2=3;
+}
+
+let trans edge x = x + 1
+
+let merge node x y = match node with
+  | 3n -> x (* change to sent value *)
+  | 0n -> y (* keep current value *)
+  | _ -> if x < y then x else y
+
+let init node = match node with
+  | 0n -> 30
+  | 1n -> 0
+  | 2n -> 10
+  | 3n -> 20
+
+let assert node x = match node with
+  | 0n -> x = 30
+  | 1n -> x = 0
+  | 2n -> x = 1
+  | 3n -> x = 2

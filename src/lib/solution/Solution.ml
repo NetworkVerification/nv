@@ -56,8 +56,66 @@ let rec mask_type_ty ty =
 (* This function works correctly, but I think it's almost always a
    mistake to use it. Use mask_type_ty instead. *)
 (* let mask_type_sol sol =
-  let one_attr = VertexMap.choose sol.labels |> snd in
-  (value_to_mask one_attr).vty |> oget *)
+   let one_attr = VertexMap.choose sol.labels |> snd in
+   (value_to_mask one_attr).vty |> oget *)
+
+(* Prints the mask itself; useful for seeing which parts of a value are hidden *)
+let print_masked_type unmasked_type sol =
+  let print_if_true ty m =
+    if m then Printing.ty_to_string ty else "_"
+  in
+  let rec construct_string ty mask =
+    match ty, mask.v with
+    | (TBool| TInt _ | TUnit | TNode), VBool m1 ->
+      print_if_true ty m1
+    | TEdge, VTuple [{v=VBool b1}; {v=VBool b2}] ->
+      Printf.sprintf "%s~%s" (print_if_true TNode b1) (print_if_true TNode b2)
+    | TOption _, VOption None ->
+      (* If mask if None then the entire option value is masked *)
+      print_if_true ty false
+    | TOption ty', VOption Some m ->
+      (* If mask is Some then the option value is relevant *)
+      Printf.sprintf "(option[%s])" @@ construct_string ty' m
+    | TTuple tys, VTuple ms ->
+      Printf.sprintf "(%s)" @@ BatString.concat "," @@
+      List.map2 construct_string tys ms
+    | TRecord vmap, VRecord bmap ->
+      let zipped =
+        StringMap.fold
+          (fun k v acc -> StringMap.add k (StringMap.find k bmap, v) acc)
+          vmap StringMap.empty
+      in
+      RecordUtils.print_record ~sep:"=" (fun (m, ty) -> construct_string ty m) zipped
+    | TMap (_, vty), VMap mbdd ->
+      (* Maps are tricky since we can hypothetically hide different parts of
+         different keys *)
+      let mbindings, _ = BddMap.bindings mbdd in
+      (* Maps the possible map values (that appear in mbindings) to the keys which
+         use that binding *)
+      let maskMap : Syntax.value list ValueMap.t =
+        List.fold_left
+          (fun acc (k, v) -> ValueMap.modify_def [] v (fun lst -> k::lst) acc)
+          ValueMap.empty mbindings
+      in
+      Printf.sprintf "map{%s}" @@
+      ValueMap.fold
+        (fun v ks acc ->
+           Printf.sprintf
+             "%s %s->%s;"
+             acc
+             (OCamlUtils.list_to_string Printing.value_to_string ks)
+             (construct_string vty v))
+        maskMap ""
+    | (TBool | TInt _ | TUnit | TNode | TEdge
+      | TOption _ | TTuple _ | TRecord _ | TMap _), _ ->
+      failwith "print_masked_type: Mask did not match value!"
+    | (TVar _ | QVar _ | TArrow _), _ ->
+      failwith "print_masked_type: Nonsense type"
+  in
+  match sol.mask with
+  | None -> Printing.ty_to_string unmasked_type
+  | Some mask -> construct_string unmasked_type mask
+;;
 
 (* Print a value with only the parts where the mask is true. *)
 let rec print_masked mask v =

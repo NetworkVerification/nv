@@ -43,12 +43,14 @@ opam install -y \
   fileutils \
   parmap \
   fix \
+  jupyter \\
   dune
 ```
 
 You may install z3 via opam as well (`opam install -y z3`), but this is not recommended
 as it takes a long time, and may be out of date. It is recommended that you install
-z3 yourself, separately.
+z3 yourself, separately. 
+Z3 version >= 4.8.7 is recommended to avoid a bug that our constraints sometimes trigger on earlier versions of z3.
 
 Then clone the repo and run `dune build src/exe/main.exe`.
 

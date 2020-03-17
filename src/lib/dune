@@ -1,6 +1,6 @@
 (library
-  (name nv_lib)
-  (public_name nv_lib)
+  (name nv)
+  (public_name nv)
   (modes native)
   (libraries
     nv_lang

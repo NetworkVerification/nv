@@ -7,6 +7,8 @@ val create : key_ty:ty -> value -> t
 
 val default_value : ty -> value
 
+val value_to_bdd: value -> Bdd.vt
+
 val map :
   op_key:exp * value BatSet.PSet.t -> (value -> value) -> t -> t
 

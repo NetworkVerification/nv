@@ -1,0 +1,29 @@
+(*** Definition of BGP as a routing algebra, ignoring policy details ***)
+
+module BGP =
+struct
+  type bgp_attr = {local_pref: int; AS_len: int; communities: set[int]}
+  type attribute = option[bgp_attr]
+
+  let trans e x policyTrans =
+    (* Policy dependent *)
+    policyTrans e {x with AS_len = AS_len + 1}
+
+  let rankBGP a b =
+    if a.local_pref > b.local_pref then a
+    else if b.local_pref > a.local_pref then b
+    else if a.AS_len < b.AS_len then a
+    else b
+
+  let merge n a b =
+    mapbetter rankBGP a b
+end
+
+module BGPMulti =
+struct
+  type attribute = dict[dest, BGP.attribute]
+
+  let trans n x = map (BGP.trans n) x
+
+  let merge n a b = combine (BGP.merge n) a b
+end
