@@ -14,8 +14,8 @@ open OCamlUtils
    needed to produce the counterexample *)
 type sol = {sol_val: value; mask : value option}
 type t =
-  { symbolics: value VarMap.t;
-    solves: sol VarMap.t;
+  { symbolics: (var * value) list;
+    solves: (var * value) list;
     assertions: bool list; (* One for each assert statement *)
     labels: value VertexMap.t; (* Deprecated -- included only for backwards compatibility *)
   }
@@ -168,27 +168,26 @@ let rec print_masked mask v =
   | VClosure _, _ -> failwith "print_masked: tried to print VClosure"
 ;;
 
+let print_fun {sol_val; mask} =
+  match mask with
+    | None -> Printing.value_to_string ~show_types:false sol_val
+    | Some m -> print_masked m sol_val
+
 let print_solution (solution : t) =
   let cfg = Nv_lang.Cmdline.get_cfg () in
   print_newline () ;
-  if cfg.verbose then (
-    VarMap.iter
-      (fun k v ->
-         Printf.printf "%s:%s\n" (Nv_datastructures.Var.name k) (Nv_lang.Printing.value_to_string v) )
-      solution.symbolics ;
-    let print_fun {sol_val; mask} =
-      match mask with
-      | None -> Printing.value_to_string ~show_types:false sol_val
-      | Some m -> print_masked m sol_val
-    in
-    AdjGraph.VertexMap.iter
-      (fun k v ->
-         Printf.printf "Label(%d):%s\n"
-           k
-           (Printing.value_to_string ~show_types:false v) )
-      solution.labels;
-    print_endline @@ VarMap.to_string print_fun solution.solves;
-  ) ;
+  if cfg.verbose then
+    begin
+      (* Print symbolics*)
+      List.iter
+        (fun (k,v) ->
+           Printf.printf "%s:%s\n" (Nv_datastructures.Var.name k) (Nv_lang.Printing.value_to_string v) )
+        solution.symbolics ;
+      (* Print solutions*)
+      List.iter (fun (k,v) ->
+          Printf.printf "Printing solutions for %s\n" (Var.to_string k);
+          print_endline (Printing.value_to_string ~show_types:false v)) solution.solves
+    end;
   ( match solution.assertions with
     | [] ->
       print_string [green; Bold] "Success: " ;

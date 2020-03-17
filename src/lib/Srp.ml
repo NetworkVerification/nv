@@ -248,11 +248,11 @@ let simulate_net_bound net k : (Nv_solution.Solution.t * queue) =
 let simulate_solve graph env (solve : Syntax.solve) : value AdjGraph.VertexMap.t =
   let get_func e =
     match (Interp.interp_exp env e).v with
-    | VClosure cl -> Some cl
+    | VClosure cl -> cl
     | _ -> failwith "must evaluate to a closure"
   in
   let trans, merge, init =
-    get_func solve.trans |> oget, get_func solve.merge |> oget, get_func solve.init |> oget
+    get_func solve.trans, get_func solve.merge, get_func solve.init
   in
   let srp = {graph; trans; merge; assertion = None} in
   let state = create_state (AdjGraph.nb_vertex graph) init in

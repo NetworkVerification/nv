@@ -10,18 +10,18 @@ open Symbolics
 (** Type of SRP network *)
 module type NATIVE_SRP =
 sig
-  type attribute
-  val init : int -> attribute
-  val trans: int * int -> attribute -> attribute
-  val merge: int -> attribute -> attribute -> attribute
-  val assertion: (int -> attribute -> bool) option
-
   (** Communication between SRP and NV *)
   val record_fns: (int * int) -> 'a -> 'b
   val record_cnstrs: int -> 'c
 end
 
-module type EnrichedSRPSig = functor (S:PackedSymbolics) -> NATIVE_SRP
+module type SrpSimulationSig =
+sig
+  val simulate_solve: int -> string -> (int -> 'a) -> ((int*int) -> 'a -> 'a -> 'a)
+    -> (int -> 'a -> 'a -> 'a) -> 'b
+end
+
+module type EnrichedSRPSig = functor (S:PackedSymbolics) (SIM:SrpSimulationSig) -> NATIVE_SRP
 
 (** Reference to a NATIVE_SRP module *)
 let (srp : (module EnrichedSRPSig) option ref) = ref None
@@ -33,30 +33,26 @@ let get_srp () =
   | None -> failwith "No srp loaded"
 
 (******************)
-(* SRP Simulation *)
+(* SRP Simulator *)
 (******************)
 
-module type SrpSimulationSig =
-sig
-  val simulate_srp: Syntax.ty -> AdjGraph.t -> Nv_solution.Solution.t
-end
 
-
-module SrpSimulation (Srp : NATIVE_SRP) : SrpSimulationSig =
+module SrpSimulation : SrpSimulationSig =
 struct
   open Srp
   exception Simulation_error of string
 
   (* Simulation States *)
-  (* Solution Invariant: All valid graph vertices are associated with an attribute initially (and always) *)
-  type solution = attribute AdjGraph.VertexMap.t
-  type extendedSolution = (solution * attribute) AdjGraph.VertexMap.t
+  (* Solution Invariant: All valid graph vertices are associated with an
+     attribute initially (and always) *)
+  type 'a solution = 'a AdjGraph.VertexMap.t
+  type 'a extendedSolution = ('a solution * 'a) AdjGraph.VertexMap.t
 
   type queue = AdjGraph.Vertex.t QueueSet.queue
 
-  type state = extendedSolution * queue
+  type 'a state = 'a extendedSolution * queue
 
-  let create_state (n : int) : state =
+  let create_state (n : int) init: 'a state =
     let rec loop n (q: queue) m =
       if Pervasives.compare n 0 > 0 then
         let next_n = n - 1 in
@@ -77,14 +73,14 @@ struct
   let srp_to_state graph =
     create_state (AdjGraph.nb_vertex graph)
 
-  let get_attribute (v: AdjGraph.VertexMap.key) (s : extendedSolution) =
+  let get_attribute (v: AdjGraph.VertexMap.key) (s : 'a extendedSolution) =
     match AdjGraph.VertexMap.Exceptionless.find v s with
     | None -> failwith ("no attribute at vertex " ^ string_of_int v)
     | Some a -> a
 
   let attr_equal = ref (fun _ _ -> true)
 
-  let simulate_step (graph: AdjGraph.t) (s : extendedSolution) (origin : int) =
+  let simulate_step (graph: AdjGraph.t) trans merge (s : 'a extendedSolution) (origin : int) =
     let do_neighbor (_, initial_attribute) (s, todo) neighbor =
       let edge = (origin, neighbor) in
       (* Compute the incoming attribute from origin *)
@@ -135,37 +131,29 @@ struct
     BatList.fold_left (do_neighbor initial_attribute) (s, []) neighbors
 
   (* simulate_init s q simulates srp starting with initial state (s,q) *)
-  let rec simulate_init (graph: AdjGraph.t) ((s, q): state) =
+  let rec simulate_init (graph: AdjGraph.t) trans merge ((s, q): 'a state) =
     match QueueSet.pop q with
     | None -> s
     | Some (next, rest) ->
-      let s', more = simulate_step graph s next in
-      simulate_init graph (s', QueueSet.add_all rest more)
+      let s', more = simulate_step graph trans merge s next in
+      simulate_init graph trans merge (s', QueueSet.add_all rest more)
 
   (* simulate for at most k steps *)
-  let simulate_init_bound (graph: AdjGraph.t) ((s, q): state) k =
+  let simulate_init_bound (graph: AdjGraph.t) trans merge ((s, q): 'a state) k =
     let rec loop s q k =
       if k <= 0 then (s, q)
       else
         match QueueSet.pop q with
         | None -> (s, q)
         | Some (next, rest) ->
-          let s', more = simulate_step graph s next in
+          let s', more = simulate_step graph trans merge s next in
           loop s' (QueueSet.add_all rest more) (k - 1)
     in
     loop s q k
 
-  let check_assertion a node v = a node v
-
-  let check_assertions vals =
-    match assertion with
-    | None -> None
-    | Some a ->
-      Some (AdjGraph.VertexMap.mapi (fun n v -> (check_assertion a n v)) vals)
-
   (** Builds equality function to check whether attributes are equal. This is
       only necessary when we use Batteries maps to represent nv maps. BDDs
-      don't have this issue it seems *)
+      don't have this issue. *)
   let rec build_equality (attr_ty: Syntax.ty) : 'a -> 'a -> bool =
     match attr_ty with
     | TUnit -> fun _ _ -> true
@@ -199,18 +187,29 @@ struct
   let ocaml_to_nv_value (attr_ty: Syntax.ty) : 'a -> Syntax.value =
     Embeddings.embed_value record_fns attr_ty
 
+
+  let simulate_solve attr_ty_id name init trans merge =
+    let s = srp_to_state () in
+    let vals = simulate_init init trans merge s |> AdjGraph.VertexMap.map (fun (_,v) -> v) in
+    let bdd_base = NativeBdd.create ~key_ty:(CompileBDDs.get_type_id TNode)
+        ~val_ty_id:attr_ty_id (Generators.default_value (CompileBDDs.get_type attr_ty_id))
+    in
+    let bdd_full = AdjGraph.VertexMap.fold (fun n v acc -> NativeBdd.update attr_ty_id acc n v) vals bdd_base in
+    let mapval = avalue (vmap bdd_full, Some xty, solve.var_names.espan) in
+
+    let val_proj = ocaml_to_nv_value attr_ty in
+    { labels = AdjGraph.VertexMap.map (fun v -> val_proj v) vals;
+      symbolics = VarMap.empty; (*TODO: but it's not important for simulation.*)
+      assertions = asserts;
+      solves = VarMap.empty;
+    }
+
   let simulate_srp attr_ty graph =
     Embeddings.build_embed_cache record_fns;
     Embeddings.build_unembed_cache record_cnstrs record_fns;
     let s = srp_to_state graph in
     let vals = simulate_init graph s |> AdjGraph.VertexMap.map (fun (_,v) -> v) in
-    let asserts =
-      match check_assertions vals with
-      | None -> []
-      | Some map -> AdjGraph.VertexMap.bindings map
-                    |> List.sort (fun (i, _) (i2, _)-> i2-i)
-                    |> List.map snd
-    in
+
     let open Solution in
     let val_proj = ocaml_to_nv_value attr_ty in
     { labels = AdjGraph.VertexMap.map (fun v -> val_proj v) vals;
