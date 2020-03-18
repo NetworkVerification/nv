@@ -136,7 +136,7 @@ let simulate_step ({graph= g; trans; merge; _} : srp) s x =
   let do_neighbor (_, initial_attribute) (s, todo) n =
     let neighbor = vnode n in
     let edge = vedge (x, n) in
-    (* Printf.printf "n is:%d\n" n; *)
+    (* compute new routing message *)
     let n_incoming_attribute =
       Interp.interp_closure trans [edge; initial_attribute]
     in

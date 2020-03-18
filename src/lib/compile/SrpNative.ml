@@ -10,21 +10,27 @@ open Symbolics
 (** Type of SRP network *)
 module type NATIVE_SRP =
 sig
-  (** Communication between SRP and NV *)
+  (** Communication between SRPs and NV *)
   val record_fns: (int * int) -> 'a -> 'b
   val record_cnstrs: int -> 'c
 end
 
+(** Simulator signature*)
 module type SrpSimulationSig =
 sig
-  val simulate_solve: int -> string -> (int -> 'a) -> ((int*int) -> 'a -> 'a -> 'a)
-    -> (int -> 'a -> 'a -> 'a) -> 'b
+  (** Takes as input the attribute type id, the name of the variable storing the solutions,
+   ** the init trans and merge functions and computes the solutions.*)
+  val simulate_solve: int -> string -> (int -> 'a) -> ((int*int) -> 'a -> 'a)
+    -> (int -> 'a -> 'a -> 'a) -> CompileBDDs.t
+
+  val solved : ((string * 'a AdjGraph.VertexMap.t) list) ref
 end
 
-module type EnrichedSRPSig = functor (S:PackedSymbolics) (SIM:SrpSimulationSig) -> NATIVE_SRP
+(** To complete the SRPs we add values for the symbolic values and a simulator*)
+module type CompleteSRPSig = functor (S:PackedSymbolics) (SIM:SrpSimulationSig) -> NATIVE_SRP
 
 (** Reference to a NATIVE_SRP module *)
-let (srp : (module EnrichedSRPSig) option ref) = ref None
+let (srp : (module CompleteSRPSig) option ref) = ref None
 
 (** Getter function for [srp]*)
 let get_srp () =
@@ -32,20 +38,26 @@ let get_srp () =
   | Some srp -> srp
   | None -> failwith "No srp loaded"
 
+
 (******************)
 (* SRP Simulator *)
 (******************)
 
 
-module SrpSimulation : SrpSimulationSig =
+module type Topology =
+sig
+  val graph : AdjGraph.t
+end
+
+module SrpSimulation (G:Topology): SrpSimulationSig =
 struct
-  open Srp
-  exception Simulation_error of string
 
   (* Simulation States *)
   (* Solution Invariant: All valid graph vertices are associated with an
      attribute initially (and always) *)
   type 'a solution = 'a AdjGraph.VertexMap.t
+
+  (* The extended solution of a node includes the route selected + the messages received from each neighbor*)
   type 'a extendedSolution = ('a solution * 'a) AdjGraph.VertexMap.t
 
   type queue = AdjGraph.Vertex.t QueueSet.queue
@@ -70,9 +82,6 @@ struct
 
   exception Require_false
 
-  let srp_to_state graph =
-    create_state (AdjGraph.nb_vertex graph)
-
   let get_attribute (v: AdjGraph.VertexMap.key) (s : 'a extendedSolution) =
     match AdjGraph.VertexMap.Exceptionless.find v s with
     | None -> failwith ("no attribute at vertex " ^ string_of_int v)
@@ -80,7 +89,7 @@ struct
 
   let attr_equal = ref (fun _ _ -> true)
 
-  let simulate_step (graph: AdjGraph.t) trans merge (s : 'a extendedSolution) (origin : int) =
+  let simulate_step trans merge (s : 'a extendedSolution) (origin : int) =
     let do_neighbor (_, initial_attribute) (s, todo) neighbor =
       let edge = (origin, neighbor) in
       (* Compute the incoming attribute from origin *)
@@ -127,94 +136,59 @@ struct
 
     in
     let initial_attribute = get_attribute origin s in
-    let neighbors = AdjGraph.succ graph origin in
+    let neighbors = AdjGraph.succ G.graph origin in
     BatList.fold_left (do_neighbor initial_attribute) (s, []) neighbors
 
   (* simulate_init s q simulates srp starting with initial state (s,q) *)
-  let rec simulate_init (graph: AdjGraph.t) trans merge ((s, q): 'a state) =
+  let rec simulate_init trans merge ((s, q): 'a state) =
     match QueueSet.pop q with
     | None -> s
     | Some (next, rest) ->
-      let s', more = simulate_step graph trans merge s next in
-      simulate_init graph trans merge (s', QueueSet.add_all rest more)
+      let s', more = simulate_step trans merge s next in
+      simulate_init trans merge (s', QueueSet.add_all rest more)
 
   (* simulate for at most k steps *)
-  let simulate_init_bound (graph: AdjGraph.t) trans merge ((s, q): 'a state) k =
+  let simulate_init_bound trans merge ((s, q): 'a state) k =
     let rec loop s q k =
       if k <= 0 then (s, q)
       else
         match QueueSet.pop q with
         | None -> (s, q)
         | Some (next, rest) ->
-          let s', more = simulate_step graph trans merge s next in
+          let s', more = simulate_step trans merge s next in
           loop s' (QueueSet.add_all rest more) (k - 1)
     in
     loop s q k
 
-  (** Builds equality function to check whether attributes are equal. This is
-      only necessary when we use Batteries maps to represent nv maps. BDDs
-      don't have this issue. *)
-  let rec build_equality (attr_ty: Syntax.ty) : 'a -> 'a -> bool =
-    match attr_ty with
-    | TUnit -> fun _ _ -> true
-    | TBool | TInt _ | TOption _->
-      fun v1 v2 -> v1 = v2
-    | TTuple ts ->
-      let fs = BatList.map (fun ty ->
-          let f_rec = build_equality ty in
-          fun v1 v2 -> f_rec v1 v2) ts
-      in
-      fun vs1 vs2 ->
-        let rec compareTuples fs vs1 vs2 =
-          match fs,vs1,vs2 with
-          | [], [], [] -> true
-          | f :: fs, v1 :: vs1, v2 :: vs2 ->
-            (f v1 v2) && compareTuples fs vs1 vs2
-          | _ -> failwith "Was expecting same length tuples"
-        in
-        compareTuples fs (Obj.magic vs1) (Obj.magic vs2)
-    | TMap (_, vty) ->
-      let f_rec = build_equality vty in
-      fun v1 v2 -> BatMap.equal f_rec (Obj.magic v1) (Obj.magic v2)
-    | TArrow _ -> failwith "Function computed as value"
-    | TRecord _ -> failwith "Trecord"
-    | TNode -> failwith "Tnode"
-    | TEdge -> failwith "Tedge"
-    | TVar _ | QVar _ -> failwith "TVars and QVars shuld not show up here"
-
-  (** Given the attribute type of the network constructs an OCaml function
-      that takes as input an OCaml value and creates a similar NV value.*)
-  let ocaml_to_nv_value (attr_ty: Syntax.ty) : 'a -> Syntax.value =
-    Embeddings.embed_value record_fns attr_ty
-
+  (* List holding the solutions of solved SRPs*)
+  let solved = ref []
 
   let simulate_solve attr_ty_id name init trans merge =
-    let s = srp_to_state () in
-    let vals = simulate_init init trans merge s |> AdjGraph.VertexMap.map (fun (_,v) -> v) in
-    let bdd_base = NativeBdd.create ~key_ty:(CompileBDDs.get_type_id TNode)
+    let s = create_state (AdjGraph.nb_vertex G.graph) init in
+    let vals = simulate_init trans merge s |> AdjGraph.VertexMap.map (fun (_,v) -> v) in
+    let bdd_base = NativeBdd.create ~key_ty_id:(CompileBDDs.get_type_id TNode)
         ~val_ty_id:attr_ty_id (Generators.default_value (CompileBDDs.get_type attr_ty_id))
     in
     let bdd_full = AdjGraph.VertexMap.fold (fun n v acc -> NativeBdd.update attr_ty_id acc n v) vals bdd_base in
-    let mapval = avalue (vmap bdd_full, Some xty, solve.var_names.espan) in
-
-    let val_proj = ocaml_to_nv_value attr_ty in
-    { labels = AdjGraph.VertexMap.map (fun v -> val_proj v) vals;
-      symbolics = VarMap.empty; (*TODO: but it's not important for simulation.*)
-      assertions = asserts;
-      solves = VarMap.empty;
-    }
-
-  let simulate_srp attr_ty graph =
-    Embeddings.build_embed_cache record_fns;
-    Embeddings.build_unembed_cache record_cnstrs record_fns;
-    let s = srp_to_state graph in
-    let vals = simulate_init graph s |> AdjGraph.VertexMap.map (fun (_,v) -> v) in
-
-    let open Solution in
-    let val_proj = ocaml_to_nv_value attr_ty in
-    { labels = AdjGraph.VertexMap.map (fun v -> val_proj v) vals;
-      symbolics = VarMap.empty; (*TODO: but it's not important for simulation.*)
-      assertions = asserts;
-      solves = VarMap.empty;
-    }
+    solved := (name, vals) :: !solved;
+    bdd_full
 end
+
+  (* (\** Given the attribute type of the network constructs an OCaml function
+   *     that takes as input an OCaml value and creates a similar NV value.*\)
+   * let ocaml_to_nv_value (attr_ty: Syntax.ty) : 'a -> Syntax.value =
+   *   Embeddings.embed_value record_fns attr_ty
+   *
+   * let simulate_srp attr_ty graph =
+   *   Embeddings.build_embed_cache record_fns;
+   *   Embeddings.build_unembed_cache record_cnstrs record_fns;
+   *   let s = srp_to_state graph in
+   *   let vals = simulate_init graph s |> AdjGraph.VertexMap.map (fun (_,v) -> v) in
+   *
+   *   let open Solution in
+   *   let val_proj = ocaml_to_nv_value attr_ty in
+   *   { labels = AdjGraph.VertexMap.map (fun v -> val_proj v) vals;
+   *     symbolics = VarMap.empty; (\*TODO: but it's not important for simulation.*\)
+   *     assertions = asserts;
+   *     solves = VarMap.empty;
+   *   } *)
