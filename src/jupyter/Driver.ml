@@ -1,4 +1,4 @@
-open Nv_lib.Main_defs
+open Nv.Main_defs
 open Nv_datastructures
 open Nv_solution
 open Nv_lang.Collections

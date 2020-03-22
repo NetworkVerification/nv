@@ -144,12 +144,11 @@ let rec alpha_convert_aux bmap env (ds: declarations) : declarations =
 
 let update_symbolics bmap smap =
   let open Collections in
-  VarMap.fold
-    (fun s v acc ->
-       match VarMap.Exceptionless.find s bmap with
-       | None -> VarMap.add s v acc
-       | Some k -> VarMap.add k v acc )
-    smap VarMap.empty
+  List.map (fun (s, v) ->
+      match VarMap.Exceptionless.find s bmap with
+      | None -> (s, v)
+      | Some k -> (k,v))
+    smap
 
 let adjust_solution bmap (s: Nv_solution.Solution.t) =
   {s with symbolics= update_symbolics bmap s.symbolics;

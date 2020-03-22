@@ -954,7 +954,7 @@ module FailuresAbstraction =
          splitting. Note that this code works if all edges can fail. *)
       let failures, agraph =
         EdgeMap.fold (fun edge fvar (acc, ag) ->
-            let bv = Collections.VarMap.find fvar sol.symbolics in
+            let bv = List.assoc fvar sol.symbolics in
             match bv.v with
             | VBool b ->
                if b then

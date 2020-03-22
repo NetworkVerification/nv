@@ -100,16 +100,16 @@ let translate_model (m : (string, string) BatMap.t) : Nv_solution.Solution.t =
           {sol with assertions = asn :: sol.assertions}
         | k when BatString.starts_with k "solve" ->
           let kvar = Var.of_var_string k in
-          {sol with solves = VarMap.add kvar {sol_val = nvval; mask = None} sol.solves}
+          {sol with solves = (kvar, {sol_val = nvval; mask = None}) :: sol.solves}
         | k ->
           let k_var = Var.of_var_string k in
-          {sol with symbolics= VarMap.add k_var nvval sol.symbolics}) m
-      {symbolics = VarMap.empty;
-       solves = VarMap.empty;
+          {sol with symbolics= (k_var, nvval) :: sol.symbolics}) m
+      {symbolics = [];
+       solves = [];
        labels = AdjGraph.VertexMap.empty;
        assertions= []}
   in
-  {sol with assertions = List.rev sol.assertions}
+  {sol with assertions = List.rev sol.assertions; symbolics = List.rev sol.symbolics; solves = List.rev sol.solves}
 
 let box_vals (xs : (int * Syntax.value) list) =
   match xs with
@@ -140,15 +140,15 @@ let translate_model_unboxed (m : (string, string) BatMap.t) : Nv_solution.Soluti
           (symbolics, solves, asn :: assertions)
         | k when BatString.starts_with k "solve" ->
           let kname = Var.of_var_string k in
-          (symbolics, VarMap.add kname nvval solves, assertions)
+          (symbolics, (kname, nvval) :: solves, assertions)
         | k ->
-          ( let new_symbolics = VarMap.add (Var.of_var_string k) nvval symbolics in
+          ( let new_symbolics = ((Var.of_var_string k), nvval) :: symbolics in
             new_symbolics, solves, assertions )
-      ) m (VarMap.empty, VarMap.empty, [])
+      ) m ([], [], [])
   in
   let box v = {sol_val = v; mask = None} in
-  { symbolics = symbolics;
-    solves = VarMap.map box solves;
+  { symbolics = List.rev symbolics;
+    solves = List.rev_map (fun (k, v) -> (k, box v)) solves;
     assertions = List.rev assertions;
     labels = AdjGraph.VertexMap.empty}
 
@@ -160,7 +160,7 @@ let refineModelMinimizeFailures (model: Nv_solution.Solution.t) info _query _cha
   | Syntax.EOp(Syntax.AtMost n, [e1;e2;e3]) ->
     (match e1.e with
      | ETuple es ->
-       VarMap.iter (fun fvar fval ->
+       List.iter (fun (fvar, fval) ->
            match fval.v with
            | VBool b ->
              if b then
@@ -198,7 +198,7 @@ let refineModelMinimizeFailures (model: Nv_solution.Solution.t) info _query _cha
 let refineModelWithSingles (model : Nv_solution.Solution.t) info _query _chan _solve _renaming _ _ds =
   (* Find and separate the single link failures from the rest *)
   let (failed, notFailed) =
-    VarMap.fold (fun fvar fval (accFailed, accNotFailed) ->
+    List.fold_right (fun (fvar, fval) (accFailed, accNotFailed) ->
         match fval.v with
         | VBool b ->
           if b then

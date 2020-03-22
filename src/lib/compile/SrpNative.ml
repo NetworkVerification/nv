@@ -23,7 +23,8 @@ sig
   val simulate_solve: int -> string -> (int -> 'a) -> ((int*int) -> 'a -> 'a)
     -> (int -> 'a -> 'a -> 'a) -> CompileBDDs.t
 
-  val solved : ((string * 'a AdjGraph.VertexMap.t) list) ref
+  (** List of solutions, each entry is the name of the SRP and the *)
+  val solved : ((string * (unit * Syntax.ty)) list) ref
 end
 
 (** To complete the SRPs we add values for the symbolic values and a simulator*)
@@ -166,29 +167,30 @@ struct
   let simulate_solve attr_ty_id name init trans merge =
     let s = create_state (AdjGraph.nb_vertex G.graph) init in
     let vals = simulate_init trans merge s |> AdjGraph.VertexMap.map (fun (_,v) -> v) in
+    let default = AdjGraph.VertexMap.choose vals |> snd in
     let bdd_base = NativeBdd.create ~key_ty_id:(CompileBDDs.get_type_id TNode)
-        ~val_ty_id:attr_ty_id (Generators.default_value (CompileBDDs.get_type attr_ty_id))
+        ~val_ty_id:attr_ty_id default
     in
     let bdd_full = AdjGraph.VertexMap.fold (fun n v acc -> NativeBdd.update attr_ty_id acc n v) vals bdd_base in
-    solved := (name, vals) :: !solved;
+    solved := (name, (Obj.magic bdd_full, CompileBDDs.get_type attr_ty_id)) :: !solved;
     bdd_full
 end
 
-  (* (\** Given the attribute type of the network constructs an OCaml function
-   *     that takes as input an OCaml value and creates a similar NV value.*\)
-   * let ocaml_to_nv_value (attr_ty: Syntax.ty) : 'a -> Syntax.value =
-   *   Embeddings.embed_value record_fns attr_ty
-   *
-   * let simulate_srp attr_ty graph =
-   *   Embeddings.build_embed_cache record_fns;
-   *   Embeddings.build_unembed_cache record_cnstrs record_fns;
-   *   let s = srp_to_state graph in
-   *   let vals = simulate_init graph s |> AdjGraph.VertexMap.map (fun (_,v) -> v) in
-   *
-   *   let open Solution in
-   *   let val_proj = ocaml_to_nv_value attr_ty in
-   *   { labels = AdjGraph.VertexMap.map (fun v -> val_proj v) vals;
-   *     symbolics = VarMap.empty; (\*TODO: but it's not important for simulation.*\)
-   *     assertions = asserts;
-   *     solves = VarMap.empty;
-   *   } *)
+(** Given the attribute type of the network constructs an OCaml function
+      that takes as input an OCaml value and creates a similar NV value.*)
+let ocaml_to_nv_value record_fns (attr_ty: Syntax.ty) : 'a -> Syntax.value =
+    Embeddings.embed_value record_fns (TMap(TNode, attr_ty))
+
+let build_solution record_fns (vals, ty) =
+  let open Solution in
+  let val_proj = ocaml_to_nv_value record_fns ty in
+  val_proj vals
+
+let build_solutions record_fns sols =
+  let open Solution in
+  {
+    symbolics = []; (*TODO: but it's not important for simulation.*)
+    assertions = [];
+    solves = List.map (fun (name, sol) -> (Var.create name, { sol_val = build_solution record_fns sol; mask = None})) sols;
+    labels = AdjGraph.VertexMap.empty
+  }

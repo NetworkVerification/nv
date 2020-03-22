@@ -233,17 +233,17 @@ let map_back_sol
   let map_back_mask = map_back_mask ~name:name sol mask_transformer in
   let map_back_value = map_back_value ~name:name sol map_back_transformer in
   let solves =
-    VarMap.mapi
-      (fun v {Solution.sol_val; mask} ->
+    List.map
+      (fun (v, {Solution.sol_val; mask}) ->
          let aty = VarMap.find v solve_tys in
-         {Solution.sol_val = map_back_value sol_val aty;
-          mask = omap (fun v -> map_back_mask v aty) mask})
+         (v, {Solution.sol_val = map_back_value sol_val aty;
+              mask = omap (fun v -> map_back_mask v aty) mask}))
       sol.solves
   in
   {
-    symbolics = VarMap.mapi (fun x v ->
-        try map_back_value v (VarMap.find x symb_tys)
-        with | Not_found -> v) sol.symbolics;
+    symbolics = List.map (fun (x,v) ->
+        try (x, map_back_value v (VarMap.find x symb_tys))
+        with | Not_found -> (x,v)) sol.symbolics;
     (* labels = VertexMap.map (fun v -> map_back_value v attr_ty) sol.labels; *)
     labels = sol.labels;
     assertions = sol.assertions; (* These transformations shouldn't change the truth value of the assertion *)

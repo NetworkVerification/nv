@@ -47,4 +47,3 @@ let assert_node n x =
 
 let sol = solution {init = init; trans = trans; merge = merge}
 
-assert foldNodes (fun k v acc -> acc && assert_node k v) sol true

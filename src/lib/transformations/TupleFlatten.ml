@@ -266,7 +266,10 @@ let proj_symbolic (var, toe) =
      | ty -> [(var, Ty ty)])
 ;;
 
-let unproj_sym_solve (map : 'a VarMap.t) : 'a list VarMap.t =
+(*NOTE: Taking the easy way out of here by converting to a map first. It should
+   be correct though because likely we have unique bindings.*)
+let unproj_sym_solve (map : (Var.t * 'a) list)  =
+  let map = List.fold_left (fun acc (k,v) -> VarMap.add k v acc) VarMap.empty map in
   let unboxed_map =
     VarMap.fold
       (fun var v acc ->
@@ -295,16 +298,16 @@ let unproj_sym_solve (map : 'a VarMap.t) : 'a list VarMap.t =
 
 let unproj_symbolics_and_solves (sol : Solution.t) =
   let symbs =
-    VarMap.map
-      (fun lst -> match lst with | [v] -> v | _ -> vtuple lst)
-      (unproj_sym_solve sol.symbolics)
+    VarMap.fold
+      (fun var lst acc -> (var, match lst with | [v] -> v | _ -> vtuple lst) :: acc)
+      (unproj_sym_solve sol.symbolics) []
   in
   let solves =
     let open Solution in
-    VarMap.map
-      (fun lst ->
+    VarMap.fold
+      (fun var lst acc ->
          match lst with
-         | [solve] -> solve
+         | [solve] -> (var, solve) :: acc
          | _ ->
            (* For a given solution, either all masks are None or all are Some.
               I think. *)
@@ -314,9 +317,8 @@ let unproj_symbolics_and_solves (sol : Solution.t) =
              if not masked then None
              else Some (vtuple (List.map (fun s -> oget s.mask) lst))
            in
-           {sol_val; mask}
-      )
-      (unproj_sym_solve sol.solves)
+           (var, {sol_val; mask}) :: acc)
+      (unproj_sym_solve sol.solves) []
   in
   {sol with symbolics = symbs; solves = solves;}
 ;;

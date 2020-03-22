@@ -200,7 +200,7 @@ let solveFunc info query chan srp =
     (Nv_datastructures.AdjGraph.nb_vertex srp.srp_graph) asn srp.srp_requires
 
 (** For quickcheck smart value generation *)
-let symvar_assign info (net: Nv_lang.Syntax.network) : Nv_lang.Syntax.value VarMap.t option =
+let symvar_assign info (net: Nv_lang.Syntax.network) : (Nv_datastructures.Var.t * Nv_lang.Syntax.value) list option =
   let module ExprEnc = (val expr_encoding smt_config) in
   let module Enc = (val (module SmtClassicEncoding.ClassicEncoding(ExprEnc) : Encoding)) in
   let env = ExprEnc.init_solver net.Nv_lang.Syntax.symbolics ~labels:[] in

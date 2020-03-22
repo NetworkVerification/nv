@@ -15,7 +15,7 @@ open OCamlUtils
 type sol = {sol_val: value; mask : value option}
 type t =
   { symbolics: (var * value) list;
-    solves: (var * value) list;
+    solves: (var * sol) list;
     assertions: bool list; (* One for each assert statement *)
     labels: value VertexMap.t; (* Deprecated -- included only for backwards compatibility *)
   }
@@ -186,7 +186,7 @@ let print_solution (solution : t) =
       (* Print solutions*)
       List.iter (fun (k,v) ->
           Printf.printf "Printing solutions for %s\n" (Var.to_string k);
-          print_endline (Printing.value_to_string ~show_types:false v)) solution.solves
+          print_endline (print_fun v)) solution.solves
     end;
   ( match solution.assertions with
     | [] ->

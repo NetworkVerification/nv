@@ -13,10 +13,10 @@ type srp =
 
 type queue = AdjGraph.Vertex.t QueueSet.queue
 
-val simulate_net : Syntax.network -> Nv_solution.Solution.t
-
-val simulate_net_bound :
-  Syntax.network -> int -> Nv_solution.Solution.t * queue
+(* val simulate_net : Syntax.network -> Nv_solution.Solution.t
+ *
+ * val simulate_net_bound :
+ *   Syntax.network -> int -> Nv_solution.Solution.t * queue *)
 
 val simulate_solve :
   AdjGraph.t -> Syntax.env -> Syntax.solve -> Syntax. value AdjGraph.VertexMap.t

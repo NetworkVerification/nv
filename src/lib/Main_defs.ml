@@ -251,13 +251,12 @@ let run_simulator cfg _ decls fs =
     Console.error "required conditions not satisfied"
 
 (** Native simulator - compiles SRP to OCaml *)
-let run_compiled file cfg _ decls fs =
-  let net = mk_net cfg decls in
+let run_compiled file _ _ decls fs =
   let path = Filename.remove_extension file in
   let name = Filename.basename path in
   let name = String.mapi (fun i c -> if i = 0 then Char.uppercase_ascii c else c) name in
   let newpath = name in
-  let solution = Loader.simulate newpath net in
+  let solution = Loader.simulate newpath decls in
   match solution.assertions with
   | [] -> Success (Some solution), fs
   | lst ->

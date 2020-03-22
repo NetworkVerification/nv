@@ -219,31 +219,31 @@ let check_assertion (srp : srp) node v =
 let check_assertions srp vals =
   AdjGraph.VertexMap.mapi (fun n v -> check_assertion srp n v) vals
 
-let simulate_net (net: Syntax.network) : Nv_solution.Solution.t =
-  let srp, state, syms =
-    net_to_state net ~throw_requires:true
-  in
-  let vals = simulate_init srp state |> AdjGraph.VertexMap.map snd in
-  let asserts =
-    check_assertions srp vals
-    |> AdjGraph.VertexMap.bindings
-    |> List.sort (fun (i, _) (i2, _)-> i2-i)
-    |> List.map snd
-  in
-  {labels= vals; symbolics= syms; assertions= asserts; solves = VarMap.empty}
-
-let simulate_net_bound net k : (Nv_solution.Solution.t * queue) =
-  let srp, state, syms =
-    net_to_state net ~throw_requires:true
-  in
-  let vals, q = simulate_init_bound srp state k in
-  let vals = AdjGraph.VertexMap.map snd vals in
-  let asserts = check_assertions srp vals
-                |> AdjGraph.VertexMap.bindings
-                |> List.sort (fun (i, _) (i2, _)-> i2-i)
-                |> List.map snd
-  in
-  ({labels= vals; symbolics= syms; assertions= asserts; solves = VarMap.empty}, q)
+(* let simulate_net (net: Syntax.network) : Nv_solution.Solution.t =
+ *   let srp, state, syms =
+ *     net_to_state net ~throw_requires:true
+ *   in
+ *   let vals = simulate_init srp state |> AdjGraph.VertexMap.map snd in
+ *   let asserts =
+ *     check_assertions srp vals
+ *     |> AdjGraph.VertexMap.bindings
+ *     |> List.sort (fun (i, _) (i2, _)-> i2-i)
+ *     |> List.map snd
+ *   in
+ *   {labels= vals; symbolics= syms; assertions= asserts; solves = VarMap.empty}
+ *
+ * let simulate_net_bound net k : (Nv_solution.Solution.t * queue) =
+ *   let srp, state, syms =
+ *     net_to_state net ~throw_requires:true
+ *   in
+ *   let vals, q = simulate_init_bound srp state k in
+ *   let vals = AdjGraph.VertexMap.map snd vals in
+ *   let asserts = check_assertions srp vals
+ *                 |> AdjGraph.VertexMap.bindings
+ *                 |> List.sort (fun (i, _) (i2, _)-> i2-i)
+ *                 |> List.map snd
+ *   in
+ *   ({labels= vals; symbolics= syms; assertions= asserts; solves = VarMap.empty}, q) *)
 
 let simulate_solve graph env (solve : Syntax.solve) : value AdjGraph.VertexMap.t =
   let get_func e =

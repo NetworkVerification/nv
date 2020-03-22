@@ -38,27 +38,27 @@ let check_assertions (sol: Nv_solution.Solution.t) =
   | [] -> true
   | asns -> List.for_all (fun b -> b) asns
 
-let rec check_aux info iters acc =
-  match (info.iterations, acc) with
-  | 0, _ | _, Some _ -> acc
-  | _ ->
-      let net, net' = info.generator info.net in
-      let info = {info with net= net} in
-      match net' with
-      | None -> None
-      | Some net' ->
-        try
-          let sol = Srp.simulate_net net' in
-          if check_assertions sol then
-            check_aux
-              {info with iterations= info.iterations - 1}
-              iters None
-          else Some (sol, iters - info.iterations + 1)
-        with Srp.Require_false ->
-          incr info.num_rejected ;
-          check_aux
-            {info with iterations= info.iterations - 1}
-            iters None
+let rec check_aux info iters acc = failwith "FIXME"
+  (* match (info.iterations, acc) with
+   * | 0, _ | _, Some _ -> acc
+   * | _ ->
+   *     let net, net' = info.generator info.net in
+   *     let info = {info with net= net} in
+   *     match net' with
+   *     | None -> None
+   *     | Some net' ->
+   *       try
+   *         let sol = Srp.simulate_net net' in
+   *         if check_assertions sol then
+   *           check_aux
+   *             {info with iterations= info.iterations - 1}
+   *             iters None
+   *         else Some (sol, iters - info.iterations + 1)
+   *       with Srp.Require_false ->
+   *         incr info.num_rejected ;
+   *         check_aux
+   *           {info with iterations= info.iterations - 1}
+   *           iters None *)
 
 let smart_symbolic prog_constants map symb =
   let (x, te) = symb in
@@ -96,14 +96,14 @@ let add_blocking_require _info net map var_map =
   let neq = aexp(eop Not [e], Some TBool, Span.default) in
   {net with requires = neq :: net.requires}
 
-let smart_symbolics info prog_constants var_map net =
+let smart_symbolics info prog_constants var_map net = failwith "FIXME"
   (* print_endline (Printing.declarations_to_string ds) ; *)
-  let map = Nv_smt.Smt.symvar_assign info net in
-  match map with
-  | None -> (net, None)
-  | Some map ->
-     (add_blocking_require info net map var_map,
-      Some {net with symbolics = BatList.map (smart_symbolic prog_constants map) net.symbolics})
+  (* let map = Nv_smt.Smt.symvar_assign info net in
+   * match map with
+   * | None -> (net, None)
+   * | Some map ->
+   *    (add_blocking_require info net map var_map,
+   *     Some {net with symbolics = BatList.map (smart_symbolic prog_constants map) net.symbolics}) *)
 
 type check_stats = {iterations: int; num_rejected: int}
 

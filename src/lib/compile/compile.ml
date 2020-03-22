@@ -463,9 +463,9 @@ let compile_decl decl =
               | Some attr ->
                 ignore (get_fresh_type_id TNode);
                 let attr_id = get_fresh_type_id attr in
-                  Printf.sprintf "let %s = SIM.simulate_solve (%d) (%s) (%s) (%s) (%s)"
-                    (varname x) attr_id (varname x) (exp_to_ocaml_string solve.init)
-                    (exp_to_ocaml_string solve.trans) (exp_to_ocaml_string solve.merge)
+                  Printf.sprintf "let %s = SIM.simulate_solve (%d) (\"%s\") (%s) (%s) (%s)"
+                    (varname x) attr_id (Var.name x) (exp_to_ocaml_string solve.init)
+                    (exp_to_ocaml_string solve.trans) (exp_to_ocaml_string solve.merge))
         | _ -> failwith "Not implemented" (* Only happens if we did map unrolling *)
       end
     | DNodes _ | DEdges _ | DPartition _ | DInterface _ ->
@@ -479,17 +479,18 @@ let compile_decls decls =
   let record_cnstrs = build_constructors () in
   let embeddings = "let _ = Embeddings.build_embed_cache record_fns\n \
                     let _ = Embeddings.build_unembed_cache record_cnstrs record_fns\n\n"
-  Printf.sprintf "%s %s %s %s"
-    tuple_s record_cnstrs record_fns s
+  in
+  Printf.sprintf "%s %s %s %s %s"
+    tuple_s record_cnstrs record_fns embeddings s
 
 let set_entry (name: string) =
-  Printf.sprintf "let () = SrpNative.srp := Some (module %s:SrpNative.EnrichedSRPSig)" name
+  Printf.sprintf "let () = SrpNative.srp := Some (module %s:SrpNative.CompleteSRPSig)" name
 
 let generate_ocaml (name : string) decls =
   let header =
     Printf.sprintf "open Nv_datastructures\n open Nv_lang\n\
-                    open Syntax\nopen Nv_compile\nopen NativeSim\n module %s (S: \
-                               Symbolics.PackedSymbolics): SrpNative.NATIVE_SRP \
+                    open Syntax\nopen Nv_compile\n\n\
+                    module %s (S: Symbolics.PackedSymbolics) (SIM:SrpNative.SrpSimulationSig): SrpNative.NATIVE_SRP \
                                = struct\n" name in
   let ocaml_decls = Profile.time_profile "Compilation Time" (fun () -> compile_decls decls) in
     Printf.sprintf "%s %s end\n %s" header ocaml_decls (set_entry name)
@@ -503,7 +504,7 @@ let build_dune_file name =
      (name %s_plugin) \n \
      (public_name %s.plugin)\n \
      (modes native)\n \
-     (libraries nv_lib))\n \
+     (libraries nv))\n \
      (env\n \
      (dev\n \
      (flags (:standard -warn-error -A -w -a -opaque))))" name name

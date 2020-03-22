@@ -169,7 +169,7 @@ let checkAssertions (answers : Solution.t option) =
     | None ->
       Jupyter_notebook.printf "<font color=\"green\">All assertions passed!</font>"
     | Some m ->
-      let asserts = match m.assertions with None -> AdjGraph.VertexMap.empty | Some ms -> ms in
+      let asserts = match m.assertions with [] -> AdjGraph.VertexMap.empty | [ms] -> ms in
       let all_pass = AdjGraph.VertexMap.for_all (fun _ b -> b) asserts in
         if all_pass then
           Jupyter_notebook.printf  "<font color=\"green\">All assertions passed!</font>"

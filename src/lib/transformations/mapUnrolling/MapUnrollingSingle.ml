@@ -364,7 +364,7 @@ let map_back_transformer (keys : keys) _ (sol : Solution.t) v orig_ty =
     let default = Nv_lang.Generators.default_value vty in
     let e_vs, symb_vs = BatList.takedrop (List.length const_keys) vs in
     let e_bindings = List.combine (List.map exp_to_value const_keys) e_vs in
-    let v_bindings = List.combine (List.map (fun v -> VarMap.find v sol.symbolics) symb_keys) symb_vs in
+    let v_bindings = List.combine (List.map (fun v -> List.assoc v sol.symbolics) symb_keys) symb_vs in
     let bindings = List.rev_append v_bindings e_bindings in
     let newmap = BddMap.from_bindings ~key_ty:kty (bindings, default) in
     Some (vmap newmap)
