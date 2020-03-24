@@ -95,9 +95,8 @@ let build_constructors () =
 
 let is_map_op op =
   match op with
-    | MCreate | MGet | MSet | MMap | MMapFilter | MMerge | MMapIte -> true
+    | MCreate | MGet | MSet | MMap | MMapFilter | MMerge | MMapIte | MFoldEdge | MFoldNode -> true
     | And | Or | Not | UAdd _ | USub _ | Eq | ULess _ | ULeq _ | AtMost _ | NLess | NLeq | TGet _ | TSet _ -> false
-    | MFoldEdge | MFoldNode -> failwith "Todo: map folds"
 
 (** Translating NV operators to OCaml operators*)
 let op_to_ocaml_string op =
@@ -118,10 +117,10 @@ let op_to_ocaml_string op =
   | MMap
   | MMapFilter
   | MMapIte
+  | MFoldEdge
+  | MFoldNode
   | MMerge -> failwith "Map ops are handled elsewhere"
   | AtMost _ -> failwith "todo: atmost"
-  | MFoldEdge
-  | MFoldNode -> failwith "todo: Map folds"
   | TGet _
   | TSet _ -> failwith "Todo: TGet/TSet"
 
