@@ -351,7 +351,7 @@ let exp_transformer (target : ty) (keys : keys) (recursors : Transformers.recurs
       | (MCreate| MGet| MSet| MMap| MMapFilter| MMapIte | MMerge | MFoldNode| MFoldEdge), _ ->
         failwith @@ "Failed to unroll map: Incorrect number of arguments to map operation : "
                     ^ Printing.exp_to_string e
-      | (AtMost _ | And | Or | Not | UAdd _ | USub _ | ULess _ | ULeq _ | NLess | NLeq | Eq | TGet _ | TSet _), _ -> None
+      | (AtMost _ | And | Or | Not | UAdd _ | USub _ | UAnd _ | ULess _ | ULeq _ | NLess | NLeq | Eq | TGet _ | TSet _), _ -> None
     end
   | _ -> None
 ;;

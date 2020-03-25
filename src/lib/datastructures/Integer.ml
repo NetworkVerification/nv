@@ -77,18 +77,20 @@ let succ x =
   let value = Z.add x.value Z.one in
   mod_by_size @@ {size = x.size; value}
 
+let uand x y = {x with value = Z.logand x.value y.value}
+
 let max_int (sz : int) =
   let sz = Z.of_int sz in
   let v = pow2 sz in
   {size = sz; value= Z.pred v}
 
-let lt x y = check x y ; Z.lt x.value y.value
+let lt x y = Z.lt x.value y.value
 
-let leq x y = check x y ; Z.leq x.value y.value
+let leq x y = Z.leq x.value y.value
 
-let gt x y = check x y ; Z.gt x.value y.value
+let gt x y = Z.gt x.value y.value
 
-let geq x y = check x y ; Z.geq x.value y.value
+let geq x y = Z.geq x.value y.value
 
 let equal x y = (x.value = y.value) && (x.size = y.size) 
 

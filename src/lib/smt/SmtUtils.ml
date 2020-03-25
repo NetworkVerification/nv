@@ -115,7 +115,10 @@ module SmtLang =
       | BvSub of smt_term * smt_term
       | BvLt of smt_term * smt_term
       | BvLeq of smt_term * smt_term
+      | BvAnd of smt_term * smt_term
       | AtMost of (smt_term list) * (smt_term list) * smt_term
+      | IntToBv of smt_term * int
+      | BvToInt of smt_term * int
       | Constructor of string * sort (** constructor name, instantiated sort*)
       | App of smt_term * (smt_term list)
 
@@ -214,9 +217,22 @@ module SmtLang =
 
     let mk_bv_sub t1 t2 = BvSub (t1, t2)
 
+    let mk_bv_sub t1 t2 = BvAnd (t1, t2)
+
     let mk_bv_lt t1 t2 = BvLt (t1, t2)
 
     let mk_bv_leq t1 t2 = BvLeq (t1, t2)
+
+    let mk_int_to_bv t1 sz = IntToBv (t1, sz)
+
+    let mk_bv_to_int t1 sz = BvToInt (t1, sz)
+
+    (* Bitwise and for bitvectors *)
+    let mk_bv_uand t1 t2 = BvAnd (t1, t2)
+
+    (* Bitwise and for integers *)
+    let mk_uand t1 t2 sz =
+      mk_bv_to_int (mk_bv_uand (mk_int_to_bv t1 sz) (mk_int_to_bv t2 sz)) sz
 
     let mk_ite t1 t2 t3 = Ite (t1, t2, t3)
 
@@ -279,7 +295,7 @@ module SmtLang =
         []
       | Var s ->
         [s]
-      | Not tm1 ->
+      | Not tm1 | IntToBv (tm1, _) | BvToInt (tm1, _) ->
         get_vars tm1
       | And (tm1, tm2)
       | Or (tm1, tm2)
@@ -291,6 +307,7 @@ module SmtLang =
       | BvSub (tm1, tm2)
       | BvLt (tm1, tm2)
       | BvLeq (tm1, tm2)
+      | BvAnd (tm1, tm2)
       | Leq (tm1, tm2) ->
         get_vars tm1 @ get_vars tm2
       | Ite (tm1, tm2, tm3) ->
@@ -355,6 +372,12 @@ module SmtLang =
         Printf.sprintf "(bvult %s %s)" (smt_term_to_smt t1) (smt_term_to_smt t2)
       | BvLeq (t1, t2) ->
         Printf.sprintf "(bvule %s %s)" (smt_term_to_smt t1) (smt_term_to_smt t2)
+      | BvAnd (t1, t2) ->
+        Printf.sprintf "(bvand %s %s)" (smt_term_to_smt t1) (smt_term_to_smt t2)
+      | IntToBv (t1, sz) ->
+        Printf.sprintf "((_ int2bv %d) %s)" sz (smt_term_to_smt t1)
+      | BvToInt (t1, sz) ->
+        Printf.sprintf "((_ bv2int %d) %s)" sz (smt_term_to_smt t1)
       | AtMost (ts1, ts2, t1) ->
         Printf.sprintf "((_ pble %s %s) %s)"
           (smt_term_to_smt t1)

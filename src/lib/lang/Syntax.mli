@@ -39,6 +39,7 @@ type op =
   | Eq
   | UAdd of bitwidth
   | USub of bitwidth
+  | UAnd of bitwidth
   | ULess of bitwidth
   | ULeq of bitwidth
   | NLess

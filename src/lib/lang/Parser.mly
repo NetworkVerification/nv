@@ -39,8 +39,8 @@
   (* TODO: span not calculated correctly here? *)
   let rec make_fun params (body : exp) (body_span: Span.t) (span : Span.t) : exp =
     match params with
-	| [] -> body
-	| (x,tyopt)::rest ->
+    | [] -> body
+    | (x,tyopt)::rest ->
         let e = efun {arg=x; argty=tyopt; resty=None; body=make_fun rest body body_span body_span} in
         exp e span
 
@@ -152,6 +152,7 @@
 %token <Nv_datastructures.Span.t> FALSE
 %token <Nv_datastructures.Span.t * int> PLUS
 %token <Nv_datastructures.Span.t * int> SUB
+%token <Nv_datastructures.Span.t * int> UAND
 %token <Nv_datastructures.Span.t> EQ
 %token <Nv_datastructures.Span.t * int> LESS
 %token <Nv_datastructures.Span.t * int> GREATER
@@ -224,7 +225,7 @@
 %right ARROW
 %left AND OR
 %nonassoc GEQ GREATER LEQ LESS EQ NLEQ NGEQ NLESS NGREATER
-%left PLUS SUB UNION INTER MINUS
+%left PLUS SUB UAND UNION INTER MINUS
 %right NOT
 %right SOME
 %nonassoc DOT
@@ -334,6 +335,7 @@ expr:
     | expr OR expr                      { exp (eop Or [$1;$3]) (Span.extend $1.espan $3.espan) }
     | expr PLUS expr                    { exp (eop (UAdd (snd $2)) [$1;$3]) (Span.extend $1.espan $3.espan) }
     | expr SUB expr                     { exp (eop (USub (snd $2)) [$1;$3]) (Span.extend $1.espan $3.espan) }
+    | expr UAND expr                    { exp (eop (UAnd (snd $2)) [$1;$3]) (Span.extend $1.espan $3.espan) }
     | expr EQ expr                      { exp (eop Eq [$1;$3]) (Span.extend $1.espan $3.espan) }
     | expr LESS expr                    { exp (eop (ULess (snd $2)) [$1;$3]) (Span.extend $1.espan $3.espan) }
     | expr GREATER expr                 { exp (eop (ULess (snd $2)) [$3;$1]) (Span.extend $1.espan $3.espan) }
