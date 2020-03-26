@@ -1,0 +1,37 @@
+type attribute = int
+
+let nodes = 6
+
+let pred x = x >= 0 && x < 15
+
+symbolic h_0_1 : int
+symbolic h_1_0 : int
+require (pred h_0_1)
+require (pred h_1_0)
+
+let edges = {
+  0-2;
+  3-1;
+  1-4;
+  5-0;
+}
+
+let init node = match node with
+  | 3n -> h_0_1
+  | 5n -> h_1_0
+  | _ -> 15
+
+let trans edge x = match edge with
+  | 3~1 -> x
+  | 5~0 -> x
+  | _ -> if x = 15 then x else x + 1
+
+let merge node x y = if x < y then x else y
+
+let assert node x = match node with
+  | 2n -> pred x
+  | 4n -> pred x
+  | 3n -> true
+  | 5n -> true
+  | _ -> x < 15
+
