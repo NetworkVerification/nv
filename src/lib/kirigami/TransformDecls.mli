@@ -4,6 +4,7 @@ open Nv_lang.Syntax
 (***
  * Functions to rewrite network declarations to include cases added by partitioning.
  ***)
+
 (* Wrap the given init exp in a new exp of the form:
  * match x with
  * | out -> init u
@@ -45,4 +46,4 @@ val transform_merge : (exp) -> (SrpRemapping.interface) -> (Vertex.t option Vert
  * | _ -> assert n x
  * where p is a predicate used in the require clause
 *)
-val transform_assert : (exp option) -> (SrpRemapping.interface) -> (Vertex.t option VertexMap.t) -> exp
+val transform_assert : (exp option) -> (SrpRemapping.interface) -> (exp EdgeMap.t) -> (Vertex.t option VertexMap.t) -> exp
