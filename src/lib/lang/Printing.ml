@@ -8,7 +8,7 @@ open Nv_utils
 
 let is_keyword_op op =
   match op with
-  | And | Or | Not | UAdd _ | USub _ | Eq | ULess _ | ULeq _ | MGet | NLess | NLeq -> false
+  | And | Or | Not | UAdd _ | USub _ | UAnd _ | Eq | ULess _ | ULeq _ | MGet | NLess | NLeq -> false
   | TGet _| TSet _| MCreate | MSet | MMap | MMerge | MFoldNode
   | MFoldEdge | MMapFilter | MMapIte | AtMost _ -> true
 
@@ -27,6 +27,7 @@ let prec_op op =
   | Eq -> 5
   | ULess _ -> 5
   | ULeq _ -> 5
+  | UAnd _ -> 5
   | NLess -> 5
   | NLeq -> 5
   | TGet _ -> 5
@@ -120,6 +121,7 @@ let op_to_string op =
   | Not -> "!"
   | UAdd n -> "+" ^ "u" ^ (string_of_int n)
   | USub n -> "-" ^ "u" ^ (string_of_int n)
+  | UAnd n -> "&" ^ "u" ^ (string_of_int n)
   | Eq -> "="
   | ULess n -> "<" ^ "u" ^ (string_of_int n)
   | ULeq n -> "<=" ^ "u" ^ (string_of_int n)

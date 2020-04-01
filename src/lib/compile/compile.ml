@@ -96,7 +96,7 @@ let build_constructors () =
 let is_map_op op =
   match op with
     | MCreate | MGet | MSet | MMap | MMapFilter | MMerge | MMapIte | MFoldEdge | MFoldNode -> true
-    | And | Or | Not | UAdd _ | USub _ | Eq | ULess _ | ULeq _ | AtMost _ | NLess | NLeq | TGet _ | TSet _ -> false
+    | And | Or | Not | UAdd _ | USub _ | UAnd _ | Eq | ULess _ | ULeq _ | AtMost _ | NLess | NLeq | TGet _ | TSet _ -> false
 
 (** Translating NV operators to OCaml operators*)
 let op_to_ocaml_string op =
@@ -106,6 +106,7 @@ let op_to_ocaml_string op =
   | Not -> "not"
   | UAdd _ -> "+"
   | USub _ -> "-"
+  | UAnd _ -> "land"
   | Eq -> "="
   | ULess _ -> "<"
   | ULeq _ -> "<="

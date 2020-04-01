@@ -139,103 +139,154 @@ struct
       |> (mk_term ~tloc:e.espan)
     | EVal v -> encode_value_z3_single ~arith descr env v
     | EOp (op, es) -> (
-        match (op, es) with
-        | Syntax.And, [e1;e2] when is_value e1 ->
-          (match (to_value e1).v with
-           | VBool true ->
-             encode_exp_z3_single descr env e2
-           | VBool false ->
-             mk_bool false |> mk_term ~tloc:e.espan
-           | _ -> failwith "must be a boolean value")
-        | Syntax.And, [e1;e2] when is_value e2 ->
-          (match (to_value e2).v with
-           | VBool true ->
-             encode_exp_z3_single descr env e1
-           | VBool false ->
-             mk_bool false |> mk_term ~tloc:e.espan
-           | _ -> failwith "must be a boolean value")
-        | Syntax.And, [e1;e2] ->
-          let ze1 = encode_exp_z3_single descr env e1 in
-          let ze2 = encode_exp_z3_single descr env e2 in
-          mk_and ze1.t ze2.t |> mk_term ~tloc:e.espan
-        | Syntax.Or, [e1;e2] ->
-          let ze1 = encode_exp_z3_single descr env e1 in
-          let ze2 = encode_exp_z3_single descr env e2 in
-          mk_or ze1.t ze2.t |> mk_term ~tloc:e.espan
-        | Not, [e1] ->
-          let ze = encode_exp_z3_single descr env e1 in
-          mk_not ze.t |> mk_term ~tloc:e.espan
-        | Syntax.UAdd _, [e1;e2] ->
-          let ze1 = encode_exp_z3_single descr env e1 in
-          let ze2 = encode_exp_z3_single descr env e2 in
-          if smt_config.infinite_arith then
-            mk_add ze1.t ze2.t |> mk_term ~tloc:e.espan
-          else
-            mk_bv_add ze1.t ze2.t |> mk_term ~tloc:e.espan
-        | Syntax.USub _, [e1;e2] ->
-          let ze1 = encode_exp_z3_single descr env e1 in
-          let ze2 = encode_exp_z3_single descr env e2 in
-          if smt_config.infinite_arith then
-            mk_sub ze1.t ze2.t |> mk_term ~tloc:e.espan
-          else
-            mk_bv_sub ze1.t ze2.t |> mk_term ~tloc:e.espan
-        | Eq, [e1;e2] ->
-          let ze1 = encode_exp_z3_single descr env e1 in
-          let ze2 = encode_exp_z3_single descr env e2 in
-          mk_eq ze1.t ze2.t |> mk_term ~tloc:e.espan
-        | ULess _, [e1;e2]
-        | NLess, [e1;e2] ->
-          let ze1 = encode_exp_z3_single descr env e1 in
-          let ze2 = encode_exp_z3_single descr env e2 in
-          if smt_config.infinite_arith then
-            mk_lt ze1.t ze2.t |> mk_term ~tloc:e.espan
-          else
-            mk_bv_lt ze1.t ze2.t |> mk_term ~tloc:e.espan
-        | ULeq _, [e1;e2]
-        | NLeq, [e1; e2] ->
-          let ze1 = encode_exp_z3_single descr env e1 in
-          let ze2 = encode_exp_z3_single descr env e2 in
-          if smt_config.infinite_arith then
-            mk_leq ze1.t ze2.t |> mk_term ~tloc:e.espan
-          else
-            mk_bv_leq ze1.t ze2.t |> mk_term ~tloc:e.espan
-        | TGet (_, lo, hi), [e1] when lo = hi ->
-          (match e1.e with
-           | ETuple es1 ->
-             encode_exp_z3_single descr env (BatList.nth es1 lo)
-           | _ ->
-             let ze1 = encode_exp_z3 descr env e1 in
-             BatList.nth ze1 lo)
-        | AtMost _, [e1;e2;e3] ->
-          (match e1.e with
-           | ETuple es ->
-             let zes =
-               BatList.map (fun e -> (encode_exp_z3_single ~arith:true descr env e).t) es in
-             (match e2.e with
+        match op with
+        | Syntax.And ->
+          (match es with
+           | [e1;e2] when is_value e1 ->
+             (match (to_value e1).v with
+              | VBool true ->
+                encode_exp_z3_single descr env e2
+              | VBool false ->
+                mk_bool false |> mk_term ~tloc:e.espan
+              | _ -> failwith "must be a boolean value")
+           | [e1;e2] when is_value e2 ->
+             (match (to_value e2).v with
+              | VBool true ->
+                encode_exp_z3_single descr env e1
+              | VBool false ->
+                mk_bool false |> mk_term ~tloc:e.espan
+              | _ -> failwith "must be a boolean value")
+           | [e1; e2] ->
+             let ze1 = encode_exp_z3_single descr env e1 in
+             let ze2 = encode_exp_z3_single descr env e2 in
+             mk_and ze1.t ze2.t |> mk_term ~tloc:e.espan
+           | _ -> failwith "Invalid number of arguments to And")
+        | Syntax.Or ->
+          (match es with
+           | [e1;e2] when is_value e1 ->
+             (match (to_value e1).v with
+              | VBool false ->
+                encode_exp_z3_single descr env e2
+              | VBool true ->
+                mk_bool true |> mk_term ~tloc:e.espan
+              | _ -> failwith "must be a boolean value")
+           | [e1;e2] when is_value e2 ->
+             (match (to_value e2).v with
+              | VBool false ->
+                encode_exp_z3_single descr env e1
+              | VBool true ->
+                mk_bool true |> mk_term ~tloc:e.espan
+              | _ -> failwith "must be a boolean value")
+           | [e1; e2] ->
+             let ze1 = encode_exp_z3_single descr env e1 in
+             let ze2 = encode_exp_z3_single descr env e2 in
+             mk_or ze1.t ze2.t |> mk_term ~tloc:e.espan
+           | _ -> failwith "Invalid number of arguments to Or")
+        | Syntax.Not ->
+          (match es with
+           | [e1] ->
+             let ze = encode_exp_z3_single descr env e1 in
+             mk_not ze.t |> mk_term ~tloc:e.espan
+           | _ -> failwith "Invalid number of arguments to Not")
+        | Syntax.UAdd _ ->
+          (match es with
+           | [e1;e2] ->
+             let ze1 = encode_exp_z3_single descr env e1 in
+             let ze2 = encode_exp_z3_single descr env e2 in
+             if smt_config.infinite_arith then
+               mk_add ze1.t ze2.t |> mk_term ~tloc:e.espan
+             else
+               mk_bv_add ze1.t ze2.t |> mk_term ~tloc:e.espan
+           | _ -> failwith "Invalid number of arguments to UAdd")
+        | Syntax.USub _ ->
+          (match es with
+           | [e1;e2] ->
+             let ze1 = encode_exp_z3_single descr env e1 in
+             let ze2 = encode_exp_z3_single descr env e2 in
+             if smt_config.infinite_arith then
+               mk_sub ze1.t ze2.t |> mk_term ~tloc:e.espan
+             else
+               mk_bv_sub ze1.t ze2.t |> mk_term ~tloc:e.espan
+           | _ -> failwith "Invalid number of arguments to USub")
+        | Syntax.UAnd _ ->
+          (match es with
+           | [e1;e2] ->
+             let ze1 = encode_exp_z3_single descr env e1 in
+             let ze2 = encode_exp_z3_single descr env e2 in
+             let sz =
+               match oget e1.ety with
+               | TInt sz -> sz
+               | _ -> failwith "Expected an integer type"
+             in
+             if smt_config.infinite_arith then
+               mk_uand ze1.t ze2.t sz |> mk_term ~tloc:e.espan
+             else
+               mk_bv_uand ze1.t ze2.t |> mk_term ~tloc:e.espan
+           | _ -> failwith "Invalid number of arguments to USub")
+        | Eq ->
+          (match es with
+           | [e1;e2] -> 
+             let ze1 = encode_exp_z3_single descr env e1 in
+             let ze2 = encode_exp_z3_single descr env e2 in
+             mk_eq ze1.t ze2.t |> mk_term ~tloc:e.espan
+           | _ -> failwith "Invalid number of arguments to Eq")
+        | ULess _ | NLess ->
+          (match es with
+           | [e1; e2] ->
+             let ze1 = encode_exp_z3_single descr env e1 in
+             let ze2 = encode_exp_z3_single descr env e2 in
+             if smt_config.infinite_arith then
+               mk_lt ze1.t ze2.t |> mk_term ~tloc:e.espan
+             else
+               mk_bv_lt ze1.t ze2.t |> mk_term ~tloc:e.espan
+           | _ -> failwith "Invalid number of arguments to Less")
+        | ULeq _ | NLeq ->
+          (match es with
+           | [e1; e2] ->
+             let ze1 = encode_exp_z3_single descr env e1 in
+             let ze2 = encode_exp_z3_single descr env e2 in
+             if smt_config.infinite_arith then
+               mk_leq ze1.t ze2.t |> mk_term ~tloc:e.espan
+             else
+               mk_bv_leq ze1.t ze2.t |> mk_term ~tloc:e.espan
+           | _ -> failwith "Invalid number of arguments to Leq")
+        | TGet (_, lo, hi) when lo = hi ->
+          (match es with
+           | [e1] ->
+             (match e1.e with
+              | ETuple es1 ->
+                encode_exp_z3_single descr env (BatList.nth es1 lo)
+              | _ ->
+                let ze1 = encode_exp_z3 descr env e1 in
+                BatList.nth ze1 lo)
+           | _ -> failwith "Invalid number of arguments to TGet")
+        | AtMost _ ->
+          (match es with
+           | [e1; e2 ; e3] ->
+             (match e1.e with
               | ETuple es ->
-                let zes2 =
-                  BatList.map (fun e -> (encode_exp_z3_single ~arith:true descr env e).t) es
-                in
-                let ze3 = encode_value_z3_single ~arith:true descr env (Syntax.to_value e3) in
-                mk_atMost zes zes2 ze3.t |>
-                mk_term ~tloc:e.espan
-              | _ -> failwith "AtMost requires a list of integers as second arg"
-             )
-           | _ -> failwith "AtMost operator requires a list of boolean variables")
-        | MCreate, [_] ->
-          failwith "not implemented"
-        | MGet, [_; _] ->
-          failwith "not implemented"
-        | MSet, [_; _; _] ->
-          failwith "not implemented"
-        | MMap, [{e = EFun _}; _] ->
-          (* | MMap, [{e= EFun {arg= x; argty= ty1; resty= ty2; body= e1}}; e2] -> *)
-          failwith "not implemented yet"
-        | MMapFilter, _
-        | MMerge, _
-        | MFoldNode, _
-        | MFoldEdge, _
-        | _ -> failwith "internal error (encode_exp_z3)")
+                let zes =
+                  BatList.map (fun e -> (encode_exp_z3_single ~arith:true descr env e).t) es in
+                (match e2.e with
+                 | ETuple es ->
+                   let zes2 =
+                     BatList.map (fun e -> (encode_exp_z3_single ~arith:true descr env e).t) es
+                   in
+                   let ze3 = encode_value_z3_single ~arith:true descr env (Syntax.to_value e3) in
+                   mk_atMost zes zes2 ze3.t |>
+                   mk_term ~tloc:e.espan
+                 | _ -> failwith "AtMost requires a list of integers as second arg")
+              | _ -> failwith "AtMost operator requires a list of boolean variables")
+           | _ -> failwith "Invalid number of arguments to AtMost")
+        | MCreate
+        | MGet
+        | MSet
+        | MMap
+        | MMapIte
+        | MMapFilter
+        | MMerge
+        | MFoldNode
+        | MFoldEdge -> failwith "internal error (encode_exp_z3)")
     | ETy (e, _) -> encode_exp_z3_single ~arith descr env e
     | _ ->
       (* we always know this is going to be a singleton list *)

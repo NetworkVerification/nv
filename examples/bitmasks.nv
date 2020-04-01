@@ -1,0 +1,22 @@
+(* Testing bitmask operations, expected solutions : 0 for 0n and 1 for 1n*)
+
+type route = int
+
+let nodes = 2
+
+let edges = { 0=1; }
+
+let trans e x = x + 1
+
+let merge u x y = if x < y then x else y
+
+let init u =
+  match u with
+  | 0n -> 5 & 2 (* = 0 *)
+  | 1n -> 7 & 3 (* = 3 *)
+
+
+let x = solution {init = init; trans = trans; merge = merge}
+
+
+assert (x[0n] = 0 && x[1n] = 1)

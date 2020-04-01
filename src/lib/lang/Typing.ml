@@ -333,6 +333,7 @@ let op_typ op =
   (* Integer operators *)
   | UAdd size -> ([tint_of_size size; tint_of_size size], tint_of_size size)
   | USub size -> ([tint_of_size size; tint_of_size size], tint_of_size size)
+  | UAnd size -> ([tint_of_size size; tint_of_size size], tint_of_size size)
   | ULess size-> ([tint_of_size size; tint_of_size size], TBool)
   | ULeq size -> ([tint_of_size size; tint_of_size size], TBool)
   | NLess -> ([TNode; TNode], TBool)

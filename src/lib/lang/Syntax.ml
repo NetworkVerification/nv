@@ -50,6 +50,7 @@ type op =
   | Eq
   | UAdd of bitwidth
   | USub of bitwidth
+  | UAnd of bitwidth
   | ULess of bitwidth
   | ULeq of bitwidth
   | NLess
@@ -705,14 +706,15 @@ and hash_op op =
   | USub n -> 11  + n + 256 * 2
   | ULess n -> 11 + n + 256 * 3
   | ULeq n -> 11  + n + 256 * 4
-  | AtMost n -> 12 + n
-  | NLess -> 13
-  | NLeq -> 14
-  | MFoldNode -> 15
-  | MFoldEdge -> 16
-  | TGet (n1, n2, n3) -> 17 + n1 + n2 + n3 + 256 * 5
-  | TSet (n1, n2, n3) -> 17 + n1 + n2 + n3 + 256 * 6
-  | MMapIte -> 18
+  | UAnd n -> 12 + n + 256 *  5
+  | AtMost n -> 13 + n
+  | NLess -> 14
+  | NLeq -> 15
+  | MFoldNode -> 16
+  | MFoldEdge -> 17
+  | TGet (n1, n2, n3) -> 18 + n1 + n2 + n3 + 256 * 6
+  | TSet (n1, n2, n3) -> 19 + n1 + n2 + n3 + 256 * 7
+  | MMapIte -> 20
 (* hashconsing information/tables *)
 
 let meta_v : (v, value) Hashcons.meta =
@@ -751,6 +753,7 @@ let arity op =
   | Eq -> 2
   | ULess _ -> 2
   | ULeq _ -> 2
+  | UAnd _ -> 2
   | NLess -> 2
   | NLeq -> 2
   | AtMost _ -> 3

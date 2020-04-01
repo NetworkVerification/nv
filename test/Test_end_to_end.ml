@@ -109,6 +109,7 @@ let simulator_tests =
     [
       ("examples/debugging/debug-combine.nv", true);
       ("examples/batfish.nv", false);
+      ("examples/bitmasks.nv", true);
       ("examples/diamond.nv", true);
       ("examples/diamond-ospf.nv", true);
       ("examples/env.nv", true);
@@ -170,6 +171,7 @@ let smt_tests =
     [
       ("examples/debugging/debug-combine.nv", true);
       ("examples/batfish.nv", false);
+      ("examples/bitmasks.nv", true);
       ("examples/diamond.nv", true);
       ("examples/diamond-ospf.nv", true);
       ("examples/env.nv", true);

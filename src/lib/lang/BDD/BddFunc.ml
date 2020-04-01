@@ -10,12 +10,12 @@ module B = BddUtils
 
 (** ** Type of values computed*)
 type t =
-  | BBool of Bdd.vt
-  | BInt of Bdd.vt array
-  | BOption of Bdd.vt * t
-  | Tuple of t list
-  | BMap of BddMap.t
-  | Value of Syntax.value
+  | BBool of Bdd.vt (* Boolean BDD *)
+  | BInt of Bdd.vt array (* Integer as an array of booleans *)
+  | BOption of Bdd.vt * t (* Option of BDD *)
+  | Tuple of t list (* Tuple of elements, not necessary BDDs *)
+  | BMap of BddMap.t (* MTBDD map, for now leafs are values *)
+  | Value of Syntax.value (* Conventional NV value *)
 
 let rec equal_t x y =
   match x,y with
@@ -284,6 +284,10 @@ let add xs ys =
   done ;
   BInt (var4)
 
+(** Bitwise and operation. Requires that the two integers are of the same size. *)
+let uand xs ys =
+  BInt (Array.init (Array.length xs) (fun i -> Bdd.dand xs.(i) ys.(i)))
+
 (* Outdated. Compare with add above if uncommenting *)
 (* let sub (x: bdd_value) (y: bdd_value) : bdd_value =
    let aux xs ys =
@@ -514,6 +518,8 @@ let rec eval (env: t Env.t) (e: exp) : t =
         eval_int_op2 (fun i1 i2 -> vint (Integer.add i1 i2)) add (eval env e1) (eval env e2)
       | ULess _, [e1; e2] ->
         eval_int_op2 (fun i1 i2 -> vbool (Integer.lt i1 i2)) lt (eval env e1) (eval env e2)
+      | UAnd _, [e1; e2] ->
+        eval_int_op2 (fun i1 i2 -> vint (Integer.uand i1 i2)) uand (eval env e1) (eval env e2)
       | ULeq _, [e1; e2] ->
         eval_int_op2 (fun i1 i2 -> vbool (Integer.leq i1 i2)) leq (eval env e1) (eval env e2)
       | NLess, [e1; e2] ->
