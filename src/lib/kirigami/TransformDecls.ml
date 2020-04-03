@@ -9,14 +9,11 @@ let node_to_exp n = e_val (vnode n)
 
 let edge_to_exp e = e_val (vedge e)
 
-let node_to_pat node =
-  exp_to_pattern @@ node_to_exp node
+let node_to_pat node = exp_to_pattern (node_to_exp node)
 
-let edge_to_pat edge =
-  exp_to_pattern @@ edge_to_exp edge
+let edge_to_pat edge = exp_to_pattern (edge_to_exp edge)
 
-let amatch v t b =
-  (ematch (aexp (evar v, t, Span.default)) b)
+let amatch v t b = ematch (aexp (evar v, t, Span.default)) b
 
 (** Add match branches using the given map of old nodes to new nodes. *)
 let match_of_node_map (m: Vertex.t option VertexMap.t) b =
@@ -100,15 +97,14 @@ let transform_init
           (* assert that this was the only node that matched *)
           assert (VertexMap.is_empty m);
           (* the output then applies the old init with the correct old base node *)
-          (eapp old (node_to_exp old_base))
+          (InterpPartial.interp_partial_fun old [(vnode old_base)])
         end
     in addBranch (node_to_pat u) exp
   in
-  (* let default_branch = addBranch PWild old emptyBranch in *)
   let base_map_match = match_of_node_map node_map emptyBranch in
   (* Simplify the old expression to a value *)
   let interp_old old exp =
-    InterpPartial.interp_partial_opt (eapp old exp)
+    InterpPartial.interp_partial_fun old [(Syntax.to_value exp)]
   in
   let base_branches = mapBranches (fun (pat,exp) -> (pat, interp_old old exp)) base_map_match in
   let input_branches = VertexMap.fold add_init_branch inputs base_branches in

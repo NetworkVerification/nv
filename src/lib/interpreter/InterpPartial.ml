@@ -331,9 +331,9 @@ let rec interp_exp_partial isapp env e =
 and interp_op_partial env op es =
   let pes = BatList.map (interp_exp_partial false env) es in
   if BatList.exists (fun pe -> not (is_value pe)) pes then
-  (*   simplify_exps op pes
-   * else
-   * if isMapOp op then *)
+    (*   simplify_exps op pes
+     * else
+     * if isMapOp op then *)
     eop op pes
   else
     begin
