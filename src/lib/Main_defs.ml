@@ -392,6 +392,7 @@ let parse_input (args : string array) :
     let new_decls = Nv_kirigami.Partition.divide_decls decls in
     List.map (fun d ->
         print_endline @@ Printing.declarations_to_string d;
+        (* TODO: don't do type inference again after transformation *)
         let new_d = Typing.infer_declarations info d in
         parse_input_aux cfg info file new_d fs) new_decls
   else
