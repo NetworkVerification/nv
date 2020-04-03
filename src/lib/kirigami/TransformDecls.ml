@@ -106,7 +106,11 @@ let transform_init
   in
   (* let default_branch = addBranch PWild old emptyBranch in *)
   let base_map_match = match_of_node_map node_map emptyBranch in
-  let base_branches = mapBranches (fun (pat,exp) -> (pat, eapp old exp)) base_map_match in
+  (* Simplify the old expression to a value *)
+  let interp_old old exp =
+    InterpPartial.interp_partial_opt (eapp old exp)
+  in
+  let base_branches = mapBranches (fun (pat,exp) -> (pat, interp_old old exp)) base_map_match in
   let input_branches = VertexMap.fold add_init_branch inputs base_branches in
   let output_branches = VertexMap.fold add_init_branch outputs input_branches in
   (* the returned expression should be a function that takes a node as input with the following body:
@@ -124,12 +128,16 @@ let transform_trans (e: Syntax.exp) (intf: SrpRemapping.interface) (edge_map: Ed
   let x_var = Var.fresh "x" in
   let { inputs; outputs } : SrpRemapping.interface = intf in
   let orig_trans edge = (apps e [edge; (evar x_var)]) in
+  (* Simplify the old expression to an expression just over the second variable *)
+  let interp_trans edge =
+    InterpPartial.interp_partial_opt (orig_trans edge)
+  in
   (* function to remap edge_map mappings to the correct trans expressions *)
   let remap_branch (pat, exp) = match pat with
     | (PEdge (PNode u, PNode v)) -> begin
         (* handle if the nodes are base~base, input~base, or base~output *)
         let new_exp = match VertexMap.Exceptionless.find v outputs with
-          | Some u' -> if (u = u') then (orig_trans exp)
+          | Some u' -> if (u = u') then (interp_trans exp)
           (* call the original exp using the old edge *)
             else failwith "outputs stored edge did not match edge in edge_map"
           | None -> begin
@@ -137,7 +145,7 @@ let transform_trans (e: Syntax.exp) (intf: SrpRemapping.interface) (edge_map: Ed
               match VertexMap.Exceptionless.find u inputs with
               | Some v' -> if (v = v') then (evar x_var) else
                   failwith "inputs stored edge did not match edge in edge_map"
-              | None -> (orig_trans exp) (* must be a base~base edge *)
+              | None -> (interp_trans exp) (* must be a base~base edge *)
             end
         in
         (pat, new_exp)
@@ -175,7 +183,11 @@ let transform_merge (e: Syntax.exp) (intf: SrpRemapping.interface) (node_map) : 
   let { outputs; inputs } : SrpRemapping.interface = intf in
   (* let default_branch = addBranch PWild e emptyBranch in *)
   let map_match = match_of_node_map node_map emptyBranch in
-  let base_branches = mapBranches (fun (pat, exp) -> (pat, eapp e exp)) map_match in
+  (* Simplify the old expression to a smaller expression *)
+  let interp_old old exp =
+    InterpPartial.interp_partial_opt (eapp old exp)
+  in
+  let base_branches = mapBranches (fun (pat, exp) -> (pat, interp_old e exp)) map_match in
   (* FIXME: bad merge impl for inputs; left as-is for now since it's not actually called,
    * just present to stop there from being complaints about missing branches in the match *)
   let input_branches = VertexMap.fold in_merge_branch inputs base_branches in
@@ -197,16 +209,13 @@ let transform_assert
   let node_var = Var.fresh "node" in
   let soln_var = Var.fresh "x" in
   let etrue = e_val (vbool true) in
-  let apply_assert node soln = match e with
-    | Some e -> (apps e [node; soln])
-    | None -> etrue
-  in
   (* If the old expression was Some, apply the assert with the given variables;
    * if it was None, simply create an expression evaluating to true *)
-  (* let e = match e with
-   *   | Some e -> (apps e [(evar node_var); (evar soln_var)])
-   *   | None -> etrue
-   * in *)
+  let apply_assert node soln = match e with
+    (* Apply the old assert and simplify if possible *)
+    | Some e -> InterpPartial.interp_partial (apps e [node; soln])
+    | None -> etrue
+  in
   (* Map the new base nodes to the old ones using the map_match *)
   let map_match = match_of_node_map node_map emptyBranch in
   let base_branches = mapBranches (fun (pat, exp) -> (pat, apply_assert exp (evar soln_var))) map_match in
