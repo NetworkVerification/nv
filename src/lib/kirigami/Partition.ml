@@ -111,22 +111,22 @@ let filter_preds vmap preds =
   in
   EdgeMap.filter find_pred_in_vmap preds
 
-let transform_declaration parted_srp edge_hyps decl =
-  let { nodes; edges; node_map; edge_map; intf; preds; } : SrpRemapping.partitioned_srp = parted_srp in
+let transform_declaration parted_srp attr_type decl =
+  let { nodes; edges; _ } : SrpRemapping.partitioned_srp = parted_srp in
   match decl with
   | DNodes _ -> Some (DNodes nodes)
   | DEdges _ -> Some (DEdges edges)
   | DInit init -> begin
-      let input_exps = EdgeMap.map (fun (v, _) -> (evar v)) edge_hyps in
-      Some (DInit (transform_init init intf input_exps node_map))
+      (* let input_exps = EdgeMap.map (fun (v, _) -> (evar v)) input_hyps in *)
+      Some (DInit (transform_init init attr_type parted_srp))
     end
-  | DTrans trans -> Some (DTrans (transform_trans trans intf edge_map))
+  | DTrans trans -> Some (DTrans (transform_trans trans attr_type parted_srp))
   (* FIXME: merge is screwy; currently an output node on the destination won't update since it
     * gets initialized with the destination's value, which is already the best *)
-  | DMerge merge -> Some (DMerge (transform_merge merge intf node_map))
+  | DMerge merge -> Some (DMerge (transform_merge merge attr_type parted_srp))
   | DAssert assertion -> begin
-      let output_preds = filter_preds intf.outputs preds in
-      Some (DAssert (transform_assert (Some assertion) intf output_preds node_map))
+      (* let output_preds = filter_preds intf.outputs preds in *)
+      Some (DAssert (transform_assert (Some assertion) attr_type parted_srp))
     end
   | DPartition _ -> None
   | DInterface _ -> None
@@ -158,7 +158,7 @@ let divide_decls (decls: declarations) : declarations list =
       in
       let interfacef = unwrap_pred % intf_opt in
       let partitioned_srps = SrpRemapping.partition_edges node_list edges partf interfacef in
-      let create_new_decls parted_srp : declarations =
+      let create_new_decls (parted_srp : SrpRemapping.partitioned_srp) : declarations =
         (* TODO: node_map and edge_map describe how to remap each node and edge in the new SRP.
          * To transform more cleanly, we can run a toplevel transformer on the SRP, replacing
          * each edge and node in the map with the new value if it's Some,
@@ -166,20 +166,20 @@ let divide_decls (decls: declarations) : declarations list =
          * We can then add code to handle adding in the new input and output nodes to the SRP.
          * (the input and output edges are handled by edge_map).
         *)
-        let { node_map; intf; preds; _ } : SrpRemapping.partitioned_srp = parted_srp in
-        let edge_hyps = EdgeMap.mapi (fun edge p -> begin
-              (* FIXME: the edge name is now the old name *)
-              let name = Printf.sprintf "hyp_%s" (Edge.to_string edge) in
-              (Var.fresh name, p)
-            end) (filter_preds intf.inputs preds) in
-        let new_symbolics = EdgeMap.fold (fun _ (v, _) l -> DSymbolic (v, Ty attr_type) :: l) edge_hyps [] in
-        let new_requires = EdgeMap.fold (fun _ (v, p) l -> DRequire (eapp p (evar v)) :: l) edge_hyps [] in
+        let add_symbolic _ ({var; _} : SrpRemapping.input_exp) l =
+          DSymbolic (var, Ty attr_type) :: l
+        in
+        let new_symbolics = VertexMap.fold add_symbolic parted_srp.inputs [] in
+        let add_require _ ({var; pred; _} : SrpRemapping.input_exp) l =
+          DRequire (eapp pred (evar var)) :: l
+        in
+        let new_requires = VertexMap.fold add_require parted_srp.inputs [] in
         (* replace relevant old decls *)
-        let new_decls = List.filter_map (transform_declaration parted_srp edge_hyps) decls in
+        let new_decls = List.filter_map (transform_declaration parted_srp attr_type) decls in
         (* add the assertion in at the end if there wasn't an assert in the original decls *)
         let add_assert = match get_assert new_decls with
           | Some _ -> []
-          | None -> [DAssert (transform_assert None intf (filter_preds intf.outputs preds) node_map)]
+          | None -> [DAssert (transform_assert None attr_type parted_srp)]
         in
         (* also add requires at the end so they can use any bindings earlier in the file *)
         new_symbolics @ new_decls @ new_requires @ add_assert

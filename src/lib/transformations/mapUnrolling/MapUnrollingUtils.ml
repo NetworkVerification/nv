@@ -71,7 +71,7 @@ let rec collect_in_ty symbolics ty acc =
 ;;
 
 let rec collect_in_exp (symbolics : var list) (exp : Syntax.exp) (acc : maplist) : maplist =
-  (* print_endline @@ "Collecting in expr " ^ Printing.exp_to_string exp; *)
+  print_endline @@ "Collecting in expr " ^ Printing.exp_to_string exp;
   let curr_ty = Nv_utils.OCamlUtils.oget exp.ety in
   let collect_in_exp = collect_in_exp symbolics in
   let add_if_map_type = add_if_map_type symbolics in
