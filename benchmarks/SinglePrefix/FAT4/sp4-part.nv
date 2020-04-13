@@ -1,7 +1,7 @@
 (* vim: set syntax=ocaml: *)
 (* Partitioned version of sp4.nv *)
 include "../../../examples/utils.nv"
-include "sp4-nomap.nv"
+include "sp4.nv"
 
 (* destination: node 10 *)
 (* 70.0.19.0/24u5 or (1174409984, 24u5)*)
