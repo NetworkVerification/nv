@@ -8,20 +8,6 @@ open Nv_interpreter
 open Nv_utils.OCamlUtils
 open SrpRemapping
 
-let is_cross_partition (f: Vertex.t -> 'a) edge =
-  (f (fst edge)) <> (f (snd edge))
-
-(* It is possible that a better implementation involves building a new graph using the interface set,
- * as indexing newly-added nodes could break on AdjGraph implementation change
-*)
-
-(** Representation of a cut edge with an associated hypothesis and a predicate on that hypothesis *)
-type cut_edge =
-  { u: Vertex.t;
-    v: Vertex.t;
-    h: var;
-    p: exp;
-  }
 
 (** Helper function to extract the edge predicate
  *  from the interface expression.
@@ -46,71 +32,11 @@ let interp_partition parte node : int =
   let value = Interp.apply empty_env (deconstructFun parte) (vnode node)
   in (int_of_val value) |> Option.get
 
-(* Generate a map of edges to annotations from the given partition and interface expressions
- * and a list of edges.
- * If the interface is absent, use None for each value.
- * @return a map from edges in the original SRP to associated values
-*)
-let map_edges_to_interface (partition: exp option) (interface: exp option) (edges: edge list) : exp option EdgeMap.t =
-  match partition with
-  | Some parte -> begin
-      let get_edge_hyp map e =
-        (* Add each cross-partition edge to the interface *)
-        if (is_cross_partition (interp_partition parte) e) then
-          let intf_pred = match interface with
-            | Some intfe -> interp_interface intfe e
-            | None -> None
-          in
-          EdgeMap.add e intf_pred map
-        else
-          map
-      in
-      List.fold_left get_edge_hyp EdgeMap.empty edges
-    end
-  | None -> EdgeMap.empty
 
 (** Helper function to unwrap the predicate. *)
 let unwrap_pred maybe_pred = match maybe_pred with
   | Some pred -> pred (* the interface is an efun *)
   | None -> e_val (vbool true)
-
-(** Create a symbolic variable for each cut edge.
- *  This function maps each edge's optional predicate
- *  into a pair: a hypothesis variable and a predicate we can
- *  apply to that hypothesis variable.
- *  @return a map from edges to hypothesis and predicate information *)
-let create_hyp_vars (interface: exp option EdgeMap.t) : (var * exp) EdgeMap.t =
-  let create_hyp_pred edge maybe_pred =
-    (* generate the var *)
-    let name = Printf.sprintf "hyp_%s" (Edge.to_string edge) in
-    (Var.fresh name, unwrap_pred maybe_pred)
-  in
-  EdgeMap.mapi create_hyp_pred interface
-
-(** Create a new map from the given map of cut edges to hypothesis-predicate pairs,
- *  where each key is an input~base edge, and each value is an expression using the hypothesis.
- *  This is then used to add the input cases to the init function.
-*)
-let get_input_exps ({ broken_ins; _}: OpenAdjGraph.interfaces_alt) (edge_hyps: (var * exp) EdgeMap.t) : (exp EdgeMap.t) =
-  (* create an edgemap of input~base keys to hypothesis expression values *)
-  let add_edge_to_hyp (u, v) inn m =
-    let (var, _) = EdgeMap.find (u,v) edge_hyps in
-    EdgeMap.add (inn,v) (evar var) m
-  in
-  EdgeMap.fold add_edge_to_hyp broken_ins EdgeMap.empty
-
-(* filter all predicate edges out that do not appear in the given vertex->vertex map *)
-let filter_preds vmap preds =
-  (* match on both binding arrangements:
-   * since outputs go output~base but preds goes base~output,
-   * there's no risk of mismatching, since outputs and input all
-   * have only one neighbor
-  *)
-  let find_pred_in_vmap (u, v) _ =
-    let is_pred_in_vmap u' v' = (u' = u && v' = v ) || (u' = v && v' = u) in
-    VertexMap.exists is_pred_in_vmap vmap
-  in
-  EdgeMap.filter find_pred_in_vmap preds
 
 let transform_declaration parted_srp attr_type decl =
   let { nodes; edges; _ } : partitioned_srp = parted_srp in
@@ -141,9 +67,6 @@ let divide_decls (decls: declarations) : declarations list =
   let partition = get_partition decls in
   match partition with
   | Some parte -> begin
-      (* Give names to remap functions *)
-      (* let node_remap_fn = "remapNode" in
-       * let edge_remap_fn = "remapEdge" in *)
       let attr_type = get_attr_type decls |> Option.get in
       (* get the parameters for partition_edges *)
       let interface = get_interface decls in
@@ -172,18 +95,18 @@ let divide_decls (decls: declarations) : declarations list =
         in
         let new_symbolics = VertexMap.fold add_symbolic parted_srp.inputs [] in
         let add_require _ ({var; pred; _} : input_exp) l =
-          DRequire (eapp pred (evar var)) :: l
+          DRequire (annot TBool (eapp pred (annot attr_type (evar var)))) :: l
         in
         let new_requires = VertexMap.fold add_require parted_srp.inputs [] in
-        (* replace relevant old decls *)
-        let new_decls = List.filter_map (transform_declaration parted_srp attr_type) decls in
+        (* replace relevant old declarations *)
+        let transformed_decls = List.filter_map (transform_declaration parted_srp attr_type) decls in
         (* add the assertion in at the end if there wasn't an assert in the original decls *)
-        let add_assert = match get_assert new_decls with
+        let add_assert = match get_assert transformed_decls with
           | Some _ -> []
           | None -> [DAssert (transform_assert None attr_type parted_srp)]
         in
         (* also add requires at the end so they can use any bindings earlier in the file *)
-        new_symbolics @ new_decls @ new_requires @ add_assert
+        new_symbolics @ transformed_decls @ new_requires @ add_assert
       in
       List.map create_new_decls partitioned_srps
     end

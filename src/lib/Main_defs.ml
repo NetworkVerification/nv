@@ -391,9 +391,10 @@ let parse_input (args : string array) :
     (* NOTE: we partition after checking well-formedness so we can reuse edges that don't exist *)
     let new_decls = Nv_kirigami.Partition.divide_decls decls in
     List.map (fun d ->
-        print_endline @@ Printing.declarations_to_string d;
+        (* print_endline @@ Printing.declarations_to_string d; *)
         (* TODO: don't do type inference again after transformation *)
         (* let d = Typing.infer_declarations info d in *)
+        (* print_endline @@ PrintingRaw.show_exp ~show_meta:true (get_trans d |> BatOption.get); *)
         parse_input_aux cfg info file d fs) new_decls
   else
     [parse_input_aux cfg info file decls fs]
