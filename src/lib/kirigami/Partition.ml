@@ -6,6 +6,7 @@ open Nv_lang.Syntax
 open TransformDecls
 open Nv_interpreter
 open Nv_utils.OCamlUtils
+open SrpRemapping
 
 let is_cross_partition (f: Vertex.t -> 'a) edge =
   (f (fst edge)) <> (f (snd edge))
@@ -112,7 +113,7 @@ let filter_preds vmap preds =
   EdgeMap.filter find_pred_in_vmap preds
 
 let transform_declaration parted_srp attr_type decl =
-  let { nodes; edges; _ } : SrpRemapping.partitioned_srp = parted_srp in
+  let { nodes; edges; _ } : partitioned_srp = parted_srp in
   match decl with
   | DNodes _ -> Some (DNodes nodes)
   | DEdges _ -> Some (DEdges edges)
@@ -157,8 +158,8 @@ let divide_decls (decls: declarations) : declarations list =
         | None -> fun (_: Edge.t) -> None
       in
       let interfacef = unwrap_pred % intf_opt in
-      let partitioned_srps = SrpRemapping.partition_edges node_list edges partf interfacef in
-      let create_new_decls (parted_srp : SrpRemapping.partitioned_srp) : declarations =
+      let partitioned_srps = partition_edges node_list edges partf interfacef in
+      let create_new_decls (parted_srp : partitioned_srp) : declarations =
         (* TODO: node_map and edge_map describe how to remap each node and edge in the new SRP.
          * To transform more cleanly, we can run a toplevel transformer on the SRP, replacing
          * each edge and node in the map with the new value if it's Some,
@@ -166,11 +167,11 @@ let divide_decls (decls: declarations) : declarations list =
          * We can then add code to handle adding in the new input and output nodes to the SRP.
          * (the input and output edges are handled by edge_map).
         *)
-        let add_symbolic _ ({var; _} : SrpRemapping.input_exp) l =
+        let add_symbolic _ ({var; _} : input_exp) l =
           DSymbolic (var, Ty attr_type) :: l
         in
         let new_symbolics = VertexMap.fold add_symbolic parted_srp.inputs [] in
-        let add_require _ ({var; pred; _} : SrpRemapping.input_exp) l =
+        let add_require _ ({var; pred; _} : input_exp) l =
           DRequire (eapp pred (evar var)) :: l
         in
         let new_requires = VertexMap.fold add_require parted_srp.inputs [] in

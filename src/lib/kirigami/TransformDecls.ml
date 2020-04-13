@@ -13,7 +13,8 @@ let node_to_pat node = exp_to_pattern (node_to_exp node)
 
 let edge_to_pat edge = exp_to_pattern (edge_to_exp edge)
 
-let amatch v t b = ematch (aexp (evar v, t, Span.default)) b
+(* Create an annotated match statement *)
+let amatch v t b = annot t (ematch (aexp (evar v, Some t, Span.default)) b)
 
 (** Add match branches using the given map of old nodes to new nodes. *)
 let match_of_node_map (m: Vertex.t option VertexMap.t) b =
@@ -82,7 +83,7 @@ let transform_init (old: exp) (ty: ty) (parted_srp: SrpRemapping.partitioned_srp
     (* if the edge is present in the interface set, then use the specified expression;
      * this should be true only for the input edges since input_exps lists input~base edges *)
     let { var; _ } : SrpRemapping.input_exp = input_exp in
-    let exp = evar var in
+    let exp = annot ty (evar var) in
     addBranch (node_to_pat u) exp
   in
   let add_output_branch u (v, _) =
@@ -96,7 +97,7 @@ let transform_init (old: exp) (ty: ty) (parted_srp: SrpRemapping.partitioned_srp
   let output_branches = VertexMap.fold add_output_branch outputs input_branches in
   (* the returned expression should be a function that takes a node as input with the following body:
    * a match with node as the exp and output_branches as the branches *)
-  wrap old (lam node_var (amatch node_var (Some TNode) output_branches))
+  wrap old (lam node_var (amatch node_var TNode output_branches))
 
 (* Pass in the original trans Syntax.exp and update it to perform
  * distinct actions for the inputs and outputs of the OpenAdjGraph.
@@ -110,7 +111,7 @@ let transform_trans (e: exp) (attr: ty) (parted_srp: SrpRemapping.partitioned_sr
   let x_var = Var.fresh "x" in
   (* Simplify the old expression to an expression just over the second variable *)
   let interp_trans edge =
-    InterpPartial.interp_partial_opt (apps e [edge; (evar x_var)])
+    InterpPartial.interp_partial_opt (annot attr (apps e [edge; annot attr (evar x_var)]))
   in
   (* function to remap edge_map mappings to the correct trans expressions *)
   let remap_branch (pat, exp) = match pat with
@@ -123,7 +124,7 @@ let transform_trans (e: exp) (attr: ty) (parted_srp: SrpRemapping.partitioned_sr
           | None -> begin
               (* not a base~output edge, check input~base case *)
               match VertexMap.Exceptionless.find u inputs with
-              | Some {base; _ } -> if (v = base) then (evar x_var) else
+              | Some {base; _ } -> if (v = base) then (annot attr (evar x_var)) else
                   failwith "inputs stored edge did not match edge in edge_map"
               | None -> (interp_trans exp) (* must be a base~base edge *)
             end
@@ -134,9 +135,11 @@ let transform_trans (e: exp) (attr: ty) (parted_srp: SrpRemapping.partitioned_sr
   in
   let edge_map_match = match_of_edge_map edge_map emptyBranch in
   let branches = mapBranches remap_branch edge_map_match in
-  wrap e (lams [edge_var; x_var] (amatch edge_var (Some TEdge) branches))
+  let x_lambda = efunc (funcFull x_var (Some attr) (Some attr) (amatch edge_var TEdge branches)) in
+  let lambda = efunc (funcFull edge_var (Some TEdge) (Some (TArrow (attr, attr))) x_lambda) in
+  wrap e lambda
 
-let in_merge_branch (n: Vertex.t) (_: SrpRemapping.input_exp) (b: branches) : branches =
+let in_merge_branch (ty: ty) (n: Vertex.t) (_: SrpRemapping.input_exp) (b: branches) : branches =
   let a1 = Var.fresh "a1" in
   let a2 = Var.fresh "a2" in
   let node_pat = node_to_pat n in
@@ -144,10 +147,10 @@ let in_merge_branch (n: Vertex.t) (_: SrpRemapping.input_exp) (b: branches) : br
   (* FIXME: this is a *brittle and dangerous solution*, since it relies on an
    * implementation detail to ignore the fact that we expect merge to be
    * commutative *)
-  let merge_exp = (lams [a1; a2] (evar a1)) in
+  let merge_exp = annot ty (lams [a1; a2] (annot ty (evar a1))) in
   addBranch node_pat merge_exp b
 
-let out_merge_branch (n: Vertex.t) (_: (Vertex.t * exp)) (b: branches) : branches =
+let out_merge_branch (ty: ty) (n: Vertex.t) (_: (Vertex.t * exp)) (b: branches) : branches =
   let a1 = Var.fresh "a1" in
   let a2 = Var.fresh "a2" in
   let node_pat = node_to_pat n in
@@ -155,7 +158,7 @@ let out_merge_branch (n: Vertex.t) (_: (Vertex.t * exp)) (b: branches) : branche
   (* FIXME: this is a *brittle and dangerous solution*, since it relies on an
    * implementation detail to ignore the fact that we expect merge to be
    * commutative *)
-  let merge_exp = (lams [a1; a2] (evar a2)) in
+  let merge_exp = annot ty (lams [a1; a2] (annot ty (evar a2))) in
   addBranch node_pat merge_exp b
 
 let transform_merge (e: exp) (attr: ty) (parted_srp: SrpRemapping.partitioned_srp) : exp =
@@ -170,35 +173,35 @@ let transform_merge (e: exp) (attr: ty) (parted_srp: SrpRemapping.partitioned_sr
   let base_branches = mapBranches (fun (pat, exp) -> (pat, interp_old e exp)) map_match in
   (* FIXME: bad merge impl for inputs; left as-is for now since it's not actually called,
    * just present to stop there from being complaints about missing branches in the match *)
-  let input_branches = VertexMap.fold in_merge_branch inputs base_branches in
-  let output_branches = VertexMap.fold out_merge_branch outputs input_branches in
-  wrap e (lam node_var (amatch node_var (Some TNode) output_branches))
+  let input_branches = VertexMap.fold (in_merge_branch attr) inputs base_branches in
+  let output_branches = VertexMap.fold (out_merge_branch attr) outputs input_branches in
+  wrap e (efunc (funcFull node_var (Some TNode) (Some attr) (amatch node_var TNode output_branches)))
 
 (* Apply the predicate test on the solution for node n *)
-let assert_branch (x: var) (outn: Vertex.t)  (_, pred) (b: branches) : branches =
+let assert_branch (x: var) (attr: ty) (outn: Vertex.t)  (_, pred) (b: branches) : branches =
   let node_pat = node_to_pat outn in
-  addBranch node_pat (eapp pred (evar x)) b
+  addBranch node_pat (annot TBool (eapp pred (annot attr (evar x)))) b
 
 let transform_assert (e: exp option) (attr: ty) (parted_srp: SrpRemapping.partitioned_srp) : exp =
   let { node_map; inputs; outputs; _ } : SrpRemapping.partitioned_srp = parted_srp in
   let node_var = Var.fresh "node" in
   let soln_var = Var.fresh "x" in
-  let etrue = e_val (vbool true) in
+  let etrue = annot TBool (e_val (vbool true)) in
   (* If the old expression was Some, apply the assert with the given variables;
    * if it was None, simply create an expression evaluating to true *)
   let apply_assert node soln = match e with
     (* Apply the old assert and simplify if possible *)
-    | Some e -> InterpPartial.interp_partial (apps e [node; soln])
+    | Some e -> InterpPartial.interp_partial (annot TBool (apps e [(annot TNode node); (annot attr soln)]))
     | None -> etrue
   in
   (* Map the new base nodes to the old ones using the map_match *)
   let map_match = match_of_node_map node_map emptyBranch in
   let base_branches = mapBranches (fun (pat, exp) -> (pat, apply_assert exp (evar soln_var))) map_match in
   (* re-map every output to point to its corresponding predicate *)
-  let output_branches = VertexMap.fold (assert_branch soln_var) outputs base_branches in
+  let output_branches = VertexMap.fold (assert_branch soln_var attr) outputs base_branches in
   let input_branches = VertexMap.fold (fun innode _ b -> addBranch (node_to_pat innode) etrue b) inputs output_branches in
-  let match_exp = amatch node_var (Some TNode) input_branches in
-  let soln_lambda = efunc (funcFull soln_var None (Some TBool) match_exp) in
+  let match_exp = amatch node_var TNode input_branches in
+  let soln_lambda = efunc (funcFull soln_var (Some attr) (Some TBool) match_exp) in
   let lambda = efunc (funcFull node_var (Some TNode) (Some (TArrow (attr, TBool))) soln_lambda) in
   print_endline @@ Printing.ty_to_string (Option.get lambda.ety);
   match e with
