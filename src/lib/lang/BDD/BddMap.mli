@@ -1,5 +1,6 @@
 open Cudd
 open Syntax
+open Nv_datastructures
 
 type t = mtbdd
 
@@ -42,6 +43,27 @@ val update : t -> value -> value -> t
 
 val bindings : t -> (value * value) list * value
 
+val bindings_repr : t -> (value * value) list
+
+val bindings_all : t -> (value * value) list
+
 val from_bindings : key_ty:ty -> (value * value) list * value -> t
 
 val equal : t -> t -> bool
+
+(** * Printing BDD values*)
+
+(** Type of multivalues*)
+type multiValue =
+  | MUnit
+  | MBool of bool option (* Booleans are either true, false, or "Top" *)
+  | MInt of ((Integer.t * Integer.t) list) (* Integers are represented as ranges *)
+  | MBit of (bool option) array
+  | MOption of (bool option * multiValue)
+  | MTuple of multiValue list (* Tuple of elements *)
+  | MNode of (bool option) array
+  | MEdge of (bool option) array * (bool option) array
+
+val bindingsExact : t -> (multiValue * value) list
+
+val multiValue_to_string : multiValue -> string

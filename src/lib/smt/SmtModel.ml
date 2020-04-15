@@ -100,7 +100,8 @@ let translate_model (m : (string, string) BatMap.t) : Nv_solution.Solution.t =
           {sol with assertions = asn :: sol.assertions}
         | k when BatString.starts_with k "solve" ->
           let kvar = Var.of_var_string k in
-          {sol with solves = (kvar, {sol_val = nvval; mask = None}) :: sol.solves}
+          failwith "Needs to be fixed"
+          (* {sol with solves = (kvar, {sol_val = nvval; mask = None}) :: sol.solves} *)
         | k ->
           let k_var = Var.of_var_string k in
           {sol with symbolics= (k_var, nvval) :: sol.symbolics}) m
@@ -146,9 +147,10 @@ let translate_model_unboxed (m : (string, string) BatMap.t) : Nv_solution.Soluti
             new_symbolics, solves, assertions )
       ) m ([], [], [])
   in
-  let box v = {sol_val = v; mask = None} in
+  let box v = {sol_val = v; mask = None; attr_ty = Syntax.TUnit} in (*Tunit is arbitrary here**)
   { symbolics = List.rev symbolics;
-    solves = List.rev_map (fun (k, v) -> (k, box v)) solves;
+    (* solves = List.rev_map (fun (k, v) -> (k, box v)) solves; *)
+    solves = failwith "todo";
     assertions = List.rev assertions;
     labels = AdjGraph.VertexMap.empty}
 

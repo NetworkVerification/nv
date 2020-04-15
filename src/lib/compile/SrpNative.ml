@@ -24,7 +24,7 @@ sig
     -> (int -> 'a -> 'a -> 'a) -> CompileBDDs.t
 
   (** List of solutions, each entry is the name of the SRP and the *)
-  val solved : ((string * (unit * Syntax.ty)) list) ref
+  val solved : ((string * (unit AdjGraph.VertexMap.t * Syntax.ty)) list) ref
 end
 
 (** To complete the SRPs we add values for the symbolic values and a simulator*)
@@ -172,7 +172,7 @@ struct
         ~val_ty_id:attr_ty_id default
     in
     let bdd_full = AdjGraph.VertexMap.fold (fun n v acc -> NativeBdd.update attr_ty_id acc n v) vals bdd_base in
-    solved := (name, (Obj.magic bdd_full, CompileBDDs.get_type attr_ty_id)) :: !solved;
+    solved := (name, (Obj.magic vals, CompileBDDs.get_type attr_ty_id)) :: !solved;
     bdd_full
 end
 
@@ -184,13 +184,13 @@ let ocaml_to_nv_value record_fns (attr_ty: Syntax.ty) : 'a -> Syntax.value =
 let build_solution record_fns (vals, ty) =
   let open Solution in
   let val_proj = ocaml_to_nv_value record_fns ty in
-  val_proj vals
+  AdjGraph.VertexMap.map (fun v -> val_proj v) vals
 
 let build_solutions record_fns sols =
   let open Solution in
   {
     symbolics = []; (*TODO: but it's not important for simulation.*)
     assertions = [];
-    solves = List.map (fun (name, sol) -> (Var.create name, { sol_val = build_solution record_fns sol; mask = None})) sols;
+    solves = List.map (fun (name, sol) -> (Var.create name, { sol_val = build_solution record_fns sol; mask = None; attr_ty = snd sol})) sols;
     labels = AdjGraph.VertexMap.empty
   }

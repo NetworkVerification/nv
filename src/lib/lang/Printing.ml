@@ -67,7 +67,10 @@ let rec sep s f xs =
   | x :: y :: rest -> f x ^ s ^ sep s f (y :: rest)
 
 let rec term s f xs =
-  match xs with [] -> "" | x :: rest -> f x ^ s ^ term s f rest
+  match xs with
+  | [] -> ""
+  | _ ->
+    PrimitiveCollections.printList f xs "" s ""
 
 let comma_sep f xs = sep "," f xs
 
@@ -76,10 +79,7 @@ let semi_sep f xs = sep ";" f xs
 let semi_term f xs = term ";" f xs
 
 let list_to_string f lst =
-  "[ " ^
-  List.fold_left (fun s1 elt -> s1 ^ f elt ^ "; ") "" lst ^
-  "] "
-;;
+  PrimitiveCollections.printList f lst "[" ";" "]"
 
 (* The way we print our types means that we don't really need precedence rules.
    The only type which isn't totally self-contained is TArrow *)
@@ -157,6 +157,9 @@ let rec pattern_to_string pattern =
   | PNode n -> Printf.sprintf "%dn" n
   | PEdge (p1, p2) -> Printf.sprintf "%s~%s" (pattern_to_string p1) (pattern_to_string p2)
 
+let padding i =
+  String.init i (fun _ -> ' ')
+
 let ty_env_to_string env = Nv_datastructures.Env.to_string ty_to_string env.ty
 
 let tyo_to_string tyo =
@@ -198,16 +201,13 @@ and closure_to_string_p ~show_types prec
 
 and map_to_string ~show_types sep_s term_s m =
   let binding_to_string (k, v) =
+    (* BddMap.multiValue_to_string k *)
     value_to_string_p ~show_types max_prec k
     ^ sep_s
     ^ value_to_string_p ~show_types max_prec v
   in
-  let bs, default = BddMap.bindings m in
-  "["
-  ^ term term_s binding_to_string bs
-  ^ "default:="
-  ^ value_to_string_p ~show_types max_prec default
-  ^ "]"
+  let bs = BddMap.bindings_all m in
+  Printf.sprintf "{ %s }" (term term_s binding_to_string bs)
 
 and value_to_string_p ~show_types prec v =
   let value_to_string_p = value_to_string_p ~show_types in
@@ -216,7 +216,7 @@ and value_to_string_p ~show_types prec v =
   | VBool true -> "true"
   | VBool false -> "false"
   | VInt i -> Integer.to_string i
-  | VMap m -> map_to_string ~show_types ":=" "," m
+  | VMap m -> map_to_string ~show_types " |-> " "\n" m
   | VTuple vs ->
     if List.is_empty vs then "VEmptyTuple" else
       "(" ^ comma_sep (value_to_string_p max_prec) vs ^ ")"

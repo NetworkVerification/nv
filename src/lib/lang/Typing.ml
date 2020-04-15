@@ -346,7 +346,7 @@ let op_typ op =
     failwith "internal error (op_typ): tuple op"
   (* Map operations *)
   | MCreate | MGet | MSet | MMap | MMerge | MMapFilter | MMapIte | MFoldNode | MFoldEdge | Eq ->
-    failwith "internal error (op_typ): map op"
+    failwith (Printf.sprintf "internal error (op_typ): %s" (Printing.op_to_string op))
 
 let texp (e, ty, span) = aexp (e, Some ty, span)
 

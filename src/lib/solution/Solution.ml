@@ -12,20 +12,15 @@ open OCamlUtils
    with a boolean in place of each base value. A value of false indicates that
    the value at that location in each attribute is bogus -- i.e. it was not
    needed to produce the counterexample *)
-type sol = {sol_val: value; mask : value option}
+type sol = {sol_val: value AdjGraph.VertexMap.t; mask : value option; attr_ty: Syntax.ty}
 type t =
   { symbolics: (var * value) list;
     solves: (var * sol) list;
     assertions: bool list; (* One for each assert statement *)
-    labels: value VertexMap.t; (* Deprecated -- included only for backwards compatibility *)
+    labels: value VertexMap.t; (* NOTE: Deprecated -- included only for backwards compatibility *)
   }
 
 type map_back = t -> t
-
-let sol_to_string sol =
-  Printf.sprintf "{sol_val = %s; mask = %s}"
-    (Printing.value_to_string sol.sol_val)
-    (match sol.mask with | None -> "None" | Some m -> Printing.value_to_string m)
 
 let rec value_to_mask v =
   let true_val = avalue (vbool true, Some TBool, v.vspan) in
@@ -170,8 +165,10 @@ let rec print_masked mask v =
 
 let print_fun {sol_val; mask} =
   match mask with
-    | None -> Printing.value_to_string ~show_types:false sol_val
-    | Some m -> print_masked m sol_val
+  | None ->
+    VertexMap.fold (fun u v s -> Printf.sprintf "Node %d\n---------\n%s\n%s" u (Printing.value_to_string ~show_types:false v) s) sol_val ""
+  | Some m ->
+    VertexMap.fold (fun u v s -> Printf.sprintf "Node %d\n---------\n%s\n%s" u (print_masked m v) s) sol_val ""
 
 let print_solution (solution : t) =
   let cfg = Nv_lang.Cmdline.get_cfg () in
