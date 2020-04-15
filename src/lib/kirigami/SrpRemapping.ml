@@ -26,7 +26,8 @@ type input_exp = {
   (* the variable associated with the input node *)
   var: Var.t;
   (* the associated predicate expression: a function over attributes *)
-  pred: exp;
+  (* optional: if not given, then assumed to always hold *)
+  pred: exp option;
 }
 
 (** A type for transforming the declarations over the old SRP
@@ -60,7 +61,7 @@ type partitioned_srp = {
    * output node as an `assert` on the solution
   *)
   inputs: input_exp VertexMap.t;
-  outputs: (Vertex.t * exp) VertexMap.t;
+  outputs: (Vertex.t * exp option) VertexMap.t;
 }
 
 (** Map each vertex in the list of vertices to a partition number.
@@ -136,7 +137,7 @@ let map_edges_to_parts predf partitions (old_edge, (edge, srp_edge)) =
                        edge_map = EdgeMap.add old_edge (if i' = j then Some edge else None) partition.edge_map;
       }
     | Cross (i1, i2) -> begin
-        let pred = predf old_edge in
+        let pred : exp option = predf old_edge in
         let (u, v) = edge in
         (* output case *)
         if i1 = j then
@@ -179,7 +180,7 @@ let map_edges_to_parts predf partitions (old_edge, (edge, srp_edge)) =
 (** Map each edge in edges to a partitioned_srp based on where its endpoints lie. *)
 let divide_edges 
     (edges: Edge.t list)
-    (predf: Edge.t -> exp)
+    (predf: Edge.t -> exp option)
     (vmaps: (int * (Vertex.t option VertexMap.t)) list)
   : (partitioned_srp list)
   =
@@ -193,7 +194,7 @@ let divide_edges
 (** Generate a list of partitioned_srp from the given list of nodes and edges,
  * along with their partitioning function and interface function.
 *)
-let partition_edges (nodes: Vertex.t list) (edges: Edge.t list) (partf: Vertex.t -> int) (intf: Edge.t -> exp) =
+let partition_edges (nodes: Vertex.t list) (edges: Edge.t list) (partf: Vertex.t -> int) (intf: Edge.t -> exp option) =
   let (node_srp_map, num_srps) = map_vertices_to_parts nodes partf in
   (* add 1 to num_srps to convert from max partition # to number of SRPS *)
   let divided_nodes = divide_vertices node_srp_map (num_srps + 1) in 

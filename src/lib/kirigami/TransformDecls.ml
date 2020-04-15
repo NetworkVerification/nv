@@ -151,7 +151,7 @@ let in_merge_branch (ty: ty) (n: Vertex.t) (_: SrpRemapping.input_exp) (b: branc
   let a1_lambda = efunc (funcFull a1 (Some ty) (Some (TArrow (ty, ty))) a2_lambda) in
   addBranch node_pat a1_lambda b
 
-let out_merge_branch (ty: ty) (n: Vertex.t) (_: (Vertex.t * exp)) (b: branches) : branches =
+let out_merge_branch (ty: ty) (n: Vertex.t) (_: (Vertex.t * exp option)) (b: branches) : branches =
   let a1 = Var.fresh "a1" in
   let a2 = Var.fresh "a2" in
   let node_pat = node_to_pat n in
@@ -184,7 +184,9 @@ let transform_merge (e: exp) (ty: ty) (parted_srp: SrpRemapping.partitioned_srp)
 (* Apply the predicate test on the solution for node n *)
 let assert_branch (x: var) (attr: ty) (outn: Vertex.t)  (_, pred) (b: branches) : branches =
   let node_pat = node_to_pat outn in
-  addBranch node_pat (annot TBool (eapp pred (annot attr (evar x)))) b
+  match pred with
+  | Some p -> addBranch node_pat (annot TBool (eapp p (annot attr (evar x)))) b
+  | None -> addBranch node_pat (annot TBool (e_val (vbool true))) b
 
 let transform_assert (e: exp option) (attr: ty) (parted_srp: SrpRemapping.partitioned_srp) : exp =
   let { node_map; inputs; outputs; _ } : SrpRemapping.partitioned_srp = parted_srp in

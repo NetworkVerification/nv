@@ -36,7 +36,8 @@ let interp_partition parte node : int =
 (** Helper function to unwrap the predicate. *)
 let unwrap_pred maybe_pred = match maybe_pred with
   | Some pred -> pred (* the interface is an efun *)
-  | None -> e_val (vbool true)
+  (* Make the predicate a function that ignores its argument *)
+  | None -> annot TBool (e_val (vbool true))
 
 let transform_declaration parted_srp attr_type decl =
   let { nodes; edges; _ } : partitioned_srp = parted_srp in
@@ -80,8 +81,8 @@ let divide_decls (decls: declarations) : declarations list =
         | Some intfe -> (interp_interface intfe)
         | None -> fun (_: Edge.t) -> None
       in
-      let interfacef = unwrap_pred % intf_opt in
-      let partitioned_srps = partition_edges node_list edges partf interfacef in
+      (* let interfacef = unwrap_pred % intf_opt in *)
+      let partitioned_srps = partition_edges node_list edges partf intf_opt in
       let create_new_decls (parted_srp : partitioned_srp) : declarations =
         (* TODO: node_map and edge_map describe how to remap each node and edge in the new SRP.
          * To transform more cleanly, we can run a toplevel transformer on the SRP, replacing
@@ -95,7 +96,9 @@ let divide_decls (decls: declarations) : declarations list =
         in
         let new_symbolics = VertexMap.fold add_symbolic parted_srp.inputs [] in
         let add_require _ ({var; pred; _} : input_exp) l =
-          DRequire (annot TBool (eapp pred (annot attr_type (evar var)))) :: l
+          match pred with
+          | Some p -> DRequire (annot TBool (eapp p (annot attr_type (evar var)))) :: l
+          | None -> l
         in
         let new_requires = VertexMap.fold add_require parted_srp.inputs [] in
         (* replace relevant old declarations *)
