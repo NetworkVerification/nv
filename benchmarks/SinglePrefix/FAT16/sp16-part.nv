@@ -13,10 +13,10 @@ let partition node = match node with
   | 66n -> 0u8
   | 68n -> 0u8
   | 69n -> 0u8
-  | 71n -> 0u8
+  | 72n -> 0u8
   | 74n -> 0u8
-  | 77n -> 0u8
-  | 80n -> 0u8
+  | 78n -> 0u8
+  | 81n -> 0u8
   | 164n -> 0u8
   | 167n -> 0u8
   | 170n -> 0u8

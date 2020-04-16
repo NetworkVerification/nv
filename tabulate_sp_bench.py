@@ -41,7 +41,7 @@ def mean_float_dict(dicts, multiop=LIST_OPERATIONS):
         # otherwise, just return a list of each time that operation was profiled
         elif multiop == DISTINCT_OPERATIONS:
             for (i, nv) in enumerate(newval):
-                averaged[key + str(i)] = nv
+                averaged[key + "_" + str(i)] = nv
         else:
             raise NotImplemented()
     return averaged

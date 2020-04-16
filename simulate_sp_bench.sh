@@ -9,6 +9,6 @@ SP=$1
   # delete the non-label lines
   sed -e '/^[^\(Label\)]/d' |\
   # simplify to just the node number and the corresponding distance
-  sed -e 's/Label(\([0-9]*\)):{  bgp= Some({  aslen= \([0-9]\)u32/L(\1): \2/g' |\
-  # sort by the second column
-  sort -k 2n
+  sed -e 's/Label(\([0-9]*\)):{  bgp= Some({  aslen= \([0-9]\)u32/\1: \2/g' |\
+  # sort by the second column, then the first
+  sort -k 2,2n -k 1,1n

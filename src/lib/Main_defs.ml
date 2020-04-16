@@ -394,7 +394,6 @@ let parse_input (args : string array) :
         (* print_endline @@ Printing.declarations_to_string d; *)
         (* TODO: don't do type inference again after transformation *)
         (* let d = Typing.infer_declarations info d in *)
-        (* print_endline @@ Printing.list_to_string (fun r -> PrintingRaw.show_exp ~show_meta:true r) (get_requires d); *)
         parse_input_aux cfg info file d fs) new_decls
   else
     [parse_input_aux cfg info file decls fs]

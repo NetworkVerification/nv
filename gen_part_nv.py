@@ -74,8 +74,20 @@ def get_part_fname(spfile):
     """Return the name of the partition file for the corresponding spX.nv file."""
     spdir, spname = os.path.split(spfile)
     root, nvext = os.path.splitext(spname)
-    partfile = os.path.join(spdir, root + "-part" + nvext)
+    part_suffix = "-part"
+    partfile = os.path.join(spdir, root + part_suffix + nvext)
+    suffix = 1
+    # don't overwrite an existing path: instead, create a new file
+    while os.path.exists(partfile):
+        partfile = os.path.join(spdir, root + part_suffix + str(suffix) + nvext)
+        suffix += 1
     return partfile
+
+def validate(spine_nodes, cross_edges):
+    """Validate that every cross edge goes to or from a spine node."""
+    for (start, end) in cross_edges:
+        if start not in spine_nodes and end not in spine_nodes:
+            print(f"Warning: Edge {start},{end} does not appear to connect to the spine!")
 
 def gen_part_nv(spfile):
     """Generate the partition file."""
@@ -86,6 +98,8 @@ def gen_part_nv(spfile):
     preamble = write_preamble(os.path.basename(spfile))
     cross_edges = find_edges(sptext)
     spine_nodes = find_nodes(sptext)
+    # validate spine and cross edges
+    validate(spine_nodes, cross_edges)
     partition = write_partition_str(spine_nodes)
     interface = write_interface_str(cross_edges)
     # put 'em all together
