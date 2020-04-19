@@ -226,21 +226,21 @@ let rec map_back_mask
 ;;
 
 (* NOTE: I don't think solve_tys is necessary or the right way to go here. We
-   can either store the type with the value (in a tuple) or withdraw the type
-   from the value if we have ensured it's always there *)
+   should store the original type at each transformation pass *)
 let map_back_sol
     ~(name:string)
     (map_back_transformer : map_back_transformer) (mask_transformer : mask_transformer) (symb_tys : ty VarMap.t)
-    (sol : Solution.t)
+    (solve_tys : ty VarMap.t) (sol : Solution.t)
   : Solution.t =
   let map_back_mask = map_back_mask ~name:name sol mask_transformer in
   let map_back_value = map_back_value ~name:name sol map_back_transformer in
   let solves =
     List.map
-      (fun (v, {Solution.sol_val; mask; attr_ty}) ->
-         (v, {Solution.sol_val = VertexMap.map (fun v -> map_back_value v attr_ty) sol_val;
-              mask = omap (fun v -> map_back_mask v attr_ty) mask ;
-              attr_ty = attr_ty}))
+      (fun (v,{Solution.sol_val; mask}) ->
+         let aty = VarMap.find v solve_tys in
+         (v, {Solution.sol_val =  VertexMap.map (fun v -> map_back_value v aty) sol_val;
+              mask = omap (fun v -> map_back_mask v aty) mask;
+              attr_ty = aty}))
       sol.solves
   in
   {
@@ -265,7 +265,10 @@ let get_symbolic_types symbs =
 let get_solve_types solves =
   let rec add_tys acc e =
     match e.e with
-    | EVar x -> VarMap.add x (oget e.ety) acc
+    | EVar x ->
+      (match oget e.ety with
+       | TMap (_, vty) -> VarMap.add x vty acc
+       | ty -> VarMap.add x ty acc)
     | ETuple es -> List.fold_left add_tys acc es
     | _ -> failwith "Bad DSolve"
   in
@@ -278,9 +281,10 @@ let transform_declarations
     (exp_transformer : exp transformer) (map_back_transformer : map_back_transformer) (mask_transformer : mask_transformer)
     (ds : declarations) =
   let symb_tys = get_symbolics ds |> get_symbolic_types in
+  let solve_tys = get_solves ds |> get_solve_types in
   let transformers = {ty_transformer; pattern_transformer; value_transformer; exp_transformer} in
   List.map (transform_decl ~name:name transformers) ds,
-  map_back_sol ~name:name map_back_transformer mask_transformer symb_tys
+  map_back_sol ~name:name map_back_transformer mask_transformer symb_tys solve_tys
 ;;
 
 let transform_network
@@ -293,6 +297,7 @@ let transform_network
   let transform_exp = transform_exp ~name:name transformers in
   let transform_symbolic = transform_symbolic ~name:name transformers in
   let symb_tys = get_symbolic_types net.symbolics in
+  let solve_tys = get_symbolic_types net.symbolics in
   let transform_solves =
     List.map
       (fun {aty; var_names; init; trans; merge} ->
@@ -316,7 +321,7 @@ let transform_network
     defs = List.map (fun (x, tyo, e) -> (x, omap transform_ty tyo, transform_exp e)) net.defs;
     graph = net.graph;
   },
-  map_back_sol ~name:name map_back_transformer mask_transformer symb_tys
+  map_back_sol ~name:name map_back_transformer mask_transformer symb_tys solve_tys
 
 let transform_srp
     ~(name:string)

@@ -132,8 +132,6 @@ let get_attribute v s =
   | Some a -> a
 
 let simulate_step ({graph= g; trans; merge; _} : srp) s x =
-  Printf.printf "x is:%d\n" x;
-  flush_all ();
   let do_neighbor (_, initial_attribute) (s, todo) n =
     let neighbor = vnode n in
     let edge = vedge (x, n) in
@@ -142,7 +140,6 @@ let simulate_step ({graph= g; trans; merge; _} : srp) s x =
       Interp.interp_closure trans [edge; initial_attribute]
     in
     let (n_received, n_old_attribute) = get_attribute n s in
-    Printf.printf "old attribute of %d: %s\n\n" n (Printing.value_to_string n_old_attribute);
     match AdjGraph.VertexMap.Exceptionless.find x n_received with
     | None ->
       (* if this is the first message from this node then add it to the received messages of n*)
@@ -167,15 +164,15 @@ let simulate_step ({graph= g; trans; merge; _} : srp) s x =
       in
       (* Printf.printf "compare_routes is:%s\n" (Printing.value_to_string dummy_new); *)
       (*if the merge between new and old routes is equal to the new route then we can incrementally merge it*)
-      (* if (equal_values ~cmp_meta:false compare_routes dummy_new) then
-       *   let n_new_attribute =
-       *     Interp.interp_closure merge [neighbor; n_old_attribute; n_incoming_attribute]
-       *   in
-       *   let new_entry = AdjGraph.VertexMap.add x n_incoming_attribute n_received in
-       *   if equal_values ~cmp_meta:false n_old_attribute n_new_attribute
-       *   then (AdjGraph.VertexMap.add n (new_entry, n_new_attribute) s, todo)
-       *   else (AdjGraph.VertexMap.add n (new_entry, n_new_attribute) s, n :: todo)
-       * else *)
+      if (equal_values ~cmp_meta:false compare_routes dummy_new) then
+        let n_new_attribute =
+          Interp.interp_closure merge [neighbor; n_old_attribute; n_incoming_attribute]
+        in
+        let new_entry = AdjGraph.VertexMap.add x n_incoming_attribute n_received in
+        if equal_values ~cmp_meta:false n_old_attribute n_new_attribute
+        then (AdjGraph.VertexMap.add n (new_entry, n_new_attribute) s, todo)
+        else (AdjGraph.VertexMap.add n (new_entry, n_new_attribute) s, n :: todo)
+      else
         let best = AdjGraph.VertexMap.fold (fun _ v acc -> Interp.interp_closure merge [neighbor; v; acc])
             n_received n_incoming_attribute
         in
