@@ -1,0 +1,41 @@
+let nodes = 4
+
+let edges = {0=1;1=2;2=3;3=0;}
+
+let init u =
+ if u = 0n then Some 0
+ else None
+
+let trans e x =
+  match x with
+  | None -> None
+  | Some x -> Some (x+1)
+
+let merge u x y =
+  match (x,y) with
+  | (_, None) -> x
+  | (None, _) -> y
+  | (Some x, Some y) -> if x <= y then Some x else Some y
+
+let applyNodeFaults u x =
+  mapIf (fun b ->
+    match b with
+    | (b0,b1,b2,b3)
+     ->
+       (match u with
+       | 0n -> b0
+       | 1n -> b1
+       | 2n -> b2
+       | 3n -> b3
+       )) (fun v -> None) x (*x : dict[bool*bool*bool*bool, option[int]]*)
+
+let mergeNodeFaults u x y =
+  let x = applyNodeFaults u x in
+  let y = applyNodeFaults u y in
+  combine (fun x y -> merge u x y) x y
+
+let transNodeFaults e x = map (fun v -> trans e v) x
+
+let initNodeFaults u = applyNodeFaults u (createDict (init u))
+
+let nodeFaults = solution {init = initNodeFaults; trans = transNodeFaults; merge = mergeNodeFaults;}
