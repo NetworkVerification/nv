@@ -287,18 +287,23 @@ let bindings_repr ((map, ty): t) : (value * value) list =
 
 let bindings_all ((map, ty): t) : (value * value) list =
   let bs = ref [] in
+  let seen = Hashtbl.create 30 in
   Mtbdd.iter_cube
     (fun vars v ->
-       let lst = Array.to_list vars in
-       let sz = B.ty_to_size ty in
-       let expanded =
-         if B.count_tops vars sz <= 2 then B.expand lst sz else [lst]
-       in
-       List.iter
-         (fun vars ->
-            let k = vars_to_value (Array.of_list vars) ty in
-            bs := (k, v) :: !bs )
-         expanded )
+       if not (Hashtbl.mem seen v) then
+         begin
+           Hashtbl.add seen v ();
+           let lst = Array.to_list vars in
+           let sz = B.ty_to_size ty in
+           let expanded =
+             if B.count_tops vars sz <= 1 then B.expand lst sz else [lst]
+           in
+           List.iter
+             (fun vars ->
+                let k = vars_to_value (Array.of_list vars) ty in
+                bs := (k, v) :: !bs )
+             expanded
+         end)
     map ;
   !bs
 
@@ -332,7 +337,8 @@ let map_when ~op_key (pred: bool Mtbdd.t) (f: value -> value)
         in
         mapw_op_cache := ExpMap.add op_key op !mapw_op_cache ;
         op
-      | Some op -> op
+      | Some op ->
+        op
     in
     (User.apply_op2 op pred vdd, ty)
 

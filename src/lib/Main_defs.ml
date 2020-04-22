@@ -220,6 +220,7 @@ let run_simulator cfg _ decls fs =
   (* let net = mk_net cfg decls in
      let net = partialEvalNet net in
      let net, _ = OptimizeBranches.optimize_net net in (* The _ should match the identity function *) *)
+  let decls, _ = OptimizeBranches.optimize_declarations decls in
   try
     let solution, q =
       match cfg.bound with

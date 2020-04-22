@@ -205,6 +205,40 @@ let getFuncCache (e: exp) : string =
        Printf.sprintf "(%d, ())" (get_fresh_exp_id e)
 
 
+(** Function walking through an NV expression to record tuple types.
+    This is done by the compiler on the go, but not for
+    operations like mapIte because these expressions are never translated to OCaml, so we manually have to do it.
+   Expect this function to be called somewhere in the MapIte case.*)
+
+let rec track_tuples_exp e =
+  match e.e with
+  | ETuple es ->
+    let n = BatList.length es in
+    List.iteri (fun i _ -> ignore(proj_rec i n)) es
+  | EMatch (_, bs) ->
+    List.iter (fun (p,_) -> track_tuples_pattern p) (branchToList bs)
+  | EVal v ->
+    (match v.v with
+     | VTuple vs ->
+       let n = BatList.length vs in
+       List.iteri (fun i _ -> ignore(proj_rec i n)) vs
+     | _ -> ())
+  | EOp (TGet (sz, lo, _), _) ->
+    ignore(proj_rec lo sz)
+  | EOp (TSet (sz, lo, _), _) ->
+    ignore(proj_rec lo sz)
+  | EVar _ | EFun _ | EApp _ | ELet _ | ESome _ | ETy _ | ERecord _ | EProject _ | EIf _ | EOp _ -> ()
+
+and track_tuples_pattern p =
+  match p with
+  | PTuple ps ->
+    let n = BatList.length ps in
+    List.iteri (fun i p -> ignore(proj_rec i n); track_tuples_pattern p) ps
+  | POption (Some p) -> track_tuples_pattern p
+  (* records are already unrolled  *)
+  | POption None | PWild | PVar _ | PUnit | PBool _ | PInt _ | PRecord _ | PNode _ | PEdge _ -> ()
+
+
 (** Translating NV values and expressions to OCaml*)
 let rec value_to_ocaml_string v =
   match v.v with
@@ -353,6 +387,8 @@ and map_to_ocaml_string op es ty =
          let pred_closure =
            match pred.e with
            | EFun predF ->
+             (* Call track_tuples_exp to record any tuple types used in this predicate *)
+             Visitors.iter_exp track_tuples_exp predF.body;
              let freeVars = Syntax.free_ty (BatSet.PSet.singleton ~cmp:Var.compare predF.arg) predF.body in
              let freeList = BatSet.PSet.to_list freeVars in
              Collections.printList (fun (x, ty) -> Printf.sprintf "(%s,%d)" (varname x) (get_fresh_type_id ty)) freeList "(" "," ")"

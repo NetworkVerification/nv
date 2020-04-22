@@ -1,0 +1,87 @@
+(* An example of a diverging network
+
+This is essentially the case that corresponds to node 2 being failed while 0 and 1 are running.
+
+*)
+
+(* Diamond Topology
+      1
+     /  \
+   2 --- 0
+
+*)
+let nodes = 3
+
+(* Does not terminate when edges are bidirectional, terminates if they are
+unidirectional *)
+let edges = {0=1; 0=2; 1=2;}
+
+let init u =
+  match u with
+  | 0n -> None
+  | 1n -> None
+  | 2n -> Some 0
+
+let trans e x =
+  match x with
+  | None -> None
+  | Some x -> Some (x+1)
+
+let merge u x y =
+  if u = 2n then None
+  else
+    match (x,y) with
+    | (_, None) -> x
+    | (None, _) -> y
+    | (Some x, Some y) -> if x <= y then Some x else Some y
+
+let diverge = solution {init = init; trans = trans; merge = merge;}
+
+(* Why does this network diverge?
+Consider the following execution, where lab is the solution at each point and recv(u)(v) is the solution received at u from v.
+
+Q={0,1,2}
+
+2 sends a route to 0 and 1
+----------------------------
+lab(0) = Some 1, lab(1) = Some 1, lab(2) = Some 0 (akward for lab(2) to be Some 0 now...)
+recv(0)(2) = Some 1, recv(1)(2) = Some 1, recv(0)(0) = Some 0
+Q={0,1}
+
+1 sends a route to 0 and 2
+---------------------------
+lab(0) = Some 1, lab(1) = Some 1, lab(2) = None (akwardness intensifies)
+recv(0)(2) = Some 1  recv(1)(2) = Some 1  recv(2)(0) = Some 0
+recv(0)(1) = Some 2                       recv(2)(1) = Some 2
+Q={0,2}
+
+0 sends a route to 1 and 2
+---------------------------
+lab(0) = Some 1, lab(1) = Some 1, lab(2) = None
+recv(0)(2) = Some 1  recv(1)(2) = Some 1  recv(2)(0) = Some 2
+recv(0)(1) = Some 2  recv(1)(0) = Some 2  recv(2)(1) = Some 2
+Q={2}
+
+2 sends a route to 0 and 1
+---------------------------
+What happens here is that 2 now sends None instead of Some 0.
+Node 0 and 1 consult their received messages (recv) to figure out that
+node 2 must be withdrawing the route, and recompute the merge.
+The problem is that to recompute the merge they use the message received from each other, which should also be invalidated.
+
+lab(0) = Some 2, lab(1) = Some 2, lab(2) = None
+recv(0)(2) = None    recv(1)(2) = None  recv(2)(0) = Some 2
+recv(0)(1) = Some 2  recv(1)(0) = Some 2  recv(2)(1) = Some 2
+Q={1,0}
+
+From this point on 1 and 0 alternate and their label increases by 1 forever.
+
+This network is probably not monotonic, by this definition of monotonicity:
+merge(trans e x, x) = x
+
+but I am not sure that's the problem either, it's not that the attribute gets better i.e.
+merge(trans e x, x) = trans e x
+
+I think the stable solution for this should be that every Node is None (and that's what the SMT seems to compute too).
+
+*)

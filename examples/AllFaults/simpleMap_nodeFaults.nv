@@ -1,0 +1,58 @@
+(* All node failures analysis*)
+
+(* Diamond Topology
+      1
+     /  \
+   2     0
+    \   /
+      3
+*)
+let nodes = 4
+
+(* Does not terminate when edges are bidirectional, terminates if they are
+unidirectional *)
+let edges = {0=1;1=2;2=3;3=0;}
+
+(* Each node announces a unique "prefix"*)
+let init u =
+  let d = createDict None in
+  match u with
+  | 0n -> d[0u2 := Some 0]
+  | 1n -> d[1u2 := Some 0]
+  | 2n -> d[2u2 := Some 0]
+  | 3n -> d[3u2 := Some 0]
+
+let trans e x =
+ map (fun x -> match x with
+  | None -> None
+  | Some x -> Some (x+1)) x
+
+let merge u x y =
+  combine (fun x y ->
+  match (x,y) with
+  | (_, None) -> x
+  | (None, _) -> y
+  | (Some x, Some y) -> if x <= y then Some x else Some y) x y
+
+let applyNodeFaults u x =
+  mapIf (fun b ->
+    match b with
+    | (b0,b1,b2,b3)
+     ->
+       (match u with
+       | 0n -> b0
+       | 1n -> b1
+       | 2n -> b2
+       | 3n -> b3
+       )) (fun v -> createDict None) x (*x : dict[bool*bool*bool*bool, option[int]]*)
+
+let mergeNodeFaults u x y =
+  let x = applyNodeFaults u x in
+  let y = applyNodeFaults u y in
+  combine (fun x y -> merge u x y) x y
+
+let transNodeFaults e x = map (fun v -> trans e v) x
+
+let initNodeFaults u = createDict (init u)
+
+let nodeFaults = solution {init = initNodeFaults; trans = transNodeFaults; merge = mergeNodeFaults;}
