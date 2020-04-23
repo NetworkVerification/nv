@@ -44,6 +44,7 @@ let rec equal_t x y =
     equal_values ~cmp_meta:false v1 v2
   | _, _ -> false
 
+  (* MTBDD table used for match expressions *)
 let tbl_match : (('a Env.t * ((Cudd.Man.v Cudd.Bdd.t) option)) option) Cudd.Mtbdd.table =
   Mtbdd.make_table
     ~hash:(fun v -> match v with
@@ -113,6 +114,7 @@ let create_value (ty: ty) : t =
   let ret, _ = aux 0 ty in
   ret
 
+  (* Constrains the MTBDD table variables by the given BDD *)
 let constrain_bdd (x : t) (typ: Syntax.ty) : Bdd.vt =
   let rec aux x idx ty =
     match x, get_inner_type ty with
@@ -323,11 +325,8 @@ let uand xs ys =
 let leq xs ys =
   let less x y = Bdd.dand (Bdd.dnot x) y in
   let acc = ref (Bdd.dtrue B.mgr) in
-  for i = 0 to Array.length xs - 1 do
-    let x = xs.(i) in
-    let y = ys.(i) in
-    acc := Bdd.dor (less x y) (Bdd.dand !acc (Bdd.eq x y))
-  done ;
+  Array.iter2 (fun x y -> 
+    acc := Bdd.dor (less x y) (Bdd.dand !acc (Bdd.eq x y))) xs ys;
   BBool (!acc)
 
 let lt xs ys =
@@ -762,6 +761,8 @@ and eval_branch env (g : t) p =
           match is valid, we bdd-and the keys that lead to the leaf
           and the conditions and use them to return the right value
           from the env. *)
+    (*NOTE: will their be conditions under each match holds? These are concrete
+    values, maybe this can be simplified. *) 
     let matches =
       Mtbdd.guardleafs (Mapleaf.mapleaf1 (fun vm ->
           eval_branch Env.empty (Value (Mtbdd.get vm)) (PTuple ps) |> Mtbdd.unique tbl_match)
