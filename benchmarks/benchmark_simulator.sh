@@ -8,12 +8,6 @@ AllPrefixes/FAT32/fat32PolSim.nv"
 
 for file in $BENCHMARKS
 do
-    time "$NV" -compile "$file";
-    echo "\n";
-done
-
-for file in $BENCHMARKS
-do
-    time "$NV" -simulate "$file";
+    /usr/bin/time -l "$NV" -simulate "$file";
     echo "\n";
 done

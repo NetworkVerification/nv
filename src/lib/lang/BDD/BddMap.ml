@@ -7,15 +7,8 @@ open Nv_utils
 (* TODO: optimize variable ordering  *)
 type t = mtbdd
 
+  
 module B = BddUtils
-
-(* let res = User.map_op2
-   ~commutative:true ~idempotent:true
-   ~special:(fun bdd1 bdd2 ->
-    if Vdd.is_cst bdd1 && Vdd.dval bdd1 = false then Some(bdd1)
-    else if Vdd.is_cst bdd2 && Vdd.dval bdd2 = false then Some(bdd2)
-    else None)
-   (fun b1 b2 -> b1 && b2) *)
 
 let create ~key_ty:ty (v: value) : t =
   B.set_size (B.ty_to_size ty) ;

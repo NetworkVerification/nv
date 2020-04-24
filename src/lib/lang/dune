@@ -8,9 +8,7 @@
     cudd
     integers
     nv_datastructures
-    nv_utils
-    totalMap
-  )
+    nv_utils)
   (preprocess
     (pps ppx_deriving.std ppx_deriving_argparse))
 )
