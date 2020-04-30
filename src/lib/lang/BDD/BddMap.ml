@@ -259,7 +259,7 @@ let bindings ((map, ty): t) : (value * value) list * value =
        let lst = Array.to_list vars in
        let sz = B.ty_to_size ty in
        let expanded =
-         if B.count_tops vars sz <= 5 then B.expand lst sz else [lst]
+         if B.count_tops vars sz <= 0 then B.expand lst sz else [lst]
        in
        List.iter
          (fun vars ->
@@ -285,18 +285,27 @@ let bindings_repr ((map, ty): t) : (value * value) list =
          end) map ;
   !bs
 
+module HashValue : (Hashtbl.HashedType with type t = Syntax.value) =
+struct  
+  type t = Syntax.value
+  let hash = hash_value ~hash_meta:false
+  let equal = equal_values ~cmp_meta:false
+end
+
+module HashTblValue : (Hashtbl.S with type key = Syntax.value) = Hashtbl.Make(HashValue)
+
 let bindings_all ((map, ty): t) : (value * value) list =
   let bs = ref [] in
-  let seen = Hashtbl.create 30 in
+  let seen = HashTblValue.create 30 in
   Mtbdd.iter_cube
     (fun vars v ->
-       if not (Hashtbl.mem seen v) then
+       if not (HashTblValue.mem seen v) then
          begin
-           Hashtbl.add seen v ();
+           HashTblValue.add seen v ();
            let lst = Array.to_list vars in
            let sz = B.ty_to_size ty in
            let expanded =
-             if B.count_tops vars sz <= 5 then B.expand lst sz else [lst]
+             if B.count_tops vars sz <= 1 then B.expand lst sz else [lst]
            in
            List.iter
              (fun vars ->

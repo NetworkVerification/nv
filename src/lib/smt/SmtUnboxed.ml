@@ -383,7 +383,7 @@ struct
       let _ = encode_pattern_z3 descr env names p t in
       let zes = encode_exp_z3 descr env e in
       zes
-    |  ((p,e), bs) ->
+    | ((p,e), bs) ->
       let zes = encode_exp_z3 descr env e in
       let zps = encode_pattern_z3 descr env names p t in
       let guard = combine_term zps in

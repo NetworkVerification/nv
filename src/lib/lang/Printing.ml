@@ -206,7 +206,7 @@ and map_to_string ~show_types sep_s term_s m =
     ^ sep_s
     ^ value_to_string_p ~show_types max_prec v
   in
-  let bs = BddMap.bindings_all m in
+  let bs, _ = BddMap.bindings m in
   Printf.sprintf "{ %s }" (term term_s binding_to_string bs)
 
 and value_to_string_p ~show_types prec v =

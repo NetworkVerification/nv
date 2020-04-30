@@ -1,4 +1,4 @@
-include "sp8Single_control.nv"
+include "sp8Single_control_R.nv"
 
 let applyNodeFaults u x = 
   mapIf (fun b ->
