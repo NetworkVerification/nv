@@ -1,7 +1,7 @@
-(*Model of an Idealized version of BGP *)
-type ideal_bgp_route = {lp:int; length:int; nexthop: tnode}
+(*Routing via a Simple example protocol, which also keeps track of the nodes traversed. *)
+type simple_route = {pref:int; length:int; nexthop: tnode; traversed: set[tnode];}
 
-type attribute = option[ideal_bgp_route]
+type attribute = option[simple_route]
 
 let nodes = 5
 let edges = {
@@ -23,7 +23,7 @@ let edges = {
 
 let init (u : tnode) = 
   match u with
-  | 0n -> Some {lp=100; length=0; nexthop=0n}
+  | 0n -> Some {pref=100; length=0; nexthop=0n; traversed={0n}}
   | _ -> None
 
 let trans e x =
@@ -32,18 +32,18 @@ let trans e x =
   | Some r ->
      (match e with
       | 0n~1n -> 
-        Some {length = r.length+1; lp = 0; nexthop=0n;}
+        Some {length = r.length+1; pref = 0; nexthop=0n; traversed= r.traversed union {0n} }
       | a~b -> 
         if a >n b then None (* Drop routes from "right" to "left"*)
-        else Some {r with length = r.length+1; nexthop=a;})
+        else Some {r with length = r.length+1; nexthop=a; traversed = r.traversed union {a}; })
 
 let isBetter x y =
   match (x,y) with
   | (_, None) -> true 
   | (None, _) -> false
   | (Some b1, Some b2) ->
-    if b1.lp > b2.lp then true
-    else if b2.lp > b1.lp then false
+    if b1.pref > b2.pref then true
+    else if b2.pref > b1.pref then false
     else if b1.length < b2.length then true
     else if b2.length < b1.length then false
     else if b1.nexthop <n b2.nexthop then true

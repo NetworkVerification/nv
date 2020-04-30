@@ -67,10 +67,10 @@ sudo apt install gcc g++ make m4 libgmp-dev python2.7 libz3-dev z3
 
 ## Getting started with NV
 
-To get started with NV, we recommend taking a look at some of the [examples](https://github.com/princedpw/nv/tree/master/examples). For instance, consider [this](https://github.com/NetworkVerification/nv/blob/master/examples/idealized_bgp.nv) example network running an idealized version of BGP. To compute the stable state of this network using networking simulation execute the following command in your shell:
+To get started with NV, we recommend taking a look at some of the [examples](https://github.com/princedpw/nv/tree/master/examples). For instance, consider [this](https://github.com/NetworkVerification/nv/blob/master/examples/simple_protocol.nv) example network running a simple protocol. To compute the stable state of this network using networking simulation execute the following command in your shell:
 
 ```
-./nv -simulate -verbose examples/idealized_bgp.nv 
+./nv -simulate -verbose examples/simple_protocol.nv 
 ```
 
 The `-verbose` option prints the stable state (solutions) for each node.
@@ -78,7 +78,7 @@ The `-verbose` option prints the stable state (solutions) for each node.
 Alternatively, you can use SMT verification to check that the assertions given in the file are true of the network's stable state.
 
 ```
-./nv -smt -verbose examples/idealized_bgp.nv 
+./nv -smt -verbose examples/simple_protocol.nv 
 ```
 
 Note that in order to use the SMT backend, you must have the z3 executable on your PATH. It should have the name "z3".
