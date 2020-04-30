@@ -1,0 +1,49 @@
+type ideal_bgp_route = {lp:int; length:int; nexthop: tnode}
+
+type attribute = option[ideal_bgp_route]
+
+let nodes = 5
+let edges = {
+    0=1;
+    0=2;
+    1=3;
+    2=3;
+    3=4;
+}
+
+let init (u : tnode) = 
+  match u with
+  | 0n -> Some {lp=100; length=0; nexthop=0n}
+  | _ -> None
+
+let trans e x =
+  match x with
+  | None -> None
+  | Some r ->
+     (match e with
+      | 0n~1n -> 
+        Some {length = r.length+1; lp = 0; nexthop=0n;}
+      | a~b -> 
+        if a >n b then None (* Drop routes from "right" to "left"*)
+        else Some {r with length = r.length+1; nexthop=a;})
+
+let isBetter x y =
+  match (x,y) with
+  | (_, None) -> true 
+  | (None, _) -> false
+  | (Some b1, Some b2) ->
+    if b1.lp > b2.lp then true
+    else if b2.lp > b1.lp then false
+    else if b1.length < b2.length then true
+    else if b2.length < b1.length then false
+    else if b1.nexthop <n b2.nexthop then true
+    else false
+
+let merge (u: tnode) x y =
+  if isBetter x y then x else y
+
+(* Does every node have a route when the network has converged to a stable state? *)
+let assert (u : tnode) x =
+  match x with
+  | None -> false
+  | Some _ -> true

@@ -43,7 +43,7 @@ opam install -y \
   fileutils \
   parmap \
   fix \
-  jupyter \\
+  jupyter \
   dune
 ```
 
@@ -65,9 +65,23 @@ sudo apt update
 sudo apt install gcc g++ make m4 libgmp-dev python2.7 libz3-dev z3
 ```
 
-## Running nv
+## Getting started with NV
 
-In order to use the SMT solver, you must have the z3 executable on your PATH. It should have the name "z3".
+To get started with NV, we recommend taking a look at some of the [examples](https://github.com/princedpw/nv/tree/master/examples). For instance, consider [this](https://github.com/NetworkVerification/nv/blob/master/examples/idealized_bgp.nv) example network running an idealized version of BGP. To compute the stable state of this network using networking simulation execute the following command in your shell:
+
+```
+./nv -simulate -verbose examples/idealized_bgp.nv 
+```
+
+The `-verbose` option prints the stable state (solutions) for each node.
+
+Alternatively, you can use SMT verification to check that the assertions given in the file are true of the network's stable state.
+
+```
+./nv -smt -verbose examples/idealized_bgp.nv 
+```
+
+Note that in order to use the SMT backend, you must have the z3 executable on your PATH. It should have the name "z3".
 
 ## Troubleshooting
 
