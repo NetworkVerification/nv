@@ -1,0 +1,46 @@
+(* vim: set syntax=ocaml: *)
+
+(* Simple example with 3 nodes u, v, and d,
+ * where v is partitioned into its own partition.
+ *)
+
+type attribute = int
+
+let nodes = 3
+
+(* u -/- v -- d *)
+(* 2 -/- 1 -- 0 *)
+
+(* 0 = d
+ * 1 = v
+ * 2 = u
+ *)
+let edges = {
+  0=1;
+  1=2;
+}
+
+(* Merge *)
+let min x y = if x < y then x else y
+
+let merge n x y = min x y
+
+(* Transfer *)
+let trans edge x = x + 1
+
+(* Init *)
+let init n = match n with
+  | 0n -> 0
+  | 1n -> 15
+  | 2n -> 15
+
+(* Partition *)
+let partition node = match node with
+  | 2n -> 0u8
+  | _ -> 1u8
+
+let interface edge = match edge with
+  | 1~2 -> Some (fun a -> a = 1 || a = 2)
+  | 2~1 -> Some (fun a -> a > 0)
+
+let assert node x = x < 3

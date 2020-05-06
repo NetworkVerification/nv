@@ -7,4 +7,4 @@ open Nv_lang.Syntax
  * where a new set of declarations for a given network is produced
  * for each possible partition in the given declarations.
 *)
-val divide_decls : declarations -> declarations list
+val divide_decls : declarations -> base_check:bool -> declarations list

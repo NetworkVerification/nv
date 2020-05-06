@@ -389,11 +389,16 @@ let parse_input (args : string array) :
   if cfg.kirigami then
     (* FIXME: this breaks ToEdge *)
     (* NOTE: we partition after checking well-formedness so we can reuse edges that don't exist *)
-    let new_decls = Nv_kirigami.Partition.divide_decls decls in
-    List.map (fun d ->
-        (* print_endline @@ Printing.declarations_to_string d; *)
+    let new_decls_base = List.map (fun d -> ("Base check:", d))
+        (Nv_kirigami.Partition.divide_decls decls ~base_check:true) in
+    (* perform the base checks before the regular checks *)
+    let new_decls = List.map (fun d -> ("I and P checks:", d))
+        (Nv_kirigami.Partition.divide_decls decls ~base_check:false) in
+    List.map (fun (s, d) ->
+        print_endline @@ s;
+        print_endline @@ Printing.declarations_to_string d;
         (* TODO: don't do type inference again after transformation *)
         (* let d = Typing.infer_declarations info d in *)
-        parse_input_aux cfg info file d fs) new_decls
+        parse_input_aux cfg info file d fs) (new_decls_base @ new_decls)
   else
     [parse_input_aux cfg info file decls fs]

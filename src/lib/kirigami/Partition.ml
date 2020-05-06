@@ -40,7 +40,7 @@ let unwrap_pred maybe_pred = match maybe_pred with
   (* Make the predicate a function that ignores its argument *)
   | None -> annot TBool (e_val (vbool true))
 
-let transform_declaration parted_srp attr_type decl =
+let transform_declaration parted_srp attr_type ~(base_check: bool) decl =
   let { nodes; edges; _ } : partitioned_srp = parted_srp in
   match decl with
   | DNodes _ -> Some (DNodes nodes)
@@ -55,7 +55,11 @@ let transform_declaration parted_srp attr_type decl =
   | DMerge merge -> Some (DMerge (transform_merge merge attr_type parted_srp))
   | DAssert assertion -> begin
       (* let output_preds = filter_preds intf.outputs preds in *)
-      Some (DAssert (transform_assert (Some assertion) attr_type parted_srp))
+      (* if performing the base check, drop assertions on the base nodes *)
+      if base_check then
+        None
+      else
+        Some (DAssert (transform_assert (Some assertion) attr_type parted_srp))
     end
   | DPartition _ -> None
   | DInterface _ -> None
@@ -65,7 +69,7 @@ let transform_declaration parted_srp attr_type decl =
  * opened along the edges described by the partition and interface declarations.
  * @return a new list of lists of declarations
 *)
-let divide_decls (decls: declarations) : declarations list =
+let divide_decls (decls: declarations) ~(base_check: bool) : declarations list =
   let partition = get_partition decls in
   match partition with
   | Some parte -> begin
@@ -98,14 +102,19 @@ let divide_decls (decls: declarations) : declarations list =
           DSymbolic (var, Ty attr_type) :: l
         in
         let new_symbolics = VertexMap.fold add_symbolic parted_srp.inputs [] in
-        let add_require _ ({var; pred; _} : input_exp) l =
-          match pred with
-          | Some p -> DRequire (annot TBool (eapp p (annot attr_type (evar var)))) :: l
-          | None -> l
+        (* If we are generating a base check, then do not add any requires clauses *)
+        let new_requires = if base_check then
+            []
+          else
+            let add_require _ ({var; pred; _} : input_exp) l =
+              match pred with
+              | Some p -> DRequire (annot TBool (eapp p (annot attr_type (evar var)))) :: l
+              | None -> l
+            in
+            VertexMap.fold add_require parted_srp.inputs []
         in
-        let new_requires = VertexMap.fold add_require parted_srp.inputs [] in
         (* replace relevant old declarations *)
-        let transformed_decls = List.filter_map (transform_declaration parted_srp attr_type) decls in
+        let transformed_decls = List.filter_map (transform_declaration parted_srp attr_type ~base_check:base_check) decls in
         (* add the assertion in at the end if there wasn't an assert in the original decls *)
         let add_assert = match get_assert transformed_decls with
           | Some _ -> []
