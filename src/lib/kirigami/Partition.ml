@@ -96,7 +96,7 @@ let divide_decls (decls: declarations) ~(base_check: bool) : declarations list =
          * We can then add code to handle adding in the new input and output nodes to the SRP.
          * (the input and output edges are handled by edge_map).
         *)
-        (* Print mapping from new nodes to old nodes *)
+        (* Print mapping from old nodes to new nodes *)
         (* print_endline @@ VertexMap.to_string (fun v -> match v with Some v -> string_of_int v | None -> "cut") parted_srp.node_map; *)
         let add_symbolic _ ({var; _} : input_exp) l =
           DSymbolic (var, Ty attr_type) :: l

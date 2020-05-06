@@ -86,6 +86,9 @@ let run_smt_classic file cfg info (net : Syntax.network) fs =
   let net = Profile.time_profile "Partially Evaluating Network" (fun () -> partialEvalNet net) in
   let get_answer net fs =
     let solve_fun =
+      if cfg.kirigami then
+        Smt.solveKirigami
+      else
       if cfg.hiding then
         (SmtHiding.solve_hiding ~starting_vars:[] ~full_chan:(smt_query_file file))
       else
@@ -394,11 +397,15 @@ let parse_input (args : string array) :
     (* perform the base checks before the regular checks *)
     let new_decls = List.map (fun d -> ("I and P checks:", d))
         (Nv_kirigami.Partition.divide_decls decls ~base_check:false) in
-    List.map (fun (s, d) ->
-        print_endline @@ s;
-        print_endline @@ Printing.declarations_to_string d;
+    List.map (fun (_s, d) ->
+        (* print_endline @@ s; *)
+        (* print_endline @@ Printing.declarations_to_string d; *)
         (* TODO: don't do type inference again after transformation *)
         (* let d = Typing.infer_declarations info d in *)
-        parse_input_aux cfg info file d fs) (new_decls_base @ new_decls)
+        parse_input_aux cfg info file d fs)
+      (* just the I-checks *)
+      (* new_decls *)
+      (* I-checks plus base checks *)
+      (new_decls_base @ new_decls)
   else
     [parse_input_aux cfg info file decls fs]

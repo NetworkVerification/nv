@@ -189,6 +189,19 @@ let solveClassic info query chan net =
   solve info query chan (fun () -> Enc.encode_z3 net)
     (Nv_datastructures.AdjGraph.nb_vertex net.graph) net.assertion net.requires
 
+(* Solver for Kirigami, which runs a base check query before the inductiveness checks.
+ * To do this, we basically make 2 calls to solve, first using a simpler set of assertions and requires,
+ * and then the ones as produced by cutting the network.
+*)
+let solveKirigami info query chan net =
+  let open Nv_lang.Syntax in
+  let module ExprEnc = (val expr_encoding smt_config) in
+  let module Enc =
+    (val (module SmtClassicEncoding.ClassicEncoding(ExprEnc) : SmtClassicEncoding.ClassicEncodingSig))
+  in
+  solve info query chan (fun () -> Enc.encode_z3 net)
+    (Nv_datastructures.AdjGraph.nb_vertex net.graph) net.assertion net.requires
+
 let solveFunc info query chan srp =
   let open Nv_lang.Syntax in
   let module ExprEnc = (val expr_encoding smt_config) in
