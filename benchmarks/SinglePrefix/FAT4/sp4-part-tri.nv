@@ -1,0 +1,82 @@
+(* vim: set syntax=ocaml: *)
+(* Partitioned version of sp4.nv *)
+include "../../../examples/utils.nv"
+include "sp4.nv"
+
+(* destination: node 10 *)
+(* 70.0.19.0/24u5 or (1174409984, 24u5)*)
+(* 10's pod includes itself and 6, 8 and 2 *)
+
+(* all true: 11 and 12 (in pod with 13 and 14) fail P assert *)
+
+(* split along spine-pod edges *)
+let partition node = match node with
+  | 1n -> 0u8
+  | 3n -> 0u8
+  | 4n -> 0u8
+  | 7n -> 0u8
+  | 2n -> 2u8
+  | 6n -> 2u8
+  | 8n -> 2u8
+  | 10n -> 2u8
+  | _ -> 1u8
+
+let interface edge =
+  let any x = true in
+  let nothingButBgp x =
+    match x with
+    | {connected = c; static = s; ospf = o; _} ->
+      (* only have bgp routes *)
+      c = None && s = None && o = None
+  in
+  let hasOnlyBgp x =
+    match x with
+    | {connected = c; static = s; ospf = o; bgp = b; selected = sel} ->
+      (* connected, static and ospf aren't transferred,
+       * so transfer won't maintain their values
+      *)
+      c = None && s = None && o = None && isSome b
+  in
+  let hasBgp x =
+    match x with
+    | {connected = c; static = s; ospf = o; bgp = b; selected = sel} ->
+      isSome b
+  in
+  match edge with
+  (* 1 edges - 1 gets the route to 10 via 8 *)
+  | 1~8 -> Some any
+  | 1~14 -> Some hasBgp
+  | 1~16 -> Some hasBgp
+  | 1~18 -> Some hasBgp
+  | 8~1 -> Some hasBgp
+  | 14~1 -> Some any
+  | 16~1 -> Some any
+  | 18~1 -> Some any
+  (* 3 edges - 3 gets the route to 10 via 8 *)
+  | 3~8 -> Some any
+  | 3~14 -> Some hasBgp
+  | 3~16 -> Some hasBgp
+  | 3~18 -> Some hasBgp
+  | 8~3 -> Some hasBgp
+  | 14~3 -> Some any
+  | 16~3 -> Some any
+  | 18~3 -> Some any
+  (* 4 edges - 4 gets the route to 10 via 6 *)
+  | 4~6 -> Some any
+  | 4~13 -> Some hasBgp
+  | 4~15 -> Some hasBgp
+  | 4~17 -> Some hasBgp
+  | 6~4 -> Some hasBgp
+  | 13~4 -> Some any
+  | 15~4 -> Some any
+  | 17~4 -> Some any
+  (* 7 edges - 7 gets the route to 10 via 6 *)
+  | 7~6 -> Some any
+  | 7~13 -> Some hasBgp
+  | 7~15 -> Some hasBgp
+  | 7~17 -> Some hasBgp
+  | 6~7 -> Some hasBgp
+  | 13~7 -> Some any
+  | 15~7 -> Some any
+  | 17~7 -> Some any
+  | _ -> None
