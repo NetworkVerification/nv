@@ -1,0 +1,16 @@
+type attribute = int
+
+let nodes = 1
+
+let edges = {}
+
+symbolic h : int
+require (fun a -> a = 2) h
+
+let init n = h
+
+let trans e x = x
+
+let merge n x y = if x < y then x else y
+
+let assert n x = (fun a -> a = 1) x
