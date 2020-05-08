@@ -105,7 +105,7 @@ let transform_init (old: exp) (ty: ty) (parted_srp: SrpRemapping.partitioned_srp
  * two parameters of types tedge and attribute
 *)
 let transform_trans (e: exp) (attr: ty) (parted_srp: SrpRemapping.partitioned_srp) : Syntax.exp =
-  let { inputs; outputs; edge_map } : SrpRemapping.partitioned_srp = parted_srp in
+  let { inputs; outputs; edge_map; trans } : SrpRemapping.partitioned_srp = parted_srp in
   (* new function argument *)
   let edge_var = Var.fresh "edge" in
   let x_var = Var.fresh "x" in
@@ -116,15 +116,20 @@ let transform_trans (e: exp) (attr: ty) (parted_srp: SrpRemapping.partitioned_sr
   (* function to remap edge_map mappings to the correct trans expressions *)
   let remap_branch (pat, edge) = match pat with
     | (PEdge (PNode u, PNode v)) -> begin
+        (* the trans field of parted_srp tells us how to decompose the transfer function *)
+        let (out_exp, in_exp) = match trans with
+          | SrpRemapping.OutputTrans -> (interp_trans edge, annot attr (evar x_var))
+          | SrpRemapping.InputTrans -> (annot attr (evar x_var), interp_trans edge)
+          | SrpRemapping.Decomposed (e1, e2) -> (e1, e2)
+        in
         (* handle if the nodes are base~base, input~base, or base~output *)
         let new_exp = match VertexMap.Exceptionless.find v outputs with
-          | Some (u', _) -> if (u = u') then (interp_trans edge)
-          (* call the original exp using the old edge *)
+          | Some (u', _) -> if (u = u') then out_exp
             else failwith "outputs stored edge did not match edge in edge_map"
           | None -> begin
               (* not a base~output edge, check input~base case *)
               match VertexMap.Exceptionless.find u inputs with
-              | Some {base; _ } -> if (v = base) then (annot attr (evar x_var)) else
+              | Some {base; _ } -> if (v = base) then in_exp else
                   failwith "inputs stored edge did not match edge in edge_map"
               | None -> (interp_trans edge) (* must be a base~base edge *)
             end

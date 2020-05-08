@@ -27,15 +27,16 @@ type t =
   ; depth: int                         (** search depth for refinement procedure   *)
   ; check_monotonicity: bool           (** checks monotonicity of trans function   *)
   ; kirigami: bool    [@short "-k"]     (** enable partitioning features           *)
+  ; print_remap: bool  [@short "-R"]   (** print the remapping of nodes in kirigami  *)
   ; link_failures: int                 (** adds at most k link failures to the network  *)
   ; slicing: bool                      (** Try to slice the network's attribute *)
   ; parallelize : int option [@short "-p"] (** Try to parallelize using n cores **)
   }
 [@@deriving
   show
-  , argparse
-      { positional= [("file", "nv policy file")]
-      ; description= "nv: a network verification framework" }]
+, argparse
+    { positional= [("file", "nv policy file")]
+    ; description= "nv: a network verification framework" }]
 
 let default =
   { debug= false
@@ -66,6 +67,7 @@ let default =
   ; link_failures=0
   ; hiding=false
   ; kirigami = false
+  ; print_remap = false
   ; slicing=false
   ; parallelize= None
   }
@@ -88,4 +90,5 @@ let update_cfg_dependencies () =
   if !cfg.slicing then cfg := {!cfg with unbox=true};
   if !cfg.hiding then cfg := {!cfg with unbox=true};
   if !cfg.smt_parallel then cfg := {!cfg with finite_arith=true};
+  if !cfg.print_remap then cfg := {!cfg with kirigami=true};
   ()

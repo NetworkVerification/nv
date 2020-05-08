@@ -69,7 +69,7 @@ let transform_declaration parted_srp attr_type ~(base_check: bool) decl =
  * opened along the edges described by the partition and interface declarations.
  * @return a new list of lists of declarations
 *)
-let divide_decls (decls: declarations) ~(base_check: bool) : declarations list =
+let divide_decls (cfg: Cmdline.t) (decls: declarations) ~(base_check: bool) : declarations list =
   let partition = get_partition decls in
   match partition with
   | Some parte -> begin
@@ -86,8 +86,9 @@ let divide_decls (decls: declarations) ~(base_check: bool) : declarations list =
         | Some intfe -> (interp_interface intfe)
         | None -> fun (_: Edge.t) -> None
       in
-      (* let interfacef = unwrap_pred % intf_opt in *)
-      let partitioned_srps = partition_edges node_list edges partf intf_opt in
+      (* TODO: change this to a cmdline parameter *)
+      let tcomp : transcomp = InputTrans in
+      let partitioned_srps = partition_edges node_list edges partf intf_opt tcomp in
       let create_new_decls (parted_srp : partitioned_srp) : declarations =
         (* TODO: node_map and edge_map describe how to remap each node and edge in the new SRP.
          * To transform more cleanly, we can run a toplevel transformer on the SRP, replacing
@@ -97,7 +98,13 @@ let divide_decls (decls: declarations) ~(base_check: bool) : declarations list =
          * (the input and output edges are handled by edge_map).
         *)
         (* Print mapping from old nodes to new nodes *)
-        (* print_endline @@ VertexMap.to_string (fun v -> match v with Some v -> string_of_int v | None -> "cut") parted_srp.node_map; *)
+        if cfg.print_remap then
+          let remap_node v = match v with
+            | Some v -> string_of_int v
+            | None -> "cut"
+          in
+          print_endline @@ VertexMap.to_string remap_node parted_srp.node_map
+        else ();
         let add_symbolic _ ({var; _} : input_exp) l =
           DSymbolic (var, Ty attr_type) :: l
         in

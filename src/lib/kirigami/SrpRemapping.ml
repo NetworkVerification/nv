@@ -6,6 +6,21 @@ open Nv_lang.Syntax
 open Nv_transformations
 open Nv_datastructures
 
+(* Describe how the transfer function should be decomposed.
+ * Some types of networks require different settings of this,
+ * depending on how they transfer routes.
+ * Figuring that out is future work. *)
+type transcomp =
+  (* Perform the original transfer on the base~output edge,
+   * and set the transfer on the input~base edge to the identity. *)
+  | OutputTrans
+  (* Perform the original transfer on the input~base edge,
+   * and set the transfer on the base~output edge to the identity. *)
+  | InputTrans
+  (* Decompose the original transfer into two parts e1 and e2.
+   * Not yet implemented. *)
+  | Decomposed of exp * exp
+
 (** A type for keeping track of the input to base and output to base relationships. *)
 type interface = {
   (* Key: input node, value: base node *)
@@ -62,6 +77,7 @@ type partitioned_srp = {
   *)
   inputs: input_exp VertexMap.t;
   outputs: (Vertex.t * exp option) VertexMap.t;
+  trans: transcomp;
 }
 
 (** Map each vertex in the list of vertices to a partition number.
@@ -87,7 +103,7 @@ let divide_vertices vmap nlists : (int * (Vertex.t option VertexMap.t)) list =
   let initial = List.make nlists (0, VertexMap.empty) in
   (* add the vertex to the corresponding map and set it to None elsewhere *)
   let place_vertex vertex srp_ix l =
-    List.mapi (fun lix (n, vmaps) -> 
+    List.mapi (fun lix (n, vmaps) ->
         (
           n + (if (lix = srp_ix) then 1 else 0),
           (* the new vertex is the old total number *)
@@ -117,14 +133,14 @@ let remap_edge edge (vmaps: (int * (Vertex.t option VertexMap.t)) list) : (Edge.
   in
   let (newu, usrp) = find_endpoint u in
   let (newv, vsrp) = find_endpoint v in
-  if (usrp != vsrp) then 
+  if (usrp != vsrp) then
     (* cross-partition case *)
     ((newu, newv), Cross (usrp, vsrp))
   else
     ((newu, newv), Internal usrp)
 
 (** Add the edge to the relevant list(s).
- * Internal edges get added to the single list that matches their 
+ * Internal edges get added to the single list that matches their
  * srp_edge.
  * A cross edge (u,v) instead gets split and added to two lists:
  * one for the (u, y) edge and another for the (x, v) edge.
@@ -160,7 +176,7 @@ let map_edges_to_parts predf partitions (old_edge, (edge, srp_edge)) =
            * symbolic variable and the require predicate *)
           let input_exp = {
             base = v;
-            var = Var.fresh (Printf.sprintf "hyp_%s" (Edge.to_string edge));
+            var = Var.fresh (Printf.sprintf "hyp_%s" (Edge.to_string old_edge));
             pred;
           } in
           {
@@ -178,14 +194,15 @@ let map_edges_to_parts predf partitions (old_edge, (edge, srp_edge)) =
   List.mapi add_edge partitions
 
 (** Map each edge in edges to a partitioned_srp based on where its endpoints lie. *)
-let divide_edges 
+let divide_edges
     (edges: Edge.t list)
     (predf: Edge.t -> exp option)
     (vmaps: (int * (Vertex.t option VertexMap.t)) list)
+    (trans: transcomp)
   : (partitioned_srp list)
   =
   let partitioned_srp_from_nodes (nodes, node_map) =
-    { nodes; edges = []; node_map; edge_map = EdgeMap.empty; inputs = VertexMap.empty; outputs = VertexMap.empty }
+    { nodes; edges = []; node_map; edge_map = EdgeMap.empty; inputs = VertexMap.empty; outputs = VertexMap.empty; trans; }
   in
   let initial = List.map partitioned_srp_from_nodes vmaps in
   let new_edges = List.map (fun e -> (e, remap_edge e vmaps)) edges in
@@ -194,11 +211,11 @@ let divide_edges
 (** Generate a list of partitioned_srp from the given list of nodes and edges,
  * along with their partitioning function and interface function.
 *)
-let partition_edges (nodes: Vertex.t list) (edges: Edge.t list) (partf: Vertex.t -> int) (intf: Edge.t -> exp option) =
+let partition_edges (nodes: Vertex.t list) (edges: Edge.t list) (partf: Vertex.t -> int) (intf: Edge.t -> exp option) (trans: transcomp) =
   let (node_srp_map, num_srps) = map_vertices_to_parts nodes partf in
   (* add 1 to num_srps to convert from max partition # to number of SRPS *)
-  let divided_nodes = divide_vertices node_srp_map (num_srps + 1) in 
-  divide_edges edges intf divided_nodes
+  let divided_nodes = divide_vertices node_srp_map (num_srps + 1) in
+  divide_edges edges intf divided_nodes trans
 
 let ty_transformer _ ty = Some ty
 

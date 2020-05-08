@@ -393,10 +393,10 @@ let parse_input (args : string array) :
     (* FIXME: this breaks ToEdge *)
     (* NOTE: we partition after checking well-formedness so we can reuse edges that don't exist *)
     let new_decls_base = List.map (fun d -> ("Base check:", d))
-        (Nv_kirigami.Partition.divide_decls decls ~base_check:true) in
+        (Nv_kirigami.Partition.divide_decls cfg decls ~base_check:true) in
     (* perform the base checks before the regular checks *)
     let new_decls = List.map (fun d -> ("I and P checks:", d))
-        (Nv_kirigami.Partition.divide_decls decls ~base_check:false) in
+        (Nv_kirigami.Partition.divide_decls cfg decls ~base_check:false) in
     List.map (fun (_s, d) ->
         (* print_endline @@ s; *)
         (* print_endline @@ Printing.declarations_to_string d; *)
