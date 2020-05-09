@@ -59,16 +59,16 @@ let simulate_declaration ~(throw_requires: bool) (graph : AdjGraph.t) (state : s
           let bdd_base = BddMap.create ~key_ty:TNode (Generators.default_value (oget solve.aty)) in
           let bdd_full = AdjGraph.VertexMap.fold (fun n v acc -> BddMap.update acc (vnode n) v) results bdd_base in
           let mapval = avalue (vmap bdd_full, Some xty, solve.var_names.espan) in
-          {state with env = Env.update env x mapval; sols = (x, {sol_val = results; mask = None; attr_ty = oget solve.aty}) :: state.sols}
+          {state with env = Env.update env x mapval; sols = (x, {sol_val = mapval; mask = None; attr_ty = oget solve.aty}) :: state.sols}
         | _ -> failwith "Not implemented" (* Only happens if we did map unrolling *)
       end
     | DUserTy _ | DPartition _ | DInterface _ | DNodes _ | DEdges _ -> state
 ;;
 
 let simulate_declarations ~(throw_requires: bool) (decls : declarations) : Solution.t =
+  let n = get_nodes decls |> oget in
+  let es = get_edges decls |> oget in
   let graph =
-    let n = get_nodes decls |> oget in
-    let es = get_edges decls |> oget in
     List.fold_left AdjGraph.add_edge_e (AdjGraph.create n) es
   in
   let final_state = List.fold_left (simulate_declaration ~throw_requires graph) empty_state decls in
@@ -82,6 +82,6 @@ let simulate_declarations ~(throw_requires: bool) (decls : declarations) : Solut
     pad (num_asserts - List.length final_state.assertions) final_state.assertions
   in
   let sol : Solution.t =
-    {labels = AdjGraph.VertexMap.empty; symbolics; solves; assertions;}
+    {symbolics; solves; assertions; nodes=n;}
   in
   sol

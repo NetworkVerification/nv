@@ -25,16 +25,7 @@ let eval_model (symbolics: Syntax.ty_or_exp VarMap.t)
     in
     mk_term smt_term
   in
-  (* Compute eval statements for labels *)
-  (* let labels = *)
-  (*   AdjGraph.fold_vertices (fun u acc -> *)
-  (*       let lblu = label_var u in *)
-  (*       let tm = mk_var (StringMap.find_default lblu lblu renaming) |> mk_term in *)
-  (*       let ev = mk_eval tm |> mk_command in *)
-  (*       let ec = mk_echo ("\"" ^ (var lblu) ^ "\"") |> mk_command in *)
-  (*       ec :: ev :: acc) num_nodes [(mk_echo ("\"end_of_model\"") |> mk_command)] in *)
   let base = [(mk_echo ("\"end_of_model\"") |> mk_command)] in
-  (* StringMap.iter (fun k v -> Printf.printf "(%s, %s)" k v) renaming; *)
   (* Compute eval statements for assertions *)
   let assertion_cmds =
     List.fold_lefti (fun acc i _ ->
@@ -107,7 +98,7 @@ let translate_model (m : (string, string) BatMap.t) : Nv_solution.Solution.t =
           {sol with symbolics= (k_var, nvval) :: sol.symbolics}) m
       {symbolics = [];
        solves = [];
-       labels = AdjGraph.VertexMap.empty;
+       nodes =  0;
        assertions= []}
   in
   {sol with assertions = List.rev sol.assertions; symbolics = List.rev sol.symbolics; solves = List.rev sol.solves}
@@ -119,23 +110,11 @@ let box_vals (xs : (int * Syntax.value) list) =
     vtuple (BatList.sort (fun (x1,_x2) (y1,_y2) -> compare x1 y1) xs
             |> BatList.map (fun (_,y) -> y))
 
-let translate_model_unboxed (m : (string, string) BatMap.t) : Nv_solution.Solution.t =
+let translate_model_unboxed nodes (m : (string, string) BatMap.t) : Nv_solution.Solution.t =
   let (symbolics, solves, assertions) =
     BatMap.foldi (fun k v (symbolics, solves, assertions) ->
         let nvval = parse_val v in
         match k with
-        | k when BatString.starts_with k "label" ->
-          failwith "Labels deprecated in SMT"
-        (* (match SmtUtils.proj_of_var k with
-                   | None ->
-                     ( symbolics,
-                       AdjGraph.VertexMap.add (SmtUtils.node_of_label_var k) [(0,nvval)] labels,
-                       assertions )
-                   | Some i ->
-                     ( symbolics,
-                       AdjGraph.VertexMap.modify_def
-                         [] (SmtUtils.node_of_label_var k) (fun xs -> (i,nvval) :: xs) labels,
-                       assertions )) *)
         | k when BatString.starts_with k "assert" ->
           let asn = match nvval.v with | VBool b -> b | _ -> failwith "Bad assert" in
           (symbolics, solves, asn :: assertions)
@@ -149,10 +128,9 @@ let translate_model_unboxed (m : (string, string) BatMap.t) : Nv_solution.Soluti
   in
   let box v = {sol_val = v; mask = None; attr_ty = Syntax.TUnit} in (*Tunit is arbitrary here**)
   { symbolics = List.rev symbolics;
-    (* solves = List.rev_map (fun (k, v) -> (k, box v)) solves; *)
-    solves = failwith "todo";
+    solves = List.rev_map (fun (k, v) -> (k, box v)) solves;
     assertions = List.rev assertions;
-    labels = AdjGraph.VertexMap.empty}
+    nodes = nodes}
 
 
 (* Model Refiners *)

@@ -296,32 +296,34 @@ let unproj_sym_solve (map : (Var.t * 'a) list)  =
   unprojed
 ;;
 
-let unproj_symbolics_and_solves (sol : Solution.t) = failwith "TODO"
-(*   let symbs =
- *     VarMap.fold
- *       (fun var lst acc -> (var, match lst with | [v] -> v | _ -> vtuple lst) :: acc)
- *       (unproj_sym_solve sol.symbolics) []
- *   in
- *   let solves =
- *     let open Solution in
- *     VarMap.fold
- *       (fun var lst acc ->
- *          match lst with
- *          | [solve] -> (var, solve) :: acc
- *          | _ ->
- *            (\* For a given solution, either all masks are None or all are Some.
- *               I think. *\)
- *            let masked = (List.hd lst).mask <> None in
- *            let sol_val = (List.map (fun s -> s.sol_val) lst) in
- *            let mask =
- *              if not masked then None
- *              else Some (vtuple (List.map (fun s -> oget s.mask) lst))
- *            in
- *            (var, {sol_val; mask}) :: acc)
- *       (unproj_sym_solve sol.solves) []
- *   in
- *   {sol with symbolics = symbs; solves = solves;}
- * ;; *)
+let unproj_symbolics_and_solves (sol : Solution.t) =
+   let symbs =
+      VarMap.fold
+        (fun var lst acc -> (var, match lst with | [v] -> v | _ -> vtuple lst) :: acc)
+        (unproj_sym_solve sol.symbolics) []
+    in
+    let solves =
+      let open Solution in
+      VarMap.fold
+        (fun var lst acc ->
+           match lst with
+           | [solve] -> (var, solve) :: acc
+           | _ ->
+             (* For a given solution, either all masks are None or all are Some.
+                I think. *)
+             let masked = (List.hd lst).mask <> None in
+             let sol_val = vtuple (List.map (fun s -> s.sol_val) lst) in
+             let sol_ty = (List.map (fun s -> s.attr_ty) lst) in
+             let mask =
+               if not masked then None
+               else Some (vtuple (List.map (fun s -> oget s.mask) lst))
+             in
+             let attr_ty = TTuple sol_ty in
+              (var, {sol_val; mask; attr_ty}) :: acc) (*NOTE: type here might be wrong *)
+        (unproj_sym_solve sol.solves) []
+    in
+    {sol with symbolics = symbs; solves = solves;}
+  ;;
 
 
 let make_toplevel (toplevel_transformer : 'a Transformers.toplevel_transformer) =

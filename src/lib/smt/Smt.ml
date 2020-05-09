@@ -73,7 +73,7 @@ let ask_for_model query chan info env solver renaming nodes eassert =
   (match model with
    | MODEL m ->
      if smt_config.unboxing then
-       Sat (translate_model_unboxed m)
+       Sat (translate_model_unboxed nodes m)
      else
        Sat (translate_model m)
    | OTHER s ->
@@ -201,37 +201,4 @@ let solveFunc info query chan srp =
 
 (** For quickcheck smart value generation *)
 let symvar_assign info (net: Nv_lang.Syntax.network) : (Nv_datastructures.Var.t * Nv_lang.Syntax.value) list option =
-  let module ExprEnc = (val expr_encoding smt_config) in
-  let module Enc = (val (module SmtClassicEncoding.ClassicEncoding(ExprEnc) : Encoding)) in
-  let env = ExprEnc.init_solver net.Nv_lang.Syntax.symbolics ~labels:[] in
-  let requires = net.Nv_lang.Syntax.requires in
-  Enc.add_symbolic_constraints env requires env.symbolics;
-  let smt_encoding = env_to_smt ~verbose:smt_config.verbose info env in
-  let solver = start_solver [] in
-  ask_solver_blocking solver smt_encoding;
-  let q = check_sat info in
-  ask_solver solver q;
-  let reply = solver |> parse_reply in
-  match reply with
-  | UNSAT  | UNKNOWN -> None
-  | SAT ->
-    (* build model question *)
-    let model = eval_model env.symbolics 0 [] (StringMap.empty, StringMap.empty) in
-    let model_question = commands_to_smt smt_config.verbose info model in
-    ask_solver solver model_question;
-    (* get answer *)
-    let model = solver |> parse_model in
-    let model =
-      match model with
-      | MODEL m ->
-        if smt_config.unboxing then
-          translate_model_unboxed m
-        else
-          translate_model m
-      | OTHER s ->
-        Printf.printf "%s\n" s;
-        failwith "failed to parse a model"
-      | _ -> failwith "failed to parse a model"
-    in
-    Some model.Nv_solution.Solution.symbolics
-  | _ -> failwith "Unexpected reply from SMT solver"
+  failwith "will deprecate soon"

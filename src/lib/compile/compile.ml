@@ -496,12 +496,13 @@ let compile_decl decl =
           | EVar x ->
             (match solve.aty with
               | None -> failwith "cannot solve without an attribute type"
-              | Some attr ->
-                ignore (get_fresh_type_id TNode);
+              | Some attr -> (*NOTE: this is just the attribute type, not including the map from nodes to attributes *)
+                ignore (get_fresh_type_id TNode); (*need to register node types manually! *)
                 let attr_id = get_fresh_type_id attr in
                   Printf.sprintf "let %s = SIM.simulate_solve (%d) (\"%s\") (%s) (%s) (%s)"
                     (varname x) attr_id (Var.name x) (exp_to_ocaml_string solve.init)
-                    (exp_to_ocaml_string solve.trans) (exp_to_ocaml_string solve.merge))
+                    (exp_to_ocaml_string solve.trans) (exp_to_ocaml_string solve.merge)
+              | _ -> failwith "Expected a map type for attributes")
         | _ -> failwith "Not implemented" (* Only happens if we did map unrolling *)
       end
     | DNodes _ | DEdges _ | DPartition _ | DInterface _ ->

@@ -50,4 +50,4 @@ let simulate name decls =
   let module Srp = (val (module CompleteSRP(Symbs)(SrpSimulator) : NATIVE_SRP)) in
 
   (* Get the computed solutions *)
-  build_solutions Srp.record_fns !SrpSimulator.solved
+  build_solutions (AdjGraph.nb_vertex graph) Srp.record_fns !SrpSimulator.solved

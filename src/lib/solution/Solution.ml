@@ -12,12 +12,12 @@ open OCamlUtils
    with a boolean in place of each base value. A value of false indicates that
    the value at that location in each attribute is bogus -- i.e. it was not
    needed to produce the counterexample *)
-type sol = {sol_val: value AdjGraph.VertexMap.t; mask : value option; attr_ty: Syntax.ty}
+type sol = {sol_val: value; mask : value option; attr_ty: Syntax.ty}
 type t =
   { symbolics: (var * value) list;
     solves: (var * sol) list;
     assertions: bool list; (* One for each assert statement *)
-    labels: value VertexMap.t; (* NOTE: Deprecated -- included only for backwards compatibility *)
+    nodes: int;
   }
 
 type map_back = t -> t
@@ -163,12 +163,22 @@ let rec print_masked mask v =
   | VClosure _, _ -> failwith "print_masked: tried to print VClosure"
 ;;
 
-let print_fun {sol_val; mask} =
-  match mask with
-  | None ->
-    VertexMap.fold (fun u v s -> Printf.sprintf "Node %d\n---------\n%s\n%s" u (Printing.value_to_string ~show_types:false v) s) sol_val ""
-  | Some m ->
-    VertexMap.fold (fun u v s -> Printf.sprintf "Node %d\n---------\n%s\n%s" u (print_masked m v) s) sol_val ""
+let print_fun nodes {sol_val; mask} =
+  let solString = ref [] in
+  let m = match sol_val.v with
+  | VMap m -> m
+  | _ -> failwith "Solution must be a map"
+  in
+  let f = 
+    match mask with
+    | None ->  fun x -> Printing.value_to_string ~show_types:false x
+    | Some m -> fun x -> print_masked m x
+  in
+  for i=(nodes-1) downto 0 do
+    let v = BddMap.find m (vnode i) in
+    solString := (i, f v) :: !solString
+  done;
+  PrimitiveCollections.printList (fun (u,s) -> Printf.sprintf "Node %d\n---------\n%s" u s) !solString "" "\n\n" "\n"
 
 let print_solution (solution : t) =
   let cfg = Nv_lang.Cmdline.get_cfg () in
@@ -183,7 +193,7 @@ let print_solution (solution : t) =
       (* Print solutions*)
       List.iter (fun (k,v) ->
           Printf.printf "Printing solutions for %s\n" (Var.to_string k);
-          print_endline (print_fun v)) solution.solves
+          print_endline (print_fun solution.nodes v)) solution.solves
     end;
   ( match solution.assertions with
     | [] ->

@@ -190,6 +190,7 @@ let rec simulate_init srp ((s, q): state) =
   match QueueSet.pop q with
   | None -> s
   | Some (next, rest) ->
+    Printf.printf "%d," next; 
     let s', more = simulate_step srp s next in
     simulate_init srp (s', QueueSet.add_all rest more)
 
