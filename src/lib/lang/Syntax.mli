@@ -154,33 +154,6 @@ type declaration =
 
 type declarations = declaration list
 
-type network =
-  { attr_type    : ty;
-    init         : exp;
-    trans        : exp;
-    merge        : exp;
-    assertion    : exp option;
-    solves       : solve list;
-    partition    : exp option; (* partitioning *)
-    interface    : exp option; (* partitioning *)
-    symbolics    : (var * ty_or_exp) list;
-    defs         : (var * ty option * exp) list;
-    utys         : (var * ty) list;
-    requires     : exp list;
-    graph        : AdjGraph.t;
-  }
-
-(* TODO: add partitioning? *)
-type srp_unfold =
-  { srp_attr : ty;
-    srp_constraints : exp AdjGraph.VertexMap.t;
-    srp_labels : (var * ty) list AdjGraph.VertexMap.t;
-    srp_symbolics : (var * ty_or_exp) list;
-    srp_assertion : exp option;
-    srp_requires : exp list;
-    srp_graph : AdjGraph.t
-  }
-
 (* Constructors *)
 val vunit : unit -> value
 
@@ -370,5 +343,3 @@ val bool_of_val: value -> bool option
 val proj_var: int -> var -> var
 
 val unproj_var: var -> (int * var)
-
-val createNetwork: declarations -> network

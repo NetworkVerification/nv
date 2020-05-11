@@ -70,9 +70,9 @@ let random_symbolic hints max_map_size d =
        (Printing.exp_to_string e) ; *)
     (x, Exp e)
 
-let random_symbolics ?hints ?max_map_size net =
+(* let random_symbolics ?hints ?max_map_size net =
   let hints =
     match hints with None -> TypeMap.empty | Some hs -> hs
   in
   let sz = match max_map_size with None -> 3 | Some x -> x in
-  {net with symbolics=BatList.map (random_symbolic hints sz) net.symbolics}
+  {net with symbolics=BatList.map (random_symbolic hints sz) net.symbolics} *)

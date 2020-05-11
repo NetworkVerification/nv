@@ -27,5 +27,3 @@ let make_toplevel (toplevel_transformer : 'a Transformers.toplevel_transformer) 
 ;;
 
 let optimize_declarations = make_toplevel Transformers.transform_declarations
-let optimize_net = make_toplevel Transformers.transform_network
-let optimize_srp = make_toplevel Transformers.transform_srp

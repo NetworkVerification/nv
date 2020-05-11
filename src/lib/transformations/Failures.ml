@@ -115,8 +115,8 @@ let buildFailTrans
   efunc {arg=aedge_var; argty=Some Typing.edge_ty; resty= transuv.ety;
          body=trans_hat_msg}
 
-let buildFailuresNet net k =
-  let (failuresMap, failuresSym, failuresConstraint) =
+let buildFailuresNet net k = failwith "need to be adapted to solve declarations"
+  (* let (failuresMap, failuresSym, failuresConstraint) =
     buildSymbolicFailures (AdjGraph.edges net.graph) k
   in
   let transMap =
@@ -125,4 +125,4 @@ let buildFailuresNet net k =
   {net with trans = buildFailTrans net.graph transMap net.attr_type failuresMap;
             requires = failuresConstraint :: net.requires;
             symbolics = failuresSym @ net.symbolics
-  }
+  } *)

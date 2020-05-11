@@ -28,15 +28,6 @@ let smt_query_file =
     lazy (open_out (file ^ "-" ^
                     (string_of_int count) ^ "-query"))
 
-let partialEvalNet (net : network) =
-  {net with
-   init = InterpPartial.interp_partial_opt net.init;
-   trans = InterpPartial.interp_partial_opt net.trans;
-   merge = InterpPartial.interp_partial_opt net.merge;
-   assertion = omap (InterpPartial.interp_partial_opt) net.assertion
-  }
-
-
 let run_smt_classic file cfg info decls fs =
   let decls, fs =
     let decls, f = UnboxEdges.unbox_declarations decls in
@@ -199,11 +190,6 @@ let run_compiled file _ _ decls fs =
       Success (Some solution), fs
     else
       CounterExample solution, fs
-
-let checkPolicy info cfg file ds =
-  let ds, _ = Renaming.alpha_convert_declarations ds in
-  let net = createNetwork ds in
-  SmtCheckProps.checkMonotonicity info cfg.query (smt_query_file file) net
 
 let parse_input (args : string array) =
   let cfg, rest = argparse default "nv" args in

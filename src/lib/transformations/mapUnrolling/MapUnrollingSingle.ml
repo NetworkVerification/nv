@@ -380,5 +380,3 @@ let make_toplevel (target : ty) (keys : keys) (toplevel_transformer : 'a Transfo
 ;;
 
 let unroll_declarations target keys = make_toplevel target keys Transformers.transform_declarations
-let unroll_net target keys = make_toplevel target keys Transformers.transform_network
-let unroll_srp target keys = make_toplevel target keys Transformers.transform_srp

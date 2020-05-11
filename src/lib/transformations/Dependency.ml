@@ -213,9 +213,3 @@ let extract_args f =
 let compute_dependencies (e : exp) =
   let acc, body = extract_args e in
   compute_dependencies_exp acc body
-
-let get_attr_size net =
-  match net.attr_type with
-  | TTuple lst -> List.length lst
-  | _ -> failwith "get_attr_size: Attribute must have tuple type"
-;;

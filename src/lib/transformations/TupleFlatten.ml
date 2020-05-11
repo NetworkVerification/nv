@@ -340,23 +340,3 @@ let flatten_declarations decls =
   let decls, f = make_toplevel Transformers.transform_declarations decls in
   List.map flatten_decl decls |> List.concat,
   f % unproj_symbolics_and_solves
-
-let flatten_net net =
-  let net, f = make_toplevel Transformers.transform_network net in
-  {net with symbolics = List.map proj_symbolic net.symbolics |> List.concat},
-  f % unproj_symbolics_and_solves
-
-let flatten_srp srp =
-  let srp, f = make_toplevel Transformers.transform_srp srp in
-  let proj_symbolics symbs = List.map proj_symbolic symbs |> List.concat in
-  let proj_label labels =
-    List.map
-      (fun (v, ty) ->
-         List.map (fun (v, toe) -> v, match toe with | Ty ty -> ty | _ -> failwith "Impossible") @@
-         proj_symbolic (v, Ty ty))
-      labels
-    |> List.concat
-  in
-  {srp with srp_symbolics = proj_symbolics srp.srp_symbolics;
-            srp_labels = AdjGraph.VertexMap.map proj_label srp.srp_labels},
-  f % unproj_symbolics_and_solves

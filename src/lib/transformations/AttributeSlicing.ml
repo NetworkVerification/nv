@@ -1,4 +1,4 @@
-open Batteries
+(*open Batteries
 open Nv_utils
 open OCamlUtils
 open Nv_datastructures
@@ -289,7 +289,7 @@ let map_back old_aty elements (sol : Solution.t) =
 (* Create a new network whose attribute is a tuple whose elements correspond
    to those indicated by the IntSet.t, and which has asn as the body of
    its assert function. *)
-let slice (net : Syntax.network) (asn_slice : exp) (elements : IntSet.t) =
+(* let slice (net : Syntax.network) (asn_slice : exp) (elements : IntSet.t) =
   let slice_fun = rewrite_fun (net.attr_type) elements asn_slice in
   let sliced_init = slice_fun 1 (* First arg is node *) 0 net.init in
   let sliced_trans = slice_fun 2 (* First two args are edge nodes *) 1 net.trans in
@@ -325,4 +325,5 @@ let slice_network (net : Syntax.network) : (Syntax.network * (Solution.t -> Solu
       )
       assert_deps
   in
-  List.map (fun (a,es) -> fun () -> (slice net a es)) assert_deps_transitive
+  List.map (fun (a,es) -> fun () -> (slice net a es)) assert_deps_transitive *)
+  *)

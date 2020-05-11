@@ -20,6 +20,3 @@ type queue = AdjGraph.Vertex.t QueueSet.queue
 
 val simulate_solve :
   AdjGraph.t -> Syntax.env -> Syntax.solve -> Syntax. value AdjGraph.VertexMap.t
-
-val net_to_srp : Syntax.network -> throw_requires:bool ->
-                            srp * Syntax.closure * Syntax.value Collections.VarMap.t

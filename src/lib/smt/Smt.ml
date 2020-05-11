@@ -72,10 +72,7 @@ let ask_for_model query chan info env solver renaming nodes eassert =
   let model = solver |> parse_model in
   (match model with
    | MODEL m ->
-     if smt_config.unboxing then
-       Sat (translate_model_unboxed nodes m)
-     else
-       Sat (translate_model m)
+      Sat (translate_model_unboxed nodes m)
    | OTHER s ->
      Printf.printf "%s\n" s;
      failwith "failed to parse a model"
@@ -100,29 +97,6 @@ let get_sat query chan info env solver renaming nodes eassert reply =
     ask_for_model query chan info env solver renaming nodes eassert
   | UNKNOWN -> Unknown
   | _ -> failwith "unexpected answer from solver\n"
-
-let refineModel (model : Nv_solution.Solution.t) info query chan env solver renaming
-    nodes eassert requires =
-  let refiner = refineModelMinimizeFailures in
-  match refiner model info query chan solver renaming env requires with
-  | None ->
-    (* Nv_lang.Console.warning "Model was not refined\n"; *)
-    Sat model (* no refinement can occur *)
-  | Some q ->
-    Nv_lang.Console.warning "Refining the model...\n";
-    let checkSat = CheckSat |> mk_command |> command_to_smt smt_config.verbose info in
-    let q = Printf.sprintf "%s%s\n" q checkSat in
-    if query then
-      (printQuery chan q);
-    ask_solver solver q;
-    let reply = solver |> parse_reply in
-    let isSat = get_sat query chan info env solver renaming nodes eassert reply in
-    (* if the second query was unsat, return the first counterexample *)
-    match isSat with
-    | Sat _newModel ->
-      Nv_lang.Console.warning "Refined the model";
-      isSat
-    | _ -> Sat model
 
 (* Apparently not setting this option can lead to Z3 not giving us a response *)
 let solver = lazy(let solver = start_solver [] in
@@ -151,29 +125,10 @@ let solve info query chan net_or_srp nodes assertions requires =
 
     (* Printf.printf "communicating with solver"; *)
     print_and_ask smt_encoding;
-    match smt_config.failures with
-    | None ->
-      let q = check_sat info in
-      print_and_ask q;
-      let reply = solver |> parse_reply in
-      get_sat query chan info env solver renaming nodes assertions reply
-    | Some _ ->
-      let q = check_sat info in
-      (* ask if it is satisfiable *)
-      print_and_ask q;
-      let reply = solver |> parse_reply in
-      (* check the reply *)
-      let isSat = get_sat query chan info env solver renaming nodes assertions reply in
-      (* In order to minimize refinement iterations, once we get a
-         counter-example we try to minimize it by only keeping failures
-         on single links. If it works then we found an actual
-         counterexample, otherwise we refine using the first
-         counterexample. *)
-      match isSat with
-      | Unsat -> Unsat
-      | Unknown -> Unknown
-      | Sat model1 ->
-        refineModel model1 info query chan env solver renaming nodes assertions requires
+    let q = check_sat info in
+    print_and_ask q;
+    let reply = solver |> parse_reply in
+    get_sat query chan info env solver renaming nodes assertions reply
   in
   print_and_ask "(push)";
   let ret = solve_aux () in
@@ -188,17 +143,3 @@ let solveClassic info query chan decls =
   in
   solve info query chan (fun () -> Enc.encode_z3 decls)
     (Nv_datastructures.AdjGraph.nb_vertex (get_graph decls |> oget)) (get_asserts decls) (get_requires decls)
-
-let solveFunc info query chan srp =
-  let open Nv_lang.Syntax in
-  let module ExprEnc = (val expr_encoding smt_config) in
-  let module Enc =
-    (val (module SmtFunctionalEncoding.FunctionalEncoding(ExprEnc) : SmtFunctionalEncoding.FunctionalEncodingSig))
-  in
-  let asn = match srp.srp_assertion with None -> [] | Some e -> [e] in
-  solve info query chan (fun () -> Enc.encode_z3 srp)
-    (Nv_datastructures.AdjGraph.nb_vertex srp.srp_graph) asn srp.srp_requires
-
-(** For quickcheck smart value generation *)
-let symvar_assign info (net: Nv_lang.Syntax.network) : (Nv_datastructures.Var.t * Nv_lang.Syntax.value) list option =
-  failwith "will deprecate soon"

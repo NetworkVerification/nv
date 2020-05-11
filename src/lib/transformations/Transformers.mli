@@ -25,5 +25,3 @@ type 'a toplevel_transformer =
   'a * Solution.map_back
 
 val transform_declarations: declarations toplevel_transformer
-val transform_network: network toplevel_transformer
-val transform_srp: srp_unfold toplevel_transformer

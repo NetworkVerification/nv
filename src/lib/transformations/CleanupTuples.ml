@@ -71,5 +71,3 @@ let make_toplevel (toplevel_transformer : 'a Transformers.toplevel_transformer) 
 ;;
 
 let cleanup_declarations = make_toplevel Transformers.transform_declarations
-let cleanup_net = make_toplevel Transformers.transform_network
-let cleanup_srp = make_toplevel Transformers.transform_srp

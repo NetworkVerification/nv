@@ -23,5 +23,3 @@ val env_to_string : ?show_types:bool -> Syntax.env -> string
 val declaration_to_string : ?show_types:bool -> Syntax.declaration -> string
 
 val declarations_to_string : ?show_types:bool -> Syntax.declarations -> string
-
-val network_to_string : ?show_types:bool -> ?show_topology:bool -> Syntax.network -> string

@@ -32,17 +32,3 @@ let iter_exp_decl f d =
   | DNodes _ | DEdges _ | DSymbolic _ | DUserTy _ -> ()
 
 let rec iter_exp_decls f ds = BatList.iter (iter_exp_decl f) ds
-
-let iter_exp_net f (net : network) =
-  BatList.iter (fun (_,_,e) -> iter_exp f e) net.defs;
-  BatList.iter (fun (_,e) ->
-      match e with
-      | Exp e -> iter_exp f e
-      | _ -> ()) net.symbolics;
-  iter_exp f net.merge;
-  iter_exp f net.trans;
-  iter_exp f net.init;
-  (match net.assertion with
-   | Some e -> iter_exp f e
-   | None -> ());
-  BatList.iter (fun e -> iter_exp f e) net.requires

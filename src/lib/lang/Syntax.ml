@@ -204,34 +204,6 @@ type declaration =
 
 type declarations = declaration list
 
-type network =
-  { attr_type : ty;
-    init : exp;
-    trans : exp;
-    merge : exp;
-    assertion : exp option;
-    solves : solve list;
-    partition : exp option; (* partitioning *)
-    interface : exp option; (* partitioning *)
-    symbolics : (var * ty_or_exp) list;
-    defs : (var * ty option * exp) list;
-    utys : (var * ty) list;
-    requires : exp list;
-    graph : AdjGraph.t;
-  }
-
-(* TODO: add partitioning? *)
-(* TODO: Definitely add solves *)
-type srp_unfold =
-  { srp_attr : ty;
-    srp_constraints : exp AdjGraph.VertexMap.t;
-    srp_labels : (var * ty) list AdjGraph.VertexMap.t;
-    srp_symbolics : (var * ty_or_exp) list;
-    srp_assertion : exp option;
-    srp_requires : exp list;
-    srp_graph : AdjGraph.t
-  }
-
 (** * Handling branches *)
 
 let rec is_irrefutable pat =
@@ -1277,39 +1249,3 @@ let compare_exps e1 e2 =
   let cfg = Cmdline.get_cfg () in
   if cfg.hashcons then e1.etag - e2.etag
   else Pervasives.compare e1 e2
-
-let createNetwork decls =
-  match
-    ( get_merge decls
-    , get_trans decls
-    , get_init decls
-    , get_graph decls
-    , get_attr_type decls
-    , get_symbolics decls
-    , get_lets decls
-    , get_types decls
-    , get_requires decls)
-  with
-  | Some emerge, Some etrans, Some einit, Some graph,
-    Some aty, symb, defs, utys, erequires ->
-    let assertion =
-      match get_asserts decls with
-      | [] -> None
-      | hd::tl -> Some (List.fold_left (fun e1 e2 -> eop And [e1; e2] |> wrap e1) hd tl)
-    in
-    { attr_type = aty;
-      init = einit;
-      trans = etrans;
-      merge = emerge;
-      assertion = assertion;
-      solves = get_solves decls;
-      partition = get_partition decls; (* partitioning *)
-      interface = get_interface decls; (* partitioning *)
-      symbolics = symb;
-      defs = defs;
-      requires = erequires;
-      utys = utys;
-      graph = graph;
-    }
-  | _ ->
-    failwith "This should be refactored soon."
