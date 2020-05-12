@@ -1,7 +1,7 @@
 open Cudd
 open Nv_datastructures
 open Nv_utils.PrimitiveCollections
-       
+
 type node = int
 
 val tnode_sz : int
@@ -39,6 +39,7 @@ type op =
   | Eq
   | UAdd of bitwidth
   | USub of bitwidth
+  | UAnd of bitwidth
   | ULess of bitwidth
   | ULeq of bitwidth
   | NLess
@@ -136,15 +137,15 @@ val optimizeBranches: branches -> branches
 val branchToList: branches -> (PatMap.key * exp) list
 val branchSize: branches -> unit
 
+(* var_names should be an exp that uses only the EVar and ETuple constructors *)
+type solve = {aty: ty option; var_names: exp; init : exp; trans: exp; merge: exp}
+
 type declaration =
   | DLet of var * ty option * exp
   | DSymbolic of var * ty_or_exp
-  | DATy of ty (* Declaration of the attribute type *)
-  | DUserTy of var * ty (* Declaration of a user-defined type *)
-  | DMerge of exp
-  | DTrans of exp
-  | DInit of exp
+  | DUserTy of var * ty (* Declaration of a record type *)
   | DAssert of exp
+  | DSolve of solve
   | DRequire of exp
   | DPartition of exp (* partition ids *)
   | DInterface of exp (* interface hypotheses *)
@@ -152,32 +153,6 @@ type declaration =
   | DEdges of (node * node) list
 
 type declarations = declaration list
-
-type network =
-  { attr_type    : ty;
-    init         : exp;
-    trans        : exp;
-    merge        : exp;
-    assertion    : exp option;
-    partition    : exp option; (* partitioning *)
-    interface    : exp option; (* partitioning *)
-    symbolics    : (var * ty_or_exp) list;
-    defs         : (var * ty option * exp) list;
-    utys         : (var * ty) list;
-    requires     : exp list;
-    graph        : AdjGraph.t;
-  }
-
-(* TODO: add partitioning? *)
-type srp_unfold =
-  { srp_attr : ty;
-    srp_constraints : exp AdjGraph.VertexMap.t;
-    srp_labels : (var * ty) list AdjGraph.VertexMap.t;
-    srp_symbolics : (var * ty_or_exp) list;
-    srp_assertion : exp option;
-    srp_requires : exp list;
-    srp_graph : AdjGraph.t
-  }
 
 (* Constructors *)
 val vunit : unit -> value
@@ -297,7 +272,9 @@ val get_trans : declarations -> exp option
 
 val get_init : declarations -> exp option
 
-val get_assert : declarations -> exp option
+val get_asserts : declarations -> exp list
+
+val get_solves : declarations -> solve list
 
 val get_partition : declarations -> exp option
 
@@ -306,6 +283,8 @@ val get_interface : declarations -> exp option
 val get_edges : declarations -> (node * node) list option
 
 val get_nodes : declarations -> int option
+
+val get_graph : declarations -> AdjGraph.t option
 
 val get_symbolics : declarations -> (var * ty_or_exp) list
 

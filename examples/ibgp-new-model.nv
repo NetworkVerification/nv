@@ -238,3 +238,5 @@ let trans edge x y =
 
 let init node =
   (initPackets node, initRoute node)
+
+let sol = solution {init = init; trans = trans; merge = merge}

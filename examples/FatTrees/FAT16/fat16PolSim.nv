@@ -86387,3 +86387,5 @@ let trans edge x =
  core-13=317,
  aggregation-309=318,
  aggregation-308=319}*)
+
+let sol = solution {init = init; trans = trans; merge = merge}

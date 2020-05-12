@@ -24,7 +24,7 @@ struct
   let merge e x1 x2 =
     combine (mapbetter S.merge) x1 x2
 
-  let assert =
+let assert_node =
     mapo
       (fun f -> fun n x ->
          foldEdge
@@ -64,7 +64,7 @@ struct
   let merge e x1 x2 =
     combine (S.merge) x1 x2
 
-  let assert n x =
+let assert_node n x =
     mapo
       (fun f -> fun n x ->
          foldEdge
@@ -73,3 +73,7 @@ struct
            x)
       S.assert
 end
+
+let sol = solution {init = init; trans = trans; merge = merge}
+
+assert foldNodes (fun k v acc -> acc && assert_node k v) sol true

@@ -36,5 +36,3 @@ let make_toplevel (toplevel_transformer : 'a Transformers.toplevel_transformer) 
 ;;
 
 let unbox_declarations = make_toplevel Transformers.transform_declarations
-let unbox_net = make_toplevel Transformers.transform_network
-let unbox_srp = make_toplevel Transformers.transform_srp

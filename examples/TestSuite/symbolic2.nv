@@ -1,0 +1,38 @@
+type attribute = option[int]
+
+let nodes = 2
+
+let edges = {
+ 0=1;
+}
+
+symbolic fail = createDict false
+
+
+let merge node x y =
+  match (x,y) with
+  | (None, _) -> y
+  | (_, None) -> x
+  | (Some x, Some y) -> Some (if x < y then x else y)
+
+let trans edge x =
+  match x with
+  | None -> None
+  | Some x ->
+    match edge with
+      | 0~1 -> if fail[0~1] then None else Some (x + 1)
+      | 1~0 -> if fail[1~0] then None else Some (x + 1)
+
+let init node =
+  match node with
+  | 0n -> Some 0
+  | _ -> None
+
+let assert_node n x =
+  match x with
+  | None -> false
+  | _ -> true
+
+let sol = solution {init = init; trans = trans; merge = merge}
+
+assert foldNodes (fun k v acc -> acc && assert_node k v) sol true

@@ -1108,3 +1108,5 @@ let init u = createDict (initProt u)
    aggregation-17=6, core-2=7, aggregation-16=8, edge-14=9, edge-19=10, edge-6=11,
    edge-7=12, aggregation-5=13, aggregation-4=14, aggregation-9=15,
    aggregation-8=16, aggregation-13=17, aggregation-12=18, edge-10=19}*)
+
+let sol = solution {init = init; trans = trans; merge = merge}

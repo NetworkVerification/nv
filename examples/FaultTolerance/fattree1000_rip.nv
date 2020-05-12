@@ -12,3 +12,5 @@ let init u =
      Some 0
   else
      None
+
+let sol = solution {init = init; trans = trans; merge = merge}

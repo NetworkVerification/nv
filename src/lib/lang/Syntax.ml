@@ -50,6 +50,7 @@ type op =
   | Eq
   | UAdd of bitwidth
   | USub of bitwidth
+  | UAnd of bitwidth
   | ULess of bitwidth
   | ULeq of bitwidth
   | NLess
@@ -186,15 +187,15 @@ and env = {ty: ty Env.t; value: value Env.t}
 
 and ty_or_exp = Ty of ty | Exp of exp
 
+(* var_names should be an exp that uses only the EVar and ETuple constructors *)
+type solve = {aty: ty option; var_names: exp; init : exp; trans: exp; merge: exp}
+
 type declaration =
   | DLet of var * ty option * exp
   | DSymbolic of var * ty_or_exp
-  | DATy of ty (* Declaration of the attribute type *)
   | DUserTy of var * ty (* Declaration of a record type *)
-  | DMerge of exp
-  | DTrans of exp
-  | DInit of exp
   | DAssert of exp
+  | DSolve of solve
   | DRequire of exp
   | DPartition of exp (* partition ids *)
   | DInterface of exp (* interface hypotheses *)
@@ -202,32 +203,6 @@ type declaration =
   | DEdges of (node * node) list
 
 type declarations = declaration list
-
-type network =
-  { attr_type : ty;
-    init : exp;
-    trans : exp;
-    merge : exp;
-    assertion : exp option;
-    partition : exp option; (* partitioning *)
-    interface : exp option; (* partitioning *)
-    symbolics : (var * ty_or_exp) list;
-    defs : (var * ty option * exp) list;
-    utys : (var * ty) list;
-    requires : exp list;
-    graph : AdjGraph.t;
-  }
-
-(* TODO: add partitioning? *)
-type srp_unfold =
-  { srp_attr : ty;
-    srp_constraints : exp AdjGraph.VertexMap.t;
-    srp_labels : (var * ty) list AdjGraph.VertexMap.t;
-    srp_symbolics : (var * ty_or_exp) list;
-    srp_assertion : exp option;
-    srp_requires : exp list;
-    srp_graph : AdjGraph.t
-  }
 
 (** * Handling branches *)
 
@@ -703,14 +678,15 @@ and hash_op op =
   | USub n -> 11  + n + 256 * 2
   | ULess n -> 11 + n + 256 * 3
   | ULeq n -> 11  + n + 256 * 4
-  | AtMost n -> 12 + n
-  | NLess -> 13
-  | NLeq -> 14
-  | MFoldNode -> 15
-  | MFoldEdge -> 16
-  | TGet (n1, n2, n3) -> 17 + n1 + n2 + n3 + 256 * 5
-  | TSet (n1, n2, n3) -> 17 + n1 + n2 + n3 + 256 * 6
-  | MMapIte -> 18
+  | UAnd n -> 12 + n + 256 *  5
+  | AtMost n -> 13 + n
+  | NLess -> 14
+  | NLeq -> 15
+  | MFoldNode -> 16
+  | MFoldEdge -> 17
+  | TGet (n1, n2, n3) -> 18 + n1 + n2 + n3 + 256 * 6
+  | TSet (n1, n2, n3) -> 19 + n1 + n2 + n3 + 256 * 7
+  | MMapIte -> 20
 (* hashconsing information/tables *)
 
 let meta_v : (v, value) Hashcons.meta =
@@ -749,6 +725,7 @@ let arity op =
   | Eq -> 2
   | ULess _ -> 2
   | ULeq _ -> 2
+  | UAnd _ -> 2
   | NLess -> 2
   | NLeq -> 2
   | AtMost _ -> 3
@@ -1009,20 +986,22 @@ let get_lets ds =
   BatList.filter_map (fun d -> match d with DLet (x,ty,e) -> Some (x,ty,e) | _ -> None) ds
 
 let get_attr_type ds =
-  get_decl ds (fun d -> match d with DATy ty -> Some ty | _ -> None)
+  get_decl ds (fun d -> match d with DUserTy(x, ty) when Var.name x = "attribute" -> Some ty | _ -> None)
 
 let get_merge ds =
-  get_decl ds (fun d -> match d with DMerge e -> Some e | _ -> None)
+  get_decl ds (fun d -> match d with DLet(x, _, e) when Var.name x = "merge" -> Some e | _ -> None)
 
 let get_trans ds =
-  get_decl ds (fun d -> match d with DTrans e -> Some e | _ -> None)
+  get_decl ds (fun d -> match d with DLet(x, _, e) when Var.name x = "trans" -> Some e | _ -> None)
 
 let get_init ds =
-  get_decl ds (fun d -> match d with DInit e -> Some e | _ -> None)
+  get_decl ds (fun d -> match d with DLet(x, _, e) when Var.name x = "merge" -> Some e | _ -> None)
 
-let get_assert ds =
-  get_decl ds (fun d ->
-      match d with DAssert e -> Some e | _ -> None )
+let get_asserts ds =
+  BatList.filter_map (fun d -> match d with DAssert e -> Some e | _ -> None ) ds
+
+let get_solves ds =
+  List.filter_map (fun d -> match d with | DSolve a -> Some a | _ -> None ) ds
 
 (* partitioning *)
 let get_partition ds =
@@ -1042,6 +1021,11 @@ let get_edges ds =
 
 let get_nodes ds =
   get_decl ds (fun d -> match d with DNodes i -> Some i | _ -> None)
+
+let get_graph ds =
+  match get_nodes ds, get_edges ds with
+  | Some n, Some es -> Some (List.fold_left AdjGraph.add_edge_e (AdjGraph.create n) es)
+  | _ -> None
 
 let get_symbolics ds =
   List.fold_left
@@ -1096,7 +1080,10 @@ let proj_var (n: int) (x: var) =
 
 let unproj_var (x : var) =
   let (s,i) = Var.from_var x in
-  let name, n = BatString.split s "-proj-" in
+  let name, n =
+    try BatString.split s "-proj-"
+    with | Not_found -> (s, "-1")
+  in
   (int_of_string n, Var.to_var (name, i))
 
 open BatSet

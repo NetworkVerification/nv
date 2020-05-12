@@ -130,6 +130,7 @@ let check_record_label_uniqueness info decls =
   in
   let all_labels =
     get_record_types decls
+    |> List.unique ~eq:(StringMap.equal Typing.equiv_tys) (* Filter out record type aliasing *)
     |> List.map (fun map -> BatList.of_enum @@ StringMap.keys map)
     |> List.concat
   in
@@ -143,37 +144,38 @@ let check_record_label_uniqueness info decls =
         name
     in
     Console.error_position info Span.default msg
+;;
 
 (* let rec is_literal (exp : Syntax.exp) : bool =
-  match exp.e with
-  | EVar _
-  | EOp _
-  | EFun _
-  | EApp _
-  | EIf _
-  | ELet _
-  | EMatch _ ->
+   match exp.e with
+   | EVar _
+   | EOp _
+   | EFun _
+   | EApp _
+   | EIf _
+   | ELet _
+   | EMatch _ ->
     false
-  | ESome exp2 ->
+   | ESome exp2 ->
     is_literal exp2
-  | ETuple es ->
+   | ETuple es ->
     List.for_all is_literal es
-  | EVal _ -> true
-  | ETy (exp2, _) -> is_literal exp2
-  | ERecord map -> StringMap.for_all (fun _ -> is_literal) map
-  | EProject (exp2, _) -> is_literal exp2
+   | EVal _ -> true
+   | ETy (exp2, _) -> is_literal exp2
+   | ERecord map -> StringMap.for_all (fun _ -> is_literal) map
+   | EProject (exp2, _) -> is_literal exp2
 
-(* Verify that the only map keys used are literals *)
-let check_keys info _ (e : exp) =
-  match e.e with
-  (* | EOp (MGet, [_; k]) *)
-  | EOp (MSet, [_; k; _]) ->
+   (* Verify that the only map keys used are literals *)
+   let check_keys info _ (e : exp) =
+   match e.e with
+   (* | EOp (MGet, [_; k]) *)
+   | EOp (MSet, [_; k; _]) ->
     if not (is_literal k) then
       let msg =
         "Only literals may be used as keys into a map"
       in
       Console.error_position info k.espan msg
-  | _ -> () *)
+   | _ -> () *)
 
 (* Ensures every node/edge value in the program actually exists in the network *)
 let check_nodes_and_edges info num_nodes edges _ (e : exp) =
@@ -208,5 +210,5 @@ let check info (ds: declarations) : unit =
   (* Visitors.iter_exp_decls (check_closures info) ds ; *) (* Is this still necessary? *)
   (* Visitors.iter_exp_decls (check_keys info) ds; *)
   Visitors.iter_exp_decls (check_nodes_and_edges info
-    (get_nodes ds |> Nv_utils.OCamlUtils.oget) (get_edges ds |> Nv_utils.OCamlUtils.oget)) ds;
+                             (get_nodes ds |> Nv_utils.OCamlUtils.oget) (get_edges ds |> Nv_utils.OCamlUtils.oget)) ds;
   ()

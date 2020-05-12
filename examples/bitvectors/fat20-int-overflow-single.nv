@@ -2,13 +2,15 @@ include "../generic-algebras/distance-overflow-single.nv"
 include "../generic-topologies/fattree500.nv"
 
 (*
-let assert u x =
+let assert_node u x =
   match x with
   | None -> false
   | Some k -> if (k < 5) then true else false
 *)
 
-let assert u x =
+let assert_node u x =
   match x with
   | None -> false
   | Some _ -> true
+
+assert foldNodes (fun k v acc -> acc && assert_node k v) sol true

@@ -11,5 +11,7 @@ let merge n x1 x2 =
   (Some None) None (Some None) None (* Extra args to combine to make simulator faster *)
 
 let init n =
-  let m = createDict None in
+  let m = (createDict None : dict[tnode, option[int]]) in
   m[n := Some 0]
+
+let sol = solution {init = init; trans = trans; merge = merge}

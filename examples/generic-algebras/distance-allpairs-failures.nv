@@ -24,5 +24,7 @@ let merge n x1 x2 =
   x1 x2) x1 x2
 
 let init n =
-  let m = createDict None in
+  let m = (createDict None : option[dict[tnode, option[int]]]) in
   Some (m[n := Some 0])
+
+let sol = solution {init = init; trans = trans; merge = merge}

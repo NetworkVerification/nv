@@ -116,3 +116,5 @@ end
   solution IBGP = n
 
   assert (...n...)
+
+let sol = solution {init = init; trans = trans; merge = merge}

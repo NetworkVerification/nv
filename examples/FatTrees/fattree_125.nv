@@ -1,7 +1,9 @@
 include "../generic-topologies/fattree125.nv"
 include "../generic-algebras/distance-allpairs.nv"
 
-let assert node x =
+let assert_node node x =
   match x[19n] with
   | None -> false
   | Some _ -> true
+
+assert foldNodes (fun k v acc -> acc && assert_node k v) sol true

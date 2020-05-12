@@ -4,5 +4,3 @@ open Nv_lang.Syntax
 open Nv_solution
 
 val cleanup_declarations : declarations -> declarations * Solution.map_back
-val cleanup_net : network -> network * Solution.map_back
-val cleanup_srp : srp_unfold -> srp_unfold * Solution.map_back

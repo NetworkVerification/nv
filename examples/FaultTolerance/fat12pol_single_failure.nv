@@ -39573,3 +39573,5 @@ let init u =
  aggregation-48=177,
  edge-54=178,
  aggregation-41=179}*)
+
+let sol = solution {init = init; trans = trans; merge = merge}

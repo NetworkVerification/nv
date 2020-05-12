@@ -15,4 +15,8 @@ let trans n x = x
 
 let merge n x y = x || y
 
-let assert n x = x
+let assert_node n x = x
+
+let sol = solution {init = init; trans = trans; merge = merge}
+
+assert foldNodes (fun k v acc -> acc && assert_node k v) sol true

@@ -50,7 +50,7 @@ rule token = parse
   | "foldEdges"       { FOLDEDGE (position lexbuf) }
   | "map"             { MAP (position lexbuf) }
   | "mapIf"           { MAPIF (position lexbuf) }
-  | "mapIte"           { MAPITE (position lexbuf) }
+  | "mapIte"          { MAPITE (position lexbuf) }
   | "combine"         { COMBINE (position lexbuf) }
   | "union"           { UNION (position lexbuf) }
   | "inter"           { INTER (position lexbuf) }
@@ -65,7 +65,8 @@ rule token = parse
   | "tnode"           { TNODE (position lexbuf) }
   | "tedge"           { TEDGE (position lexbuf) }
   | "type"            { TYPE (position lexbuf) }
-  | "attribute"       { ATTRIBUTE (position lexbuf) }
+  | "solution"        { SOLUTION (position lexbuf) }
+  | "assert"          { ASSERT (position lexbuf) }
   | id as s           { ID (position lexbuf, Nv_datastructures.Var.create s) }
   | node as s         { NODE (position lexbuf, int_of_string (String.rchop ~n:1 s)) }
   | num width as n    { NUM (position lexbuf, Nv_datastructures.Integer.of_string n) }
@@ -81,6 +82,8 @@ rule token = parse
   | "+"               { PLUS (position lexbuf, 32) }
   | "-" width as s    { SUB (position lexbuf, int_of_string @@ String.lchop ~n:2 s) }
   | "-"               { SUB (position lexbuf, 32) }
+  | "&" width as s    { UAND (position lexbuf, int_of_string @@ String.lchop ~n:2 s) }
+  | "&"               { UAND (position lexbuf, 32) }
   | "<=n"             { NLEQ (position lexbuf) }
   | "<=" width as s   { LEQ (position lexbuf, int_of_string @@ String.lchop ~n:3 s) }
   | "<="              { LEQ (position lexbuf, 32) }

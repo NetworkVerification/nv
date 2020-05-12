@@ -10,12 +10,23 @@ module B = BddUtils
 
 (** ** Type of values computed*)
 type t =
-  | BBool of Bdd.vt
-  | BInt of Bdd.vt array
-  | BOption of Bdd.vt * t
-  | Tuple of t list
-  | BMap of BddMap.t
-  | Value of Syntax.value
+  | BBool of Bdd.vt (* Boolean BDD *)
+  | BInt of Bdd.vt array (* Integer as an array of booleans *)
+  | BOption of Bdd.vt * t (* Option of BDD *)
+  | Tuple of t list (* Tuple of elements, not necessary BDDs *)
+  | BMap of BddMap.t (* MTBDD map, for now leafs are values *)
+  | Value of Syntax.value (* Conventional NV value *)
+
+
+let rec print (x : t) =
+  match x with
+  | BBool _ -> "BBool"
+  | BInt _ -> "BInt"
+  | BOption (_, x) -> Printf.sprintf "BOption[%s]" (print x)
+  | Tuple xs -> Collections.printList print xs "[" ";" "]"
+  | BMap _ -> "BMap"
+  | Value _ -> "Value"
+
 
 let rec equal_t x y =
   match x,y with
@@ -33,6 +44,7 @@ let rec equal_t x y =
     equal_values ~cmp_meta:false v1 v2
   | _, _ -> false
 
+  (* MTBDD table used for match expressions *)
 let tbl_match : (('a Env.t * ((Cudd.Man.v Cudd.Bdd.t) option)) option) Cudd.Mtbdd.table =
   Mtbdd.make_table
     ~hash:(fun v -> match v with
@@ -102,6 +114,7 @@ let create_value (ty: ty) : t =
   let ret, _ = aux 0 ty in
   ret
 
+  (* Constrains the MTBDD table variables by the given BDD *)
 let constrain_bdd (x : t) (typ: Syntax.ty) : Bdd.vt =
   let rec aux x idx ty =
     match x, get_inner_type ty with
@@ -291,6 +304,10 @@ let add xs ys =
   done ;
   BInt (var4)
 
+(** Bitwise and operation. Requires that the two integers are of the same size. *)
+let uand xs ys =
+  BInt (Array.init (Array.length xs) (fun i -> Bdd.dand xs.(i) ys.(i)))
+
 (* Outdated. Compare with add above if uncommenting *)
 (* let sub (x: bdd_value) (y: bdd_value) : bdd_value =
    let aux xs ys =
@@ -315,11 +332,8 @@ let add xs ys =
 let leq xs ys =
   let less x y = Bdd.dand (Bdd.dnot x) y in
   let acc = ref (Bdd.dtrue B.mgr) in
-  for i = 0 to Array.length xs - 1 do
-    let x = xs.(i) in
-    let y = ys.(i) in
-    acc := Bdd.dor (less x y) (Bdd.dand !acc (Bdd.eq x y))
-  done ;
+  Array.iter2 (fun x y -> 
+    acc := Bdd.dor (less x y) (Bdd.dand !acc (Bdd.eq x y))) xs ys;
   BBool (!acc)
 
 let lt xs ys =
@@ -521,6 +535,8 @@ let rec eval (env: t Env.t) (e: exp) : t =
         eval_int_op2 (fun i1 i2 -> vint (Integer.add i1 i2)) add (eval env e1) (eval env e2)
       | ULess _, [e1; e2] ->
         eval_int_op2 (fun i1 i2 -> vbool (Integer.lt i1 i2)) lt (eval env e1) (eval env e2)
+      | UAnd _, [e1; e2] ->
+        eval_int_op2 (fun i1 i2 -> vint (Integer.uand i1 i2)) uand (eval env e1) (eval env e2)
       | ULeq _, [e1; e2] ->
         eval_int_op2 (fun i1 i2 -> vbool (Integer.leq i1 i2)) leq (eval env e1) (eval env e2)
       | NLess, [e1; e2] ->
@@ -561,7 +577,8 @@ let rec eval (env: t Env.t) (e: exp) : t =
   | ESome e ->
     (match eval env e with
      | Value v -> Value (voption (Some v))
-     (* | BMap m -> Mapleaf.mapleaf1 (fun v -> voption (Some (Mtbdd.get v))) *)
+     | BMap m -> BMap (Mapleaf.mapleaf1 (fun v -> voption (Some (Mtbdd.get v)) |> Mtbdd.unique B.tbl) (fst m), snd m)
+     (* NOTE: Decided to push the option through a map, it makes writing functions like eval_ite_bdd_guard much easier... *)
      | b ->
        BOption (Bdd.dtrue B.mgr, b))
   | EMatch (e1, branches) ->
@@ -574,6 +591,9 @@ and eval_matches env key_ty v1 branches default =
     default
   else
     (let ((p, e), bs) = popBranch branches in
+     (* Printf.printf "branch: %s\n\n" (Printing.pattern_to_string p);
+      * Printf.printf "guard: %s\n\n" (print v1);
+      * Printf.printf "expr: %s\n\n" (Printing.exp_to_string e); *)
      match eval_branch env v1 p with
      | None ->
        (* no match - go to next branch*)
@@ -630,6 +650,31 @@ and eval_branch env (g : t) p =
                   (fun vm ->
                      (match (Mtbdd.get vm).v with
                       | VInt vi when Integer.equal pi vi -> true
+                      | _ -> false)
+                     |> Mtbdd.unique B.tbl_bool) (fst m)) |> bdd_of_mtbdd
+    in
+    Some (env, Some cond)
+  | PNode pi, Value v ->
+    (match v.v with
+     | VNode vi when pi = vi -> Some (env, None)
+     | _ -> None)
+  | PNode pi, BInt bi ->
+    if Syntax.tnode_sz <> Array.length bi then
+      failwith "Likely failure of type checking."
+    else
+      let pi = Integer.create ~value:pi ~size:tnode_sz in
+      let cond = ref (Bdd.dtrue B.mgr) in
+      for j = 0 to tnode_sz - 1 do
+        let b = B.get_bit pi j in
+        let bdd = if b then bi.(j) else Bdd.dnot bi.(j) in
+        cond := Bdd.dand !cond bdd
+      done ;
+      Some (env, Some !cond)
+  | PNode pi, BMap m ->
+    let cond = (Mapleaf.mapleaf1
+                  (fun vm ->
+                     (match (Mtbdd.get vm).v with
+                      | VNode vi when pi = vi -> true
                       | _ -> false)
                      |> Mtbdd.unique B.tbl_bool) (fst m)) |> bdd_of_mtbdd
     in
@@ -723,13 +768,16 @@ and eval_branch env (g : t) p =
           match is valid, we bdd-and the keys that lead to the leaf
           and the conditions and use them to return the right value
           from the env. *)
+    (*NOTE: will their be conditions under each match holds? These are concrete
+    values, maybe this can be simplified. *) 
     let matches =
       Mtbdd.guardleafs (Mapleaf.mapleaf1 (fun vm ->
           eval_branch Env.empty (Value (Mtbdd.get vm)) (PTuple ps) |> Mtbdd.unique tbl_match)
           (fst m))
     in
     eval_branch_mapLift env matches (snd m)
-  | _ -> failwith "unknown error"
+  (* | _ ->
+   *   failwith "unknown error" *)
 
 (* Example: m[k]: int * map[int,bool] * int match m[k] with | (0,_,0) -> None |
    (1, c, 1) -> Some (c[1]) | (_, c, _) -> Some (c[0])
@@ -808,7 +856,10 @@ and eval_ite env e1 e2 e3 =
   | BBool b -> eval_ite_bdd_guard (oget e1.ety) b (eval env e2) (eval env e3)
   | _ -> failwith "impossible"
 
+(* TODO: this doesn't work if we are trying to combine a BInt and a BMap *)
 and eval_ite_bdd_guard key_ty b v1 v2 =
+  (* Printf.printf "v1: %s\n" (print v1);
+   * Printf.printf "v2: %s\n" (print v2); *)
   match v1,v2 with
   | Value v1, Value v2 ->
     BMap (Mapleaf.mapleaf1
@@ -837,6 +888,19 @@ and eval_ite_bdd_guard key_ty b v1 v2 =
     ite b (eval_value v1) b2
   | b1, Value v2 when isBdd b1 = true ->
     ite b b1 (eval_value v2)
+  (* | Value v1, BOption (tag, b2) -> (\*b2 is not a BDD, i.e. it's a map because we do not push values inside BOptions, but we push maps*\)
+   *   match tag with
+   *   | BOption (tag1, b1) ->
+   *     BMap (Mapleaf.mapleaf1
+   *             (fun b -> (if Mtbdd.get b then v1 else v2)
+   *                       |> Mtbdd.unique B.tbl) (wrap_mtbdd b), key_ty)
+   *   ite b (eval_value v1) b2
+   * | b1, Value v2 when isBdd b1 = true ->
+   *   ite b b1 (eval_value v2) *)
+  | BMap m1, BBool _ -> (* Convert the boolean MTBDD to a BDD and do a BDD.ite operation *)
+    ite b (BBool (bdd_of_mtbdd @@ value_mtbdd_bool_mtbdd (fst m1))) v2
+  | BBool _, BMap m2 -> (* Convert the boolean MTBDD to a BDD and do a BDD.ite operation *)
+    ite b v1 (BBool (bdd_of_mtbdd @@ value_mtbdd_bool_mtbdd (fst m2)))
   | Tuple bs1, Tuple bs2 ->
     Tuple (eval_ite_list key_ty b bs1 bs2)
   | Tuple bs1, Value v2 ->
@@ -849,6 +913,8 @@ and eval_ite_bdd_guard key_ty b v1 v2 =
      | VTuple vs1 ->
        Tuple (eval_ite_list key_ty b (List.map (fun v -> Value v) vs1) bs2)
      | _ -> failwith "expected a tuple of values")
+  | b1, b2 when isBdd b1 && isBdd b2 ->
+    ite b b1 b2
   | Tuple _, BMap _ | BMap _, Tuple _ ->
     failwith "unsure how to implement this case, leaving out for now"
   | _ -> failwith "unknown error"

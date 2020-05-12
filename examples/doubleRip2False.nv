@@ -1,0 +1,26 @@
+include "generic-algebras/rip.nv"
+
+let nodes = 5
+
+let edges = {0=1; 0=2; 1=2; 1=3; 2=3; 3=4; }
+
+let ripSol = solution {init = initRip 0n; trans = transRip; merge = mergeRip}
+
+(* Dist is the minimum distance to the start node OR to node 0 *)
+let merge2 n x1 x2 =
+  let x3 = ripSol[n] in
+  mergeRip n x1 (mergeRip n x2 x3)
+
+let ripSol2 = solution {init = initRip 4n; trans = transRip; merge = merge2}
+
+let assertNode n =
+  match (ripSol2[n], ripSol[n]) with
+  | (Some x, Some y) -> x >= y
+  | _ -> false
+
+(* Assert that the distance from 0 to 4 is the same as the distance from 4 to 0 *)
+assert assertNode 0n
+  assert assertNode 1n
+  assert assertNode 2n
+  assert assertNode 3n
+  assert assertNode 4n

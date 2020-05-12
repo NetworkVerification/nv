@@ -1,0 +1,102 @@
+include "sp8Single_control_R.nv"
+
+let applyNodeFaults u x = 
+  mapIf (fun b ->
+    match b with
+    | (b0,b1,b2,b3,b4,b5,b6,b7,b8,b9,b10,b11,b12,b13,b14,b15,b16,b17,b18,b19,b20,b21,b22,b23,b24,b25,b26,b27,b28,b29,b30,b31,b32,b33,b34,b35,b36,b37,b38,b39,b40,b41,b42,b43,b44,b45,b46,b47,b48,b49,b50,b51,b52,b53,b54,b55,b56,b57,b58,b59,b60,b61,b62,b63,b64,b65,b66,b67,b68,b69,b70,b71,b72,b73,b74,b75,b76,b77,b78,b79)
+     ->
+       (match u with
+       | 0n -> b0
+       | 1n -> b1
+       | 2n -> b2
+       | 3n -> b3
+       | 4n -> b4
+       | 5n -> b5
+       | 6n -> b6
+       | 7n -> b7
+       | 8n -> b8
+       | 9n -> b9
+       | 10n -> b10
+       | 11n -> b11
+       | 12n -> b12
+       | 13n -> b13
+       | 14n -> b14
+       | 15n -> b15
+       | 16n -> b16
+       | 17n -> b17
+       | 18n -> b18
+       | 19n -> b19
+       | 20n -> b20
+       | 21n -> b21
+       | 22n -> b22
+       | 23n -> b23
+       | 24n -> b24
+       | 25n -> b25
+       | 26n -> b26
+       | 27n -> b27
+       | 28n -> b28
+       | 29n -> b29
+       | 30n -> b30
+       | 31n -> b31
+       | 32n -> b32
+       | 33n -> b33
+       | 34n -> b34
+       | 35n -> b35
+       | 36n -> b36
+       | 37n -> b37
+       | 38n -> b38
+       | 39n -> b39
+       | 40n -> b40
+       | 41n -> b41
+       | 42n -> b42
+       | 43n -> b43
+       | 44n -> b44
+       | 45n -> b45
+       | 46n -> b46
+       | 47n -> b47
+       | 48n -> b48
+       | 49n -> b49
+       | 50n -> b50
+       | 51n -> b51
+       | 52n -> b52
+       | 53n -> b53
+       | 54n -> b54
+       | 55n -> b55
+       | 56n -> b56
+       | 57n -> b57
+       | 58n -> b58
+       | 59n -> b59
+       | 60n -> b60
+       | 61n -> b61
+       | 62n -> b62
+       | 63n -> b63
+       | 64n -> b64
+       | 65n -> b65
+       | 66n -> b66
+       | 67n -> b67
+       | 68n -> b68
+       | 69n -> b69
+       | 70n -> b70
+       | 71n -> b71
+       | 72n -> b72
+       | 73n -> b73
+       | 74n -> b74
+       | 75n -> b75
+       | 76n -> b76
+       | 77n -> b77
+       | 78n -> b78
+       | 79n -> b79
+       )) (fun v -> {connected=None; static=None; ospf=None; bgp=None; selected=None;}) x
+
+let mergeNodeFaults u x y =
+  let x = applyNodeFaults u x in
+  let y = applyNodeFaults u y in
+  combine (fun x y -> merge u x y) x y
+
+let transNodeFaults e x = map (fun v -> trans e v) x
+
+let initNodeFaults u = 
+  let d = createDict (init u) in
+  applyNodeFaults u d
+
+let nodeFaults = solution {init = initNodeFaults; trans = transNodeFaults; merge = mergeNodeFaults;}

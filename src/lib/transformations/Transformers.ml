@@ -157,13 +157,14 @@ let transform_decl ~(name:string) (transformers:transformers) (d : declaration) 
   let transform_symbolic = transform_symbolic ~name:name transformers in
   match d with
   | DLet (x, tyo, e) -> DLet (x, omap transform_ty tyo, transform_exp e)
-  | DInit e -> DInit (transform_exp e)
   | DAssert e -> DAssert (transform_exp e)
-  | DTrans e -> DTrans (transform_exp e)
-  | DMerge e -> DMerge (transform_exp e)
+  | DSolve {aty; var_names; init; trans; merge} ->
+    let var_names, init, trans, merge =
+      transform_exp var_names, transform_exp init, transform_exp trans, transform_exp merge
+    in
+    DSolve {aty = omap transform_ty aty; var_names; init; trans; merge}
   | DSymbolic (x, toe) -> let (x, toe') = transform_symbolic (x, toe) in DSymbolic (x, toe')
   | DRequire e -> DRequire (transform_exp e)
-  | DATy ty -> DATy (transform_ty ty)
   | DUserTy (x, ty) -> DUserTy (x, transform_ty ty)
   | DPartition e -> DPartition (transform_exp e)
   | DInterface e -> DInterface (transform_exp e)
@@ -175,6 +176,7 @@ let rec map_back_value
     (sol : Solution.t) (map_back_transformer : map_back_transformer) (v : value) (orig_ty : ty) =
   let map_back_value = map_back_value ~name:name sol map_back_transformer in
   let map_back_transformer = map_back_transformer map_back_value sol in
+  let orig_ty = get_inner_type orig_ty in
   match map_back_transformer v orig_ty with
   | Some v -> v
   | None ->
@@ -198,6 +200,7 @@ let rec map_back_mask
     (sol : Solution.t) (mask_transformer : mask_transformer) (v : value) (orig_ty : ty) =
   let map_back_mask = map_back_value ~name:name sol mask_transformer in
   let mask_transformer = mask_transformer map_back_mask sol in
+  let orig_ty = get_inner_type orig_ty in
   match mask_transformer v orig_ty with
   | Some v -> v
   | None ->
@@ -222,20 +225,31 @@ let rec map_back_mask
         name (Printing.value_to_string v) (Printing.ty_to_string orig_ty)
 ;;
 
+(* NOTE: I don't think solve_tys is necessary or the right way to go here. We
+   should store the original type at each transformation pass *)
 let map_back_sol
     ~(name:string)
     (map_back_transformer : map_back_transformer) (mask_transformer : mask_transformer) (symb_tys : ty VarMap.t)
-    (attr_ty : ty) (sol : Solution.t)
+    (solve_tys : ty VarMap.t) (sol : Solution.t)
   : Solution.t =
-  let map_back_mask = (fun v -> map_back_mask ~name:name sol mask_transformer v attr_ty) in
+  let map_back_mask = map_back_mask ~name:name sol mask_transformer in
   let map_back_value = map_back_value ~name:name sol map_back_transformer in
+  let solves =
+    List.map
+      (fun (v,{Solution.sol_val; mask}) ->
+         let aty = VarMap.find v solve_tys in
+         (v, {Solution.sol_val = map_back_value sol_val aty;
+              mask = omap (fun v -> map_back_mask v aty) mask;
+              attr_ty = aty}))
+      sol.solves
+  in
   {
-    symbolics = VarMap.mapi (fun x v ->
-        try map_back_value v (VarMap.find x symb_tys)
-        with | Not_found -> v) sol.symbolics;
-    labels = VertexMap.map (fun v -> map_back_value v attr_ty) sol.labels;
+    symbolics = List.map (fun (x,v) ->
+        try (x, map_back_value v (VarMap.find x symb_tys))
+        with | Not_found -> (x,v)) sol.symbolics;
     assertions = sol.assertions; (* These transformations shouldn't change the truth value of the assertion *)
-    mask = omap map_back_mask sol.mask;
+    solves = solves;
+    nodes = sol.nodes;
   }
 ;;
 
@@ -247,64 +261,24 @@ let get_symbolic_types symbs =
     symbs
 ;;
 
+let get_solve_types solves =
+  let rec add_tys acc e =
+    match e.e with
+    | EVar x -> VarMap.add x (oget e.ety) acc
+    | ETuple es -> List.fold_left add_tys acc es
+    | _ -> failwith "Bad DSolve"
+  in
+  List.fold_left (fun acc s -> add_tys acc s.var_names) VarMap.empty solves
+;;
+
 let transform_declarations
     ~(name:string)
     (ty_transformer : ty transformer) (pattern_transformer : pattern_transformer) (value_transformer : value transformer)
     (exp_transformer : exp transformer) (map_back_transformer : map_back_transformer) (mask_transformer : mask_transformer)
     (ds : declarations) =
-  let attr_ty = get_attr_type ds |> oget in
   let symb_tys = get_symbolics ds |> get_symbolic_types in
+  let solve_tys = get_solves ds |> get_solve_types in
   let transformers = {ty_transformer; pattern_transformer; value_transformer; exp_transformer} in
   List.map (transform_decl ~name:name transformers) ds,
-  map_back_sol ~name:name map_back_transformer mask_transformer symb_tys attr_ty
+  map_back_sol ~name:name map_back_transformer mask_transformer symb_tys solve_tys
 ;;
-
-let transform_network
-    ~(name:string)
-    (ty_transformer : ty transformer) (pattern_transformer : pattern_transformer) (value_transformer : value transformer)
-    (exp_transformer : exp transformer) (map_back_transformer : map_back_transformer) (mask_transformer : mask_transformer)
-    (net : network) =
-  let transformers = {ty_transformer; pattern_transformer; value_transformer; exp_transformer} in
-  let transform_ty = transform_ty ~name:name transformers in
-  let transform_exp = transform_exp ~name:name transformers in
-  let transform_symbolic = transform_symbolic ~name:name transformers in
-  let attr_ty = net.attr_type in
-  let symb_tys = get_symbolic_types net.symbolics in
-  {
-    attr_type = transform_ty net.attr_type;
-    init = transform_exp net.init;
-    trans = transform_exp net.trans;
-    merge = transform_exp net.merge;
-    assertion = omap transform_exp net.assertion;
-    symbolics = List.map transform_symbolic net.symbolics;
-    requires = List.map transform_exp net.requires;
-    utys =  List.map (fun (x,m) -> (x, transform_ty m)) net.utys;
-    partition = omap transform_exp net.partition;
-    interface = omap transform_exp net.interface;
-    defs = List.map (fun (x, tyo, e) -> (x, omap transform_ty tyo, transform_exp e)) net.defs;
-    graph = net.graph;
-  },
-  map_back_sol ~name:name map_back_transformer mask_transformer symb_tys attr_ty
-
-let transform_srp
-    ~(name:string)
-    (ty_transformer : ty transformer) (pattern_transformer : pattern_transformer) (value_transformer : value transformer)
-    (exp_transformer : exp transformer) (map_back_transformer : map_back_transformer) (mask_transformer : mask_transformer)
-    (srp : srp_unfold) =
-  let attr_ty = srp.srp_attr in
-  let symb_tys = get_symbolic_types srp.srp_symbolics in
-  let transformers = {ty_transformer; pattern_transformer; value_transformer; exp_transformer} in
-  let transform_ty = transform_ty ~name:name transformers in
-  let transform_exp = transform_exp ~name:name transformers in
-  let transform_symbolic = transform_symbolic ~name:name transformers in
-  let transformd_attr = transform_ty srp.srp_attr in
-  {
-    srp_attr = transformd_attr;
-    srp_constraints = VertexMap.map transform_exp srp.srp_constraints;
-    srp_labels = VertexMap.map (fun xs -> BatList.map (fun (x,ty) -> (x, transform_ty ty)) xs) srp.srp_labels;
-    srp_symbolics =  BatList.map transform_symbolic srp.srp_symbolics;
-    srp_assertion = omap transform_exp srp.srp_assertion;
-    srp_requires = BatList.map transform_exp srp.srp_requires;
-    srp_graph = srp.srp_graph
-  },
-  map_back_sol ~name:name map_back_transformer mask_transformer symb_tys attr_ty

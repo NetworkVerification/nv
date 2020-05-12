@@ -37,7 +37,11 @@ let isBetter x y =
 let merge (u: tnode) x y =
   if isBetter x y then x else y
 
-let assert (u : tnode) x =
+let assert_node (u : tnode) x =
   match x with
   | None -> false
   | Some b -> if !(u = 4n) then b.origin = 0n else true
+
+let sol = solution {init = init; trans = trans; merge = merge}
+
+assert foldNodes (fun k v acc -> acc && assert_node k v) sol true

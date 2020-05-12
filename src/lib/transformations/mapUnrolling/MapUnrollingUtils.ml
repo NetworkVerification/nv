@@ -134,18 +134,15 @@ let collect_in_decl (symbolics : var list) (d : declaration) (acc : maplist) : m
       | Ty ty -> collect_in_ty ty acc
       | Exp exp -> collect_in_exp exp acc
     end
-  | DATy ty ->
-    collect_in_ty ty acc
   | DUserTy (_, ty) ->
     collect_in_ty ty acc
-  | DMerge exp
-  | DTrans exp
-  | DInit exp
   | DAssert exp
   | DPartition exp (* partitioning *)
   | DInterface exp (* partitioning *)
   | DRequire exp ->
     collect_in_exp exp acc
+  | DSolve {var_names; init; trans; merge; _} ->
+    List.fold_right collect_in_exp [var_names; init; trans; merge] acc
   | DNodes _
   | DEdges _ ->
     acc

@@ -12022,3 +12022,5 @@ let init u =
  copperhill=171
  spartanburg=172
  pensacola=173*)
+
+let sol = solution {init = init; trans = trans; merge = merge}

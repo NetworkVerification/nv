@@ -61,3 +61,5 @@ let trans edge x =
   x
 
 let init node = initRoute node
+
+let sol = solution {init = init; trans = trans; merge = merge}

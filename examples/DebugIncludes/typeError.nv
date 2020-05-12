@@ -13,3 +13,5 @@ let init u =
      map (fun v -> Some 0) m
   else
      m
+
+let sol = solution {init = init; trans = trans; merge = merge}

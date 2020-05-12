@@ -7,6 +7,8 @@ open SmtUtils
 open SmtLang
 open SmtOptimizations
 open Smt
+open Nv_lang.Syntax
+open Nv_utils.OCamlUtils
 
 (** Removes all variable equalities *)
 (** Modified from propagate_eqs in SmtOptimizations.ml. It has the following
@@ -461,7 +463,7 @@ let full_solver = lazy(let solver = start_solver [] in
                                                      "(set-option :produce-unsat-cores true)\n";
                        solver)
 
-let solve_hiding info query partial_chan ~full_chan ?(starting_vars=[]) net =
+let solve_hiding info query partial_chan ~full_chan ?(starting_vars=[]) decls =
   let partial_solver = Lazy.force partial_solver in
   let full_solver = Lazy.force full_solver in
   let print_and_ask solver chan q =
@@ -483,7 +485,7 @@ let solve_hiding info query partial_chan ~full_chan ?(starting_vars=[]) net =
     (* compute the encoding of the network *)
     let renaming, full_env =
       time_profile "Encoding network"
-        (fun () -> let env = Enc.encode_z3 net in
+        (fun () -> let env = Enc.encode_z3 decls in
           propagate_eqs_for_hiding env)
     in
     let partial_env, hiding_map = construct_starting_env full_env in
@@ -499,9 +501,9 @@ let solve_hiding info query partial_chan ~full_chan ?(starting_vars=[]) net =
     print_and_ask_partial partial_encoding;
     print_and_ask_full full_encoding;
 
-    let nodes = Nv_datastructures.AdjGraph.nb_vertex net.graph in
+    let nodes = Nv_datastructures.AdjGraph.nb_vertex (get_graph decls |> oget) in
     let ask_for_nv_model solver =
-      ask_for_model query partial_chan info full_env solver renaming nodes net.assertion
+      ask_for_model query partial_chan info full_env solver renaming nodes (get_asserts decls)
     in
     time_profile_absolute "Solving with hiding"
       (fun () ->

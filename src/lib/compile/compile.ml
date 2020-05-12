@@ -95,9 +95,8 @@ let build_constructors () =
 
 let is_map_op op =
   match op with
-    | MCreate | MGet | MSet | MMap | MMapFilter | MMerge | MMapIte -> true
-    | And | Or | Not | UAdd _ | USub _ | Eq | ULess _ | ULeq _ | AtMost _ | NLess | NLeq | TGet _ | TSet _ -> false
-    | MFoldEdge | MFoldNode -> failwith "Todo: map folds"
+    | MCreate | MGet | MSet | MMap | MMapFilter | MMerge | MMapIte | MFoldEdge | MFoldNode -> true
+    | And | Or | Not | UAdd _ | USub _ | UAnd _ | Eq | ULess _ | ULeq _ | AtMost _ | NLess | NLeq | TGet _ | TSet _ -> false
 
 (** Translating NV operators to OCaml operators*)
 let op_to_ocaml_string op =
@@ -107,6 +106,7 @@ let op_to_ocaml_string op =
   | Not -> "not"
   | UAdd _ -> "+"
   | USub _ -> "-"
+  | UAnd _ -> "land"
   | Eq -> "="
   | ULess _ -> "<"
   | ULeq _ -> "<="
@@ -118,10 +118,10 @@ let op_to_ocaml_string op =
   | MMap
   | MMapFilter
   | MMapIte
+  | MFoldEdge
+  | MFoldNode
   | MMerge -> failwith "Map ops are handled elsewhere"
   | AtMost _ -> failwith "todo: atmost"
-  | MFoldEdge
-  | MFoldNode -> failwith "todo: Map folds"
   | TGet _
   | TSet _ -> failwith "Todo: TGet/TSet"
 
@@ -203,6 +203,40 @@ let getFuncCache (e: exp) : string =
         *   Printf.sprintf "(%d, %s)" f.body.etag (BatInnerIO.close_out closure) *)
      | _ -> (*assume there are no free variables, but this needs to be fixed: always inline*)
        Printf.sprintf "(%d, ())" (get_fresh_exp_id e)
+
+
+(** Function walking through an NV expression to record tuple types.
+    This is done by the compiler on the go, but not for
+    operations like mapIte because these expressions are never translated to OCaml, so we manually have to do it.
+   Expect this function to be called somewhere in the MapIte case.*)
+
+let rec track_tuples_exp e =
+  match e.e with
+  | ETuple es ->
+    let n = BatList.length es in
+    List.iteri (fun i _ -> ignore(proj_rec i n)) es
+  | EMatch (_, bs) ->
+    List.iter (fun (p,_) -> track_tuples_pattern p) (branchToList bs)
+  | EVal v ->
+    (match v.v with
+     | VTuple vs ->
+       let n = BatList.length vs in
+       List.iteri (fun i _ -> ignore(proj_rec i n)) vs
+     | _ -> ())
+  | EOp (TGet (sz, lo, _), _) ->
+    ignore(proj_rec lo sz)
+  | EOp (TSet (sz, lo, _), _) ->
+    ignore(proj_rec lo sz)
+  | EVar _ | EFun _ | EApp _ | ELet _ | ESome _ | ETy _ | ERecord _ | EProject _ | EIf _ | EOp _ -> ()
+
+and track_tuples_pattern p =
+  match p with
+  | PTuple ps ->
+    let n = BatList.length ps in
+    List.iteri (fun i p -> ignore(proj_rec i n); track_tuples_pattern p) ps
+  | POption (Some p) -> track_tuples_pattern p
+  (* records are already unrolled  *)
+  | POption None | PWild | PVar _ | PUnit | PBool _ | PInt _ | PRecord _ | PNode _ | PEdge _ -> ()
 
 
 (** Translating NV values and expressions to OCaml*)
@@ -353,6 +387,8 @@ and map_to_ocaml_string op es ty =
          let pred_closure =
            match pred.e with
            | EFun predF ->
+             (* Call track_tuples_exp to record any tuple types used in this predicate *)
+             Visitors.iter_exp track_tuples_exp predF.body;
              let freeVars = Syntax.free_ty (BatSet.PSet.singleton ~cmp:Var.compare predF.arg) predF.body in
              let freeList = BatSet.PSet.to_list freeVars in
              Collections.printList (fun (x, ty) -> Printf.sprintf "(%s,%d)" (varname x) (get_fresh_type_id ty)) freeList "(" "," ")"
@@ -436,60 +472,64 @@ and map_to_ocaml_string op es ty =
 *)
 
 
-(** Translate something of type [Syntax.network] to an OCaml program*)
-let compile_net net =
-  let utys_s =
-    Collections.printList
-      (fun (x, ty) -> Printf.sprintf "type %s = %s" (varname x) (ty_to_ocaml_string ty))
-      net.utys "" "\n" "\n\n"
-  in
-  let attr_s = Printf.sprintf "type attribute = %s\n\n" (ty_to_ocaml_string net.attr_type) in
+(** Translate a declaration to an OCaml program*)
+let symbolic_counter = ref 0
+let compile_decl decl =
+  match decl with
+    | DUserTy (x, ty) ->
+      Printf.sprintf "type %s = %s" (varname x) (ty_to_ocaml_string ty)
+    | DSymbolic (x, _) ->
+      let s = Printf.sprintf "let %s = S.get_symb record_cnstrs record_fns %d"
+          (varname x) !symbolic_counter
+      in
+        incr symbolic_counter;
+        s
+    | DLet (x, _ , e) ->
+      Printf.sprintf "let %s = %s" (varname x) (exp_to_ocaml_string e)
+    | DRequire e ->
+      Printf.sprintf "let () = assert %s" (exp_to_ocaml_string e)
+    | DAssert e ->
+      Printf.sprintf "let () = assert %s" (exp_to_ocaml_string e)
+    | DSolve solve ->
+      begin
+        match solve.var_names.e with
+          | EVar x ->
+            (match solve.aty with
+              | None -> failwith "cannot solve without an attribute type"
+              | Some attr -> (*NOTE: this is just the attribute type, not including the map from nodes to attributes *)
+                ignore (get_fresh_type_id TNode); (*need to register node types manually! *)
+                let attr_id = get_fresh_type_id attr in
+                  Printf.sprintf "let %s = SIM.simulate_solve (%d) (\"%s\") (%s) (%s) (%s)"
+                    (varname x) attr_id (Var.name x) (exp_to_ocaml_string solve.init)
+                    (exp_to_ocaml_string solve.trans) (exp_to_ocaml_string solve.merge))
+        | _ -> failwith "Not implemented" (* Only happens if we did map unrolling *)
+      end
+    | DNodes _ | DEdges _ | DPartition _ | DInterface _ ->
+      ""
 
-  (* Handling of symbolic values*)
-  let symbs_s =
-    Collections.printListi
-      (fun i (x, _) ->
-        Printf.sprintf "let %s = S.get_symb record_cnstrs record_fns %d" (varname x) i) net.symbolics "" "\n" "\n\n"
-  in
-  let requires_s =
-    match net.requires with
-    | [] -> ""
-    | rs ->
-       Collections.printList (fun e -> Printf.sprintf "let () = assert %s" (exp_to_ocaml_string e))
-         rs "" "\n\n" "\n\n"
-  in
-  let defs_s =
-    Collections.printList
-      (fun (x, _, e) ->
-         Printf.sprintf "let %s = %s"
-           (varname x) (exp_to_ocaml_string e))
-      net.defs "" "\n\n" "\n\n"
-  in
-  let init_s = Printf.sprintf "let init = %s\n\n" (exp_to_ocaml_string net.init) in
-  let trans_s = Printf.sprintf "let trans = %s\n\n" (exp_to_ocaml_string net.trans) in
-  let merge_s = Printf.sprintf "let merge = %s\n\n" (exp_to_ocaml_string net.merge) in
-  let assert_s =
-    match net.assertion with
-    | None ->
-       "let assertion = None\n"
-    | Some e ->
-       Printf.sprintf "let assertion = Some (%s)\n" (exp_to_ocaml_string e)
-  in
+
+let compile_decls decls =
+  let s = Collections.printList compile_decl decls "" "\n\n" "\n" in
   let tuple_s = build_record_types () in
   let record_fns = build_proj_funcs () in
   let record_cnstrs = build_constructors () in
-
-  Printf.sprintf "%s %s %s %s %s %s %s %s %s %s %s %s"
-    tuple_s utys_s attr_s record_cnstrs record_fns symbs_s defs_s init_s trans_s merge_s requires_s assert_s
+  let embeddings = "let _ = Embeddings.build_embed_cache record_fns\n \
+                    let _ = Embeddings.build_unembed_cache record_cnstrs record_fns\n\n"
+  in
+  Printf.sprintf "%s %s %s %s %s"
+    tuple_s record_cnstrs record_fns embeddings s
 
 let set_entry (name: string) =
-  Printf.sprintf "let () = SrpNative.srp := Some (module %s:SrpNative.EnrichedSRPSig)" name
+  Printf.sprintf "let () = SrpNative.srp := Some (module %s:SrpNative.CompleteSRPSig)" name
 
-let generate_ocaml (name : string) net =
-  let header = Printf.sprintf "open Nv_datastructures\n open Nv_lang\n open Syntax\nopen Nv_compile\n\n \
-                               module %s (S: Symbolics.PackedSymbolics): SrpNative.NATIVE_SRP = struct\n" name in
-  let ocaml_decls = Profile.time_profile "Compilation Time" (fun () -> compile_net net) in
-  Printf.sprintf "%s %s end\n %s" header ocaml_decls (set_entry name)
+let generate_ocaml (name : string) decls =
+  let header =
+    Printf.sprintf "open Nv_datastructures\n open Nv_lang\n\
+                    open Syntax\nopen Nv_compile\n\n\
+                    module %s (S: Symbolics.PackedSymbolics) (SIM:SrpNative.SrpSimulationSig): SrpNative.NATIVE_SRP \
+                               = struct\n" name in
+  let ocaml_decls = Profile.time_profile "Compilation Time" (fun () -> compile_decls decls) in
+    Printf.sprintf "%s %s end\n %s" header ocaml_decls (set_entry name)
 
 
 (* Create the plugin that we will dynamically load later, do not print warnings
@@ -500,7 +540,7 @@ let build_dune_file name =
      (name %s_plugin) \n \
      (public_name %s.plugin)\n \
      (modes native)\n \
-     (libraries nv_lib))\n \
+     (libraries nv))\n \
      (env\n \
      (dev\n \
      (flags (:standard -warn-error -A -w -a -opaque))))" name name
@@ -528,7 +568,7 @@ let compile_command_ocaml name =
     print_file (name ^ ".opam") opam;
     Sys.command "dune build; dune install"
 
-    (* Sys.command "dune build command >>/dev/null 2>&1; sudo dune install command >>/dev/null 2>&1" *)
+   (* Sys.command "dune build command >>/dev/null 2>&1; sudo dune install command >>/dev/null 2>&1" *)
 
 let compile_ocaml name net =
   let basename = Filename.basename name in

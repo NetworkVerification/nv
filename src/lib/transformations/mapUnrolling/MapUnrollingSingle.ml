@@ -351,7 +351,7 @@ let exp_transformer (target : ty) (keys : keys) (recursors : Transformers.recurs
       | (MCreate| MGet| MSet| MMap| MMapFilter| MMapIte | MMerge | MFoldNode| MFoldEdge), _ ->
         failwith @@ "Failed to unroll map: Incorrect number of arguments to map operation : "
                     ^ Printing.exp_to_string e
-      | (AtMost _ | And | Or | Not | UAdd _ | USub _ | ULess _ | ULeq _ | NLess | NLeq | Eq | TGet _ | TSet _), _ -> None
+      | (AtMost _ | And | Or | Not | UAdd _ | USub _ | UAnd _ | ULess _ | ULeq _ | NLess | NLeq | Eq | TGet _ | TSet _), _ -> None
     end
   | _ -> None
 ;;
@@ -364,7 +364,7 @@ let map_back_transformer (keys : keys) _ (sol : Solution.t) v orig_ty =
     let default = Nv_lang.Generators.default_value vty in
     let e_vs, symb_vs = BatList.takedrop (List.length const_keys) vs in
     let e_bindings = List.combine (List.map exp_to_value const_keys) e_vs in
-    let v_bindings = List.combine (List.map (fun v -> VarMap.find v sol.symbolics) symb_keys) symb_vs in
+    let v_bindings = List.combine (List.map (fun v -> List.assoc v sol.symbolics) symb_keys) symb_vs in
     let bindings = List.rev_append v_bindings e_bindings in
     let newmap = BddMap.from_bindings ~key_ty:kty (bindings, default) in
     Some (vmap newmap)
@@ -380,5 +380,3 @@ let make_toplevel (target : ty) (keys : keys) (toplevel_transformer : 'a Transfo
 ;;
 
 let unroll_declarations target keys = make_toplevel target keys Transformers.transform_declarations
-let unroll_net target keys = make_toplevel target keys Transformers.transform_network
-let unroll_srp target keys = make_toplevel target keys Transformers.transform_srp

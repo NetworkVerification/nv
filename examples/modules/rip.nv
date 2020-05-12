@@ -38,3 +38,5 @@ module RIPSRP : SRP = struct
   let nodes = 2 (* User-defined *)
   let edges = {0~1;} (* User-defined *)
 end
+
+let sol = solution {init = init; trans = trans; merge = merge}

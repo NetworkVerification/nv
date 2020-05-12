@@ -4674,3 +4674,5 @@ core-11=67, core-10=68, aggregation-40=69, core-15=70, core-14=71, core-13=72,
 edge-52=73, edge-53=74, aggregation-48=75, edge-54=76, aggregation-42=77,
 aggregation-41=78,
 aggregation-43=79}*)
+
+let sol = solution {init = init; trans = trans; merge = merge}

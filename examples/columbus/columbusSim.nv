@@ -9725,3 +9725,4 @@ let trans edge x =
   let x = transferBgp edge x in
   let x = map (fun x -> {x with ospf=transferOspf edge x.ospf; connected=None; static=None}) x in
   x
+let sol = solution {init = init; trans = trans; merge = merge}

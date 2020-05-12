@@ -2,15 +2,17 @@ open Nv_datastructures.AdjGraph
 open Nv_lang.Collections
 open Nv_lang.Syntax
 
+type sol = {sol_val: value; mask : value option; attr_ty: ty}
 type t =
-  { symbolics: value VarMap.t
-  ; labels: value VertexMap.t
-  ; assertions: bool VertexMap.t option
-  ; mask: value option  }
+  { symbolics: (var * value) list;
+    solves: (var * sol) list;
+    assertions: bool list; (* One for each assert statement *)
+    nodes: int;
+  }
 
 type map_back = t -> t
 
-val print_masked_type : ty -> t -> string
+val print_masked_type : ty -> sol -> string
 
 val print_solution : t -> unit
 

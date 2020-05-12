@@ -35,6 +35,9 @@ let rec alpha_rename_smt_term (renaming: string StringMap.t)
   | Sub (tm1, tm2) ->
     Sub (alpha_rename_smt_term renaming valMap tm1,
          alpha_rename_smt_term renaming valMap tm2)
+  | BvAnd (tm1, tm2) ->
+    BvAnd (alpha_rename_smt_term renaming valMap tm1,
+         alpha_rename_smt_term renaming valMap tm2)
   | Eq (tm1, tm2) ->
     let tm1 = alpha_rename_smt_term renaming valMap tm1 in
     let tm2 = alpha_rename_smt_term renaming valMap tm2 in
@@ -50,6 +53,10 @@ let rec alpha_rename_smt_term (renaming: string StringMap.t)
       (alpha_rename_smt_term renaming valMap tm1)
       (alpha_rename_smt_term renaming valMap tm2)
       (alpha_rename_smt_term renaming valMap tm3)
+  | IntToBv (tm1, sz) ->
+    IntToBv (alpha_rename_smt_term renaming valMap tm1, sz)
+  | BvToInt (tm1, sz) ->
+    BvToInt (alpha_rename_smt_term renaming valMap tm1, sz)
   | AtMost (tm1, tm2, tm3) ->
     AtMost (BatList.map (alpha_rename_smt_term renaming valMap) tm1,
             tm2,

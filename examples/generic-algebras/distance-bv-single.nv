@@ -11,3 +11,5 @@ let init n =
   match n with
   | 0n -> Some 0u3
   | _ -> None
+
+let sol = solution {init = init; trans = trans; merge = merge}

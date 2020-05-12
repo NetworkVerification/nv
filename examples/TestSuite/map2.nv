@@ -1,0 +1,26 @@
+type attribute = dict[int,int]
+
+let nodes = 2
+
+let edges = {
+ 0=1;
+}
+
+let merge node x y =
+  combine (fun i j -> if i < j then i else j) x y
+
+let trans edge x = map (fun i -> i + 1) x
+
+let init node =
+  let m = (createDict 10) in
+  let m = m[2 := 12] in
+  if node = 0n then m[3 := m[2]][2 := m[2] + 1] else m
+
+let assert_node n x =
+  let y = x[2] in
+  let z = x[3] in
+  (y < 10) && (z < 10)
+
+let sol = solution {init = init; trans = trans; merge = merge}
+
+assert foldNodes (fun k v acc -> acc && assert_node k v) sol true

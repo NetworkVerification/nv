@@ -12,11 +12,13 @@ open OCamlUtils
    with a boolean in place of each base value. A value of false indicates that
    the value at that location in each attribute is bogus -- i.e. it was not
    needed to produce the counterexample *)
+type sol = {sol_val: value; mask : value option; attr_ty: Syntax.ty}
 type t =
-  { symbolics: value VarMap.t
-  ; labels: value VertexMap.t
-  ; assertions: bool VertexMap.t option
-  ; mask: value option }
+  { symbolics: (var * value) list;
+    solves: (var * sol) list;
+    assertions: bool list; (* One for each assert statement *)
+    nodes: int;
+  }
 
 type map_back = t -> t
 
@@ -60,7 +62,7 @@ let rec mask_type_ty ty =
    (value_to_mask one_attr).vty |> oget *)
 
 (* Prints the mask itself; useful for seeing which parts of a value are hidden *)
-let print_masked_type unmasked_type sol =
+let print_masked_type unmasked_ty sol =
   let print_if_true ty m =
     if m then Printing.ty_to_string ty else "_"
   in
@@ -113,8 +115,8 @@ let print_masked_type unmasked_type sol =
       failwith "print_masked_type: Nonsense type"
   in
   match sol.mask with
-  | None -> Printing.ty_to_string unmasked_type
-  | Some mask -> construct_string unmasked_type mask
+  | None -> Printing.ty_to_string unmasked_ty
+  | Some mask -> construct_string unmasked_ty mask
 ;;
 
 (* Print a value with only the parts where the mask is true. *)
@@ -161,39 +163,53 @@ let rec print_masked mask v =
   | VClosure _, _ -> failwith "print_masked: tried to print VClosure"
 ;;
 
+let print_fun nodes {sol_val; mask} =
+  let solString = ref [] in
+  let m = match sol_val.v with
+  | VMap m -> m
+  | _ -> failwith "Solution must be a map"
+  in
+  let f = 
+    match mask with
+    | None ->  fun x -> Printing.value_to_string ~show_types:false x
+    | Some m -> fun x -> print_masked m x
+  in
+  for i=(nodes-1) downto 0 do
+    let v = BddMap.find m (vnode i) in
+    solString := (i, f v) :: !solString
+  done;
+  PrimitiveCollections.printList (fun (u,s) -> Printf.sprintf "Node %d\n---------\n%s" u s) !solString "" "\n\n" "\n"
+
 let print_solution (solution : t) =
   let cfg = Nv_lang.Cmdline.get_cfg () in
   print_newline () ;
-  if cfg.verbose then (
-    VarMap.iter
-      (fun k v ->
-         Printf.printf "%s:%s\n" (Nv_datastructures.Var.name k) (Nv_lang.Printing.value_to_string v) )
-      solution.symbolics ;
-    let print_fun =
-      match solution.mask with
-      | None -> Printing.value_to_string
-      | Some m -> print_masked m
-    in
-    AdjGraph.VertexMap.iter
-      (fun k v ->
-         Printf.printf "Label(%d):%s\n"
-           k
-           (print_fun v) )
-      solution.labels ) ;
+  if cfg.verbose then
+    begin
+      (* Print symbolics*)
+      List.iter
+        (fun (k,v) ->
+           Printf.printf "%s:%s\n" (Nv_datastructures.Var.name k) (Nv_lang.Printing.value_to_string v) )
+        solution.symbolics ;
+      (* Print solutions*)
+      List.iter (fun (k,v) ->
+          Printf.printf "Printing solutions for %s\n" (Var.to_string k);
+          print_endline (print_fun solution.nodes v)) solution.solves
+    end;
   ( match solution.assertions with
-    | None ->
+    | [] ->
       print_string [green; Bold] "Success: " ;
       Printf.printf "No assertions provided, so none failed\n"
-    | Some m ->
-      let all_pass = AdjGraph.VertexMap.for_all (fun _ b -> b) m in
+    | asns ->
+      let all_pass = List.for_all (fun x -> x) asns in
       if all_pass then (
         print_string [green; Bold] "Success: " ;
         Printf.printf "all assertions passed\n" )
       else
-        AdjGraph.VertexMap.iter
-          (fun k v ->
-             if not v then (
-               print_string [red; Bold] "Failed: " ;
-               Printf.printf "assertion for node %d\n" k ) )
-          m ) ;
-  print_newline ()
+        (print_string [red; Bold] "Failed: " ;
+         asns
+         |> BatList.mapi (fun i b -> Printf.sprintf "Assertion %d" i, b)
+         |> BatList.filter_map (fun (s, b) -> if not b then Some s else None)
+         |> BatString.concat ", "
+         |> print_endline))
+      ;
+      print_newline ()

@@ -39,34 +39,22 @@
   (* TODO: span not calculated correctly here? *)
   let rec make_fun params (body : exp) (body_span: Span.t) (span : Span.t) : exp =
     match params with
-	| [] -> body
-	| (x,tyopt)::rest ->
+    | [] -> body
+    | (x,tyopt)::rest ->
         let e = efun {arg=x; argty=tyopt; resty=None; body=make_fun rest body body_span body_span} in
         exp e span
 
   let local_let (id,params) body body_span span =
     (id, make_fun params body body_span span)
 
-  let merge_identifier = "merge"
-  let trans_identifier = "trans"
-  let init_identifier = "init"
-  let assert_identifier = "assert"
   (* partitioning identifiers *)
   let partition_identifier = "partition"
   let interface_identifier = "interface"
 
   let global_let (id,params) body body_span span =
     let e = make_fun params body body_span span in
-    if Var.name id = merge_identifier then
-      DMerge e
-    else if Var.name id = trans_identifier then
-      DTrans e
-    else if Var.name id = init_identifier then
-      DInit e
-    else if Var.name id = assert_identifier then
-      DAssert e
     (* partitioning cases *)
-    else if Var.name id = partition_identifier then
+    if Var.name id = partition_identifier then
       DPartition e
     else if Var.name id = interface_identifier then
       DInterface e
@@ -143,6 +131,15 @@
       (b1 * 16777216) + (b2 * 65536) + (b3 * 256) + b4
       |> Integer.of_int
 
+  let make_dsolve x r =
+    let (init, trans, merge) =
+      match r.e with
+      | ERecord m ->
+        StringMap.find "init" m, StringMap.find "trans" m, StringMap.find "merge" m
+      | _ -> failwith "solution must take a direct record expression"
+    in
+    DSolve ({aty = None; var_names = evar x; init; trans; merge})
+
 %}
 
 %token <Nv_datastructures.Span.t * Nv_datastructures.Var.t> ID
@@ -155,6 +152,7 @@
 %token <Nv_datastructures.Span.t> FALSE
 %token <Nv_datastructures.Span.t * int> PLUS
 %token <Nv_datastructures.Span.t * int> SUB
+%token <Nv_datastructures.Span.t * int> UAND
 %token <Nv_datastructures.Span.t> EQ
 %token <Nv_datastructures.Span.t * int> LESS
 %token <Nv_datastructures.Span.t * int> GREATER
@@ -197,7 +195,8 @@
 %token <Nv_datastructures.Span.t> COMBINE
 %token <Nv_datastructures.Span.t> TOPTION
 %token <Nv_datastructures.Span.t> TDICT
-%token <Nv_datastructures.Span.t> ATTRIBUTE
+%token <Nv_datastructures.Span.t> SOLUTION
+%token <Nv_datastructures.Span.t> ASSERT
 %token <Nv_datastructures.Span.t> TYPE
 %token <Nv_datastructures.Span.t> COLON
 %token <Nv_datastructures.Span.t> TBOOL
@@ -226,7 +225,7 @@
 %right ARROW
 %left AND OR
 %nonassoc GEQ GREATER LEQ LESS EQ NLEQ NGEQ NLESS NGREATER
-%left PLUS SUB UNION INTER MINUS
+%left PLUS SUB UAND UNION INTER MINUS
 %right NOT
 %right SOME
 %nonassoc DOT
@@ -278,18 +277,18 @@ letvars:
 ;
 
 component:
+    | LET letvars EQ SOLUTION expr      { make_dsolve (fst $2) $5 }
     | LET letvars EQ expr               { global_let $2 $4 $4.espan (Span.extend $1 $4.espan) }
     | SYMBOLIC ID EQ expr               { DSymbolic (snd $2, Exp $4) }
     | SYMBOLIC ID COLON ty              { DSymbolic (snd $2, Ty $4) }
     | SYMBOLIC ID COLON ty EQ expr      { let ety = exp (ety $6 $4) $6.espan in
                                           DSymbolic (snd $2, Exp ety) }
     | REQUIRE expr                      { DRequire $2 }
+    | ASSERT expr                       { DAssert $2 }
     | LET EDGES EQ LBRACE RBRACE        { DEdges [] }
     | LET EDGES EQ LBRACE edges RBRACE  { DEdges $5 }
     | LET NODES EQ NUM                  { DNodes (Nv_datastructures.Integer.to_int (snd $4)) }
-    | TYPE ATTRIBUTE EQ ty              { DATy $4 }
     | TYPE ID EQ ty                     { (add_user_type (snd $2) $4; DUserTy (snd $2, $4)) }
-
 ;
 
 components:
@@ -336,6 +335,7 @@ expr:
     | expr OR expr                      { exp (eop Or [$1;$3]) (Span.extend $1.espan $3.espan) }
     | expr PLUS expr                    { exp (eop (UAdd (snd $2)) [$1;$3]) (Span.extend $1.espan $3.espan) }
     | expr SUB expr                     { exp (eop (USub (snd $2)) [$1;$3]) (Span.extend $1.espan $3.espan) }
+    | expr UAND expr                    { exp (eop (UAnd (snd $2)) [$1;$3]) (Span.extend $1.espan $3.espan) }
     | expr EQ expr                      { exp (eop Eq [$1;$3]) (Span.extend $1.espan $3.espan) }
     | expr LESS expr                    { exp (eop (ULess (snd $2)) [$1;$3]) (Span.extend $1.espan $3.espan) }
     | expr GREATER expr                 { exp (eop (ULess (snd $2)) [$3;$1]) (Span.extend $1.espan $3.espan) }

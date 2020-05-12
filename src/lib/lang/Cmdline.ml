@@ -4,13 +4,9 @@ type t =
   ; verbose: bool     [@short "-v"]    (** print out the srp solution              *)
   ; simulate: bool    [@short "-s"]    (** simulate the network on given inputs    *)
   ; bound: int option                  (** bound the number of simulation steps    *)
-  ; random_test: bool [@short "-r"]    (** perform randomized network testing      *)
-  ; ntests: int                        (** number of random test cases to try      *)
-  ; smart_gen: bool   [@short "-g"]    (** generate relevant randomized inputs     *)
   ; smt: bool         [@short "-m"]    (** search for bugs using an smt solver     *)
   ; query: bool                        (** emit the query used by the smt solver   *)
   ; unbox: bool                        (** unboxes options and flattens tuples     *)
-  ; func: bool                         (** use to enable functional smt encoding   *)
   ; hiding: bool                       (** Use the hiding abstraction during SMT solving *)
   ; smt_parallel: bool                 (** use parallel smt/sat solving*)
   ; finite_arith: bool                 (** set to false to use finite arithmetic in SMT *)
@@ -20,7 +16,6 @@ type t =
   ; no_cutoff: bool                    (** disables mtbdd early termination        *)
   ; inline: bool      [@short "-i"]    (** inline the policy before simulation     *)
   ; compile: bool                      (** compile network to OCaml code before simulation *)
-  ; compress: int                      (** compress the network for n failures     *)
   ; unroll: bool                       (** whether to unroll maps or not           *)
   (* ; draw: bool                         (\** emits a .jpg file of the graph          *\) *)
   ; depth: int                         (** search depth for refinement procedure   *)
@@ -40,9 +35,6 @@ let default =
   ; verbose= false
   ; simulate= false
   ; bound= None
-  ; random_test= false
-  ; ntests = 100
-  ; smart_gen= false
   ; smt= false
   ; smt_parallel=false
   ; query= false
@@ -52,10 +44,8 @@ let default =
   ; no_cutoff=false
   ; inline=false
   ; compile=false
-  ; compress= -1
   ; unroll= false
   ; unbox = false
-  ; func = false
   ; finite_arith = false
   (* ; draw=false *)
   ; depth=20
@@ -80,7 +70,6 @@ let update_cfg_dependencies () =
   if !cfg.smt then cfg := {!cfg with unroll=true; unbox=true; inline=true};
   if !cfg.unroll then cfg := {!cfg with inline=true};
   if !cfg.check_monotonicity then cfg := {!cfg with inline=true};
-  if !cfg.smart_gen then cfg := {!cfg with inline=true};
   if !cfg.slicing then cfg := {!cfg with unbox=true};
   if !cfg.hiding then cfg := {!cfg with unbox=true};
   if !cfg.smt_parallel then cfg := {!cfg with finite_arith=true};

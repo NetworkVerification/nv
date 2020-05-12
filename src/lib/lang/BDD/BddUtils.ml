@@ -77,3 +77,9 @@ let rec expand (vars: Man.tbool list) sz : Man.tbool list list =
     | x :: xs ->
       let vars = expand xs (sz - 1) in
       List.map (fun v -> x :: v) vars
+
+let tbool_to_obool tb =
+  match tb with
+    Man.False -> Some false
+  | Man.Top -> None
+  | Man.True -> Some true

@@ -1,0 +1,28 @@
+include "../utils.nv"
+
+type attribute = option[int]
+
+let nodes = 4
+
+let edges = {
+ 0=1;
+ 0=2;
+ 1=2;
+ 1=3;
+ 2=3;
+}
+
+let min x y = if x < y then x else y
+
+let merge node x y =
+  mapbetter min x y
+
+let trans edge x =
+  mapo (fun x -> x + 1) x
+
+let init node =
+  match node with
+  | 0n -> Some 0
+  | _ -> None
+
+let sol = solution {init = init; trans = trans; merge = merge}

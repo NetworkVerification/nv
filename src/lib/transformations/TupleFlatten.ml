@@ -172,8 +172,8 @@ let exp_transformer (recursors : Transformers.recursors) e =
           (* Tuple type, but not directly a tuple expression. We need to name its
              elements, so we have to use a match expression. *)
           let freshvarexps, pat = List.fold_left (fun (exps, pats) ty ->
-                                      let v = Nv_datastructures.Var.fresh "TupleFlattenVar" in
-                                      (aexp (evar v, Some ty, e.espan) :: exps, PVar v :: pats)) ([],[]) (List.rev tys)
+              let v = Nv_datastructures.Var.fresh "TupleFlattenVar" in
+              (aexp (evar v, Some ty, e.espan) :: exps, PVar v :: pats)) ([],[]) (List.rev tys)
           in
           let body = cont freshvarexps in
           ematch e (addBranch (PTuple pat) body emptyBranch) |> wrap wrapper
@@ -198,21 +198,21 @@ let exp_transformer (recursors : Transformers.recursors) e =
       | TSet (_, lo, hi) ->
         let tup =  match es with | [e1;_] -> e1 | _ -> failwith "Bad TSet" in
         let size, lo, hi = size_and_index_after_flattening (oget tup.ety) lo hi in
-          Some (eop (TSet (size, lo, hi)) (List.map flatten_exp es))
+        Some (eop (TSet (size, lo, hi)) (List.map flatten_exp es))
       | Eq ->
         (match es with
          | [e1; e2] when (match oget e1.ety with | TTuple _ -> true | _ -> false) ->
-            let e1 = flatten_exp e1 in
-            let e2 = flatten_exp e2 in
-            (match tupleToListSafe e1, tupleToListSafe e2 with
-              | ((_ :: _ :: _) as es1), ((_ :: _ :: _) as es2) ->
-                Some (List.fold_left2 (fun acc e1 e2 ->
-                    let eq12 = eop Eq [e1;e2] |> wrap e in
-                      eop And [eq12; acc] |> wrap e)
-                    (e_val (vbool true) |> wrap e) es1 es2)
-              | _ ->
-                None)
-          | _ -> None)
+           let e1 = flatten_exp e1 in
+           let e2 = flatten_exp e2 in
+           (match tupleToListSafe e1, tupleToListSafe e2 with
+            | ((_ :: _ :: _) as es1), ((_ :: _ :: _) as es2) ->
+              Some (List.fold_left2 (fun acc e1 e2 ->
+                  let eq12 = eop Eq [e1;e2] |> wrap e in
+                  eop And [eq12; acc] |> wrap e)
+                  (e_val (vbool true) |> wrap e) es1 es2)
+            | _ ->
+              None)
+         | _ -> None)
       | _ -> None
     end
   | _ -> None
@@ -266,8 +266,10 @@ let proj_symbolic (var, toe) =
      | ty -> [(var, Ty ty)])
 ;;
 
-let unproj_symbolics (sol : Solution.t) =
-  let symbs = sol.symbolics in
+(*NOTE: Taking the easy way out of here by converting to a map first. It should
+   be correct though because likely we have unique bindings.*)
+let unproj_sym_solve (map : (Var.t * 'a) list)  =
+  let map = List.fold_left (fun acc (k,v) -> VarMap.add k v acc) VarMap.empty map in
   let unboxed_map =
     VarMap.fold
       (fun var v acc ->
@@ -276,30 +278,52 @@ let unproj_symbolics (sol : Solution.t) =
            with Not_found -> (0, var)
          in
          VarMap.modify_def [] var'
-           (fun xs -> (index,v) :: xs) acc )
-      symbs
+           (fun xs -> (index, v) :: xs) acc )
+      map
       VarMap.empty
   in
-  (* Transform our lists of (index, value) pairs into the corresponding tuples *)
-  (* TODO: is that code necessary? I don't 100% understand what's the goal but
-     the SmtModel code does something like this.*)
+  (* Transform our lists of (index, 'a) pairs into the corresponding tuples *)
+  (* The SmtModel code does this for labels, but we need to do it here for
+     symbolics and solves.*)
   let unprojed =
     VarMap.map
       (fun elts ->
-         match elts with
-         | [] -> failwith "Impossible"
-         | [(0, v)] -> v
-         | lst ->
-           let lst = List.sort (fun a b -> compare (fst a) (fst b)) lst in
-             (* Sanity check *)
-             (* worst case scenario it crashes *)
-           (* assert (List.fold_lefti (fun acc i elt -> acc && (i = fst elt)) true lst); *)
-           vtuple (List.map snd lst)
+         let lst = List.sort (fun a b -> compare (fst a) (fst b)) elts in
+         (List.map snd lst)
       )
       unboxed_map
   in
-  {sol with symbolics=unprojed}
+  unprojed
 ;;
+
+let unproj_symbolics_and_solves (sol : Solution.t) =
+   let symbs =
+      VarMap.fold
+        (fun var lst acc -> (var, match lst with | [v] -> v | _ -> vtuple lst) :: acc)
+        (unproj_sym_solve sol.symbolics) []
+    in
+    let solves =
+      let open Solution in
+      VarMap.fold
+        (fun var lst acc ->
+           match lst with
+           | [solve] -> (var, solve) :: acc
+           | _ ->
+             (* For a given solution, either all masks are None or all are Some.
+                I think. *)
+             let masked = (List.hd lst).mask <> None in
+             let sol_val = vtuple (List.map (fun s -> s.sol_val) lst) in
+             let sol_ty = (List.map (fun s -> s.attr_ty) lst) in
+             let mask =
+               if not masked then None
+               else Some (vtuple (List.map (fun s -> oget s.mask) lst))
+             in
+             let attr_ty = TTuple sol_ty in
+              (var, {sol_val; mask; attr_ty}) :: acc) (*NOTE: type here might be wrong *)
+        (unproj_sym_solve sol.solves) []
+    in
+    {sol with symbolics = symbs; solves = solves;}
+  ;;
 
 
 let make_toplevel (toplevel_transformer : 'a Transformers.toplevel_transformer) =
@@ -315,24 +339,4 @@ let flatten_decl d =
 let flatten_declarations decls =
   let decls, f = make_toplevel Transformers.transform_declarations decls in
   List.map flatten_decl decls |> List.concat,
-  f % unproj_symbolics
-
-let flatten_net net =
-  let net, f = make_toplevel Transformers.transform_network net in
-  {net with symbolics = List.map proj_symbolic net.symbolics |> List.concat},
-  f % unproj_symbolics
-
-let flatten_srp srp =
-  let srp, f = make_toplevel Transformers.transform_srp srp in
-  let proj_symbolics symbs = List.map proj_symbolic symbs |> List.concat in
-  let proj_label labels =
-    List.map
-      (fun (v, ty) ->
-         List.map (fun (v, toe) -> v, match toe with | Ty ty -> ty | _ -> failwith "Impossible") @@
-         proj_symbolic (v, Ty ty))
-      labels
-    |> List.concat
-  in
-  {srp with srp_symbolics = proj_symbolics srp.srp_symbolics;
-            srp_labels = AdjGraph.VertexMap.map proj_label srp.srp_labels},
-  f % unproj_symbolics
+  f % unproj_symbolics_and_solves

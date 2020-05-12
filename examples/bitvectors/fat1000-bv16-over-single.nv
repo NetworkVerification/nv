@@ -1,7 +1,9 @@
 include "../generic-algebras/distance-bv16-over-single.nv"
 include "../generic-topologies/fattree1000.nv"
 
-let assert u x =
+let assert_node u x =
   match x with
   | None -> false
   | Some _ -> true
+
+assert foldNodes (fun k v acc -> acc && assert_node k v) sol true

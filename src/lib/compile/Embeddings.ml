@@ -15,7 +15,8 @@ let rec embed_value (record_fns: (int*int) -> 'a -> 'b) (typ: Syntax.ty) : 'v ->
     | TBool ->
       fun v -> Syntax.vbool (Obj.magic v)
     | TInt n ->
-      fun v -> Syntax.vint (Integer.create ~value:(Obj.magic v) ~size:n)
+      fun v ->
+        Syntax.vint (Integer.create ~value:(Obj.magic v) ~size:n)
     | TOption ty ->
       let f = embed_value record_fns ty in
         (fun v ->
@@ -72,7 +73,6 @@ let rec unembed_value (record_cnstrs : int -> 'c) (record_proj : (int * int) -> 
             | _ -> failwith (Printf.sprintf "mistyped value %s at type %s\n"
                              (PrintingRaw.show_value ~show_meta:false v) (PrintingRaw.show_ty typ)))
     | TTuple ts ->
-      (*TODO: this case is wrong? fix it*)
       let n = BatList.length ts in
       let f_cnstr = record_cnstrs n in (*function that constructs the record*)
       let fs = (*functions that unembed each value of a tuple *)

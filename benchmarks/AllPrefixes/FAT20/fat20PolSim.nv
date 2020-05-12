@@ -51870,3 +51870,5 @@ core-27=486, core-26=487, core-25=488, core-24=489, core-12=490, core-11=491,
 core-10=492, core-19=493, core-18=494, core-17=495, core-16=496, core-15=497,
 core-14=498,
 core-13=499}*)
+
+let sol = solution {init = init; trans = trans; merge = merge}

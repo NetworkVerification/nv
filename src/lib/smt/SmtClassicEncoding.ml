@@ -6,13 +6,14 @@ open SmtUtils
 open SmtLang
 open Nv_interpreter
 open Nv_utils.OCamlUtils
+open Batteries
 
-module type ClassicEncodingSig = SmtEncodingSigs.Encoding with type network_type = Syntax.network
+module type ClassicEncodingSig = SmtEncodingSigs.Encoding with type network_type = Syntax.declarations
 module ClassicEncoding (E: SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
 struct
   open E
 
-  type network_type = Syntax.network
+  type network_type = Syntax.declarations
 
   let add_symbolic_constraints env requires sym_vars =
     (* Declare the symbolic variables: ignore the expression in case of SMT *)
@@ -21,12 +22,12 @@ struct
          let names = create_vars env "" v in
          let sort = SmtUtils.ty_to_sort (Syntax.get_ty_from_tyexp e) in
          let symb = mk_constant env names sort
-           ~cdescr:"Symbolic variable decl"
+             ~cdescr:"Symbolic variable decl"
          in
-           match sort with
-             | IntSort ->
-               SmtUtils.add_constraint env (mk_term (mk_leq (mk_int 0) symb.t))
-             | _ -> ()
+         match sort with
+         | IntSort ->
+           SmtUtils.add_constraint env (mk_term (mk_leq (mk_int 0) symb.t))
+         | _ -> ()
       ) sym_vars ;
     (* add the require clauses *)
     BatList.iter
@@ -134,6 +135,7 @@ struct
         SmtUtils.add_constraint env (mk_term (mk_eq result.t e.t))) es results);
     results
 
+  (* Currently unused, but might be if we split up assertions *)
   let encode_z3_assert str env _node assertion =
     let rec loop assertion acc =
       match assertion.e with
@@ -157,14 +159,29 @@ struct
     in
     loop assertion []
 
-  let encode_z3 (net: Syntax.network) : SmtUtils.smt_env =
-    let env = init_solver net.symbolics ~labels:[] in
-    let einit = net.init in
-    let eassert = net.assertion in
-    let emerge = net.merge in
-    let etrans = net.trans in
-    let nodes = (AdjGraph.nb_vertex net.graph) in
-    let aty = net.attr_type in
+  let encode_solve env graph count {aty; var_names; init; trans; merge} =
+    let aty = oget aty in
+    let einit, etrans, emerge = init, trans, merge in
+    let nodes = AdjGraph.nb_vertex graph in
+
+    (* Extract variable names from e, and split them up based on which node they
+       belong to. In the end, label_vars.(i) is the list of attribute variables
+       for node i *)
+    let label_vars : var E.t array =
+      let aty_len = match aty with | TTuple tys -> List.length tys | _ -> 1 in
+      match var_names.e with
+      | ETuple es ->
+        (* Sanity check *)
+        assert (aty_len * nodes = List.length es);
+        let varnames =
+          List.map (fun e -> match e.e with | EVar x -> x | _ -> failwith "") es
+        in
+        varnames |> List.ntake aty_len |> Array.of_list |> Array.map of_list
+      | EVar x ->
+        (* Not sure if this can happen, but if it does it's in networks with only one node *)
+        Array.map of_list @@ Array.make 1 [ x]
+      | _ -> failwith "internal error (encode_algebra)"
+    in
     (* Map each edge to transfer function result *)
 
     (* incoming_map is a map from vertices to list of incoming edges *)
@@ -177,13 +194,6 @@ struct
     let enc_z3_trans = encode_z3_trans etrans in
     AdjGraph.iter_edges_e
       (fun (i, j) ->
-         (* ( try
-          *     let idxs = AdjGraph.VertexMap.find j !incoming_map in
-          *     incoming_map :=
-          *       AdjGraph.VertexMap.add j ((i, j) :: idxs) !incoming_map
-          *   with _ ->
-          *     incoming_map :=
-          *       AdjGraph.VertexMap.add j [(i, j)] !incoming_map ) ; *)
          incoming_map.(j) <- (i,j) :: incoming_map.(j);
          let node_value n =
            avalue ((vnode n), Some Typing.node_ty, Span.default)
@@ -198,12 +208,12 @@ struct
          (* Printf.printf "etrans:%s\n" (Printing.exp_to_string etrans); *)
          let trans, x =
            enc_z3_trans edge
-             (Printf.sprintf "trans-%d-%d" i j)
+             (Printf.sprintf "trans%d-%d-%d" count i j)
              env
          in
          trans_input_map := AdjGraph.EdgeMap.add (i, j) x !trans_input_map ;
          trans_map := AdjGraph.EdgeMap.add (i, j) trans !trans_map )
-      net.graph ;
+      graph ;
     (*`Seutp labelling functions*)
     let attr_sort = ty_to_sorts aty in
     (* Compute the labelling as the merge of all inputs *)
@@ -212,10 +222,8 @@ struct
       (* compute each init attribute *)
       let node = avalue (vnode i, Some Typing.node_ty, Span.default) in
       let einit_i = Nv_interpreter.InterpPartial.interp_partial_fun einit [node] in
-      let init = encode_z3_init (Printf.sprintf "init-%d" i) env einit_i in
+      let init = encode_z3_init (Printf.sprintf "init%d-%d" count i) env einit_i in
       let in_edges = incoming_map.(i) in
-      (* try AdjGraph.VertexMap.find i !incoming_map
-       * with Not_found -> [] *)
       let emerge_i = InterpPartial.interp_partial_fun emerge [node] in
       (* Printf.printf "merge after interp:\n%s\n\n" (Printing.exp_to_string emerge_i);
        * failwith "bla"; *)
@@ -225,7 +233,7 @@ struct
           (fun prev_result (x, y) ->
              incr idx ;
              let trans = AdjGraph.EdgeMap.find (x, y) !trans_map in
-             let str = Printf.sprintf "merge-%d-%d" i !idx in
+             let str = Printf.sprintf "merge%d-%d-%d" count i !idx in
              let merge_result, x =
                encode_z3_merge str env emerge_i
              in
@@ -239,9 +247,7 @@ struct
           )
           init in_edges
       in
-      let lbl_i_name = SmtUtils.label_var i in
-      let lbl_i = create_strings lbl_i_name aty in
-      let lbl_iv = lift1 Nv_datastructures.Var.create lbl_i in
+      let lbl_iv = label_vars.(i) in
       add_symbolic env lbl_iv (Ty aty);
       let l = lift2 (fun lbl s -> mk_constant env (create_vars env "" lbl) s)
           lbl_iv attr_sort
@@ -257,28 +263,36 @@ struct
          BatList.iter2 (fun label x ->
              SmtUtils.add_constraint env (mk_term (mk_eq label.t x.t))) (to_list label) x)
       !trans_input_map ;
+  ;;
+
+  let encode_z3 (decls: Syntax.declarations) : SmtUtils.smt_env =
+    let symbolics = get_symbolics decls in
+    let graph = get_graph decls |> oget in
+    let solves = get_solves decls in
+    let assertions = get_asserts decls |> List.map InterpPartial.interp_partial in
+    let requires = get_requires decls in
+    let env = init_solver symbolics ~labels:[] in
+
+    List.iteri (encode_solve env graph) solves;
+
     (* add assertions at the end *)
-    ( match eassert with
-      | None -> ()
-      | Some eassert ->
-        let all_good = ref (mk_bool true) in
-        for i = 0 to nodes - 1 do
-          let label = labelling.(i) in
-          let node = avalue (vnode i, Some Typing.node_ty, Span.default) in
-          let eassert_i = InterpPartial.interp_partial_fun eassert [node] in
-          let result, x =
-            encode_z3_assert (SmtUtils.assert_var i) env i eassert_i
-          in
-          BatList.iter2 (fun x label ->
-              SmtUtils.add_constraint env (mk_term (mk_eq x.t label.t))) x (to_list label);
-          let assertion_holds =
-            lift1 (fun result -> mk_eq result.t (mk_bool true) |> mk_term) result
-            |> combine_term in
-          all_good :=
-            mk_and !all_good assertion_holds.t
-        done ;
-        SmtUtils.add_constraint env (mk_term (mk_not !all_good)));
-    (* add the symbolic variable constraints *)
-    add_symbolic_constraints env net.requires (env.symbolics (*@ sym_vars*));
+    (match assertions with
+     | [] -> ()
+     | _ ->
+       (* Encode every assertion as an expression and record the name of the
+          corresponding smt variable *)
+       let assert_vars =
+         List.mapi (fun i eassert ->
+             let z3_assert = encode_exp_z3 "" env eassert |> to_list |> List.hd in
+             let assert_var = mk_constant env (Printf.sprintf "assert-%d" i) (ty_to_sort TBool) in
+             SmtUtils.add_constraint env (mk_term (mk_eq assert_var.t z3_assert.t));
+             assert_var) assertions in
+       (* Expression representing the conjunction of the assertion variables *)
+       let all_good =
+         List.fold_left (fun acc v -> mk_and acc v.t) (List.hd assert_vars).t (List.tl assert_vars)
+       in
+       SmtUtils.add_constraint env (mk_term (mk_not all_good)));
+    (* add any require clauses constraints *)
+    add_symbolic_constraints env requires env.symbolics;
     env
 end

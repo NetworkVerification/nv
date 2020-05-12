@@ -10,6 +10,22 @@ let map_back bmap new_name old_name =
 (* TODO: Make sure this doesn't have to be Var.to_string *)
 let fresh x = Var.fresh (Var.name x)
 
+let rec rename_solve_vars bmap env e =
+  match e.e with
+  | EVar x ->
+    let y = fresh x in
+    map_back bmap y x ;
+    let env = Env.update env x y in
+    env, evar y |> wrap e
+  | ETuple es ->
+    let env', es' =
+      List.fold_left
+        (fun (env, acc) e -> let env', y = rename_solve_vars bmap env e in env', y :: acc)
+        (env, []) es
+    in
+    env', etuple (List.rev es') |> wrap e
+  | _ -> failwith "Bad DSolve"
+
 let rec update_pattern (env: Var.t Env.t) (p: pattern) :
   pattern * Var.t Env.t =
   match p with
@@ -107,14 +123,17 @@ let alpha_convert_declaration bmap (env: Var.t Env.t)
     map_back bmap y x ;
     let env = Env.update env x y in
     (env, DSymbolic (y, Ty ty))
-  | DMerge e -> (env, DMerge (alpha_convert_exp env e))
-  | DTrans e -> (env, DTrans (alpha_convert_exp env e))
-  | DInit e -> (env, DInit (alpha_convert_exp env e))
+  | DSolve {aty; var_names; init; trans; merge} ->
+    let init, trans, merge =
+      alpha_convert_exp env init, alpha_convert_exp env trans, alpha_convert_exp env merge
+    in
+    let env, y = rename_solve_vars bmap env var_names in
+    (env, DSolve {aty; var_names = y; init; trans; merge})
   | DAssert e -> (env, DAssert (alpha_convert_exp env e))
   | DPartition e -> (env, DPartition (alpha_convert_exp env e)) (* partitioning *)
   | DInterface e -> (env, DInterface (alpha_convert_exp env e)) (* partitioning *)
   | DRequire e -> (env, DRequire (alpha_convert_exp env e))
-  | DATy _ | DUserTy _ | DNodes _ | DEdges _ -> (env, d)
+  | DUserTy _ | DNodes _ | DEdges _ -> (env, d)
 
 let rec alpha_convert_aux bmap env (ds: declarations) : declarations =
   match ds with
@@ -125,152 +144,18 @@ let rec alpha_convert_aux bmap env (ds: declarations) : declarations =
 
 let update_symbolics bmap smap =
   let open Collections in
-  VarMap.fold
-    (fun s v acc ->
-       match VarMap.Exceptionless.find s bmap with
-       | None -> VarMap.add s v acc
-       | Some k -> VarMap.add k v acc )
-    smap VarMap.empty
+  List.map (fun (s, v) ->
+      match VarMap.Exceptionless.find s bmap with
+      | None -> (s, v)
+      | Some k -> (k,v))
+    smap
 
 let adjust_solution bmap (s: Nv_solution.Solution.t) =
-  {s with symbolics= update_symbolics bmap s.symbolics}
+  {s with symbolics= update_symbolics bmap s.symbolics;
+          solves = update_symbolics bmap s.solves}
 
 let rec alpha_convert_declarations (ds: declarations) =
   (* Var.reset () ; *)
   let bmap = ref Collections.VarMap.empty in
   let prog = alpha_convert_aux bmap Env.empty ds in
   (prog, adjust_solution !bmap)
-
-let alpha_convert_net net =
-  let bmap = ref Collections.VarMap.empty in
-  let env = Env.empty in
-  let env, symbolics =
-    BatList.fold_right (fun (x, ty_exp) (env, acc) ->
-        let y = fresh x in
-        map_back bmap y x ;
-        let env = Env.update env x y in
-        match ty_exp with
-        |  Exp e ->
-          let e = alpha_convert_exp env e in
-          (env, (y, Exp e) :: acc)
-        | Ty ty ->
-          (env, (y, Ty ty) :: acc))
-      net.symbolics (env, [])
-  in
-  let env, defs =
-    BatList.fold_right (fun (x, tyo, exp) (env, acc) ->
-        let y = fresh x in
-        let env = Env.update env x y in
-        let e = alpha_convert_exp env exp in
-        (env, (y, tyo, e) :: acc)) net.defs (env, [])
-  in
-  let net' =
-    { attr_type = net.attr_type;
-      init = alpha_convert_exp env net.init;
-      trans = alpha_convert_exp env net.trans;
-      merge = alpha_convert_exp env net.merge;
-      assertion = (match net.assertion with
-          | None -> None
-          | Some e -> Some (alpha_convert_exp env e));
-      (* partitioning *)
-      partition = (match net.partition with
-          | None -> None
-          | Some e -> Some (alpha_convert_exp env e));
-      interface = (match net.interface with
-          | None -> None
-          | Some e -> Some (alpha_convert_exp env e));
-      (* end partitioning *)
-      symbolics = symbolics;
-      defs = defs;
-      utys = net.utys;
-      requires = BatList.map (alpha_convert_exp env) net.requires;
-      graph = net.graph
-    }
-  in
-  (net', adjust_solution !bmap)
-
-let alpha_convert_srp (srp : Syntax.srp_unfold) =
-  let bmap = ref Collections.VarMap.empty in
-  let env = Env.empty in
-  let env, symbolics =
-    BatList.fold_right (fun (x, ty_exp) (env, acc) ->
-        let y = fresh x in
-        map_back bmap y x ;
-        let env = Env.update env x y in
-        match ty_exp with
-        |  Exp e ->
-          let e = alpha_convert_exp env e in
-          (env, (y, Exp e) :: acc)
-        | Ty ty ->
-          (env, (y, Ty ty) :: acc))
-      srp.srp_symbolics (env, [])
-  in
-  let env = AdjGraph.VertexMap.fold (fun _ xs env ->
-      BatList.fold_right (fun (x, _) env ->
-          Env.update env x x) xs env) srp.srp_labels env
-  in
-  let srp' =
-    (* TODO: add partitioning? *)
-    { srp_attr = srp.srp_attr;
-      srp_constraints = AdjGraph.VertexMap.map (alpha_convert_exp env) srp.srp_constraints;
-      srp_labels = srp.srp_labels;
-      srp_assertion = (match srp.srp_assertion with
-          | None -> None
-          | Some e -> Some (alpha_convert_exp env e));
-      srp_symbolics = symbolics;
-      srp_requires = BatList.map (alpha_convert_exp env) srp.srp_requires;
-      srp_graph = srp.srp_graph
-    }
-  in
-  (srp', adjust_solution !bmap)
-
-(*
-module Tests =
-struct
-
-  exception Duplicate
-
-  let collect_unique_vars e =
-    let vars = ref BatSet.empty in
-    let checkCollect x =
-      if BatSet.mem x !vars then
-        raise Duplicate
-      else
-        vars := BatSet.add x !vars
-    in
-    Visitors.iter_exp (fun e ->
-        match e.e with
-        | EVar x -> checkCollect x
-        | EFun f -> checkCollect f.arg
-        | ELet (x, _, _) -> checkCollect x
-        | _ -> ()) e;
-    !vars
-
-  let collect_vars e =
-    let vars = ref [] in
-    Visitors.iter_exp (fun e ->
-        match e.e with
-        | EVar x -> vars := x :: !vars
-        | EFun f -> vars := f.arg :: !vars
-        | ELet (x, _, _) -> vars := x :: !vars
-        | _ -> ()) e;
-    !vars
-
-  let alpha_exp_no_duplicates_prop env e =
-    let aexp = alpha_convert_exp env e in
-    try
-      let _ = collect_unique_vars aexp in
-      true
-    with | Duplicate -> false
-
-  let alpha_exp_number_of_vars_prop env e =
-    let aexp = alpha_convert_exp env e in
-    try
-      begin
-        let avars = collect_unique_vars aexp in
-        let vars = collect_vars e in
-        BatList.length vars = BatSet.cardinal avars
-      end
-    with | Duplicate -> false
-
-end *)

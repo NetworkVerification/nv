@@ -21,8 +21,12 @@ let init node = match node with
   | 2n -> 10
   | 3n -> 20
 
-let assert node x = match node with
+let assert_node node x = match node with
   | 0n -> x = 30
   | 1n -> x = 0
   | 2n -> x = 1
   | 3n -> x = 2
+
+let sol = solution {init = init; trans = trans; merge = merge}
+
+assert foldNodes (fun k v acc -> acc && assert_node k v) sol true

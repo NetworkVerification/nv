@@ -316,6 +316,8 @@ and interp_op_partial env ty op es =
         if Integer.lt i1 i2 then vbool true else vbool false
       | ULeq _, [{v= VInt i1}; {v= VInt i2}] ->
         if Integer.leq i1 i2 then vbool true else vbool false
+      | UAnd _, [{v= VInt i1}; {v= VInt i2}] ->
+        vint (Integer.uand i1 i2)
       | NLess, [{v= VNode n1}; {v= VNode n2}] ->
         if n1 < n2 then vbool true else vbool false
       | NLeq, [{v= VNode n1}; {v= VNode n2}] ->

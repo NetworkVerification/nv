@@ -8,3 +8,5 @@ let init n =
   match n with
   | 0n -> true
   | _ -> false
+
+let sol = solution {init = init; trans = trans; merge = merge}
