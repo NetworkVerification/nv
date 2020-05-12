@@ -406,6 +406,8 @@ let parse_input (args : string array) :
       (* just the I-checks *)
       (* new_decls *)
       (* I-checks plus base checks *)
+      (* new_decls_base *)
+      (* (List.tl (List.tl new_decls_base)) *)
       (new_decls_base @ new_decls)
   else
     [parse_input_aux cfg info file decls fs]
