@@ -52,8 +52,14 @@ let isBetter x y =
 let merge (u: tnode) x y =
   if isBetter x y then x else y
 
+
+let sol = solution {init = init; trans = trans; merge = merge}
+
 (* Does every node have a route when the network has converged to a stable state? *)
-let assert (u : tnode) x =
+let reachable x =
   match x with
   | None -> false
   | Some _ -> true
+
+(* Assert that every node is reachable *)
+assert foldNodes (fun u v acc -> acc && reachable v) sol true

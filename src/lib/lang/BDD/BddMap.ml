@@ -252,7 +252,7 @@ let bindings ((map, ty): t) : (value * value) list * value =
        let lst = Array.to_list vars in
        let sz = B.ty_to_size ty in
        let expanded =
-         if B.count_tops vars sz <= 0 then B.expand lst sz else [lst]
+         if B.count_tops vars sz <= 2 then B.expand lst sz else [lst]
        in
        List.iter
          (fun vars ->
@@ -298,7 +298,7 @@ let bindings_all ((map, ty): t) : (value * value) list =
            let lst = Array.to_list vars in
            let sz = B.ty_to_size ty in
            let expanded =
-             if B.count_tops vars sz <= 1 then B.expand lst sz else [lst]
+             if B.count_tops vars sz <= 2 then B.expand lst sz else [lst]
            in
            List.iter
              (fun vars ->
