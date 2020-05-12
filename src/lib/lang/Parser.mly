@@ -192,6 +192,7 @@
 %token <Nv_datastructures.Span.t> MAP
 %token <Nv_datastructures.Span.t> MAPIF
 %token <Nv_datastructures.Span.t> MAPITE
+%token <Nv_datastructures.Span.t> MAPFORALL
 %token <Nv_datastructures.Span.t> COMBINE
 %token <Nv_datastructures.Span.t> TOPTION
 %token <Nv_datastructures.Span.t> TDICT
@@ -326,6 +327,7 @@ expr:
     | FOLDEDGE exprsspace               { exp (eop MFoldEdge $2) $1 }
     | MAP exprsspace                    { exp (eop MMap $2) $1 }
     | MAPIF exprsspace                  { exp (eop MMapFilter $2) $1 }
+    | MAPFORALL exprsspace              { exp (eop MForAll $2) $1 }
     | MAPITE exprsspace                 { exp (eop MMapIte $2) $1 }
     | COMBINE exprsspace                { exp (eop MMerge $2) $1 }
     | CREATEMAP exprsspace              { exp (eop MCreate $2) $1 }

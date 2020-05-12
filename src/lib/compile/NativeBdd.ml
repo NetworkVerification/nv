@@ -249,3 +249,66 @@ let mapIf (pred_key: int * 'g) (op_key : int * 'f) (vty_new_id: int) (f: 'a1 -> 
   in
   {vmap with bdd = (User.apply_op2 op pred (fst vmap.bdd), snd vmap.bdd);
              val_ty_id = vty_new_id}
+
+
+(* Cache for map forall expressions *)
+let forall_op_cache = ref HashClosureMap.empty
+
+let forall (pred_key: int * 'g) (op_key : int * 'f) (vty_new_id: int) (f: 'a1 -> 'a2) (vmap : t) : bool =
+  let cfg = Cmdline.get_cfg () in
+  let f_embed =
+    fun x -> (f (unembed_value_id vmap.val_ty_id x))
+             |> embed_value_id vty_new_id
+  in
+  let g b v =
+    if Mtbdd.get b then f_embed (Mtbdd.get v) |> Mtbdd.unique B.tbl
+    else vbool true |> Mtbdd.unique B.tbl
+  in
+
+  let pred =
+    match HashClosureMap.Exceptionless.find pred_key !mapw_pred_cache with
+    | None ->
+      (* Printf.printf "edge: %d,%d\n" (fst (fst (Obj.magic clos))) (snd (fst (Obj.magic clos))); *)
+      let pred = get_pred (fst pred_key) in
+      let predFun =
+        match pred.e with
+        | EFun predFun -> predFun
+        | _ -> failwith "expected a function"
+      in
+      let bddf = BddFunc.create_value (OCamlUtils.oget predFun.argty) in
+      let env = build_env predFun.arg bddf predFun.body (snd pred_key) in
+      let bddf = BddFunc.eval env predFun.body in
+      (match bddf with
+       | BBool bdd ->
+         let mtbdd = BddFunc.wrap_mtbdd bdd in
+         mapw_pred_cache :=
+           HashClosureMap.add pred_key mtbdd !mapw_pred_cache ;
+         mtbdd
+       | _ -> failwith "A boolean bdd was expected but something went wrong")
+    | Some mtbdd ->
+      mtbdd
+  in
+
+    let op =
+      match HashClosureMap.Exceptionless.find op_key !forall_op_cache with
+      | None ->
+        let special =
+          if cfg.no_cutoff then fun _ _ -> None
+          else fun bdd1 _ ->
+            if Vdd.is_cst bdd1 && not (Mtbdd.get (Vdd.dval bdd1))
+            then Some (Mtbdd.cst B.mgr B.tbl (vbool true))
+            else None
+        in
+        let op =
+          User.make_op2
+            ~memo:(Cudd.Memo.Global)
+            ~commutative:false ~idempotent:false ~special g
+        in
+        forall_op_cache := HashClosureMap.add op_key op !forall_op_cache ;
+        op
+      | Some op ->
+        op
+    in
+    let op_result = User.apply_op2 op pred (fst vmap.bdd) in
+    Array.fold_left (fun acc v -> (match v.v with | VBool b -> (b && acc) | _ -> failwith "Mistyped map")) true
+      (Mtbdd.leaves op_result)

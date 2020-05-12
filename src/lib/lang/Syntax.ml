@@ -67,6 +67,7 @@ type op =
   | MMerge
   | MFoldNode
   | MFoldEdge
+  | MForAll
 [@@deriving ord, eq, show]
 
 type pattern =
@@ -687,6 +688,7 @@ and hash_op op =
   | TGet (n1, n2, n3) -> 18 + n1 + n2 + n3 + 256 * 6
   | TSet (n1, n2, n3) -> 19 + n1 + n2 + n3 + 256 * 7
   | MMapIte -> 20
+  | MForAll -> 21
 (* hashconsing information/tables *)
 
 let meta_v : (v, value) Hashcons.meta =
@@ -735,6 +737,7 @@ let arity op =
   | MMap -> 2
   | MMapFilter -> 3
   | MMapIte -> 4
+  | MForAll -> 3
   | MMerge -> 3
   | MFoldNode -> 3
   | MFoldEdge -> 3

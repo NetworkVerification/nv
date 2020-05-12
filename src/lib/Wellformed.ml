@@ -209,6 +209,6 @@ let check info (ds: declarations) : unit =
   Visitors.iter_exp_decls (check_types info) ds ;
   (* Visitors.iter_exp_decls (check_closures info) ds ; *) (* Is this still necessary? *)
   (* Visitors.iter_exp_decls (check_keys info) ds; *)
-  Visitors.iter_exp_decls (check_nodes_and_edges info
-                             (get_nodes ds |> Nv_utils.OCamlUtils.oget) (get_edges ds |> Nv_utils.OCamlUtils.oget)) ds;
+  (* Visitors.iter_exp_decls (check_nodes_and_edges info
+                             (get_nodes ds |> Nv_utils.OCamlUtils.oget) (get_edges ds |> Nv_utils.OCamlUtils.oget)) ds; *)
   ()

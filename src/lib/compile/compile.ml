@@ -95,7 +95,7 @@ let build_constructors () =
 
 let is_map_op op =
   match op with
-    | MCreate | MGet | MSet | MMap | MMapFilter | MMerge | MMapIte | MFoldEdge | MFoldNode -> true
+    | MCreate | MGet | MSet | MMap | MMapFilter | MMerge | MMapIte | MFoldEdge | MFoldNode | MForAll -> true
     | And | Or | Not | UAdd _ | USub _ | UAnd _ | Eq | ULess _ | ULeq _ | AtMost _ | NLess | NLeq | TGet _ | TSet _ -> false
 
 (** Translating NV operators to OCaml operators*)
@@ -120,6 +120,7 @@ let op_to_ocaml_string op =
   | MMapIte
   | MFoldEdge
   | MFoldNode
+  | MForAll
   | MMerge -> failwith "Map ops are handled elsewhere"
   | AtMost _ -> failwith "todo: atmost"
   | TGet _
@@ -419,6 +420,44 @@ and map_to_ocaml_string op es ty =
                 (exp_to_ocaml_string f) (exp_to_ocaml_string m)
             | _ -> failwith ("Wrong type for function argument" ^ (Printing.ty_to_string (OCamlUtils.oget f.ety))))
        | _ -> failwith "Wrong number of arguments to mapIf operation")
+       | MForAll ->
+       (match es with
+        | [pred; f; m] ->
+          let pred_closure =
+            match pred.e with
+            | EFun predF ->
+              (* Call track_tuples_exp to record any tuple types used in this predicate *)
+              Visitors.iter_exp track_tuples_exp predF.body;
+              let freeVars = Syntax.free_ty (BatSet.PSet.singleton ~cmp:Var.compare predF.arg) predF.body in
+              let freeList = BatSet.PSet.to_list freeVars in
+              Collections.printList (fun (x, ty) -> Printf.sprintf "(%s,%d)" (varname x) (get_fresh_type_id ty)) freeList "(" "," ")"
+            | _ -> failwith "Predicate is not a function expression, try inlining"
+          in
+          let pred_id =
+            match Collections.ExpMap.Exceptionless.find pred !pred_cache with
+            | None ->
+                 let id = fresh_pred_id () in
+                 pred_cache :=
+                   Collections.ExpMap.add pred id !pred_cache ;
+                 id
+            | Some id -> id
+          in
+          (match get_inner_type (OCamlUtils.oget f.ety) with
+            | TArrow (_, newty) ->
+              (* Get e1's hashcons and closure *)
+               let op_key = getFuncCache f in
+               let op_key_var = "op_key" in
+               let pred_key = Printf.sprintf "(%d, %s)" pred_id pred_closure in
+               (*need the Obj.magic to op_key_var arg here because tuple may
+                    have different type/size depending on the free vars*)
+               Printf.sprintf "(let %s = %s in \n\
+                                let pred_key = %s in \n\
+                                NativeBdd.forall (Obj.magic pred_key) (Obj.magic %s) (%d) (%s) (%s))"
+                 op_key_var op_key (*first let*)
+                 pred_key op_key_var (get_fresh_type_id newty)
+                 (exp_to_ocaml_string f) (exp_to_ocaml_string m)
+             | _ -> failwith ("Wrong type for function argument" ^ (Printing.ty_to_string (OCamlUtils.oget f.ety))))
+        | _ -> failwith "Wrong number of arguments to forall operation")      
     | _ -> failwith "Not yet implemented"
 
 (* BatMap maps*)

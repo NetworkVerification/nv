@@ -286,7 +286,8 @@ struct
         | MMapFilter
         | MMerge
         | MFoldNode
-        | MFoldEdge -> failwith "internal error (encode_exp_z3)")
+        | MFoldEdge
+        | MForAll -> failwith "internal error (encode_exp_z3)")
     | ETy (e, _) -> encode_exp_z3_single ~arith descr env e
     | _ ->
       (* we always know this is going to be a singleton list *)

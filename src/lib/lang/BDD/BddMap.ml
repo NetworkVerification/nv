@@ -383,6 +383,41 @@ let map_ite ~op_key1 ~op_key2 (pred: bool Mtbdd.t) (f1: value -> value) (f2: val
     in
     (User.apply_op2 op pred vdd, ty)
 
+
+(* Cache for map forall expressions *)
+let forall_op_cache = ref ExpMap.empty
+
+let forall ~op_key (pred: bool Mtbdd.t) (f: value -> value) ((vdd, _): t) : value =
+  let cfg = Cmdline.get_cfg () in
+  let g b v =
+    if Mtbdd.get b then f (Mtbdd.get v) |> Mtbdd.unique B.tbl
+    else vbool true |> Mtbdd.unique B.tbl
+  in
+    let op =
+      match ExpMap.Exceptionless.find op_key !forall_op_cache with
+      | None ->
+        let special =
+          if cfg.no_cutoff then fun _ _ -> None
+          else fun bdd1 _ ->
+            if Vdd.is_cst bdd1 && not (Mtbdd.get (Vdd.dval bdd1))
+            then Some (Mtbdd.cst B.mgr B.tbl (vbool true))
+            else None
+        in
+        let op =
+          User.make_op2
+            ~memo:(Cudd.Memo.Global)
+            (* ~memo:(Memo.Cache (Cache.create2 ~maxsize:4096 ())) *)
+            ~commutative:false ~idempotent:false ~special g
+        in
+        forall_op_cache := ExpMap.add op_key op !forall_op_cache ;
+        op
+      | Some op ->
+        op
+    in
+    let op_result = User.apply_op2 op pred vdd in
+    Array.fold_left (fun acc v -> (match v.v with | VBool b -> (b && acc) | _ -> failwith "Mistyped map")) true
+      (Mtbdd.leaves op_result) |> vbool
+
 module MergeMap = BatMap.Make (struct
     type t =
       (exp * value BatSet.PSet.t) * (value * value * value * value) option

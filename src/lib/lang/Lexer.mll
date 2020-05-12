@@ -52,6 +52,7 @@ rule token = parse
   | "mapIf"           { MAPIF (position lexbuf) }
   | "mapIte"          { MAPITE (position lexbuf) }
   | "combine"         { COMBINE (position lexbuf) }
+  | "forall"          { MAPFORALL (position lexbuf) }
   | "union"           { UNION (position lexbuf) }
   | "inter"           { INTER (position lexbuf) }
   | "filter"          { FILTER (position lexbuf) }

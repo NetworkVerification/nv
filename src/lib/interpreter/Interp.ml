@@ -166,9 +166,11 @@ and interp_op env ty op es =
     , [ {v= VClosure (c_env1, f1)}
       ; {v= VClosure (c_env2, f2)}
       ; {v= VMap m} ] ) ->
+    (* Compute the closure of the function applied over the leafs *)  
     let seen2 = BatSet.PSet.singleton ~cmp:Var.compare f2.arg in
     let env2 = build_env c_env2 (Syntax.free seen2 f2.body) in
-
+    
+    (* Likewise for the predicate, and create a cache entry *)
     let seen1 = Syntax.free (BatSet.PSet.singleton ~cmp:Var.compare f1.arg) f1.body in
     let usedValEnv = Env.filter c_env1.value (fun x _ -> BatSet.PSet.mem x seen1) in
     let lookupVal = (f1.body, usedValEnv) in
@@ -177,6 +179,7 @@ and interp_op env ty op es =
       | None -> (
         let bddf = BddFunc.create_value (Nv_utils.OCamlUtils.oget f1.argty) in
         let env = Env.update (Env.map usedValEnv (fun v -> BddFunc.Value v)) f1.arg bddf in
+        (* Compute BDD out of predicate *)
         let bddf = BddFunc.eval env f1.body in
         let bddf = match bddf with
           | Value v -> BddFunc.eval_value v
@@ -231,6 +234,41 @@ and interp_op env ty op es =
     let f1_fun v = apply c_env1 f1 v in
     let f2_fun v = apply c_env2 f2 v in
     vmap (BddMap.map_ite ~op_key1:(f1.body, env1) ~op_key2:(f2.body, env2) mtbdd f1_fun f2_fun m)
+    | ( MForAll, [ {v= VClosure (c_env1, f1)}; {v= VClosure (c_env2, f2)}; {v= VMap m} ] ) ->
+      (* Compute the closure of the function applied over the leafs *)  
+      let seen2 = BatSet.PSet.singleton ~cmp:Var.compare f2.arg in
+      let env2 = build_env c_env2 (Syntax.free seen2 f2.body) in
+      
+      (* Likewise for the predicate, and create a cache entry *)
+      let seen1 = Syntax.free (BatSet.PSet.singleton ~cmp:Var.compare f1.arg) f1.body in
+      let usedValEnv = Env.filter c_env1.value (fun x _ -> BatSet.PSet.mem x seen1) in
+      let lookupVal = (f1.body, usedValEnv) in
+      let mtbdd =
+        match ExpEnvMap.Exceptionless.find lookupVal !bddfunc_cache with
+        | None -> (
+          let bddf = BddFunc.create_value (Nv_utils.OCamlUtils.oget f1.argty) in
+          let env = Env.update (Env.map usedValEnv (fun v -> BddFunc.Value v)) f1.arg bddf in
+          (* Compute BDD out of predicate *)
+          let bddf = BddFunc.eval env f1.body in
+          let bddf = match bddf with
+            | Value v -> BddFunc.eval_value v
+            | _ -> bddf
+          in
+          match bddf with
+          | BBool bdd ->
+            let mtbdd = BddFunc.wrap_mtbdd bdd in
+            bddfunc_cache :=
+              ExpEnvMap.add lookupVal mtbdd !bddfunc_cache ;
+            mtbdd
+          | BMap mtbdd ->
+            let mtbdd = (BddFunc.value_mtbdd_bool_mtbdd (fst mtbdd)) in
+            bddfunc_cache := ExpEnvMap.add lookupVal mtbdd !bddfunc_cache ;
+            mtbdd
+          | _ -> failwith "impossible" )
+        | Some bddf -> bddf
+      in
+      let f v = apply c_env2 f2 v in
+      BddMap.forall ~op_key:(f2.body, env2) mtbdd f m
   | _, _ ->
     failwith
       (Printf.sprintf "bad operator application: %s"
