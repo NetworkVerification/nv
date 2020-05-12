@@ -108,32 +108,32 @@ let simulator_tests =
   List.map (fun (f,b) -> simulator_test f b)
     [
       ("examples/debugging/debug-combine.nv", true);
-      ("examples/batfish.nv", false);
-      ("examples/bitmasks.nv", true);
-      ("examples/diamond.nv", true);
-      ("examples/diamond-ospf.nv", true);
-      ("examples/env.nv", true);
-      ("examples/failure.nv", true);
-      ("examples/failure2.nv", true);
-      ("examples/FatTrees/fattree.nv", true);
-      ("examples/map.nv", true);
-      ("examples/map2.nv", false);
-      ("examples/minesweeper.nv", true);
-      ("examples/property.nv", true);
-      ("examples/set.nv", true);
-      ("examples/simple.nv", true);
-      ("examples/symbolic.nv", true);
-      ("examples/symbolic2.nv", true);
-      ("examples/maprecord.nv", true);
-      ("examples/maprecordpattern.nv", true);
-      ("examples/maprecord2.nv", true);
-      ("examples/record.nv", true);
-      ("examples/recordwith.nv", true);
-      ("examples/doubleRip.nv", true);
-      ("examples/doubleRipFalse.nv", false);
-      ("examples/symbolic3.nv", true);
-      ("examples/symbolicDecls.nv", true);
-      ("examples/ospf-areas.nv", true);
+      ("examples/TestSuite/batfish.nv", false);
+      ("examples/TestSuite/bitmasks.nv", true);
+      ("examples/TestSuite/diamond.nv", true);
+      ("examples/TestSuite/diamond-ospf.nv", true);
+      ("examples/TestSuite/env.nv", true);
+      ("examples/TestSuite/failure.nv", true);
+      ("examples/TestSuite/failure2.nv", true);
+      ("examples/TestSuite/fattree.nv", true);
+      ("examples/TestSuite/map.nv", true);
+      ("examples/TestSuite/map2.nv", false);
+      ("examples/TestSuite/minesweeper.nv", true);
+      ("examples/TestSuite/property.nv", true);
+      ("examples/TestSuite/set.nv", true);
+      ("examples/TestSuite/simple.nv", true);
+      ("examples/TestSuite/symbolic.nv", true);
+      ("examples/TestSuite/symbolic2.nv", true);
+      ("examples/TestSuite/maprecord.nv", true);
+      ("examples/TestSuite/maprecordpattern.nv", true);
+      ("examples/TestSuite/maprecord2.nv", true);
+      ("examples/TestSuite/record.nv", true);
+      ("examples/TestSuite/recordwith.nv", true);
+      ("examples/TestSuite/doubleRip.nv", true);
+      ("examples/TestSuite/doubleRipFalse.nv", false);
+      ("examples/TestSuite/symbolic3.nv", true);
+      ("examples/TestSuite/symbolicDecls.nv", true);
+      ("examples/TestSuite/ospf-areas.nv", true);
     ]
 ;;
 
@@ -143,26 +143,26 @@ let compiler_tests =
   | _ ->
   List.map (fun (f,b) -> compiler_test f b)
     [
-      ("examples/batfish.nv", false);
-      ("examples/diamond.nv", true);
-      ("examples/env.nv", true);
-      ("examples/failure.nv", true);
-      (* ("examples/failure2.nv", true); *) (* TODO: Enable *)
-      ("examples/FatTrees/fattree.nv", true);
-      ("examples/map.nv", true);
-      ("examples/map2.nv", false);
-      ("examples/property.nv", true);
-      ("examples/set.nv", true);
-      ("examples/simple.nv", true);
-      ("examples/symbolic.nv", true);
-      ("examples/symbolic2.nv", true);
-      ("examples/maprecord.nv", true);
-      ("examples/maprecordpattern.nv", true);
-      ("examples/maprecord2.nv", true);
-      ("examples/doubleRip.nv", true);
-      ("examples/doubleRipFalse.nv", false);
-      ("examples/symbolic3.nv", true);
-      ("examples/symbolicDecls.nv", true);
+      ("examples/TestSuite/batfish.nv", false);
+      ("examples/TestSuite/diamond.nv", true);
+      ("examples/TestSuite/env.nv", true);
+      ("examples/TestSuite/failure.nv", true);
+      (* ("examples/TestSuite/failure2.nv", true); *) (* TODO: Enable *)
+      ("examples/TestSuite/fattree.nv", true);
+      ("examples/TestSuite/map.nv", true);
+      ("examples/TestSuite/map2.nv", false);
+      ("examples/TestSuite/property.nv", true);
+      ("examples/TestSuite/set.nv", true);
+      ("examples/TestSuite/simple.nv", true);
+      ("examples/TestSuite/symbolic.nv", true);
+      ("examples/TestSuite/symbolic2.nv", true);
+      ("examples/TestSuite/maprecord.nv", true);
+      ("examples/TestSuite/maprecordpattern.nv", true);
+      ("examples/TestSuite/maprecord2.nv", true);
+      ("examples/TestSuite/doubleRip.nv", true);
+      ("examples/TestSuite/doubleRipFalse.nv", false);
+      ("examples/TestSuite/symbolic3.nv", true);
+      ("examples/TestSuite/symbolicDecls.nv", true);
     ]
 ;;
 
@@ -170,32 +170,32 @@ let smt_tests =
   List.map (fun (f,b) -> smt_test f b)
     [
       ("examples/debugging/debug-combine.nv", true);
-      ("examples/batfish.nv", false);
-      ("examples/bitmasks.nv", true);
-      ("examples/diamond.nv", true);
-      ("examples/diamond-ospf.nv", true);
-      ("examples/env.nv", true);
-      ("examples/failure.nv", false);
-      ("examples/failure2.nv", false);
-      ("examples/FatTrees/fattree.nv", true);
-      ("examples/map.nv", true);
-      ("examples/map2.nv", false);
-      ("examples/minesweeper.nv", false);
-      ("examples/property.nv", true);
-      ("examples/set.nv", true);
-      ("examples/simple.nv", true);
-      ("examples/symbolic.nv", false);
-      ("examples/symbolic2.nv", false);
-      ("examples/maprecord.nv", true);
-      ("examples/maprecordpattern.nv", true);
-      ("examples/maprecord2.nv", true);
-      ("examples/record.nv", true);
-      ("examples/recordwith.nv", true);
-      ("examples/doubleRip.nv", true);
-      ("examples/doubleRipFalse.nv", false);
-      ("examples/symbolic3.nv", false);
-      ("examples/symbolicDecls.nv", false);
-      ("examples/ospf-areas.nv", true);
+      ("examples/TestSuite/batfish.nv", false);
+      ("examples/TestSuite/bitmasks.nv", true);
+      ("examples/TestSuite/diamond.nv", true);
+      ("examples/TestSuite/diamond-ospf.nv", true);
+      ("examples/TestSuite/env.nv", true);
+      ("examples/TestSuite/failure.nv", false);
+      ("examples/TestSuite/failure2.nv", false);
+      ("examples/TestSuite/fattree.nv", true);
+      ("examples/TestSuite/map.nv", true);
+      ("examples/TestSuite/map2.nv", false);
+      ("examples/TestSuite/minesweeper.nv", false);
+      ("examples/TestSuite/property.nv", true);
+      ("examples/TestSuite/set.nv", true);
+      ("examples/TestSuite/simple.nv", true);
+      ("examples/TestSuite/symbolic.nv", false);
+      ("examples/TestSuite/symbolic2.nv", false);
+      ("examples/TestSuite/maprecord.nv", true);
+      ("examples/TestSuite/maprecordpattern.nv", true);
+      ("examples/TestSuite/maprecord2.nv", true);
+      ("examples/TestSuite/record.nv", true);
+      ("examples/TestSuite/recordwith.nv", true);
+      ("examples/TestSuite/doubleRip.nv", true);
+      ("examples/TestSuite/doubleRipFalse.nv", false);
+      ("examples/TestSuite/symbolic3.nv", false);
+      ("examples/TestSuite/symbolicDecls.nv", false);
+      ("examples/TestSuite/ospf-areas.nv", true);
     ]
 ;;
 
@@ -203,63 +203,63 @@ let hiding_tests =
   List.map (fun (f,b) -> hiding_test f b)
     [
       ("examples/debugging/debug-combine.nv", true);
-      ("examples/batfish.nv", false);
-      ("examples/diamond.nv", true);
-      ("examples/diamond-ospf.nv", true);
-      ("examples/env.nv", true);
-      ("examples/failure.nv", false);
-      ("examples/failure2.nv", false);
-      ("examples/FatTrees/fattree.nv", true);
-      ("examples/map.nv", true);
-      ("examples/map2.nv", false);
-      ("examples/minesweeper.nv", false);
-      ("examples/property.nv", true);
-      ("examples/set.nv", true);
-      ("examples/simple.nv", true);
-      ("examples/symbolic.nv", false);
-      ("examples/symbolic2.nv", false);
-      ("examples/maprecord.nv", true);
-      ("examples/maprecordpattern.nv", true);
-      ("examples/maprecord2.nv", true);
-      ("examples/record.nv", true);
-      ("examples/recordwith.nv", true);
-      ("examples/doubleRip.nv", true);
-      ("examples/doubleRipFalse.nv", false);
-      ("examples/symbolic3.nv", false);
-      ("examples/symbolicDecls.nv", false);
-      ("examples/ospf-areas.nv", true);
+      ("examples/TestSuite/batfish.nv", false);
+      ("examples/TestSuite/diamond.nv", true);
+      ("examples/TestSuite/diamond-ospf.nv", true);
+      ("examples/TestSuite/env.nv", true);
+      ("examples/TestSuite/failure.nv", false);
+      ("examples/TestSuite/failure2.nv", false);
+      ("examples/TestSuite/fattree.nv", true);
+      ("examples/TestSuite/map.nv", true);
+      ("examples/TestSuite/map2.nv", false);
+      ("examples/TestSuite/minesweeper.nv", false);
+      ("examples/TestSuite/property.nv", true);
+      ("examples/TestSuite/set.nv", true);
+      ("examples/TestSuite/simple.nv", true);
+      ("examples/TestSuite/symbolic.nv", false);
+      ("examples/TestSuite/symbolic2.nv", false);
+      ("examples/TestSuite/maprecord.nv", true);
+      ("examples/TestSuite/maprecordpattern.nv", true);
+      ("examples/TestSuite/maprecord2.nv", true);
+      ("examples/TestSuite/record.nv", true);
+      ("examples/TestSuite/recordwith.nv", true);
+      ("examples/TestSuite/doubleRip.nv", true);
+      ("examples/TestSuite/doubleRipFalse.nv", false);
+      ("examples/TestSuite/symbolic3.nv", false);
+      ("examples/TestSuite/symbolicDecls.nv", false);
+      ("examples/TestSuite/ospf-areas.nv", true);
     ]
 ;;
 
 let slicing_tests =
   List.map (fun (f,b) -> slicing_test f b)
     [
-      ("examples/debugging/debug-combine.nv", true);
-      ("examples/batfish.nv", false);
-      ("examples/diamond.nv", true);
-      ("examples/diamond-ospf.nv", true);
-      ("examples/env.nv", true);
-      ("examples/failure.nv", false);
-      ("examples/failure2.nv", false);
-      ("examples/FatTrees/fattree.nv", true);
-      ("examples/map.nv", true);
-      ("examples/map2.nv", false);
-      ("examples/minesweeper.nv", false);
-      ("examples/property.nv", true);
-      ("examples/set.nv", true);
-      ("examples/simple.nv", true);
-      ("examples/symbolic.nv", false);
-      ("examples/symbolic2.nv", false);
-      ("examples/maprecord.nv", true);
-      ("examples/maprecordpattern.nv", true);
-      ("examples/maprecord2.nv", true);
-      ("examples/record.nv", true);
-      ("examples/recordwith.nv", true);
-      ("examples/doubleRip.nv", true);
-      ("examples/doubleRipFalse.nv", false);
-      ("examples/symbolic3.nv", false);
-      ("examples/symbolicDecls.nv", false);
-      ("examples/ospf-areas.nv", true);
+      ("examples/TestSuite/debug-combine.nv", true);
+      ("examples/TestSuite/batfish.nv", false);
+      ("examples/TestSuite/diamond.nv", true);
+      ("examples/TestSuite/diamond-ospf.nv", true);
+      ("examples/TestSuite/env.nv", true);
+      ("examples/TestSuite/failure.nv", false);
+      ("examples/TestSuite/failure2.nv", false);
+      ("examples/TestSuite/fattree.nv", true);
+      ("examples/TestSuite/map.nv", true);
+      ("examples/TestSuite/map2.nv", false);
+      ("examples/TestSuite/minesweeper.nv", false);
+      ("examples/TestSuite/property.nv", true);
+      ("examples/TestSuite/set.nv", true);
+      ("examples/TestSuite/simple.nv", true);
+      ("examples/TestSuite/symbolic.nv", false);
+      ("examples/TestSuite/symbolic2.nv", false);
+      ("examples/TestSuite/maprecord.nv", true);
+      ("examples/TestSuite/maprecordpattern.nv", true);
+      ("examples/TestSuite/maprecord2.nv", true);
+      ("examples/TestSuite/record.nv", true);
+      ("examples/TestSuite/recordwith.nv", true);
+      ("examples/TestSuite/doubleRip.nv", true);
+      ("examples/TestSuite/doubleRipFalse.nv", false);
+      ("examples/TestSuite/symbolic3.nv", false);
+      ("examples/TestSuite/symbolicDecls.nv", false);
+      ("examples/TestSuite/ospf-areas.nv", true);
     ]
 ;;
 

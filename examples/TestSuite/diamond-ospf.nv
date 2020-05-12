@@ -1,4 +1,4 @@
-include "utils.nv"
+include "../utils.nv"
 
 type attribute = option[int]
 
@@ -12,13 +12,17 @@ let edges = {
  2=3;
 }
 
-let min x y = if x < y then x else y
-
 let merge node x y =
-  mapbetter min x y
+  mapbetter (fun x y -> if x < y then x else y) x y
+
+let weight edge =
+  match edge with
+  | 0~1 -> 1
+  | 1~2 -> 1
+  | _ -> 3
 
 let trans edge x =
-  mapo (fun x -> x + 1) x
+  mapo (fun x -> x + (weight edge)) x
 
 let init node =
   match node with

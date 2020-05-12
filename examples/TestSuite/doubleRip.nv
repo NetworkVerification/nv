@@ -1,4 +1,4 @@
-include "generic-algebras/rip.nv"
+include "../generic-algebras/rip.nv"
 
 let nodes = 5
 
