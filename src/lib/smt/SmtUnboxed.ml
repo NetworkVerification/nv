@@ -409,6 +409,10 @@ struct
     | PInt i, TInt _ ->
       let const = if smt_config.infinite_arith then mk_int_u32 i else mk_bv i in
       [mk_eq (BatList.hd znames).t const |> mk_term]
+    | PNode n, TNode ->
+      let i = Integer.create ~value:n ~size:Syntax.tnode_sz in
+      let const = if smt_config.infinite_arith then mk_int_u32 i else mk_bv i in
+      [mk_eq (BatList.hd znames).t const |> mk_term]
     | PTuple ps, TTuple ts -> (
         match (ps, ts) with
         | [p], [t] -> encode_pattern_z3 descr env znames p t
@@ -440,9 +444,9 @@ struct
       mk_term ~tloc:v.vspan ~tdescr:"val"
     | VNode n ->
       encode_value_z3_single descr env @@
-      avalue (vint (Integer.create ~size:32 ~value:n), Some (TInt 32), v.vspan)
+      avalue (vint (Integer.create ~size:Syntax.tnode_sz ~value:n), Some (TInt Syntax.tnode_sz), v.vspan)
     | VUnit -> failwith "units should have been unboxed"
-    | VEdge _ -> failwith "edges should have been tupelized"
+    | VEdge _ -> failwith "edges should have been converted to tuples"
     | VOption _ -> failwith "options should have been unboxed"
     | VTuple _ -> failwith "internal error (check that tuples are flat)"
     | VClosure _ -> failwith "internal error (closure in smt)"
