@@ -83,6 +83,10 @@ Alternatively, you can use SMT verification to check that the assertions given i
 
 Note that in order to use the SMT backend, you must have the z3 executable on your PATH. It should have the name "z3".
 
+## Translating Router Configs to NV.
+
+See the [wiki](https://github.com/NetworkVerification/nv/wiki/Translating-Configurations)
+
 ## Troubleshooting
 
 ### "symbol lookup error: Z3_get_full_version"
