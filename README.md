@@ -85,7 +85,7 @@ Note that in order to use the SMT backend, you must have the z3 executable on yo
 
 ## Translating Router Configs to NV.
 
-See the [wiki](https://github.com/NetworkVerification/nv/wiki/Translating-Configurations)
+See the [wiki](https://github.com/NetworkVerification/nv/wiki/Translating-Configurations).
 
 ## Troubleshooting
 
