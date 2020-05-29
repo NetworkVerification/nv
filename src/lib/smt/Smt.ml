@@ -59,7 +59,7 @@ let printQuery (chan: out_channel Lazy.t) (msg: string) =
 let expr_encoding smt_config =
   match smt_config.unboxing with
   | true -> (module SmtUnboxed.Unboxed : ExprEncoding)
-  | false -> (module SmtBoxed.Boxed : ExprEncoding)
+  | false -> failwith "Boxed encoding no longer supported"
 
 (* Asks the SMT solver to return a model and translates it to NV lang *)
 let ask_for_model query chan info env solver renaming nodes eassert =
