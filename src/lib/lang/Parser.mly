@@ -413,6 +413,7 @@ expr3:
     | ID                                { exp (evar (snd $1)) (fst $1) }
     | ID DOT ID                         { exp (eproject (evar (snd $1)) (Nv_datastructures.Var.name (snd $3))) (Span.extend (fst $1) (fst $3)) }
     | NUM                               { to_value (vint (snd $1)) (fst $1) }
+    | ipaddr                            { $1 }
     | prefixes                          { $1 }
     | NODE                              { to_value (vnode (snd $1)) (fst $1)}
     | edge_arg TILDE edge_arg           { to_value (vedge (snd $1, snd $3)) (Span.extend (fst $1) (fst $3))}
@@ -426,7 +427,7 @@ ipaddr:
   | NUM DOT NUM DOT NUM DOT NUM         { to_value (vint (ip_to_dec (snd $1) (snd $3) (snd $5) (snd $7))) (fst $1) }
 
 prefixes:
-  | ipaddr SLASH NUM                    { let pre = to_value (vint (snd $3)) (fst $3) in
+  | ipaddr SLASH NUM                    { let pre = to_value (vint (Integer.create ~value:(Integer.to_int (snd $3)) ~size:6)) (fst $3) in
                                           etuple [$1; pre]}
 
 edge_arg:
