@@ -1,0 +1,241 @@
+type ospf = 
+  { weight: int16; 
+    ospfNextHop: option[tedge] (*nexthop for ospf *)
+  }
+
+type bgp = 
+  { 
+    nexthop: option[tedge]; (*Nexthop for BGP if there is one*)
+    length: int; (*AS Path Length*)
+    communities: set[int]; (* Set of community values *)
+    external: bool; (* EBGP or IBGP route *)
+    }
+
+type packet = {srcIp: int; dstIp: int}
+type packets = set[packet]
+
+(* Utility functions *)
+let flipEdge e =
+  match e with
+  | a~b -> toEdge b a
+
+let pickOptionOspf f x y =
+  match (x,y) with
+  | (_, None) -> x  
+  | (None, _) -> y
+  | (Some a, Some b) -> Some (f a b)
+
+(* Topology *)
+let nodes = 6
+let edges = 
+  {
+   (* physical links *) 
+   0=1;
+   1=2;
+   1=3;
+   2=4;
+   3=4;
+   4=5; 
+   (* virtual, iBGP peerings *)
+   1=4;
+   (* I don't think we need a 2-3 peering because they are not border routers *)
+   }
+
+(*
+     3 -- 4 -- 5  
+     |    |
+     |    |
+0 -- 1 -- 2
+*)
+
+(* Loopbacks used for iBGP connections *)
+let loopback u =
+  match u with
+  | 1n -> Some 70.0.1.0
+  | 2n -> Some 70.0.2.0
+  | 3n -> Some 70.0.3.0
+  | 4n -> Some 70.0.4.0
+  | _ -> None
+
+
+
+(* Part 1 - IGP (OSPF) Network *)
+let initOSPF u =
+  let d = createDict None in
+  match loopback u with
+  | Some p -> d[(p,32u6) := Some {weight=0u16; ospfNextHop=None}]
+  | None -> d
+
+let transferOspf e x = 
+  match e with
+  | 1~0 -> createDict None
+  | 4~5 -> createDict None
+  | _ -> 
+    map (fun v ->
+          match v with
+          | None -> None
+          | Some ospfRoute -> Some {weight = ospfRoute.weight +u16 1u16;
+                                    ospfNextHop = flipEdge e}) x 
+
+let mergeOspfRoutes x y =
+  if x.weight <u16 y.weight then x else y
+
+let mergeOspf u x y =
+  combine (pickOptionOspf mergeOspfRoutes) x y 
+
+let igp = solution {init=initOSPF; trans=transferOspf; merge=mergeOspf;}
+
+(* Part 2 - Dataplane model *)
+
+(* Each router sends a packet to its iBGP peers. *)
+let initData u =
+  match u with
+  | 0n -> {}
+  | 1n -> {{srcIp=70.0.1.0; dstIp=70.0.2.0}, 
+           {srcIp=70.0.1.0; dstIp=70.0.3.0},
+           {srcIp=70.0.1.0; dstIp=70.0.4.0}}
+  | 2n -> {{srcIp=70.0.2.0; dstIp=70.0.1.0}, 
+           {srcIp=70.0.2.0; dstIp=70.0.3.0},
+           {srcIp=70.0.2.0; dstIp=70.0.4.0}}
+  | 3n -> {{srcIp=70.0.3.0; dstIp=70.0.1.0}, 
+           {srcIp=70.0.3.0; dstIp=70.0.2.0},
+           {srcIp=70.0.3.0; dstIp=70.0.4.0}}
+  | 4n -> {{srcIp=70.0.4.0; dstIp=70.0.1.0}, 
+           {srcIp=70.0.4.0; dstIp=70.0.2.0},
+           {srcIp=70.0.4.0; dstIp=70.0.3.0}}
+  | 5n -> {}
+
+(* This only looks at exact prefix matches (32-bits) for simplicity.
+   A proper implementation should look through all possible prefix sizes *)
+let lpm fib e p =
+  let dst = p.dstIp in
+  match (fib[(dst, 32u6)]) with
+  | None -> false
+  | Some {weight = _; ospfNextHop = None} -> false
+  | Some {weight = _; ospfNextHop = Some edge} -> 
+    edge = e
+  
+let transferData fib e ps = 
+  match e with
+  | (a~b) ->
+    filter (fun p -> !(lpm (fib[a]) e p)) ps
+    
+let mergeData u ps1 ps2 = 
+  ps1 union ps2
+ 
+(* Dataplane for underlying IGP (OSPF) *)
+let dataplane = solution {init = initData; trans = transferData igp; merge = mergeData;}
+
+(* Part 3 - BGP *)
+
+(* External Peers, 0 and 5 each announce one BGP route *)
+let initBgp u = 
+  let d = createDict None in
+  match u with
+  | 0n -> 
+    let route = Some {nexthop = None; length = 0; communities = {}; external = true;} in
+    d[143.1.50.0/24 := route]
+  | 5n -> 
+   let route = Some {nexthop = None; length = 0; communities = {}; external = true;} in
+    d[143.1.55.0/24 := route]
+  | _ -> d
+
+(* Set nexthop, increase path lenght, this route is learned from an external BGP peer *)
+let transEBGP e route = 
+  match route with
+  | None -> None
+  | Some route -> 
+    Some {route with nexthop = flipEdge e; length = route.length + 1; external = true}
+
+(* Here we are setting the nexthop, although in practice iBGP does not do that
+(unless configured to do so). iBGP will send routes via packets and hence does
+not modify the nexthop. Instead the router that received an iBGP route and seeks
+to reach the destination performs a recursive lookup (i.e. to reach the external
+destination 140.0.0.0/24 it looks up how to reach the internal destination
+70.0.1.0/32). 
+
+This behavior is emulated by checking that the two routers can
+send packets between each other, but otherwise routes and packets between two iBGP peers
+are transferred through the so called virtual links.
+
+
+* iBGP does not increase the AS path length.
+* The route is learned from an iBGP peer so we set the external flag to false.
+*)
+let transIBGP e route = 
+  match route with
+  | None -> None
+  | Some route -> 
+   let (u~v) = e in 
+   (match (loopback u, loopback v) with
+    | (Some ipu, Some ipv) ->
+     (* Do not redistribute internal BGP routes, check iBGP peers can talk with each other*)
+     if (route.external = true && 
+        dataplane[v][{srcIp=ipu; dstIp=ipv}] && 
+        dataplane[u][{srcIp=ipv; dstIp=ipu}]) then
+        Some { route with nexthop =  flipEdge e; 
+               length = route.length; 
+               external = false}
+      else None
+    | _ -> None)
+  
+
+ let transferBgp e bgpRib =
+  match e with
+  (* External BGP connections *)
+  | 0~1 -> 
+    map (transEBGP e) bgpRib
+  | 5~4 -> 
+    map (transEBGP e) bgpRib
+  | 1~0 -> 
+    map (transEBGP e) bgpRib
+  | 4~5 -> 
+    map (transEBGP e) bgpRib
+  | _ ->
+    (* iBGP connections *)
+    map (transIBGP e) bgpRib
+
+let mergeBgpRoutes x y =
+  if x.length < y.length then x else
+  if y.length < x.length then y else
+  if x.external && !(y.external) then x
+  else if y.external && !(x.external) then y
+  else x
+
+(* if we use pickOption for both OSPF and BGP, and we inline type checker fails *)
+let pickOptionBgp f x y =
+  match (x,y) with
+  | (_, None) -> x  
+  | (None, _) -> y
+  | (Some a, Some b) -> Some (f a b)
+
+let mergeBGP u x y = combine (pickOptionBgp mergeBgpRoutes) x y
+
+(* Computing solutions to the EGP *)
+let egp = solution {init=initBgp; trans = transferBgp; merge = mergeBGP }
+
+(* Putting all protocols together - for fun, shows why combine would need to be more expressive*)
+
+
+(* Not concerned with administrative distance (just take the default BGP > OSPF), 
+   redistributions, etc. *)
+(*type fib = {bgpRoute: option[bgp]; ospfRoute: option[ospf]; selected: option[bool]}
+
+let p_BGP = true
+let p_OSPF = false 
+
+let init u =
+  combine (fun bgpRoute ospfRoute ->
+    { bgpRoute = bgpRoute; ospfRoute = ospfRoute;
+      selected = match (bgpRoute, ospfRoute) with
+                 | (Some _, _) -> Some true 
+                 | (_, Some _) -> Some false
+                 | (_, _) -> None}
+  ) (egp[u]) (igp[u])
+
+let trans e x = createDict None
+
+let merge u x y = combine (fun x y -> match (x,y) with
+                                      | (Some _, None) -> x
+                                      | (None, Some _) -> y
+                                      | (_, _) -> x) x y*)
