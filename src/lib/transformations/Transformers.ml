@@ -185,7 +185,7 @@ let rec map_back_value
     | VOption (Some v'), TOption ty' -> voption (Some (map_back_value v' ty'))
     | VTuple vs, TTuple tys -> vtuple (List.map2 map_back_value vs tys)
     | VRecord vmap, TRecord tmap -> vrecord @@ StringMap.mapi (fun l v -> map_back_value v (StringMap.find l tmap)) vmap
-    | VMap bdd, TMap (_, vty) ->
+    | VMap bdd, TMap (kty, vty) ->
       let op_key = e_val v, BatSet.PSet.empty in
       vmap (BddMap.map op_key (fun v -> map_back_value v vty) bdd)
     | VClosure _, _ -> failwith @@ name ^ ": Can't have closures in attributes"

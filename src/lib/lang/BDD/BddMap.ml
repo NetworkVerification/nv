@@ -6,7 +6,7 @@ open Nv_utils
 (* TODO: optimize variable ordering  *)
 type t = mtbdd
 
-  
+
 module B = BddUtils
 
 let create ~key_ty:ty (v: value) : t =
@@ -111,7 +111,17 @@ let vars_to_value vars ty =
         (* This will have been encoded as if it's a tuple.
            So get the tuple type and use that to decode *)
         let tup = TTuple (get_record_entries map) in
-        aux idx tup
+        let vals, i = aux idx tup in
+        let vals = match vals with | {v = VTuple vs; _} -> vs | _ -> failwith "impossible" in
+        (* Reconstruct the record *)
+        let open PrimitiveCollections in
+        let recmap =
+          List.fold_left2 (fun acc l v -> StringMap.add l v acc)
+            StringMap.empty
+            (RecordUtils.get_record_labels map)
+            vals
+        in
+        vrecord recmap, i
       | TNode ->
         (* Was encoded as int, so decode same way *)
         (match aux idx (TInt tnode_sz) with
@@ -141,7 +151,6 @@ let vars_to_value vars ty =
     (annotv ty v, i)
   in
   fst (aux 0 ty)
-
 
 let vars_to_values vars ty =
   let open RecordUtils in
@@ -230,7 +239,7 @@ let map ~op_key (f: value -> value) ((vdd, ty): t) : t =
         o
       | Some op -> op
     in
-      (User.apply_op1 op vdd, ty)
+    (User.apply_op1 op vdd, ty)
 
 let pick_default_value (map,ty) =
   let count = ref (-1) in
@@ -279,7 +288,7 @@ let bindings_repr ((map, ty): t) : (value * value) list =
   !bs
 
 module HashValue : (Hashtbl.HashedType with type t = Syntax.value) =
-struct  
+struct
   type t = Syntax.value
   let hash = hash_value ~hash_meta:false
   let equal = equal_values ~cmp_meta:false
@@ -392,8 +401,8 @@ module MergeMap = BatMap.Make (struct
 
 let unwrap x =
   match x with
-    | {v= VOption (Some v)} ->
-      (true, v)
+  | {v= VOption (Some v)} ->
+    (true, v)
   | _ -> (false, vbool false)
 
 let merge_op_cache = ref MergeMap.empty
@@ -448,9 +457,9 @@ let merge ?opt ~op_key (f: value -> value -> value) ((x, tyx): t)
         let o = User.make_op2
             ~memo:(Cudd.Memo.Global)
             ~commutative:false ~idempotent:false ~special g
-          (* User.make_op2
-           *   ~memo:(Memo.Cache (Cache.create2 ~maxsize:4096 ()))
-           *   ~commutative:false ~idempotent:false ~special g *)
+            (* User.make_op2
+             *   ~memo:(Memo.Cache (Cache.create2 ~maxsize:4096 ()))
+             *   ~commutative:false ~idempotent:false ~special g *)
         in
         merge_op_cache := MergeMap.add key o !merge_op_cache ;
         o
@@ -506,10 +515,10 @@ let rec bintRange i vars acc =
         *   incr j
         * done; *)
         bintRange (i+1) vars
-         ((List.map
-            (fun arr -> (splitArray arr i i Man.False) ::
-                        [splitArray arr i i Man.True]) acc)
-          |> List.concat))
+          ((List.map
+              (fun arr -> (splitArray arr i i Man.False) ::
+                          [splitArray arr i i Man.True]) acc)
+           |> List.concat))
 
 let int_of_bint vars =
   let size = Array.length vars in
@@ -544,9 +553,9 @@ let vars_to_multivalue vars ty =
       | TInt size ->
         let arr = Array.init (size) (fun i -> vars.(idx + size - 1 - i)) in
         MBit (Array.map (fun b -> B.tbool_to_obool b) arr), idx + size
-        (* let arr = Array.init (size) (fun i -> vars.(idx + i)) in
-         * let ranges = createRanges 0 arr in
-         * MInt ranges, idx + size *)
+      (* let arr = Array.init (size) (fun i -> vars.(idx + i)) in
+       * let ranges = createRanges 0 arr in
+       * MInt ranges, idx + size *)
       | TTuple ts ->
         let vs, i =
           List.fold_left
@@ -565,7 +574,7 @@ let vars_to_multivalue vars ty =
         (* Was encoded as int, so decode same way *)
         (match aux idx (TInt tnode_sz) with
          (* | MInt rs, i ->  MNode rs, i *)
-         | MBit rs, i -> MNode rs, i 
+         | MBit rs, i -> MNode rs, i
          | _ -> failwith "impossible")
       | TEdge ->
         (* Was encoded as tuple of nodes *)
@@ -612,6 +621,12 @@ let rec multiValue_to_string (mv : multiValue) =
     Printf.sprintf "%sn" (multiValue_to_string (MBit rs))
   | MEdge _ ->
     failwith "Todo printing of edges"
+
+(* Very dangerous! Changes the bdd to think it has keys of the given type.
+   This will cause everything to break unless the new type uses exactly the
+   same encoding as the original type, in which case this will only affect
+   printing. *)
+let change_key_type ty (map, _) = (map, ty)
 
 (*
 let splitArray vars i j elt =

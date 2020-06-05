@@ -67,3 +67,9 @@ type multiValue =
 val bindingsExact : t -> (multiValue * value) list
 
 val multiValue_to_string : multiValue -> string
+
+(* Very dangerous! Changes the bdd to think it has keys of the given type.
+   This will cause everything to break unless the new type uses exactly the
+   same encoding as the original type, in which case this will only affect
+   printing. *)
+val change_key_type : ty -> t -> t

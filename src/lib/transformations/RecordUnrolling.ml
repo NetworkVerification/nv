@@ -47,6 +47,13 @@ let map_back_transformer recurse _ v orig_ty =
     let mapped_back_vs = List.map2 recurse vs vtys in
     let zipped = List.combine vlabels mapped_back_vs in
     Some (vrecord (List.fold_left (fun acc (l, v) -> StringMap.add l v acc) StringMap.empty zipped))
+  | VMap bdd, TMap ((TRecord _ as rty), vty) ->
+    let op_key = e_val v, BatSet.PSet.empty in
+    let record = BddMap.map op_key (fun v -> recurse v vty) bdd
+                 |> BddMap.change_key_type rty
+                 |> vmap
+    in
+    Some record
   | _ -> None
 ;;
 
