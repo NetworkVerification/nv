@@ -62,7 +62,7 @@ For instructions on installing `mlcuddidl`, see Issue [#7](https://github.com/pr
 
 ```
 sudo apt update
-sudo apt install gcc g++ make m4 libgmp-dev python2.7 libz3-dev z3
+sudo apt install gcc g++ make m4 libgmp-dev python2.7 libz3-dev z3 libzmq3-dev zlib1g-dev
 ```
 
 ## Getting started with NV
