@@ -51,6 +51,9 @@ let run_smt_classic file cfg info decls fs =
 
   let get_answer decls fs =
     let solve_fun =
+      if cfg.kirigami then
+        Smt.solveKirigami
+      else
       if cfg.hiding then
         (SmtHiding.solve_hiding ~starting_vars:[] ~full_chan:(smt_query_file file))
       else
@@ -137,9 +140,9 @@ let run_smt file cfg info decls fs =
   (if cfg.smt_parallel then
      SmtUtils.smt_config.parallel <- true);
   (* if cfg.func then
-    run_smt_func file cfg info decls fs
-  else *)
-   run_smt_classic file cfg info decls fs
+     run_smt_func file cfg info decls fs
+     else *)
+  run_smt_classic file cfg info decls fs
 
 let run_simulator cfg _ decls fs =
   (* let net = mk_net cfg decls in
@@ -191,7 +194,23 @@ let run_compiled file _ _ decls fs =
     else
       CounterExample solution, fs
 
-let parse_input (args : string array) =
+let parse_input_aux cfg info file decls fs =
+  let decls, fs =
+    if cfg.unroll then
+      let decls, f = (* unrolling maps *)
+        Profile.time_profile "Map unrolling" (fun () -> MapUnrolling.unroll info decls)
+      in
+      (* Inline again after unrolling. Could probably optimize this away during unrolling *)
+      let decls = Profile.time_profile "Inlining" (fun () -> Inline.inline_declarations decls) in
+      (* (Typing.infer_declarations info decls, f :: fs) (* TODO: is type inf necessary here?*) *)
+      (decls, f :: fs)
+    else decls, fs
+  in
+  (cfg, info, file, decls, fs)
+
+let parse_input (args : string array) :
+  (Cmdline.t * Console.info * string * Syntax.network * Solution.map_back list) list
+  =
   let cfg, rest = argparse default "nv" args in
   Cmdline.set_cfg cfg ;
   Cmdline.update_cfg_dependencies ();
@@ -204,7 +223,7 @@ let parse_input (args : string array) =
   let decls = (ToEdge.toEdge_decl decls) :: decls in
   let decls = Typing.infer_declarations info decls in
   Typing.check_annot_decls decls ;
-  Wellformed.check info decls ;
+  if not cfg.no_wellformed then Wellformed.check info decls ;
   let decls, f = RecordUnrolling.unroll_declarations decls in
   let fs = [f] in
   let decls,fs = (* inlining definitions *)
@@ -219,15 +238,25 @@ let parse_input (args : string array) =
     else
       (decls,fs)
   in
-  let decls, fs =
-    if cfg.unroll then
-      let decls, f = (* unrolling maps *)
-        Profile.time_profile "Map unrolling" (fun () -> MapUnrolling.unroll info decls)
-      in
-      (* Inline again after unrolling. Could probably optimize this away during unrolling *)
-      let decls = Profile.time_profile "Inlining" (fun () -> Inline.inline_declarations decls) in
-      (* (Typing.infer_declarations info decls, f :: fs) (* TODO: is type inf necessary here?*) *)
-      (decls, f :: fs)
-    else decls, fs
-  in
-  (cfg, info, file, decls, fs)
+  if cfg.kirigami then
+    (* FIXME: this breaks ToEdge *)
+    (* NOTE: we partition after checking well-formedness so we can reuse edges that don't exist *)
+    let new_decls_base = List.map (fun d -> ("Base check:", d))
+        (Nv_kirigami.Partition.divide_decls cfg decls ~base_check:true) in
+    (* perform the base checks before the regular checks *)
+    let new_decls = List.map (fun d -> ("I and P checks:", d))
+        (Nv_kirigami.Partition.divide_decls cfg decls ~base_check:false) in
+    List.map (fun (_s, d) ->
+        (* print_endline @@ s; *)
+        (* print_endline @@ Printing.declarations_to_string d; *)
+        (* TODO: don't do type inference again after transformation *)
+        (* let d = Typing.infer_declarations info d in *)
+        parse_input_aux cfg info file d fs)
+      (* just the I-checks *)
+      (* new_decls *)
+      (* I-checks plus base checks *)
+      (* new_decls_base *)
+      (* (List.tl (List.tl new_decls_base)) *)
+      (new_decls_base @ new_decls)
+  else
+    [parse_input_aux cfg info file decls fs]

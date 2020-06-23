@@ -72,7 +72,7 @@ let ask_for_model query chan info env solver renaming nodes eassert =
   let model = solver |> parse_model in
   (match model with
    | MODEL m ->
-      Sat (translate_model_unboxed nodes m)
+     Sat (translate_model_unboxed nodes m)
    | OTHER s ->
      Printf.printf "%s\n" s;
      failwith "failed to parse a model"
@@ -136,6 +136,20 @@ let solve info query chan net_or_srp nodes assertions requires =
   ret
 
 let solveClassic info query chan decls =
+  let open Nv_lang.Syntax in
+  let module ExprEnc = (val expr_encoding smt_config) in
+  let module Enc =
+    (val (module SmtClassicEncoding.ClassicEncoding(ExprEnc) : SmtClassicEncoding.ClassicEncodingSig))
+  in
+  solve info query chan (fun () -> Enc.encode_z3 decls)
+    (Nv_datastructures.AdjGraph.nb_vertex (get_graph decls |> oget)) (get_asserts decls) (get_requires decls)
+
+(* Solver for Kirigami, which runs a base check query before the inductiveness checks.
+ * To do this, we basically make 2 calls to solve, first using a simpler set of assertions and requires,
+ * and then the ones as produced by cutting the network.
+*)
+let solveKirigami info query chan decls =
+  (* TODO: unfinished *)
   let open Nv_lang.Syntax in
   let module ExprEnc = (val expr_encoding smt_config) in
   let module Enc =

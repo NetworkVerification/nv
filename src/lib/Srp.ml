@@ -30,6 +30,7 @@ type queue = AdjGraph.Vertex.t QueueSet.queue
 
 type state = extendedSolution * queue
 
+(* add n nodes to the state, using the closure cl to generate the value for each node in 0..n *)
 let create_state n cl : state =
   let rec loop n (q: queue) m =
     if Pervasives.compare n 0 > 0 then

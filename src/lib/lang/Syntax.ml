@@ -145,7 +145,7 @@ and value =
 [@@deriving ord]
 
 and mtbdd = (value Mtbdd.t * ty)
-            [@compare fun _ _ -> failwith "Map value comparison not supported"]
+    [@compare fun _ _ -> failwith "Map value comparison not supported"]
 [@@deriving ord]
 
 and e =
@@ -180,7 +180,7 @@ and branches = { pmap  : exp PatMap.t;
 and func = {arg: var; argty: ty option; resty: ty option; body: exp}
 
 and closure = (env * func)
-              [@compare fun _ _ -> failwith "Map value comparison not supported"]
+    [@compare fun _ _ -> failwith "Map value comparison not supported"]
 [@@deriving ord]
 
 and env = {ty: ty Env.t; value: value Env.t}
@@ -280,6 +280,7 @@ let branchSize b =
 (* equality / hashing *)
 
 let equal_spans (s1: Span.t) (s2: Span.t) =
+  let open Span in
   s1.start = s2.start && s1.finish = s2.finish
 
 let equal_opt e o1 o2 =
@@ -347,7 +348,8 @@ let rec equal_inner_tys ty1 ty2 =
     false
 
 let rec equal_values ~cmp_meta (v1: value) (v2: value) =
-  let cfg = Cmdline.get_cfg () in
+  let open Cmdline in
+  let cfg = get_cfg () in
   let b =
     if cfg.hashcons then v1.vtag = v2.vtag
     else equal_vs ~cmp_meta v1.v v2.v
@@ -393,7 +395,8 @@ and equal_lists ~cmp_meta vs1 vs2 =
     equal_values ~cmp_meta v1 v2 && equal_lists ~cmp_meta vs1 vs2
 
 and equal_exps ~cmp_meta (e1: exp) (e2: exp) =
-  let cfg = Cmdline.get_cfg () in
+  let open Cmdline in
+  let cfg = get_cfg () in
   let b =
     if cfg.hashcons then e1.etag = e2.etag
     else equal_es ~cmp_meta e1.e e2.e
@@ -520,13 +523,14 @@ let rec hash_ty ty =
   | TNode -> 12
   | TEdge -> 13
 
-let hash_span (span: Span.t) = (19 * span.start) + span.finish
+let hash_span (span: Span.t) = let open Span in (19 * span.start) + span.finish
 
 let hash_opt h o =
   match o with None -> 1 | Some x -> (19 * h x) + 2
 
 let rec hash_value ~hash_meta v : int =
-  let cfg = Cmdline.get_cfg () in
+  let open Cmdline in
+  let cfg = get_cfg () in
   let m =
     if hash_meta then
       (19 * hash_opt hash_ty v.vty) + hash_span v.vspan
@@ -574,7 +578,8 @@ and hash_v ~hash_meta v =
   | VEdge (e1, e2) -> (19 * (e1 + 19 * e2)) + 10
 
 and hash_exp ~hash_meta e =
-  let cfg = Cmdline.get_cfg () in
+  let open Cmdline in
+  let cfg = get_cfg () in
   let m =
     if hash_meta then
       (19 * hash_opt hash_ty e.ety) + hash_span e.espan
@@ -748,12 +753,14 @@ let tint_of_size n = TInt n
 let tint_of_value n = TInt (Integer.size n)
 
 let exp e =
-  let cfg = Cmdline.get_cfg () in
+  let open Cmdline in
+  let cfg = get_cfg () in
   if cfg.hashcons then Hashcons.hashcons tbl_e e
   else {e; ety= None; espan= Span.default; etag= 0; ehkey= 0}
 
 let value v =
-  let cfg = Cmdline.get_cfg () in
+  let open Cmdline in
+  let cfg = get_cfg () in
   if cfg.hashcons then Hashcons.hashcons tbl_v v
   else {v; vty= None; vspan= Span.default; vtag= 0; vhkey= 0}
 
@@ -1074,6 +1081,11 @@ let bool_of_val (v : value) : bool option =
   | VBool b -> Some b
   | _ -> None
 
+let int_of_val (v : value) : int option =
+  match v.v with
+  | VInt i -> Some (Integer.to_int i)
+  | _ -> None
+
 let proj_var (n: int) (x: var) =
   let (s,i) = Var.from_var x in
   Var.to_var (Printf.sprintf "%s-proj-%d" s n,i)
@@ -1085,6 +1097,38 @@ let unproj_var (x : var) =
     with | Not_found -> (s, "-1")
   in
   (int_of_string n, Var.to_var (name, i))
+
+(** Get the variables referenced by the given type. *)
+let rec get_ty_vars (t: ty) : var list =
+  match t with
+  | TVar tv -> begin match !tv with
+      | Unbound (tn, _) -> [tn]
+      | Link t -> get_ty_vars t
+    end
+  | QVar n -> [n]
+  | TArrow (t1, t2) -> (get_ty_vars t1) @ (get_ty_vars t2)
+  | TTuple ts -> List.fold_left (fun l t -> (get_ty_vars t) @ l) [] ts
+  | TOption t -> get_ty_vars t
+  | TMap (t1, t2) -> (get_ty_vars t1) @ (get_ty_vars t2)
+  | TRecord tm -> StringMap.fold (fun _s t l -> (get_ty_vars t) @ l) tm []
+  | _ -> []
+
+(** Get the variables referenced by the given expression. *)
+let rec get_exp_vars (e: exp) : var list =
+  match e.e with
+  | EVar v -> [v]
+  | EOp (_, es) -> List.fold_left (fun l e -> (get_exp_vars e) @ l) [] es
+  | EFun func -> get_exp_vars func.body
+  | EApp (e1, e2) -> get_exp_vars e1 @ get_exp_vars e2
+  | EIf (e1, e2, e3) -> get_exp_vars e1 @ get_exp_vars e2 @ get_exp_vars e3
+  | ELet (v, e1, e2) -> [v] @ get_exp_vars e1 @ get_exp_vars e2
+  | ETuple es -> List.fold_left (fun l e -> (get_exp_vars e) @ l) [] es
+  | ESome e -> get_exp_vars e
+  | EMatch (e, bs) -> get_exp_vars e @ foldBranches (fun (_, e) l -> get_exp_vars e @ l) [] bs
+  | ETy (e, t) -> get_exp_vars e @ get_ty_vars t
+  | ERecord em -> StringMap.fold (fun _s e l -> (get_exp_vars e) @ l) em []
+  | EProject (e, _s) -> get_exp_vars e
+  | _ -> []
 
 open BatSet
 
@@ -1149,7 +1193,6 @@ let rec free (seen: Var.t PSet.t) (e: exp) : Var.t PSet.t =
         bs.plist
     in
     PSet.union (free seen e) bs
-
 
 let rec free_ty (seen: Var.t PSet.t) (e: exp) : (Var.t * ty) PSet.t =
   let cmp = fun (a,_) (b,_) -> Var.compare a b in
@@ -1241,11 +1284,13 @@ let compare_vs = compare_value
 let compare_es = compare_exp
 
 let compare_values v1 v2 =
-  let cfg = Cmdline.get_cfg () in
+  let open Cmdline in
+  let cfg = get_cfg () in
   if cfg.hashcons then v1.vtag - v2.vtag
   else Pervasives.compare v1 v2
 
 let compare_exps e1 e2 =
-  let cfg = Cmdline.get_cfg () in
+  let open Cmdline in
+  let cfg = get_cfg () in
   if cfg.hashcons then e1.etag - e2.etag
   else Pervasives.compare e1 e2

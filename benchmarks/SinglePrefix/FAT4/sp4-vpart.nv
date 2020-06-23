@@ -1,0 +1,64 @@
+(* vim: set syntax=ocaml: *)
+(* Partitioned version of sp4.nv -- vertically *)
+include "../../../examples/utils.nv"
+include "sp4.nv"
+
+(* destination: node 10 *)
+(* 70.0.19.0/24u5 or (1174409984, 24u5)*)
+(* 10's pod includes itself and 6, 8 and 2 *)
+
+(* split along edges between left and right *)
+let partition node = match node with
+  (* spine nodes *)
+  | 1n -> 0u8
+  | 3n -> 0u8
+  (* aggregation nodes *)
+  | 13n -> 0u8
+  | 14n -> 0u8
+  | 15n -> 0u8
+  | 16n -> 0u8
+  (* edge nodes *)
+  | 5n -> 0u8
+  | 11n -> 0u8
+  | 12n -> 0u8
+  | 19n -> 0u8
+  | _ -> 1u8
+
+let interface edge =
+  let any x = true in
+  let nothingButBgp x =
+    match x with
+    | {connected = c; static = s; ospf = o; _} ->
+      (* only have bgp routes *)
+      c = None && s = None && o = None
+  in
+  let hasOnlyBgp x =
+    match x with
+    | {connected = c; static = s; ospf = o; bgp = b; selected = sel} ->
+      (* connected, static and ospf aren't transferred,
+       * so transfer won't maintain their values
+      *)
+      c = None && s = None && o = None && isSome b && sel = Some 3u2
+  in
+  match edge with
+  (* 1 edges - 1 gets the route to 10 via 8 *)
+  | 1~8 -> Some nothingButBgp
+  | 1~18 -> Some nothingButBgp
+  | 8~1 -> Some hasOnlyBgp
+  | 18~1 -> Some hasOnlyBgp
+  (* 3 edges - 3 gets the route to 10 via 8 *)
+  | 3~8 -> Some nothingButBgp
+  | 3~18 -> Some nothingButBgp
+  | 8~3 -> Some hasOnlyBgp
+  | 18~3 -> Some hasOnlyBgp
+  (* 4 edges - 4 gets the route to 10 via 6 *)
+  | 4~13 -> Some hasOnlyBgp
+  | 4~15 -> Some hasOnlyBgp
+  | 13~4 -> Some nothingButBgp
+  | 15~4 -> Some nothingButBgp
+  (* 7 edges - 7 gets the route to 10 via 6 *)
+  | 7~13 -> Some hasOnlyBgp
+  | 7~15 -> Some hasOnlyBgp
+  | 13~7 -> Some nothingButBgp
+  | 15~7 -> Some nothingButBgp
+  | _ -> None

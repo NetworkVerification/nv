@@ -2,6 +2,7 @@
 type t =
   { debug: bool       [@short "-d"]    (** enable a debugging backtrace for nv     *)
   ; verbose: bool     [@short "-v"]    (** print out the srp solution              *)
+  ; no_wellformed: bool                (** don't check if the network is well-formed *)
   ; simulate: bool    [@short "-s"]    (** simulate the network on given inputs    *)
   ; bound: int option                  (** bound the number of simulation steps    *)
   ; smt: bool         [@short "-m"]    (** search for bugs using an smt solver     *)
@@ -20,19 +21,22 @@ type t =
   (* ; draw: bool                         (\** emits a .jpg file of the graph          *\) *)
   ; depth: int                         (** search depth for refinement procedure   *)
   ; check_monotonicity: bool           (** checks monotonicity of trans function   *)
+  ; kirigami: bool    [@short "-k"]     (** enable partitioning features           *)
+  ; print_remap: bool  [@short "-R"]   (** print the remapping of nodes in kirigami  *)
   ; link_failures: int                 (** adds at most k link failures to the network  *)
   ; slicing: bool                      (** Try to slice the network's attribute *)
   ; parallelize : int option [@short "-p"] (** Try to parallelize using n cores **)
   }
 [@@deriving
   show
-  , argparse
-      { positional= [("file", "nv policy file")]
-      ; description= "nv: a network verification framework" }]
+, argparse
+    { positional= [("file", "nv policy file")]
+    ; description= "nv: a network verification framework" }]
 
 let default =
   { debug= false
   ; verbose= false
+  ; no_wellformed = false
   ; simulate= false
   ; bound= None
   ; smt= false
@@ -52,6 +56,8 @@ let default =
   ; check_monotonicity=false
   ; link_failures=0
   ; hiding=false
+  ; kirigami = false
+  ; print_remap = false
   ; slicing=false
   ; parallelize= None
   }
@@ -73,4 +79,5 @@ let update_cfg_dependencies () =
   if !cfg.slicing then cfg := {!cfg with unbox=true};
   if !cfg.hiding then cfg := {!cfg with unbox=true};
   if !cfg.smt_parallel then cfg := {!cfg with finite_arith=true};
+  if !cfg.print_remap then cfg := {!cfg with kirigami=true};
   ()

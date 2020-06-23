@@ -1,0 +1,55 @@
+(* vim: set syntax=ocaml: *)
+
+(* An example showcasing how we can find
+ * overly strong hypotheses when there are multiple
+ * solutions to the network.
+ *)
+type attribute = int
+
+symbolic x : int
+
+let nodes = 3
+
+let edges = {
+  0=1;
+  0=2;
+  1=2;
+}
+
+let init node = match node with
+  | 0n -> x
+  | 1n -> 5
+  | 2n -> 6
+
+let trans edge x = x + 1
+
+let merge node x y = if x < y then x else y
+
+let partition node = match node with
+  | 0n -> 0u8
+  | _ -> 1u8
+
+(* There are two solutions to this network:
+ * Solution 1:
+ *   0
+ *  / \
+ * 1   2
+ * (x < 5)
+ *
+ * Solution 2:
+ *   1
+ *  / \
+ * 0   2
+ * (x > 5)
+ *
+ * If we try to make the annotation on the edges leaving 
+ * 0 not include the possible case of L(0) = 6 (solution 2),
+ * or L(0) < 6 (solution 1)
+ * then the inductiveness checks will fail!
+ *)
+let interface edge = match edge with
+  | 0~1 -> Some (fun a -> a <= 7)
+  | 1~0 -> Some (fun a -> a <= 6)
+  | 0~2 -> Some (fun a -> a <= 7)
+  | 2~0 -> Some (fun a -> a <= 7)
+  | _ -> None

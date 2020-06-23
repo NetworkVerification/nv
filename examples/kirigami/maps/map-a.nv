@@ -1,0 +1,31 @@
+include "../utils.nv"
+
+type attribute = dict[int,option[int]]
+
+symbolic h_1_0 : dict[int,option[int]]
+let pred x = x[3] = Some 3
+require (pred h_1_0)
+
+let nodes = 3
+
+let edges = {
+  1-0;
+  0-2;
+}
+
+let merge node x y =
+  match node with
+  | 1n -> x
+  | 2n -> y
+  | 0n -> let f = mapbetter (fun x y -> if x < y then x else y) in
+    combine f x y
+
+let trans edge x = match edge with
+  | 0~2 -> map (fun x -> mapo (fun x -> x + 1) x) x
+  | 1~0 -> x
+
+let init node =
+  match node with
+  | 0n -> let m = createDict None in m[0 := Some 0]
+  | 1n -> h_1_0
+  | 2n -> let m = createDict None in m[0 := Some 1]

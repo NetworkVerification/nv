@@ -1,0 +1,14 @@
+(library
+  (name nv_kirigami)
+  (public_name nv.kirigami)
+  (libraries
+    nv_lang
+    nv_smt
+    nv_datastructures
+    nv_utils
+    integers
+    str
+    batteries)
+  (preprocess
+    (pps ppx_deriving.std ppx_deriving_argparse))
+)

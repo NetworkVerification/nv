@@ -3,6 +3,7 @@
   (public_name nv)
   (modes native)
   (libraries
+    nv_kirigami
     nv_lang
     nv_smt
     nv_datastructures

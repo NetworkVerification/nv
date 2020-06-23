@@ -333,13 +333,20 @@ val free_ty : Var.t BatSet.PSet.t -> exp -> (Var.t * ty) BatSet.PSet.t
 
 val free_dead_vars : exp -> exp
 
-(** [get_ty_from_tyexp t] @return the type wrapped by [Ty] or the type
+(** [get_ty_from_tyexp t]
+ * @return the type wrapped by [Ty] or the type
     of the expression wrapped by [Exp]. Fails if the expression has no
     type. *)
 val get_ty_from_tyexp: ty_or_exp -> ty
 
 val bool_of_val: value -> bool option
 
+val int_of_val : value -> int option
+
 val proj_var: int -> var -> var
 
 val unproj_var: var -> (int * var)
+
+val get_ty_vars : ty -> var list
+
+val get_exp_vars : exp -> var list

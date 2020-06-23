@@ -1,0 +1,42 @@
+type attribute = (int, int)
+
+let nodes = 3
+
+let edges = { 0=1; 1=2; 2=0; }
+
+let min a b = if a < b then a else b
+
+let merge n x y =
+  let (x1, x2) = x in
+  let (y1, y2) = y in
+  (min x1 y1, min x2 y2)
+
+let trans e x = x
+
+let init n = match n with
+ | 0n -> (3, 3)
+ | 1n -> (1, 2)
+ | 2n -> (2, 1)
+
+let assert n x =
+  let (x1, x2) = x in
+  x1 < 2 && x2 < 2
+
+let partition n = match n with
+ | 0n -> 0u8
+ | 1n -> 1u8
+ | 2n -> 2u8
+
+let interface edge = 
+  let le a b =
+    let (a1, a2) = a in
+    let (b1, b2) = b in
+    a1 <= b1 && a2 <= b2
+  in
+  match edge with
+  | 0~1 -> Some (fun a -> le a (3, 3))
+  | 0~2 -> Some (fun a -> le a (3, 3))
+  | 1~0 -> Some (fun a -> le a (1, 1))
+  | 1~2 -> Some (fun a -> le a (1, 1))
+  | 2~0 -> Some (fun a -> le a (1, 1))
+  | 2~1 -> Some (fun a -> le a (1, 1))

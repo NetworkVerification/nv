@@ -1,0 +1,32 @@
+(* vim: set syntax=ocaml: *)
+
+type attribute = (int, dict[tedge, int])
+
+let nodes = 4
+
+let edges = {
+  0=1;
+  1=2;
+  1=3;
+}
+
+let trans e x = 
+  let (d, es) = x in
+  let old_count = es[e] in
+  (d + 1, es[e := old_count + 1])
+
+let merge n x1 x2 =
+  let (d1, es1) = x1 in
+  let (d2, es2) = x2 in
+  if d1 < d2 then (d1, es1) else (d2, es2)
+
+let init node =
+  let es = createDict 0 in
+  match node with
+  | 0n -> (0, es)
+  | _ -> (15, es)
+
+(* Assert that no edge is used more than once by any transfer *)
+let assert node x =
+  let (_, es) = x in
+  foldEdges (fun e x acc -> x < 2 && acc) es true
