@@ -109,11 +109,14 @@ let check_annot_decl (d: declaration) =
   | DSymbolic (_, Exp e)
   | DAssert e
   | DPartition e (* partitioning *)
-  | DInterface e (* partitioning *)
   | DRequire e ->
     check_annot e
-  | DSolve {var_names; init; trans; merge; _} ->
-    check_annot var_names; check_annot init; check_annot trans; check_annot merge
+  | DSolve {var_names; init; trans; merge; interface; _} ->
+    begin check_annot var_names; check_annot init; check_annot trans; check_annot merge;
+      match interface with
+      | Some i -> check_annot i
+      | None -> ()
+    end
   | DNodes _ | DEdges _ | DSymbolic _ | DUserTy _ -> ()
 
 let rec check_annot_decls (ds: declarations) =
@@ -885,23 +888,24 @@ and infer_declaration i info env record_types d : ty Env.t * declaration =
     let ty = oget e'.ety in
     unify info e ty partition_ty ;
     (Env.update env (Var.create "partition") ty, DPartition e')
-  | DInterface _ ->
-    failwith "Not implemented (requires knowing the attribute type)"
-    (* let e' = infer_exp e in
-    let ty = oget e'.ety in
-    unify info e ty (interface_ty aty) ;
-    (Env.update env (Var.create "interface") ty, DInterface e') *)
-  (* end partitioning *)
   | DRequire e ->
     let e' = infer_exp e in
     let ty = oget e'.ety in
     unify info e ty TBool ; (env, DRequire e')
-  | DSolve {aty; var_names; init; trans; merge} ->
+  | DSolve {aty; var_names; init; trans; merge; interface} ->
     (* Note: This only works before map unrolling *)
     let solve_aty = match aty with | Some ty -> ty | None -> fresh_tyvar () in
     let init' = infer_exp init in
     let trans' = infer_exp trans in
     let merge' = infer_exp merge in
+    let interface' = match interface with
+      | Some interf -> begin
+          let interf' = infer_exp interf in
+          unify info interf (oget interf'.ety) (interface_ty solve_aty) ;
+          Some interf'
+        end
+      | None -> None
+    in
     unify info init (oget init'.ety) (init_ty solve_aty) ;
     unify info trans (oget trans'.ety) (trans_ty solve_aty) ;
     unify info merge (oget merge'.ety) (merge_ty solve_aty) ;
@@ -909,7 +913,7 @@ and infer_declaration i info env record_types d : ty Env.t * declaration =
     let ety = TMap (TNode, solve_aty) in
     (Env.update env var ety,
      DSolve {aty = Some solve_aty; var_names = aexp (evar var, (Some ety), var_names.espan);
-             init = init'; trans = trans'; merge = merge'})
+             init = init'; trans = trans'; merge = merge'; interface = interface'})
   | DUserTy _ | DNodes _ | DEdges _ -> (env, d)
 
 let canonicalize_type (ty : ty) : ty =

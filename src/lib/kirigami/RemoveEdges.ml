@@ -37,5 +37,3 @@ let make_toplevel (edges: edge list) (toplevel_transformer : 'a Transformers.top
     (exp_transformer edges) (map_back_transformer edges) mask_transformer
 
 let remap_declarations edges = make_toplevel edges Transformers.transform_declarations
-let remap_net edges = make_toplevel edges Transformers.transform_network
-let remap_srp edges = make_toplevel edges Transformers.transform_srp

@@ -47,18 +47,14 @@
   let local_let (id,params) body body_span span =
     (id, make_fun params body body_span span)
 
-  (* partitioning identifiers *)
+  (* partitioning identifier *)
   let partition_identifier = "partition"
-  let interface_identifier = "interface"
 
   let global_let (id,params) body body_span span =
     let e = make_fun params body body_span span in
-    (* partitioning cases *)
+    (* partitioning case *)
     if Var.name id = partition_identifier then
       DPartition e
-    else if Var.name id = interface_identifier then
-      DInterface e
-    (* end partitioning cases *)
     else
       DLet (id, None, e)
 
@@ -132,13 +128,13 @@
       |> Integer.of_int
 
   let make_dsolve x r =
-    let (init, trans, merge) =
+    let (init, trans, merge, interface) =
       match r.e with
       | ERecord m ->
-        StringMap.find "init" m, StringMap.find "trans" m, StringMap.find "merge" m
+        StringMap.find "init" m, StringMap.find "trans" m, StringMap.find "merge" m, StringMap.Exceptionless.find "interface" m
       | _ -> failwith "solution must take a direct record expression"
     in
-    DSolve ({aty = None; var_names = evar x; init; trans; merge})
+    DSolve ({aty = None; var_names = evar x; init; trans; merge; interface})
 
 %}
 

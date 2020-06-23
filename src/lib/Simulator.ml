@@ -62,7 +62,7 @@ let simulate_declaration ~(throw_requires: bool) (graph : AdjGraph.t) (state : s
           {state with env = Env.update env x mapval; sols = (x, {sol_val = mapval; mask = None; attr_ty = oget solve.aty}) :: state.sols}
         | _ -> failwith "Not implemented" (* Only happens if we did map unrolling *)
       end
-    | DUserTy _ | DPartition _ | DInterface _ | DNodes _ | DEdges _ -> state
+    | DUserTy _ | DPartition _ | DNodes _ | DEdges _ -> state
 ;;
 
 let simulate_declarations ~(throw_requires: bool) (decls : declarations) : Solution.t =

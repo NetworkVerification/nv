@@ -141,11 +141,16 @@ let collect_in_decl (symbolics : var list) (d : declaration) (acc : maplist) : m
     collect_in_ty ty acc
   | DAssert exp
   | DPartition exp (* partitioning *)
-  | DInterface exp (* partitioning *)
   | DRequire exp ->
     collect_in_exp exp acc
-  | DSolve {var_names; init; trans; merge; _} ->
-    List.fold_right collect_in_exp [var_names; init; trans; merge] acc
+  | DSolve {var_names; init; trans; merge; interface; _} ->
+    begin
+      let intflist = match interface with
+        | Some i -> [i]
+        | None -> []
+      in
+      List.fold_right collect_in_exp ([var_names; init; trans; merge] @ intflist) acc
+    end
   | DNodes _
   | DEdges _ ->
     acc

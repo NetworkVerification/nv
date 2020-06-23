@@ -23,12 +23,15 @@ let iter_exp_decl f d =
   | DLet (_, _, e)
   | DAssert e
   | DPartition e (* partitioning *)
-  | DInterface e (* partitioning *)
   | DRequire e
   | DSymbolic (_, Exp e) ->
     iter_exp (f d) e
-  | DSolve {var_names; init; trans; merge; _} ->
-    List.iter (iter_exp (f d)) [var_names; init; trans; merge]
+  | DSolve {var_names; init; trans; merge; interface; _} ->
+    let intf = match interface with
+      | Some i -> [i]
+      | None -> []
+    in
+    List.iter (iter_exp (f d)) ([var_names; init; trans; merge] @ intf)
   | DNodes _ | DEdges _ | DSymbolic _ | DUserTy _ -> ()
 
 let rec iter_exp_decls f ds = BatList.iter (iter_exp_decl f) ds

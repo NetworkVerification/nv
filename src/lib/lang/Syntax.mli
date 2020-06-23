@@ -138,7 +138,7 @@ val branchToList: branches -> (PatMap.key * exp) list
 val branchSize: branches -> unit
 
 (* var_names should be an exp that uses only the EVar and ETuple constructors *)
-type solve = {aty: ty option; var_names: exp; init : exp; trans: exp; merge: exp}
+type solve = {aty: ty option; var_names: exp; init : exp; trans: exp; merge: exp; interface: exp option}
 
 type declaration =
   | DLet of var * ty option * exp
@@ -148,7 +148,6 @@ type declaration =
   | DSolve of solve
   | DRequire of exp
   | DPartition of exp (* partition ids *)
-  | DInterface of exp (* interface hypotheses *)
   | DNodes of int
   | DEdges of (node * node) list
 

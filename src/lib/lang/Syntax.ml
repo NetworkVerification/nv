@@ -188,7 +188,8 @@ and env = {ty: ty Env.t; value: value Env.t}
 and ty_or_exp = Ty of ty | Exp of exp
 
 (* var_names should be an exp that uses only the EVar and ETuple constructors *)
-type solve = {aty: ty option; var_names: exp; init : exp; trans: exp; merge: exp}
+(* interface is an optional expression to describe the network hypotheses *)
+type solve = {aty: ty option; var_names: exp; init : exp; trans: exp; merge: exp; interface: exp option}
 
 type declaration =
   | DLet of var * ty option * exp
@@ -198,7 +199,6 @@ type declaration =
   | DSolve of solve
   | DRequire of exp
   | DPartition of exp (* partition ids *)
-  | DInterface of exp (* interface hypotheses *)
   | DNodes of int
   | DEdges of (node * node) list
 
@@ -1002,7 +1002,7 @@ let get_trans ds =
   get_decl ds (fun d -> match d with DLet(x, _, e) when Var.name x = "trans" -> Some e | _ -> None)
 
 let get_init ds =
-  get_decl ds (fun d -> match d with DLet(x, _, e) when Var.name x = "merge" -> Some e | _ -> None)
+  get_decl ds (fun d -> match d with DLet(x, _, e) when Var.name x = "init" -> Some e | _ -> None)
 
 let get_asserts ds =
   BatList.filter_map (fun d -> match d with DAssert e -> Some e | _ -> None ) ds
@@ -1016,9 +1016,7 @@ let get_partition ds =
       match d with DPartition e -> Some e | _ -> None )
 
 let get_interface ds =
-  get_decl ds (fun d ->
-      match d with DInterface e -> Some e | _ -> None )
-(* end partitioning *)
+  get_decl ds (fun d -> match d with DLet(x, _, e) when Var.name x = "interface" -> Some e | _ -> None)
 
 let get_edges ds =
   try

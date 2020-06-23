@@ -209,7 +209,7 @@ let parse_input_aux cfg info file decls fs =
   (cfg, info, file, decls, fs)
 
 let parse_input (args : string array) :
-  (Cmdline.t * Console.info * string * Syntax.network * Solution.map_back list) list
+  (Cmdline.t * Console.info * string * Syntax.declarations * Solution.map_back list) list
   =
   let cfg, rest = argparse default "nv" args in
   Cmdline.set_cfg cfg ;
@@ -248,7 +248,7 @@ let parse_input (args : string array) :
         (Nv_kirigami.Partition.divide_decls cfg decls ~base_check:false) in
     List.map (fun (_s, d) ->
         (* print_endline @@ s; *)
-        (* print_endline @@ Printing.declarations_to_string d; *)
+        print_endline @@ Printing.declarations_to_string d;
         (* TODO: don't do type inference again after transformation *)
         (* let d = Typing.infer_declarations info d in *)
         parse_input_aux cfg info file d fs)

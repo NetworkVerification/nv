@@ -46,4 +46,4 @@ val transform_merge : exp -> ty -> SrpRemapping.partitioned_srp -> exp
  * | _ -> assert n x
  * where p is a predicate used in the require clause
 *)
-val transform_assert : exp option -> ty -> SrpRemapping.partitioned_srp -> exp
+val outputs_assert : exp -> ty -> SrpRemapping.partitioned_srp -> exp

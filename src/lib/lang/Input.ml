@@ -84,11 +84,11 @@ let process_includes (fname : string) : string list =
 ;;
 
 module DeclG = Graph.Persistent.Digraph.Concrete(struct
-  type t = Syntax.declaration
-  let compare = Pervasives.compare
-  let equal = (fun a b -> compare a b = 0)
-  let hash = Hashtbl.hash
-end)
+    type t = Syntax.declaration
+    let compare = Pervasives.compare
+    let equal = (fun a b -> compare a b = 0)
+    let hash = Hashtbl.hash
+  end)
 
 module DeclSort = Graph.Topological.Make(DeclG)
 
@@ -97,30 +97,38 @@ module DeclSort = Graph.Topological.Make(DeclG)
   * - the map from each variable to the declaration it references.
   * We can then combine these maps to get a map from each declaration
   * to the list of declarations it depends on.
-  *)
-let get_decl_vars (var_m, decl_m) d = 
+*)
+let get_decl_vars (var_m, decl_m) d =
   let open Syntax in
   let extend_map_list k newv m = Map.modify_opt k (fun oldv -> match oldv with
-    | Some old -> Some (newv @ old)
-    | None -> Some (newv)) m
+      | Some old -> Some (newv @ old)
+      | None -> Some (newv)) m
   in
   match d with
   | DLet (v, _, e) -> let vars = get_exp_vars e in
     (extend_map_list d vars var_m, Map.add v d decl_m)
   | DSymbolic (v, t_or_e) -> let deps = match t_or_e with
-    | Ty t -> (get_ty_vars t)
-    | Exp e -> (get_exp_vars e)
+      | Ty t -> (get_ty_vars t)
+      | Exp e -> (get_exp_vars e)
     in (extend_map_list d deps var_m, Map.add v d decl_m)
-  | DATy t -> (extend_map_list d (get_ty_vars t) var_m, decl_m)
   | DUserTy (v, t) -> let deps = get_ty_vars t in
     (extend_map_list d deps var_m, Map.add v d decl_m)
-  | DMerge e -> (extend_map_list d (get_exp_vars e) var_m, decl_m)
-  | DTrans e -> (extend_map_list d (get_exp_vars e) var_m, decl_m)
-  | DInit e -> (extend_map_list d (get_exp_vars e) var_m, decl_m)
   | DAssert e -> (extend_map_list d (get_exp_vars e) var_m, decl_m)
   | DRequire e -> (extend_map_list d (get_exp_vars e) var_m, decl_m)
   | DPartition e -> (extend_map_list d (get_exp_vars e) var_m, decl_m)
-  | DInterface e -> (extend_map_list d (get_exp_vars e) var_m, decl_m)
+  | DSolve {aty; var_names; init; trans; merge; interface} -> begin
+      let ty_vars = match aty with
+        | Some t -> (get_ty_vars t)
+        | None -> [] in
+      let interface_vars = match interface with
+        | Some i -> (get_exp_vars i)
+        | None -> [] in
+      (extend_map_list d (ty_vars @
+                          (get_exp_vars var_names) @
+                          (get_exp_vars init) @
+                          (get_exp_vars trans) @
+                          (get_exp_vars merge) @ interface_vars) var_m, decl_m)
+    end
   (* DNodes and DEdges *)
   | _ -> (extend_map_list d [] var_m, decl_m)
 
@@ -135,7 +143,7 @@ let sort_decls ds =
    * - Sort the symbolics based on which depends on another
    * - Sort the let bindings based on which depends on another
    * - Add links from the let bindings to all other declarations
-   *)
+  *)
   let (decl_to_vars, var_to_decl) = List.fold_left get_decl_vars (Map.empty, Map.empty) ds in
   let map_vars_to_decls vars : declaration list =
     (* if a variable is not in var_to_decls, we just ignore it,

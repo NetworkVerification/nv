@@ -328,7 +328,6 @@ let rec declaration_to_string ?(show_types=false) d =
       (exp_to_string var_names) (match aty with | None -> "None" | Some ty -> ty_to_string ty)
       (exp_to_string init) (exp_to_string trans) (exp_to_string merge)
   | DPartition e -> "let partition = " ^ exp_to_string e (* partitioning *)
-  | DInterface e -> "let interface = " ^ exp_to_string e (* partitioning *)
   | DRequire e -> "require " ^ exp_to_string e
   | DNodes n -> "let nodes = " ^ string_of_int n
   | DEdges es ->

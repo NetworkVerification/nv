@@ -123,15 +123,18 @@ let alpha_convert_declaration bmap (env: Var.t Env.t)
     map_back bmap y x ;
     let env = Env.update env x y in
     (env, DSymbolic (y, Ty ty))
-  | DSolve {aty; var_names; init; trans; merge} ->
+  | DSolve {aty; var_names; init; trans; merge; interface} ->
+    let interface = match interface with
+      | Some intf -> Some (alpha_convert_exp env intf)
+      | None -> None
+    in
     let init, trans, merge =
       alpha_convert_exp env init, alpha_convert_exp env trans, alpha_convert_exp env merge
     in
     let env, y = rename_solve_vars bmap env var_names in
-    (env, DSolve {aty; var_names = y; init; trans; merge})
+    (env, DSolve {aty; var_names = y; init; trans; merge; interface})
   | DAssert e -> (env, DAssert (alpha_convert_exp env e))
   | DPartition e -> (env, DPartition (alpha_convert_exp env e)) (* partitioning *)
-  | DInterface e -> (env, DInterface (alpha_convert_exp env e)) (* partitioning *)
   | DRequire e -> (env, DRequire (alpha_convert_exp env e))
   | DUserTy _ | DNodes _ | DEdges _ -> (env, d)
 

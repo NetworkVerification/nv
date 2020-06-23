@@ -193,27 +193,19 @@ let assert_branch (x: var) (attr: ty) (outn: Vertex.t)  (_, pred) (b: branches) 
   | Some p -> addBranch node_pat (annot TBool (eapp p (annot attr (evar x)))) b
   | None -> addBranch node_pat (annot TBool (e_val (vbool true))) b
 
-let transform_assert (e: exp option) (attr: ty) (parted_srp: SrpRemapping.partitioned_srp) : exp =
-  let { node_map; inputs; outputs; _ } : SrpRemapping.partitioned_srp = parted_srp in
-  let node_var = Var.fresh "node" in
-  let soln_var = Var.fresh "x" in
-  let etrue = annot TBool (e_val (vbool true)) in
-  (* If the old expression was Some, apply the assert with the given variables;
-   * if it was None, simply create an expression evaluating to true *)
-  let apply_assert node soln = match e with
-    (* Apply the old assert and simplify if possible *)
-    | Some e -> InterpPartial.interp_partial (annot TBool (apps e [(annot TNode node); (annot attr soln)]))
-    | None -> etrue
-  in
-  (* Map the new base nodes to the old ones using the map_match *)
-  let map_match = match_of_node_map node_map emptyBranch in
-  let base_branches = mapBranches (fun (pat, exp) -> (pat, apply_assert exp (evar soln_var))) map_match in
+(* Check that the solution's value at a particular output vertex satisfies the predicate. *)
+let add_output_pred (attr: ty) (sol: exp) (outn: Vertex.t) (_, pred) acc =
+  match pred with
+  | Some p -> (annot TBool (eapp p (annot attr (eop MGet [sol; (annot TNode (node_to_exp outn))])))) :: acc
+  | None -> acc
+
+(* Check each output's solution in the sol variable. *)
+let outputs_assert (sol: exp) (attr: ty) (parted_srp: SrpRemapping.partitioned_srp) : exp =
+  let { outputs; _ } : SrpRemapping.partitioned_srp = parted_srp in
   (* re-map every output to point to its corresponding predicate *)
-  let output_branches = VertexMap.fold (assert_branch soln_var attr) outputs base_branches in
-  let input_branches = VertexMap.fold (fun innode _ b -> addBranch (node_to_pat innode) etrue b) inputs output_branches in
-  let match_exp = amatch node_var TNode input_branches in
-  let soln_lambda = efunc (funcFull soln_var (Some attr) (Some TBool) match_exp) in
-  let lambda = efunc (funcFull node_var (Some TNode) (Some (TArrow (attr, TBool))) soln_lambda) in
-  match e with
-  | Some e -> (wrap e lambda)
-  | None -> lambda
+  let output_preds = VertexMap.fold (add_output_pred attr sol) outputs [] in
+  (* Return a conjunction of the output assertions *)
+  if (List.length output_preds) > 1 then
+    annot TBool (eop And output_preds)
+  else
+    annot TBool (List.hd output_preds)

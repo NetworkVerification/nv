@@ -158,16 +158,19 @@ let transform_decl ~(name:string) (transformers:transformers) (d : declaration) 
   match d with
   | DLet (x, tyo, e) -> DLet (x, omap transform_ty tyo, transform_exp e)
   | DAssert e -> DAssert (transform_exp e)
-  | DSolve {aty; var_names; init; trans; merge} ->
+  | DSolve {aty; var_names; init; trans; merge; interface} ->
+    let interface = match interface with
+      | Some intf -> Some (transform_exp intf)
+      | None -> None
+    in
     let var_names, init, trans, merge =
       transform_exp var_names, transform_exp init, transform_exp trans, transform_exp merge
     in
-    DSolve {aty = omap transform_ty aty; var_names; init; trans; merge}
+    DSolve {aty = omap transform_ty aty; var_names; init; trans; merge; interface}
   | DSymbolic (x, toe) -> let (x, toe') = transform_symbolic (x, toe) in DSymbolic (x, toe')
   | DRequire e -> DRequire (transform_exp e)
   | DUserTy (x, ty) -> DUserTy (x, transform_ty ty)
   | DPartition e -> DPartition (transform_exp e)
-  | DInterface e -> DInterface (transform_exp e)
   | DNodes _ | DEdges _ -> d
 ;;
 

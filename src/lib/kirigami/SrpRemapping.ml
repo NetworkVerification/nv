@@ -145,7 +145,7 @@ let remap_edge edge (vmaps: (int * (Vertex.t option VertexMap.t)) list) : (Edge.
  * A cross edge (u,v) instead gets split and added to two lists:
  * one for the (u, y) edge and another for the (x, v) edge.
 *)
-let map_edges_to_parts predf partitions (old_edge, (edge, srp_edge)) =
+let map_edges_to_parts partitions (old_edge, (edge, srp_edge)) =
   let add_edge j partition =
     match srp_edge with
     | Internal i' -> {
@@ -153,7 +153,7 @@ let map_edges_to_parts predf partitions (old_edge, (edge, srp_edge)) =
                        edge_map = EdgeMap.add old_edge (if i' = j then Some edge else None) partition.edge_map;
       }
     | Cross (i1, i2) -> begin
-        let pred : exp option = predf old_edge in
+        (* let pred : exp option = predf old_edge in *)
         let (u, v) = edge in
         (* output case *)
         if i1 = j then
@@ -164,7 +164,7 @@ let map_edges_to_parts predf partitions (old_edge, (edge, srp_edge)) =
             partition with nodes = partition.nodes + 1;
                            edges = new_edge :: partition.edges;
                            edge_map = EdgeMap.add old_edge (Some new_edge) partition.edge_map;
-                           outputs = VertexMap.add outnode (u, pred) partition.outputs;
+                           outputs = VertexMap.add outnode (u, None) partition.outputs;
           }
         else
           (* input case *)
@@ -177,7 +177,7 @@ let map_edges_to_parts predf partitions (old_edge, (edge, srp_edge)) =
           let input_exp = {
             base = v;
             var = Var.fresh (Printf.sprintf "hyp_%s" (Edge.to_string old_edge));
-            pred;
+            pred = None;
           } in
           {
             partition with nodes = partition.nodes + 1;
@@ -196,7 +196,6 @@ let map_edges_to_parts predf partitions (old_edge, (edge, srp_edge)) =
 (** Map each edge in edges to a partitioned_srp based on where its endpoints lie. *)
 let divide_edges
     (edges: Edge.t list)
-    (predf: Edge.t -> exp option)
     (vmaps: (int * (Vertex.t option VertexMap.t)) list)
     (trans: transcomp)
   : (partitioned_srp list)
@@ -206,16 +205,16 @@ let divide_edges
   in
   let initial = List.map partitioned_srp_from_nodes vmaps in
   let new_edges = List.map (fun e -> (e, remap_edge e vmaps)) edges in
-  List.fold_left (map_edges_to_parts predf) initial new_edges
+  List.fold_left map_edges_to_parts initial new_edges
 
 (** Generate a list of partitioned_srp from the given list of nodes and edges,
  * along with their partitioning function and interface function.
 *)
-let partition_edges (nodes: Vertex.t list) (edges: Edge.t list) (partf: Vertex.t -> int) (intf: Edge.t -> exp option) (trans: transcomp) =
+let partition_edges (nodes: Vertex.t list) (edges: Edge.t list) (partf: Vertex.t -> int) (trans: transcomp) =
   let (node_srp_map, num_srps) = map_vertices_to_parts nodes partf in
   (* add 1 to num_srps to convert from max partition # to number of SRPS *)
   let divided_nodes = divide_vertices node_srp_map (num_srps + 1) in
-  divide_edges edges intf divided_nodes trans
+  divide_edges edges divided_nodes trans
 
 let ty_transformer _ ty = Some ty
 
@@ -253,5 +252,3 @@ let make_toplevel (part_srp: partitioned_srp) (toplevel_transformer : 'a Transfo
     exp_transformer (map_back_transformer part_srp) mask_transformer
 
 let remap_declarations part_srp = make_toplevel part_srp Transformers.transform_declarations
-let remap_net part_srp = make_toplevel part_srp Transformers.transform_network
-let remap_srp part_srp = make_toplevel part_srp Transformers.transform_srp
