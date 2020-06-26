@@ -151,7 +151,7 @@ let run_simulator cfg _ decls fs =
       match cfg.bound with
       | None ->
         (Profile.time_profile "Interpreted simulation"
-           (fun () -> Simulator.simulate_declarations ~throw_requires:true decls)
+           (fun () -> Simulator.simulate_declarations cfg.interactive  ~throw_requires:true decls)
         , QueueSet.empty Pervasives.compare )
       | Some b -> ignore b; failwith "Don't know what this means" (* Srp.simulate_net_bound net b *)
     in

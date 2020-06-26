@@ -1,3 +1,6 @@
+(* This file is a copy of Srp.ml modified for interactive simulation.
+   A proper implementation should combine the two with proper abstractions and options*)
+
 open Nv_lang
 open Nv_datastructures
 open Nv_solution
@@ -26,7 +29,7 @@ exception Simulation_error of string
 type solution = value AdjGraph.VertexMap.t
 
 type extendedSolution = (solution * value) AdjGraph.VertexMap.t
-type queue = AdjGraph.Vertex.t QueueSet.queue
+type queue = AdjGraph.VertexSet.t
 
 type state = extendedSolution * queue
 
@@ -34,7 +37,7 @@ let create_state n cl : state =
   let rec loop n (q: queue) m =
     if Pervasives.compare n 0 > 0 then
       let next_n = n - 1 in
-      let next_q = QueueSet.add q next_n in
+      let next_q = AdjGraph.VertexSet.add next_n q in
       let init_n = Interp.interp_closure cl [vnode next_n] in
       let next_m =
         AdjGraph.VertexMap.add next_n
@@ -44,7 +47,7 @@ let create_state n cl : state =
       loop next_n next_q next_m
     else (m, q)
   in
-  loop n (QueueSet.empty Pervasives.compare) AdjGraph.VertexMap.empty
+  loop n (AdjGraph.VertexSet.empty) AdjGraph.VertexMap.empty
 
 type info =
   { mutable env: Syntax.env; (* environment *)
@@ -121,29 +124,27 @@ let simulate_step ({graph= g; trans; merge; _} : srp) s x =
   let neighbors = AdjGraph.succ g x in
   List.fold_left (do_neighbor initial_attribute) (s, []) neighbors
 
-let steps = ref 0
 (* simulate srp s q simulates srp starting with initial state (s,q) *)
+let steps = ref 0
 let rec simulate_init srp ((s, q): state) =
-  match QueueSet.pop q with
-  | None -> s
-  | Some (next, rest) ->
-    Printf.printf "%d," next;
-    incr steps; 
+  Printf.printf "Current Queue: %s\n" (AdjGraph.VertexSet.to_string q);
+  let rec loop () =
+    let x = read_int () in 
+    if AdjGraph.VertexSet.mem x q then
+      (x, AdjGraph.VertexSet.remove x q)
+    else
+      (Printf.printf "Node %d is not in the queue, try again:\n" x;
+       loop ())
+  in
+  if AdjGraph.VertexSet.is_empty q then s
+  else
+    let (next, rest) = loop () in
+    incr steps;
     let s', more = simulate_step srp s next in
-    simulate_init srp (s', QueueSet.add_all rest more)
+    simulate_init srp (s', BatList.fold_left (fun acc r -> AdjGraph.VertexSet.add r acc) rest more)
 
 (* simulate for at most k steps *)
-let simulate_init_bound srp ((s, q): state) k =
-  let rec loop s q k =
-    if k <= 0 then (s, q)
-    else
-      match QueueSet.pop q with
-      | None -> (s, q)
-      | Some (next, rest) ->
-        let s', more = simulate_step srp s next in
-        loop s' (QueueSet.add_all rest more) (k - 1)
-  in
-  loop s q k
+let simulate_init_bound srp ((s, q): state) k = failwith "Not implemented for now"
 
 let check_assertion (srp : srp) node v =
   match srp.assertion with

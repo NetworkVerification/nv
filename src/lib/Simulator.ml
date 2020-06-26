@@ -13,7 +13,7 @@ open Nv_lang.Collections
 type sym_state = {env : value Env.t; syms : (var * value) list; sols : (var*Solution.sol) list; assertions : bool list}
 let empty_state = {env = Env.empty; syms = []; sols = []; assertions = []}
 
-let simulate_declaration ~(throw_requires: bool) (graph : AdjGraph.t) (state : sym_state) (d : declaration) : sym_state =
+let simulate_declaration interactive ~(throw_requires: bool) (graph : AdjGraph.t) (state : sym_state) (d : declaration) : sym_state =
   match state.assertions with
   | false::_ -> state (* Stop simulating once an assertion fails *)
   | _ ->
@@ -51,7 +51,9 @@ let simulate_declaration ~(throw_requires: bool) (graph : AdjGraph.t) (state : s
         {state with assertions = result :: state.assertions}
       end
     | DSolve solve ->
-      let results = Srp.simulate_solve graph {ty = Env.empty; value = env} solve in
+      let results = if interactive then SrpInteractive.simulate_solve graph {ty = Env.empty; value = env} solve
+                else  Srp.simulate_solve graph {ty = Env.empty; value = env} solve
+      in
       begin
         match solve.var_names.e with
         | EVar x ->
@@ -65,13 +67,13 @@ let simulate_declaration ~(throw_requires: bool) (graph : AdjGraph.t) (state : s
     | DUserTy _ | DPartition _ | DInterface _ | DNodes _ | DEdges _ -> state
 ;;
 
-let simulate_declarations ~(throw_requires: bool) (decls : declarations) : Solution.t =
+let simulate_declarations interactive ~(throw_requires: bool) (decls : declarations) : Solution.t =
   let n = get_nodes decls |> oget in
   let es = get_edges decls |> oget in
   let graph =
     List.fold_left AdjGraph.add_edge_e (AdjGraph.create n) es
   in
-  let final_state = List.fold_left (simulate_declaration ~throw_requires graph) empty_state decls in
+  let final_state = List.fold_left (simulate_declaration interactive ~throw_requires graph) empty_state decls in
   let symbolics = List.rev final_state.syms in
   let solves = List.rev final_state.sols in
   let assertions =

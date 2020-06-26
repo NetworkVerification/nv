@@ -23,6 +23,7 @@ type t =
   ; link_failures: int                 (** adds at most k link failures to the network  *)
   ; slicing: bool                      (** Try to slice the network's attribute *)
   ; parallelize : int option [@short "-p"] (** Try to parallelize using n cores **)
+  ; interactive: bool                   (** interactive simulation **)
   }
 [@@deriving
   show
@@ -54,6 +55,7 @@ let default =
   ; hiding=false
   ; slicing=false
   ; parallelize= None
+  ; interactive=false
   }
 
 let cfg = ref default
