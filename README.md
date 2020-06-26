@@ -1,5 +1,4 @@
 # An intermediate language for network verification
-[![Build Status](https://travis-ci.com/princedpw/nv.svg?branch=master)](https://travis-ci.com/princedpw/nv)
 
 NV is a functional language that can be used to express the semantics of
 routing protocols, such as BGP, OSPF, etc. The language is designed to be
@@ -62,7 +61,7 @@ For instructions on installing `mlcuddidl`, see Issue [#7](https://github.com/pr
 
 ```
 sudo apt update
-sudo apt install gcc g++ make m4 libgmp-dev python2.7 libz3-dev z3
+sudo apt install gcc g++ make m4 libgmp-dev python2.7 libz3-dev z3 libzmq3-dev zlib1g-dev
 ```
 
 ## Getting started with NV
