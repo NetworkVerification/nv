@@ -48,4 +48,7 @@ let mergeFail u x y = combine (merge u) x y
 
 let initFail u = createDict (init u)
 
-let sol = solution {init = initFail; trans = transFail; merge = mergeFail;}
+let transFail2 e x = 
+  mapIte (fun k -> let (e1, e2) = k in e = e1 || e = e2) (fun v -> None) (fun v -> trans e v) x
+
+let sol = solution {init = initFail; trans = transFail2; merge = mergeFail;}

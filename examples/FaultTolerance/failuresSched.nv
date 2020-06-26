@@ -1,6 +1,7 @@
 let nodes = 9
 
 (* fast schedule *)
+(*
 let edges = { 
     0=2;
     0=1;
@@ -15,10 +16,10 @@ let edges = {
     5=8;
     6=7;
     6=8;
-}
+}*)
 
 (*slow schedule, 1 and 2 are swapped *)
-(*let edges = { 
+let edges = { 
     0=1;
     0=2;
     1=2;
@@ -32,7 +33,7 @@ let edges = {
     5=8;
     6=7;
     6=8;
-}*)
+}
 
 let trans e x = 
   match x with
@@ -50,8 +51,11 @@ let init u = if (u = 0n) then Some 0 else None
 let transFail e x = 
   mapIte (fun e1 -> e = e1) (fun v -> None) (fun v -> trans e v) x
 
+let transFail2 e x = 
+  mapIte (fun k -> let (e1, e2) = k in e = e1 || e = e2) (fun v -> None) (fun v -> trans e v) x
+
 let mergeFail u x y = combine (merge u) x y
 
 let initFail u = createDict (init u)
 
-let sol = solution {init = initFail; trans = transFail; merge = mergeFail;}
+let sol = solution {init = initFail; trans = transFail2; merge = mergeFail;}
