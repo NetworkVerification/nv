@@ -11,7 +11,7 @@ type srp =
   ; merge: Syntax.closure
   ; assertion: Syntax.closure option }
 
-type queue = AdjGraph.Vertex.t QueueSet.queue
+type queue = AdjGraph.VertexSet.t
 
 (* val simulate_net : Syntax.network -> Nv_solution.Solution.t
  *
