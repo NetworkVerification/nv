@@ -8,7 +8,7 @@ type rib = {
     selected:option[int2]; }
 type attribute = rib
 
-let d = (70.0.19.0/24u5)
+let d = (70.0.19.0/24u6)
 
 let edges = {
   3-16; (*core-0,Serial0 --> aggregation-8,Serial0*)
@@ -141,14 +141,14 @@ let merge node x y = mergeValues x y
 let init node =
   match node with
   | 0n ->
-if (d = (1174408962, 31u5)) || (d = (1174408960, 32u5)) || (d = (167774976, 31u5)) || (d = (167774464, 31u5)) || (d = (1174408960, 31u5)) then
+if (d = (1174408962, 31u6)) || (d = (1174408960, 32u6)) || (d = (167774976, 31u6)) || (d = (167774464, 31u6)) || (d = (1174408960, 31u6)) then
     let c = Some 0u8 in
     let s = None in
     let o = None in
     let b = None in
     let fib = best c s o b in
       {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
-     else if (d = (1174408960, 24u5)) then
+     else if (d = (1174408960, 24u6)) then
     let c = None in
     let s = Some 1u8 in
     let o = None in
@@ -157,7 +157,7 @@ if (d = (1174408962, 31u5)) || (d = (1174408960, 32u5)) || (d = (167774976, 31u5
       {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
      else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
   | 1n ->
-if (d = (167778048, 31u5)) || (d = (167777280, 31u5)) || (d = (167777792, 31u5)) || (d = (167777536, 31u5)) || (d = (1174405376, 32u5)) then
+if (d = (167778048, 31u6)) || (d = (167777280, 31u6)) || (d = (167777792, 31u6)) || (d = (167777536, 31u6)) || (d = (1174405376, 32u6)) then
     let c = Some 0u8 in
     let s = None in
     let o = None in
@@ -166,14 +166,14 @@ if (d = (167778048, 31u5)) || (d = (167777280, 31u5)) || (d = (167777792, 31u5))
       {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
      else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
   | 2n ->
-if (d = (1174409728, 31u5)) || (d = (1174409728, 32u5)) || (d = (1174409730, 31u5)) || (d = (167775744, 31u5)) || (d = (167775232, 31u5)) then
+if (d = (1174409728, 31u6)) || (d = (1174409728, 32u6)) || (d = (1174409730, 31u6)) || (d = (167775744, 31u6)) || (d = (167775232, 31u6)) then
     let c = Some 0u8 in
     let s = None in
     let o = None in
     let b = None in
     let fib = best c s o b in
       {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
-     else if (d = (1174409728, 24u5)) then
+     else if (d = (1174409728, 24u6)) then
     let c = None in
     let s = Some 1u8 in
     let o = None in
@@ -182,7 +182,7 @@ if (d = (1174409728, 31u5)) || (d = (1174409728, 32u5)) || (d = (1174409730, 31u
       {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
      else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
   | 3n ->
-if (d = (167777024, 31u5)) || (d = (167776768, 31u5)) || (d = (167776512, 31u5)) || (d = (167776256, 31u5)) || (d = (1174405120, 32u5)) then
+if (d = (167777024, 31u6)) || (d = (167776768, 31u6)) || (d = (167776512, 31u6)) || (d = (167776256, 31u6)) || (d = (1174405120, 32u6)) then
     let c = Some 0u8 in
     let s = None in
     let o = None in
@@ -191,7 +191,7 @@ if (d = (167777024, 31u5)) || (d = (167776768, 31u5)) || (d = (167776512, 31u5))
       {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
      else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
   | 4n ->
-if (d = (167779840, 31u5)) || (d = (167779328, 31u5)) || (d = (167780096, 31u5)) || (d = (167779584, 31u5)) || (d = (1174405888, 32u5)) then
+if (d = (167779840, 31u6)) || (d = (167779328, 31u6)) || (d = (167780096, 31u6)) || (d = (167779584, 31u6)) || (d = (1174405888, 32u6)) then
     let c = Some 0u8 in
     let s = None in
     let o = None in
@@ -200,14 +200,14 @@ if (d = (167779840, 31u5)) || (d = (167779328, 31u5)) || (d = (167780096, 31u5))
       {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
      else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
   | 5n ->
-if (d = (1174407938, 31u5)) || (d = (167773952, 31u5)) || (d = (167773440, 31u5)) || (d = (1174407936, 32u5)) || (d = (1174407936, 31u5)) then
+if (d = (1174407938, 31u6)) || (d = (167773952, 31u6)) || (d = (167773440, 31u6)) || (d = (1174407936, 32u6)) || (d = (1174407936, 31u6)) then
     let c = Some 0u8 in
     let s = None in
     let o = None in
     let b = None in
     let fib = best c s o b in
       {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
-     else if (d = (1174407936, 24u5)) then
+     else if (d = (1174407936, 24u6)) then
     let c = None in
     let s = Some 1u8 in
     let o = None in
@@ -216,7 +216,7 @@ if (d = (1174407938, 31u5)) || (d = (167773952, 31u5)) || (d = (167773440, 31u5)
       {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
      else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
   | 6n ->
-if (d = (167779072, 31u5)) || (d = (167780096, 31u5)) || (d = (1174409472, 32u5)) || (d = (167776000, 31u5)) || (d = (167775744, 31u5)) then
+if (d = (167779072, 31u6)) || (d = (167780096, 31u6)) || (d = (1174409472, 32u6)) || (d = (167776000, 31u6)) || (d = (167775744, 31u6)) then
     let c = Some 0u8 in
     let s = None in
     let o = None in
@@ -225,7 +225,7 @@ if (d = (167779072, 31u5)) || (d = (167780096, 31u5)) || (d = (1174409472, 32u5)
       {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
      else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
   | 7n ->
-if (d = (167778304, 31u5)) || (d = (167778816, 31u5)) || (d = (167779072, 31u5)) || (d = (167778560, 31u5)) || (d = (1174405632, 32u5)) then
+if (d = (167778304, 31u6)) || (d = (167778816, 31u6)) || (d = (167779072, 31u6)) || (d = (167778560, 31u6)) || (d = (1174405632, 32u6)) then
     let c = Some 0u8 in
     let s = None in
     let o = None in
@@ -234,7 +234,7 @@ if (d = (167778304, 31u5)) || (d = (167778816, 31u5)) || (d = (167779072, 31u5))
       {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
      else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
   | 8n ->
-if (d = (167778048, 31u5)) || (d = (167777024, 31u5)) || (d = (1174409216, 32u5)) || (d = (167775488, 31u5)) || (d = (167775232, 31u5)) then
+if (d = (167778048, 31u6)) || (d = (167777024, 31u6)) || (d = (1174409216, 32u6)) || (d = (167775488, 31u6)) || (d = (167775232, 31u6)) then
     let c = Some 0u8 in
     let s = None in
     let o = None in
@@ -243,14 +243,14 @@ if (d = (167778048, 31u5)) || (d = (167777024, 31u5)) || (d = (1174409216, 32u5)
       {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
      else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
   | 9n ->
-if (d = (1174408706, 31u5)) || (d = (167774208, 31u5)) || (d = (1174408704, 32u5)) || (d = (167774720, 31u5)) || (d = (1174408704, 31u5)) then
+if (d = (1174408706, 31u6)) || (d = (167774208, 31u6)) || (d = (1174408704, 32u6)) || (d = (167774720, 31u6)) || (d = (1174408704, 31u6)) then
     let c = Some 0u8 in
     let s = None in
     let o = None in
     let b = None in
     let fib = best c s o b in
       {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
-     else if (d = (1174408704, 24u5)) then
+     else if (d = (1174408704, 24u6)) then
     let c = None in
     let s = Some 1u8 in
     let o = None in
@@ -259,14 +259,14 @@ if (d = (1174408706, 31u5)) || (d = (167774208, 31u5)) || (d = (1174408704, 32u5
       {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
      else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
   | 10n ->
-if (d = (1174409984, 31u5)) || (d = (1174409984, 32u5)) || (d = (1174409986, 31u5)) || (d = (167776000, 31u5)) || (d = (167775488, 31u5)) then
+if (d = (1174409984, 31u6)) || (d = (1174409984, 32u6)) || (d = (1174409986, 31u6)) || (d = (167776000, 31u6)) || (d = (167775488, 31u6)) then
     let c = Some 0u8 in
     let s = None in
     let o = None in
     let b = None in
     let fib = best c s o b in
       {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
-     else if (d = (1174409984, 24u5)) then
+     else if (d = (1174409984, 24u6)) then
     let c = None in
     let s = Some 1u8 in
     let o = None in
@@ -275,14 +275,14 @@ if (d = (1174409984, 31u5)) || (d = (1174409984, 32u5)) || (d = (1174409986, 31u
       {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
      else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
   | 11n ->
-if (d = (1174406658, 31u5)) || (d = (167772672, 31u5)) || (d = (167772160, 31u5)) || (d = (1174406656, 31u5)) || (d = (1174406656, 32u5)) then
+if (d = (1174406658, 31u6)) || (d = (167772672, 31u6)) || (d = (167772160, 31u6)) || (d = (1174406656, 31u6)) || (d = (1174406656, 32u6)) then
     let c = Some 0u8 in
     let s = None in
     let o = None in
     let b = None in
     let fib = best c s o b in
       {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
-     else if (d = (1174406656, 24u5)) then
+     else if (d = (1174406656, 24u6)) then
     let c = None in
     let s = Some 1u8 in
     let o = None in
@@ -291,14 +291,14 @@ if (d = (1174406658, 31u5)) || (d = (167772672, 31u5)) || (d = (167772160, 31u5)
       {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
      else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
   | 12n ->
-if (d = (1174406914, 31u5)) || (d = (167772928, 31u5)) || (d = (167772416, 31u5)) || (d = (1174406912, 31u5)) || (d = (1174406912, 32u5)) then
+if (d = (1174406914, 31u6)) || (d = (167772928, 31u6)) || (d = (167772416, 31u6)) || (d = (1174406912, 31u6)) || (d = (1174406912, 32u6)) then
     let c = Some 0u8 in
     let s = None in
     let o = None in
     let b = None in
     let fib = best c s o b in
       {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
-     else if (d = (1174406912, 24u5)) then
+     else if (d = (1174406912, 24u6)) then
     let c = None in
     let s = Some 1u8 in
     let o = None in
@@ -307,7 +307,7 @@ if (d = (1174406914, 31u5)) || (d = (167772928, 31u5)) || (d = (167772416, 31u5)
       {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
      else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
   | 13n ->
-if (d = (167778304, 31u5)) || (d = (167779328, 31u5)) || (d = (167772928, 31u5)) || (d = (167772672, 31u5)) || (d = (1174406400, 32u5)) then
+if (d = (167778304, 31u6)) || (d = (167779328, 31u6)) || (d = (167772928, 31u6)) || (d = (167772672, 31u6)) || (d = (1174406400, 32u6)) then
     let c = Some 0u8 in
     let s = None in
     let o = None in
@@ -316,7 +316,7 @@ if (d = (167778304, 31u5)) || (d = (167779328, 31u5)) || (d = (167772928, 31u5))
       {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
      else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
   | 14n ->
-if (d = (167777280, 31u5)) || (d = (167772416, 31u5)) || (d = (167772160, 31u5)) || (d = (167776256, 31u5)) || (d = (1174406144, 32u5)) then
+if (d = (167777280, 31u6)) || (d = (167772416, 31u6)) || (d = (167772160, 31u6)) || (d = (167776256, 31u6)) || (d = (1174406144, 32u6)) then
     let c = Some 0u8 in
     let s = None in
     let o = None in
@@ -325,7 +325,7 @@ if (d = (167777280, 31u5)) || (d = (167772416, 31u5)) || (d = (167772160, 31u5))
       {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
      else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
   | 15n ->
-if (d = (167778560, 31u5)) || (d = (167779584, 31u5)) || (d = (167773952, 31u5)) || (d = (167773696, 31u5)) || (d = (1174407424, 32u5)) then
+if (d = (167778560, 31u6)) || (d = (167779584, 31u6)) || (d = (167773952, 31u6)) || (d = (167773696, 31u6)) || (d = (1174407424, 32u6)) then
     let c = Some 0u8 in
     let s = None in
     let o = None in
@@ -334,7 +334,7 @@ if (d = (167778560, 31u5)) || (d = (167779584, 31u5)) || (d = (167773952, 31u5))
       {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
      else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
   | 16n ->
-if (d = (167777536, 31u5)) || (d = (167776512, 31u5)) || (d = (167773440, 31u5)) || (d = (167773184, 31u5)) || (d = (1174407168, 32u5)) then
+if (d = (167777536, 31u6)) || (d = (167776512, 31u6)) || (d = (167773440, 31u6)) || (d = (167773184, 31u6)) || (d = (1174407168, 32u6)) then
     let c = Some 0u8 in
     let s = None in
     let o = None in
@@ -343,7 +343,7 @@ if (d = (167777536, 31u5)) || (d = (167776512, 31u5)) || (d = (167773440, 31u5))
       {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
      else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
   | 17n ->
-if (d = (167779840, 31u5)) || (d = (167778816, 31u5)) || (d = (1174408448, 32u5)) || (d = (167774976, 31u5)) || (d = (167774720, 31u5)) then
+if (d = (167779840, 31u6)) || (d = (167778816, 31u6)) || (d = (1174408448, 32u6)) || (d = (167774976, 31u6)) || (d = (167774720, 31u6)) then
     let c = Some 0u8 in
     let s = None in
     let o = None in
@@ -352,7 +352,7 @@ if (d = (167779840, 31u5)) || (d = (167778816, 31u5)) || (d = (1174408448, 32u5)
       {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
      else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
   | 18n ->
-if (d = (167777792, 31u5)) || (d = (167776768, 31u5)) || (d = (167774208, 31u5)) || (d = (1174408192, 32u5)) || (d = (167774464, 31u5)) then
+if (d = (167777792, 31u6)) || (d = (167776768, 31u6)) || (d = (167774208, 31u6)) || (d = (1174408192, 32u6)) || (d = (167774464, 31u6)) then
     let c = Some 0u8 in
     let s = None in
     let o = None in
@@ -361,14 +361,14 @@ if (d = (167777792, 31u5)) || (d = (167776768, 31u5)) || (d = (167774208, 31u5))
       {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
      else {connected=None; static=None; ospf=None; bgp=None; selected=None;}
   | 19n ->
-if (d = (1174407682, 31u5)) || (d = (167773696, 31u5)) || (d = (167773184, 31u5)) || (d = (1174407680, 32u5)) || (d = (1174407680, 31u5)) then
+if (d = (1174407682, 31u6)) || (d = (167773696, 31u6)) || (d = (167773184, 31u6)) || (d = (1174407680, 32u6)) || (d = (1174407680, 31u6)) then
     let c = Some 0u8 in
     let s = None in
     let o = None in
     let b = None in
     let fib = best c s o b in
       {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
-     else if (d = (1174407680, 24u5)) then
+     else if (d = (1174407680, 24u6)) then
     let c = None in
     let s = Some 1u8 in
     let o = None in
@@ -398,7 +398,7 @@ if (d = (1174407682, 31u5)) || (d = (167773696, 31u5)) || (d = (167773184, 31u5)
    | (0~18) ->
      let (prefix, prefixLen) = d in
      let b =
-           (if (((prefixLen = 24u5) && ((prefix >= 1174408960) && (prefix < 1174409216)))) then
+           (if (((prefixLen = 24u6) && ((prefix >= 1174408960) && (prefix < 1174409216)))) then
 (if b.comms[131074] then
 (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327682:= true];})
 else
@@ -422,7 +422,7 @@ else
    | (0~17) ->
      let (prefix, prefixLen) = d in
      let b =
-           (if (((prefixLen = 24u5) && ((prefix >= 1174408960) && (prefix < 1174409216)))) then
+           (if (((prefixLen = 24u6) && ((prefix >= 1174408960) && (prefix < 1174409216)))) then
 (if b.comms[131074] then
 (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327682:= true];})
 else
@@ -518,7 +518,7 @@ else
    | (2~6) ->
      let (prefix, prefixLen) = d in
      let b =
-           (if (((prefixLen = 24u5) && ((prefix >= 1174409728) && (prefix < 1174409984)))) then
+           (if (((prefixLen = 24u6) && ((prefix >= 1174409728) && (prefix < 1174409984)))) then
 (if b.comms[131075] then
 (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327683:= true];})
 else
@@ -542,7 +542,7 @@ else
    | (2~8) ->
      let (prefix, prefixLen) = d in
      let b =
-           (if (((prefixLen = 24u5) && ((prefix >= 1174409728) && (prefix < 1174409984)))) then
+           (if (((prefixLen = 24u6) && ((prefix >= 1174409728) && (prefix < 1174409984)))) then
 (if b.comms[131075] then
 (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327683:= true];})
 else
@@ -710,7 +710,7 @@ else
    | (5~16) ->
      let (prefix, prefixLen) = d in
      let b =
-           (if (((prefixLen = 24u5) && ((prefix >= 1174407936) && (prefix < 1174408192)))) then
+           (if (((prefixLen = 24u6) && ((prefix >= 1174407936) && (prefix < 1174408192)))) then
 (if b.comms[131073] then
 (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327681:= true];})
 else
@@ -734,7 +734,7 @@ else
    | (5~15) ->
      let (prefix, prefixLen) = d in
      let b =
-           (if (((prefixLen = 24u5) && ((prefix >= 1174407936) && (prefix < 1174408192)))) then
+           (if (((prefixLen = 24u6) && ((prefix >= 1174407936) && (prefix < 1174408192)))) then
 (if b.comms[131073] then
 (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327681:= true];})
 else
@@ -974,7 +974,7 @@ else
    | (9~18) ->
      let (prefix, prefixLen) = d in
      let b =
-           (if (((prefixLen = 24u5) && ((prefix >= 1174408704) && (prefix < 1174408960)))) then
+           (if (((prefixLen = 24u6) && ((prefix >= 1174408704) && (prefix < 1174408960)))) then
 (if b.comms[131074] then
 (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327682:= true];})
 else
@@ -998,7 +998,7 @@ else
    | (9~17) ->
      let (prefix, prefixLen) = d in
      let b =
-           (if (((prefixLen = 24u5) && ((prefix >= 1174408704) && (prefix < 1174408960)))) then
+           (if (((prefixLen = 24u6) && ((prefix >= 1174408704) && (prefix < 1174408960)))) then
 (if b.comms[131074] then
 (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327682:= true];})
 else
@@ -1022,7 +1022,7 @@ else
    | (10~8) ->
      let (prefix, prefixLen) = d in
      let b =
-           (if (((prefixLen = 24u5) && ((prefix >= 1174409984) && (prefix < 1174410240)))) then
+           (if (((prefixLen = 24u6) && ((prefix >= 1174409984) && (prefix < 1174410240)))) then
 (if b.comms[131075] then
 (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327683:= true];})
 else
@@ -1046,7 +1046,7 @@ else
    | (10~6) ->
      let (prefix, prefixLen) = d in
      let b =
-           (if (((prefixLen = 24u5) && ((prefix >= 1174409984) && (prefix < 1174410240)))) then
+           (if (((prefixLen = 24u6) && ((prefix >= 1174409984) && (prefix < 1174410240)))) then
 (if b.comms[131075] then
 (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327683:= true];})
 else
@@ -1070,7 +1070,7 @@ else
    | (11~13) ->
      let (prefix, prefixLen) = d in
      let b =
-           (if (((prefixLen = 24u5) && ((prefix >= 1174406656) && (prefix < 1174406912)))) then
+           (if (((prefixLen = 24u6) && ((prefix >= 1174406656) && (prefix < 1174406912)))) then
 (if b.comms[131072] then
 (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327680:= true];})
 else
@@ -1094,7 +1094,7 @@ else
    | (11~14) ->
      let (prefix, prefixLen) = d in
      let b =
-           (if (((prefixLen = 24u5) && ((prefix >= 1174406656) && (prefix < 1174406912)))) then
+           (if (((prefixLen = 24u6) && ((prefix >= 1174406656) && (prefix < 1174406912)))) then
 (if b.comms[131072] then
 (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327680:= true];})
 else
@@ -1118,7 +1118,7 @@ else
    | (12~13) ->
      let (prefix, prefixLen) = d in
      let b =
-           (if (((prefixLen = 24u5) && ((prefix >= 1174406912) && (prefix < 1174407168)))) then
+           (if (((prefixLen = 24u6) && ((prefix >= 1174406912) && (prefix < 1174407168)))) then
 (if b.comms[131072] then
 (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327680:= true];})
 else
@@ -1142,7 +1142,7 @@ else
    | (12~14) ->
      let (prefix, prefixLen) = d in
      let b =
-           (if (((prefixLen = 24u5) && ((prefix >= 1174406912) && (prefix < 1174407168)))) then
+           (if (((prefixLen = 24u6) && ((prefix >= 1174406912) && (prefix < 1174407168)))) then
 (if b.comms[131072] then
 (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327680:= true];})
 else
@@ -1598,7 +1598,7 @@ else
    | (19~16) ->
      let (prefix, prefixLen) = d in
      let b =
-           (if (((prefixLen = 24u5) && ((prefix >= 1174407680) && (prefix < 1174407936)))) then
+           (if (((prefixLen = 24u6) && ((prefix >= 1174407680) && (prefix < 1174407936)))) then
 (if b.comms[131073] then
 (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327681:= true];})
 else
@@ -1622,7 +1622,7 @@ else
    | (19~15) ->
      let (prefix, prefixLen) = d in
      let b =
-           (if (((prefixLen = 24u5) && ((prefix >= 1174407680) && (prefix < 1174407936)))) then
+           (if (((prefixLen = 24u6) && ((prefix >= 1174407680) && (prefix < 1174407936)))) then
 (if b.comms[131073] then
 (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms[327681:= true];})
 else
@@ -1651,7 +1651,7 @@ let trans edge x =
   {connected=None; static=None; ospf=o; bgp=b; selected=None}
 
 let assert_node node x =
-  if (d = (70.0.19.0/24u5)) then
+  if (d = (70.0.19.0/24u6)) then
     match x.selected with
       | None -> false
       | _ -> true
