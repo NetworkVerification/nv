@@ -345,7 +345,7 @@ let op_typ op =
   | TGet _ | TSet _ ->
     failwith "internal error (op_typ): tuple op"
   (* Map operations *)
-  | MCreate | MGet | MSet | MMap | MMerge | MMapFilter | MMapIte | MFoldNode | MFoldEdge | Eq ->
+  | MCreate | MGet | MSet | MMap | MMerge | MMapFilter | MMapIte | MFoldNode | MFoldEdge | MForAll | Eq ->
     failwith (Printf.sprintf "internal error (op_typ): %s" (Printing.op_to_string op))
 
 let texp (e, ty, span) = aexp (e, Some ty, span)
@@ -441,6 +441,18 @@ let rec infer_exp i info env record_types (e: exp) : exp =
           unify info e vty1 (TArrow (valty, valty)) ;
           unify info e vty2 (TArrow (valty, valty)) ;
           texp (eop o [e1; e2; e3; e4], mapty, e.espan)
+        | MForAll, [e1; e2; e3] ->
+          let e1, kty = infer_exp e1 |> textract in
+          let e2, vty = infer_exp e2 |> textract in
+          let e3, mapty =
+            infer_exp e3 |> textract
+          in
+          let keyty = fresh_tyvar () in
+          let valty = fresh_tyvar () in
+          unify info e mapty (TMap (keyty, valty)) ;
+          unify info e kty (TArrow (keyty, TBool)) ;
+          unify info e vty (TArrow (valty, TBool)) ;
+          texp (eop o [e1; e2; e3], TBool, e.espan)
         | MMerge, _ ->
           let (e1, e2, e3), rest =
             match es with
@@ -887,10 +899,10 @@ and infer_declaration i info env record_types d : ty Env.t * declaration =
     (Env.update env (Var.create "partition") ty, DPartition e')
   | DInterface _ ->
     failwith "Not implemented (requires knowing the attribute type)"
-    (* let e' = infer_exp e in
-    let ty = oget e'.ety in
-    unify info e ty (interface_ty aty) ;
-    (Env.update env (Var.create "interface") ty, DInterface e') *)
+  (* let e' = infer_exp e in
+     let ty = oget e'.ety in
+     unify info e ty (interface_ty aty) ;
+     (Env.update env (Var.create "interface") ty, DInterface e') *)
   (* end partitioning *)
   | DRequire e ->
     let e' = infer_exp e in

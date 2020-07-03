@@ -54,8 +54,10 @@ module ExpEnvMap = BatMap.Make (struct
     let compare x1 x2 =
       let cmp1 = compare_exps (fst x1) (fst x2) in
       if cmp1 = 0 then Env.compare compare_values (snd x1) (snd x2) else cmp1
-  end)
+  end)  
 
+module TypeIds = ArrayIdMake(TypeMap)
+module ExpIds = ArrayIdMake(ExpMap)
 
 (* module HashTy : BatHashtbl.HashedType =
  * struct

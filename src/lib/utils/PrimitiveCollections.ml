@@ -106,3 +106,58 @@ let printListi (printer: int -> 'a -> string) (ls: 'a list) (first : string)
   loop 0 ls;
   Buffer.add_string buf last;
   Buffer.contents buf
+
+module type ArrayIdSig =
+sig
+  (** The type of elements cached *)
+  type elt
+  type t
+
+  (** Create an id store *)
+  val create: unit -> t
+
+  (** [fresh_id store e] takes as input an id store, and an element and returns a unique identifier for it. *)
+  val fresh_id : t -> elt -> int
+
+  (** Once the store is sealed we can perform constant-time lookups using the identifiers*)
+  val seal : t -> unit
+
+  val get_elt : t -> int -> elt
+  val get_id : t -> elt -> int
+  val to_array: t -> elt BatArray.t
+end
+
+module ArrayIdMake(M:BatMap.S) : ArrayIdSig with type elt = M.key =
+struct
+  type elt = M.key
+  type t = {mutable id : int; mutable cache : int M.t; mutable arr: elt Array.t}
+
+  let create () : t = {id=0; cache=M.empty; arr=[||]}
+
+  let fresh_id m =
+    let x = m.id in
+    m.id <- m.id + 1;
+    x
+
+  let fresh_id m elt =
+    match M.Exceptionless.find elt m.cache with
+    | None ->
+      let new_id = fresh_id m in
+      m.cache <- M.add elt new_id m.cache;
+      new_id
+    | Some id -> id
+
+  let get_id m e = M.find e m.cache
+
+  let seal m =
+    if m.id > 0 then
+      begin
+        let arr = BatArray.create m.id (fst (M.any m.cache)) in
+        M.iter (fun elt elt_id -> arr.(elt_id) <- elt) m.cache;
+        m.arr <- arr
+      end
+
+  let get_elt m i = m.arr.(i) 
+  let to_array m = m.arr
+
+end

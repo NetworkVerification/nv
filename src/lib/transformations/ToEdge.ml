@@ -42,7 +42,7 @@ let toEdge_decl decls =
         )
     else*)
       (* print_endline @@ Nv_lang.Printing.declarations_to_string decls ; *)
-      let edges = get_edges decls |> Nv_utils.OCamlUtils.oget in
+      let edges = match get_edges decls with | None -> [] | Some es -> es in
       let default_branch =
         addBranch PWild (e_val (voption None)) emptyBranch
       in

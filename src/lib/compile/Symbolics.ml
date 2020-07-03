@@ -19,8 +19,8 @@ let rec default_value ty =
   | TOption _ ->
     avalue (voption None, Some ty, Span.default)
   | TMap (ty1, ty2) ->
-    let _ = get_fresh_type_id ty1 in
-    let _ = get_fresh_type_id ty2 in
+    let _ = Collections.TypeIds.fresh_id type_store ty1 in
+    let _ = Collections.TypeIds.fresh_id type_store ty2 in
     avalue (vmap (create ~key_ty:ty1 (default_value ty2)), Some ty, Span.default)
   | TNode -> avalue (vnode 0, Some ty, Span.default)
   | TEdge -> avalue (vedge (0, 1), Some ty, Span.default)

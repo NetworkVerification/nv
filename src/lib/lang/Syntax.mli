@@ -56,6 +56,7 @@ type op =
   | MMerge
   | MFoldNode
   | MFoldEdge
+  | MForAll
 [@@deriving show]
 
 type pattern =
