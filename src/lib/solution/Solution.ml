@@ -200,16 +200,14 @@ let print_solution (solution : t) =
       print_string [green; Bold] "Success: " ;
       Printf.printf "No assertions provided, so none failed\n"
     | asns ->
-      let all_pass = List.for_all (fun x -> x) asns in
-      if all_pass then (
+      let failed = 
+        BatList.fold_righti (fun i b acc -> if not b then (i :: acc) else acc) asns []
+      in
+      (match failed with
+      | [] -> 
         print_string [green; Bold] "Success: " ;
-        Printf.printf "all assertions passed\n" )
-      else
-        (print_string [red; Bold] "Failed: " ;
-         asns
-         |> BatList.mapi (fun i b -> Printf.sprintf "Assertion %d" i, b)
-         |> BatList.filter_map (fun (s, b) -> if not b then Some s else None)
-         |> BatString.concat ", "
-         |> print_endline))
+        Printf.printf "All assertions passed\n"
+      | _ ->
+         BatList.iter (fun i -> print_string [red; Bold] (Printf.sprintf "Assertion %d failed" i)) failed))
       ;
       print_newline ()

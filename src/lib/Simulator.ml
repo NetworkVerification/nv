@@ -77,9 +77,10 @@ let simulate_declarations ~(throw_requires: bool) (decls : declarations) : Solut
   let assertions =
     let num_asserts = List.length @@ get_asserts decls in
     let rec pad count lst =
-      if count = 0 then lst else pad (count-1) (true::lst)
+      if count = 0 then lst else pad (count-1) (true::lst) (*TODO: what is this code doing?*)
     in
     pad (num_asserts - List.length final_state.assertions) final_state.assertions
+    |> List.rev
   in
   let sol : Solution.t =
     {symbolics; solves; assertions; nodes=n;}

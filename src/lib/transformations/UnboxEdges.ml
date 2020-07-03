@@ -25,6 +25,8 @@ let exp_transformer _ _ = None;;
 let map_back_transformer _ _ v orig_ty =
   match v.v, orig_ty with
   | VTuple [{v=VNode n1}; {v=VNode n2}], TEdge -> Some (vedge (n1, n2))
+  | VTuple [{v=VInt n1}; {v=VInt n2}], TEdge ->
+     Some (vedge ((Integer.to_int n1), (Integer.to_int n2)))
   | _ -> None
 ;;
 
