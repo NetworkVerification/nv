@@ -90,7 +90,7 @@ let rec unembed_value (record_cnstrs : int -> 'c) (record_proj : (int * int) -> 
       fun v ->
         (match v.v with
          | VMap vdd ->
-           Printf.printf "kty: %s, vty:%s" (Printing.ty_to_string kty) (Printing.ty_to_string vty);
+           (* Printf.printf "kty: %s, vty:%s" (Printing.ty_to_string kty) (Printing.ty_to_string vty); *)
            Obj.magic ({bdd = vdd; key_ty_id = Collections.TypeIds.get_id type_store kty; val_ty_id = Collections.TypeIds.get_id type_store vty})
          | _ -> failwith "mistyped value")
     | TArrow _ -> failwith "Function computed as value"

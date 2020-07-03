@@ -15,6 +15,11 @@ let pred_store = Collections.ExpIds.create ()
 let type_store = Collections.TypeIds.create ()
 let exp_store = Collections.ExpIds.create ()
 
+(* Helper function that canonicalizes (removing TLinks) types before generating an id *)
+let get_fresh_type_id store typ =
+  let typ = Typing.canonicalize_type typ in
+  Collections.TypeIds.fresh_id store typ
+
 
 (* let bddfunc_cache : (bool Cudd.Mtbdd.t * int) Collections.ExpMap.t ref = ref Collections.ExpMap.empty
 
