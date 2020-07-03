@@ -1,0 +1,13 @@
+let nodes = 5
+let edges = {}
+
+let m = 
+  let m = createDict 10 in
+   m[0 := 5]
+
+(* succeeds *)
+assert (forall (fun k -> k > 0) (fun v -> v >= 10) m)
+
+(* fails *)
+assert (forall (fun k -> k < 10) (fun v -> v >= 10) m)
+
