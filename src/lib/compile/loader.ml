@@ -6,6 +6,7 @@ open Symbolics
 open CompileBDDs
 open Nv_datastructures
 open Nv_lang.Syntax
+open Nv_lang
 open OCamlUtils
 
 
@@ -36,9 +37,9 @@ let simulate name decls =
   let module G : Topology = (struct let graph = graph end) in
 
   (* build bdd and type arrays so that lookups during execution will work *)
-  build_type_array ();
+  Collections.TypeIds.seal type_store;
   (*build_bdd_array (); *)
-  build_pred_array ();
+  Collections.ExpIds.seal pred_store;
 
   (* Build a simulator for SRPs *)
   let module SrpSimulator = (val (module SrpSimulation(G) : SrpSimulationSig)) in

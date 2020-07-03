@@ -195,7 +195,7 @@ let getFuncCache (e: exp) : string =
        let closure =
          Collections.printList (fun x -> varname x) freeList "(" "," ")"
        in
-       Printf.sprintf "(%d, %s)" (get_fresh_exp_id f.body) closure
+       Printf.sprintf "(%d, %s)" (Collections.ExpIds.fresh_id exp_store f.body) closure
        (*FIXME: annoying BatSet printing outputs null character at the end so I am using the code above*)
        (* let closure = BatIO.output_string () in
         *   BatSet.PSet.print ~first:"(" ~sep:"," ~last:")"
@@ -203,7 +203,7 @@ let getFuncCache (e: exp) : string =
         *     closure free;
         *   Printf.sprintf "(%d, %s)" f.body.etag (BatInnerIO.close_out closure) *)
      | _ -> (*assume there are no free variables, but this needs to be fixed: always inline*)
-       Printf.sprintf "(%d, ())" (get_fresh_exp_id e)
+       Printf.sprintf "(%d, ())" (Collections.ExpIds.fresh_id exp_store e)
 
 
 (** Function walking through an NV expression to record tuple types.
@@ -334,19 +334,19 @@ and map_to_ocaml_string op es ty =
       (match ty with
        | TMap (kty,vty) ->
           Printf.sprintf "NativeBdd.create ~key_ty_id:(%d) ~val_ty_id:(%d) (%s)"
-            (get_fresh_type_id kty) (get_fresh_type_id vty) (exp_to_ocaml_string (BatList.hd es))
+            (Collections.TypeIds.fresh_id type_store kty) (Collections.TypeIds.fresh_id type_store vty) (exp_to_ocaml_string (BatList.hd es))
         | _ -> failwith "Wrong type for map operation")
     | MSet ->
       (match es with
         | [e1;e2;e3] ->
           Printf.sprintf "(NativeBdd.update (%d) (%s) (%s) (%s))"
-            (get_fresh_type_id (OCamlUtils.oget e3.ety)) (exp_to_ocaml_string e1) (exp_to_ocaml_string e2) (exp_to_ocaml_string e3)
+            (Collections.TypeIds.fresh_id type_store (OCamlUtils.oget e3.ety)) (exp_to_ocaml_string e1) (exp_to_ocaml_string e2) (exp_to_ocaml_string e3)
         | _ -> failwith "Wrong number of arguments to MSet operation")
     | MGet ->
       (match es with
         | [e1;e2] ->
           Printf.sprintf "(NativeBdd.find %d (%s) (%s))"
-            (get_fresh_type_id (OCamlUtils.oget e2.ety)) (exp_to_ocaml_string e1) (exp_to_ocaml_string e2)
+            (Collections.TypeIds.fresh_id type_store (OCamlUtils.oget e2.ety)) (exp_to_ocaml_string e1) (exp_to_ocaml_string e2)
         | _ -> failwith "Wrong number of arguments to MGet operation")
     | MMap ->
       (match es with
@@ -362,7 +362,7 @@ and map_to_ocaml_string op es ty =
                  different type/size depending on the free vars*)
               Printf.sprintf "(let %s = %s in \n \
                                NativeBdd.map (Obj.magic %s) (%d) (%s) (%s))"
-                op_key_var op_key op_key_var (get_fresh_type_id newty)
+                op_key_var op_key op_key_var (Collections.TypeIds.fresh_id type_store newty)
                 (exp_to_ocaml_string e1) (exp_to_ocaml_string e2)
             | _ -> failwith ("Wrong type for function argument" ^ (Printing.ty_to_string (OCamlUtils.oget e1.ety))))
         | _ -> failwith "Wrong number of arguments to map operation")
@@ -392,18 +392,10 @@ and map_to_ocaml_string op es ty =
              Visitors.iter_exp track_tuples_exp predF.body;
              let freeVars = Syntax.free_ty (BatSet.PSet.singleton ~cmp:Var.compare predF.arg) predF.body in
              let freeList = BatSet.PSet.to_list freeVars in
-             Collections.printList (fun (x, ty) -> Printf.sprintf "(%s,%d)" (varname x) (get_fresh_type_id ty)) freeList "(" "," ")"
+             Collections.printList (fun (x, ty) -> Printf.sprintf "(%s,%d)" (varname x) (Collections.TypeIds.fresh_id type_store ty)) freeList "(" "," ")"
            | _ -> failwith "Predicate is not a function expression, try inlining"
          in
-         let pred_id =
-           match Collections.ExpMap.Exceptionless.find pred !pred_cache with
-           | None ->
-                let id = fresh_pred_id () in
-                pred_cache :=
-                  Collections.ExpMap.add pred id !pred_cache ;
-                id
-           | Some id -> id
-         in
+         let pred_id = Collections.ExpIds.fresh_id pred_store pred in
          (match get_inner_type (OCamlUtils.oget f.ety) with
            | TArrow (_, newty) ->
              (* Get e1's hashcons and closure *)
@@ -416,7 +408,7 @@ and map_to_ocaml_string op es ty =
                                let pred_key = %s in \n\
                                NativeBdd.mapIf (Obj.magic pred_key) (Obj.magic %s) (%d) (%s) (%s))"
                 op_key_var op_key (*first let*)
-                pred_key op_key_var (get_fresh_type_id newty)
+                pred_key op_key_var (Collections.TypeIds.fresh_id type_store newty)
                 (exp_to_ocaml_string f) (exp_to_ocaml_string m)
             | _ -> failwith ("Wrong type for function argument" ^ (Printing.ty_to_string (OCamlUtils.oget f.ety))))
        | _ -> failwith "Wrong number of arguments to mapIf operation")
@@ -430,18 +422,10 @@ and map_to_ocaml_string op es ty =
               Visitors.iter_exp track_tuples_exp predF.body;
               let freeVars = Syntax.free_ty (BatSet.PSet.singleton ~cmp:Var.compare predF.arg) predF.body in
               let freeList = BatSet.PSet.to_list freeVars in
-              Collections.printList (fun (x, ty) -> Printf.sprintf "(%s,%d)" (varname x) (get_fresh_type_id ty)) freeList "(" "," ")"
+              Collections.printList (fun (x, ty) -> Printf.sprintf "(%s,%d)" (varname x) (Collections.TypeIds.fresh_id type_store ty)) freeList "(" "," ")"
             | _ -> failwith "Predicate is not a function expression, try inlining"
           in
-          let pred_id =
-            match Collections.ExpMap.Exceptionless.find pred !pred_cache with
-            | None ->
-                 let id = fresh_pred_id () in
-                 pred_cache :=
-                   Collections.ExpMap.add pred id !pred_cache ;
-                 id
-            | Some id -> id
-          in
+          let pred_id = Collections.ExpIds.fresh_id pred_store pred in
           (match get_inner_type (OCamlUtils.oget f.ety) with
             | TArrow (_, newty) ->
               (* Get e1's hashcons and closure *)
@@ -454,62 +438,11 @@ and map_to_ocaml_string op es ty =
                                 let pred_key = %s in \n\
                                 NativeBdd.forall (Obj.magic pred_key) (Obj.magic %s) (%d) (%s) (%s))"
                  op_key_var op_key (*first let*)
-                 pred_key op_key_var (get_fresh_type_id newty)
+                 pred_key op_key_var (Collections.TypeIds.fresh_id type_store newty)
                  (exp_to_ocaml_string f) (exp_to_ocaml_string m)
              | _ -> failwith ("Wrong type for function argument" ^ (Printing.ty_to_string (OCamlUtils.oget f.ety))))
         | _ -> failwith "Wrong number of arguments to forall operation")      
     | _ -> failwith "Not yet implemented"
-
-(* BatMap maps*)
-(*and map_to_ocaml_string op es ty =
-  match op with
-    | MCreate ->
-      Printf.sprintf "BatMap.empty"
-    | MSet ->
-      (match es with
-        | [e1;e2;e3] ->
-          Printf.sprintf "(BatMap.add (%s) (%s) (%s))"
-            (exp_to_ocaml_string e2)
-            (exp_to_ocaml_string e3) (exp_to_ocaml_string e1)
-        | _ -> failwith "Wrong number of arguments for set operation")
-    | MGet ->
-      (match es with
-        | [e1;e2] ->
-          Printf.sprintf "(BatMap.find (%s) (%s))"
-            (exp_to_ocaml_string e2) (exp_to_ocaml_string e1)
-        | _ -> failwith "Wrong number of arguments for get operation")
-    | MMap ->
-      (match es with
-        | [e1;e2] ->
-          Printf.sprintf "(BatMap.map (%s) (%s))"
-            (exp_to_ocaml_string e1) (exp_to_ocaml_string e2)
-        | _ -> failwith "Wrong number of arguments for map operation")
-    | MMerge ->
-      (match es with
-        | (e1 :: e2 :: e3 :: _) ->
-          let ty2 = match OCamlUtils.oget e2.ety |> get_inner_type  with
-            | TMap (_, vty) -> vty
-            | x -> Printf.printf "%s\n" (Printing.ty_to_string x); failwith "expected a map"
-          in
-          let ty3 = match OCamlUtils.oget e3.ety |> get_inner_type with
-            | TMap (_, vty) -> vty
-            | _ -> failwith "expected a map"
-          in
-          Printf.sprintf "(BatMap.merge (fun _ v1 v2 -> \n \
-                                      let v1 = match v1 with | Some v1 -> v1 | None -> %s in\n\
-                                      let v2 = match v2 with | Some v2 -> v2 | None -> %s in\n\
-                          Some (%s v1 v2)) (%s) (%s))"
-            (value_to_ocaml_string (default_value ty2)) (value_to_ocaml_string (default_value ty3))
-            (exp_to_ocaml_string e1) (exp_to_ocaml_string e2) (exp_to_ocaml_string e3)
-        | _ -> failwith "Wrong number of arguments for merge operation")
-    | MMapFilter ->
-      (match es with
-        | [e1;e2;e3] ->
-          Printf.sprintf "(BatMap.mapi (fun k v -> if (%s k) then (%s v) else v) (%s))"
-            (exp_to_ocaml_string e1) (exp_to_ocaml_string e2) (exp_to_ocaml_string e3)
-        | _ -> failwith "Wrong number of arguments for mapIf operation")
-*)
-
 
 (** Translate a declaration to an OCaml program*)
 let symbolic_counter = ref 0
@@ -536,8 +469,8 @@ let compile_decl decl =
             (match solve.aty with
               | None -> failwith "cannot solve without an attribute type"
               | Some attr -> (*NOTE: this is just the attribute type, not including the map from nodes to attributes *)
-                ignore (get_fresh_type_id TNode); (*need to register node types manually! *)
-                let attr_id = get_fresh_type_id attr in
+                ignore (Collections.TypeIds.fresh_id type_store TNode); (*need to register node types manually! *)
+                let attr_id = Collections.TypeIds.fresh_id type_store attr in
                   Printf.sprintf "let %s = SIM.simulate_solve (%d) (\"%s\") (%s) (%s) (%s)"
                     (varname x) attr_id (Var.name x) (exp_to_ocaml_string solve.init)
                     (exp_to_ocaml_string solve.trans) (exp_to_ocaml_string solve.merge))

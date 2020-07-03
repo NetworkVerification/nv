@@ -168,11 +168,11 @@ struct
     let s = create_state (AdjGraph.nb_vertex G.graph) init in
     let vals = simulate_init trans merge s |> AdjGraph.VertexMap.map (fun (_,v) -> v) in
     let default = AdjGraph.VertexMap.choose vals |> snd in
-    let bdd_base = NativeBdd.create ~key_ty_id:(CompileBDDs.get_type_id TNode)
+    let bdd_base = NativeBdd.create ~key_ty_id:(Collections.TypeIds.get_id CompileBDDs.type_store TNode)
         ~val_ty_id:attr_ty_id default
     in
     let bdd_full = AdjGraph.VertexMap.fold (fun n v acc -> NativeBdd.update attr_ty_id acc n v) vals bdd_base in
-    solved := (name, (Obj.magic bdd_full, CompileBDDs.get_type attr_ty_id)) :: !solved;
+    solved := (name, (Obj.magic bdd_full, Collections.TypeIds.get_elt CompileBDDs.type_store  attr_ty_id)) :: !solved;
     bdd_full
 end
 

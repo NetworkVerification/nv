@@ -30,7 +30,7 @@ module HashClosureMap = BatMap.Make (struct
 let map_cache = ref HashClosureMap.empty
 
 let create ~(key_ty_id:int) ~(val_ty_id:int) (vnat: 'v) : t =
-  let key_ty = get_type key_ty_id in
+  let key_ty = Collections.TypeIds.get_elt type_store key_ty_id in
   let v = embed_value_id val_ty_id vnat in
   {bdd = BddMap.create key_ty v; key_ty_id=key_ty_id; val_ty_id=val_ty_id}
 
@@ -208,7 +208,7 @@ let mapIf (pred_key: int * 'g) (op_key : int * 'f) (vty_new_id: int) (f: 'a1 -> 
     match HashClosureMap.Exceptionless.find pred_key !mapw_pred_cache with
     | None ->
       (* Printf.printf "edge: %d,%d\n" (fst (fst (Obj.magic clos))) (snd (fst (Obj.magic clos))); *)
-      let pred = get_pred (fst pred_key) in
+      let pred = Collections.ExpIds.get_elt pred_store (fst pred_key) in
       let predFun =
         match pred.e with
         | EFun predFun -> predFun
@@ -269,7 +269,7 @@ let forall (pred_key: int * 'g) (op_key : int * 'f) (vty_new_id: int) (f: 'a1 ->
     match HashClosureMap.Exceptionless.find pred_key !mapw_pred_cache with
     | None ->
       (* Printf.printf "edge: %d,%d\n" (fst (fst (Obj.magic clos))) (snd (fst (Obj.magic clos))); *)
-      let pred = get_pred (fst pred_key) in
+      let pred = Collections.ExpIds.get_elt pred_store(fst pred_key) in
       let predFun =
         match pred.e with
         | EFun predFun -> predFun

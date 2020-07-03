@@ -5,13 +5,18 @@ open Cudd
 (* BddMap plus the type of the values*)
 type t = {bdd : BddMap.t; key_ty_id : int; val_ty_id: int}
 
-(*TODO: make a module for this*)
-
 (** ** Support for MapIf*)
 (* Expression map cache used to avoid recompiling mapIf predicates. First
    element of the value is the bdd, second one is the identifier used to look it
    up in the native BDDs module *)
-let bddfunc_cache : (bool Cudd.Mtbdd.t * int) Collections.ExpMap.t ref = ref Collections.ExpMap.empty
+
+let bddfunc_store = Collections.ExpIds.create ()
+let pred_store = Collections.ExpIds.create ()
+let type_store = Collections.TypeIds.create ()
+let exp_store = Collections.ExpIds.create ()
+
+
+(* let bddfunc_cache : (bool Cudd.Mtbdd.t * int) Collections.ExpMap.t ref = ref Collections.ExpMap.empty
 
 let bddfunc_id = ref 0
 
@@ -29,9 +34,9 @@ let build_bdd_array () =
   bdd_array := arr
 
 let get_bdd =
-  fun i -> BatArray.get !bdd_array i
+  fun i -> BatArray.get !bdd_array i *)
 
-let pred_cache : int Collections.ExpMap.t ref = ref Collections.ExpMap.empty
+(* let pred_cache : int Collections.ExpMap.t ref = ref Collections.ExpMap.empty
 
 let pred_id = ref 0
 
@@ -49,10 +54,10 @@ let build_pred_array () =
   pred_array := arr
 
 let get_pred =
-  fun i -> BatArray.get !pred_array i
+  fun i -> BatArray.get !pred_array i *)
 
 (** ** Type Cache*)
-let type_cache : int Collections.TypeMap.t ref = ref Collections.TypeMap.empty
+(* let type_cache : int Collections.TypeMap.t ref = ref Collections.TypeMap.empty
 let type_id = ref 0
 
 let fresh_type_id () =
@@ -81,10 +86,10 @@ let get_fresh_type_id typ =
     let new_id = fresh_type_id () in
     type_cache := Collections.TypeMap.add typ new_id !type_cache;
     new_id
-  | Some id -> id
+  | Some id -> id *)
 
 (** ** Exp Cache*)
-
+(* 
 let exp_cache : int Collections.ExpMap.t ref = ref Collections.ExpMap.empty
 let exp_id = ref 0
 
@@ -110,4 +115,4 @@ let get_fresh_exp_id exp =
     let new_id = fresh_exp_id () in
     exp_cache := Collections.ExpMap.add exp new_id !exp_cache;
     new_id
-  | Some id -> id
+  | Some id -> id *)
