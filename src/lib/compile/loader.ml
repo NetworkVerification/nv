@@ -44,7 +44,7 @@ let simulate name decls =
   (* Build a simulator for SRPs *)
   let module SrpSimulator = (val (module SrpSimulation(G) : SrpSimulationSig)) in
 
-  (* Load compiled NV program*)
+  (* Load compiled NV program - this is where simulation occurs*)
   let module CompleteSRP = (val get_srp ()) in
 
   (* Plug everything together to simulate the SRPs *)

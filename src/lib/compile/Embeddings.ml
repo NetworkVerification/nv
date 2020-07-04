@@ -5,7 +5,9 @@ open Nv_datastructures
 open PrimitiveCollections
 open Syntax
 open CompileBDDs
+open Cudd
 
+module B = BddUtilsNat
          
 (** Given an NV type and an OCaml value constructs an NV value*)
 let rec embed_value (record_fns: (int*int) -> 'a -> 'b) (typ: Syntax.ty) : 'v -> Syntax.value =
@@ -34,9 +36,13 @@ let rec embed_value (record_fns: (int*int) -> 'a -> 'b) (typ: Syntax.ty) : 'v ->
                 f_rec (Obj.magic (proj_val vrec))) ts
       in
         fun v -> Syntax.vtuple (BatList.map (fun f -> f v) fs)
-    | TMap _ -> (* trivial as we represent maps with the same mtbdd + key type id + value type id*)
+    | TMap (kty, vty) -> (* trivial as we represent maps with the same mtbdd + key type id + value type id*)
+      (* no longer trivial *)
+      let g x = embed_value record_fns vty (Mtbdd.get x) |> Mtbdd.unique B.tbl_nv in
       fun v ->
-        Syntax.vmap ((Obj.magic v).bdd)
+        let omap = Obj.magic v in
+        let vbdd = Mapleaf.mapleaf1 g omap.bdd in
+        Syntax.vmap (vbdd, kty)
     | TArrow _ -> failwith "Function computed as value"
     | TRecord _ -> failwith "Trecord"
     | TNode ->
@@ -87,12 +93,12 @@ let rec unembed_value (record_cnstrs : int -> 'c) (record_proj : (int * int) -> 
                             (PrintingRaw.show_value ~show_meta:false v) (PrintingRaw.show_ty typ)))
     | TMap (kty, vty) ->
       (* this is trivial as OCaml maps are NV maps plus a value type*)
-      fun v ->
-        (match v.v with
+      fun v -> failwith "Not doing this for now, only useful for symbolics."
+        (* (match v.v with
          | VMap vdd ->
            (* Printf.printf "kty: %s, vty:%s" (Printing.ty_to_string kty) (Printing.ty_to_string vty); *)
            Obj.magic ({bdd = vdd; key_ty_id = Collections.TypeIds.get_id type_store kty; val_ty_id = Collections.TypeIds.get_id type_store vty})
-         | _ -> failwith "mistyped value")
+         | _ -> failwith "mistyped value") *)
     | TArrow _ -> failwith "Function computed as value"
     | TRecord _ -> failwith "Trecord"
     | TNode ->

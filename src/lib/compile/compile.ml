@@ -176,7 +176,8 @@ let rec ty_to_ocaml_string t =
   | TMap (kty,vty) ->
     ignore (ty_to_ocaml_string kty); (* NOTE: doing this for the side effect in the case of TTuple, i.e. adding to record_table *)
     ignore (ty_to_ocaml_string vty);
-    Printf.sprintf "CompileBDDs.t"
+    let vty = ty_to_ocaml_string vty in
+    Printf.sprintf "(%s) CompileBDDs.t" vty
   | TRecord map ->
     record_to_ocaml_record ":" ty_to_ocaml_string map
 
@@ -333,20 +334,20 @@ and map_to_ocaml_string op es ty =
     | MCreate ->
       (match ty with
        | TMap (kty,vty) ->
-          Printf.sprintf "NativeBdd.create ~key_ty_id:(%d) ~val_ty_id:(%d) (%s)"
+          Printf.sprintf "(Obj.magic (NativeBdd.create ~key_ty_id:(%d) ~val_ty_id:(%d) (Obj.magic (%s))))"
             (get_fresh_type_id type_store kty) (get_fresh_type_id type_store vty) (exp_to_ocaml_string (BatList.hd es))
         | _ -> failwith "Wrong type for map operation")
     | MSet ->
       (match es with
         | [e1;e2;e3] ->
-          Printf.sprintf "(NativeBdd.update (%d) (%s) (%s) (%s))"
-            (get_fresh_type_id type_store (OCamlUtils.oget e3.ety)) (exp_to_ocaml_string e1) (exp_to_ocaml_string e2) (exp_to_ocaml_string e3)
+          Printf.sprintf "(Obj.magic (NativeBdd.update record_fns (%s) (Obj.magic (%s)) (Obj.magic (%s))))"
+             (exp_to_ocaml_string e1) (exp_to_ocaml_string e2) (exp_to_ocaml_string e3)
         | _ -> failwith "Wrong number of arguments to MSet operation")
     | MGet ->
       (match es with
         | [e1;e2] ->
-          Printf.sprintf "(NativeBdd.find %d (%s) (%s))"
-            (get_fresh_type_id type_store (OCamlUtils.oget e2.ety)) (exp_to_ocaml_string e1) (exp_to_ocaml_string e2)
+          Printf.sprintf "(Obj.magic (NativeBdd.find record_fns (%s) (Obj.magic (%s))))"
+            (exp_to_ocaml_string e1) (exp_to_ocaml_string e2)
         | _ -> failwith "Wrong number of arguments to MGet operation")
     | MMap ->
       (match es with
@@ -360,8 +361,8 @@ and map_to_ocaml_string op es ty =
               let op_key_var = "op_key" in
               (*need the Obj.magic to op_key_var arg here because tuple may have
                  different type/size depending on the free vars*)
-              Printf.sprintf "(let %s = %s in \n \
-                               NativeBdd.map (Obj.magic %s) (%d) (%s) (%s))"
+                 Printf.sprintf "(Obj.magic (let %s = %s in \n \
+                 NativeBdd.map (Obj.magic %s) (%d) (Obj.magic (%s)) (Obj.magic (%s))))"
                 op_key_var op_key op_key_var (get_fresh_type_id type_store newty)
                 (exp_to_ocaml_string e1) (exp_to_ocaml_string e2)
             | _ -> failwith ("Wrong type for function argument" ^ (Printing.ty_to_string (OCamlUtils.oget e1.ety))))
@@ -377,8 +378,8 @@ and map_to_ocaml_string op es ty =
                 (exp_to_ocaml_string er0) (exp_to_ocaml_string er1)
             | _ -> ""
           in
-          Printf.sprintf "(let %s = %s in \n\
-                          NativeBdd.merge %s (Obj.magic %s) (%s) (%s) (%s))"
+          Printf.sprintf "(Obj.magic (let %s = %s in \n\
+                          NativeBdd.merge %s (Obj.magic %s) (Obj.magic (%s)) (Obj.magic (%s)) (Obj.magic (%s))))"
             op_key_var op_key opt op_key_var (exp_to_ocaml_string e1)
             (exp_to_ocaml_string e2) (exp_to_ocaml_string e3)
         | _ -> failwith "Wrong number of arguments for merge operation")
@@ -404,9 +405,9 @@ and map_to_ocaml_string op es ty =
               let pred_key = Printf.sprintf "(%d, %s)" pred_id pred_closure in
               (*need the Obj.magic to op_key_var arg here because tuple may
                    have different type/size depending on the free vars*)
-              Printf.sprintf "(let %s = %s in \n\
-                               let pred_key = %s in \n\
-                               NativeBdd.mapIf (Obj.magic pred_key) (Obj.magic %s) (%d) (%s) (%s))"
+              Printf.sprintf "(Obj.magic (let %s = %s in \n\
+              let pred_key = %s in \n\
+              NativeBdd.mapIf (Obj.magic pred_key) (Obj.magic %s) (%d) (Obj.magic (%s)) (Obj.magic (%s))))"
                 op_key_var op_key (*first let*)
                 pred_key op_key_var (get_fresh_type_id type_store newty)
                 (exp_to_ocaml_string f) (exp_to_ocaml_string m)
@@ -471,7 +472,7 @@ let compile_decl decl =
               | Some attr -> (*NOTE: this is just the attribute type, not including the map from nodes to attributes *)
                 ignore (get_fresh_type_id type_store TNode); (*need to register node types manually! *)
                 let attr_id = get_fresh_type_id type_store attr in
-                  Printf.sprintf "let %s = SIM.simulate_solve (%d) (\"%s\") (%s) (%s) (%s)"
+                  Printf.sprintf "let %s = SIM.simulate_solve record_fns (%d) (\"%s\") (%s) (%s) (%s)"
                     (varname x) attr_id (Var.name x) (exp_to_ocaml_string solve.init)
                     (exp_to_ocaml_string solve.trans) (exp_to_ocaml_string solve.merge))
         | _ -> failwith "Not implemented" (* Only happens if we did map unrolling *)
