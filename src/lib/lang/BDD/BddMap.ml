@@ -343,7 +343,7 @@ let map_when ~op_key (pred: bool Mtbdd.t) (f: value -> value)
         let op =
           User.make_op2
             ~memo:(Cudd.Memo.Global)
-            (* ~memo:(Memo.Cache (Cache.create2 ~maxsize:4096 ())) *)
+            (* ~memo:(Memo.Cache (Cache.create2 ~maxsize:8000 ())) *)
             ~commutative:false ~idempotent:false ~special g
         in
         mapw_op_cache := ExpMap.add op_key op !mapw_op_cache ;
