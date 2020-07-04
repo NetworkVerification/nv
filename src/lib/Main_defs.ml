@@ -141,10 +141,26 @@ let run_smt file cfg info decls fs =
   else *)
    run_smt_classic file cfg info decls fs
 
+let partialEvalDecls decls = 
+  List.map (fun d ->
+    match d with
+    | DLet (x, ty, e) -> DLet (x, ty, InterpPartial.interp_partial_opt e)
+    | DAssert e -> DAssert (InterpPartial.interp_partial_opt e)
+    | DSolve r ->
+      DSolve {r with init = InterpPartial.interp_partial_opt r.init;
+                     trans = InterpPartial.interp_partial_opt r.trans;
+                     merge = InterpPartial.interp_partial_opt r.merge;}
+    | DRequire _
+    | DPartition _
+    | DInterface _  
+    | DNodes _ 
+    | DSymbolic _ 
+    | DUserTy _ 
+    | DEdges _ -> d) decls
+
 let run_simulator cfg _ decls fs =
-  (* let net = mk_net cfg decls in
-     let net = partialEvalNet net in
-     let net, _ = OptimizeBranches.optimize_net net in (* The _ should match the identity function *) *)
+  (* It is important to partially evaluate before optimizing branches and before simulation. *)
+  let decls = partialEvalDecls decls in
   let decls, _ = OptimizeBranches.optimize_declarations decls in
   try
     let solution, q =

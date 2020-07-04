@@ -51,6 +51,7 @@ let simulate_declaration ~(throw_requires: bool) (graph : AdjGraph.t) (state : s
         {state with assertions = result :: state.assertions}
       end
     | DSolve solve ->
+
       let results = Srp.simulate_solve graph {ty = Env.empty; value = env} solve in
       begin
         match solve.var_names.e with

@@ -194,3 +194,4 @@ let simulate_solve graph env (solve : Syntax.solve) : value AdjGraph.VertexMap.t
   let state = create_state (AdjGraph.nb_vertex graph) init in
   simulate_init srp state
   |> AdjGraph.VertexMap.map snd
+    
