@@ -6,24 +6,25 @@ open Syntax
 open Nv_utils.OCamlUtils
 open Nv_solution
 
-let ty_transformer _ ty =
+let ty_transformer (recursors: Transformers.recursors) ty =
   match ty with
   | TTuple [] -> Some(TUnit)
-  | TTuple [ty] -> Some(ty)
+  | TTuple [ty] -> Some(recursors.recurse_ty ty)
   | _ -> None
 ;;
 
-let pattern_transformer _ p _ =
-  match p with
-  | PTuple [] -> Some(PUnit)
-  | PTuple [p] -> Some(p)
+let pattern_transformer (recursors: Transformers.recursors) p pty =
+  match p, pty with
+  | PTuple [], TTuple [] -> Some(PUnit)
+  | PTuple [p], TTuple [t] -> Some(recursors.recurse_pattern p t)
+  | PTuple [], _ | PTuple [_], _ -> failwith "CleanupTuples: Unexpected pattern type"
   | _ -> None
 ;;
 
-let value_transformer _ v =
+let value_transformer (recursors: Transformers.recursors) v =
   match v.v with
   | VTuple [] -> Some(vunit ())
-  | VTuple [v] -> Some(v)
+  | VTuple [v] -> Some(recursors.recurse_value v)
   | _ -> None
 ;;
 
@@ -31,7 +32,7 @@ let exp_transformer (recursors: Transformers.recursors) e =
   let cleanup_exp = recursors.recurse_exp in
   match e.e with
   | ETuple [] -> Some (e_val (avalue (vunit (), Some TUnit, e.espan)))
-  | ETuple [e] -> Some(e)
+  | ETuple [e] -> Some(cleanup_exp e)
   | EOp (op, es) ->
     begin
       match op, es with
@@ -52,17 +53,19 @@ let exp_transformer (recursors: Transformers.recursors) e =
 (** Functions to convert a solution to the cleanup'd version to a solution
     to the original version **)
 
-let rec map_back_transformer _ _ v oldty =
+let rec map_back_transformer recurse _ v oldty =
   match v.v, oldty with
   | VUnit, TTuple [] -> Some(vtuple [])
-  | _, TTuple [_] -> Some(vtuple [v])
+  | _, TTuple [] -> failwith "Cleanup Tuples: Unexpected map_back"
+  | _, TTuple [oldty'] -> Some(vtuple [recurse v oldty'])
   | _ -> None
 ;;
 
-let mask_transformer _ _ v oldty =
+let mask_transformer recurse _ v oldty =
   match v.v, oldty with
   | VBool _, TTuple [] -> Some (vtuple [])
-  | _, TTuple [_] -> Some(vtuple [v])
+  | _, TTuple [] -> failwith "Cleanup Tuples: Unexpected mask"
+  | _, TTuple [oldty'] -> Some(vtuple [recurse v oldty'])
   | _ -> None
 ;;
 

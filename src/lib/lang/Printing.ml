@@ -94,8 +94,9 @@ let rec ty_to_string t =
   | TNode -> "tnode"
   | TEdge -> "tedge"
   | TTuple ts ->
-    if List.is_empty ts then "TEmptyTuple"
-    else "(" ^ sep "," ty_to_string ts ^ ")"
+    if List.is_empty ts then "TTuple0" else
+    if List.length ts = 1 then "TTuple1(" ^ ty_to_string (List.hd ts) ^ ")" else
+     "(" ^ sep "," ty_to_string ts ^ ")"
   | TOption t -> "option[" ^ ty_to_string t ^ "]"
   | TMap (t1, t2) ->
     "dict[" ^ ty_to_string t1 ^ "," ^ ty_to_string t2
@@ -151,7 +152,8 @@ let rec pattern_to_string pattern =
   | PBool false -> "false"
   | PInt i -> Integer.to_string i
   | PTuple ps ->
-    if List.is_empty ps then "PEmptyTuple" else
+    if List.is_empty ps then "PTuple0" else
+    if List.length ps = 1 then "PTuple1(" ^ pattern_to_string (List.hd ps) ^ ")" else
       "(" ^ comma_sep pattern_to_string ps ^ ")"
   | POption None -> "None"
   | POption (Some p) -> "Some " ^ pattern_to_string p
@@ -220,7 +222,8 @@ and value_to_string_p ~show_types prec v =
   | VInt i -> Integer.to_string i
   | VMap m -> map_to_string ~show_types " |-> " "\n" m
   | VTuple vs ->
-    if List.is_empty vs then "VEmptyTuple" else
+    if List.is_empty vs then "VTuple0" else
+    if List.length vs = 1 then "VTuple1(" ^ value_to_string_p max_prec (List.hd vs) ^ ")" else
       "(" ^ comma_sep (value_to_string_p max_prec) vs ^ ")"
   | VOption None -> (* Printf.sprintf "None:%s" (ty_to_string (oget v.vty)) *)
     "None"
@@ -255,7 +258,8 @@ and exp_to_string_p ~show_types prec e =
       ^ exp_to_string_p max_prec e1
       ^ " in \n" ^ exp_to_string_p prec e2
     | ETuple es ->
-      if List.is_empty es then "EEmptyTuple" else
+      if List.is_empty es then "ETuple0" else
+      if List.length es = 1 then "ETuple1(" ^ exp_to_string_p max_prec (List.hd es) ^ ")" else
         "(" ^ comma_sep (exp_to_string_p max_prec) es ^ ")"
     | ESome e -> "Some(" ^ exp_to_string_p prec e ^ ")"
     | EMatch (e1, bs) ->
