@@ -160,7 +160,7 @@ let partialEvalDecls decls =
 
 let run_simulator cfg _ decls fs =
   (* It is important to partially evaluate before optimizing branches and before simulation. *)
-  let decls = partialEvalDecls decls in
+  let decls = Profile.time_profile "partial eval took:" (fun () -> partialEvalDecls decls) in
   let decls, _ = OptimizeBranches.optimize_declarations decls in
   try
     let solution, q =

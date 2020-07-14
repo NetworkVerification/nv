@@ -17,8 +17,8 @@ do
     echo "\n";
 done
 
-for file in $SMT_BENCHMARKS
-do
-    time "$NV" -smt -link-failures 1 "$file";
-    echo "\n";
-done
+#for file in $SMT_BENCHMARKS
+#do
+#    time "$NV" -smt -link-failures 1 "$file";
+#    echo "\n";
+#done

@@ -11871,3 +11871,8 @@ let init u = createDict (initProt u)
    pensacola=173}*)
 
 let sol = solution {init = init; trans = trans; merge = merge}
+
+let hasRoute s = forall (fun f -> match f with
+                                  | a~b ->
+                                    (match (toEdge a b) with | Some _ -> true | _ -> false)) (fun v -> !(v.selected = None)) s
+assert (forall (fun u -> u <n 174n) (fun v -> hasRoute v) sol)

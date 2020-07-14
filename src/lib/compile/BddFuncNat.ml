@@ -737,7 +737,42 @@ and eval_branch env (g : t) p =
                       | _ -> false)
                      |> Mtbdd.unique B.tbl_bool) (fst m)) |> bdd_of_mtbdd
     in
-    Some (env, Some cond)
+    Some (env, Some cond)    
+  | PEdge (p1, p2), Value v ->
+    (match v.v with
+    | VEdge (v1,v2) -> 
+      (match eval_branch env (Value (vnode v1)) p1 with
+        | None -> None
+        | Some (env, None) ->
+          eval_branch env (Value (vnode v2)) p2
+        | _ -> failwith "should not occur")
+    | _ -> None)
+  | PEdge (p1, p2), Tuple [b1;b2] ->
+    eval_branch env (Tuple [b1;b2]) (PTuple [p1;p2])
+
+  (* | PNode pi, BInt bi ->
+    if Syntax.tnode_sz <> Array.length bi then
+      failwith "Likely failure of type checking."
+    else
+      let pi = Integer.create ~value:pi ~size:tnode_sz in
+      let cond = ref (Bdd.dtrue B.mgr) in
+      for j = 0 to tnode_sz - 1 do
+        let b = B.get_bit (Integer.to_int pi) j in
+        let bdd = if b then bi.(j) else Bdd.dnot bi.(j) in
+        cond := Bdd.dand !cond bdd
+      done ;
+      Some (env, Some !cond)
+  | PNode pi, BMap m ->
+    let cond = (Mapleaf.mapleaf1
+                  (fun vm ->
+                     (match (Mtbdd.get vm).v with
+                      | VNode vi when pi = vi -> true
+                      | _ -> false)
+                     |> Mtbdd.unique B.tbl_bool) (fst m)) |> bdd_of_mtbdd
+    in
+    Some (env, Some cond) *)
+
+
   | POption None, Value v ->
     (match v.v with
      | VOption None -> Some (env, None)
