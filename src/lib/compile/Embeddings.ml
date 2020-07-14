@@ -7,7 +7,7 @@ open Syntax
 open CompileBDDs
 open Cudd
 
-module B = BddUtilsNat
+module B = BddUtils
          
 (** Given an NV type and an OCaml value constructs an NV value*)
 let rec embed_value (record_fns: (int*int) -> 'a -> 'b) (typ: Syntax.ty) : 'v -> Syntax.value =

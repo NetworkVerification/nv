@@ -3,6 +3,17 @@ open Cudd
 open Nv_datastructures
 open Nv_utils
 
+(* module type BddMapSig (B: BddUtilsSig) =
+sig
+  val create: key_ty:Syntax.ty -> Syntax.value -> t
+  val map: op_key:ExpMap.key -> (Syntax.value -> Syntax.value) -> t -> t
+  val map_when: op_key:ExpMap.key -> bool Cudd.Mtbdd.t -> (Syntax.value -> Syntax.value) -> t -> t
+  val map_ite: op_key1:ExpMap.key -> op_key2:ExpMap.key -> bool Cudd.Mtbdd.t -> (Nv_lang.Syntax.value -> Nv_lang.Syntax.value) 
+            -> (Nv_lang.Syntax.value -> Nv_lang.Syntax.value) -> t -> t
+  val find: t -> Nv_lang.Syntax.value -> Nv_lang.Syntax.value
+  val update: t -> Nv_lang.Syntax.value -> Nv_lang.Syntax.value -> t *)
+
+
 (* TODO: optimize variable ordering  *)
 type t = mtbdd
 
@@ -11,7 +22,7 @@ module B = BddUtils
 
 let create ~key_ty:ty (v: value) : t =
   B.set_size (B.ty_to_size ty) ;
-  (Mtbdd.cst B.mgr B.tbl v, ty)
+  (Mtbdd.cst B.mgr B.tbl_nv v, ty)
 
 let rec default_value ty =
   match ty with
@@ -223,7 +234,7 @@ let map_cache = ref ExpMap.empty
 
 let map ~op_key (f: value -> value) ((vdd, ty): t) : t =
   let cfg = Cmdline.get_cfg () in
-  let g x = f (Mtbdd.get x) |> Mtbdd.unique B.tbl in
+  let g x = f (Mtbdd.get x) |> Mtbdd.unique B.tbl_nv in
   if cfg.no_caching then (Mapleaf.mapleaf1 g vdd, ty)
   else
     let op =
@@ -325,7 +336,7 @@ let map_when ~op_key (pred: bool Mtbdd.t) (f: value -> value)
     ((vdd, ty): t) : t =
   let cfg = Cmdline.get_cfg () in
   let g b v =
-    if Mtbdd.get b then f (Mtbdd.get v) |> Mtbdd.unique B.tbl
+    if Mtbdd.get b then f (Mtbdd.get v) |> Mtbdd.unique B.tbl_nv
     else v
   in
   if cfg.no_caching then (Mapleaf.mapleaf2 g pred vdd, ty)
@@ -360,8 +371,8 @@ let map_ite ~op_key1 ~op_key2 (pred: bool Mtbdd.t) (f1: value -> value) (f2: val
     ((vdd, ty): t) : t =
   let cfg = Cmdline.get_cfg () in
   let g b v =
-    if Mtbdd.get b then f1 (Mtbdd.get v) |> Mtbdd.unique B.tbl
-    else f2 (Mtbdd.get v) |> Mtbdd.unique B.tbl
+    if Mtbdd.get b then f1 (Mtbdd.get v) |> Mtbdd.unique B.tbl_nv
+    else f2 (Mtbdd.get v) |> Mtbdd.unique B.tbl_nv
   in
   if cfg.no_caching then (Mapleaf.mapleaf2 g pred vdd, ty)
   else
@@ -399,8 +410,8 @@ let forall_op_cache = ref ExpMap.empty
 let forall ~op_key (pred: bool Mtbdd.t) (f: value -> value) ((vdd, _): t) : value =
   let cfg = Cmdline.get_cfg () in
   let g b v =
-    if Mtbdd.get b then f (Mtbdd.get v) |> Mtbdd.unique B.tbl
-    else vbool true |> Mtbdd.unique B.tbl
+    if Mtbdd.get b then f (Mtbdd.get v) |> Mtbdd.unique B.tbl_nv
+    else vbool true |> Mtbdd.unique B.tbl_nv
   in
     let op =
       match ExpMap.Exceptionless.find op_key !forall_op_cache with
@@ -409,7 +420,7 @@ let forall ~op_key (pred: bool Mtbdd.t) (f: value -> value) ((vdd, _): t) : valu
           if cfg.no_cutoff then fun _ _ -> None
           else fun bdd1 _ ->
             if Vdd.is_cst bdd1 && not (Mtbdd.get (Vdd.dval bdd1))
-            then Some (Mtbdd.cst B.mgr B.tbl (vbool true))
+            then Some (Mtbdd.cst B.mgr B.tbl_nv (vbool true))
             else None
         in
         let op =
@@ -446,7 +457,7 @@ let merge ?opt ~op_key (f: value -> value -> value) ((x, tyx): t)
     ((y, _): t) : t =
   let cfg = Cmdline.get_cfg () in
   let g x y =
-    f (Mtbdd.get x) (Mtbdd.get y) |> Mtbdd.unique B.tbl
+    f (Mtbdd.get x) (Mtbdd.get y) |> Mtbdd.unique B.tbl_nv
   in
   if cfg.no_caching then (Mapleaf.mapleaf2 g x y, tyx)
   else
@@ -508,7 +519,7 @@ let find ((map, _): t) (v: value) : value =
   Mtbdd.pick_leaf for_key
 
 let update ((map, ty): t) (k: value) (v: value) : t =
-  let leaf = Mtbdd.cst B.mgr B.tbl v in
+  let leaf = Mtbdd.cst B.mgr B.tbl_nv v in
   let key = value_to_bdd k in
   (Mtbdd.ite key leaf map, ty)
 

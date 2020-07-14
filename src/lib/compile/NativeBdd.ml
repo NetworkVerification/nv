@@ -8,7 +8,7 @@ open CompileBDDs
 open Collections
 open Nv_utils
 
-module B = BddUtilsNat
+module B = BddUtils
 
 (* value_to_bdd converts an OCaml Value to a Bdd. It requires an NV type for the given OCaml value *)
 let value_to_bdd (record_fns: (int*int) -> 'a -> 'b) (typ : Syntax.ty) (v: 'v) : Bdd.vt =
@@ -20,7 +20,8 @@ let value_to_bdd (record_fns: (int*int) -> 'a -> 'b) (typ : Syntax.ty) (v: 'v) :
       let var = B.ithvar idx in
       ((if (Obj.magic v) then var else Bdd.dnot var), idx + 1)
     | TInt sz ->
-      B.mk_int sz (Obj.magic v) idx, idx + sz
+      let i = Integer.create ~value:(Obj.magic v) ~size:sz in
+      B.mk_int i idx, idx + sz
     | TTuple ts ->
       let base = Bdd.dtrue B.mgr in
       let n = BatList.length ts in
@@ -33,7 +34,9 @@ let value_to_bdd (record_fns: (int*int) -> 'a -> 'b) (typ : Syntax.ty) (v: 'v) :
         (base, idx) ts
     | TNode ->
       (* Encode same way as we encode ints *)
-      B.mk_int tnode_sz (Obj.magic v) idx, idx + tnode_sz
+      let sz = tnode_sz in
+      let i = Integer.create ~value:(Obj.magic v) ~size:sz in
+      B.mk_int i idx, idx + sz
     | TEdge ->
       let bdd1, i = aux TNode (fst (Obj.magic v)) idx in
       let bdd2, i = aux TNode (snd (Obj.magic v)) i in
@@ -185,18 +188,18 @@ let mapw_pred_cache = ref HashClosureMap.empty
 
 (* Given the argument [x], the corrresponding bdd [bddf], a predicate's body [f] and a closure (tuple of values) [clos] returns
  * an environment of NV values that can be used to build the BDD. *)
-let build_env (x : Syntax.var) (bddf: BddFuncNat.t) (f: exp) (clos: 'a) =
+let build_env (x : Syntax.var) (bddf: BddFunc.t) (f: exp) (clos: 'a) =
   let freeVars = Syntax.free (BatSet.PSet.singleton ~cmp:Var.compare x) f in
   let freeList = BatSet.PSet.to_list freeVars in
   let rec loop list clos acc =
     match list with
     | [] -> acc
     | [y] ->
-      Env.update acc y (BddFuncNat.eval_value (embed_value_id (snd clos) (fst clos)))
+      Env.update acc y (BddFunc.eval_value (embed_value_id (snd clos) (fst clos)))
     | y :: ys ->
       let elt = Obj.magic (fst clos) in
       let clos = snd clos in
-      let env = Env.update acc y (BddFuncNat.eval_value (embed_value_id (snd elt) (fst elt))) in
+      let env = Env.update acc y (BddFunc.eval_value (embed_value_id (snd elt) (fst elt))) in
       loop ys (Obj.magic clos) env
   in
   loop freeList (Obj.magic clos) (Env.bind x bddf)
@@ -218,24 +221,24 @@ let mapIf (pred_key: int * 'g) (op_key : int * 'f) (vty_new_id: int) (f: 'a1 -> 
         | _ -> failwith "expected a function"
       in
       (* Create a BDD that corresponds to all keys of type argty*)
-      let bddf = BddFuncNat.create_value (OCamlUtils.oget predFun.argty) in
+      let bddf = BddFunc.create_value (OCamlUtils.oget predFun.argty) in
       (* Build the closure environment of the predicate *)
       let env = build_env predFun.arg bddf predFun.body (snd pred_key) in
       (* Build the BDD that captures the predicate's semantics *)
-      let bddf = BddFuncNat.eval env predFun.body in
+      let bddf = BddFunc.eval env predFun.body in
       (* If it's a value, create a BDD *)
       let bddf = match bddf with
-        | Value v -> BddFuncNat.eval_value v
+        | Value v -> BddFunc.eval_value v
         | _ -> bddf
       in
       (match bddf with
        | BBool bdd ->
-         let mtbdd = BddFuncNat.wrap_mtbdd bdd in
+         let mtbdd = BddFunc.wrap_mtbdd bdd in
          mapw_pred_cache :=
            HashClosureMap.add pred_key mtbdd !mapw_pred_cache ;
          mtbdd
        | BMap mtbdd ->
-         let mtbdd = (BddFuncNat.value_mtbdd_bool_mtbdd (fst mtbdd)) in
+         let mtbdd = (BddFunc.value_mtbdd_bool_mtbdd (fst mtbdd)) in
          mapw_pred_cache  := HashClosureMap.add pred_key mtbdd !mapw_pred_cache ;
          mtbdd
        | _ -> failwith "A boolean bdd was expected but something went wrong")
@@ -287,19 +290,19 @@ let forall (pred_key: int * 'g) (op_key : int * 'f) (vty_new_id: int) (f: 'a1 ->
         | _ -> failwith "expected a function"
       in
       (* Create a BDD that corresponds to all keys of type argty*)
-      let bddf = BddFuncNat.create_value (OCamlUtils.oget predFun.argty) in
+      let bddf = BddFunc.create_value (OCamlUtils.oget predFun.argty) in
       (* Build the closure environment of the predicate *)
       let env = build_env predFun.arg bddf predFun.body (snd pred_key) in
       (* Build the BDD that captures the predicate's semantics *)
-      let bddf = BddFuncNat.eval env predFun.body in
+      let bddf = BddFunc.eval env predFun.body in
       (match bddf with
        | BBool bdd ->
-         let mtbdd = BddFuncNat.wrap_mtbdd bdd in
+         let mtbdd = BddFunc.wrap_mtbdd bdd in
          mapw_pred_cache :=
            HashClosureMap.add pred_key mtbdd !mapw_pred_cache ;
          mtbdd
        | BMap mtbdd ->
-         let mtbdd = (BddFuncNat.value_mtbdd_bool_mtbdd (fst mtbdd)) in
+         let mtbdd = (BddFunc.value_mtbdd_bool_mtbdd (fst mtbdd)) in
          mapw_pred_cache  := HashClosureMap.add pred_key mtbdd !mapw_pred_cache ;
          mtbdd
        | _ -> failwith "A boolean bdd was expected but something went wrong")

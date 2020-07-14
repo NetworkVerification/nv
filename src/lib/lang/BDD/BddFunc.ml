@@ -4,9 +4,10 @@ open Nv_datastructures
 open Nv_utils
 open Nv_utils.OCamlUtils
 open Batteries
-open BddMap
 
 module B = BddUtils
+
+(** Computations over BddFunc are done entirely as NV values. *)
 
 (** ** Type of values computed*)
 type t =
@@ -39,7 +40,7 @@ let rec equal_t x y =
   | Tuple ts1, Tuple ts2 ->
     List.for_all2 equal_t ts1 ts2
   | BMap m1, BMap m2 ->
-    BddMap.equal m1 m2
+    Mtbdd.is_equal (fst m1) (fst m2)
   | Value v1, Value v2 ->
     equal_values ~cmp_meta:false v1 v2
   | _, _ -> false
@@ -154,7 +155,7 @@ let rec isBdd (x: t) =
   | BMap _ | Tuple _ | Value _  -> false
 
 (** Lifts an NV value to a BDD*)
-let rec eval_value (v: value) :t =
+let rec eval_value (v: 'v) :t =
   match v.v with
   | VUnit -> BBool (bdd_of_bool true) (* Encode as boolean *)
   | VBool b -> BBool (bdd_of_bool b)
@@ -363,19 +364,19 @@ let eval_int_op2 f f_lifted (x: t) (y: t) : t =
   | BMap m1, BMap m2 ->
     BMap (Mapleaf.mapleaf2 (fun v1 v2 ->
         match (Mtbdd.get v1).v, (Mtbdd.get v2).v with
-        | VInt n, VInt m -> f n m |> Mtbdd.unique B.tbl
+        | VInt n, VInt m -> f n m |> Mtbdd.unique B.tbl_nv
         | _, _ -> failwith "Mistyped integer computation"
       ) (fst m1) (fst m2), snd m1)
   | BMap m1, Value v2 ->
     BMap (Mapleaf.mapleaf1 (fun v1 ->
         match (Mtbdd.get v1).v, v2.v with
-        | VInt n, VInt m -> f n m |> Mtbdd.unique B.tbl
+        | VInt n, VInt m -> f n m |> Mtbdd.unique B.tbl_nv
         | _, _ -> failwith "Mistyped boolean computation"
       ) (fst m1), snd m1)
   | Value v2, BMap m1 ->
     BMap (Mapleaf.mapleaf1 (fun v1 ->
         match v2.v, (Mtbdd.get v1).v with
-        | VInt n, VInt m -> f n m |> Mtbdd.unique B.tbl
+        | VInt n, VInt m -> f n m |> Mtbdd.unique B.tbl_nv
         | _, _ -> failwith "Mistyped boolean computation"
       ) (fst m1), snd m1)
   | BMap _, BInt _ | BInt _, BMap _ ->
@@ -418,7 +419,7 @@ let eval_branch_mapLift env matches key_ty =
                         return v otherwise return whatever was in them map*)
                      BMap (Mapleaf.mapleaf2 (fun b vcur ->
                          (if (Mtbdd.get b) then v else Mtbdd.get vcur) |>
-                         Mtbdd.unique B.tbl) (wrap_mtbdd cond) (fst m), (snd m))
+                         Mtbdd.unique B.tbl_nv) (wrap_mtbdd cond) (fst m), (snd m))
                    | _, _ -> failwith "Invalid combination") accEnv matchEnv
              in
              let newCond =
@@ -461,7 +462,7 @@ let eval_tget lo hi x =
     else Tuple (elts |> BatList.drop lo  |> BatList.take (hi - lo + 1))
   | BMap m ->
     BMap (Mapleaf.mapleaf1
-            (fun v -> eval_tget_v lo hi (Mtbdd.get v) |> Mtbdd.unique B.tbl) (fst m),
+            (fun v -> eval_tget_v lo hi (Mtbdd.get v) |> Mtbdd.unique B.tbl_nv) (fst m),
           snd m)
   | _ -> failwith "Impossible"
 
@@ -512,7 +513,7 @@ let eval_tset lo hi xs x =
                      | VTuple velts ->
                        vtuple (OCamlUtils.replaceSlice lo hi elts velts)
                      | _ -> failwith "Bad TSet")
-                | _ -> failwith "Expected a tuple") |> Mtbdd.unique B.tbl
+                | _ -> failwith "Expected a tuple") |> Mtbdd.unique B.tbl_nv
             ) (fst m), snd m)
   | _ -> failwith "Impossible"
 
@@ -577,13 +578,13 @@ let rec eval (env: t Env.t) (e: exp) : t =
   | ESome e ->
     (match eval env e with
      | Value v -> Value (voption (Some v))
-     | BMap m -> BMap (Mapleaf.mapleaf1 (fun v -> voption (Some (Mtbdd.get v)) |> Mtbdd.unique B.tbl) (fst m), snd m)
+     | BMap m -> BMap (Mapleaf.mapleaf1 (fun v -> voption (Some (Mtbdd.get v)) |> Mtbdd.unique B.tbl_nv) (fst m), snd m)
      (* NOTE: Decided to push the option through a map, it makes writing functions like eval_ite_bdd_guard much easier... *)
      | b ->
        BOption (Bdd.dtrue B.mgr, b))
   | EMatch (e1, branches) ->
     let v1 = eval env e1 in
-    eval_matches env (oget e1.ety) v1 branches (Value (default_value (oget e.ety)))
+    eval_matches env (oget e1.ety) v1 branches (Value (BddMap.default_value (oget e.ety)))
   | EFun _ | EApp _ | ERecord _ | EProject _ -> failwith "internal error (eval)"
 
 and eval_matches env key_ty v1 branches default =
@@ -678,7 +679,42 @@ and eval_branch env (g : t) p =
                       | _ -> false)
                      |> Mtbdd.unique B.tbl_bool) (fst m)) |> bdd_of_mtbdd
     in
-    Some (env, Some cond)
+    Some (env, Some cond)    
+  | PEdge (p1, p2), Value v ->
+    (match v.v with
+    | VEdge (v1,v2) -> 
+      (match eval_branch env (Value (vnode v1)) p1 with
+        | None -> None
+        | Some (env, None) ->
+          eval_branch env (Value (vnode v2)) p2
+        | _ -> failwith "should not occur")
+    | _ -> None)
+  | PEdge (p1, p2), Tuple [b1;b2] ->
+    eval_branch env (Tuple [b1;b2]) (PTuple [p1;p2])
+
+  (* | PNode pi, BInt bi ->
+    if Syntax.tnode_sz <> Array.length bi then
+      failwith "Likely failure of type checking."
+    else
+      let pi = Integer.create ~value:pi ~size:tnode_sz in
+      let cond = ref (Bdd.dtrue B.mgr) in
+      for j = 0 to tnode_sz - 1 do
+        let b = B.get_bit (Integer.to_int pi) j in
+        let bdd = if b then bi.(j) else Bdd.dnot bi.(j) in
+        cond := Bdd.dand !cond bdd
+      done ;
+      Some (env, Some !cond)
+  | PNode pi, BMap m ->
+    let cond = (Mapleaf.mapleaf1
+                  (fun vm ->
+                     (match (Mtbdd.get vm).v with
+                      | VNode vi when pi = vi -> true
+                      | _ -> false)
+                     |> Mtbdd.unique B.tbl_bool) (fst m)) |> bdd_of_mtbdd
+    in
+    Some (env, Some cond) *)
+
+
   | POption None, Value v ->
     (match v.v with
      | VOption None -> Some (env, None)
@@ -795,7 +831,7 @@ and eval_bool_op1 env f f_lifted e1 =
   | BMap m1 ->
     BMap (Mapleaf.mapleaf1 (fun v1 ->
         match (Mtbdd.get v1).v with
-        | VBool b1 -> vbool (f b1) |> Mtbdd.unique B.tbl
+        | VBool b1 -> vbool (f b1) |> Mtbdd.unique B.tbl_nv
         | _ -> failwith "Mistyped boolean computation"
       ) (fst m1), snd m1)
   | _ -> failwith "internal error (eval_bool_op1)"
@@ -820,13 +856,13 @@ and eval_bool_op2 env f f_lifted e1 e2 =
   | BMap m1, BMap m2 ->
     BMap (Mapleaf.mapleaf2 (fun v1 v2 ->
         match (Mtbdd.get v1).v, (Mtbdd.get v2).v with
-        | VBool b1, VBool b2 -> vbool (f b1 b2) |> Mtbdd.unique B.tbl
+        | VBool b1, VBool b2 -> vbool (f b1 b2) |> Mtbdd.unique B.tbl_nv
         | _, _ -> failwith "Mistyped boolean computation"
       ) (fst m1) (fst m2), snd m1)
   | BMap m1, Value v2  | Value v2, BMap m1->
     BMap (Mapleaf.mapleaf1 (fun v1 ->
         match (Mtbdd.get v1).v, v2.v with
-        | VBool b1, VBool b2 -> vbool (f b1 b2) |> Mtbdd.unique B.tbl
+        | VBool b1, VBool b2 -> vbool (f b1 b2) |> Mtbdd.unique B.tbl_nv
         | _, _ -> failwith "Mistyped boolean computation"
       ) (fst m1), snd m1)
   | BMap _, BBool _ | BBool _, BMap _ ->
@@ -864,7 +900,7 @@ and eval_ite_bdd_guard key_ty b v1 v2 =
   | Value v1, Value v2 ->
     BMap (Mapleaf.mapleaf1
             (fun b -> (if Mtbdd.get b then v1 else v2)
-                      |> Mtbdd.unique B.tbl) (wrap_mtbdd b), key_ty)
+                      |> Mtbdd.unique B.tbl_nv) (wrap_mtbdd b), key_ty)
   | BMap m1, BMap m2 ->
     let res = User.map_op3
         ~special:(fun bdd1 bdd2 bdd3 ->
@@ -872,18 +908,18 @@ and eval_ite_bdd_guard key_ty b v1 v2 =
             then Some(if Mtbdd.dval bdd1 then bdd2 else bdd3)
             else None
           )
-        (fun b1 b2 b3 -> (if Mtbdd.get b1 then Mtbdd.get b2 else Mtbdd.get b3) |> Mtbdd.unique B.tbl)
+        (fun b1 b2 b3 -> (if Mtbdd.get b1 then Mtbdd.get b2 else Mtbdd.get b3) |> Mtbdd.unique B.tbl_nv)
         (wrap_mtbdd b) (fst m1) (fst m2)
     in
     BMap (res, snd m1)
   | BMap m1, Value v2 ->
     BMap (Mapleaf.mapleaf2
             (fun b v -> (if Mtbdd.get b then Mtbdd.get v else v2)
-                        |> Mtbdd.unique B.tbl) (wrap_mtbdd b) (fst m1), snd m1)
+                        |> Mtbdd.unique B.tbl_nv) (wrap_mtbdd b) (fst m1), snd m1)
   | Value v1, BMap m2 ->
     BMap (Mapleaf.mapleaf2
             (fun b v -> (if Mtbdd.get b then v1 else Mtbdd.get v)
-                        |> Mtbdd.unique B.tbl) (wrap_mtbdd b) (fst m2), snd m2)
+                        |> Mtbdd.unique B.tbl_nv) (wrap_mtbdd b) (fst m2), snd m2)
   | Value v1, b2 when isBdd b2 = true ->
     ite b (eval_value v1) b2
   | b1, Value v2 when isBdd b1 = true ->
@@ -893,7 +929,7 @@ and eval_ite_bdd_guard key_ty b v1 v2 =
    *   | BOption (tag1, b1) ->
    *     BMap (Mapleaf.mapleaf1
    *             (fun b -> (if Mtbdd.get b then v1 else v2)
-   *                       |> Mtbdd.unique B.tbl) (wrap_mtbdd b), key_ty)
+   *                       |> Mtbdd.unique B.tbl_nv) (wrap_mtbdd b), key_ty)
    *   ite b (eval_value v1) b2
    * | b1, Value v2 when isBdd b1 = true ->
    *   ite b b1 (eval_value v2) *)
