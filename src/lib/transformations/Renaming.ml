@@ -109,14 +109,14 @@ let alpha_convert_declaration bmap (env: Var.t Env.t)
   match d with
   | DLet (x, tyo, e) ->
     let y = fresh x in
-    let env = Env.update env x y in
     let e = alpha_convert_exp env e in
+    let env = Env.update env x y in
     (env, DLet (y, tyo, e))
   | DSymbolic (x, Exp e) ->
     let y = fresh x in
     map_back bmap y x ;
-    let env = Env.update env x y in
     let e = alpha_convert_exp env e in
+    let env = Env.update env x y in
     (env, DSymbolic (y, Exp e))
   | DSymbolic (x, Ty ty) ->
     let y = fresh x in
