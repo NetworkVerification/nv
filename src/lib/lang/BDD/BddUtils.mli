@@ -21,7 +21,7 @@ val ithvar: int -> Cudd.Man.v Cudd.Bdd.t
 (** Given an integer n and an int i returns the ith-bit of n. *)
 val get_bit : Integer.t -> int -> bool
 
-(** [mk_int i idx] *)
+(** [mk_int i idx] represents integer i as a BDD. *)
 val mk_int: Integer.t -> int -> Cudd.Man.v Cudd.Bdd.t
 
 val tbool_to_bool: Cudd.Man.tbool -> bool

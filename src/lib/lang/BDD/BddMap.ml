@@ -49,8 +49,7 @@ let value_to_bdd (v: value) : Bdd.vt =
   let rec aux v idx =
     match v.v with
     | VUnit -> (* Encode unit as if it were a true boolean *)
-      let var = B.ithvar idx in
-      var, idx + 1
+      Cudd.Bdd.dtrue B.mgr, idx 
     | VBool b ->
       let var = B.ithvar idx in
       ((if b then var else Bdd.dnot var), idx + 1)

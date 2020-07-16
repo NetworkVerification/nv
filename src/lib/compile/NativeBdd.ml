@@ -105,6 +105,7 @@ let find record_fns (vmap: 'v t) (k: 'key) : 'v =
   let for_key = Mtbdd.constrain vmap.bdd bdd in
     Mtbdd.pick_leaf for_key
 
+(** Update vmap at key k with value v *)
 let update record_fns (vmap: 'v t) (k: 'key) (v: 'v): 'v t =
   let key_ty = TypeIds.get_elt type_store vmap.key_ty_id in
   let key = value_to_bdd record_fns key_ty k in
@@ -213,7 +214,6 @@ let mapIf (pred_key: int * 'g) (op_key : int * 'f) (vty_new_id: int) (f: 'a1 -> 
   let pred =
     match HashClosureMap.Exceptionless.find pred_key !mapw_pred_cache with
     | None ->
-      (* Printf.printf "edge: %d,%d\n" (fst (fst (Obj.magic clos))) (snd (fst (Obj.magic clos))); *)
       let pred = Collections.ExpIds.get_elt pred_store (fst pred_key) in
       let predFun =
         match pred.e with

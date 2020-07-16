@@ -1,3 +1,5 @@
+(** * Compute NV Predicate as BDD *)
+
 open Cudd
 open Syntax
 open Nv_datastructures
@@ -45,7 +47,7 @@ let rec equal_t x y =
     equal_values ~cmp_meta:false v1 v2
   | _, _ -> false
 
-  (* MTBDD table used for match expressions *)
+(* MTBDD table used for match expressions *)
 let tbl_match : (('a Env.t * ((Cudd.Man.v Cudd.Bdd.t) option)) option) Cudd.Mtbdd.table =
   Mtbdd.make_table
     ~hash:(fun v -> match v with
@@ -87,7 +89,7 @@ let value_mtbdd_bool_mtbdd (map: value Cudd.Mtbdd.unique Cudd.Vdd.t) =
 let create_value (ty: ty) : t =
   let rec aux i ty =
     match get_inner_type ty with
-    | TUnit -> (BBool (B.ithvar i), i + 1)
+    | TUnit -> (BBool (Bdd.dtrue B.mgr), i)
     | TBool -> (BBool (B.ithvar i), i + 1)
     | TInt size ->
       (BInt (Array.init size (fun j -> B.ithvar (i + j))), i + size)
@@ -609,6 +611,7 @@ and eval_matches env key_ty v1 branches default =
        eval_ite_bdd_guard key_ty cond (eval newEnv e)
          (eval_matches env key_ty v1 bs default))
 
+(* For every pattern, we have three cases, matching an NV value, matching a BDD, or matching a map of values *)
 and eval_branch env (g : t) p =
   match p, g with
   | PWild, _ -> Some (env, None)
@@ -691,30 +694,14 @@ and eval_branch env (g : t) p =
     | _ -> None)
   | PEdge (p1, p2), Tuple [b1;b2] ->
     eval_branch env (Tuple [b1;b2]) (PTuple [p1;p2])
-
-  (* | PNode pi, BInt bi ->
-    if Syntax.tnode_sz <> Array.length bi then
-      failwith "Likely failure of type checking."
-    else
-      let pi = Integer.create ~value:pi ~size:tnode_sz in
-      let cond = ref (Bdd.dtrue B.mgr) in
-      for j = 0 to tnode_sz - 1 do
-        let b = B.get_bit (Integer.to_int pi) j in
-        let bdd = if b then bi.(j) else Bdd.dnot bi.(j) in
-        cond := Bdd.dand !cond bdd
-      done ;
-      Some (env, Some !cond)
-  | PNode pi, BMap m ->
-    let cond = (Mapleaf.mapleaf1
-                  (fun vm ->
-                     (match (Mtbdd.get vm).v with
-                      | VNode vi when pi = vi -> true
-                      | _ -> false)
-                     |> Mtbdd.unique B.tbl_bool) (fst m)) |> bdd_of_mtbdd
+  | PEdge _, BMap m ->
+    let matches =
+      Mtbdd.guardleafs (Mapleaf.mapleaf1
+                          (fun vm ->
+                              eval_branch Env.empty (Value (Mtbdd.get vm)) p
+                              |> Mtbdd.unique tbl_match) (fst m))
     in
-    Some (env, Some cond) *)
-
-
+    eval_branch_mapLift env matches (snd m)    
   | POption None, Value v ->
     (match v.v with
      | VOption None -> Some (env, None)
@@ -812,8 +799,8 @@ and eval_branch env (g : t) p =
           (fst m))
     in
     eval_branch_mapLift env matches (snd m)
-  (* | _ ->
-   *   failwith "unknown error" *)
+  | _ ->
+   failwith "pattern matching failed"
 
 (* Example: m[k]: int * map[int,bool] * int match m[k] with | (0,_,0) -> None |
    (1, c, 1) -> Some (c[1]) | (_, c, _) -> Some (c[0])
@@ -892,10 +879,8 @@ and eval_ite env e1 e2 e3 =
   | BBool b -> eval_ite_bdd_guard (oget e1.ety) b (eval env e2) (eval env e3)
   | _ -> failwith "impossible"
 
-(* TODO: this doesn't work if we are trying to combine a BInt and a BMap *)
+(* NOTE: this doesn't work if we are trying to combine a BInt and a BMap *)
 and eval_ite_bdd_guard key_ty b v1 v2 =
-  (* Printf.printf "v1: %s\n" (print v1);
-   * Printf.printf "v2: %s\n" (print v2); *)
   match v1,v2 with
   | Value v1, Value v2 ->
     BMap (Mapleaf.mapleaf1

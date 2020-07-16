@@ -1,0 +1,13 @@
+include "../../AllPrefixes/TopologyZoo/USCarrierSim.nv"
+
+let init u =
+  createDict (init u)
+
+let merge u x y =
+  combine (fun v1 v2 -> merge u v1 v2) x y
+
+let trans e x =
+  let x = mapIf (fun e1 -> e = e1) (fun v -> createDict ({connected=None; static=None; ospf=None; bgp=None; selected=None;})) x in
+    mapIf (fun e1 -> !(e=e1)) (fun v -> trans e v) x
+
+let sol = solution {init=init; trans=trans; merge=merge}
