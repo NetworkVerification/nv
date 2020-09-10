@@ -227,11 +227,12 @@ let parse_input (args : string array) =
     if cfg.inline then
       (* Note! Must rename before inling otherwise inling is unsound *)
       let decls, f = Renaming.alpha_convert_declarations decls in
-      (Profile.time_profile "Inlining" (
+      let decls, fs = (Profile.time_profile "Inlining" (
           fun () ->
-            Inline.inline_declarations decls |>
+            Inline.inline_declarations decls
             (* TODO: We could probably propagate type information through inlining *)
-            Typing.infer_declarations info), f :: fs)
+            ), f :: fs)
+      in (Typing.infer_declarations info decls, fs)
     else
       (decls,fs)
   in

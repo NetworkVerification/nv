@@ -118,6 +118,9 @@ let simulate_step ({graph= g; trans; merge; _} : srp) s x =
         (AdjGraph.VertexMap.add n (n_received, best) s, newTodo)
   in
   let initial_attribute = get_attribute x s in
+  (* if (x = 102) then
+    (Printf.printf "L(%d): %s\n" x (Printing.value_to_string (snd initial_attribute));
+    flush_all()); *)
   let neighbors = AdjGraph.succ g x in
   List.fold_left (do_neighbor initial_attribute) (s, []) neighbors
 
