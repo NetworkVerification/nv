@@ -8,13 +8,34 @@ open Nv_utils
 
 let is_keyword_op op =
   match op with
-  | And | Or | Not | UAdd _ | USub _ | UAnd _ | Eq | ULess _ | ULeq _ | MGet | NLess | NLeq -> false
-  | TGet _| TSet _| MCreate | MSet | MMap | MMerge | MFoldNode | MForAll
-  | MFoldEdge | MMapFilter | MMapIte | AtMost _ -> true
+  | And
+  | Or
+  | Not
+  | UAdd _
+  | USub _
+  | UAnd _
+  | Eq
+  | ULess _
+  | ULeq _
+  | MGet
+  | NLess
+  | NLeq -> false
+  | TGet _
+  | TSet _
+  | MCreate
+  | MSet
+  | MMap
+  | MMerge
+  | MFoldNode
+  | MForAll
+  | MFoldEdge
+  | MMapFilter
+  | MMapIte
+  | AtMost _ -> true
+;;
 
 (* set to true if you want to print universal quanifiers explicitly *)
 let quantifiers = true
-
 let max_prec = 10
 
 let prec_op op =
@@ -43,7 +64,7 @@ let prec_op op =
   | MMapFilter -> 5
   | MMapIte -> 5
   | AtMost _ -> 6
-
+;;
 
 let prec_exp e =
   match e.e with
@@ -60,33 +81,31 @@ let prec_exp e =
   | ETy (_, _) -> max_prec
   | ERecord _ -> 0
   | EProject _ -> 0
+;;
 
 let rec sep s f xs =
   match xs with
   | [] -> ""
   | [x] -> f x
   | x :: y :: rest -> f x ^ s ^ sep s f (y :: rest)
+;;
 
 let rec term s f xs =
   match xs with
   | [] -> ""
-  | _ ->
-    PrimitiveCollections.printList f xs "" s ""
+  | _ -> PrimitiveCollections.printList f xs "" s ""
+;;
 
 let comma_sep f xs = sep "," f xs
-
 let semi_sep f xs = sep ";" f xs
-
 let semi_term f xs = term ";" f xs
-
-let list_to_string f lst =
-  PrimitiveCollections.printList f lst "[" ";" "]"
+let list_to_string f lst = PrimitiveCollections.printList f lst "[" ";" "]"
 
 (* The way we print our types means that we don't really need precedence rules.
    The only type which isn't totally self-contained is TArrow *)
 let rec ty_to_string t =
   match t with
-  | TVar {contents= tv} -> tyvar_to_string tv
+  | TVar { contents = tv } -> tyvar_to_string tv
   | QVar name -> "{" ^ Var.to_string name ^ "}"
   | TUnit -> "unit"
   | TBool -> "bool"
@@ -94,14 +113,14 @@ let rec ty_to_string t =
   | TNode -> "tnode"
   | TEdge -> "tedge"
   | TTuple ts ->
-    if List.is_empty ts then "TTuple0" else
-    if List.length ts = 1 then "TTuple1(" ^ ty_to_string (List.hd ts) ^ ")" else
-     "(" ^ sep "," ty_to_string ts ^ ")"
+    if List.is_empty ts
+    then "TTuple0"
+    else if List.length ts = 1
+    then "TTuple1(" ^ ty_to_string (List.hd ts) ^ ")"
+    else "(" ^ sep "," ty_to_string ts ^ ")"
   | TOption t -> "option[" ^ ty_to_string t ^ "]"
-  | TMap (t1, t2) ->
-    "dict[" ^ ty_to_string t1 ^ "," ^ ty_to_string t2
-    ^ "]"
-  | TRecord map -> print_record ":" (ty_to_string) map
+  | TMap (t1, t2) -> "dict[" ^ ty_to_string t1 ^ "," ^ ty_to_string t2 ^ "]"
+  | TRecord map -> print_record ":" ty_to_string map
   | TArrow (t1, t2) ->
     let leftside =
       match t1 with
@@ -112,21 +131,21 @@ let rec ty_to_string t =
 
 and tyvar_to_string tv =
   match tv with
-  | Unbound (name, l) ->
-    Var.to_string name ^ "[" ^ string_of_int l ^ "]"
+  | Unbound (name, l) -> Var.to_string name ^ "[" ^ string_of_int l ^ "]"
   | Link ty -> "<" ^ ty_to_string ty ^ ">"
+;;
 
 let op_to_string op =
   match op with
   | And -> "&&"
   | Or -> "||"
   | Not -> "!"
-  | UAdd n -> "+" ^ "u" ^ (string_of_int n)
-  | USub n -> "-" ^ "u" ^ (string_of_int n)
-  | UAnd n -> "&" ^ "u" ^ (string_of_int n)
+  | UAdd n -> "+" ^ "u" ^ string_of_int n
+  | USub n -> "-" ^ "u" ^ string_of_int n
+  | UAnd n -> "&" ^ "u" ^ string_of_int n
   | Eq -> "="
-  | ULess n -> "<" ^ "u" ^ (string_of_int n)
-  | ULeq n -> "<=" ^ "u" ^ (string_of_int n)
+  | ULess n -> "<" ^ "u" ^ string_of_int n
+  | ULeq n -> "<=" ^ "u" ^ string_of_int n
   | NLess -> "<n"
   | NLeq -> "<=n"
   | TGet (n1, n2, n3) -> Printf.sprintf "tuple%dGet%d-%d" n1 n2 n3
@@ -142,6 +161,7 @@ let op_to_string op =
   | MFoldEdge -> "foldEdges"
   | AtMost _ -> "atMost"
   | MForAll -> "forAll"
+;;
 
 let rec pattern_to_string pattern =
   match pattern with
@@ -152,53 +172,69 @@ let rec pattern_to_string pattern =
   | PBool false -> "false"
   | PInt i -> Integer.to_string i
   | PTuple ps ->
-    if List.is_empty ps then "PTuple0" else
-    if List.length ps = 1 then "PTuple1(" ^ pattern_to_string (List.hd ps) ^ ")" else
-      "(" ^ comma_sep pattern_to_string ps ^ ")"
+    if List.is_empty ps
+    then "PTuple0"
+    else if List.length ps = 1
+    then "PTuple1(" ^ pattern_to_string (List.hd ps) ^ ")"
+    else "(" ^ comma_sep pattern_to_string ps ^ ")"
   | POption None -> "None"
   | POption (Some p) -> "Some " ^ pattern_to_string p
   | PRecord map -> print_record "=" pattern_to_string map
   | PNode n -> Printf.sprintf "%dn" n
   | PEdge (p1, p2) -> Printf.sprintf "%s~%s" (pattern_to_string p1) (pattern_to_string p2)
+;;
 
-let padding i =
-  String.init i (fun _ -> ' ')
-
+let padding i = String.init i (fun _ -> ' ')
 let ty_env_to_string env = Nv_datastructures.Env.to_string ty_to_string env.ty
 
 let tyo_to_string tyo =
   match tyo with
   | None -> "None"
   | Some ty -> ty_to_string ty
+;;
 
 let glob = ref false
+
 let rec value_env_to_string ~show_types env =
   Nv_datastructures.Env.to_string (value_to_string_p ~show_types max_prec) env.value
 
-and env_to_string ?(show_types=false) env =
+and env_to_string ?(show_types = false) env =
   let open Nv_datastructures in
-  if env.ty = Env.empty && env.value = Env.empty then " "
-  else
-    "[" ^ ty_env_to_string env ^ "|" ^ value_env_to_string ~show_types env ^ "] "
+  if env.ty = Env.empty && env.value = Env.empty
+  then " "
+  else "[" ^ ty_env_to_string env ^ "|" ^ value_env_to_string ~show_types env ^ "] "
 
-and func_to_string_p ~show_types prec {arg= x; argty; resty= _; body} =
+and func_to_string_p ~show_types prec { arg = x; argty; resty = _; body } =
   let s_arg = Var.to_string x in
-  let arg_str = if show_types then Printf.sprintf "(%s : %s)" s_arg (tyo_to_string argty) else s_arg in
-  let s = Printf.sprintf "fun %s -> %s " arg_str (exp_to_string_p ~show_types max_prec body) in
+  let arg_str =
+    if show_types then Printf.sprintf "(%s : %s)" s_arg (tyo_to_string argty) else s_arg
+  in
+  let s =
+    Printf.sprintf "fun %s -> %s " arg_str (exp_to_string_p ~show_types max_prec body)
+  in
   if prec < max_prec then "(" ^ s ^ ")" else s
 
-and closure_to_string_p ~show_types prec
-    (env, {arg= x; argty= argt; resty= rest; body}) =
+and closure_to_string_p
+    ~show_types
+    prec
+    (env, { arg = x; argty = argt; resty = rest; body })
+  =
   let s_arg =
     match argt with
     | None -> Var.to_string x
     | Some t -> "(" ^ Var.to_string x ^ ":" ^ ty_to_string t ^ ")"
   in
   let s_res =
-    match rest with None -> "" | Some t -> " : " ^ ty_to_string t
+    match rest with
+    | None -> ""
+    | Some t -> " : " ^ ty_to_string t
   in
   let s =
-    "fun" ^ env_to_string ~show_types env ^ s_arg ^ s_res ^ " -> "
+    "fun"
+    ^ env_to_string ~show_types env
+    ^ s_arg
+    ^ s_res
+    ^ " -> "
     ^ exp_to_string_p ~show_types prec body
   in
   if prec < max_prec then "(" ^ s ^ ")" else s
@@ -222,10 +258,13 @@ and value_to_string_p ~show_types prec v =
   | VInt i -> Integer.to_string i
   | VMap m -> map_to_string ~show_types " |-> " "\n" m
   | VTuple vs ->
-    if List.is_empty vs then "VTuple0" else
-    if List.length vs = 1 then "VTuple1(" ^ value_to_string_p max_prec (List.hd vs) ^ ")" else
-      "(" ^ comma_sep (value_to_string_p max_prec) vs ^ ")"
-  | VOption None -> (* Printf.sprintf "None:%s" (ty_to_string (oget v.vty)) *)
+    if List.is_empty vs
+    then "VTuple0"
+    else if List.length vs = 1
+    then "VTuple1(" ^ value_to_string_p max_prec (List.hd vs) ^ ")"
+    else "(" ^ comma_sep (value_to_string_p max_prec) vs ^ ")"
+  | VOption None ->
+    (* Printf.sprintf "None:%s" (ty_to_string (oget v.vty)) *)
     "None"
   | VOption (Some v) ->
     let s = "Some(" ^ value_to_string_p max_prec v ^ ")" in
@@ -245,39 +284,44 @@ and exp_to_string_p ~show_types prec e =
     | EVal v -> value_to_string_p prec v
     | EOp (op, es) -> op_args_to_string ~show_types prec p op es
     | EFun f -> func_to_string_p ~show_types prec f
-    | EApp (e1, e2) ->
-      exp_to_string_p prec e1 ^ " " ^ exp_to_string_p p e2 ^ " "
+    | EApp (e1, e2) -> exp_to_string_p prec e1 ^ " " ^ exp_to_string_p p e2 ^ " "
     | EIf (e1, e2, e3) ->
       "if "
       ^ exp_to_string_p max_prec e1
       ^ " then \n"
       ^ exp_to_string_p max_prec e2
-      ^ " else \n" ^ exp_to_string_p prec e3
+      ^ " else \n"
+      ^ exp_to_string_p prec e3
     | ELet (x, e1, e2) ->
-      "let " ^ Var.to_string x ^ "="
+      "let "
+      ^ Var.to_string x
+      ^ "="
       ^ exp_to_string_p max_prec e1
-      ^ " in \n" ^ exp_to_string_p prec e2
+      ^ " in \n"
+      ^ exp_to_string_p prec e2
     | ETuple es ->
-      if List.is_empty es then "ETuple0" else
-      if List.length es = 1 then "ETuple1(" ^ exp_to_string_p max_prec (List.hd es) ^ ")" else
-        "(" ^ comma_sep (exp_to_string_p max_prec) es ^ ")"
+      if List.is_empty es
+      then "ETuple0"
+      else if List.length es = 1
+      then "ETuple1(" ^ exp_to_string_p max_prec (List.hd es) ^ ")"
+      else "(" ^ comma_sep (exp_to_string_p max_prec) es ^ ")"
     | ESome e -> "Some(" ^ exp_to_string_p prec e ^ ")"
     | EMatch (e1, bs) ->
       "(match "
       ^ exp_to_string_p max_prec e1
-      ^ " with " ^ "\n"
+      ^ " with "
+      ^ "\n"
       ^ branches_to_string ~show_types prec (branchToList bs)
       ^ ")"
     | ETy (e, t) -> exp_to_string_p prec e ^ ty_to_string t
     | ERecord map -> print_record "=" (exp_to_string_p prec) map
     | EProject (e, l) -> exp_to_string_p prec e ^ "." ^ l
   in
-  if show_types then
-    Printf.sprintf "(%s : %s)" s (tyo_to_string e.ety)
-  else if p > prec then
-    "(" ^ s ^ ")"
-  else
-    s
+  if show_types
+  then Printf.sprintf "(%s : %s)" s (tyo_to_string e.ety)
+  else if p > prec
+  then "(" ^ s ^ ")"
+  else s
 
 and branch_to_string ~show_types prec (p, e) =
   " | " ^ pattern_to_string p ^ " -> " ^ exp_to_string_p ~show_types prec e
@@ -285,36 +329,29 @@ and branch_to_string ~show_types prec (p, e) =
 and branches_to_string ~show_types prec bs =
   match bs with
   | [] -> ""
-  | b :: bs -> branch_to_string ~show_types prec b ^ "\n" ^ branches_to_string ~show_types prec bs
+  | b :: bs ->
+    branch_to_string ~show_types prec b ^ "\n" ^ branches_to_string ~show_types prec bs
 
 and op_args_to_string ~show_types prec p op es =
   let exp_to_string_p = exp_to_string_p ~show_types in
-  if is_keyword_op op then
-    op_to_string op ^ "("
-    ^ comma_sep (exp_to_string_p max_prec) es
-    ^ ")"
-  else
+  if is_keyword_op op
+  then op_to_string op ^ "(" ^ comma_sep (exp_to_string_p max_prec) es ^ ")"
+  else (
     match es with
     | [] -> op_to_string op ^ "()" (* should not happen *)
     | [e1] -> op_to_string op ^ exp_to_string_p p e1
     | [e1; e2] ->
-      exp_to_string_p p e1 ^ " " ^ op_to_string op ^ " "
-      ^ exp_to_string_p prec e2
-    | es ->
-      op_to_string op ^ "("
-      ^ comma_sep (exp_to_string_p max_prec) es
-      ^ ")"
+      exp_to_string_p p e1 ^ " " ^ op_to_string op ^ " " ^ exp_to_string_p prec e2
+    | es -> op_to_string op ^ "(" ^ comma_sep (exp_to_string_p max_prec) es ^ ")")
+;;
 
-let value_to_string ?(show_types=false) v = value_to_string_p ~show_types max_prec v
-
-let exp_to_string ?(show_types=false) e = exp_to_string_p ~show_types max_prec e
-
-let func_to_string ?(show_types=false) f = func_to_string_p ~show_types max_prec f
-
-let closure_to_string ?(show_types=false) c = closure_to_string_p ~show_types max_prec c
+let value_to_string ?(show_types = false) v = value_to_string_p ~show_types max_prec v
+let exp_to_string ?(show_types = false) e = exp_to_string_p ~show_types max_prec e
+let func_to_string ?(show_types = false) f = func_to_string_p ~show_types max_prec f
+let closure_to_string ?(show_types = false) c = closure_to_string_p ~show_types max_prec c
 
 (* TODO: should the let statements use the identifiers defined in Syntax instead? *)
-let rec declaration_to_string ?(show_types=false) d =
+let rec declaration_to_string ?(show_types = false) d =
   let exp_to_string = exp_to_string ~show_types in
   match d with
   | DLet (x, tyo, e) ->
@@ -324,32 +361,34 @@ let rec declaration_to_string ?(show_types=false) d =
       | Some ty -> ":" ^ ty_to_string ty ^ " "
     in
     "let " ^ Var.to_string x ^ ty_str ^ " = " ^ exp_to_string e
-  | DSymbolic (x, Exp e) ->
-    "symbolic " ^ Var.to_string x ^ " = " ^ exp_to_string e
-  | DSymbolic (x, Ty ty) ->
-    "symbolic " ^ Var.to_string x ^ " : " ^ ty_to_string ty
+  | DSymbolic (x, Exp e) -> "symbolic " ^ Var.to_string x ^ " = " ^ exp_to_string e
+  | DSymbolic (x, Ty ty) -> "symbolic " ^ Var.to_string x ^ " : " ^ ty_to_string ty
   | DAssert e -> "assert " ^ exp_to_string e
-  | DSolve {aty; var_names; init;trans;merge} ->
-    Printf.sprintf "let %s = solution<%s> {init = %s; trans = %s; merge = %s}"
-      (exp_to_string var_names) (match aty with | None -> "None" | Some ty -> ty_to_string ty)
-      (exp_to_string init) (exp_to_string trans) (exp_to_string merge)
+  | DSolve { aty; var_names; init; trans; merge } ->
+    Printf.sprintf
+      "let %s = solution<%s> {init = %s; trans = %s; merge = %s}"
+      (exp_to_string var_names)
+      (match aty with
+      | None -> "None"
+      | Some ty -> ty_to_string ty)
+      (exp_to_string init)
+      (exp_to_string trans)
+      (exp_to_string merge)
   | DPartition e -> "let partition = " ^ exp_to_string e (* partitioning *)
   | DInterface e -> "let interface = " ^ exp_to_string e (* partitioning *)
   | DRequire e -> "require " ^ exp_to_string e
   | DNodes n -> "let nodes = " ^ string_of_int n
   | DEdges es ->
     "let edges = {"
-    ^ List.fold_right
-      (fun (u, v) s ->
-         Printf.sprintf "%s%dn-%dn;" s u v
-      )
-      es ""
+    ^ List.fold_right (fun (u, v) s -> Printf.sprintf "%s%dn-%dn;" s u v) es ""
     ^ "}"
   | DUserTy (name, ty) ->
     Printf.sprintf "type %s = %s" (Var.to_string name) (ty_to_string ty)
+;;
 
-let rec declarations_to_string ?(show_types=false) ds =
+let rec declarations_to_string ?(show_types = false) ds =
   match ds with
   | [] -> ""
   | d :: ds ->
     declaration_to_string ~show_types d ^ "\n" ^ declarations_to_string ~show_types ds
+;;
