@@ -258,7 +258,10 @@ module SmtLang = struct
   ;;
 
   let mk_atMost t1 t2 t3 = AtMost (t1, t2, t3)
-  let mk_term ?(tdescr = "") ?(tloc = Span.default) (t : smt_term) = { t; tdescr; tloc }
+
+  let mk_term ?(tdescr = "") ?(tloc = Span.default) (t : smt_term) =
+    { t; tdescr; tloc }
+  ;;
 
   (** ** Constructors for SMT commands *)
 
@@ -320,7 +323,8 @@ module SmtLang = struct
     | UnitSort -> "Unit"
     | BoolSort -> "Bool"
     | IntSort -> "Int"
-    | MapSort (s1, s2) -> Printf.sprintf "((%s) %s)" (sort_to_smt s1) (sort_to_smt s2)
+    | MapSort (s1, s2) ->
+      Printf.sprintf "((%s) %s)" (sort_to_smt s1) (sort_to_smt s2)
     | DataTypeSort (name, ls) ->
       let args = printList sort_to_smt ls "" " " "" in
       Printf.sprintf "(%s %s)" name args
@@ -334,13 +338,19 @@ module SmtLang = struct
     | Bool b -> if b then "true" else "false"
     | And (b1, b2) ->
       Printf.sprintf "(and %s %s)" (smt_term_to_smt b1) (smt_term_to_smt b2)
-    | Or (b1, b2) -> Printf.sprintf "(or %s %s)" (smt_term_to_smt b1) (smt_term_to_smt b2)
+    | Or (b1, b2) ->
+      Printf.sprintf "(or %s %s)" (smt_term_to_smt b1) (smt_term_to_smt b2)
     | Not b -> Printf.sprintf "(not %s)" (smt_term_to_smt b)
-    | Add (n, m) -> Printf.sprintf "(+ %s %s)" (smt_term_to_smt n) (smt_term_to_smt m)
-    | Sub (n, m) -> Printf.sprintf "(- %s %s)" (smt_term_to_smt n) (smt_term_to_smt m)
-    | Eq (n, m) -> Printf.sprintf "(= %s %s)" (smt_term_to_smt n) (smt_term_to_smt m)
-    | Lt (n, m) -> Printf.sprintf "(< %s %s)" (smt_term_to_smt n) (smt_term_to_smt m)
-    | Leq (n, m) -> Printf.sprintf "(<= %s %s)" (smt_term_to_smt n) (smt_term_to_smt m)
+    | Add (n, m) ->
+      Printf.sprintf "(+ %s %s)" (smt_term_to_smt n) (smt_term_to_smt m)
+    | Sub (n, m) ->
+      Printf.sprintf "(- %s %s)" (smt_term_to_smt n) (smt_term_to_smt m)
+    | Eq (n, m) ->
+      Printf.sprintf "(= %s %s)" (smt_term_to_smt n) (smt_term_to_smt m)
+    | Lt (n, m) ->
+      Printf.sprintf "(< %s %s)" (smt_term_to_smt n) (smt_term_to_smt m)
+    | Leq (n, m) ->
+      Printf.sprintf "(<= %s %s)" (smt_term_to_smt n) (smt_term_to_smt m)
     | Ite (t1, t2, t3) ->
       Printf.sprintf
         "(ite %s %s %s)"
@@ -359,8 +369,10 @@ module SmtLang = struct
       Printf.sprintf "(bvule %s %s)" (smt_term_to_smt t1) (smt_term_to_smt t2)
     | BvAnd (t1, t2) ->
       Printf.sprintf "(bvand %s %s)" (smt_term_to_smt t1) (smt_term_to_smt t2)
-    | IntToBv (t1, sz) -> Printf.sprintf "((_ int2bv %d) %s)" sz (smt_term_to_smt t1)
-    | BvToInt (t1, sz) -> Printf.sprintf "((_ bv2int %d) %s)" sz (smt_term_to_smt t1)
+    | IntToBv (t1, sz) ->
+      Printf.sprintf "((_ int2bv %d) %s)" sz (smt_term_to_smt t1)
+    | BvToInt (t1, sz) ->
+      Printf.sprintf "((_ bv2int %d) %s)" sz (smt_term_to_smt t1)
     | AtMost (ts1, ts2, t1) ->
       Printf.sprintf
         "((_ pble %s %s) %s)"
@@ -411,7 +423,10 @@ module SmtLang = struct
     (if verbose
     then printVerbose "Constant declared about:" const.cdescr const.cloc info
     else "")
-    ^ Printf.sprintf "(declare-const %s %s)" const.cname (sort_to_smt const.csort)
+    ^ Printf.sprintf
+        "(declare-const %s %s)"
+        const.cname
+        (sort_to_smt const.csort)
   ;;
 
   (*
@@ -450,17 +465,18 @@ module SmtLang = struct
       then
         Printf.sprintf
           "(set-option :parallel.enable true)\n\
-           (check-sat-using (then simplify propagate-values simplify solve-eqs bit-blast \
-           psat))\n"
+           (check-sat-using (then simplify propagate-values simplify solve-eqs \
+           bit-blast psat))\n"
       else if smt_config.infinite_arith
       then
         Printf.sprintf
           "(set-option :smt.arith.nl false)\n\
-           (check-sat-using (then simplify propagate-values simplify solve-eqs smt))"
+           (check-sat-using (then simplify propagate-values simplify solve-eqs \
+           smt))"
       else
         Printf.sprintf
-          "(check-sat-using (then simplify propagate-values simplify solve-eqs bit-blast \
-           smtfd))"
+          "(check-sat-using (then simplify propagate-values simplify solve-eqs \
+           bit-blast smtfd))"
     | GetModel -> Printf.sprintf "(get-model)"
     | Push -> Printf.sprintf "(push)"
     | Pop -> Printf.sprintf "(pop)"
@@ -517,10 +533,14 @@ type smt_env =
   ; mutable symbolics : Nv_lang.Syntax.ty_or_exp VarMap.t
   }
 
-let create_fresh descr s = Printf.sprintf "%s-%s" descr (Var.fresh s |> Var.to_string)
+let create_fresh descr s =
+  Printf.sprintf "%s-%s" descr (Var.fresh s |> Var.to_string)
+;;
 
 let create_name descr n =
-  if descr = "" then Var.to_string n else Printf.sprintf "%s-%s" descr (Var.to_string n)
+  if descr = ""
+  then Var.to_string n
+  else Printf.sprintf "%s-%s" descr (Var.to_string n)
 ;;
 
 (** * Returns the SMT name of a datatype *)
@@ -538,11 +558,24 @@ let rec datatype_name (ty : Nv_lang.Syntax.ty) : string option =
   | _ -> None
 ;;
 
-let add_constant (env : smt_env) ?(cdescr = "") ?(cloc = Span.default) cname csort =
-  env.const_decls <- ConstantSet.add { cname; csort; cdescr; cloc } env.const_decls
+let add_constant
+    (env : smt_env)
+    ?(cdescr = "")
+    ?(cloc = Span.default)
+    cname
+    csort
+  =
+  env.const_decls
+    <- ConstantSet.add { cname; csort; cdescr; cloc } env.const_decls
 ;;
 
-let mk_constant (env : smt_env) ?(cdescr = "") ?(cloc = Span.default) cname csort =
+let mk_constant
+    (env : smt_env)
+    ?(cdescr = "")
+    ?(cloc = Span.default)
+    cname
+    csort
+  =
   add_constant env ~cdescr ~cloc cname csort;
   mk_var cname |> mk_term ~tdescr:cdescr ~tloc:cloc
 ;;
@@ -591,7 +624,9 @@ let rec ty_to_sort (ty : Nv_lang.Syntax.ty) : sort =
 (** Naming convention of useful variables *)
 let label_var i = Printf.sprintf "label-%d-" i
 
-let node_of_label_var s = int_of_string (BatList.nth (BatString.split_on_char '-' s) 1)
+let node_of_label_var s =
+  int_of_string (BatList.nth (BatString.split_on_char '-' s) 1)
+;;
 
 let proj_of_var s =
   let name, _i = Var.from_var @@ Var.of_var_string s in

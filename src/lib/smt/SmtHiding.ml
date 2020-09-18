@@ -95,7 +95,8 @@ let propagate_eqs_for_hiding (env : smt_env) =
            match c.com with
            | Assert tm ->
              { c with com = Assert (alpha_rename_term renaming newValMap tm) }
-           | Eval tm -> { c with com = Eval (alpha_rename_term renaming newValMap tm) }
+           | Eval tm ->
+             { c with com = Eval (alpha_rename_term renaming newValMap tm) }
            | _ -> c)
          new_ctx;
   (* remove unnecessary declarations *)
@@ -154,7 +155,8 @@ let map_vars_to_commands env : command list StringMap.t =
         (* Otherwise, it's probably a regular assert. Unhide it when we unhide
            the primary variable *)
         match get_assert_var com with
-        | Some s1 when not (String.starts_with s1 "symbolic-") -> update_map com map s1
+        | Some s1 when not (String.starts_with s1 "symbolic-") ->
+          update_map com map s1
         | _ ->
           (* This is a require clause which involves a non-symbolic variable.
              This can be caused by defining a new variable inside the require. *)
@@ -175,7 +177,8 @@ let map_vars_to_commands env : command list StringMap.t =
   The constant is the declaration of that variable
 *)
 type hiding_map =
-  (bool (* is_declared *) * bool (* is_visible *) * command list * constant) StringMap.t
+  (bool (* is_declared *) * bool (* is_visible *) * command list * constant)
+  StringMap.t
 
 (* For debugging *)
 let hiding_map_to_string hm : string =
@@ -206,13 +209,19 @@ let declare_variable hiding_map var : hiding_map * ConstantSet.t =
 
 (* Given an env with some variables hidden, unhide the input variable
    var and all intermediate variables it depends on. *)
-let rec unhide_variable hiding_map var : hiding_map * command list * ConstantSet.t =
+let rec unhide_variable hiding_map var
+    : hiding_map * command list * ConstantSet.t
+  =
   let declared, visible, coms, decl = StringMap.find var hiding_map in
   if visible
   then hiding_map, [], ConstantSet.empty
   else (
-    let new_map = StringMap.update var var (true, true, coms, decl) hiding_map in
-    let new_decls = if declared then ConstantSet.empty else ConstantSet.singleton decl in
+    let new_map =
+      StringMap.update var var (true, true, coms, decl) hiding_map
+    in
+    let new_decls =
+      if declared then ConstantSet.empty else ConstantSet.singleton decl
+    in
     (* TODO: Right now, this could potentially unhide lots of symbolics if we
        have big commands that involve lots of them, e.g. capping the number of
        failures. It would be nice to be cleverer. *)
@@ -242,7 +251,8 @@ let rec unhide_variable hiding_map var : hiding_map * command list * ConstantSet
       intermediate_vars)
 ;;
 
-let unhide_variables hiding_map vars : hiding_map * command list * ConstantSet.t =
+let unhide_variables hiding_map vars : hiding_map * command list * ConstantSet.t
+  =
   List.fold_left
     (fun (hs, coms, decls) var ->
       let hs', coms', decls' = unhide_variable hs var in
@@ -274,7 +284,8 @@ let construct_starting_env (full_env : smt_env) : smt_env * hiding_map =
     | Assert tm ->
       begin
         match tm.t with
-        | Not (And (_, Eq (Var s1, Bool true))) -> String.starts_with s1 "assert-"
+        | Not (And (_, Eq (Var s1, Bool true))) ->
+          String.starts_with s1 "assert-"
         | _ -> false
       end
     (* I don't think we'll have any other commands besides asserts, so if we do
@@ -290,7 +301,8 @@ let construct_starting_env (full_env : smt_env) : smt_env * hiding_map =
   in
   let type_decls = full_env.type_decls in
   let symbolics = full_env.symbolics in
-  { ctx = active_coms @ additional_coms; const_decls; type_decls; symbolics }, hidden_map
+  ( { ctx = active_coms @ additional_coms; const_decls; type_decls; symbolics }
+  , hidden_map )
 ;;
 
 (* Overall alg:
@@ -325,7 +337,9 @@ let construct_starting_env (full_env : smt_env) : smt_env * hiding_map =
 (* Gets a different kind of model than the code in Smt.ml: here, we want values
    for each _SMT_ variable, rather than for the corresponding NV variables *)
 let get_model verbose info _query _chan solver =
-  let q = Printf.sprintf "%s\n" (GetModel |> mk_command |> command_to_smt verbose info) in
+  let q =
+    Printf.sprintf "%s\n" (GetModel |> mk_command |> command_to_smt verbose info)
+  in
   (* if query then
      printQuery chan q; *)
   ask_solver_blocking solver q;
@@ -424,7 +438,9 @@ let rec refineModel
     | UNSAT ->
       (* Spurious counterexample: Get unsat core and unhide the variables
            which appear in it *)
-      let vars_to_unhide = get_variables_to_unhide query full_chan full_solver in
+      let vars_to_unhide =
+        get_variables_to_unhide query full_chan full_solver
+      in
       (* Pop the constraints we added to the full program *)
       print_and_ask_full "(pop)\n";
       (* Unhide the variables, and get back the new commands and declarations
@@ -510,15 +526,25 @@ let solve_hiding info query partial_chan ~full_chan ?(starting_vars = []) decls 
     (* compile the encoding to SMT-LIB *)
     let full_encoding =
       time_profile "Compiling full query" (fun () ->
-          env_to_smt ~verbose:smt_config.verbose ~name_asserts:true info full_env)
+          env_to_smt
+            ~verbose:smt_config.verbose
+            ~name_asserts:true
+            info
+            full_env)
     in
     let partial_encoding =
       time_profile "Compiling partial query" (fun () ->
-          env_to_smt ~verbose:smt_config.verbose ~name_asserts:false info partial_env)
+          env_to_smt
+            ~verbose:smt_config.verbose
+            ~name_asserts:false
+            info
+            partial_env)
     in
     print_and_ask_partial partial_encoding;
     print_and_ask_full full_encoding;
-    let nodes = Nv_datastructures.AdjGraph.nb_vertex (get_graph decls |> oget) in
+    let nodes =
+      Nv_datastructures.AdjGraph.nb_vertex (get_graph decls |> oget)
+    in
     let ask_for_nv_model solver =
       ask_for_model
         query
