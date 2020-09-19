@@ -34,10 +34,7 @@ let rec ty_to_size ty =
     failwith ("internal error (ty_to_size): " ^ PrintingRaw.show_ty ty)
 ;;
 
-let tbl =
-  Obj.magic (Mtbdd.make_table
-               ~hash:Hashtbl.hash
-               ~equal:(=))
+let tbl = Obj.magic (Mtbdd.make_table ~hash:Hashtbl.hash ~equal:( = ))
 
 let tbl_nv =
   Mtbdd.make_table
