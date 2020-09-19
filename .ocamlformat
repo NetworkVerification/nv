@@ -3,3 +3,5 @@ profile=janestreet
 space-around-lists=false
 space-around-arrays=false
 exp-grouping=preserve
+break-infix=fit-or-vertical
+margin=90
