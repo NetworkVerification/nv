@@ -6,6 +6,8 @@ open Nv_datastructures
 open PrimitiveCollections
 open Syntax
 open CompileBDDs
+open Cudd
+module B = BddUtils
 
 (** Given an NV type and an OCaml value constructs an NV value*)
 let rec embed_value (record_fns : int * int -> 'a -> 'b) (typ : Syntax.ty)
@@ -35,10 +37,16 @@ let rec embed_value (record_fns : int * int -> 'a -> 'b) (typ : Syntax.ty)
         ts
     in
     fun v -> Syntax.vtuple (BatList.map (fun f -> f v) fs)
-  | TMap _ ->
+  | TMap (kty, vty) ->
     (* trivial as we represent maps with the same mtbdd + key type id + value type id*)
-    fun v -> Syntax.vmap (Obj.magic v).bdd
-  | TArrow _ -> failwith "Function computed as value"
+    (* no longer trivial *)
+    let g x = embed_value record_fns vty (Mtbdd.get x) |> Mtbdd.unique B.tbl_nv in
+    fun v ->
+      let omap = Obj.magic v in
+      let vbdd = Mapleaf.mapleaf1 g omap.bdd in
+      Syntax.vmap (vbdd, kty)
+  | TArrow _ ->
+    failwith (Printf.sprintf "Function %s computed as value" (Printing.ty_to_string typ))
   | TRecord _ -> failwith "Trecord"
   | TNode ->
     fun v -> Syntax.vint (Integer.create ~value:(Obj.magic v) ~size:Syntax.tnode_sz)
@@ -112,16 +120,12 @@ let rec unembed_value
              (PrintingRaw.show_ty typ)))
   | TMap (kty, vty) ->
     (* this is trivial as OCaml maps are NV maps plus a value type*)
-    fun v ->
-     (match v.v with
-     | VMap vdd ->
-       (* Printf.printf "kty: %s, vty:%s" (Printing.ty_to_string kty) (Printing.ty_to_string vty); *)
-       Obj.magic
-         { bdd = vdd
-         ; key_ty_id = Collections.TypeIds.get_id type_store kty
-         ; val_ty_id = Collections.TypeIds.get_id type_store vty
-         }
-     | _ -> failwith "mistyped value")
+    fun v -> failwith "Not doing this for now, only useful for symbolics."
+    (* (match v.v with
+         | VMap vdd ->
+           (* Printf.printf "kty: %s, vty:%s" (Printing.ty_to_string kty) (Printing.ty_to_string vty); *)
+           Obj.magic ({bdd = vdd; key_ty_id = Collections.TypeIds.get_id type_store kty; val_ty_id = Collections.TypeIds.get_id type_store vty})
+         | _ -> failwith "mistyped value") *)
   | TArrow _ -> failwith "Function computed as value"
   | TRecord _ -> failwith "Trecord"
   | TNode ->

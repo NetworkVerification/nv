@@ -18,15 +18,16 @@ end
 
 (** Simulator signature*)
 module type SrpSimulationSig = sig
-  (** Takes as input the attribute type id, the name of the variable storing the solutions,
+  (** Takes as input record_fns, the attribute type id, the name of the variable storing the solutions,
    ** the init trans and merge functions and computes the solutions.*)
   val simulate_solve
-    :  int
+    :  (int * int -> 'a -> 'b)
+    -> int
     -> string
     -> (int -> 'a)
     -> (int * int -> 'a -> 'a)
     -> (int -> 'a -> 'a -> 'a)
-    -> CompileBDDs.t
+    -> 'a CompileBDDs.t
 
   (** List of solutions, each entry is the name of the SRP and the *)
   val solved : (string * (unit AdjGraph.VertexMap.t * Syntax.ty)) list ref
@@ -177,7 +178,7 @@ module SrpSimulation (G : Topology) : SrpSimulationSig = struct
   (* List holding the solutions of solved SRPs*)
   let solved = ref []
 
-  let simulate_solve attr_ty_id name init trans merge =
+  let simulate_solve record_fns attr_ty_id name init trans merge =
     let s = create_state (AdjGraph.nb_vertex G.graph) init in
     let vals = simulate_init trans merge s |> AdjGraph.VertexMap.map (fun (_, v) -> v) in
     let default = AdjGraph.VertexMap.choose vals |> snd in
@@ -189,7 +190,8 @@ module SrpSimulation (G : Topology) : SrpSimulationSig = struct
     in
     let bdd_full =
       AdjGraph.VertexMap.fold
-        (fun n v acc -> NativeBdd.update attr_ty_id acc n v)
+        (fun n v acc ->
+          NativeBdd.update (Obj.magic record_fns) acc (Obj.magic n) (Obj.magic v))
         vals
         bdd_base
     in

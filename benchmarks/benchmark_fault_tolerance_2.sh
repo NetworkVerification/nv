@@ -15,8 +15,8 @@ done
 
 echo "\nRunning compiled tests\n"
 
-for file in $BENCHMARKS
-do
-    time "$NV" -inline -compile "$file";
-    echo "\n";
-done
+#for file in $BENCHMARKS
+#do
+#    time "$NV" -compile "$file";
+#    echo "\n";
+#done

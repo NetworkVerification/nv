@@ -41,9 +41,9 @@ let rec interp_exp env e =
       failwith
         (Printf.sprintf "runtime exception - unbound variable: %s" (Var.to_string x))
     | Some v -> v)
-  | EVal v -> v
+  | EVal v -> avalue (v, e.ety, e.espan)
   | EOp (op, es) -> interp_op env (OCamlUtils.oget e.ety) op es
-  | EFun f -> vclosure (env, f)
+  | EFun f -> avalue (vclosure (env, f), e.ety, e.espan)
   | EApp (e1, e2) ->
     let v1 = interp_exp env e1 in
     let v2 = interp_exp env e2 in
@@ -59,8 +59,8 @@ let rec interp_exp env e =
   | ELet (x, e1, e2) ->
     let v1 = interp_exp env e1 in
     interp_exp (update_env env x v1 (Nv_utils.OCamlUtils.oget e1.ety)) e2
-  | ETuple es -> vtuple (List.map (interp_exp env) es)
-  | ESome e -> voption (Some (interp_exp env e))
+  | ETuple es -> avalue (vtuple (List.map (interp_exp env) es), e.ety, e.espan)
+  | ESome e -> avalue (voption (Some (interp_exp env e)), e.ety, e.espan)
   | EMatch (e1, branches) ->
     let v = interp_exp env e1 in
     (match match_branches branches v env.value with
@@ -263,4 +263,8 @@ and apply env f v = interp_exp (update_value env f.arg v) f.body
 
 let interp e = interp_exp empty_env e
 let interp = MemoizeExp.memoize ~size:1000 interp
-let interp_closure cl (args : value list) = interp (Syntax.apply_closure cl args)
+
+let interp_closure cl (args : value list) =
+  let exp = Syntax.apply_closure cl args in
+  interp exp
+;;

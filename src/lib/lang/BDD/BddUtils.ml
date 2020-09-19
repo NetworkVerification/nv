@@ -22,7 +22,7 @@ let ithvar i =
 
 let rec ty_to_size ty =
   match get_inner_type ty with
-  | TUnit -> 1 (* I don't understand how Cudd BDDs work, so encode TUnit as false *)
+  | TUnit -> 0
   | TBool -> 1
   | TInt n -> n
   | TOption tyo -> 1 + ty_to_size tyo
@@ -34,7 +34,9 @@ let rec ty_to_size ty =
     failwith ("internal error (ty_to_size): " ^ PrintingRaw.show_ty ty)
 ;;
 
-let tbl =
+let tbl = Obj.magic (Mtbdd.make_table ~hash:Hashtbl.hash ~equal:( = ))
+
+let tbl_nv =
   Mtbdd.make_table
     ~hash:(hash_value ~hash_meta:false)
     ~equal:(equal_values ~cmp_meta:false)

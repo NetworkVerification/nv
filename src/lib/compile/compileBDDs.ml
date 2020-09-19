@@ -3,8 +3,8 @@ open Syntax
 open Cudd
 
 (* BddMap plus the type of the values*)
-type t =
-  { bdd : BddMap.t
+type 'a t =
+  { bdd : 'a Mtbdd.t
   ; key_ty_id : int
   ; val_ty_id : int
   }

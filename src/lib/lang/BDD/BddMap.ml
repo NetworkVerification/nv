@@ -3,6 +3,16 @@ open Cudd
 open Nv_datastructures
 open Nv_utils
 
+(* module type BddMapSig (B: BddUtilsSig) =
+sig
+  val create: key_ty:Syntax.ty -> Syntax.value -> t
+  val map: op_key:ExpMap.key -> (Syntax.value -> Syntax.value) -> t -> t
+  val map_when: op_key:ExpMap.key -> bool Cudd.Mtbdd.t -> (Syntax.value -> Syntax.value) -> t -> t
+  val map_ite: op_key1:ExpMap.key -> op_key2:ExpMap.key -> bool Cudd.Mtbdd.t -> (Nv_lang.Syntax.value -> Nv_lang.Syntax.value) 
+            -> (Nv_lang.Syntax.value -> Nv_lang.Syntax.value) -> t -> t
+  val find: t -> Nv_lang.Syntax.value -> Nv_lang.Syntax.value
+  val update: t -> Nv_lang.Syntax.value -> Nv_lang.Syntax.value -> t *)
+
 (* TODO: optimize variable ordering  *)
 type t = mtbdd
 
@@ -10,7 +20,7 @@ module B = BddUtils
 
 let create ~key_ty:ty (v : value) : t =
   B.set_size (B.ty_to_size ty);
-  Mtbdd.cst B.mgr B.tbl v, ty
+  Mtbdd.cst B.mgr B.tbl_nv v, ty
 ;;
 
 let rec default_value ty =
@@ -38,8 +48,7 @@ let value_to_bdd (v : value) : Bdd.vt =
     match v.v with
     | VUnit ->
       (* Encode unit as if it were a true boolean *)
-      let var = B.ithvar idx in
-      var, idx + 1
+      Cudd.Bdd.dtrue B.mgr, idx
     | VBool b ->
       let var = B.ithvar idx in
       (if b then var else Bdd.dnot var), idx + 1
@@ -226,7 +235,7 @@ let map_cache = ref ExpMap.empty
 
 let map ~op_key (f : value -> value) ((vdd, ty) : t) : t =
   let cfg = Cmdline.get_cfg () in
-  let g x = f (Mtbdd.get x) |> Mtbdd.unique B.tbl in
+  let g x = f (Mtbdd.get x) |> Mtbdd.unique B.tbl_nv in
   if cfg.no_caching
   then Mapleaf.mapleaf1 g vdd, ty
   else (
@@ -329,7 +338,7 @@ let mapw_op_cache = ref ExpMap.empty
 
 let map_when ~op_key (pred : bool Mtbdd.t) (f : value -> value) ((vdd, ty) : t) : t =
   let cfg = Cmdline.get_cfg () in
-  let g b v = if Mtbdd.get b then f (Mtbdd.get v) |> Mtbdd.unique B.tbl else v in
+  let g b v = if Mtbdd.get b then f (Mtbdd.get v) |> Mtbdd.unique B.tbl_nv else v in
   if cfg.no_caching
   then Mapleaf.mapleaf2 g pred vdd, ty
   else (
@@ -346,7 +355,7 @@ let map_when ~op_key (pred : bool Mtbdd.t) (f : value -> value) ((vdd, ty) : t) 
         let op =
           User.make_op2
             ~memo:
-              Cudd.Memo.Global (* ~memo:(Memo.Cache (Cache.create2 ~maxsize:4096 ())) *)
+              Cudd.Memo.Global (* ~memo:(Memo.Cache (Cache.create2 ~maxsize:8000 ())) *)
             ~commutative:false
             ~idempotent:false
             ~special
@@ -359,7 +368,13 @@ let map_when ~op_key (pred : bool Mtbdd.t) (f : value -> value) ((vdd, ty) : t) 
     User.apply_op2 op pred vdd, ty)
 ;;
 
-let mapite_op_cache = ref ExpMap.empty
+module ExpMap2 = BatMap.Make (struct
+  type t = (exp * value BatSet.PSet.t) * (exp * value BatSet.PSet.t)
+
+  let compare = Pervasives.compare
+end)
+
+let mapite_op_cache = ref ExpMap2.empty
 
 (* For map_ite we have two operations hence we maintain a map from expressions to another map for the cache *)
 let map_ite
@@ -374,14 +389,14 @@ let map_ite
   let cfg = Cmdline.get_cfg () in
   let g b v =
     if Mtbdd.get b
-    then f1 (Mtbdd.get v) |> Mtbdd.unique B.tbl
-    else f2 (Mtbdd.get v) |> Mtbdd.unique B.tbl
+    then f1 (Mtbdd.get v) |> Mtbdd.unique B.tbl_nv
+    else f2 (Mtbdd.get v) |> Mtbdd.unique B.tbl_nv
   in
   if cfg.no_caching
   then Mapleaf.mapleaf2 g pred vdd, ty
   else (
     let op =
-      match ExpMap.Exceptionless.find op_key1 !mapite_op_cache with
+      match ExpMap2.Exceptionless.find (op_key1, op_key2) !mapite_op_cache with
       | None ->
         let op =
           User.make_op2
@@ -390,26 +405,9 @@ let map_ite
             ~idempotent:false
             g
         in
-        let newMap = ExpMap.singleton op_key2 op in
-        mapite_op_cache := ExpMap.add op_key1 newMap !mapite_op_cache;
+        mapite_op_cache := ExpMap2.add (op_key1, op_key2) op !mapite_op_cache;
         op
-      | Some map2 ->
-        (match ExpMap.Exceptionless.find op_key2 map2 with
-        | None ->
-          let op =
-            User.make_op2
-              ~memo:Cudd.Memo.Global (* ~memo:(Memo.Cache (Cache.create2 ())) *)
-              ~commutative:false
-              ~idempotent:false
-              g
-          in
-          mapite_op_cache
-            := ExpMap.modify
-                 op_key1
-                 (fun map2 -> ExpMap.add op_key2 op map2)
-                 !mapite_op_cache;
-          op
-        | Some op -> op)
+      | Some op -> op
     in
     User.apply_op2 op pred vdd, ty)
 ;;
@@ -421,8 +419,8 @@ let forall ~op_key (pred : bool Mtbdd.t) (f : value -> value) ((vdd, _) : t) : v
   let cfg = Cmdline.get_cfg () in
   let g b v =
     if Mtbdd.get b
-    then f (Mtbdd.get v) |> Mtbdd.unique B.tbl
-    else vbool true |> Mtbdd.unique B.tbl
+    then f (Mtbdd.get v) |> Mtbdd.unique B.tbl_nv
+    else vbool true |> Mtbdd.unique B.tbl_nv
   in
   let op =
     match ExpMap.Exceptionless.find op_key !forall_op_cache with
@@ -433,7 +431,7 @@ let forall ~op_key (pred : bool Mtbdd.t) (f : value -> value) ((vdd, _) : t) : v
         else
           fun bdd1 _ ->
           if Vdd.is_cst bdd1 && not (Mtbdd.get (Vdd.dval bdd1))
-          then Some (Mtbdd.cst B.mgr B.tbl (vbool true))
+          then Some (Mtbdd.cst B.mgr B.tbl_nv (vbool true))
           else None
       in
       let op =
@@ -475,7 +473,7 @@ let merge_op_cache = ref MergeMap.empty
 
 let merge ?opt ~op_key (f : value -> value -> value) ((x, tyx) : t) ((y, _) : t) : t =
   let cfg = Cmdline.get_cfg () in
-  let g x y = f (Mtbdd.get x) (Mtbdd.get y) |> Mtbdd.unique B.tbl in
+  let g x y = f (Mtbdd.get x) (Mtbdd.get y) |> Mtbdd.unique B.tbl_nv in
   if cfg.no_caching
   then Mapleaf.mapleaf2 g x y, tyx
   else (
@@ -535,7 +533,7 @@ let find ((map, _) : t) (v : value) : value =
 ;;
 
 let update ((map, ty) : t) (k : value) (v : value) : t =
-  let leaf = Mtbdd.cst B.mgr B.tbl v in
+  let leaf = Mtbdd.cst B.mgr B.tbl_nv v in
   let key = value_to_bdd k in
   Mtbdd.ite key leaf map, ty
 ;;

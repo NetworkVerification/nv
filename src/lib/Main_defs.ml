@@ -143,10 +143,34 @@ let run_smt file cfg info decls fs =
   run_smt_classic file cfg info decls fs
 ;;
 
+let partialEvalDecls decls =
+  List.map
+    (fun d ->
+      match d with
+      | DLet (x, ty, e) -> DLet (x, ty, InterpPartial.interp_partial_opt e)
+      | DAssert e -> DAssert (InterpPartial.interp_partial_opt e)
+      | DSolve r ->
+        DSolve
+          { r with
+            init = InterpPartial.interp_partial_opt r.init
+          ; trans = InterpPartial.interp_partial_opt r.trans
+          ; merge = InterpPartial.interp_partial_opt r.merge
+          }
+      | DRequire _
+      | DPartition _
+      | DInterface _
+      | DNodes _
+      | DSymbolic _
+      | DUserTy _
+      | DEdges _ -> d)
+    decls
+;;
+
 let run_simulator cfg _ decls fs =
-  (* let net = mk_net cfg decls in
-     let net = partialEvalNet net in
-     let net, _ = OptimizeBranches.optimize_net net in (* The _ should match the identity function *) *)
+  (* It is important to partially evaluate before optimizing branches and before simulation. *)
+  let decls =
+    Profile.time_profile "partial eval took:" (fun () -> partialEvalDecls decls)
+  in
   let decls, _ = OptimizeBranches.optimize_declarations decls in
   try
     let solution, q =
@@ -215,11 +239,13 @@ let parse_input (args : string array) =
     then (
       (* Note! Must rename before inling otherwise inling is unsound *)
       let decls, f = Renaming.alpha_convert_declarations decls in
-      ( Profile.time_profile "Inlining" (fun () ->
-            Inline.inline_declarations decls
-            |> (* TODO: We could probably propagate type information through inlining *)
-            Typing.infer_declarations info)
-      , f :: fs ))
+      let decls, fs =
+        ( Profile.time_profile "Inlining" (fun () ->
+              Inline.inline_declarations decls
+              (* TODO: We could probably propagate type information through inlining *))
+        , f :: fs )
+      in
+      Typing.infer_declarations info decls, fs)
     else decls, fs
   in
   let decls, fs =

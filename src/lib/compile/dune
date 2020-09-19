@@ -1,12 +1,12 @@
 (library
  (name nv_compile)
  (public_name nv.compile)
-  (libraries
-    nv_lang
-    nv_solution
-    nv_datastructures
-    nv_utils
-    findlib.dynload
-    fix
-  )
+ (libraries
+   nv_lang
+   nv_solution
+   nv_datastructures
+   nv_utils
+   findlib.dynload
+   fix
+ )
 )
