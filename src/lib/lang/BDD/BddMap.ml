@@ -363,7 +363,13 @@ let map_when ~op_key (pred: bool Mtbdd.t) (f: value -> value)
     in
     (User.apply_op2 op pred vdd, ty)
 
-let mapite_op_cache = ref ExpMap.empty
+module ExpMap2 = BatMap.Make (struct
+  type t = (exp * value BatSet.PSet.t) * (exp * value BatSet.PSet.t)
+
+  let compare = Pervasives.compare
+end)
+
+let mapite_op_cache = ref ExpMap2.empty
 
 (* For map_ite we have two operations hence we maintain a map from expressions to another map for the cache *)
 let map_ite ~op_key1 ~op_key2 (pred: bool Mtbdd.t) (f1: value -> value) (f2: value -> value)
@@ -376,7 +382,7 @@ let map_ite ~op_key1 ~op_key2 (pred: bool Mtbdd.t) (f1: value -> value) (f2: val
   if cfg.no_caching then (Mapleaf.mapleaf2 g pred vdd, ty)
   else
     let op =
-      match ExpMap.Exceptionless.find op_key1 !mapite_op_cache with
+      match ExpMap2.Exceptionless.find (op_key1, op_key2) !mapite_op_cache with
       | None ->
         let op =
           User.make_op2
@@ -384,21 +390,9 @@ let map_ite ~op_key1 ~op_key2 (pred: bool Mtbdd.t) (f1: value -> value) (f2: val
             (* ~memo:(Memo.Cache (Cache.create2 ())) *)
             ~commutative:false ~idempotent:false g
         in
-        let newMap = ExpMap.singleton op_key2 op in
-        mapite_op_cache := ExpMap.add op_key1 newMap !mapite_op_cache ;
+        mapite_op_cache := ExpMap2.add (op_key1, op_key2) op !mapite_op_cache ;
         op
-      | Some map2 ->
-        (match ExpMap.Exceptionless.find op_key2 map2 with
-         | None ->
-           let op =
-             User.make_op2
-               ~memo:(Cudd.Memo.Global)
-               (* ~memo:(Memo.Cache (Cache.create2 ())) *)
-               ~commutative:false ~idempotent:false g
-           in
-           mapite_op_cache := ExpMap.modify op_key1 (fun map2 -> ExpMap.add op_key2 op map2) !mapite_op_cache ;
-           op
-         | Some op -> op)
+      | Some op -> op
     in
     (User.apply_op2 op pred vdd, ty)
 

@@ -185,7 +185,7 @@ let rec ty_to_ocaml_string t =
    body and a tuple with the free variables that appear in the function. Used
    for caching BDD operations.
     NOTE: In general this is sound only if you inline, because we do not capture the environment
-    of any called function.
+    of any function that is called and may have free variables.
 *)
 let getFuncCache (e: exp) : string =
    match e.e with
@@ -413,6 +413,40 @@ and map_to_ocaml_string op es ty =
                 (exp_to_ocaml_string f) (exp_to_ocaml_string m)
             | _ -> failwith ("Wrong type for function argument" ^ (Printing.ty_to_string (OCamlUtils.oget f.ety))))
        | _ -> failwith "Wrong number of arguments to mapIf operation")
+    | MMapIte -> 
+      (match es with
+      | [pred; f1; f2; m] ->
+        let pred_closure =
+          match pred.e with
+          | EFun predF ->
+            (* Call track_tuples_exp to record any tuple types used in this predicate *)
+            Visitors.iter_exp track_tuples_exp predF.body;
+            let freeVars = Syntax.free_ty (BatSet.PSet.singleton ~cmp:Var.compare predF.arg) predF.body in
+            let freeList = BatSet.PSet.to_list freeVars in
+            Collections.printList (fun (x, ty) -> Printf.sprintf "(%s,%d)" (varname x) (get_fresh_type_id type_store ty)) freeList "(" "," ")"
+          | _ -> failwith "Predicate is not a function expression, try inlining"
+        in
+        let pred_id = Collections.ExpIds.fresh_id pred_store pred in
+        (match get_inner_type (OCamlUtils.oget f1.ety) with
+          | TArrow (_, newty) ->
+            (* Get e1's and e2's hashcons and closure *)
+            let op_key1 = getFuncCache f1 in
+            let op_key_var1 = "op_key1" in
+            let op_key2 = getFuncCache f2 in
+            let op_key_var2 = "op_key2" in
+            let pred_key = Printf.sprintf "(%d, %s)" pred_id pred_closure in
+            (*need the Obj.magic to op_key_var arg here because tuple may
+                  have different type/size depending on the free vars*)
+            Printf.sprintf "(Obj.magic (let %s = %s in \n\
+            let %s = %s in \n\
+            let pred_key = %s in \n\
+            NativeBdd.mapIte (Obj.magic pred_key) (Obj.magic %s) (Obj.magic %s) (%d) (Obj.magic (%s)) (Obj.magic (%s)) (Obj.magic (%s))))"
+              op_key_var1 op_key1 (*first let*)
+              op_key_var2 op_key2 (*snd let*)
+              pred_key op_key_var1 op_key_var2 (get_fresh_type_id type_store newty)
+              (exp_to_ocaml_string f1) (exp_to_ocaml_string f2) (exp_to_ocaml_string m)
+          | _ -> failwith ("Wrong type for function argument" ^ (Printing.ty_to_string (OCamlUtils.oget f1.ety))))
+      | _ -> failwith "Wrong number of arguments to mapIf operation")
     | MForAll ->
       (match es with
       | [pred; f; m] ->

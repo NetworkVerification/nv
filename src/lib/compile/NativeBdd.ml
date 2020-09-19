@@ -269,6 +269,69 @@ let mapIf (pred_key: int * 'g) (op_key : int * 'f) (vty_new_id: int) (f: 'a1 -> 
              val_ty_id = vty_new_id}
 
 
+module HashClosureMap2 = BatMap.Make (struct
+  type t = (int * unit) * (int * unit) (*NOTE: unit here is a placeholder for the closure type which is a tuple of OCaml variables*)
+  let compare = Pervasives.compare
+end)
+
+let mapIte_op_cache = Obj.magic (ref HashClosureMap2.empty)
+          
+
+let mapIte (pred_key: int * 'g) (op_key1 : int * 'f) (op_key2: int * 'h) (vty_new_id: int) (f1: 'a1 -> 'a2) (f2: 'a1 -> 'a2) (vmap : 'a1 t) : 'a2 t =
+  let g b v =
+    (if Mtbdd.get b then f1 (Mtbdd.get v) else f2 (Mtbdd.get v)) |> Mtbdd.unique B.tbl
+  in
+  let pred =
+    match HashClosureMap.Exceptionless.find pred_key !mapw_pred_cache with
+    | None ->
+      let pred = Collections.ExpIds.get_elt pred_store (fst pred_key) in
+      let predFun =
+        match pred.e with
+        | EFun predFun -> predFun
+        | _ -> failwith "expected a function"
+      in
+      (* Create a BDD that corresponds to all keys of type argty*)
+      let bddf = BddFunc.create_value (OCamlUtils.oget predFun.argty) in
+      (* Build the closure environment of the predicate *)
+      let env = build_env predFun.arg bddf predFun.body (snd pred_key) in
+      (* Build the BDD that captures the predicate's semantics *)
+      let bddf = BddFunc.eval env predFun.body in
+      (* If it's a value, create a BDD *)
+      let bddf = match bddf with
+        | Value v -> BddFunc.eval_value v
+        | _ -> bddf
+      in
+      (match bddf with
+       | BBool bdd ->
+         let mtbdd = BddFunc.wrap_mtbdd bdd in
+         mapw_pred_cache :=
+           HashClosureMap.add pred_key mtbdd !mapw_pred_cache ;
+         mtbdd
+       | BMap mtbdd ->
+         let mtbdd = (BddFunc.value_mtbdd_bool_mtbdd (fst mtbdd)) in
+         mapw_pred_cache  := HashClosureMap.add pred_key mtbdd !mapw_pred_cache ;
+         mtbdd
+       | _ -> failwith "A boolean bdd was expected but something went wrong")
+    | Some mtbdd -> (*cache hit *)
+      mtbdd
+  in
+
+  let op =
+    match HashClosureMap2.Exceptionless.find (op_key1, op_key2) !mapIte_op_cache with
+    | None ->
+      let op =
+        User.make_op2
+          ~memo:(Cudd.Memo.Global)
+          ~commutative:false ~idempotent:false g
+      in
+      mapIte_op_cache := HashClosureMap2.add (op_key1, op_key2) op !mapIte_op_cache ;
+      op
+    | Some op -> op
+  in
+  {vmap with bdd = User.apply_op2 op pred vmap.bdd;
+             val_ty_id = vty_new_id}
+
+
 (* Cache for map forall operations *)
 let forall_op_cache = Obj.magic (ref HashClosureMap.empty)
 
