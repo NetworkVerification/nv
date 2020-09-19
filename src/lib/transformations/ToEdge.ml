@@ -26,7 +26,7 @@ let toEdge_decl decls =
   let open Nv_datastructures in
   let n1_var = Var.create "n1" in
   let n2_var = Var.create "n2" in
-   (* if compile then
+  (* if compile then
       DLet
         (
           Var.create "toEdge",
@@ -41,30 +41,33 @@ let toEdge_decl decls =
             }
         )
     else*)
-      (* print_endline @@ Nv_lang.Printing.declarations_to_string decls ; *)
-      let edges = match get_edges decls with | None -> [] | Some es -> es in
-      let default_branch =
-        addBranch PWild (e_val (voption None)) emptyBranch
-      in
-      let branches =
-        List.fold_left
-          (fun bs (n1, n2) ->
-             addBranch (PTuple [PNode n1; PNode n2]) (esome (e_val (vedge (n1, n2)))) bs
-          )
-          default_branch
-          edges
-      in
-        DLet
-          (
-            Var.create "toEdge",
-            None,
+  (* print_endline @@ Nv_lang.Printing.declarations_to_string decls ; *)
+  let edges =
+    match get_edges decls with
+    | None -> []
+    | Some es -> es
+  in
+  let default_branch = addBranch PWild (e_val (voption None)) emptyBranch in
+  let branches =
+    List.fold_left
+      (fun bs (n1, n2) ->
+        addBranch (PTuple [PNode n1; PNode n2]) (esome (e_val (vedge (n1, n2)))) bs)
+      default_branch
+      edges
+  in
+  DLet
+    ( Var.create "toEdge"
+    , None
+    , efun
+        { arg = n1_var
+        ; argty = None
+        ; resty = None
+        ; body =
             efun
-              {arg = n1_var; argty = None; resty = None;
-               body =
-                 efun
-                   {arg = n2_var; argty = None; resty= None;
-                    body =
-                      ematch (etuple [evar n1_var; evar n2_var]) branches
-                   }
+              { arg = n2_var
+              ; argty = None
+              ; resty = None
+              ; body = ematch (etuple [evar n1_var; evar n2_var]) branches
               }
-          )
+        } )
+;;

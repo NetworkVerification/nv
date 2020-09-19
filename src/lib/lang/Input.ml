@@ -6,7 +6,7 @@ let read ?(filename : string option = None) lexbuf =
     let line = curr.Lexing.pos_lnum in
     let cnum = curr.Lexing.pos_cnum - curr.Lexing.pos_bol in
     let tok = Lexing.lexeme lexbuf in
-    (tok, line, cnum)
+    tok, line, cnum
   in
   let err_header =
     match filename with
@@ -19,24 +19,33 @@ let read ?(filename : string option = None) lexbuf =
   | _ ->
     let tok, line, cnum = get_info () in
     let msg =
-      Printf.sprintf "%s token: %s, line: %s, char: %s" err_header tok
-        (string_of_int line) (string_of_int cnum)
+      Printf.sprintf
+        "%s token: %s, line: %s, char: %s"
+        err_header
+        tok
+        (string_of_int line)
+        (string_of_int cnum)
     in
     Console.error msg
+;;
 
 let read_from_in cin =
   let res = read (Lexing.from_channel cin) in
-  close_in cin ; res
+  close_in cin;
+  res
+;;
 
 let read_from_str str = Lexing.from_string str |> read
 
 let read_from_file fname =
   let fin = open_in fname in
   let lexbuf = Lexing.from_channel fin in
-  lexbuf.lex_curr_p <- {lexbuf.lex_curr_p with pos_fname=fname};
-  lexbuf.lex_start_p <- {lexbuf.lex_start_p with pos_fname=fname};
+  lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname = fname };
+  lexbuf.lex_start_p <- { lexbuf.lex_start_p with pos_fname = fname };
   let res = read ~filename:(Some fname) lexbuf in
-  close_in fin ; res
+  close_in fin;
+  res
+;;
 
 (* Make dest_fname relative to the current directory (or absolute),
    instead of relative to the source_fname *)
@@ -51,35 +60,39 @@ let adjust_filename source_fname dest_fname =
 let process_includes (fname : string) : string list =
   let rec process_includes_aux (seen, imports) fname =
     print_endline @@ "Processing " ^ fname;
-    if List.mem fname seen then (seen, imports) else
+    if List.mem fname seen
+    then seen, imports
+    else (
       (* Get any imports in this file *)
       let lines =
-        try File.lines_of fname
-        with _ -> Console.error ("File not found: " ^ fname)
+        try File.lines_of fname with
+        | _ -> Console.error ("File not found: " ^ fname)
       in
       let includes =
         Enum.take_while
           (fun s -> String.starts_with s "include")
-          (Enum.filter (fun s -> (not @@ String.starts_with s "(*") &&
-                                 String.trim s <> "")
+          (Enum.filter
+             (fun s -> (not @@ String.starts_with s "(*") && String.trim s <> "")
              lines)
       in
-      let imported_fnames = Enum.map (fun s ->
-          if Str.string_match (Str.regexp "include[ ]*\\\"\\(.+\\)\\\"") s 0 then
-            adjust_filename fname (Str.matched_group 1 s)
-          else
-            Console.error @@ "Bad include directive (did you forget the quotes?): " ^ s
-        )
+      let imported_fnames =
+        Enum.map
+          (fun s ->
+            if Str.string_match (Str.regexp "include[ ]*\\\"\\(.+\\)\\\"") s 0
+            then adjust_filename fname (Str.matched_group 1 s)
+            else
+              Console.error @@ "Bad include directive (did you forget the quotes?): " ^ s)
           includes
       in
       (* Recursively process those imports *)
       let rec_seen, rec_imports =
-        Enum.fold process_includes_aux
-          (fname::seen, imports) imported_fnames
+        Enum.fold process_includes_aux (fname :: seen, imports) imported_fnames
       in
-      (rec_seen, fname :: rec_imports)
+      rec_seen, fname :: rec_imports)
   in
-  let _, imports = process_includes_aux ([], []) (adjust_filename FilePath.current_dir fname) in
+  let _, imports =
+    process_includes_aux ([], []) (adjust_filename FilePath.current_dir fname)
+  in
   List.rev imports
 ;;
 
@@ -87,4 +100,5 @@ let parse fname =
   let files_to_parse = process_includes fname in
   let t = Console.read_files files_to_parse in
   let ds = List.concat (List.map read_from_file files_to_parse) in
-  (ds, t)
+  ds, t
+;;
