@@ -33,6 +33,11 @@ let interp_partition parte node : int =
   let value = Interp.apply empty_env (deconstructFun parte) (vnode node)
   in (int_of_val value) |> Option.get
 
+(** Interpret the transfer function expression with the given edge and the given expression x. *)
+let interp_trans trans edge x : value =
+  let edge_exp = e_val (vedge edge) in
+  let trans_app = Interp.interp (eapp (eapp trans edge_exp) x) in
+  trans_app
 
 (** Helper function to unwrap the predicate. *)
 let unwrap_pred maybe_pred = match maybe_pred with
@@ -49,24 +54,26 @@ let transform_solve ~(base_check: bool) solve (partition: partitioned_srp) : (so
     | Some intfe -> (interp_interface intfe)
     | None -> fun (_: Edge.t) -> None
   in
-  let edge_preds = EdgeMap.fold (fun olde newe m -> match newe with
-      | Some e -> EdgeMap.add e (intf_opt olde) m
-      | None -> m) partition.edge_map EdgeMap.empty in
+  (* let edge_preds = EdgeMap.fold (fun olde newe m -> match newe with
+   *     | Some e -> EdgeMap.add e (intf_opt olde) m
+   *     | None -> m) partition.edge_map EdgeMap.empty in *)
   (* Update the partitioned_srp instance with the interface information *)
   let partition' = {
     partition with
-    inputs = VertexMap.mapi (fun innode input_exp -> let new_pred = EdgeMap.find_default None (innode, input_exp.base) edge_preds in
-                              { input_exp with pred = new_pred }) partition.inputs;
-    outputs = VertexMap.mapi (fun outnode (base, _) -> let new_pred = EdgeMap.find_default None (base, outnode) edge_preds in
-                               (base, new_pred)) partition.outputs;
+    inputs = VertexMap.map (fun input_exp -> { input_exp with pred = (intf_opt input_exp.edge) }) partition.inputs;
+    outputs = VertexMap.map (fun (edge, _) -> (edge, (intf_opt edge))) partition.outputs;
+    (* inputs = VertexMap.mapi (fun innode input_exp -> let new_pred = EdgeMap.find_default None (innode, input_exp.base) edge_preds in
+     *                           { input_exp with pred = new_pred }) partition.inputs;
+     * outputs = VertexMap.mapi (fun outnode (base, _) -> let new_pred = EdgeMap.find_default None (base, outnode) edge_preds in
+     *                            (base, new_pred)) partition.outputs; *)
   } in
   let attr_type = aty |> Option.get in
-  let init' = transform_init init attr_type partition' in
-  let trans' = transform_trans trans attr_type partition' in
-  let merge' = transform_merge merge attr_type partition' in
+  let init' = transform_init init merge attr_type partition' in
+  (* let trans' = transform_trans trans attr_type partition' in
+   * let merge' = transform_merge merge attr_type partition' in *)
   (* TODO: should we instead create separate let-bindings to refer to init, trans and merge? *)
-  let outputs_assert = TransformDecls.outputs_assert var_names attr_type partition' in
-  let add_require _ ({var; pred; _} : input_exp) l =
+  let outputs_assert = TransformDecls.outputs_assert trans var_names attr_type partition' in
+  let add_require _ {var; pred; _} l =
     match pred with
     | Some p -> (annot TBool (eapp p (annot attr_type (evar var)))) :: l
     | None -> l
@@ -76,11 +83,11 @@ let transform_solve ~(base_check: bool) solve (partition: partitioned_srp) : (so
   ({
     solve with
     init = init';
-    trans = trans';
+    (* trans = trans'; *)
     (* FIXME: merge is screwy; currently an output node on the destination won't update since it
       * gets initialized with the destination's value, which is already the best *)
     (* 2020/06/23 (tim): is this still true? *)
-    merge = merge';
+    (* merge = merge'; *)
     (* should this be erased? *)
     interface = None;
   }, outputs_assert, reqs)
@@ -113,7 +120,7 @@ let divide_decls (cfg: Cmdline.t) (decls: declarations) ~(base_check: bool) : de
       (* interpret partition function *)
       let partf : (Vertex.t -> int) = interp_partition parte in
       (* TODO: change this to a cmdline parameter *)
-      let tcomp : transcomp = InputTrans in
+      let tcomp : transcomp = OutputTrans in
       let partitioned_srps = partition_edges node_list edges partf tcomp in
       let create_new_decls (parted_srp : partitioned_srp) : declarations =
         (* TODO: node_map and edge_map describe how to remap each node and edge in the new SRP.
@@ -131,7 +138,7 @@ let divide_decls (cfg: Cmdline.t) (decls: declarations) ~(base_check: bool) : de
           in
           print_endline @@ VertexMap.to_string remap_node parted_srp.node_map
         else ();
-        let new_symbolics = VertexMap.fold (fun _ ({var; _}) l -> DSymbolic (var, Ty attr_type) :: l) parted_srp.inputs [] in
+        let new_symbolics = VertexMap.fold (fun _ {var; _} l -> DSymbolic (var, Ty attr_type) :: l) parted_srp.inputs [] in
         (* replace relevant old declarations *)
         let transformed_decls = List.flatten @@ List.map (transform_declaration ~base_check parted_srp) decls in
         new_symbolics @ transformed_decls

@@ -12,7 +12,7 @@ open Nv_lang.Syntax
  * | _ -> init x
  * where the edge u~v has been partitioned into u~out and in~v.
 *)
-val transform_init : exp -> ty -> SrpRemapping.partitioned_srp -> exp
+val transform_init : exp -> exp -> ty -> SrpRemapping.partitioned_srp -> exp
 
 (* Wrap the given trans exp in a new exp of the form:
  * match e with
@@ -22,7 +22,7 @@ val transform_init : exp -> ty -> SrpRemapping.partitioned_srp -> exp
  * where the edge u~v has been partitioned into u~out and in~v.
  * Note that the `trans u~v a` case is pulled from the previous exp.
 *)
-val transform_trans : exp -> ty -> SrpRemapping.partitioned_srp -> exp
+(* val transform_trans : exp -> ty -> SrpRemapping.partitioned_srp -> exp *)
 
 (* NOTE: this function appears to be unnecessary in practice *)
 (* Wrap the given merge exp in a new exp of the form:
@@ -32,7 +32,7 @@ val transform_trans : exp -> ty -> SrpRemapping.partitioned_srp -> exp
  * | _ -> merge n x y
  * where the edge u~v has been partitioned into u~out and in~v.
 *)
-val transform_merge : exp -> ty -> SrpRemapping.partitioned_srp -> exp
+(* val transform_merge : exp -> ty -> SrpRemapping.partitioned_srp -> exp *)
 
 (* Wrap the given assert exp in a new exp that also checks the input and output nodes
  * of the partitioned network.
@@ -46,4 +46,4 @@ val transform_merge : exp -> ty -> SrpRemapping.partitioned_srp -> exp
  * | _ -> assert n x
  * where p is a predicate used in the require clause
 *)
-val outputs_assert : exp -> ty -> SrpRemapping.partitioned_srp -> exp
+val outputs_assert : exp -> exp -> ty -> SrpRemapping.partitioned_srp -> exp

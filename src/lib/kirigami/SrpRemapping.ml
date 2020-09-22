@@ -36,8 +36,8 @@ let empty_interface : interface = {
 
 (* A record for managing the input node information *)
 type input_exp = {
-  (* the associated base node *)
-  base: V.t;
+  (* the associated original edge *)
+  edge: E.t;
   (* the variable associated with the input node *)
   var: Var.t;
   (* the associated predicate expression: a function over attributes *)
@@ -76,7 +76,7 @@ type partitioned_srp = {
    * output node as an `assert` on the solution
   *)
   inputs: input_exp VertexMap.t;
-  outputs: (Vertex.t * exp option) VertexMap.t;
+  outputs: (Edge.t * exp option) VertexMap.t;
   trans: transcomp;
 }
 
@@ -158,32 +158,37 @@ let map_edges_to_parts partitions (old_edge, (edge, srp_edge)) =
         (* output case *)
         if i1 = j then
           (* new node number *)
-          let outnode = partition.nodes in
-          let new_edge = Edge.create u () outnode in
+          (* let outnode = partition.nodes in
+           * let new_edge = Edge.create u () outnode in *)
           {
-            partition with nodes = partition.nodes + 1;
-                           edges = new_edge :: partition.edges;
-                           edge_map = EdgeMap.add old_edge (Some new_edge) partition.edge_map;
-                           outputs = VertexMap.add outnode (u, None) partition.outputs;
+            partition with
+            (* nodes = partition.nodes + 1;
+             *                edges = new_edge :: partition.edges;
+             *                edge_map = EdgeMap.add old_edge (Some new_edge) partition.edge_map; *)
+            (* outputs = VertexMap.add outnode (u, None) partition.outputs; *)
+            outputs = VertexMap.add u (old_edge, None) partition.outputs;
           }
         else
           (* input case *)
         if i2 = j then
           (* new node number *)
-          let innode = partition.nodes in
-          let new_edge = Edge.create innode () v in
+          (* let innode = partition.nodes in
+           * let new_edge = Edge.create innode () v in *)
           (* construct the record of the new input information: used when creating the
            * symbolic variable and the require predicate *)
+          let hyp_var = Var.fresh (Printf.sprintf "hyp_%s" (Edge.to_string old_edge)) in
           let input_exp = {
-            base = v;
-            var = Var.fresh (Printf.sprintf "hyp_%s" (Edge.to_string old_edge));
+            edge = old_edge;
+            var = hyp_var;
             pred = None;
           } in
           {
-            partition with nodes = partition.nodes + 1;
-                           edges = new_edge :: partition.edges;
-                           edge_map = EdgeMap.add old_edge (Some new_edge) partition.edge_map;
-                           inputs = VertexMap.add innode input_exp partition.inputs;
+            partition with
+            (* nodes = partition.nodes + 1; *)
+            (* edges = new_edge :: partition.edges; *)
+            (* edge_map = EdgeMap.add old_edge (Some new_edge) partition.edge_map; *)
+            (* inputs = VertexMap.add innode input_exp partition.inputs; *)
+            inputs = VertexMap.add v input_exp partition.inputs;
           }
           (* neither case, mark edge as absent and continue *)
         else {
