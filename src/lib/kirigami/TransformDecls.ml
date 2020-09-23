@@ -197,7 +197,7 @@ let assert_branch (x: var) (attr: ty) (outn: Vertex.t)  (_, pred) (b: branches) 
 (* Check that the solution's value at a particular output vertex satisfies the predicate. *)
 let add_output_pred (trans: exp) (attr: ty) (sol: exp) (n: Vertex.t) (edge, pred) acc =
   let sol_x = annot attr (eop MGet [sol; (annot TNode (node_to_exp n))]) in
-  let trans_curried = annot (TArrow (attr, attr)) (eapp trans (edge_to_exp edge)) in
+  let trans_curried = annot (TArrow (attr, attr)) (eapp trans (annot TEdge (edge_to_exp edge))) in
   match pred with
   | Some p -> (annot TBool (eapp p (annot attr (eapp trans_curried sol_x)))) :: acc
   | None -> acc

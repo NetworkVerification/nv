@@ -1,3 +1,4 @@
+(* vim: set syntax=ocaml: *)
 (* simple.nv:
    Implements shortest paths on a 2-node network
    with the destination at node 0. *)
