@@ -60,8 +60,8 @@ let transform_solve ~(base_check: bool) solve (partition: partitioned_srp) : (so
   (* Update the partitioned_srp instance with the interface information *)
   let partition' = {
     partition with
-    inputs = VertexMap.map (fun input_exp -> { input_exp with pred = (intf_opt input_exp.edge) }) partition.inputs;
-    outputs = VertexMap.map (fun (edge, _) -> (edge, (intf_opt edge))) partition.outputs;
+    inputs = VertexMap.map (fun input_exps -> List.map (fun input_exp -> { input_exp with pred = (intf_opt input_exp.edge) }) input_exps) partition.inputs;
+    outputs = VertexMap.map (fun outputs -> List.map (fun (edge, _) -> (edge, (intf_opt edge))) outputs) partition.outputs;
     (* inputs = VertexMap.mapi (fun innode input_exp -> let new_pred = EdgeMap.find_default None (innode, input_exp.base) edge_preds in
      *                           { input_exp with pred = new_pred }) partition.inputs;
      * outputs = VertexMap.mapi (fun outnode (base, _) -> let new_pred = EdgeMap.find_default None (base, outnode) edge_preds in
@@ -69,26 +69,23 @@ let transform_solve ~(base_check: bool) solve (partition: partitioned_srp) : (so
   } in
   let attr_type = aty |> Option.get in
   let init' = transform_init init merge attr_type partition' in
-  (* let trans' = transform_trans trans attr_type partition' in
-   * let merge' = transform_merge merge attr_type partition' in *)
+  let trans' = transform_trans trans attr_type partition' in
+  let merge' = transform_merge merge attr_type partition' in
   (* TODO: should we instead create separate let-bindings to refer to init, trans and merge? *)
   let outputs_assert = TransformDecls.outputs_assert trans var_names attr_type partition' in
-  let add_require _ {var; pred; _} l =
-    match pred with
-    | Some p -> (annot TBool (eapp p (annot attr_type (evar var)))) :: l
-    | None -> l
+  let add_require _ inputs l =
+    List.fold_left (fun l {var; pred; _} -> match pred with
+        | Some p -> (annot TBool (eapp p (annot attr_type (evar var)))) :: l
+        | None -> l) l inputs
   in
   let reqs = if base_check then [] else VertexMap.fold add_require partition'.inputs []
   in
   ({
     solve with
     init = init';
-    (* trans = trans'; *)
-    (* FIXME: merge is screwy; currently an output node on the destination won't update since it
-      * gets initialized with the destination's value, which is already the best *)
-    (* 2020/06/23 (tim): is this still true? *)
-    (* merge = merge'; *)
-    (* should this be erased? *)
+    trans = trans';
+    merge = merge';
+    (* should this be erased, or kept as reference? *)
     interface = None;
   }, outputs_assert, reqs)
 
@@ -138,7 +135,10 @@ let divide_decls (cfg: Cmdline.t) (decls: declarations) ~(base_check: bool) : de
           in
           print_endline @@ VertexMap.to_string remap_node parted_srp.node_map
         else ();
-        let new_symbolics = VertexMap.fold (fun _ {var; _} l -> DSymbolic (var, Ty attr_type) :: l) parted_srp.inputs [] in
+        let add_symbolics _ inputs l =
+          List.fold_left (fun l {var; _} -> DSymbolic (var, Ty attr_type) :: l) l inputs
+        in
+        let new_symbolics = VertexMap.fold add_symbolics parted_srp.inputs [] in
         (* replace relevant old declarations *)
         let transformed_decls = List.flatten @@ List.map (transform_declaration ~base_check parted_srp) decls in
         new_symbolics @ transformed_decls

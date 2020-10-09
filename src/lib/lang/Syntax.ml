@@ -189,6 +189,7 @@ and ty_or_exp = Ty of ty | Exp of exp
 
 (* var_names should be an exp that uses only the EVar and ETuple constructors *)
 (* interface is an optional expression to describe the network hypotheses *)
+(* TODO: add a flag to control how the trans function is cut *)
 type solve = {aty: ty option; var_names: exp; init : exp; trans: exp; merge: exp; interface: exp option}
 
 type declaration =

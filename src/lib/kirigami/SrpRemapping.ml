@@ -69,14 +69,13 @@ type partitioned_srp = {
   node_map: (Vertex.t option) VertexMap.t;
   (* keys are old edges, values are Some new edge or None *)
   edge_map: (Edge.t option) EdgeMap.t;
-  (* Maps from input and output nodes to their
-   * corresponding base nodes and predicates:
-   * the predicate applies to the input node as a `require`
+  (* Maps from base nodes to their inputs and outputs *)
+  (* the predicate applies to the input node as a `require`
    * on the hypothesis symbolic variable, and to the
    * output node as an `assert` on the solution
   *)
-  inputs: input_exp VertexMap.t;
-  outputs: (Edge.t * exp option) VertexMap.t;
+  inputs: (input_exp list) VertexMap.t;
+  outputs: ((Edge.t * exp option) list) VertexMap.t;
   trans: transcomp;
 }
 
@@ -166,7 +165,7 @@ let map_edges_to_parts partitions (old_edge, (edge, srp_edge)) =
              *                edges = new_edge :: partition.edges;
              *                edge_map = EdgeMap.add old_edge (Some new_edge) partition.edge_map; *)
             (* outputs = VertexMap.add outnode (u, None) partition.outputs; *)
-            outputs = VertexMap.add u (old_edge, None) partition.outputs;
+            outputs = VertexMap.modify_def [] u (List.cons (old_edge, None)) partition.outputs;
           }
         else
           (* input case *)
@@ -188,7 +187,7 @@ let map_edges_to_parts partitions (old_edge, (edge, srp_edge)) =
             (* edges = new_edge :: partition.edges; *)
             (* edge_map = EdgeMap.add old_edge (Some new_edge) partition.edge_map; *)
             (* inputs = VertexMap.add innode input_exp partition.inputs; *)
-            inputs = VertexMap.add v input_exp partition.inputs;
+            inputs = VertexMap.modify_def [] v (List.cons input_exp) partition.inputs;
           }
           (* neither case, mark edge as absent and continue *)
         else {
