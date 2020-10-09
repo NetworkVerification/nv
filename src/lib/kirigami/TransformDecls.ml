@@ -151,3 +151,9 @@ let outputs_assert (trans: exp) (sol: exp) (attr: ty) (parted_srp: SrpRemapping.
     annot TBool (eop And output_preds)
   else
     annot TBool (List.hd output_preds)
+
+let transform_assert (e: exp) (parted_srp: SrpRemapping.partitioned_srp) : exp =
+  (* TODO: drop expressions or simplify them to true if they reference nodes we don't have access to *)
+  (* NOTE: this may not even be occurring in the assert itself, but in another part of the program;
+   * although maybe that's fine if it's already inlined *)
+  e

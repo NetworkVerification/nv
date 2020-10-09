@@ -98,7 +98,7 @@ let transform_declaration ~(base_check: bool) parted_srp decl =
     [DSolve solve'; DAssert assert'] @ List.map (fun e -> DRequire e) reqs
   | DPartition _ -> []
   (* If performing the base check, drop existing assertions *)
-  | DAssert _ -> if base_check then [] else [decl]
+  | DAssert e -> if base_check then [] else [DAssert (transform_assert e parted_srp)]
   | _ -> [decl]
 
 (** Create a list of lists of declarations representing a network which has been
