@@ -17,10 +17,10 @@ let edge_to_pat edge = exp_to_pattern (edge_to_exp edge)
 let amatch v t b = annot t (ematch (aexp (evar v, Some t, Span.default)) b)
 
 (** Add match branches using the given map of old nodes to new nodes. *)
-let match_of_node_map (m: Vertex.t option VertexMap.t) (f: Vertex.t -> exp) b =
+let match_of_node_map (m: Vertex.t option VertexMap.t) (f: Vertex.t -> Vertex.t -> exp) b =
   let add_node_branch old_node new_node branches =
     match new_node with
-    | Some n -> addBranch (node_to_pat n) (f old_node) branches
+    | Some n -> addBranch (node_to_pat n) (f n old_node) branches
     | None -> branches
     (* if there is no new node, just map the old node to itself *)
     (* addBranch (node_to_pat old_node) (node_to_exp old_node) branches *)
@@ -30,7 +30,7 @@ let match_of_node_map (m: Vertex.t option VertexMap.t) (f: Vertex.t -> exp) b =
 (* Return a Let declaration of a function that maps from old nodes to new nodes. *)
 let node_map_decl fnname (m: Vertex.t option VertexMap.t) =
   let node_var = Var.create "n" in
-  let branches = match_of_node_map m node_to_exp emptyBranch in
+  let branches = match_of_node_map m (fun _ -> node_to_exp) emptyBranch in
   DLet
     (
       Var.create fnname,
@@ -77,7 +77,6 @@ let edge_map_decl fnname (m: Edge.t option EdgeMap.t) =
 *)
 let transform_init (old: exp) (merge: exp) (ty: ty) (parted_srp: SrpRemapping.partitioned_srp) : Syntax.exp =
   let {node_map; inputs; _} : SrpRemapping.partitioned_srp = parted_srp in
-  let interp arg = InterpPartial.interp_partial_fun old [arg] in
   let node_var = Var.fresh "node" in
   (* function we recursively call to build up the new base node init *)
   (* TODO: allow a switch to use the trans function here, instead of on output assertions *)
@@ -89,10 +88,12 @@ let transform_init (old: exp) (merge: exp) (ty: ty) (parted_srp: SrpRemapping.pa
     let curried_node_exp = annot (TArrow (ty, ty)) (eapp curried_node node_exp) in
     wrap node_exp (eapp curried_node_exp input_exp)
   in
-  (* FIXME: this looks up the wrong node *)
-  let map_nodes node = match VertexMap.Exceptionless.find node inputs with
-    | Some input_nodes -> List.fold_left (fun e input -> merge_input (vnode node) e input) (interp (vnode node)) input_nodes
-    | None -> interp (vnode node)
+  (* we use both node names here since the inputs are organized acc. to new node name, while the old node name
+   * is needed to interpret the old function *)
+  let interp node = InterpPartial.interp_partial_fun old [(vnode node)] in
+  let map_nodes new_node old_node = match VertexMap.Exceptionless.find new_node inputs with
+    | Some input_nodes -> List.fold_left (fun e input -> merge_input (vnode old_node) e input) (interp old_node) input_nodes
+    | None -> interp old_node
   in
   let branches = match_of_node_map node_map map_nodes emptyBranch in
   (* the returned expression should be a function that takes a node as input with the following body:
@@ -124,14 +125,12 @@ let transform_merge (e: exp) (ty: ty) (parted_srp: SrpRemapping.partitioned_srp)
   (* the internal type after matching on the node *)
   let inner_ty = TArrow (ty, TArrow (ty, ty)) in
   let node_var = Var.fresh "node" in
-  (* let default_branch = addBranch PWild e emptyBranch in *)
-  let map_match = match_of_node_map node_map node_to_exp emptyBranch in
   (* Simplify the old expression to a smaller expression *)
   let interp_old old exp =
     InterpPartial.interp_partial_opt (annot inner_ty (eapp old exp))
   in
-  let base_branches = mapBranches (fun (pat, exp) -> (pat, interp_old e exp)) map_match in
-  wrap e (efunc (funcFull node_var (Some TNode) (Some inner_ty) (amatch node_var TNode base_branches)))
+  let branches = match_of_node_map node_map (fun _ old -> interp_old e (node_to_exp old)) emptyBranch in
+  wrap e (efunc (funcFull node_var (Some TNode) (Some inner_ty) (amatch node_var TNode branches)))
 
 (* Check that the solution's value at a particular output vertex satisfies the predicate. *)
 let add_output_pred (trans: exp) (attr: ty) (sol: exp) (n: Vertex.t) (edge, pred) acc =
