@@ -1,0 +1,27 @@
+include "../disagree.nv"
+
+let partition n = match n with
+  | 0n -> 0u8
+  | 1n -> 1u8
+  | 2n -> 2u8
+
+let interface e = 
+  let eq t x = match x with
+  | Some x -> x = t
+  | None -> false
+  in
+  let le t x = match x with
+  | Some x -> x <= t
+  | None -> false
+  in
+  match e with
+  | 0~1 -> Some (eq 1)
+  | 0~2 -> Some (eq 1)
+  | 1~2 -> Some (le 3)
+  | 2~1 -> Some (le 3)
+  | 1~0 -> Some (fun a -> true)
+  | 2~0 -> Some (fun a -> true)
+
+let partsol = solution { init = init; trans = trans; merge = merge; interface = interface }
+
+assert foldNodes (fun v x acc -> match x with | Some y -> acc && y <= 2 | None -> acc) partsol true
