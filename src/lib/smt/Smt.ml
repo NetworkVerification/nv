@@ -144,9 +144,7 @@ let solveClassic info query chan decls =
   solve info query chan (fun () -> Enc.encode_z3 decls)
     (Nv_datastructures.AdjGraph.nb_vertex (get_graph decls |> oget)) (get_asserts decls) (get_requires decls)
 
-(* Solver for Kirigami, which runs a base check query before the inductiveness checks.
- * To do this, we basically make 2 calls to solve, first using a simpler set of assertions and requires,
- * and then the ones as produced by cutting the network.
+(* Solver for Kirigami, which performs two SMT encodings, one for initial checks and one for safety checks.
 *)
 let solveKirigami info query chan decls =
   (* TODO: unfinished *)
@@ -155,5 +153,39 @@ let solveKirigami info query chan decls =
   let module Enc =
     (val (module SmtClassicEncoding.ClassicEncoding(ExprEnc) : SmtClassicEncoding.ClassicEncodingSig))
   in
-  solve info query chan (fun () -> Enc.encode_z3 decls)
-    (Nv_datastructures.AdjGraph.nb_vertex (get_graph decls |> oget)) (get_asserts decls) (get_requires decls)
+  (* second solve *)
+  let nodes = Nv_datastructures.AdjGraph.nb_vertex (get_graph decls |> oget) in
+  let assertions = get_asserts decls in
+  let solver = Lazy.force solver in
+  let print_and_ask q =
+    if query then
+      printQuery chan q;
+    ask_solver_blocking solver q
+  in
+  let solve_aux () =
+    let ((renaming1, env1), (renaming2, env2)) =
+      time_profile_absolute "Encoding network"
+        (fun () -> let (env1, env2) = Enc.kirigami_encode_z3 decls in
+          if smt_config.optimize then (propagate_eqs env1, propagate_eqs env2)
+          else (((StringMap.empty, StringMap.empty), env1), ((StringMap.empty, StringMap.empty), env2)))
+    in
+    (* compile the encoding to SMT-LIB *)
+    let smt_encoding1 =
+      time_profile_absolute "Compiling query 1"
+        (fun () -> env_to_smt ~verbose:smt_config.verbose info env1) in
+    let smt_encoding2 =
+      time_profile_absolute "Compiling query 2"
+        (fun () -> env_to_smt ~verbose:smt_config.verbose info env2) in
+    (* print query to a file if asked to *)
+    (* Printf.printf "communicating with solver"; *)
+    print_and_ask smt_encoding1;
+    let q = check_sat info in
+    print_and_ask q;
+    let reply = solver |> parse_reply in
+    get_sat query chan info env1 solver renaming1 nodes assertions reply
+    (*TODO: get the other environment response*)
+  in
+  print_and_ask "(push)";
+  let ret = solve_aux () in
+  print_and_ask "(pop)";
+  ret

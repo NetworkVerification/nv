@@ -24,8 +24,9 @@ sig
 end
 
 module type Encoding =
-  sig
-    type network_type
-    val encode_z3: network_type -> smt_env
-    val add_symbolic_constraints: smt_env ->  Syntax.exp list -> Syntax.ty_or_exp Collections.VarMap.t -> unit
+sig
+  type network_type
+  val encode_z3: network_type -> smt_env
+  val kirigami_encode_z3: network_type -> (smt_env * smt_env)
+  val add_symbolic_constraints: smt_env ->  Syntax.exp list -> Syntax.ty_or_exp Collections.VarMap.t -> unit
 end

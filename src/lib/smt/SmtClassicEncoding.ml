@@ -295,4 +295,29 @@ struct
     (* add any require clauses constraints *)
     add_symbolic_constraints env requires env.symbolics;
     env
+
+  let kirigami_encode_z3 (decls: Syntax.declarations) : (SmtUtils.smt_env * SmtUtils.smt_env) =
+    let symbolics = get_symbolics decls in
+    let graph = get_graph decls |> oget in
+    let solves = get_solves decls in
+    let assertions = get_asserts decls |> List.map InterpPartial.interp_partial in
+    let requires = get_requires decls in
+    let env1 = init_solver symbolics ~labels:[] in
+    let env2 = init_solver symbolics ~labels:[] in
+
+    List.iteri (encode_solve env1 graph) solves;
+    List.iteri (encode_solve env2 graph) solves;
+
+    (match assertions with
+     | [] -> ()
+     | _ -> let assert_vars = List.mapi (fun i eassert ->
+         let z3_assert = encode_exp_z3 "" env1 eassert |> to_list |> List.hd in
+         let assert_var = mk_constant env1 (Printf.sprintf "assert-%d" i) (ty_to_sort TBool) in
+         SmtUtils.add_constraint env1 (mk_term (mk_eq assert_var.t z3_assert.t));
+         assert_var) assertions in
+       let all_good = List.fold_left (fun acc v -> mk_and acc v.t) (List.hd assert_vars).t (List.tl assert_vars)
+       in SmtUtils.add_constraint env1 (mk_term (mk_not all_good)));
+    add_symbolic_constraints env1 requires env1.symbolics;
+    (* TODO: set up env2 to handle the P assertions and env1 to handle the G assertions *)
+    (env1, env2)
 end

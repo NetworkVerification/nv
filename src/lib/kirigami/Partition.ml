@@ -9,7 +9,6 @@ open Nv_interpreter
 open Nv_utils.OCamlUtils
 open SrpRemapping
 
-
 (** Helper function to extract the edge predicate
  *  from the interface expression.
 *)
@@ -89,7 +88,7 @@ let transform_solve ~(base_check: bool) solve (partition: partitioned_srp) : (so
     interface = None;
   }, outputs_assert, reqs)
 
-let transform_declaration ~(base_check: bool) parted_srp decl =
+let transform_declaration ~(base_check: bool) parted_srp constraint_set decl =
   let { nodes; edges; _ } : partitioned_srp = parted_srp in
   match decl with
   | DNodes _ -> [DNodes nodes]
@@ -105,7 +104,7 @@ let transform_declaration ~(base_check: bool) parted_srp decl =
  * opened along the edges described by the partition and interface declarations.
  * @return a new list of lists of declarations
 *)
-let divide_decls (cfg: Cmdline.t) (decls: declarations) ~(base_check: bool) : declarations list =
+let divide_decls (cfg: Cmdline.t) (decls: declarations) ~(base_check: bool) : (declarations * exp Set.t) list =
   let partition = get_partition decls in
   match partition with
   | Some parte -> begin
@@ -119,7 +118,7 @@ let divide_decls (cfg: Cmdline.t) (decls: declarations) ~(base_check: bool) : de
       (* TODO: change this to a cmdline parameter *)
       let tcomp : transcomp = OutputTrans in
       let partitioned_srps = partition_edges node_list edges partf tcomp in
-      let create_new_decls (parted_srp : partitioned_srp) : declarations =
+      let create_new_decls (parted_srp : partitioned_srp) : (declarations * exp Set.t) =
         (* TODO: node_map and edge_map describe how to remap each node and edge in the new SRP.
          * To transform more cleanly, we can run a toplevel transformer on the SRP, replacing
          * each edge and node in the map with the new value if it's Some,
@@ -140,9 +139,10 @@ let divide_decls (cfg: Cmdline.t) (decls: declarations) ~(base_check: bool) : de
         in
         let new_symbolics = VertexMap.fold add_symbolics parted_srp.inputs [] in
         (* replace relevant old declarations *)
-        let transformed_decls = List.flatten @@ List.map (transform_declaration ~base_check parted_srp) decls in
-        new_symbolics @ transformed_decls
+        let constraint_set = Set.empty in
+        let transformed_decls = List.flatten @@ List.map (transform_declaration ~base_check parted_srp constraint_set) decls in
+        (new_symbolics @ transformed_decls, constraint_set)
       in
       List.map create_new_decls partitioned_srps
     end
-  | None -> [decls]
+  | None -> [(decls, Set.empty)]

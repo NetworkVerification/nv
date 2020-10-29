@@ -21,19 +21,6 @@ type transcomp =
    * Not yet implemented. *)
   | Decomposed of exp * exp
 
-(** A type for keeping track of the input to base and output to base relationships. *)
-type interface = {
-  (* Key: input node, value: base node *)
-  inputs: Vertex.t VertexMap.t;
-  (* Key: output node, value: base node *)
-  outputs: Vertex.t VertexMap.t;
-}
-
-let empty_interface : interface = {
-  inputs = VertexMap.empty;
-  outputs = VertexMap.empty;
-}
-
 (* A record for managing the input node information *)
 type input_exp = {
   (* the associated original edge *)
@@ -219,6 +206,11 @@ let partition_edges (nodes: Vertex.t list) (edges: Edge.t list) (partf: Vertex.t
   (* add 1 to num_srps to convert from max partition # to number of SRPS *)
   let divided_nodes = divide_vertices node_srp_map (num_srps + 1) in
   divide_edges edges divided_nodes trans
+
+(** Transformer utilities.
+ ** This transformer impl remaps patterns and values to refer to the new node identities.
+ ** However, it does not perform any action if the node found has been cut; we may in that
+ ** case want to remove the entire offending expression or replace it with some default. *)
 
 let ty_transformer _ ty = Some ty
 
