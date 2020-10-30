@@ -27,6 +27,8 @@ type input_exp = {
   edge: E.t;
   (* the variable associated with the input node *)
   var: Var.t;
+  (* the partition rank of the associated output *)
+  rank: int;
   (* the associated predicate expression: a function over attributes *)
   (* optional: if not given, then assumed to always hold *)
   pred: exp option;
@@ -48,6 +50,8 @@ type input_exp = {
  **   in the new SRP
  **)
 type partitioned_srp = {
+  (* the rank of the partitioned srp *)
+  rank: int;
   (* the number of nodes in the network *)
   nodes: int;
   (* the edges in the network *)

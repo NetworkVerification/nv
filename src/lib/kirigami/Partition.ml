@@ -38,12 +38,6 @@ let interp_trans trans edge x : value =
   let trans_app = Interp.interp (eapp (eapp trans edge_exp) x) in
   trans_app
 
-(** Helper function to unwrap the predicate. *)
-let unwrap_pred maybe_pred = match maybe_pred with
-  | Some pred -> pred (* the interface is an efun *)
-  (* Make the predicate a function that ignores its argument *)
-  | None -> annot TBool (e_val (vbool true))
-
 (* Transform the given solve and return it along with a new expression to assert
  * and new expressions to require. *)
 let transform_solve ~(base_check: bool) solve (partition: partitioned_srp) : (solve * exp * exp list) =
@@ -53,18 +47,11 @@ let transform_solve ~(base_check: bool) solve (partition: partitioned_srp) : (so
     | Some intfe -> (interp_interface intfe)
     | None -> fun (_: Edge.t) -> None
   in
-  (* let edge_preds = EdgeMap.fold (fun olde newe m -> match newe with
-   *     | Some e -> EdgeMap.add e (intf_opt olde) m
-   *     | None -> m) partition.edge_map EdgeMap.empty in *)
   (* Update the partitioned_srp instance with the interface information *)
   let partition' = {
     partition with
     inputs = VertexMap.map (fun input_exps -> List.map (fun input_exp -> { input_exp with pred = (intf_opt input_exp.edge) }) input_exps) partition.inputs;
     outputs = VertexMap.map (fun outputs -> List.map (fun (edge, _) -> (edge, (intf_opt edge))) outputs) partition.outputs;
-    (* inputs = VertexMap.mapi (fun innode input_exp -> let new_pred = EdgeMap.find_default None (innode, input_exp.base) edge_preds in
-     *                           { input_exp with pred = new_pred }) partition.inputs;
-     * outputs = VertexMap.mapi (fun outnode (base, _) -> let new_pred = EdgeMap.find_default None (base, outnode) edge_preds in
-     *                            (base, new_pred)) partition.outputs; *)
   } in
   let attr_type = aty |> Option.get in
   let init' = transform_init init merge attr_type partition' in
@@ -73,11 +60,12 @@ let transform_solve ~(base_check: bool) solve (partition: partitioned_srp) : (so
   (* TODO: should we instead create separate let-bindings to refer to init, trans and merge? *)
   let outputs_assert = TransformDecls.outputs_assert trans var_names attr_type partition' in
   let add_require _ inputs l =
-    List.fold_left (fun l {var; pred; _} -> match pred with
-        | Some p -> (annot TBool (eapp p (annot attr_type (evar var)))) :: l
+    List.fold_left (fun l {var; rank; pred; _} -> match pred with
+        (* if we are performing the initial check, skip any predicates with rank higher than this partition *)
+        | Some p -> if base_check && partition.rank < rank then l else (annot TBool (eapp p (annot attr_type (evar var)))) :: l
         | None -> l) l inputs
   in
-  let reqs = if base_check then [] else VertexMap.fold add_require partition'.inputs []
+  let reqs = VertexMap.fold add_require partition'.inputs []
   in
   ({
     solve with
