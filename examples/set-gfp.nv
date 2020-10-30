@@ -1,0 +1,17 @@
+type attribute = set[tnode]
+let nodes = 3
+let edges = {0=1;}
+
+let init n = match n with
+  | 0n -> {0n}
+  | 1n -> {1n}
+  | 2n -> {2n}
+
+let trans e x = x
+
+let merge n x y = x union y
+
+let sol = solution { init = init; trans = trans; merge = merge; }
+
+(* Fails; 2n can also be a solution, even though there's no edge to it! *)
+assert sol[0n] = {0n, 1n}
