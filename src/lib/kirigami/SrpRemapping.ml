@@ -6,20 +6,10 @@ open Nv_lang.Syntax
 open Nv_transformations
 open Nv_datastructures
 
-(* Describe how the transfer function should be decomposed.
- * Some types of networks require different settings of this,
- * depending on how they transfer routes.
- * Figuring that out is future work. *)
 type transcomp =
-  (* Perform the original transfer on the base~output edge,
-   * and set the transfer on the input~base edge to the identity. *)
-  | OutputTrans
-  (* Perform the original transfer on the input~base edge,
-   * and set the transfer on the base~output edge to the identity. *)
-  | InputTrans
-  (* Decompose the original transfer into two parts e1 and e2.
-   * Not yet implemented. *)
   | Decomposed of exp * exp
+  | OutputTrans
+  | InputTrans
 
 (* A record for managing the input node information *)
 type input_exp = {

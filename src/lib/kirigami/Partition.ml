@@ -88,7 +88,7 @@ let transform_solve ~(base_check: bool) solve (partition: partitioned_srp) : (so
     interface = None;
   }, outputs_assert, reqs)
 
-let transform_declaration ~(base_check: bool) parted_srp constraint_set decl =
+let transform_declaration ~(base_check: bool) parted_srp _constraint_set decl =
   let { nodes; edges; _ } : partitioned_srp = parted_srp in
   match decl with
   | DNodes _ -> [DNodes nodes]
