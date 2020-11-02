@@ -6,11 +6,6 @@ open Nv_lang.Syntax
 open Nv_transformations
 open Nv_datastructures
 
-type transcomp =
-  | Decomposed of exp * exp
-  | OutputTrans
-  | InputTrans
-
 (* A record for managing the input node information *)
 type input_exp = {
   (* the associated original edge *)

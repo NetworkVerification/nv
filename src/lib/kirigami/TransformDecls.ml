@@ -80,7 +80,7 @@ let transform_init (init: exp) (trans: exp) (merge: exp) (ty: ty) (parted_srp: S
     let input_exp = annot ty (evar var) in
     (* perform the input transfer on the input exp *)
     let trans_curried = annot (TArrow (ty, ty)) (eapp trans (annot TEdge (edge_to_exp edge))) in
-    let trans_input_exp = annot ty (eapp trans_curried input_exp) in
+    let trans_input_exp = InterpPartial.interp_partial_opt (annot ty (eapp trans_curried input_exp)) in
     (* perform the merge function, using the given node and its current value with the input variable *)
     let curried_node = annot (TArrow ((TArrow (ty, ty)), ty)) (InterpPartial.interp_partial_fun merge [node]) in
     let curried_node_exp = annot (TArrow (ty, ty)) (eapp curried_node node_exp) in
@@ -133,7 +133,9 @@ let transform_merge (e: exp) (ty: ty) (parted_srp: SrpRemapping.partitioned_srp)
 (* Check that the solution's value at a particular output vertex satisfies the predicate. *)
 let add_output_pred (trans: exp) (attr: ty) (sol: exp) (n: Vertex.t) (edge, pred) acc =
   let sol_x = annot attr (eop MGet [sol; (annot TNode (node_to_exp n))]) in
-  let trans_curried = annot (TArrow (attr, attr)) (eapp trans (annot TEdge (edge_to_exp edge))) in
+  (* partially interpret the transfer function *)
+  let trans_app = (eapp trans (annot TEdge (edge_to_exp edge))) in
+  let trans_curried = InterpPartial.interp_partial_opt (annot (TArrow (attr, attr)) trans_app) in
   match pred with
   | Some p -> (annot TBool (eapp p (annot attr (eapp trans_curried sol_x)))) :: acc
   | None -> acc

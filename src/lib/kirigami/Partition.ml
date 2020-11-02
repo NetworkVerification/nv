@@ -9,6 +9,11 @@ open Nv_interpreter
 open Nv_utils.OCamlUtils
 open SrpRemapping
 
+type transcomp =
+  | Decomposed of exp * exp
+  | OutputTrans
+  | InputTrans
+
 (** Helper function to extract the edge predicate
  *  from the interface expression.
 *)
@@ -31,12 +36,6 @@ let interp_interface intfe e : exp option =
 let interp_partition parte node : int =
   let value = Interp.apply empty_env (deconstructFun parte) (vnode node)
   in (int_of_val value) |> Option.get
-
-(** Interpret the transfer function expression with the given edge and the given expression x. *)
-let interp_trans trans edge x : value =
-  let edge_exp = e_val (vedge edge) in
-  let trans_app = Interp.interp (eapp (eapp trans edge_exp) x) in
-  trans_app
 
 (** Return the outgoing transfer function and the incoming transfer function decomposition. *)
 let decompose_trans (attr: ty) (trans: exp) (transcomp: transcomp) : (exp * exp) =
@@ -89,23 +88,25 @@ let transform_solve ~(base_check: bool) ~(transcomp: transcomp) solve (partition
     interface = None;
   }, outputs_assert, reqs)
 
-let transform_declaration ~(base_check: bool) ~(transcomp: transcomp) parted_srp _constraint_set decl =
+(* Return a transformed version of the given declaration, and optionally any new Kirigami constraints
+ * that need to be added with it. *)
+let transform_declaration ~(base_check: bool) ~(transcomp: transcomp) parted_srp decl : (declaration * declaration list) option =
   let { nodes; edges; _ } : partitioned_srp = parted_srp in
   match decl with
-  | DNodes _ -> [DNodes nodes]
-  | DEdges _ -> [DEdges edges]
+  | DNodes _ -> Some (DNodes nodes, [])
+  | DEdges _ -> Some (DEdges edges, [])
   | DSolve s -> let (solve', assert', reqs) = transform_solve base_check transcomp s parted_srp in
-    [DSolve solve'; DAssert assert'] @ List.map (fun e -> DRequire e) reqs
-  | DPartition _ -> []
+    Some (DSolve solve', [DAssert assert'] @ List.map (fun e -> DRequire e) reqs)
+  | DPartition _ -> None
   (* If performing the base check, drop existing assertions *)
-  | DAssert e -> if base_check then [] else [DAssert (transform_assert e parted_srp)]
-  | _ -> [decl]
+  | DAssert e -> if base_check then None else Some (DAssert (transform_assert e parted_srp), [])
+  | _ -> Some (decl, [])
 
 (** Create a list of lists of declarations representing a network which has been
  * opened along the edges described by the partition and interface declarations.
  * @return a new list of lists of declarations
 *)
-let divide_decls (cfg: Cmdline.t) (decls: declarations) ~(base_check: bool) : (declarations * exp Set.t) list =
+let divide_decls (cfg: Cmdline.t) (decls: declarations) ~(base_check: bool) : (declarations * declarations) list =
   let partition = get_partition decls in
   match partition with
   | Some parte -> begin
@@ -119,7 +120,7 @@ let divide_decls (cfg: Cmdline.t) (decls: declarations) ~(base_check: bool) : (d
       (* TODO: change this to a cmdline parameter *)
       let transcomp : transcomp = OutputTrans in
       let partitioned_srps = partition_edges node_list edges partf in
-      let create_new_decls (parted_srp : partitioned_srp) : (declarations * exp Set.t) =
+      let create_new_decls (parted_srp : partitioned_srp) : (declarations * declarations) =
         (* TODO: node_map and edge_map describe how to remap each node and edge in the new SRP.
          * To transform more cleanly, we can run a toplevel transformer on the SRP, replacing
          * each edge and node in the map with the new value if it's Some,
@@ -138,10 +139,11 @@ let divide_decls (cfg: Cmdline.t) (decls: declarations) ~(base_check: bool) : (d
         in
         let new_symbolics = VertexMap.fold add_symbolics parted_srp.inputs [] in
         (* replace relevant old declarations *)
-        let constraint_set = Set.empty in
-        let transformed_decls = List.flatten @@ List.map (transform_declaration ~base_check ~transcomp parted_srp constraint_set) decls in
-        (new_symbolics @ transformed_decls, constraint_set)
+        let transformed_decls = List.filter_map (transform_declaration ~base_check ~transcomp parted_srp) decls in
+        let (transformed, added) = List.split transformed_decls in
+        (* let transformed_decls = List.flatten @@ List.map (transform_declaration ~base_check ~transcomp parted_srp constraint_set) decls in *)
+        (new_symbolics @ transformed, List.flatten added)
       in
       List.map create_new_decls partitioned_srps
     end
-  | None -> [(decls, Set.empty)]
+  | None -> [(decls, [])]

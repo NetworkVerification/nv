@@ -241,10 +241,12 @@ let parse_input (args : string array) :
   if cfg.kirigami then
     (* FIXME: this breaks ToEdge *)
     (* NOTE: we partition after checking well-formedness so we can reuse edges that don't exist *)
-    let new_decls_base = List.map (fun (d, _set) -> ("Initial check:", d))
+    (* TODO: keep the declarations separate, run them through the transformations,
+     * and then sort them out once we get to SMT encoding *)
+    let new_decls_base = List.map (fun (d1, d2) -> ("Initial check:", d1 @ d2))
         (Nv_kirigami.Partition.divide_decls cfg decls ~base_check:true) in
     (* perform the base checks before the regular checks *)
-    let new_decls = List.map (fun (d, _set) -> ("Safety check:", d))
+    let new_decls = List.map (fun (d1, d2) -> ("Safety check:", d1 @ d2))
         (Nv_kirigami.Partition.divide_decls cfg decls ~base_check:false) in
     List.map (fun (_s, d) ->
         (* print_endline @@ s; *)
