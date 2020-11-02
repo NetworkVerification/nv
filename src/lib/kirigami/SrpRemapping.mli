@@ -67,9 +67,8 @@ type partitioned_srp = {
   *)
   inputs: (input_exp list) VertexMap.t;
   outputs: ((Edge.t * exp option) list) VertexMap.t;
-  trans: transcomp;
 }
 
-val partition_edges : Vertex.t list -> Edge.t list -> (Vertex.t -> int) -> transcomp -> partitioned_srp list
+val partition_edges : Vertex.t list -> Edge.t list -> (Vertex.t -> int) -> partitioned_srp list
 
 val remap_declarations : partitioned_srp -> declarations -> (declarations * (Solution.t -> Solution.t))

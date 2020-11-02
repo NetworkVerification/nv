@@ -57,7 +57,6 @@ type partitioned_srp = {
   *)
   inputs: (input_exp list) VertexMap.t;
   outputs: ((Edge.t * exp option) list) VertexMap.t;
-  trans: transcomp;
 }
 
 (** Map each vertex in the list of vertices to a partition number.
@@ -169,7 +168,7 @@ let map_edges_to_parts partitions (old_edge, (edge, srp_edge)) =
   List.mapi add_edge partitions
 
 (** Map each edge in edges to a partitioned_srp based on where its endpoints lie. *)
-let divide_edges (edges: Edge.t list) (vmaps: vmap list) (trans: transcomp) : (partitioned_srp list) =
+let divide_edges (edges: Edge.t list) (vmaps: vmap list) : (partitioned_srp list) =
   let partitioned_srp_from_nodes i (nodes, node_map) =
     {
       rank = i;
@@ -179,7 +178,6 @@ let divide_edges (edges: Edge.t list) (vmaps: vmap list) (trans: transcomp) : (p
       edge_map = EdgeMap.empty;
       inputs = VertexMap.empty;
       outputs = VertexMap.empty;
-      trans;
     }
   in
   let initial = List.mapi partitioned_srp_from_nodes vmaps in
@@ -189,11 +187,11 @@ let divide_edges (edges: Edge.t list) (vmaps: vmap list) (trans: transcomp) : (p
 (** Generate a list of partitioned_srp from the given list of nodes and edges,
  * along with their partitioning function and interface function.
 *)
-let partition_edges (nodes: Vertex.t list) (edges: Edge.t list) (partf: Vertex.t -> int) (trans: transcomp) =
+let partition_edges (nodes: Vertex.t list) (edges: Edge.t list) (partf: Vertex.t -> int) =
   let (node_srp_map, max_partition) = map_vertices_to_parts nodes partf in
   (* add 1 to max_partition to convert from max partition # to number of SRPS *)
   let divided_nodes = divide_vertices node_srp_map (max_partition + 1) in
-  divide_edges edges divided_nodes trans
+  divide_edges edges divided_nodes
 
 (** Transformer utilities.
  ** This transformer impl remaps patterns and values to refer to the new node identities.

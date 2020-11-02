@@ -38,9 +38,21 @@ let interp_trans trans edge x : value =
   let trans_app = Interp.interp (eapp (eapp trans edge_exp) x) in
   trans_app
 
+(** Return the outgoing transfer function and the incoming transfer function decomposition. *)
+let decompose_trans (attr: ty) (trans: exp) (transcomp: transcomp) : (exp * exp) =
+  let edge_var = Var.fresh "e" in
+  let x_var = Var.fresh "x" in
+  let x_lambda = efunc (funcFull x_var (Some attr) (Some attr) (annot attr (evar x_var))) in
+  let lambda = efunc (funcFull edge_var (Some TEdge) (Some (TArrow (attr, attr))) x_lambda) in
+  let identity = wrap trans lambda in
+  match transcomp with
+  | OutputTrans -> (trans, identity)
+  | InputTrans -> (identity, trans)
+  | Decomposed (e1, e2) -> (e1, e2)
+
 (* Transform the given solve and return it along with a new expression to assert
  * and new expressions to require. *)
-let transform_solve ~(base_check: bool) solve (partition: partitioned_srp) : (solve * exp * exp list) =
+let transform_solve ~(base_check: bool) ~(transcomp: transcomp) solve (partition: partitioned_srp) : (solve * exp * exp list) =
   let { aty; var_names; init; trans; merge; interface; _ } : solve = solve in
   let intf_opt : (Edge.t -> exp option) =
     match interface with
@@ -54,11 +66,12 @@ let transform_solve ~(base_check: bool) solve (partition: partitioned_srp) : (so
     outputs = VertexMap.map (fun outputs -> List.map (fun (edge, _) -> (edge, (intf_opt edge))) outputs) partition.outputs;
   } in
   let attr_type = aty |> Option.get in
-  let init' = transform_init init merge attr_type partition' in
+  let (outtrans, intrans) = decompose_trans attr_type trans transcomp in
+  let init' = transform_init init intrans merge attr_type partition' in
   let trans' = transform_trans trans attr_type partition' in
   let merge' = transform_merge merge attr_type partition' in
   (* TODO: should we instead create separate let-bindings to refer to init, trans and merge? *)
-  let outputs_assert = TransformDecls.outputs_assert trans var_names attr_type partition' in
+  let outputs_assert = TransformDecls.outputs_assert outtrans var_names attr_type partition' in
   let add_require _ inputs l =
     List.fold_left (fun l {var; rank; pred; _} -> match pred with
         (* if we are performing the initial check, skip any predicates with rank higher than this partition *)
@@ -76,12 +89,12 @@ let transform_solve ~(base_check: bool) solve (partition: partitioned_srp) : (so
     interface = None;
   }, outputs_assert, reqs)
 
-let transform_declaration ~(base_check: bool) parted_srp _constraint_set decl =
+let transform_declaration ~(base_check: bool) ~(transcomp: transcomp) parted_srp _constraint_set decl =
   let { nodes; edges; _ } : partitioned_srp = parted_srp in
   match decl with
   | DNodes _ -> [DNodes nodes]
   | DEdges _ -> [DEdges edges]
-  | DSolve s -> let (solve', assert', reqs) = transform_solve base_check s parted_srp in
+  | DSolve s -> let (solve', assert', reqs) = transform_solve base_check transcomp s parted_srp in
     [DSolve solve'; DAssert assert'] @ List.map (fun e -> DRequire e) reqs
   | DPartition _ -> []
   (* If performing the base check, drop existing assertions *)
@@ -104,15 +117,13 @@ let divide_decls (cfg: Cmdline.t) (decls: declarations) ~(base_check: bool) : (d
       (* interpret partition function *)
       let partf : (Vertex.t -> int) = interp_partition parte in
       (* TODO: change this to a cmdline parameter *)
-      let tcomp : transcomp = OutputTrans in
-      let partitioned_srps = partition_edges node_list edges partf tcomp in
+      let transcomp : transcomp = OutputTrans in
+      let partitioned_srps = partition_edges node_list edges partf in
       let create_new_decls (parted_srp : partitioned_srp) : (declarations * exp Set.t) =
         (* TODO: node_map and edge_map describe how to remap each node and edge in the new SRP.
          * To transform more cleanly, we can run a toplevel transformer on the SRP, replacing
          * each edge and node in the map with the new value if it's Some,
-         * and removing it if it's None * (where the edge/node is explicitly used).
-         * We can then add code to handle adding in the new input and output nodes to the SRP.
-         * (the input and output edges are handled by edge_map).
+         * and removing it if it's None (where the edge/node is explicitly used).
         *)
         (* Print mapping from old nodes to new nodes *)
         if cfg.print_remap then
@@ -128,7 +139,7 @@ let divide_decls (cfg: Cmdline.t) (decls: declarations) ~(base_check: bool) : (d
         let new_symbolics = VertexMap.fold add_symbolics parted_srp.inputs [] in
         (* replace relevant old declarations *)
         let constraint_set = Set.empty in
-        let transformed_decls = List.flatten @@ List.map (transform_declaration ~base_check parted_srp constraint_set) decls in
+        let transformed_decls = List.flatten @@ List.map (transform_declaration ~base_check ~transcomp parted_srp constraint_set) decls in
         (new_symbolics @ transformed_decls, constraint_set)
       in
       List.map create_new_decls partitioned_srps

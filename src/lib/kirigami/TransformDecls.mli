@@ -12,7 +12,7 @@ open Nv_lang.Syntax
  * | _ -> init x
  * where the edge u~v has been partitioned into u~out and in~v.
 *)
-val transform_init : exp -> exp -> ty -> SrpRemapping.partitioned_srp -> exp
+val transform_init : exp -> exp -> exp -> ty -> SrpRemapping.partitioned_srp -> exp
 
 (* Wrap the given trans exp in a new exp of the form:
  * match e with

@@ -70,27 +70,25 @@ let edge_map_decl fnname (m: Edge.t option EdgeMap.t) =
  * distinct actions for the inputs and outputs of the OpenAdjGraph.
  * The expression that is passed in should be a function which has
  * a single parameter of type tnode.
- * There are 3 transformations we do:
- * - add a new input node
- * - add a new output node
- * - map a new node to an old node
 *)
-let transform_init (old: exp) (merge: exp) (ty: ty) (parted_srp: SrpRemapping.partitioned_srp) : Syntax.exp =
+let transform_init (init: exp) (trans: exp) (merge: exp) (ty: ty) (parted_srp: SrpRemapping.partitioned_srp) : Syntax.exp =
   let {node_map; inputs; _} : SrpRemapping.partitioned_srp = parted_srp in
   let node_var = Var.fresh "node" in
   (* function we recursively call to build up the new base node init *)
-  (* TODO: allow a switch to use the trans function here, instead of on output assertions *)
   let merge_input node node_exp input_exp =
-    let { var; _ } : SrpRemapping.input_exp = input_exp in
+    let { var; edge; _ } : SrpRemapping.input_exp = input_exp in
     let input_exp = annot ty (evar var) in
+    (* perform the input transfer on the input exp *)
+    let trans_curried = annot (TArrow (ty, ty)) (eapp trans (annot TEdge (edge_to_exp edge))) in
+    let trans_input_exp = annot ty (eapp trans_curried input_exp) in
     (* perform the merge function, using the given node and its current value with the input variable *)
     let curried_node = annot (TArrow ((TArrow (ty, ty)), ty)) (InterpPartial.interp_partial_fun merge [node]) in
     let curried_node_exp = annot (TArrow (ty, ty)) (eapp curried_node node_exp) in
-    wrap node_exp (eapp curried_node_exp input_exp)
+    wrap node_exp (eapp curried_node_exp trans_input_exp)
   in
   (* we use both node names here since the inputs are organized acc. to new node name, while the old node name
    * is needed to interpret the old function *)
-  let interp node = InterpPartial.interp_partial_fun old [(vnode node)] in
+  let interp node = InterpPartial.interp_partial_fun init [(vnode node)] in
   let map_nodes new_node old_node = match VertexMap.Exceptionless.find new_node inputs with
     | Some input_nodes -> List.fold_left (fun e input -> merge_input (vnode old_node) e input) (interp old_node) input_nodes
     | None -> interp old_node
@@ -98,7 +96,7 @@ let transform_init (old: exp) (merge: exp) (ty: ty) (parted_srp: SrpRemapping.pa
   let branches = match_of_node_map node_map map_nodes emptyBranch in
   (* the returned expression should be a function that takes a node as input with the following body:
    * a match with node as the exp and output_branches as the branches *)
-  wrap old (efunc (funcFull node_var (Some TNode) (Some ty) (amatch node_var TNode branches)))
+  wrap init (efunc (funcFull node_var (Some TNode) (Some ty) (amatch node_var TNode branches)))
 
 (* Pass in the original trans Syntax.exp and update it to perform
  * distinct actions for the inputs and outputs of the OpenAdjGraph.
