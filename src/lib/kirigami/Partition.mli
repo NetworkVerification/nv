@@ -24,18 +24,19 @@ type transcomp =
 
 (** Separation of the purposes of the declarations
  ** for a given partitioned SRP. *)
-type partitioned_decls = {
-  (* new DSymbolic decls *)
-  symbolics: declaration list;
-  (* new DRequire decls and their corresponding partition ranks *)
-  hypotheses: (declaration, int) Map.t;
-  (* new DAssert decls for checking hypotheses *)
-  guarantees: declaration list;
-  (* old DAssert decls for testing network properties *)
-  properties: declaration list;
-  (* all other network decls, including those defining essential behaviour (solution, topology) *)
-  network: declaration list;
-}
+type partitioned_decls =
+  { (* new DSymbolic decls *)
+    (* symbolics: declaration list; *)
+    (* new DRequire decls and their corresponding partition ranks *)
+    lesser_hyps : declaration list
+  ; greater_hyps : declaration list
+  ; (* new DAssert decls for checking hypotheses *)
+    guarantees : declaration list
+  ; (* old DAssert decls for testing network properties *)
+    properties : declaration list
+  ; (* all other network decls, including those defining essential behaviour (solution, topology) *)
+    network : declaration list
+  }
 
 (* Sum type that distinguishes partitioned versus unpartitioned networks,
  * for the purpose of lifting operations over declarations. *)
@@ -51,4 +52,9 @@ type declaration_group =
 *)
 val divide_decls : Cmdline.t -> declarations -> declaration_group list
 
-val lift_decl_transform : (declarations -> declarations * map_back) -> (declaration_group * map_back list) -> (declaration_group * map_back list)
+val lift : (declarations -> declarations) -> declaration_group -> declaration_group
+
+val lift_mb
+  :  (declarations -> declarations * map_back)
+  -> declaration_group
+  -> declaration_group * map_back

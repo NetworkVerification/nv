@@ -10,6 +10,7 @@ open Nv_transformations
 open Nv_compile
 open Nv_utils
 open OCamlUtils
+open Nv_kirigami
 
 type answer =
   | Success of Solution.t option
@@ -31,39 +32,37 @@ let smt_query_file =
 
 let run_smt_classic file cfg info decls fs =
   let decls, fs =
-    let decls, f = UnboxEdges.unbox_declarations decls in
+    let decls, f = Partition.lift_mb UnboxEdges.unbox_declarations decls in
     decls, f :: fs
   in
   let decls, fs =
     SmtUtils.smt_config.unboxing <- true;
     let decls, f1 =
       Profile.time_profile "Unbox options" (fun () ->
-          UnboxOptions.unbox_declarations decls)
+          Partition.lift_mb UnboxOptions.unbox_declarations decls)
     in
     let decls, f2 =
       Profile.time_profile "Flattening Tuples" (fun () ->
-          TupleFlatten.flatten_declarations decls)
+          Partition.lift_mb TupleFlatten.flatten_declarations decls)
     in
     decls, f2 :: f1 :: fs
   in
   let decls, fs =
-    let decls, f = Renaming.alpha_convert_declarations decls in
+    let decls, f = Partition.lift_mb Renaming.alpha_convert_declarations decls in
     (*TODO: why are we renaming here?*)
-    let decls, _ = OptimizeBranches.optimize_declarations decls in
+    let decls, _ = Partition.lift_mb OptimizeBranches.optimize_declarations decls in
     (* The _ should match the identity function *)
-    let decls, f' = RenameForSMT.rename_declarations decls in
+    let decls, f' = Partition.lift_mb RenameForSMT.rename_declarations decls in
     (* Maybe we should wrap this into the previous renaming... *)
     decls, f' :: f :: fs
   in
   let get_answer decls fs =
     let solve_fun =
-      if cfg.kirigami then
-        Smt.solveKirigami
-      else
-      if cfg.hiding then
-        SmtHiding.solve_hiding ~starting_vars:[] ~full_chan:(smt_query_file file)
-      else
-        Smt.solveClassic
+      if cfg.kirigami
+      then Smt.solveKirigami
+      else if cfg.hiding
+      then SmtHiding.solve_hiding ~starting_vars:[] ~full_chan:(smt_query_file file)
+      else Smt.solveClassic
     in
     match solve_fun info cfg.query (smt_query_file file) decls with
     | Unsat -> Success None, []
@@ -90,7 +89,7 @@ let run_smt_classic file cfg info decls fs =
   let slices =
     List.map
       (dmap (fun (decls, fs) ->
-           let decls, f = UnboxUnits.unbox_declarations decls in
+           let decls, f = Partition.lift_mb UnboxUnits.unbox_declarations decls in
            decls, f :: fs))
       slices
   in
@@ -159,23 +158,29 @@ let partialEvalDecls decls =
             init = InterpPartial.interp_partial_opt r.init
           ; trans = InterpPartial.interp_partial_opt r.trans
           ; merge = InterpPartial.interp_partial_opt r.merge
-          ; interface = BatOption.map (fun i -> InterpPartial.interp_partial_opt i) r.interface;
+          ; interface =
+              BatOption.map (fun i -> InterpPartial.interp_partial_opt i) r.interface
           }
-      | DRequire _
-      | DPartition _
-      | DNodes _
-      | DSymbolic _
-      | DUserTy _
-      | DEdges _ -> d)
+      | DRequire _ | DPartition _ | DNodes _ | DSymbolic _ | DUserTy _ | DEdges _ -> d)
     decls
 ;;
 
 let run_simulator cfg _ decls fs =
   (* It is important to partially evaluate before optimizing branches and before simulation. *)
   let decls =
-    Profile.time_profile "partial eval took:" (fun () -> partialEvalDecls decls)
+    Profile.time_profile "partial eval took:" (fun () ->
+        Partition.lift partialEvalDecls decls)
   in
-  let decls, _ = OptimizeBranches.optimize_declarations decls in
+  let decls, _ = Partition.lift_mb OptimizeBranches.optimize_declarations decls in
+  (* TODO:  *)
+  let decls =
+    match decls with
+    | Partition.Unpartitioned d -> d
+    (* just use these declarations since the requires are ignored,
+     * and drop the guarantees since we generally can't prove them
+     * and the properties at the same time *)
+    | Partition.Partitioned { properties; network; _ } -> network @ properties
+  in
   try
     let solution, q =
       match cfg.bound with
@@ -211,6 +216,12 @@ let run_compiled file _ _ decls fs =
   let name = Filename.basename path in
   let name = String.mapi (fun i c -> if i = 0 then Char.uppercase_ascii c else c) name in
   let newpath = name in
+  let decls =
+    match decls with
+    | Partition.Unpartitioned d -> d
+    (* TODO: we may want to consider other fields for this *)
+    | Partition.Partitioned { network; properties; _ } -> network @ properties
+  in
   let solution = Loader.simulate newpath decls in
   match solution.assertions with
   | [] -> Success (Some solution), fs
@@ -222,20 +233,32 @@ let run_compiled file _ _ decls fs =
 
 let parse_input_aux cfg info file decls fs =
   let decls, fs =
-    if cfg.unroll then
-      let decls, f = (* unrolling maps *)
-        Profile.time_profile "Map unrolling" (fun () -> MapUnrolling.unroll info decls)
+    if cfg.unroll
+    then (
+      let decls, f =
+        (* unrolling maps *)
+        Profile.time_profile "Map unrolling" (fun () ->
+            Partition.lift_mb (MapUnrolling.unroll info) decls)
       in
       (* Inline again after unrolling. Could probably optimize this away during unrolling *)
-      let decls = Profile.time_profile "Inlining" (fun () -> Inline.inline_declarations decls) in
+      let decls =
+        Profile.time_profile "Inlining" (fun () ->
+            Partition.lift Inline.inline_declarations decls)
+      in
       (* (Typing.infer_declarations info decls, f :: fs) (* TODO: is type inf necessary here?*) *)
-      (decls, f :: fs)
+      decls, f :: fs)
     else decls, fs
   in
-  (cfg, info, file, decls, fs)
+  cfg, info, file, decls, fs
+;;
 
-let parse_input (args : string array) :
-  (Cmdline.t * Console.info * string * Syntax.declarations * Solution.map_back list) list
+let parse_input (args : string array)
+    : (Cmdline.t
+      * Console.info
+      * string
+      * Partition.declaration_group
+      * Solution.map_back list)
+    list
   =
   let cfg, rest = argparse default "nv" args in
   Cmdline.set_cfg cfg;
@@ -249,8 +272,8 @@ let parse_input (args : string array) :
   (* print_endline @@ Printing.declarations_to_string decls ; *)
   let decls = ToEdge.toEdge_decl decls :: decls in
   let decls = Typing.infer_declarations info decls in
-  Typing.check_annot_decls decls ;
-  if not cfg.no_wellformed then Wellformed.check info decls ;
+  Typing.check_annot_decls decls;
+  if not cfg.no_wellformed then Wellformed.check info decls;
   let decls, f = RecordUnrolling.unroll_declarations decls in
   let fs = [f] in
   let decls, fs =
@@ -268,19 +291,15 @@ let parse_input (args : string array) :
       Typing.infer_declarations info decls, fs)
     else decls, fs
   in
-  if cfg.kirigami then
+  if cfg.kirigami
+  then (
     (* FIXME: this breaks ToEdge *)
     (* NOTE: we partition after checking well-formedness so we can reuse edges that don't exist *)
-    let open Nv_kirigami.Partition in
-    let new_decls = divide_decls cfg decls in
-    List.map (fun parted_decls ->
-        match parted_decls with
-        | Unpartitioned d -> parse_input_aux cfg info file d fs
-        | Partitioned { symbolics; hypotheses; guarantees; properties; network; } -> (
-            (* FIXME: lift transformations over the full partitioned_decls *)
-            print_endline @@ Printing.declarations_to_string network;
-            parse_input_aux cfg info file network fs
-          ))
-      new_decls
-  else
-    [parse_input_aux cfg info file decls fs]
+    let new_decls = Partition.divide_decls cfg decls in
+    List.map
+      (fun parted_decls ->
+        (* print_endline @@ Printing.declarations_to_string network; *)
+        parse_input_aux cfg info file parted_decls fs)
+      new_decls)
+  else [parse_input_aux cfg info file (Partition.Unpartitioned decls) fs]
+;;
