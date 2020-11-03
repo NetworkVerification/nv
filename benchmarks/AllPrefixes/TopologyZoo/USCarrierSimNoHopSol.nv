@@ -1,0 +1,3 @@
+include "USCarrierSimNoHop.nv"
+
+let sol = solution {init=init; trans=trans; merge=merge}

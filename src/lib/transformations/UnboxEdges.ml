@@ -20,19 +20,28 @@ let value_transformer _ v =
   | _ -> None
 ;;
 
-let exp_transformer _ _ = None;;
+let exp_transformer _ _ = None
 
 let map_back_transformer _ _ v orig_ty =
   match v.v, orig_ty with
-  | VTuple [{v=VNode n1}; {v=VNode n2}], TEdge -> Some (vedge (n1, n2))
+  | VTuple [{ v = VNode n1 }; { v = VNode n2 }], TEdge -> Some (vedge (n1, n2))
+  | VTuple [{ v = VInt n1 }; { v = VInt n2 }], TEdge ->
+    Some (vedge (Integer.to_int n1, Integer.to_int n2))
   | _ -> None
 ;;
 
 (* The mask type for edges is always a tuple, even if we don't unbox them *)
-let mask_transformer _ _ v _ = Some v;;
+let mask_transformer _ _ v _ = Some v
 
 let make_toplevel (toplevel_transformer : 'a Transformers.toplevel_transformer) =
-  toplevel_transformer ~name:"UnboxEdges" ty_transformer pattern_transformer value_transformer exp_transformer map_back_transformer mask_transformer
+  toplevel_transformer
+    ~name:"UnboxEdges"
+    ty_transformer
+    pattern_transformer
+    value_transformer
+    exp_transformer
+    map_back_transformer
+    mask_transformer
 ;;
 
 let unbox_declarations = make_toplevel Transformers.transform_declarations

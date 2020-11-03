@@ -5,5 +5,4 @@ module type MEMOIZER = sig
 end
 
 module MemoizeValue : MEMOIZER with type t = Nv_lang.Syntax.value
-
 module MemoizeExp : MEMOIZER with type t = Nv_lang.Syntax.exp

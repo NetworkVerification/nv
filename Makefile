@@ -13,6 +13,10 @@ test: default
 doc:
 	dune build @doc
 
+format:
+	find src -type f -regex ".*\.mli*" -exec ocamlformat --inplace {} \;
+	find test -type f -regex ".*\.mli*" -exec ocamlformat --inplace {} \;
+
 clean:
 	dune clean
 	rm -f nv

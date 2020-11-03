@@ -1,4 +1,3 @@
-
 type t =
   { debug: bool       [@short "-d"]    (** enable a debugging backtrace for nv     *)
   ; verbose: bool     [@short "-v"]    (** print out the srp solution              *)
@@ -29,29 +28,29 @@ type t =
   }
 [@@deriving
   show
-, argparse
-    { positional= [("file", "nv policy file")]
-    ; description= "nv: a network verification framework" }]
+  , argparse
+      { positional = ["file", "nv policy file"]
+      ; description = "nv: a network verification framework"
+      }]
 
 let default =
-  { debug= false
-  ; verbose= false
+  { debug = false
+  ; verbose = false
+  ; simulate = false
   ; no_wellformed = false
-  ; simulate= false
-  ; bound= None
-  ; smt= false
-  ; smt_parallel=false
-  ; query= false
-  ; hashcons=false
+  ; bound = None
+  ; smt = false
+  ; smt_parallel = false
+  ; query = false
+  ; hashcons = false
   ; memoize = false
-  ; no_caching=false
-  ; no_cutoff=false
-  ; inline=false
-  ; compile=false
-  ; unroll= false
+  ; no_caching = false
+  ; no_cutoff = false
+  ; inline = false
+  ; compile = false
+  ; unroll = false
   ; unbox = false
-  ; finite_arith = false
-  (* ; draw=false *)
+  ; finite_arith = false (* ; draw=false *)
   ; depth=20
   ; check_monotonicity=false
   ; link_failures=0
@@ -61,11 +60,10 @@ let default =
   ; slicing=false
   ; parallelize= None
   }
+;;
 
 let cfg = ref default
-
 let get_cfg () = !cfg
-
 let set_cfg c = cfg := c
 
 (* Some of our flags only make sense if we have other ones -- for example,
@@ -73,11 +71,12 @@ let set_cfg c = cfg := c
    appropriate flags are set, so we don't have to check for lots of different
    variables at the site of each transformation *)
 let update_cfg_dependencies () =
-  if !cfg.smt then cfg := {!cfg with unroll=true; unbox=true; inline=true};
-  if !cfg.unroll then cfg := {!cfg with inline=true};
-  if !cfg.check_monotonicity then cfg := {!cfg with inline=true};
-  if !cfg.slicing then cfg := {!cfg with unbox=true};
-  if !cfg.hiding then cfg := {!cfg with unbox=true};
-  if !cfg.smt_parallel then cfg := {!cfg with finite_arith=true};
-  if !cfg.print_remap then cfg := {!cfg with kirigami=true};
+  if !cfg.smt then cfg := { !cfg with unroll = true; unbox = true; inline = true };
+  if !cfg.unroll then cfg := { !cfg with inline = true };
+  if !cfg.check_monotonicity then cfg := { !cfg with inline = true };
+  if !cfg.slicing then cfg := { !cfg with unbox = true };
+  if !cfg.hiding then cfg := { !cfg with unbox = true };
+  if !cfg.smt_parallel then cfg := { !cfg with finite_arith = true };
+  if !cfg.print_remap then cfg := { !cfg with kirigami = true };
   ()
+;;

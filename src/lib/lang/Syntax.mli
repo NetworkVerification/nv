@@ -7,13 +7,9 @@ type node = int
 val tnode_sz : int
 
 type edge = node * node
-
 type bitwidth = int
-
 type level = int
-
 type var = Var.t
-
 type tyname = Var.t
 
 type ty =
@@ -30,7 +26,9 @@ type ty =
   | TNode
   | TEdge
 
-and tyvar = Unbound of tyname * level | Link of ty
+and tyvar =
+  | Unbound of tyname * level
+  | Link of ty
 
 type op =
   | And
@@ -56,6 +54,7 @@ type op =
   | MMerge
   | MFoldNode
   | MFoldEdge
+  | MForAll
 [@@deriving show]
 
 type pattern =
@@ -71,7 +70,6 @@ type pattern =
   | PEdge of pattern * pattern
 
 module Pat : Map.OrderedType with type t = pattern
-
 module PatMap : BatMap.S with type key = Pat.t
 
 type v = private
@@ -89,7 +87,12 @@ type v = private
 and mtbdd = value Mtbdd.t * ty
 
 and value = private
-  {v: v; vty: ty option; vspan: Span.t; vtag: int; vhkey: int}
+  { v : v
+  ; vty : ty option
+  ; vspan : Span.t
+  ; vtag : int
+  ; vhkey : int
+  }
 
 and e = private
   | EVar of var
@@ -107,38 +110,63 @@ and e = private
   | EProject of exp * string
 
 and exp = private
-  {e: e; ety: ty option; espan: Span.t; etag: int; ehkey: int}
+  { e : e
+  ; ety : ty option
+  ; espan : Span.t
+  ; etag : int
+  ; ehkey : int
+  }
 
 and branches
 
-and func = {arg: var; argty: ty option; resty: ty option; body: exp}
+and func =
+  { arg : var
+  ; argty : ty option
+  ; resty : ty option
+  ; body : exp
+  }
 
 and closure = env * func
 
-and env = {ty: ty Env.t; value: value Env.t}
+and env =
+  { ty : ty Env.t
+  ; value : value Env.t
+  }
 
-and ty_or_exp = Ty of ty | Exp of exp
+and ty_or_exp =
+  | Ty of ty
+  | Exp of exp
 
 val is_irrefutable : pattern -> bool
 
-type branchLookup = Found of exp | Rest of (pattern * exp) list
+type branchLookup =
+  | Found of exp
+  | Rest of (pattern * exp) list
 
-val addBranch: Pat.t -> exp -> branches -> branches
-val mapBranches: (Pat.t * exp -> Pat.t * exp) -> branches -> branches
-val iterBranches: (Pat.t * exp -> unit) -> branches -> unit
-val foldBranches: (PatMap.key * exp -> 'a -> 'a) -> 'a -> branches -> 'a
-val lookUpPat: PatMap.key -> branches -> branchLookup
+val addBranch : Pat.t -> exp -> branches -> branches
+val mapBranches : (Pat.t * exp -> Pat.t * exp) -> branches -> branches
+val iterBranches : (Pat.t * exp -> unit) -> branches -> unit
+val foldBranches : (PatMap.key * exp -> 'a -> 'a) -> 'a -> branches -> 'a
+val lookUpPat : PatMap.key -> branches -> branchLookup
 
 (** Raises not found *)
-val popBranch: branches -> ((Pat.t * exp) * branches)
+val popBranch : branches -> (Pat.t * exp) * branches
+
 val emptyBranch : branches
-val isEmptyBranch: branches -> bool
-val optimizeBranches: branches -> branches
-val branchToList: branches -> (PatMap.key * exp) list
-val branchSize: branches -> unit
+val isEmptyBranch : branches -> bool
+val optimizeBranches : branches -> branches
+val branchToList : branches -> (PatMap.key * exp) list
+val branchSize : branches -> unit
 
 (* var_names should be an exp that uses only the EVar and ETuple constructors *)
-type solve = {aty: ty option; var_names: exp; init : exp; trans: exp; merge: exp; interface: exp option}
+type solve =
+  { aty : ty option
+  ; var_names : exp
+  ; init : exp
+  ; trans : exp
+  ; merge : exp
+  ; interface : exp option
+  }
 
 type declaration =
   | DLet of var * ty option * exp
@@ -155,154 +183,83 @@ type declarations = declaration list
 
 (* Constructors *)
 val vunit : unit -> value
-
 val vbool : bool -> value
-
 val vnode : node -> value
-
 val vedge : edge -> value
-
 val vint : Integer.t -> value
-
 val vmap : mtbdd -> value
-
 val vtuple : value list -> value
-
 val vrecord : value StringMap.t -> value
-
 val voption : value option -> value
-
 val vclosure : closure -> value
-
 val evar : var -> exp
-
 val e_val : value -> exp
-
 val eop : op -> exp list -> exp
-
 val efun : func -> exp
-
 val eapp : exp -> exp -> exp
-
 val eif : exp -> exp -> exp -> exp
-
 val elet : Var.t -> exp -> exp -> exp
-
 val etuple : exp list -> exp
-
 val erecord : exp StringMap.t -> exp
-
 val eproject : exp -> string -> exp
-
 val esome : exp -> exp
-
 val ematch : exp -> branches -> exp
-
 val ety : exp -> ty -> exp
-
-val deconstructFun: exp -> func
-
-val exp_to_pattern: exp -> pattern
+val deconstructFun : exp -> func
+val exp_to_pattern : exp -> pattern
 
 (* exp must be a literal *)
-val exp_to_value: exp -> value
-
-val empty_env: env
+val exp_to_value : exp -> value
+val empty_env : env
 
 (* Utilities *)
 
 val arity : op -> int
-
 val tupleToList : exp -> exp list
-
 val tupleToListSafe : exp -> exp list
-
 val tint_of_size : int -> ty
-
 val tint_of_value : Integer.t -> ty
-
 val exp : e -> exp
-
 val value : v -> value
-
 val aexp : exp * ty option * Span.t -> exp
-
 val avalue : value * ty option * Span.t -> value
-
 val annot : ty -> exp -> exp
-
 val annotv : ty -> value -> value
-
 val wrap : exp -> exp -> exp
-
 val exp_of_v : v -> exp
-
 val exp_of_value : value -> exp
-
 val func : var -> exp -> func
-
 val funcFull : var -> ty option -> ty option -> exp -> func
-
 val efunc : func -> exp
-
 val lam : var -> exp -> exp
-
 val is_value : exp -> bool
-
 val to_value : exp -> value
-
 val update_value : env -> Var.t -> value -> env
-
-val update_env: env -> Var.t -> value -> ty -> env
-
+val update_env : env -> Var.t -> value -> ty -> env
 val lams : var list -> exp -> exp
-
 val apps : exp -> exp list -> exp
-
 val apply_closure : closure -> value list -> exp
-
-val get_lets : declarations ->  (var * ty option * exp) list
-
+val get_lets : declarations -> (var * ty option * exp) list
 val get_attr_type : declarations -> ty option
-
 val get_merge : declarations -> exp option
-
 val get_trans : declarations -> exp option
-
 val get_init : declarations -> exp option
-
 val get_asserts : declarations -> exp list
-
 val get_solves : declarations -> solve list
-
 val get_partition : declarations -> exp option
-
 val get_interface : declarations -> exp option
-
 val get_edges : declarations -> (node * node) list option
-
 val get_nodes : declarations -> int option
-
 val get_graph : declarations -> AdjGraph.t option
-
 val get_symbolics : declarations -> (var * ty_or_exp) list
-
 val get_requires : declarations -> exp list
-
 val get_types : declarations -> (var * ty) list
-
-val get_record_types : declarations -> (ty StringMap.t) list
-
-val get_record_types_from_utys: (var * ty) list -> (ty StringMap.t) list
-
+val get_record_types : declarations -> ty StringMap.t list
+val get_record_types_from_utys : (var * ty) list -> ty StringMap.t list
 val equal_values : cmp_meta:bool -> value -> value -> bool
-
 val equal_exps : cmp_meta:bool -> exp -> exp -> bool
-
 val hash_value : hash_meta:bool -> value -> int
-
 val hash_exp : hash_meta:bool -> exp -> int
-
 val hash_ty : ty -> int
 
 (* Operates only on the 'v' element of the value records, ignoring
@@ -317,19 +274,14 @@ val compare_values : value -> value -> int
 
 (* As above, but for exps *)
 val compare_exps : exp -> exp -> int
-
 val get_inner_type : ty -> ty
 
 (* Actual equality. Prefer equal_inner_tys since it ignores TVar Links.
    For a stronger notion of equivalence, use Typing.equiv_tys *)
 val equal_tys : ty -> ty -> bool
-
 val equal_inner_tys : ty -> ty -> bool
-
 val free : Var.t BatSet.PSet.t -> exp -> Var.t BatSet.PSet.t
-
 val free_ty : Var.t BatSet.PSet.t -> exp -> (Var.t * ty) BatSet.PSet.t
-
 val free_dead_vars : exp -> exp
 
 (** [get_ty_from_tyexp t]

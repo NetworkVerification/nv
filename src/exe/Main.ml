@@ -25,5 +25,4 @@ let main_func () =
           Printf.printf "No counterexamples found\n"
       end) inputs
 
-let main =
-  Nv_utils.Profile.time_profile_absolute "Entire Program" main_func
+let main = Nv_utils.Profile.time_profile_absolute "Entire Program" main_func
