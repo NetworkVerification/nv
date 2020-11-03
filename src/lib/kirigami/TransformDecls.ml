@@ -141,16 +141,11 @@ let add_output_pred (trans: exp) (attr: ty) (sol: exp) (n: Vertex.t) (edge, pred
   | None -> acc
 
 (* Check each output's solution in the sol variable. *)
-let outputs_assert (trans: exp) (sol: exp) (attr: ty) (parted_srp: SrpRemapping.partitioned_srp) : exp =
+let outputs_assert (trans: exp) (sol: exp) (attr: ty) (parted_srp: SrpRemapping.partitioned_srp) : exp list =
   let { outputs; _ } : SrpRemapping.partitioned_srp = parted_srp in
   (* re-map every output to point to its corresponding predicate *)
   let add_preds n outputs acc = List.fold_left (fun acc output -> add_output_pred trans attr sol n output acc) acc outputs in
-  let output_preds = VertexMap.fold add_preds outputs [] in
-  (* Return a conjunction of the output assertions *)
-  if (List.length output_preds) > 1 then
-    annot TBool (eop And output_preds)
-  else
-    annot TBool (List.hd output_preds)
+  VertexMap.fold add_preds outputs []
 
 let transform_assert (e: exp) (_parted_srp: SrpRemapping.partitioned_srp) : exp =
   (* TODO: drop expressions or simplify them to true if they reference nodes we don't have access to *)

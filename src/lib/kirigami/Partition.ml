@@ -14,6 +14,28 @@ type transcomp =
   | OutputTrans
   | InputTrans
 
+(** Separation of the purposes of the declarations
+ ** for a given partitioned SRP. *)
+type partitioned_decls = {
+  (* new DSymbolic decls *)
+  symbolics: declaration list;
+  (* new DRequire decls and their corresponding partition ranks *)
+  hypotheses: (declaration, int) Map.t;
+  (* new DAssert decls for checking hypotheses *)
+  guarantees: declaration list;
+  (* old DAssert decls for testing network properties *)
+  properties: declaration list;
+  (* all other network decls, including those defining essential behaviour (init, trans, merge) *)
+  network: declaration list;
+}
+
+(* Sum type that distinguishes partitioned versus unpartitioned networks,
+ * for the purpose of lifting operations over declarations. *)
+type declaration_group =
+  | Unpartitioned of declarations
+  | Partitioned of partitioned_decls
+
+
 (** Helper function to extract the edge predicate
  *  from the interface expression.
 *)
@@ -51,7 +73,7 @@ let decompose_trans (attr: ty) (trans: exp) (transcomp: transcomp) : (exp * exp)
 
 (* Transform the given solve and return it along with a new expression to assert
  * and new expressions to require. *)
-let transform_solve ~(base_check: bool) ~(transcomp: transcomp) solve (partition: partitioned_srp) : (solve * exp * exp list) =
+let transform_solve ~(transcomp: transcomp) solve (partition: partitioned_srp) : (solve * exp list * (exp, int) Map.t) =
   let { aty; var_names; init; trans; merge; interface; _ } : solve = solve in
   let intf_opt : (Edge.t -> exp option) =
     match interface with
@@ -71,13 +93,12 @@ let transform_solve ~(base_check: bool) ~(transcomp: transcomp) solve (partition
   let merge' = transform_merge merge attr_type partition' in
   (* TODO: should we instead create separate let-bindings to refer to init, trans and merge? *)
   let outputs_assert = TransformDecls.outputs_assert outtrans var_names attr_type partition' in
-  let add_require _ inputs l =
-    List.fold_left (fun l {var; rank; pred; _} -> match pred with
-        (* if we are performing the initial check, skip any predicates with rank higher than this partition *)
-        | Some p -> if base_check && partition.rank < rank then l else (annot TBool (eapp p (annot attr_type (evar var)))) :: l
-        | None -> l) l inputs
+  let add_require _ input_exps m =
+    List.fold_left (fun m {var; rank; pred; _} -> match pred with
+        | Some p -> Map.add (annot TBool (eapp p (annot attr_type (evar var)))) rank m
+        | None -> m) m input_exps
   in
-  let reqs = VertexMap.fold add_require partition'.inputs []
+  let reqs = VertexMap.fold add_require partition'.inputs Map.empty
   in
   ({
     solve with
@@ -90,23 +111,23 @@ let transform_solve ~(base_check: bool) ~(transcomp: transcomp) solve (partition
 
 (* Return a transformed version of the given declaration, and optionally any new Kirigami constraints
  * that need to be added with it. *)
-let transform_declaration ~(base_check: bool) ~(transcomp: transcomp) parted_srp decl : (declaration * declaration list) option =
+let transform_declaration ~(transcomp: transcomp) parted_srp decl : (declaration option * declaration list * (declaration, int) Map.t * declaration option) =
   let { nodes; edges; _ } : partitioned_srp = parted_srp in
   match decl with
-  | DNodes _ -> Some (DNodes nodes, [])
-  | DEdges _ -> Some (DEdges edges, [])
-  | DSolve s -> let (solve', assert', reqs) = transform_solve base_check transcomp s parted_srp in
-    Some (DSolve solve', [DAssert assert'] @ List.map (fun e -> DRequire e) reqs)
-  | DPartition _ -> None
-  (* If performing the base check, drop existing assertions *)
-  | DAssert e -> if base_check then None else Some (DAssert (transform_assert e parted_srp), [])
-  | _ -> Some (decl, [])
+  | DNodes _ -> (Some (DNodes nodes), [], Map.empty, None)
+  | DEdges _ -> (Some (DEdges edges), [], Map.empty, None)
+  | DSolve s -> let (solve', assert', reqs) = transform_solve transcomp s parted_srp in
+    let req_decls = Map.foldi (fun e r -> Map.add (DRequire e) r) reqs Map.empty in
+    (Some (DSolve solve'), List.map (fun e -> DAssert e) assert', req_decls, None)
+  | DPartition _ -> (None, [], Map.empty, None)
+  | DAssert e -> (None, [], Map.empty, Some (DAssert (transform_assert e parted_srp)))
+  | _ -> (Some decl, [], Map.empty, None)
 
 (** Create a list of lists of declarations representing a network which has been
  * opened along the edges described by the partition and interface declarations.
  * @return a new list of lists of declarations
 *)
-let divide_decls (cfg: Cmdline.t) (decls: declarations) ~(base_check: bool) : (declarations * declarations) list =
+let divide_decls (cfg: Cmdline.t) (decls: declarations) : declaration_group list =
   let partition = get_partition decls in
   match partition with
   | Some parte -> begin
@@ -120,7 +141,7 @@ let divide_decls (cfg: Cmdline.t) (decls: declarations) ~(base_check: bool) : (d
       (* TODO: change this to a cmdline parameter *)
       let transcomp : transcomp = OutputTrans in
       let partitioned_srps = partition_edges node_list edges partf in
-      let create_new_decls (parted_srp : partitioned_srp) : (declarations * declarations) =
+      let create_new_decls (parted_srp : partitioned_srp) : declaration_group =
         (* TODO: node_map and edge_map describe how to remap each node and edge in the new SRP.
          * To transform more cleanly, we can run a toplevel transformer on the SRP, replacing
          * each edge and node in the map with the new value if it's Some,
@@ -137,13 +158,38 @@ let divide_decls (cfg: Cmdline.t) (decls: declarations) ~(base_check: bool) : (d
         let add_symbolics _ inputs l =
           List.fold_left (fun l {var; _} -> DSymbolic (var, Ty attr_type) :: l) l inputs
         in
-        let new_symbolics = VertexMap.fold add_symbolics parted_srp.inputs [] in
+        let symbolics = VertexMap.fold add_symbolics parted_srp.inputs [] in
         (* replace relevant old declarations *)
-        let transformed_decls = List.filter_map (transform_declaration ~base_check ~transcomp parted_srp) decls in
-        let (transformed, added) = List.split transformed_decls in
-        (* let transformed_decls = List.flatten @@ List.map (transform_declaration ~base_check ~transcomp parted_srp constraint_set) decls in *)
-        (new_symbolics @ transformed, List.flatten added)
+        let transformed_decls = List.map (transform_declaration ~transcomp parted_srp) decls in
+        (* divide up the declarations as appropriate *)
+        let rec split_decls (net, guar, hyp, prop) l =
+          match l with
+          | [] -> (net, guar, hyp, prop)
+          | (net', guar', hyp', prop') :: t -> split_decls (net' :: net, guar' @ guar, Map.union hyp' hyp, prop' :: prop) t
+        in
+        let (network, guarantees, hypotheses, properties) = split_decls ([], [], Map.empty, []) transformed_decls in
+        Partitioned {
+          symbolics;
+          hypotheses;
+          guarantees;
+          properties = List.filter_map (fun a -> a) properties;
+          network = List.filter_map (fun a -> a) network;
+        }
       in
       List.map create_new_decls partitioned_srps
     end
-  | None -> [(decls, [])]
+  | None -> [Unpartitioned decls]
+
+(* TODO: change this not to take a list of map_back functions, but instead to compose the partitioned map_back *)
+let lift_decl_transform (f: declarations -> (declarations * Nv_solution.Solution.map_back)) (decls, fs) =
+  match decls with
+  | Unpartitioned d -> let d', f = f d in (Unpartitioned d', f :: fs)
+  | Partitioned { symbolics; hypotheses; guarantees; properties; network; } -> (
+      (* FIXME: fiddle with or drop map back functions as necessary *)
+      let s, sf = f symbolics in
+      let h, hf = Map.foldi (fun hyp rank (m, l) -> let h, hf = f [hyp] in (Map.add (List.hd h) rank m, hf :: l)) hypotheses (Map.empty, []) in
+      let g, gf = f guarantees in
+      let p, pf = f properties in
+      let n, nf = f network in
+      (Partitioned { symbolics = s; hypotheses = h; guarantees = g; properties = p; network = n; }, sf :: hf @ gf :: pf :: nf :: fs)
+    )

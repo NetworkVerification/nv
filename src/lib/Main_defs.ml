@@ -241,20 +241,16 @@ let parse_input (args : string array) :
   if cfg.kirigami then
     (* FIXME: this breaks ToEdge *)
     (* NOTE: we partition after checking well-formedness so we can reuse edges that don't exist *)
-    (* TODO: keep the declarations separate, run them through the transformations,
-     * and then sort them out once we get to SMT encoding *)
-    let new_decls_base = List.map (fun (d1, d2) -> ("Initial check:", d1 @ d2))
-        (Nv_kirigami.Partition.divide_decls cfg decls ~base_check:true) in
-    (* perform the base checks before the regular checks *)
-    let new_decls = List.map (fun (d1, d2) -> ("Safety check:", d1 @ d2))
-        (Nv_kirigami.Partition.divide_decls cfg decls ~base_check:false) in
-    List.map (fun (_s, d) ->
-        (* print_endline @@ s; *)
-        print_endline @@ Printing.declarations_to_string d;
-        parse_input_aux cfg info file d fs)
-      (* just the I-checks *)
-      (* new_decls *)
-      (* I-checks plus base checks *)
-      (new_decls_base @ new_decls)
+    let open Nv_kirigami.Partition in
+    let new_decls = divide_decls cfg decls in
+    List.map (fun parted_decls ->
+        match parted_decls with
+        | Unpartitioned d -> parse_input_aux cfg info file d fs
+        | Partitioned { symbolics; hypotheses; guarantees; properties; network; } -> (
+            (* FIXME: lift transformations over the full partitioned_decls *)
+            print_endline @@ Printing.declarations_to_string network;
+            parse_input_aux cfg info file network fs
+          ))
+      new_decls
   else
     [parse_input_aux cfg info file decls fs]

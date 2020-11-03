@@ -34,18 +34,10 @@ val transform_trans : exp -> ty -> SrpRemapping.partitioned_srp -> exp
 *)
 val transform_merge : exp -> ty -> SrpRemapping.partitioned_srp -> exp
 
-(* Wrap the given assert exp in a new exp that also checks the input and output nodes
- * of the partitioned network.
- * Output nodes are tested against the assumptions on the associated input nodes.
- * Input nodes do not have any associated checks (since their value is assumed).
- * The form of the new exp is:
- * let assert n x =
- * match n with
- * | out -> p x
- * | in -> true
- * | _ -> assert n x
- * where p is a predicate used in the require clause
-*)
-val outputs_assert : exp -> exp -> ty -> SrpRemapping.partitioned_srp -> exp
 
+val outputs_assert : exp -> exp -> ty -> SrpRemapping.partitioned_srp -> exp list
+
+(* Wrap the given assert exp in a new exp that maps over new nodes.
+ * TODO
+*)
 val transform_assert : exp -> SrpRemapping.partitioned_srp -> exp
