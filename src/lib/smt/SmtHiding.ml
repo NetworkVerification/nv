@@ -1,6 +1,7 @@
 (** * SMT encoding of network *)
 open Batteries
 
+open Nv_lang
 open Nv_lang.Collections
 open Nv_utils.Profile
 open SolverUtil
@@ -482,6 +483,11 @@ let full_solver =
 ;;
 
 let solve_hiding info query partial_chan ~full_chan ?(starting_vars = []) decls =
+  let open Nv_kirigami.Partition in
+  let decls = match decls with
+    | Unpartitioned d -> d
+    | Partitioned _ -> Console.error "attempted to perform unpartitioned encoding on partitioned SRP"
+  in
   let partial_solver = Lazy.force partial_solver in
   let full_solver = Lazy.force full_solver in
   let print_and_ask solver chan q =

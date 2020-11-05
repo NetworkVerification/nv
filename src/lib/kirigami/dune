@@ -3,7 +3,8 @@
   (public_name nv.kirigami)
   (libraries
     nv_lang
-    nv_smt
+    nv_solution
+    nv_transformations
     nv_datastructures
     nv_utils
     integers

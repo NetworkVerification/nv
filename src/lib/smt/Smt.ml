@@ -1,9 +1,11 @@
 (** * SMT encoding of network *)
 
+open Nv_lang
 open Nv_lang.Collections
 open Nv_solution.Solution
 open Nv_utils.Profile
 open Nv_utils.OCamlUtils
+open Nv_kirigami.Partition
 open SolverUtil
 open SmtUtils
 open SmtLang
@@ -148,6 +150,10 @@ let solve info query chan net_or_srp nodes assertions requires =
 ;;
 
 let solveClassic info query chan decls =
+  let decls = match decls with
+    | Unpartitioned d -> d
+    | Partitioned _ -> Console.error "attempted to perform unpartitioned encoding on partitioned SRP"
+  in
   let open Nv_lang.Syntax in
   let module ExprEnc = (val expr_encoding smt_config) in
   let module Enc = (val (module SmtClassicEncoding.ClassicEncoding (ExprEnc))
@@ -167,49 +173,29 @@ let solveClassic info query chan decls =
 *)
 let solveKirigami info query chan decls =
   (* TODO: unfinished *)
+  let {lesser_hyps; greater_hyps; guarantees; properties; network} = match decls with
+    | Unpartitioned _ -> Console.error "attempted to perform partitioned encoding on unpartitioned SRP"
+    | Partitioned dg -> dg
+  in
   let open Nv_lang.Syntax in
   let module ExprEnc = (val expr_encoding smt_config) in
   let module Enc = (val (module SmtClassicEncoding.ClassicEncoding (ExprEnc))
                       : SmtClassicEncoding.ClassicEncodingSig)
   in
   (* second solve *)
-  let nodes = Nv_datastructures.AdjGraph.nb_vertex (get_graph decls |> oget) in
-  let assertions = get_asserts decls in
-  let solver = Lazy.force solver in
-  let print_and_ask q =
-    if query then printQuery chan q;
-    ask_solver_blocking solver q
+  let nodes = Nv_datastructures.AdjGraph.nb_vertex (get_graph network |> oget) in
+  let assertions = get_asserts properties in
+  let ranked_initial_decls = lesser_hyps @ guarantees @ network in
+  (* FIXME: report this result and introduce scoping *)
+  let ranked_result = solve
+    info
+    query
+    chan
+    (fun () -> Enc.encode_z3 ranked_initial_decls)
+    nodes
+    assertions
+    lesser_hyps
   in
-  let solve_aux () =
-    let (renaming1, env1), (renaming2, env2) =
-      time_profile_absolute "Encoding network" (fun () ->
-          let env1, env2 = Enc.kirigami_encode_z3 decls in
-          if smt_config.optimize
-          then propagate_eqs env1, propagate_eqs env2
-          else
-            ( ((StringMap.empty, StringMap.empty), env1)
-            , ((StringMap.empty, StringMap.empty), env2) ))
-    in
-    (* compile the encoding to SMT-LIB *)
-    let smt_encoding1 =
-      time_profile_absolute "Compiling query 1" (fun () ->
-          env_to_smt ~verbose:smt_config.verbose info env1)
-    in
-    let smt_encoding2 =
-      time_profile_absolute "Compiling query 2" (fun () ->
-          env_to_smt ~verbose:smt_config.verbose info env2)
-    in
-    (* print query to a file if asked to *)
-    (* Printf.printf "communicating with solver"; *)
-    print_and_ask smt_encoding1;
-    let q = check_sat info in
-    print_and_ask q;
-    let reply = solver |> parse_reply in
-    get_sat query chan info env1 solver renaming1 nodes assertions reply
-    (*TODO: get the other environment response*)
-  in
-  print_and_ask "(push)";
-  let ret = solve_aux () in
-  print_and_ask "(pop)";
-  ret
+  let safety_decls = lesser_hyps @ greater_hyps @ properties @ network in
+  solve info query chan (fun () -> Enc.encode_z3 safety_decls) nodes assertions (lesser_hyps @ greater_hyps)
 ;;

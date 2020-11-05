@@ -8,6 +8,7 @@
     nv_utils
     nv_solution
     nv_transformations
+    nv_kirigami
     integers
     str
     batteries
