@@ -38,11 +38,7 @@ type partitioned_decls =
     network : declaration list
   }
 
-(* Sum type that distinguishes partitioned versus unpartitioned networks,
- * for the purpose of lifting operations over declarations. *)
-type declaration_group =
-  | Unpartitioned of declarations
-  | Partitioned of partitioned_decls
+val of_decls : declaration list -> partitioned_decls
 
 (** Create a list of Syntax.declarations,
  * where a new set of declarations for a given network is produced
@@ -50,11 +46,11 @@ type declaration_group =
  * Also return a set identifying which asserts and requires are added as part of kirigami,
  ** and which are part of the base declarations.
 *)
-val divide_decls : Cmdline.t -> declarations -> declaration_group list
+val divide_decls : Cmdline.t -> declarations -> partitioned_decls list
 
-val lift : (declarations -> declarations) -> declaration_group -> declaration_group
+val lift : (declarations -> declarations) -> partitioned_decls -> partitioned_decls
 
 val lift_mb
   :  (declarations -> declarations * map_back)
-  -> declaration_group
-  -> declaration_group * map_back
+  -> partitioned_decls
+  -> partitioned_decls * map_back

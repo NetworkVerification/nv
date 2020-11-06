@@ -30,11 +30,9 @@ type partitioned_decls =
     network : declaration list
   }
 
-(* Sum type that distinguishes partitioned versus unpartitioned networks,
- * for the purpose of lifting operations over declarations. *)
-type declaration_group =
-  | Unpartitioned of declarations
-  | Partitioned of partitioned_decls
+let of_decls d =
+  { lesser_hyps = []; greater_hyps = []; guarantees = []; properties = []; network = d }
+;;
 
 (** Helper function to extract the edge predicate
  *  from the interface expression.
@@ -170,7 +168,7 @@ let transform_declaration ~(transcomp : transcomp) parted_srp decl : transform_r
  * opened along the edges described by the partition and interface declarations.
  * @return a new list of lists of declarations
 *)
-let divide_decls (cfg : Cmdline.t) (decls : declarations) : declaration_group list =
+let divide_decls (cfg : Cmdline.t) (decls : declarations) : partitioned_decls list =
   let partition = get_partition decls in
   match partition with
   | Some parte ->
@@ -184,7 +182,7 @@ let divide_decls (cfg : Cmdline.t) (decls : declarations) : declaration_group li
     (* TODO: change this to a cmdline parameter *)
     let transcomp : transcomp = OutputTrans in
     let partitioned_srps = partition_edges node_list edges partf in
-    let create_new_decls (parted_srp : partitioned_srp) : declaration_group =
+    let create_new_decls parted_srp =
       (* TODO: node_map and edge_map describe how to remap each node and edge in the new SRP.
        * To transform more cleanly, we can run a toplevel transformer on the SRP, replacing
        * each edge and node in the map with the new value if it's Some,
@@ -225,49 +223,33 @@ let divide_decls (cfg : Cmdline.t) (decls : declarations) : declaration_group li
       let network, guarantees, lesser_hyps, greater_hyps, properties =
         split_decls ([], [], [], [], []) transformed_decls
       in
-      Partitioned
-        { lesser_hyps
-        ; greater_hyps
-        ; guarantees
-        ; properties
-        ; network = network @ symbolics
-        }
+      { lesser_hyps
+      ; greater_hyps
+      ; guarantees
+      ; properties
+      ; network = network @ symbolics
+      }
     in
     List.map create_new_decls partitioned_srps
-  | None -> [Unpartitioned decls]
+  | None -> [of_decls decls]
 ;;
 
 let lift (f : declarations -> declarations) decls =
-  match decls with
-  | Unpartitioned d -> Unpartitioned (f d)
-  | Partitioned { lesser_hyps; greater_hyps; guarantees; properties; network } ->
-    Partitioned
-      { lesser_hyps = f lesser_hyps
-      ; greater_hyps = f greater_hyps
-      ; guarantees = f guarantees
-      ; properties = f properties
-      ; network = f network
-      }
+  { lesser_hyps = f decls.lesser_hyps
+  ; greater_hyps = f decls.greater_hyps
+  ; guarantees = f decls.guarantees
+  ; properties = f decls.properties
+  ; network = f decls.network
+  }
 ;;
 
 let lift_mb (f : declarations -> declarations * Nv_solution.Solution.map_back) decls =
-  match decls with
-  | Unpartitioned d ->
-    let d', f' = f d in
-    Unpartitioned d', f'
-  | Partitioned { lesser_hyps; greater_hyps; guarantees; properties; network } ->
-    (* TODO: drop unnecessary map back functions: possibly all but network *)
-    let lh, lhf = f lesser_hyps in
-    let gh, ghf = f greater_hyps in
-    let g, gf = f guarantees in
-    let p, pf = f properties in
-    let n, nf = f network in
-    ( Partitioned
-        { lesser_hyps = lh
-        ; greater_hyps = gh
-        ; guarantees = g
-        ; properties = p
-        ; network = n
-        }
-    , lhf % ghf % gf % pf % nf )
+  (* TODO: drop unnecessary map back functions: possibly all but network *)
+  let lh, lhf = f decls.lesser_hyps in
+  let gh, ghf = f decls.greater_hyps in
+  let g, gf = f decls.guarantees in
+  let p, pf = f decls.properties in
+  let n, nf = f decls.network in
+  ( { lesser_hyps = lh; greater_hyps = gh; guarantees = g; properties = p; network = n }
+  , lhf % ghf % gf % pf % nf )
 ;;

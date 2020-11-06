@@ -107,13 +107,12 @@ let propagate_eqs_for_hiding (env : smt_env) =
          (fun cdecl ->
            if StringMap.mem cdecl.cname newValMap
            then false
-           else begin
+           else (
              try
                let repr = StringMap.find cdecl.cname renaming in
                if repr = cdecl.cname then true else false
              with
-             | Not_found -> true
-           end)
+             | Not_found -> true))
          env.const_decls;
   (renaming, valMap), env
 ;;
@@ -326,7 +325,9 @@ let construct_starting_env (full_env : smt_env) : smt_env * hiding_map =
 (* Gets a different kind of model than the code in Smt.ml: here, we want values
    for each _SMT_ variable, rather than for the corresponding NV variables *)
 let get_model verbose info _query _chan solver =
-  let q = Printf.sprintf "%s\n" (GetModel |> mk_command |> command_to_smt verbose info) in
+  let q =
+    Printf.sprintf "%s\n" (GetModel |> mk_command |> command_to_smt verbose info)
+  in
   (* if query then
      printQuery chan q; *)
   ask_solver_blocking solver q;
@@ -482,12 +483,7 @@ let full_solver =
      solver)
 ;;
 
-let solve_hiding info query partial_chan ~full_chan ?(starting_vars = []) decls =
-  let open Nv_kirigami.Partition in
-  let decls = match decls with
-    | Unpartitioned d -> d
-    | Partitioned _ -> Console.error "attempted to perform unpartitioned encoding on partitioned SRP"
-  in
+let solve_hiding info query partial_chan ~full_chan ?(starting_vars = []) ~decls =
   let partial_solver = Lazy.force partial_solver in
   let full_solver = Lazy.force full_solver in
   let print_and_ask solver chan q =

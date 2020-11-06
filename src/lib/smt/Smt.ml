@@ -5,7 +5,6 @@ open Nv_lang.Collections
 open Nv_solution.Solution
 open Nv_utils.Profile
 open Nv_utils.OCamlUtils
-open Nv_kirigami.Partition
 open SolverUtil
 open SmtUtils
 open SmtLang
@@ -149,11 +148,7 @@ let solve info query chan net_or_srp nodes assertions requires =
   ret
 ;;
 
-let solveClassic info query chan decls =
-  let decls = match decls with
-    | Unpartitioned d -> d
-    | Partitioned _ -> Console.error "attempted to perform unpartitioned encoding on partitioned SRP"
-  in
+let solveClassic info query chan ~decls =
   let open Nv_lang.Syntax in
   let module ExprEnc = (val expr_encoding smt_config) in
   let module Enc = (val (module SmtClassicEncoding.ClassicEncoding (ExprEnc))
@@ -167,35 +162,4 @@ let solveClassic info query chan decls =
     (Nv_datastructures.AdjGraph.nb_vertex (get_graph decls |> oget))
     (get_asserts decls)
     (get_requires decls)
-;;
-
-(* Solver for Kirigami, which performs two SMT encodings, one for initial checks and one for safety checks.
-*)
-let solveKirigami info query chan decls =
-  (* TODO: unfinished *)
-  let {lesser_hyps; greater_hyps; guarantees; properties; network} = match decls with
-    | Unpartitioned _ -> Console.error "attempted to perform partitioned encoding on unpartitioned SRP"
-    | Partitioned dg -> dg
-  in
-  let open Nv_lang.Syntax in
-  let module ExprEnc = (val expr_encoding smt_config) in
-  let module Enc = (val (module SmtClassicEncoding.ClassicEncoding (ExprEnc))
-                      : SmtClassicEncoding.ClassicEncodingSig)
-  in
-  (* second solve *)
-  let nodes = Nv_datastructures.AdjGraph.nb_vertex (get_graph network |> oget) in
-  let assertions = get_asserts properties in
-  let ranked_initial_decls = lesser_hyps @ guarantees @ network in
-  (* FIXME: report this result and introduce scoping *)
-  let ranked_result = solve
-    info
-    query
-    chan
-    (fun () -> Enc.encode_z3 ranked_initial_decls)
-    nodes
-    assertions
-    lesser_hyps
-  in
-  let safety_decls = lesser_hyps @ greater_hyps @ properties @ network in
-  solve info query chan (fun () -> Enc.encode_z3 safety_decls) nodes assertions (lesser_hyps @ greater_hyps)
 ;;

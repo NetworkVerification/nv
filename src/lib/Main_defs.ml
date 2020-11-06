@@ -59,12 +59,16 @@ let run_smt_classic file cfg info decls fs =
   let get_answer decls fs =
     let solve_fun =
       if cfg.kirigami
-      then Smt.solveKirigami
+      then SmtKirigami.solveKirigami ~decls
       else if cfg.hiding
-      then SmtHiding.solve_hiding ~starting_vars:[] ~full_chan:(smt_query_file file)
-      else Smt.solveClassic
+      then
+        SmtHiding.solve_hiding
+          ~starting_vars:[]
+          ~full_chan:(smt_query_file file)
+          ~decls:decls.network
+      else Smt.solveClassic ~decls:decls.network
     in
-    match solve_fun info cfg.query (smt_query_file file) decls with
+    match solve_fun info cfg.query (smt_query_file file) with
     | Unsat -> Success None, []
     | Unknown -> Console.error "SMT returned unknown"
     | Sat solution ->
@@ -174,12 +178,10 @@ let run_simulator cfg _ decls fs =
   let decls, _ = Partition.lift_mb OptimizeBranches.optimize_declarations decls in
   (* TODO:  *)
   let decls =
-    match decls with
-    | Partition.Unpartitioned d -> d
     (* just use these declarations since the requires are ignored,
      * and drop the guarantees since we generally can't prove them
      * and the properties at the same time *)
-    | Partition.Partitioned { properties; network; _ } -> network @ properties
+    if cfg.kirigami then decls.network @ decls.properties else decls.network
   in
   try
     let solution, q =
@@ -211,16 +213,14 @@ let run_simulator cfg _ decls fs =
 ;;
 
 (** Native simulator - compiles SRP to OCaml *)
-let run_compiled file _ _ decls fs =
+let run_compiled file cfg _ (decls : Partition.partitioned_decls) fs =
   let path = Filename.remove_extension file in
   let name = Filename.basename path in
   let name = String.mapi (fun i c -> if i = 0 then Char.uppercase_ascii c else c) name in
   let newpath = name in
   let decls =
-    match decls with
-    | Partition.Unpartitioned d -> d
     (* TODO: we may want to consider other fields for this *)
-    | Partition.Partitioned { network; properties; _ } -> network @ properties
+    if cfg.kirigami then decls.network @ decls.properties else decls.network
   in
   let solution = Loader.simulate newpath decls in
   match solution.assertions with
@@ -256,7 +256,7 @@ let parse_input (args : string array)
     : (Cmdline.t
       * Console.info
       * string
-      * Partition.declaration_group
+      * Partition.partitioned_decls
       * Solution.map_back list)
     list
   =
@@ -296,10 +296,6 @@ let parse_input (args : string array)
     (* FIXME: this breaks ToEdge *)
     (* NOTE: we partition after checking well-formedness so we can reuse edges that don't exist *)
     let new_decls = Partition.divide_decls cfg decls in
-    List.map
-      (fun parted_decls ->
-        (* print_endline @@ Printing.declarations_to_string network; *)
-        parse_input_aux cfg info file parted_decls fs)
-      new_decls)
-  else [parse_input_aux cfg info file (Partition.Unpartitioned decls) fs]
+    List.map (fun d -> parse_input_aux cfg info file d fs) new_decls)
+  else [parse_input_aux cfg info file (Partition.of_decls decls) fs]
 ;;

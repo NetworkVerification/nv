@@ -6,6 +6,7 @@ open SmtUtils
 open SmtLang
 open Nv_interpreter
 open Nv_utils.OCamlUtils
+open Nv_kirigami
 open Batteries
 
 module type ClassicEncodingSig =
@@ -15,6 +16,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
   open E
 
   type network_type = Syntax.declarations
+  type part_network_type = Partition.partitioned_decls
 
   let add_symbolic_constraints env requires sym_vars =
     (* Declare the symbolic variables: ignore the expression in case of SMT *)
@@ -356,41 +358,57 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     env
   ;;
 
-  let kirigami_encode_z3 (decls : Syntax.declarations)
-      : SmtUtils.smt_env * SmtUtils.smt_env
-    =
-    let symbolics = get_symbolics decls in
-    let graph = get_graph decls |> oget in
-    let solves = get_solves decls in
-    let assertions = get_asserts decls |> List.map InterpPartial.interp_partial in
-    let requires = get_requires decls in
-    let env1 = init_solver symbolics ~labels:[] in
-    let env2 = init_solver symbolics ~labels:[] in
-    List.iteri (encode_solve env1 graph) solves;
-    List.iteri (encode_solve env2 graph) solves;
-    (match assertions with
-    | [] -> ()
-    | _ ->
-      let assert_vars =
-        List.mapi
-          (fun i eassert ->
-            let z3_assert = encode_exp_z3 "" env1 eassert |> to_list |> List.hd in
-            let assert_var =
-              mk_constant env1 (Printf.sprintf "assert-%d" i) (ty_to_sort TBool)
-            in
-            SmtUtils.add_constraint env1 (mk_term (mk_eq assert_var.t z3_assert.t));
-            assert_var)
-          assertions
-      in
-      let all_good =
-        List.fold_left
-          (fun acc v -> mk_and acc v.t)
-          (List.hd assert_vars).t
-          (List.tl assert_vars)
-      in
-      SmtUtils.add_constraint env1 (mk_term (mk_not all_good)));
-    add_symbolic_constraints env1 requires env1.symbolics;
-    (* TODO: set up env2 to handle the P assertions and env1 to handle the G assertions *)
-    env1, env2
+  let kirigami_encode_z3 (decls : Partition.partitioned_decls) : SmtUtils.smt_env =
+    let ({ lesser_hyps; greater_hyps; guarantees; properties; network }
+          : Partition.partitioned_decls)
+      =
+      decls
+    in
+    let push = SmtLang.mk_command ~comdescr:"push" SmtLang.Push in
+    let pop = SmtLang.mk_command ~comdescr:"pop" SmtLang.Pop in
+    let symbolics = get_symbolics network in
+    let graph = get_graph network |> oget in
+    let solves = get_solves network in
+    let g_assertions = get_asserts guarantees |> List.map InterpPartial.interp_partial in
+    let p_assertions = get_asserts properties |> List.map InterpPartial.interp_partial in
+    let requires = get_requires network in
+    let lh_requires = get_requires lesser_hyps in
+    let gh_requires = get_requires greater_hyps in
+    let env = init_solver symbolics ~labels:[] in
+    List.iteri (encode_solve env graph) solves;
+    let add_assertions env assertions =
+      match assertions with
+      | [] -> ()
+      | _ ->
+        let assert_vars =
+          List.mapi
+            (fun i eassert ->
+              let z3_assert = encode_exp_z3 "" env eassert |> to_list |> List.hd in
+              let assert_var =
+                mk_constant env (Printf.sprintf "assert-%d" i) (ty_to_sort TBool)
+              in
+              SmtUtils.add_constraint env (mk_term (mk_eq assert_var.t z3_assert.t));
+              assert_var)
+            assertions
+        in
+        let all_good =
+          List.fold_left
+            (fun acc v -> mk_and acc v.t)
+            (List.hd assert_vars).t
+            (List.tl assert_vars)
+        in
+        SmtUtils.add_constraint env (mk_term (mk_not all_good))
+    in
+    (* these require constraints are always included *)
+    add_symbolic_constraints env lh_requires env.symbolics;
+    add_symbolic_constraints env requires env.symbolics;
+    (* ranked initial checks: test guarantees *)
+    (* push *)
+    add_assertions env g_assertions;
+    (* pop *)
+    (* safety checks: add other hypotheses, test properties *)
+    add_symbolic_constraints env gh_requires env.symbolics;
+    add_assertions env p_assertions;
+    env
   ;;
 end
