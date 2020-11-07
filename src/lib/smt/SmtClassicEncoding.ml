@@ -364,8 +364,6 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
       =
       decls
     in
-    let push = SmtLang.mk_command ~comdescr:"push" SmtLang.Push in
-    let pop = SmtLang.mk_command ~comdescr:"pop" SmtLang.Pop in
     let symbolics = get_symbolics network in
     let graph = get_graph network |> oget in
     let solves = get_solves network in
@@ -404,8 +402,10 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     add_symbolic_constraints env requires env.symbolics;
     (* ranked initial checks: test guarantees *)
     (* push *)
+    add_command env ~comdescr:"push" SmtLang.Push;
     add_assertions env g_assertions;
     (* pop *)
+    add_command env ~comdescr:"pop" SmtLang.Pop;
     (* safety checks: add other hypotheses, test properties *)
     add_symbolic_constraints env gh_requires env.symbolics;
     add_assertions env p_assertions;
