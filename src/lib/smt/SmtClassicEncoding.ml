@@ -10,7 +10,9 @@ open Nv_kirigami
 open Batteries
 
 module type ClassicEncodingSig =
-  SmtEncodingSigs.Encoding with type network_type = Syntax.declarations
+  SmtEncodingSigs.Encoding
+    with type network_type = Syntax.declarations
+     and type part_network_type = Partition.partitioned_decls
 
 module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig = struct
   open E

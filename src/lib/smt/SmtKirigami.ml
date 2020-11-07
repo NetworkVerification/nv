@@ -19,25 +19,25 @@ let solveKirigami info query chan ~decls =
   in
   (* second solve *)
   let nodes = Nv_datastructures.AdjGraph.nb_vertex (get_graph network |> oget) in
-  let assertions = get_asserts properties in
-  let ranked_initial_decls = lesser_hyps @ guarantees @ network in
+  let assertions = get_asserts properties @ get_asserts guarantees in
+  (* let ranked_initial_decls = lesser_hyps @ guarantees @ network in *)
   (* FIXME: report this result and introduce scoping *)
-  let ranked_result =
-    solve
-      info
-      query
-      chan
-      (fun () -> Enc.encode_z3 ranked_initial_decls)
-      nodes
-      assertions
-      lesser_hyps
-  in
-  let safety_decls = lesser_hyps @ greater_hyps @ properties @ network in
+  (* let ranked_result =
+   *   solve
+   *     info
+   *     query
+   *     chan
+   *     (fun () -> Enc.encode_z3 ranked_initial_decls)
+   *     nodes
+   *     assertions
+   *     lesser_hyps *)
+  (* in *)
+  (* let safety_decls = lesser_hyps @ greater_hyps @ properties @ network in *)
   solve
     info
     query
     chan
-    (fun () -> Enc.encode_z3 safety_decls)
+    (fun () -> Enc.kirigami_encode_z3 decls)
     nodes
     assertions
     (lesser_hyps @ greater_hyps)
