@@ -4,7 +4,6 @@
   (libraries
     nv_lang
     nv_solution
-    nv_transformations
     nv_datastructures
     nv_utils
     integers

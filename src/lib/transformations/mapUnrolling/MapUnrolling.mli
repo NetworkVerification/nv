@@ -1,4 +1,13 @@
+open Nv_lang
+open Nv_solution
+
 val unroll
-  :  Nv_lang.Console.info
-  -> Nv_lang.Syntax.declarations
-  -> Nv_lang.Syntax.declarations * (Nv_solution.Solution.t -> Nv_solution.Solution.t)
+  :  Console.info
+  -> Syntax.declarations
+  -> Syntax.declarations * (Solution.t -> Solution.t)
+
+val unroll_with_maplist
+  :  Console.info
+  -> maplist:MapUnrollingUtils.maplist
+  -> Syntax.declarations
+  -> Syntax.declarations * (Solution.t -> Solution.t)

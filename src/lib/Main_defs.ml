@@ -48,7 +48,7 @@ let run_smt_classic file cfg info decls fs =
     decls, f2 :: f1 :: fs
   in
   let decls, fs =
-    let decls, f = Partition.lift_mb Renaming.alpha_convert_declarations decls in
+    let decls, f = Renaming.alpha_convert_partitioned_declarations decls in
     (*TODO: why are we renaming here?*)
     let decls, _ = Partition.lift_mb OptimizeBranches.optimize_declarations decls in
     (* The _ should match the identity function *)
@@ -237,8 +237,23 @@ let parse_input_aux cfg info file decls fs =
     then (
       let decls, f =
         (* unrolling maps *)
+        let unrollf =
+          if cfg.kirigami
+          then (
+            let decls : Partition.partitioned_decls = decls in
+            let elements =
+              decls.network
+              @ decls.properties
+              @ decls.guarantees
+              @ decls.greater_hyps
+              @ decls.lesser_hyps
+            in
+            let maplist = MapUnrollingUtils.collect_map_types_and_keys elements in
+            MapUnrolling.unroll_with_maplist ~maplist)
+          else MapUnrolling.unroll
+        in
         Profile.time_profile "Map unrolling" (fun () ->
-            Partition.lift_mb (MapUnrolling.unroll info) decls)
+            Partition.lift_mb (unrollf info) decls)
       in
       (* Inline again after unrolling. Could probably optimize this away during unrolling *)
       let decls =

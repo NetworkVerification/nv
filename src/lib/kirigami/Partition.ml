@@ -227,7 +227,7 @@ let divide_decls (cfg : Cmdline.t) (decls : declarations) : partitioned_decls li
       ; greater_hyps
       ; guarantees
       ; properties
-      ; network = network @ symbolics
+      ; network = symbolics @ network
       }
     in
     List.map create_new_decls partitioned_srps
