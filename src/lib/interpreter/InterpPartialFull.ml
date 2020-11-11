@@ -302,7 +302,7 @@ let rec interp_exp_partial (env : Syntax.exp Env.t) e =
 (* this is same as above, minus the app boolean. see again if we can get rid of that? *)
 and interp_op_partial env ty op es =
   let pes = BatList.map (fun e -> snd (interp_exp_partial env e)) es in
-  if BatList.exists (fun pe -> not (is_value pe)) pes
+  if BatList.exists (fun pe -> not (is_value pe)) pes || op = MCreate
   then simplify_exps op pes
   else
     exp_of_value
@@ -342,9 +342,15 @@ and interp_op_partial env ty op es =
           vtuple (hd @ velts @ tl)
         | _ -> failwith "Bad TSet")
     | MCreate, [v] ->
-      (match get_inner_type ty with
+      ignore v; ignore ty;
+      (* Doing this before map unrolling was breaking stuff, so I'm disabling it
+         for now. We could imagine having a flag that tells you whether or not
+         to simplify map operations, but I suspect for the most part we just
+         don't want to in the first case *)
+      failwith "Disabled"
+      (* (match get_inner_type ty with
       | TMap (kty, _) -> vmap (BddMap.create ~key_ty:kty v)
-      | _ -> failwith "runtime error: missing map key type")
+      | _ -> failwith "runtime error: missing map key type") *)
     | MGet, [{ v = VMap m }; v] -> BddMap.find m v
     | MSet, [{ v = VMap m }; vkey; vval] -> vmap (BddMap.update m vkey vval)
     | MMap, [{ v = VClosure (c_env, f) }; { v = VMap m }] ->
