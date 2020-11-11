@@ -9,11 +9,6 @@ open Nv_interpreter
 open Nv_utils.OCamlUtils
 open SrpRemapping
 
-type transcomp =
-  | Decomposed of exp * exp
-  | OutputTrans
-  | InputTrans
-
 (** Separation of the purposes of the declarations
  ** for a given partitioned SRP. *)
 type partitioned_decls =
@@ -34,105 +29,12 @@ let of_decls d =
   { lesser_hyps = []; greater_hyps = []; guarantees = []; properties = []; network = d }
 ;;
 
-(** Helper function to extract the edge predicate
- *  from the interface expression.
-*)
-let interp_interface intfe e : exp option =
-  let intf_app = Interp.apply empty_env (deconstructFun intfe) (vedge e) in
-  (* if intf_app is not an option, or if the value it contains is not a function,
-   * fail *)
-  match intf_app with
-  | { v = VOption o; _ } ->
-    begin
-      match o with
-      | Some { v = VClosure (_env, func); _ } -> Some (efunc func)
-      | Some _ -> failwith "expected a closure, got something else instead!"
-      (* infer case *)
-      | None -> None
-    end
-  | _ -> failwith "intf value is not an option; did you type check the input?"
-;;
-
 (** Helper function to extract the partition index
  *  from the partition expression.
 *)
 let interp_partition parte node : int =
   let value = Interp.apply empty_env (deconstructFun parte) (vnode node) in
   int_of_val value |> Option.get
-;;
-
-(** Return the outgoing transfer function and the incoming transfer function decomposition. *)
-let decompose_trans (attr : ty) (trans : exp) (transcomp : transcomp) : exp * exp =
-  let edge_var = Var.fresh "e" in
-  let x_var = Var.fresh "x" in
-  let x_lambda =
-    efunc (funcFull x_var (Some attr) (Some attr) (annot attr (evar x_var)))
-  in
-  let lambda =
-    efunc (funcFull edge_var (Some TEdge) (Some (TArrow (attr, attr))) x_lambda)
-  in
-  let identity = wrap trans lambda in
-  match transcomp with
-  | OutputTrans -> trans, identity
-  | InputTrans -> identity, trans
-  | Decomposed (e1, e2) -> e1, e2
-;;
-
-(* Transform the given solve and return it along with a new expression to assert
- * and new expressions to require. *)
-let transform_solve ~(transcomp : transcomp) solve (partition : partitioned_srp)
-    : solve * exp list * (exp, int) Map.t
-  =
-  let ({ aty; var_names; init; trans; merge; interface; _ } : solve) = solve in
-  let intf_opt : Edge.t -> exp option =
-    match interface with
-    | Some intfe -> interp_interface intfe
-    | None -> fun (_ : Edge.t) -> None
-  in
-  (* Update the partitioned_srp instance with the interface information *)
-  let partition' =
-    { partition with
-      inputs =
-        VertexMap.map
-          (fun input_exps ->
-            List.map
-              (fun input_exp -> { input_exp with pred = intf_opt input_exp.edge })
-              input_exps)
-          partition.inputs
-    ; outputs =
-        VertexMap.map
-          (fun outputs -> List.map (fun (edge, _) -> edge, intf_opt edge) outputs)
-          partition.outputs
-    }
-  in
-  let attr_type = aty |> Option.get in
-  let outtrans, intrans = decompose_trans attr_type trans transcomp in
-  let init' = transform_init init intrans merge attr_type partition' in
-  let trans' = transform_trans trans attr_type partition' in
-  let merge' = transform_merge merge attr_type partition' in
-  (* TODO: should we instead create separate let-bindings to refer to init, trans and merge? *)
-  let outputs_assert =
-    TransformDecls.outputs_assert outtrans var_names attr_type partition'
-  in
-  let add_require _ input_exps m =
-    List.fold_left
-      (fun m { var; rank; pred; _ } ->
-        match pred with
-        | Some p -> Map.add (annot TBool (eapp p (annot attr_type (evar var)))) rank m
-        | None -> m)
-      m
-      input_exps
-  in
-  let reqs = VertexMap.fold add_require partition'.inputs Map.empty in
-  ( { solve with
-      init = init'
-    ; trans = trans'
-    ; merge = merge'
-    ; (* should this be erased, or kept as reference? *)
-      interface = None
-    }
-  , outputs_assert
-  , reqs )
 ;;
 
 type transform_result =
@@ -245,11 +147,11 @@ let lift (f : declarations -> declarations) decls =
 
 let lift_mb (f : declarations -> declarations * Nv_solution.Solution.map_back) decls =
   (* TODO: drop unnecessary map back functions: possibly all but network *)
-  let lh, lhf = f decls.lesser_hyps in
-  let gh, ghf = f decls.greater_hyps in
-  let g, gf = f decls.guarantees in
-  let p, pf = f decls.properties in
+  let lh, _lhf = f decls.lesser_hyps in
+  let gh, _ghf = f decls.greater_hyps in
+  let g, _gf = f decls.guarantees in
+  let p, _pf = f decls.properties in
   let n, nf = f decls.network in
   ( { lesser_hyps = lh; greater_hyps = gh; guarantees = g; properties = p; network = n }
-  , lhf % ghf % gf % pf % nf )
+  , nf )
 ;;

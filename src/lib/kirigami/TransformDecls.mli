@@ -1,43 +1,30 @@
 open Nv_datastructures.AdjGraph
 open Nv_lang.Syntax
 
-(***
- * Functions to rewrite network declarations to include cases added by partitioning.
- ***)
+(* Describe how the transfer function should be decomposed.
+ * Some types of networks require different settings of this,
+ * depending on how they transfer routes.
+ * Future work will involve providing the transcomp as part of
+ * a solution (when an interface is provided) to describe how
+ * to decompose the transfer function.
+ *  Figuring that out is future work. *)
+type transcomp =
+  (* Decompose the original transfer e into two parts e1 and e2,
+   * where e1 is performed on the base~output edge and e2 is
+   * performed on the input~base edge. *)
+  | Decomposed of exp * exp
+  (* Shorthand for (Decomposed e identity). *)
+  | OutputTrans
+  (* Shorthand for (Decomposed identity e). *)
+  | InputTrans
 
-(* Wrap the given init exp in a new exp of the form:
- * match x with
- * | out -> init u
- * | in -> init u
- * | _ -> init x
- * where the edge u~v has been partitioned into u~out and in~v.
-*)
-val transform_init : exp -> exp -> exp -> ty -> SrpRemapping.partitioned_srp -> exp
-
-(* Wrap the given trans exp in a new exp of the form:
- * match e with
- * | u~out -> a
- * | in~v -> trans u~v a
- * | _ -> trans e a
- * where the edge u~v has been partitioned into u~out and in~v.
- * Note that the `trans u~v a` case is pulled from the previous exp.
-*)
-val transform_trans : exp -> ty -> SrpRemapping.partitioned_srp -> exp
-
-(* NOTE: this function appears to be unnecessary in practice *)
-(* Wrap the given merge exp in a new exp of the form:
- * match n with
- * | out -> y
- * | in -> x
- * | _ -> merge n x y
- * where the edge u~v has been partitioned into u~out and in~v.
-*)
-val transform_merge : exp -> ty -> SrpRemapping.partitioned_srp -> exp
-
-
-val outputs_assert : exp -> exp -> ty -> SrpRemapping.partitioned_srp -> exp list
+val transform_solve
+  :  transcomp:transcomp
+  -> solve
+  -> SrpRemapping.partitioned_srp
+  -> solve * exp list * (exp, int) Batteries.Map.t
 
 (* Wrap the given assert exp in a new exp that maps over new nodes.
  * TODO
-*)
+ *)
 val transform_assert : exp -> SrpRemapping.partitioned_srp -> exp

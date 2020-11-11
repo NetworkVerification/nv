@@ -34,6 +34,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     (* add the require clauses *)
     BatList.iter
       (fun e ->
+        (* print_endline ("Encoding symbolic exp: " ^ Printing.exp_to_string e); *)
         let es = encode_exp_z3 "" env e in
         ignore (lift1 (fun e -> SmtUtils.add_constraint env e) es))
       requires
@@ -366,6 +367,8 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
       =
       decls
     in
+    (* need to use a counter i, as add_assertions gets called for multiple lists *)
+    let i = ref (-1) in
     let symbolics = get_symbolics network in
     let graph = get_graph network |> oget in
     let solves = get_solves network in
@@ -376,16 +379,20 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     let gh_requires = get_requires greater_hyps in
     let env = init_solver symbolics ~labels:[] in
     List.iteri (encode_solve env graph) solves;
+    (* FIXME: assertions are encoded as over solve-sol or over UnrollingFoldVar,
+     * which means we are missing some important information! *)
     let add_assertions env assertions =
       match assertions with
       | [] -> ()
       | _ ->
         let assert_vars =
-          List.mapi
-            (fun i eassert ->
+          List.map
+            (fun eassert ->
+              i := !i + 1;
+              (* print_endline (Printing.exp_to_string eassert); *)
               let z3_assert = encode_exp_z3 "" env eassert |> to_list |> List.hd in
               let assert_var =
-                mk_constant env (Printf.sprintf "assert-%d" i) (ty_to_sort TBool)
+                mk_constant env (Printf.sprintf "assert-%d" !i) (ty_to_sort TBool)
               in
               SmtUtils.add_constraint env (mk_term (mk_eq assert_var.t z3_assert.t));
               assert_var)
@@ -400,8 +407,9 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
         SmtUtils.add_constraint env (mk_term (mk_not all_good))
     in
     (* these require constraints are always included *)
-    add_symbolic_constraints env lh_requires env.symbolics;
     add_symbolic_constraints env requires env.symbolics;
+    (* FIXME: seems to not add the requires? or they get propagated out *)
+    add_symbolic_constraints env lh_requires VarMap.empty;
     (* ranked initial checks: test guarantees *)
     (* push *)
     add_command env ~comdescr:"push" SmtLang.Push;
@@ -409,8 +417,9 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     (* pop *)
     add_command env ~comdescr:"pop" SmtLang.Pop;
     (* safety checks: add other hypotheses, test properties *)
-    add_symbolic_constraints env gh_requires env.symbolics;
+    add_symbolic_constraints env gh_requires VarMap.empty;
     add_assertions env p_assertions;
+    (* print_endline ("Final env.ctx length: " ^ string_of_int (List.length env.ctx)); *)
     env
   ;;
 end

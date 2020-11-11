@@ -36,8 +36,10 @@ let env_to_smt ?(verbose = false) ?(name_asserts = false) info (env : smt_env) =
       smt_command_to_smt ~name_asserts:true ~count:!count info c.com)
     else fun c -> smt_command_to_smt info c.com
   in
+  (* print_endline ("env.ctx length: " ^ string_of_int (List.length env.ctx)); *)
   let context = BatList.rev_map map_fun env.ctx in
   let context = BatString.concat "\n" context in
+  (* print_endline context; *)
   (* Emit constants *)
   let constants = ConstantSet.to_list env.const_decls in
   let constants =
@@ -124,11 +126,17 @@ let solve info query chan net_or_srp nodes assertions requires =
     let renaming, env =
       time_profile_absolute "Encoding network" (fun () ->
           let env = net_or_srp () in
+          print_endline
+            ("Before propagation:\n" ^ commands_to_smt smt_config.verbose info env.ctx);
           if smt_config.optimize
-          then propagate_eqs env
+          then
+            propagate_eqs env
+            (* FIXME: causes some important assertions to disappear! *)
           else (StringMap.empty, StringMap.empty), env)
     in
     (* compile the encoding to SMT-LIB *)
+    print_endline
+      ("After propagation:\n" ^ commands_to_smt smt_config.verbose info env.ctx);
     let smt_encoding =
       time_profile_absolute "Compiling query" (fun () ->
           env_to_smt ~verbose:smt_config.verbose info env)
