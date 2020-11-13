@@ -11,15 +11,15 @@ include "sp4.nv"
 
 (* split along spine-pod edges *)
 let partition node = match node with
-  | 1n -> 0u8
-  | 3n -> 0u8
-  | 4n -> 0u8
-  | 7n -> 0u8
-  | 2n -> 2u8
-  | 6n -> 2u8
-  | 8n -> 2u8
-  | 10n -> 2u8
-  | _ -> 1u8
+  | 1n -> 1u8
+  | 3n -> 1u8
+  | 4n -> 1u8
+  | 7n -> 1u8
+  | 2n -> 0u8
+  | 6n -> 0u8
+  | 8n -> 0u8
+  | 10n -> 0u8
+  | _ -> 2u8
 
 let interface edge =
   let any x = true in
@@ -40,7 +40,7 @@ let interface edge =
   let hasBgp x =
     match x with
     | {connected = c; static = s; ospf = o; bgp = b; selected = sel} ->
-      isSome b
+      isSome b && (sel = Some 3u2)
   in
   match edge with
   (* 1 edges - 1 gets the route to 10 via 8 *)
@@ -80,3 +80,5 @@ let interface edge =
   | 15~7 -> Some any
   | 17~7 -> Some any
   | _ -> None
+
+let sol = solution {init = init; trans = trans; merge = merge; interface = interface}
