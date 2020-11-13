@@ -2,6 +2,7 @@ open Nv_lang
 open Nv_datastructures
 open Syntax
 open Collections
+open Nv_kirigami.Partition
 
 (* A program transformation that prepends every symbolic variable with the prefix
    "symbolic-" and every solution variable with "solve-". Leaves other variables
@@ -140,12 +141,13 @@ let alpha_convert_declaration bmap (env : Var.t Env.t) (d : declaration) =
   | DUserTy _ | DNodes _ | DEdges _ -> env, d
 ;;
 
-let rec alpha_convert_aux bmap env (ds : declarations) : declarations =
+let rec alpha_convert_aux bmap env (ds : declarations) : declarations * Var.t Env.t =
   match ds with
-  | [] -> []
+  | [] -> [], env
   | d :: ds' ->
     let env', d' = alpha_convert_declaration bmap env d in
-    d' :: alpha_convert_aux bmap env' ds'
+    let ds, e = alpha_convert_aux bmap env' ds' in
+    d' :: ds, e
 ;;
 
 let update_symbolics bmap smap =
@@ -165,9 +167,27 @@ let adjust_solution bmap (s : Nv_solution.Solution.t) =
   }
 ;;
 
-let rec rename_declarations (ds : declarations) =
+let rename_declarations (ds : declarations) =
   (* Var.reset () ; *)
   let bmap = ref Collections.VarMap.empty in
-  let prog = alpha_convert_aux bmap Env.empty ds in
+  let prog, _ = alpha_convert_aux bmap Env.empty ds in
   prog, adjust_solution !bmap
+;;
+
+let rename_partitioned_declarations (pds : partitioned_decls) =
+  let { network; properties; guarantees; lesser_hyps; greater_hyps } = pds in
+  (* Renaming order: network loaded into env first, then everything else *)
+  let bmap = ref Collections.VarMap.empty in
+  let netprog, netenv = alpha_convert_aux bmap Env.empty network in
+  let propprog, _ = alpha_convert_aux bmap netenv properties in
+  let guarprog, _ = alpha_convert_aux bmap netenv guarantees in
+  let lhprog, _ = alpha_convert_aux bmap netenv lesser_hyps in
+  let ghprog, _ = alpha_convert_aux bmap netenv greater_hyps in
+  ( { network = netprog
+    ; properties = propprog
+    ; guarantees = guarprog
+    ; lesser_hyps = lhprog
+    ; greater_hyps = ghprog
+    }
+  , adjust_solution !bmap )
 ;;

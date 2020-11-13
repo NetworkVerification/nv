@@ -52,7 +52,7 @@ let run_smt_classic file cfg info decls fs =
     (*TODO: why are we renaming here?*)
     let decls, _ = Partition.lift_mb OptimizeBranches.optimize_declarations decls in
     (* The _ should match the identity function *)
-    let decls, f' = Partition.lift_mb RenameForSMT.rename_declarations decls in
+    let decls, f' = RenameForSMT.rename_partitioned_declarations decls in
     (* Maybe we should wrap this into the previous renaming... *)
     decls, f' :: f :: fs
   in
@@ -238,7 +238,10 @@ let parse_input_aux cfg info file decls fs =
       let decls, f =
         (* unrolling maps *)
         let unrollf =
-          if cfg.kirigami
+          (* FIXME: calling unroll with an "unpartitioned" partitioned_decls
+           * (i.e. one only containing a network field)
+           *  leads to problems generating the maplist *)
+          if true
           then (
             let decls : Partition.partitioned_decls = decls in
             let elements =
@@ -311,6 +314,9 @@ let parse_input (args : string array)
     (* FIXME: this breaks ToEdge *)
     (* NOTE: we partition after checking well-formedness so we can reuse edges that don't exist *)
     let new_decls = Partition.divide_decls cfg decls in
+    if cfg.print_partitions then
+      List.iter (fun d -> print_endline (Partition.partitions_to_string d)) new_decls
+        else ();
     List.map (fun d -> parse_input_aux cfg info file d fs) new_decls)
   else [parse_input_aux cfg info file (Partition.of_decls decls) fs]
 ;;

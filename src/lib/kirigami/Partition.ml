@@ -82,7 +82,7 @@ let divide_decls (cfg : Cmdline.t) (decls : declarations) : partitioned_decls li
     (* interpret partition function *)
     let partf : Vertex.t -> int = interp_partition parte in
     (* TODO: change this to a cmdline parameter *)
-    let transcomp : transcomp = OutputTrans in
+    let transcomp : transcomp = InputTrans in
     let partitioned_srps = partition_edges node_list edges partf in
     let create_new_decls parted_srp =
       (* TODO: node_map and edge_map describe how to remap each node and edge in the new SRP.
@@ -155,3 +155,8 @@ let lift_mb (f : declarations -> declarations * Nv_solution.Solution.map_back) d
   ( { lesser_hyps = lh; greater_hyps = gh; guarantees = g; properties = p; network = n }
   , nf )
 ;;
+
+let partitions_to_string ?(show_types = false) decls =
+  let { lesser_hyps; greater_hyps; guarantees; properties; network } = decls in
+  let print = Printing.declarations_to_string ~show_types in
+  print network ^ "\n" ^ print properties ^ "\n" ^ print lesser_hyps ^ "\n" ^ print greater_hyps ^ "\n" ^ print guarantees

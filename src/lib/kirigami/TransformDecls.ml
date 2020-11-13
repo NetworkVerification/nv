@@ -87,14 +87,8 @@ let edge_map_decl fnname (m : Edge.t option EdgeMap.t) =
  * The expression that is passed in should be a function which has
  * a single parameter of type tnode.
  *)
-let transform_init
-    (init : exp)
-    (trans : exp)
-    (merge : exp)
-    (ty : ty)
-    (parted_srp : SrpRemapping.partitioned_srp)
-    : Syntax.exp
-  =
+let transform_init (init : exp) (trans : exp) (merge : exp) ty parted_srp : Syntax.exp =
+  let interp = InterpPartialFull.interp_partial in
   let ({ node_map; inputs; _ } : SrpRemapping.partitioned_srp) = parted_srp in
   let node_var = Var.fresh "node" in
   (* function we recursively call to build up the new base node init *)
@@ -105,29 +99,30 @@ let transform_init
     let trans_curried =
       annot (TArrow (ty, ty)) (eapp trans (annot TEdge (edge_to_exp edge)))
     in
-    let trans_input_exp =
-      InterpPartialFull.interp_partial (annot ty (eapp trans_curried input_exp))
-    in
+    let trans_input_exp = interp (annot ty (eapp trans_curried input_exp)) in
     (* perform the merge function, using the given node and its current value with the input variable *)
     let curried_node =
-      annot
-        (TArrow (TArrow (ty, ty), ty))
-        (InterpPartialFull.interp_partial_fun merge [node])
+      interp
+        (annot
+           (TArrow (TArrow (ty, ty), ty))
+           (eapp merge (annot TNode (node_to_exp node))))
     in
     let curried_node_exp = annot (TArrow (ty, ty)) (eapp curried_node node_exp) in
-    wrap node_exp (eapp curried_node_exp trans_input_exp)
+    interp (wrap node_exp (eapp curried_node_exp trans_input_exp))
   in
   (* we use both node names here since the inputs are organized acc. to new node name, while the old node name
    * is needed to interpret the old function *)
-  let interp node = InterpPartialFull.interp_partial_fun init [node_to_exp node] in
   let map_nodes new_node old_node =
+    let interp_old_node =
+      InterpPartialFull.interp_partial_fun init [node_to_exp old_node]
+    in
     match VertexMap.Exceptionless.find new_node inputs with
     | Some input_nodes ->
       List.fold_left
-        (fun e input -> merge_input (node_to_exp old_node) e input)
-        (interp old_node)
+        (fun e input -> merge_input old_node e input)
+        interp_old_node
         input_nodes
-    | None -> interp old_node
+    | None -> interp_old_node
   in
   let branches = match_of_node_map node_map map_nodes emptyBranch in
   (* the returned expression should be a function that takes a node as input with the following body:
@@ -151,13 +146,10 @@ let transform_trans (e : exp) (attr : ty) (parted_srp : SrpRemapping.partitioned
   let x_var = Var.fresh "x" in
   (* Simplify the old expression to an expression just over the second variable *)
   let interp_trans edge =
-    InterpPartialFull.interp_partial
-      (annot attr (apps e [edge; annot attr (evar x_var)]))
+    InterpPartialFull.interp_partial (annot attr (apps e [edge; annot attr (evar x_var)]))
   in
   let edge_map_match = match_of_edge_map edge_map emptyBranch in
-  let branches =
-    mapBranches (fun (pat, edge) -> pat, interp_trans edge) edge_map_match
-  in
+  let branches = mapBranches (fun (pat, edge) -> pat, interp_trans edge) edge_map_match in
   let x_lambda =
     efunc
       (funcFull
@@ -172,8 +164,7 @@ let transform_trans (e : exp) (attr : ty) (parted_srp : SrpRemapping.partitioned
   wrap e lambda
 ;;
 
-let transform_merge (e : exp) (ty : ty) (parted_srp : SrpRemapping.partitioned_srp) : exp
-  =
+let transform_merge (e : exp) (ty : ty) (parted_srp : SrpRemapping.partitioned_srp) : exp =
   let ({ node_map; _ } : SrpRemapping.partitioned_srp) = parted_srp in
   (* the internal type after matching on the node *)
   let inner_ty = TArrow (ty, TArrow (ty, ty)) in
@@ -192,8 +183,7 @@ let transform_merge (e : exp) (ty : ty) (parted_srp : SrpRemapping.partitioned_s
 ;;
 
 (* Check that the solution's value at a particular output vertex satisfies the predicate. *)
-let add_output_pred (trans : exp) (attr : ty) (sol : exp) (n : Vertex.t) (edge, pred) acc
-  =
+let add_output_pred (trans : exp) (attr : ty) (sol : exp) (n : Vertex.t) (edge, pred) acc =
   let sol_x = annot attr (eop MGet [sol; annot TNode (node_to_exp n)]) in
   (* partially interpret the transfer function *)
   let trans_app = eapp trans (annot TEdge (edge_to_exp edge)) in
@@ -201,7 +191,10 @@ let add_output_pred (trans : exp) (attr : ty) (sol : exp) (n : Vertex.t) (edge, 
     InterpPartialFull.interp_partial (annot (TArrow (attr, attr)) trans_app)
   in
   match pred with
-  | Some p -> annot TBool (eapp p (annot attr (eapp trans_curried sol_x))) :: acc
+  | Some p ->
+    InterpPartialFull.interp_partial
+      (annot TBool (eapp p (annot attr (eapp trans_curried sol_x))))
+    :: acc
   | None -> acc
 ;;
 

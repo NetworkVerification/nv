@@ -60,7 +60,8 @@ let exp_transformer (recursors : Transformers.recursors) e =
 let rec map_back_transformer recurse _ v oldty =
   match v.v, oldty with
   | VUnit, TTuple [] -> Some (vtuple [])
-  | _, TTuple [] -> failwith "Cleanup Tuples: Unexpected map_back"
+  | VBool _, TTuple [] -> Some (vtuple [])
+  | _, TTuple [] -> (print_endline (Printing.value_to_string v); failwith "Cleanup Tuples: Unexpected map_back")
   | _, TTuple [oldty'] -> Some (vtuple [recurse v oldty'])
   | _ -> None
 ;;

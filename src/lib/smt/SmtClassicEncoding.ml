@@ -408,14 +408,14 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     in
     (* these require constraints are always included *)
     add_symbolic_constraints env requires env.symbolics;
-    (* FIXME: seems to not add the requires? or they get propagated out *)
     add_symbolic_constraints env lh_requires VarMap.empty;
     (* ranked initial checks: test guarantees *)
     (* push *)
-    add_command env ~comdescr:"push" SmtLang.Push;
+    if (List.is_empty g_assertions) then () else
+    (add_command env ~comdescr:"push" SmtLang.Push;
     add_assertions env g_assertions;
     (* pop *)
-    add_command env ~comdescr:"pop" SmtLang.Pop;
+    add_command env ~comdescr:"pop" SmtLang.Pop);
     (* safety checks: add other hypotheses, test properties *)
     add_symbolic_constraints env gh_requires VarMap.empty;
     add_assertions env p_assertions;

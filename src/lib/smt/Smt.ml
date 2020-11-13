@@ -126,17 +126,11 @@ let solve info query chan net_or_srp nodes assertions requires =
     let renaming, env =
       time_profile_absolute "Encoding network" (fun () ->
           let env = net_or_srp () in
-          print_endline
-            ("Before propagation:\n" ^ commands_to_smt smt_config.verbose info env.ctx);
           if smt_config.optimize
-          then
-            propagate_eqs env
-            (* FIXME: causes some important assertions to disappear! *)
+          then propagate_eqs env
           else (StringMap.empty, StringMap.empty), env)
     in
     (* compile the encoding to SMT-LIB *)
-    print_endline
-      ("After propagation:\n" ^ commands_to_smt smt_config.verbose info env.ctx);
     let smt_encoding =
       time_profile_absolute "Compiling query" (fun () ->
           env_to_smt ~verbose:smt_config.verbose info env)

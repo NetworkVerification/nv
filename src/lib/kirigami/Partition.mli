@@ -37,3 +37,5 @@ val lift_mb
   :  (declarations -> declarations * map_back)
   -> partitioned_decls
   -> partitioned_decls * map_back
+
+val partitions_to_string : ?show_types:bool -> partitioned_decls -> string

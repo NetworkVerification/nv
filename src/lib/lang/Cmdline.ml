@@ -22,6 +22,7 @@ type t =
   ; check_monotonicity: bool           (** checks monotonicity of trans function   *)
   ; kirigami: bool    [@short "-k"]     (** enable partitioning features           *)
   ; print_remap: bool  [@short "-R"]   (** print the remapping of nodes in kirigami  *)
+  ; print_partitions : bool            (** print the partitioned declarations in kirigami *)
   ; link_failures: int                 (** adds at most k link failures to the network  *)
   ; slicing: bool                      (** Try to slice the network's attribute *)
   ; parallelize : int option [@short "-p"] (** Try to parallelize using n cores **)
@@ -57,6 +58,7 @@ let default =
   ; hiding=false
   ; kirigami = false
   ; print_remap = false
+  ; print_partitions = false
   ; slicing=false
   ; parallelize= None
   }
@@ -78,5 +80,6 @@ let update_cfg_dependencies () =
   if !cfg.hiding then cfg := { !cfg with unbox = true };
   if !cfg.smt_parallel then cfg := { !cfg with finite_arith = true };
   if !cfg.print_remap then cfg := { !cfg with kirigami = true };
+  if !cfg.print_partitions then cfg := { !cfg with kirigami = true };
   ()
 ;;
