@@ -166,6 +166,7 @@ type solve =
   ; trans : exp
   ; merge : exp
   ; interface : exp option
+  ; decomp : (exp option * exp option) option
   }
 
 type declaration =
@@ -288,16 +289,11 @@ val free_dead_vars : exp -> exp
  * @return the type wrapped by [Ty] or the type
     of the expression wrapped by [Exp]. Fails if the expression has no
     type. *)
-val get_ty_from_tyexp: ty_or_exp -> ty
+val get_ty_from_tyexp : ty_or_exp -> ty
 
-val bool_of_val: value -> bool option
-
+val bool_of_val : value -> bool option
 val int_of_val : value -> int option
-
-val proj_var: int -> var -> var
-
-val unproj_var: var -> (int * var)
-
+val proj_var : int -> var -> var
+val unproj_var : var -> int * var
 val get_ty_vars : ty -> var list
-
 val get_exp_vars : exp -> var list

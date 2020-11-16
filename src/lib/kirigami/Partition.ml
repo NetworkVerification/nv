@@ -45,13 +45,13 @@ type transform_result =
 
 (* Return a transformed version of the given declaration, and optionally any new Kirigami constraints
  * that need to be added with it. *)
-let transform_declaration ~(transcomp : transcomp) parted_srp decl : transform_result =
+let transform_declaration parted_srp decl : transform_result =
   let ({ nodes; edges; rank; _ } : partitioned_srp) = parted_srp in
   match decl with
   | DNodes _ -> Network (DNodes nodes)
   | DEdges _ -> Network (DEdges edges)
   | DSolve s ->
-    let solve', assert', reqs = transform_solve transcomp s parted_srp in
+    let solve', assert', reqs = transform_solve s parted_srp in
     let sort_hyp exp r (lt, gt) =
       if r < rank then DRequire exp :: lt, gt else lt, DRequire exp :: gt
     in
@@ -81,8 +81,6 @@ let divide_decls (cfg : Cmdline.t) (decls : declarations) : partitioned_decls li
     let edges = get_edges decls |> Option.get in
     (* interpret partition function *)
     let partf : Vertex.t -> int = interp_partition parte in
-    (* TODO: change this to a cmdline parameter *)
-    let transcomp : transcomp = InputTrans in
     let partitioned_srps = partition_edges node_list edges partf in
     let create_new_decls parted_srp =
       (* TODO: node_map and edge_map describe how to remap each node and edge in the new SRP.
@@ -105,9 +103,7 @@ let divide_decls (cfg : Cmdline.t) (decls : declarations) : partitioned_decls li
       in
       let symbolics = VertexMap.fold add_symbolics parted_srp.inputs [] in
       (* replace relevant old declarations *)
-      let transformed_decls =
-        List.map (transform_declaration ~transcomp parted_srp) decls
-      in
+      let transformed_decls = List.map (transform_declaration parted_srp) decls in
       (* divide up the declarations as appropriate *)
       let rec split_decls (net, guar, lt_hyp, gt_hyp, prop) l =
         match l with
@@ -125,12 +121,7 @@ let divide_decls (cfg : Cmdline.t) (decls : declarations) : partitioned_decls li
       let network, guarantees, lesser_hyps, greater_hyps, properties =
         split_decls ([], [], [], [], []) transformed_decls
       in
-      { lesser_hyps
-      ; greater_hyps
-      ; guarantees
-      ; properties
-      ; network = symbolics @ network
-      }
+      { lesser_hyps; greater_hyps; guarantees; properties; network = symbolics @ network }
     in
     List.map create_new_decls partitioned_srps
   | None -> [of_decls decls]
@@ -152,11 +143,19 @@ let lift_mb (f : declarations -> declarations * Nv_solution.Solution.map_back) d
   let g, _gf = f decls.guarantees in
   let p, _pf = f decls.properties in
   let n, nf = f decls.network in
-  ( { lesser_hyps = lh; greater_hyps = gh; guarantees = g; properties = p; network = n }
-  , nf )
+  { lesser_hyps = lh; greater_hyps = gh; guarantees = g; properties = p; network = n }, nf
 ;;
 
 let partitions_to_string ?(show_types = false) decls =
   let { lesser_hyps; greater_hyps; guarantees; properties; network } = decls in
   let print = Printing.declarations_to_string ~show_types in
-  print network ^ "\n" ^ print properties ^ "\n" ^ print lesser_hyps ^ "\n" ^ print greater_hyps ^ "\n" ^ print guarantees
+  print network
+  ^ "\n"
+  ^ print properties
+  ^ "\n"
+  ^ print lesser_hyps
+  ^ "\n"
+  ^ print greater_hyps
+  ^ "\n"
+  ^ print guarantees
+;;

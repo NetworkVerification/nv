@@ -32,6 +32,10 @@ let init node =
   | 0n -> Some 1
   | _ -> Some 2
 
-let assert node x = match x with
- | Some a -> a < 2
+let sol = solution { init = init; trans = trans; merge = merge; interface = interface }
+
+let assertNode node x acc = match x with
+ | Some a -> a < 2 && acc
  | None -> false
+
+assert (foldNodes assertNode sol true)

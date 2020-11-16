@@ -198,6 +198,7 @@ type solve =
   ; trans : exp
   ; merge : exp
   ; interface : exp option
+  ; decomp : (exp option * exp option) option
   }
 
 type declaration =

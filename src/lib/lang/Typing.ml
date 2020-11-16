@@ -30,6 +30,9 @@ let solve_ty aty =
 let partition_ty = TArrow (node_ty, TInt 8)
 let interface_ty aty = TArrow (edge_ty, TOption (TArrow (aty, TBool)))
 
+(* same type for both sides *)
+let decomp_ty = trans_ty
+
 (* end partitioning *)
 
 (* Region-like levels for efficient implementation of type generalization *)
@@ -646,9 +649,7 @@ let rec infer_exp i info env record_types (e : exp) : exp =
       texp (esome e, TOption t, e.espan)
     | EMatch (e1, branches) ->
       let e1, tmatch = infer_exp e1 |> textract in
-      let branches, t =
-        infer_branches (i + 1) info env record_types e1 tmatch branches
-      in
+      let branches, t = infer_branches (i + 1) info env record_types e1 tmatch branches in
       texp (ematch e1 branches, t, e1.espan)
     | ETy (e, t) ->
       let e, t1 = infer_exp e |> textract in
@@ -828,8 +829,7 @@ and valid_pattern env p =
   | PVar x ->
     (match Env.lookup_opt env x with
     | None -> Env.update env x ()
-    | Some _ ->
-      Console.error ("variable " ^ Var.to_string x ^ " appears twice in pattern"))
+    | Some _ -> Console.error ("variable " ^ Var.to_string x ^ " appears twice in pattern"))
   | PEdge (p1, p2) -> valid_patterns env [p1; p2]
   | PTuple ps -> valid_patterns env ps
   | PRecord map -> StringMap.fold (fun _ p env -> valid_pattern env p) map env
@@ -842,8 +842,7 @@ and valid_patterns env p =
   | p :: ps -> valid_patterns (valid_pattern env p) ps
 ;;
 
-let rec infer_declarations_aux i info env record_types (ds : declarations) : declarations
-  =
+let rec infer_declarations_aux i info env record_types (ds : declarations) : declarations =
   match ds with
   | [] -> []
   | d :: ds' ->
@@ -887,7 +886,7 @@ and infer_declaration i info env record_types d : ty Env.t * declaration =
     let ty = oget e'.ety in
     unify info e ty TBool;
     env, DRequire e'
-  | DSolve { aty; var_names; init; trans; merge; interface } ->
+  | DSolve { aty; var_names; init; trans; merge; interface; decomp } ->
     (* Note: This only works before map unrolling *)
     let solve_aty =
       match aty with
@@ -897,17 +896,26 @@ and infer_declaration i info env record_types d : ty Env.t * declaration =
     let init' = infer_exp init in
     let trans' = infer_exp trans in
     let merge' = infer_exp merge in
-    let interface' =
-      match interface with
-      | Some interf ->
-        let interf' = infer_exp interf in
-        unify info interf (oget interf'.ety) (interface_ty solve_aty);
-        Some interf'
-      | None -> None
-    in
     unify info init (oget init'.ety) (init_ty solve_aty);
     unify info trans (oget trans'.ety) (trans_ty solve_aty);
     unify info merge (oget merge'.ety) (merge_ty solve_aty);
+    let lift_unify o ty =
+      match o with
+      | Some x ->
+        let x' = infer_exp x in
+        unify info x (oget x'.ety) ty;
+        Some x'
+      | None -> None
+    in
+    let interface' = lift_unify interface (interface_ty solve_aty) in
+    let decomp' =
+      match decomp with
+      | Some (lt, rt) ->
+        let lt' = lift_unify lt (decomp_ty solve_aty) in
+        let rt' = lift_unify rt (decomp_ty solve_aty) in
+        Some (lt', rt')
+      | None -> None
+    in
     let var =
       match var_names.e with
       | EVar x -> x
@@ -922,6 +930,7 @@ and infer_declaration i info env record_types d : ty Env.t * declaration =
         ; trans = trans'
         ; merge = merge'
         ; interface = interface'
+        ; decomp = decomp'
         } )
   | DUserTy _ | DNodes _ | DEdges _ -> env, d
 ;;

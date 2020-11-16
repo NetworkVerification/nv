@@ -74,4 +74,4 @@ let interface edge =
   | _ -> None
 
 
-let sol = solution { init = init; trans = trans; merge = merge; interface = interface }
+let sol = solution { init = init; trans = trans; merge = merge; interface = interface; rtrans = trans }

@@ -6,18 +6,6 @@ open Syntax
 open Nv_interpreter
 open SrpRemapping
 
-(* Describe how the transfer function should be decomposed.
- * Some types of networks require different settings of this,
- * depending on how they transfer routes.
- * Future work will involve providing the transcomp as part of
- * a solution (when an interface is provided) to describe how
- * to decompose the transfer function.
- *  Figuring that out is future work. *)
-type transcomp =
-  | Decomposed of exp * exp
-  | OutputTrans
-  | InputTrans
-
 let node_to_exp n = e_val (vnode n)
 let edge_to_exp e = e_val (vedge e)
 let node_to_pat node = exp_to_pattern (node_to_exp node)
@@ -82,12 +70,22 @@ let edge_map_decl fnname (m : Edge.t option EdgeMap.t) =
         } )
 ;;
 
+(* Apply and partially interpret the given transfer function t on the given edge e and attribute value x. *)
+let apply_trans ty e t x =
+  let trans_app = eapp t (annot TEdge (edge_to_exp e)) in
+  let trans_curried = annot (TArrow (ty, ty)) trans_app in
+  (* partially interpret the transfer function *)
+  InterpPartialFull.interp_partial (annot ty (eapp trans_curried x))
+;;
+
 (* Pass in the original init Syntax.exp and update it to perform
  * distinct actions for the inputs and outputs of the OpenAdjGraph.
  * The expression that is passed in should be a function which has
  * a single parameter of type tnode.
  *)
-let transform_init (init : exp) (trans : exp) (merge : exp) ty parted_srp : Syntax.exp =
+let transform_init (init : exp) (trans : exp option) (merge : exp) ty parted_srp
+    : Syntax.exp
+  =
   let interp = InterpPartialFull.interp_partial in
   let ({ node_map; inputs; _ } : SrpRemapping.partitioned_srp) = parted_srp in
   let node_var = Var.fresh "node" in
@@ -96,10 +94,9 @@ let transform_init (init : exp) (trans : exp) (merge : exp) ty parted_srp : Synt
     let ({ var; edge; _ } : SrpRemapping.input_exp) = input_exp in
     let input_exp = annot ty (evar var) in
     (* perform the input transfer on the input exp *)
-    let trans_curried =
-      annot (TArrow (ty, ty)) (eapp trans (annot TEdge (edge_to_exp edge)))
+    let trans_input_exp =
+      Option.apply (Option.map (apply_trans ty edge) trans) input_exp
     in
-    let trans_input_exp = interp (annot ty (eapp trans_curried input_exp)) in
     (* perform the merge function, using the given node and its current value with the input variable *)
     let curried_node =
       interp
@@ -183,24 +180,28 @@ let transform_merge (e : exp) (ty : ty) (parted_srp : SrpRemapping.partitioned_s
 ;;
 
 (* Check that the solution's value at a particular output vertex satisfies the predicate. *)
-let add_output_pred (trans : exp) (attr : ty) (sol : exp) (n : Vertex.t) (edge, pred) acc =
+let add_output_pred
+    (trans : exp option)
+    (attr : ty)
+    (sol : exp)
+    (n : Vertex.t)
+    (edge, pred)
+    acc
+  =
   let sol_x = annot attr (eop MGet [sol; annot TNode (node_to_exp n)]) in
-  (* partially interpret the transfer function *)
-  let trans_app = eapp trans (annot TEdge (edge_to_exp edge)) in
-  let trans_curried =
-    InterpPartialFull.interp_partial (annot (TArrow (attr, attr)) trans_app)
-  in
   match pred with
   | Some p ->
     InterpPartialFull.interp_partial
-      (annot TBool (eapp p (annot attr (eapp trans_curried sol_x))))
+      (annot
+         TBool
+         (eapp p (Option.apply (Option.map (apply_trans attr edge) trans) sol_x)))
     :: acc
   | None -> acc
 ;;
 
 (* Check each output's solution in the sol variable. *)
 let outputs_assert
-    (trans : exp)
+    (trans : exp option)
     (sol : exp)
     (attr : ty)
     (parted_srp : SrpRemapping.partitioned_srp)
@@ -244,32 +245,12 @@ let interp_interface intfe e : exp option =
   | _ -> failwith "intf value is not an option; did you type check the input?"
 ;;
 
-(** Return the outgoing transfer function and the incoming transfer function decomposition. *)
-let decompose_trans (attr : ty) (trans : exp) (transcomp : transcomp) : exp * exp =
-  let edge_var = Var.fresh "e" in
-  let x_var = Var.fresh "x" in
-  let x_lambda =
-    efunc (funcFull x_var (Some attr) (Some attr) (annot attr (evar x_var)))
-  in
-  let lambda =
-    efunc (funcFull edge_var (Some TEdge) (Some (TArrow (attr, attr))) x_lambda)
-  in
-  let identity = wrap trans lambda in
-  match transcomp with
-  | OutputTrans -> trans, identity
-  | InputTrans -> identity, trans
-  | Decomposed (e1, e2) -> e1, e2
-;;
-
 (* Transform the given solve and return it along with a new expression to assert
  * and new expressions to require. *)
-let transform_solve
-    ~(transcomp : transcomp)
-    solve
-    (partition : SrpRemapping.partitioned_srp)
+let transform_solve solve (partition : SrpRemapping.partitioned_srp)
     : solve * exp list * (exp, int) Map.t
   =
-  let ({ aty; var_names; init; trans; merge; interface; _ } : solve) = solve in
+  let ({ aty; var_names; init; trans; merge; interface; decomp } : solve) = solve in
   let intf_opt : Edge.t -> exp option =
     match interface with
     | Some intfe -> interp_interface intfe
@@ -292,7 +273,14 @@ let transform_solve
     }
   in
   let attr_type = aty |> Option.get in
-  let outtrans, intrans = decompose_trans attr_type trans transcomp in
+  (* NOTE: we don't perform any kind of verification that the decomposition is sound;
+   * if we've got it, we use it! *)
+  let outtrans, intrans =
+    match decomp with
+    | Some (lt, rt) -> lt, rt
+    (* default behaviour: perform the transfer on the output side *)
+    | None -> Some trans, None
+  in
   let init' = transform_init init intrans merge attr_type partition' in
   let trans' = transform_trans trans attr_type partition' in
   let merge' = transform_merge merge attr_type partition' in
