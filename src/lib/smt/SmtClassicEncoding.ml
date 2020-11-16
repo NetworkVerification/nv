@@ -263,9 +263,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
                 , Span.default ) ]
         in
         (* Printf.printf "etrans:%s\n" (Printing.exp_to_string etrans); *)
-        let trans, x =
-          enc_z3_trans edge (Printf.sprintf "trans%d-%d-%d" count i j) env
-        in
+        let trans, x = enc_z3_trans edge (Printf.sprintf "trans%d-%d-%d" count i j) env in
         trans_input_map := AdjGraph.EdgeMap.add (i, j) x !trans_input_map;
         trans_map := AdjGraph.EdgeMap.add (i, j) trans !trans_map)
       graph;
@@ -372,15 +370,18 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     let symbolics = get_symbolics network in
     let graph = get_graph network |> oget in
     let solves = get_solves network in
-    let g_assertions = get_asserts guarantees |> List.map InterpPartial.interp_partial in
-    let p_assertions = get_asserts properties |> List.map InterpPartial.interp_partial in
+    let simplify_assertion e =
+      let etrue = Syntax.e_val (Syntax.vbool true) in
+      let simplified = InterpPartialFull.interp_partial e in
+      if Syntax.equal_exps ~cmp_meta:false etrue simplified then None else Some simplified
+    in
+    let g_assertions = get_asserts guarantees |> List.filter_map simplify_assertion in
+    let p_assertions = get_asserts properties |> List.filter_map simplify_assertion in
     let requires = get_requires network in
     let lh_requires = get_requires lesser_hyps in
     let gh_requires = get_requires greater_hyps in
     let env = init_solver symbolics ~labels:[] in
     List.iteri (encode_solve env graph) solves;
-    (* FIXME: assertions are encoded as over solve-sol or over UnrollingFoldVar,
-     * which means we are missing some important information! *)
     let add_assertions env assertions =
       match assertions with
       | [] -> ()
@@ -411,11 +412,13 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     add_symbolic_constraints env lh_requires VarMap.empty;
     (* ranked initial checks: test guarantees *)
     (* push *)
-    if (List.is_empty g_assertions) then () else
-    (add_command env ~comdescr:"push" SmtLang.Push;
-    add_assertions env g_assertions;
-    (* pop *)
-    add_command env ~comdescr:"pop" SmtLang.Pop);
+    if List.is_empty g_assertions
+    then ()
+    else (
+      add_command env ~comdescr:"push" SmtLang.Push;
+      add_assertions env g_assertions;
+      (* pop *)
+      add_command env ~comdescr:"pop" SmtLang.Pop);
     (* safety checks: add other hypotheses, test properties *)
     add_symbolic_constraints env gh_requires VarMap.empty;
     add_assertions env p_assertions;

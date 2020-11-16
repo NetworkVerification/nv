@@ -88,15 +88,10 @@ let partition node = match node with
 let interface edge =
   let any x = true
     in
-    let nothingButBgp x =
-      match x with
-      | { connected = c; static = s; ospf = o; bgp = b; selected = sel } ->
-        c = None && s = None && o = None
-    in
     let hasOnlyBgp x =
       match x with
       | { connected = c; static = s; ospf = o; bgp = b; selected = sel } ->
-        c = None && s = None && o = None && isSome b && sel = Some 3u2
+        isSome b && sel = Some 3u2
     in
     match edge with
   | 40~7 -> Some hasOnlyBgp
