@@ -155,9 +155,10 @@ let map_edges_to_parts partitions (old_edge, (edge, srp_edge)) =
         let input_exp = { edge = old_edge; var = hyp_var; rank = i1; pred = None } in
         { partition with
           inputs = VertexMap.modify_def [] v (List.cons input_exp) partition.inputs
-        }
-        (* neither case, mark edge as absent and continue *))
-      else { partition with edge_map = EdgeMap.add old_edge None partition.edge_map }
+        })
+      else
+        (* neither case, mark edge as absent and continue *)
+        { partition with edge_map = EdgeMap.add old_edge None partition.edge_map }
   in
   List.mapi add_edge partitions
 ;;

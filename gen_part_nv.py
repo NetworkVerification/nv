@@ -213,6 +213,7 @@ def gen_part_nv(spfile, dest, orientation=HORIZONTAL, verbose=False):
     graph = construct_graph(sptext)
     if verbose:
         print(str(graph))
+    # sys.exit(0)
     # get the three parts
     preamble = write_preamble(os.path.basename(spfile))
     if orientation == HORIZONTAL:
@@ -238,10 +239,7 @@ def gen_part_nv(spfile, dest, orientation=HORIZONTAL, verbose=False):
     partition = write_partition_str(nodes)
     interface = write_interface_str(fwd_cross, back_cross)
     # perform the decomposed transfer on the input side
-    decomp = "rtrans = trans"
-    solution = "\nlet sol = solution { init = init; trans = trans; merge = merge; interface = interface; {} }".format(
-        decomp
-    )
+    solution = "\nlet sol = solution { init = init; trans = trans; merge = merge; interface = interface; rtrans = trans }"
     # put 'em all together
     output = "\n".join([preamble, partition, interface, solution])
     with open(part, "w") as outfile:

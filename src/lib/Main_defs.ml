@@ -318,7 +318,7 @@ let parse_input (args : string array)
   then (
     (* FIXME: this breaks ToEdge *)
     (* NOTE: we partition after checking well-formedness so we can reuse edges that don't exist *)
-    let new_decls = Partition.divide_decls cfg decls in
+    let new_decls = Profile.time_profile "Partitioning" (fun () -> Partition.divide_decls cfg decls) in
     if cfg.print_partitions then
       List.iter (fun d -> print_endline (Partition.partitions_to_string d)) new_decls
         else ();
