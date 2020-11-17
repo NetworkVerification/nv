@@ -208,7 +208,6 @@ type declaration =
   | DSolve of solve
   | DRequire of exp
   | DPartition of exp (* partition ids *)
-  | DInterface of exp (* interface hypotheses *)
   | DNodes of int
   | DEdges of (node * node) list
 
@@ -1000,13 +999,6 @@ let get_partition ds =
   get_decl ds (fun d ->
       match d with
       | DPartition e -> Some e
-      | _ -> None)
-;;
-
-let get_interface ds =
-  get_decl ds (fun d ->
-      match d with
-      | DInterface e -> Some e
       | _ -> None)
 ;;
 

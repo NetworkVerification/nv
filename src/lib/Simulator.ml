@@ -85,7 +85,7 @@ let simulate_declaration
           }
         | _ -> failwith "Not implemented" (* Only happens if we did map unrolling *)
       end
-    | DUserTy _ | DPartition _ | DInterface _ | DNodes _ | DEdges _ -> state)
+    | DUserTy _ | DPartition _ | DNodes _ | DEdges _ -> state)
 ;;
 
 let simulate_declarations ~(throw_requires : bool) (decls : declarations) : Solution.t =

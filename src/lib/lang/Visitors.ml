@@ -31,7 +31,6 @@ let iter_exp_decl f d =
   | DLet (_, _, e)
   | DAssert e
   | DPartition e (* partitioning *)
-  | DInterface e (* partitioning *)
   | DRequire e
   | DSymbolic (_, Exp e) -> iter_exp (f d) e
   | DSolve { var_names; init; trans; merge; _ } ->

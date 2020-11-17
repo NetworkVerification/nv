@@ -113,7 +113,6 @@ let check_annot_decl (d : declaration) =
   | DSymbolic (_, Exp e)
   | DAssert e
   | DPartition e (* partitioning *)
-  | DInterface e (* partitioning *)
   | DRequire e -> check_annot e
   | DSolve { var_names; init; trans; merge; _ } ->
     check_annot var_names;
@@ -870,18 +869,11 @@ and infer_declaration i info env record_types d : ty Env.t * declaration =
     let ty = oget e'.ety in
     unify info e ty TBool;
     Env.update env (Var.create "assert") ty, DAssert e'
-  (* partitioning *)
   | DPartition e ->
     let e' = infer_exp e in
     let ty = oget e'.ety in
     unify info e ty partition_ty;
     Env.update env (Var.create "partition") ty, DPartition e'
-  | DInterface _ -> failwith "Not implemented (requires knowing the attribute type)"
-  (* let e' = infer_exp e in
-     let ty = oget e'.ety in
-     unify info e ty (interface_ty aty) ;
-     (Env.update env (Var.create "interface") ty, DInterface e') *)
-  (* end partitioning *)
   | DRequire e ->
     let e' = infer_exp e in
     let ty = oget e'.ety in

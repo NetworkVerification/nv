@@ -160,7 +160,6 @@ let inline_declaration (env : exp Env.t) (d : declaration) =
     in
     env, Some (DSolve { aty; var_names; init; trans; merge })
   | DPartition e -> env, Some (DPartition (inline_exp env e)) (* partitioning *)
-  | DInterface e -> env, Some (DInterface (inline_exp env e)) (* partitioning *)
   | DRequire e -> env, Some (DRequire (inline_exp env e))
   | DUserTy _ | DNodes _ | DEdges _ -> env, Some d
 ;;

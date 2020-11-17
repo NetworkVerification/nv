@@ -53,12 +53,8 @@
 
   let global_let (id,params) body body_span span =
     let e = make_fun params body body_span span in
-    (* partitioning cases *)
     if Var.name id = partition_identifier then
       DPartition e
-    else if Var.name id = interface_identifier then
-      DInterface e
-    (* end partitioning cases *)
     else
       DLet (id, None, e)
 

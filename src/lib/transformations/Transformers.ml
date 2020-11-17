@@ -196,7 +196,6 @@ let transform_decl ~(name : string) (transformers : transformers) (d : declarati
   | DRequire e -> DRequire (transform_exp e)
   | DUserTy (x, ty) -> DUserTy (x, transform_ty ty)
   | DPartition e -> DPartition (transform_exp e)
-  | DInterface e -> DInterface (transform_exp e)
   | DNodes _ | DEdges _ -> d
 ;;
 

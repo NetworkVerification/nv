@@ -127,7 +127,6 @@ let alpha_convert_declaration bmap (env : Var.t Env.t) (d : declaration) =
     env, DSolve { aty; var_names = y; init; trans; merge }
   | DAssert e -> env, DAssert (alpha_convert_exp env e)
   | DPartition e -> env, DPartition (alpha_convert_exp env e) (* partitioning *)
-  | DInterface e -> env, DInterface (alpha_convert_exp env e) (* partitioning *)
   | DRequire e -> env, DRequire (alpha_convert_exp env e)
   | DUserTy _ | DNodes _ | DEdges _ -> env, d
 ;;

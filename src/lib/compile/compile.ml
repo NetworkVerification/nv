@@ -654,7 +654,7 @@ let compile_decl decl =
             (exp_to_ocaml_string solve.merge))
       | _ -> failwith "Not implemented" (* Only happens if we did map unrolling *)
     end
-  | DNodes _ | DEdges _ | DPartition _ | DInterface _ -> ""
+  | DNodes _ | DEdges _ | DPartition _ -> ""
 ;;
 
 let compile_decls decls =

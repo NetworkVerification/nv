@@ -158,7 +158,6 @@ let partialEvalDecls decls =
           }
       | DRequire _
       | DPartition _
-      | DInterface _
       | DNodes _
       | DSymbolic _
       | DUserTy _
