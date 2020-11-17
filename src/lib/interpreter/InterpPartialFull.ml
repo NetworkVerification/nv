@@ -192,6 +192,7 @@ let rec matchExpPat pat pe1 env =
   | PWild, _ -> Match env
   | PUnit, _ -> Match env
   | PVar x, _ -> Match (Env.update env x pe1)
+  | POption (Some p), ESome e -> matchExpPat p e env
   | PTuple ps, ETuple es ->
     (match ps, es with
     | [], [] -> Match env

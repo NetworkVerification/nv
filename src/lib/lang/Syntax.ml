@@ -1012,13 +1012,6 @@ let get_partition ds =
       | _ -> None)
 ;;
 
-let get_interface ds =
-  get_decl ds (fun d ->
-      match d with
-      | DLet (x, _, e) when Var.name x = "interface" -> Some e
-      | _ -> None)
-;;
-
 let get_edges ds =
   try
     Some

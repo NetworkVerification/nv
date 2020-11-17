@@ -165,7 +165,12 @@ let partialEvalDecls decls =
           ; interface =
               BatOption.map (fun i -> InterpPartial.interp_partial_opt i) r.interface
           }
-      | DRequire _ | DPartition _ | DNodes _ | DSymbolic _ | DUserTy _ | DEdges _ -> d)
+      | DRequire _
+      | DPartition _
+      | DNodes _
+      | DSymbolic _
+      | DUserTy _
+      | DEdges _ -> d)
     decls
 ;;
 

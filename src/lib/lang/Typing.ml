@@ -875,7 +875,6 @@ and infer_declaration i info env record_types d : ty Env.t * declaration =
     let ty = oget e'.ety in
     unify info e ty TBool;
     Env.update env (Var.create "assert") ty, DAssert e'
-  (* partitioning *)
   | DPartition e ->
     let e' = infer_exp e in
     let ty = oget e'.ety in

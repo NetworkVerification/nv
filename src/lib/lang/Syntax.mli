@@ -248,7 +248,6 @@ val get_init : declarations -> exp option
 val get_asserts : declarations -> exp list
 val get_solves : declarations -> solve list
 val get_partition : declarations -> exp option
-val get_interface : declarations -> exp option
 val get_edges : declarations -> (node * node) list option
 val get_nodes : declarations -> int option
 val get_graph : declarations -> AdjGraph.t option

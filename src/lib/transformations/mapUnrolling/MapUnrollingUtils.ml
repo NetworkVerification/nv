@@ -120,13 +120,11 @@ let collect_in_decl (symbolics : var list) (d : declaration) (acc : maplist) : m
   | DUserTy (_, ty) -> collect_in_ty ty acc
   | DAssert exp | DPartition exp (* partitioning *) | DRequire exp ->
     collect_in_exp exp acc
-  | DSolve { var_names; init; trans; merge; interface; _ } ->
-    let intflist =
-      match interface with
-      | Some i -> [i]
-      | None -> []
-    in
-    List.fold_right collect_in_exp ([var_names; init; trans; merge] @ intflist) acc
+  | DSolve { var_names; init; trans; merge; interface; decomp; _ } ->
+    let explist = match decomp with
+      | Some (lt, rt) -> [interface; lt; rt]
+      | None -> [interface] in
+    List.fold_right collect_in_exp ([var_names; init; trans; merge] @ List.filter_map (fun e -> e) explist) acc
   | DNodes _ | DEdges _ -> acc
 ;;
 

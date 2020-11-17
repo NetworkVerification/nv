@@ -52,7 +52,6 @@
 
   let global_let (id,params) body body_span span =
     let e = make_fun params body body_span span in
-    (* partitioning case *)
     if Var.name id = partition_identifier then
       DPartition e
     else
