@@ -219,17 +219,37 @@ let rec matchExp branches pe1 =
     else Delayed
 ;;
 
+let rec matchExpPatFull pat pe1 env =
+  match pat, pe1.e with
+  | PWild, _ -> Match env
+  | PUnit, _ -> Match env
+  | PVar x, _ -> Match (Env.update env x pe1)
+  | POption (Some p), ESome e -> matchExpPat p e env
+  | PTuple ps, ETuple es ->
+    (match ps, es with
+    | [], [] -> Match env
+    | p :: ps, e :: es ->
+      (match matchExpPat p e env with
+      | Delayed -> Delayed
+      | Match env -> matchExpPat (PTuple ps) (etuple es) env
+      | NoMatch -> NoMatch)
+    | _, _ -> Delayed)
+  | _, EVal _ -> matches pat pe1
+  | _, _ -> NoMatch
+;;
+
 (* more aggressive expression matcher.
  * will look at every branch instead of just the first. *)
 (* procedure:
  * check each branch for the pattern.
  * if the branch *could* match, but we're not sure, stop and return Delayed
- * if it definitely can't match, continue and remove the branch
+ * if it definitely can't match, continue
  * if it matches, return Match *)
+(* TODO: remove branches that can't match *)
 let rec matchExpFull branches pe1 =
   match popBranch branches with
   | (pat, e), branches' ->
-    (match matchExpPat pat pe1 Env.empty with
+    (match matchExpPatFull pat pe1 Env.empty with
     | Delayed -> Delayed
     | Match env -> Match (env, e)
     | NoMatch ->
