@@ -248,7 +248,7 @@ let interp_interface intfe e : exp option =
 (* Transform the given solve and return it along with a new expression to assert
  * and new expressions to require. *)
 let transform_solve solve (partition : SrpRemapping.partitioned_srp)
-    : solve * exp list * (exp, int) Map.t
+    : solve * exp list * (var * ty_or_exp) list * (exp, int) Map.t
   =
   let ({ aty; var_names; init; trans; merge; interface; decomp } : solve) = solve in
   (* print_endline "in transform_solve"; *)
@@ -287,16 +287,18 @@ let transform_solve solve (partition : SrpRemapping.partitioned_srp)
   let merge' = transform_merge merge attr_type partition' in
   (* TODO: should we instead create separate let-bindings to refer to init, trans and merge? *)
   let assertions = outputs_assert outtrans var_names attr_type partition' in
-  let add_require _ input_exps m =
+  (* collect require and symbolic information *)
+  let add_requires _ input_exps (m, l) =
     List.fold_left
-      (fun m { var; rank; pred; _ } ->
-        match pred with
-        | Some p -> Map.add (annot TBool (eapp p (annot attr_type (evar var)))) rank m
-        | None -> m)
-      m
+      (fun (m, l) { var; rank; pred; _ } ->
+        ( (match pred with
+          | Some p -> Map.add (annot TBool (eapp p (annot attr_type (evar var)))) rank m
+          | None -> m)
+        , (var, Ty attr_type) :: l ))
+      (m, l)
       input_exps
   in
-  let reqs = VertexMap.fold add_require partition'.inputs Map.empty in
+  let reqs, symbolics = VertexMap.fold add_requires partition'.inputs (Map.empty, []) in
   ( { solve with
       init = init'
     ; trans = trans'
@@ -306,5 +308,6 @@ let transform_solve solve (partition : SrpRemapping.partitioned_srp)
     ; decomp = None
     }
   , assertions
+  , symbolics
   , reqs )
 ;;

@@ -145,8 +145,8 @@ let run_smt file cfg info decls fs =
   if cfg.finite_arith then SmtUtils.smt_config.infinite_arith <- false;
   if cfg.smt_parallel then SmtUtils.smt_config.parallel <- true;
   (* if cfg.func then
-    run_smt_func file cfg info decls fs
-  else *)
+       run_smt_func file cfg info decls fs
+     else *)
   run_smt_classic file cfg info decls fs
 ;;
 
@@ -165,12 +165,7 @@ let partialEvalDecls decls =
           ; interface =
               BatOption.map (fun i -> InterpPartial.interp_partial_opt i) r.interface
           }
-      | DRequire _
-      | DPartition _
-      | DNodes _
-      | DSymbolic _
-      | DUserTy _
-      | DEdges _ -> d)
+      | DRequire _ | DPartition _ | DNodes _ | DSymbolic _ | DUserTy _ | DEdges _ -> d)
     decls
 ;;
 
@@ -318,10 +313,12 @@ let parse_input (args : string array)
   then (
     (* FIXME: this breaks ToEdge *)
     (* NOTE: we partition after checking well-formedness so we can reuse edges that don't exist *)
-    let new_decls = Profile.time_profile "Partitioning" (fun () -> Partition.divide_decls cfg decls) in
-    if cfg.print_partitions then
-      List.iter (fun d -> print_endline (Partition.partitions_to_string d)) new_decls
-        else ();
+    let new_decls =
+      Profile.time_profile "Partitioning" (fun () -> Partition.divide_decls decls)
+    in
+    if cfg.print_partitions
+    then List.iter (fun d -> print_endline (Partition.partitions_to_string d)) new_decls
+    else ();
     List.map (fun d -> parse_input_aux cfg info file d fs) new_decls)
   else [parse_input_aux cfg info file (Partition.of_decls decls) fs]
 ;;

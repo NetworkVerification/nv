@@ -29,7 +29,7 @@ val of_decls : declaration list -> partitioned_decls
  * Also return a set identifying which asserts and requires are added as part of kirigami,
  ** and which are part of the base declarations.
 *)
-val divide_decls : Cmdline.t -> declarations -> partitioned_decls list
+val divide_decls : declarations -> partitioned_decls list
 
 val lift : (declarations -> declarations) -> partitioned_decls -> partitioned_decls
 
