@@ -12,3 +12,4 @@ val closure_to_string : ?show_types:bool -> Syntax.closure -> string
 val env_to_string : ?show_types:bool -> Syntax.env -> string
 val declaration_to_string : ?show_types:bool -> Syntax.declaration -> string
 val declarations_to_string : ?show_types:bool -> Syntax.declarations -> string
+val declaration_groups_to_string : ?show_types:bool -> Syntax.declaration_groups -> string

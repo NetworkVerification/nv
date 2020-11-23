@@ -32,41 +32,42 @@ let smt_query_file =
 
 let run_smt_classic file cfg info decls fs =
   let decls, fs =
-    let decls, f = Partition.lift_mb UnboxEdges.unbox_declarations decls in
+    let decls, f = map_decls_tuple UnboxEdges.unbox_declarations decls in
     decls, f :: fs
   in
   let decls, fs =
     SmtUtils.smt_config.unboxing <- true;
     let decls, f1 =
       Profile.time_profile "Unbox options" (fun () ->
-          Partition.lift_mb UnboxOptions.unbox_declarations decls)
+          map_decls_tuple UnboxOptions.unbox_declarations decls)
     in
     let decls, f2 =
       Profile.time_profile "Flattening Tuples" (fun () ->
-          Partition.lift_mb TupleFlatten.flatten_declarations decls)
+          map_decls_tuple TupleFlatten.flatten_declarations decls)
     in
     decls, f2 :: f1 :: fs
   in
   let decls, fs =
-    let decls, f = Renaming.alpha_convert_partitioned_declarations decls in
+    let decls, f = Renaming.alpha_convert_declarations_or_group decls in
     (*TODO: why are we renaming here?*)
-    let decls, _ = Partition.lift_mb OptimizeBranches.optimize_declarations decls in
+    let decls, _ = map_decls_tuple OptimizeBranches.optimize_declarations decls in
     (* The _ should match the identity function *)
-    let decls, f' = RenameForSMT.rename_partitioned_declarations decls in
+    let decls, f' = RenameForSMT.rename_declarations_or_group decls in
     (* Maybe we should wrap this into the previous renaming... *)
     decls, f' :: f :: fs
   in
   let get_answer decls fs =
     let solve_fun =
-      if cfg.kirigami
-      then SmtKirigami.solveKirigami ~decls
-      else if cfg.hiding
-      then
-        SmtHiding.solve_hiding
-          ~starting_vars:[]
-          ~full_chan:(smt_query_file file)
-          ~decls:decls.network
-      else Smt.solveClassic ~decls:decls.network
+      match decls with
+      | Decls d ->
+        if cfg.hiding
+        then
+          SmtHiding.solve_hiding
+            ~starting_vars:[]
+            ~full_chan:(smt_query_file file)
+            ~decls:d
+        else Smt.solveClassic ~decls:d
+      | Grp g -> SmtKirigami.solveKirigami ~decls:g
     in
     match solve_fun info cfg.query (smt_query_file file) with
     | Unsat -> Success None, []
@@ -93,7 +94,7 @@ let run_smt_classic file cfg info decls fs =
   let slices =
     List.map
       (dmap (fun (decls, fs) ->
-           let decls, f = Partition.lift_mb UnboxUnits.unbox_declarations decls in
+           let decls, f = map_decls_tuple UnboxUnits.unbox_declarations decls in
            decls, f :: fs))
       slices
   in
@@ -172,16 +173,17 @@ let partialEvalDecls decls =
 let run_simulator cfg _ decls fs =
   (* It is important to partially evaluate before optimizing branches and before simulation. *)
   let decls =
-    Profile.time_profile "partial eval took:" (fun () ->
-        Partition.lift partialEvalDecls decls)
+    Profile.time_profile "partial eval took:" (fun () -> map_decls partialEvalDecls decls)
   in
-  let decls, _ = Partition.lift_mb OptimizeBranches.optimize_declarations decls in
+  let decls, _ = map_decls_tuple OptimizeBranches.optimize_declarations decls in
   (* TODO:  *)
   let decls =
     (* just use these declarations since the requires are ignored,
      * and drop the guarantees since we generally can't prove them
      * and the properties at the same time *)
-    if cfg.kirigami then decls.network @ decls.properties else decls.network
+    match decls with
+    | Decls d -> d
+    | Grp g -> g.base @ g.prop
   in
   try
     let solution, q =
@@ -213,14 +215,16 @@ let run_simulator cfg _ decls fs =
 ;;
 
 (** Native simulator - compiles SRP to OCaml *)
-let run_compiled file cfg _ (decls : Partition.partitioned_decls) fs =
+let run_compiled file _ _ decls fs =
   let path = Filename.remove_extension file in
   let name = Filename.basename path in
   let name = String.mapi (fun i c -> if i = 0 then Char.uppercase_ascii c else c) name in
   let newpath = name in
   let decls =
     (* TODO: we may want to consider other fields for this *)
-    if cfg.kirigami then decls.network @ decls.properties else decls.network
+    match decls with
+    | Decls d -> d
+    | Grp g -> g.base @ g.prop
   in
   let solution = Loader.simulate newpath decls in
   match solution.assertions with
@@ -237,31 +241,12 @@ let parse_input_aux cfg info file decls fs =
     then (
       let decls, f =
         (* unrolling maps *)
-        let unrollf =
-          (* FIXME: calling unroll with an "unpartitioned" partitioned_decls
-           * (i.e. one only containing a network field)
-           *  leads to problems generating the maplist *)
-          if true
-          then (
-            let decls : Partition.partitioned_decls = decls in
-            let elements =
-              decls.network
-              @ decls.properties
-              @ decls.guarantees
-              @ decls.greater_hyps
-              @ decls.lesser_hyps
-            in
-            let maplist = MapUnrollingUtils.collect_map_types_and_keys elements in
-            MapUnrolling.unroll_with_maplist ~maplist)
-          else MapUnrolling.unroll
-        in
-        Profile.time_profile "Map unrolling" (fun () ->
-            Partition.lift_mb (unrollf info) decls)
+        Profile.time_profile "Map unrolling" (fun () -> MapUnrolling.unroll info decls)
       in
       (* Inline again after unrolling. Could probably optimize this away during unrolling *)
       let decls =
         Profile.time_profile "Inlining" (fun () ->
-            Partition.lift Inline.inline_declarations decls)
+            map_decls Inline.inline_declarations decls)
       in
       (* (Typing.infer_declarations info decls, f :: fs) (* TODO: is type inf necessary here?*) *)
       decls, f :: fs)
@@ -271,11 +256,7 @@ let parse_input_aux cfg info file decls fs =
 ;;
 
 let parse_input (args : string array)
-    : (Cmdline.t
-      * Console.info
-      * string
-      * Partition.partitioned_decls
-      * Solution.map_back list)
+    : (Cmdline.t * Console.info * string * declarations_or_group * Solution.map_back list)
     list
   =
   let cfg, rest = argparse default "nv" args in
@@ -313,12 +294,27 @@ let parse_input (args : string array)
   then (
     (* FIXME: this breaks ToEdge *)
     (* NOTE: we partition after checking well-formedness so we can reuse edges that don't exist *)
-    let new_decls =
-      Profile.time_profile "Partitioning" (fun () -> Partition.divide_decls decls)
+    let partitions = SrpRemapping.partition_declarations decls in
+    let decls =
+      Profile.time_profile "Partitioning" (fun () ->
+          List.map (fun p -> p, Partition.transform_declarations decls p) partitions)
     in
-    if cfg.print_partitions
-    then List.iter (fun d -> print_endline (Partition.partitions_to_string d)) new_decls
-    else ();
-    List.map (fun d -> parse_input_aux cfg info file d fs) new_decls)
-  else [parse_input_aux cfg info file (Partition.of_decls decls) fs]
+    let decls =
+      Profile.time_profile "Remapping partitions" (fun () ->
+          List.map
+            (fun (p, d) ->
+              (* FIXME: perform the remapping within the declarations transforming *)
+              (* the reason for this is due to the fact that some transformations are written using new nodes,
+               * but those transformations could be unintentionally modified by remapping as though the declarations
+               * are all in terms of the old nodes and edges still *)
+              let d', _ = map_decls_tuple (RemapSRP.remap_declarations p) (Grp d) in
+              d')
+            decls)
+    in
+    (* if cfg.print_partitions
+     * then
+     *   List.iter (fun d -> print_endline (Printing.declaration_groups_to_string d)) decls
+     * else (); *)
+    List.map (fun d -> parse_input_aux cfg info file d fs) decls)
+  else [parse_input_aux cfg info file (Decls decls) fs]
 ;;

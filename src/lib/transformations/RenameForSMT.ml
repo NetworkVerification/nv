@@ -3,7 +3,6 @@ open Nv_datastructures
 open Syntax
 open Collections
 open Nv_utils.OCamlUtils
-open Nv_kirigami.Partition
 
 (* A program transformation that prepends every symbolic variable with the prefix
    "symbolic-" and every solution variable with "solve-". Leaves other variables
@@ -127,13 +126,12 @@ let alpha_convert_declaration bmap (env : Var.t Env.t) (d : declaration) =
     let interface = omap (alpha_convert_exp env) interface in
     let decomp =
       match decomp with
-      | Some (lt, rt) -> Some (omap (alpha_convert_exp env) lt, omap (alpha_convert_exp env) rt)
+      | Some (lt, rt) ->
+        Some (omap (alpha_convert_exp env) lt, omap (alpha_convert_exp env) rt)
       | None -> None
     in
     let init, trans, merge =
-      ( alpha_convert_exp env init
-      , alpha_convert_exp env trans
-      , alpha_convert_exp env merge )
+      alpha_convert_exp env init, alpha_convert_exp env trans, alpha_convert_exp env merge
     in
     let env, y = rename_solve_vars bmap env var_names in
     env, DSolve { aty; var_names = y; init; trans; merge; interface; decomp }
@@ -176,20 +174,23 @@ let rename_declarations (ds : declarations) =
   prog, adjust_solution !bmap
 ;;
 
-let rename_partitioned_declarations (pds : partitioned_decls) =
-  let { network; properties; guarantees; lesser_hyps; greater_hyps } = pds in
-  (* Renaming order: network loaded into env first, then everything else *)
+let rename_declaration_groups (dgs : declaration_groups) =
+  (* Renaming order: base loaded into env first, then everything else *)
   let bmap = ref Collections.VarMap.empty in
-  let netprog, netenv = alpha_convert_aux bmap Env.empty network in
-  let propprog, _ = alpha_convert_aux bmap netenv properties in
-  let guarprog, _ = alpha_convert_aux bmap netenv guarantees in
-  let lhprog, _ = alpha_convert_aux bmap netenv lesser_hyps in
-  let ghprog, _ = alpha_convert_aux bmap netenv greater_hyps in
-  ( { network = netprog
-    ; properties = propprog
-    ; guarantees = guarprog
-    ; lesser_hyps = lhprog
-    ; greater_hyps = ghprog
-    }
-  , adjust_solution !bmap )
+  let base, env = alpha_convert_aux bmap Env.empty dgs.base in
+  let prop, _ = alpha_convert_aux bmap env dgs.prop in
+  let guar, _ = alpha_convert_aux bmap env dgs.guar in
+  let lth, _ = alpha_convert_aux bmap env dgs.lth in
+  let gth, _ = alpha_convert_aux bmap env dgs.gth in
+  { base; prop; guar; lth; gth }, adjust_solution !bmap
+;;
+
+let rename_declarations_or_group d_or_g =
+  match d_or_g with
+  | Decls d ->
+    let d, f = rename_declarations d in
+    Decls d, f
+  | Grp g ->
+    let g, f = rename_declaration_groups g in
+    Grp g, f
 ;;

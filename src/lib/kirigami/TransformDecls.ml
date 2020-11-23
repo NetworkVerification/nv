@@ -283,9 +283,10 @@ let transform_solve solve (partition : SrpRemapping.partitioned_srp)
     | None -> Some trans, None
   in
   let init' = transform_init init intrans merge attr_type partition' in
-  let trans' = transform_trans trans attr_type partition' in
-  let merge' = transform_merge merge attr_type partition' in
-  (* TODO: should we instead create separate let-bindings to refer to init, trans and merge? *)
+  let trans' = trans in
+  let merge' = merge in
+  (* let trans' = transform_trans trans attr_type partition' in *)
+  (* let merge' = transform_merge merge attr_type partition' in *)
   let assertions = outputs_assert outtrans var_names attr_type partition' in
   (* collect require and symbolic information *)
   let add_requires _ input_exps (m, l) =

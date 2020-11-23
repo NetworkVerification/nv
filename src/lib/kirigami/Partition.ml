@@ -9,33 +9,7 @@ open Nv_interpreter
 open Nv_utils.OCamlUtils
 open SrpRemapping
 
-(** Separation of the purposes of the declarations
- ** for a given partitioned SRP. *)
-type partitioned_decls =
-  { (* new DSymbolic decls *)
-    (* symbolics : declaration list *)
-    (* new DRequire decls and their corresponding partition ranks *)
-    lesser_hyps : declaration list
-  ; greater_hyps : declaration list
-  ; (* new DAssert decls for checking hypotheses *)
-    guarantees : declaration list
-  ; (* old DAssert decls for testing network properties *)
-    properties : declaration list
-  ; (* all other network decls, including those defining essential behaviour (init, trans, merge) *)
-    network : declaration list
-  }
-
-let of_decls d =
-  { lesser_hyps = []; greater_hyps = []; guarantees = []; properties = []; network = d }
-;;
-
-(** Helper function to extract the partition index
- *  from the partition expression.
-*)
-let interp_partition parte node : int =
-  let value = Interp.apply empty_env (deconstructFun parte) (vnode node) in
-  int_of_val value |> Option.get
-;;
+let of_decls d = Decls d
 
 type transform_result =
   | Network of declaration
@@ -89,60 +63,24 @@ let transform_declarations decls parted_srp =
         | None -> split_decls (net, guar, lt_hyp, gt_hyp, prop) t
       end
   in
-  let network, guarantees, lesser_hyps, greater_hyps, properties =
-    split_decls ([], [], [], [], []) transformed_decls
-  in
-  { lesser_hyps; greater_hyps; guarantees; properties; network }
-;;
-
-(** Create a list of lists of declarations representing a network which has been
- * opened along the edges described by the partition and interface declarations.
- * @return a new list of lists of declarations
-*)
-let divide_decls (decls : declarations) : partitioned_decls list =
-  let partition = get_partition decls in
-  match partition with
-  | Some parte ->
-    (* get the parameters for partition_edges *)
-    let nodes = get_nodes decls |> Option.get in
-    let node_list = List.range 0 `To (nodes - 1) in
-    let edges = get_edges decls |> Option.get in
-    (* interpret partition function *)
-    let partf : Vertex.t -> int = interp_partition parte in
-    let partitioned_srps = partition_edges node_list edges partf in
-    List.map (transform_declarations decls) partitioned_srps
-  | None -> [of_decls decls]
+  let base, guar, lth, gth, prop = split_decls ([], [], [], [], []) transformed_decls in
+  { base; prop; guar; lth; gth }
 ;;
 
 let lift (f : declarations -> declarations) decls =
-  { lesser_hyps = f decls.lesser_hyps
-  ; greater_hyps = f decls.greater_hyps
-  ; guarantees = f decls.guarantees
-  ; properties = f decls.properties
-  ; network = f decls.network
+  { lth = f decls.lth
+  ; gth = f decls.gth
+  ; guar = f decls.guar
+  ; prop = f decls.prop
+  ; base = f decls.base
   }
 ;;
 
 let lift_mb (f : declarations -> declarations * Nv_solution.Solution.map_back) decls =
-  (* TODO: drop unnecessary map back functions: possibly all but network *)
-  let lh, _lhf = f decls.lesser_hyps in
-  let gh, _ghf = f decls.greater_hyps in
-  let g, _gf = f decls.guarantees in
-  let p, _pf = f decls.properties in
-  let n, nf = f decls.network in
-  { lesser_hyps = lh; greater_hyps = gh; guarantees = g; properties = p; network = n }, nf
-;;
-
-let partitions_to_string ?(show_types = false) decls =
-  let { lesser_hyps; greater_hyps; guarantees; properties; network } = decls in
-  let print = Printing.declarations_to_string ~show_types in
-  print network
-  ^ "\n"
-  ^ print properties
-  ^ "\n"
-  ^ print lesser_hyps
-  ^ "\n"
-  ^ print greater_hyps
-  ^ "\n"
-  ^ print guarantees
+  let lth, _lhf = f decls.lth in
+  let gth, _ghf = f decls.gth in
+  let guar, _gf = f decls.guar in
+  let prop, _pf = f decls.prop in
+  let base, f = f decls.base in
+  { lth; gth; guar; prop; base }, f
 ;;

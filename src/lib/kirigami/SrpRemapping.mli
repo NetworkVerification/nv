@@ -51,8 +51,8 @@ type partitioned_srp =
   ; outputs : (Edge.t * exp option) list VertexMap.t
   }
 
-val partition_edges
-  :  Vertex.t list
-  -> Edge.t list
-  -> (Vertex.t -> int)
-  -> partitioned_srp list
+(** Create a list of partitioned SRP structures,
+ * where each structure represents one partition's topological structure
+ * for each possible partition in the given declarations.
+*)
+val partition_declarations : declarations -> partitioned_srp list

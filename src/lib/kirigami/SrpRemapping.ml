@@ -193,3 +193,23 @@ let partition_edges
   let divided_nodes = divide_vertices node_srp_map (max_partition + 1) in
   divide_edges edges divided_nodes
 ;;
+
+(** Helper function to extract the partition index
+ *  from the partition expression.
+*)
+let interp_partition parte node : int =
+  let value = Nv_interpreter.Interp.apply empty_env (deconstructFun parte) (vnode node) in
+  int_of_val value |> Option.get
+;;
+
+let partition_declarations decls : partitioned_srp list =
+  let partition = get_partition decls in
+  match partition with
+  | Some part ->
+    let nodes = get_nodes decls |> Option.get in
+    let node_list = List.range 0 `To (nodes - 1) in
+    let edges = get_edges decls |> Option.get in
+    let partf = interp_partition part in
+    partition_edges node_list edges partf
+  | None -> failwith "no partition expression found!"
+;;

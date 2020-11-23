@@ -12,13 +12,13 @@ open Batteries
 module type ClassicEncodingSig =
   SmtEncodingSigs.Encoding
     with type network_type = Syntax.declarations
-     and type part_network_type = Partition.partitioned_decls
+     and type part_network_type = Syntax.declaration_groups
 
 module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig = struct
   open E
 
   type network_type = Syntax.declarations
-  type part_network_type = Partition.partitioned_decls
+  type part_network_type = Syntax.declaration_groups
 
   let add_symbolic_constraints env requires sym_vars =
     (* Declare the symbolic variables: ignore the expression in case of SMT *)
@@ -359,27 +359,22 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     env
   ;;
 
-  let kirigami_encode_z3 (decls : Partition.partitioned_decls) : SmtUtils.smt_env =
-    let ({ lesser_hyps; greater_hyps; guarantees; properties; network }
-          : Partition.partitioned_decls)
-      =
-      decls
-    in
+  let kirigami_encode_z3 (dgs : declaration_groups) : SmtUtils.smt_env =
     (* need to use a counter i, as add_assertions gets called for multiple lists *)
     let i = ref (-1) in
-    let symbolics = get_symbolics network in
-    let graph = get_graph network |> oget in
-    let solves = get_solves network in
+    let symbolics = get_symbolics dgs.base in
+    let graph = get_graph dgs.base |> oget in
+    let solves = get_solves dgs.base in
     let simplify_assertion e =
       let etrue = Syntax.e_val (Syntax.vbool true) in
       let simplified = InterpPartialFull.interp_partial e in
       if Syntax.equal_exps ~cmp_meta:false etrue simplified then None else Some simplified
     in
-    let g_assertions = get_asserts guarantees |> List.filter_map simplify_assertion in
-    let p_assertions = get_asserts properties |> List.filter_map simplify_assertion in
-    let requires = get_requires network in
-    let lh_requires = get_requires lesser_hyps in
-    let gh_requires = get_requires greater_hyps in
+    let g_assertions = get_asserts dgs.guar |> List.filter_map simplify_assertion in
+    let p_assertions = get_asserts dgs.prop |> List.filter_map simplify_assertion in
+    let requires = get_requires dgs.base in
+    let lh_requires = get_requires dgs.lth in
+    let gh_requires = get_requires dgs.gth in
     let env = init_solver symbolics ~labels:[] in
     List.iteri (encode_solve env graph) solves;
     let add_assertions env assertions =

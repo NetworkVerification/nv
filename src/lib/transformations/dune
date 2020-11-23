@@ -4,7 +4,6 @@
   (libraries
     parmap
     nv_datastructures
-    nv_kirigami
     nv_lang
     nv_utils
     nv_solution))

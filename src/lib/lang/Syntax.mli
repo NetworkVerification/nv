@@ -182,6 +182,29 @@ type declaration =
 
 type declarations = declaration list
 
+(* Used for encoding Kirigami-cut networks *)
+type declaration_groups =
+  {
+    (* the base network behaviour *)
+    base : declarations
+  ; (* properties of the network *)
+    prop : declarations
+  ; (* guarantees satisfied by the partition *)
+    guar : declarations
+  ; (* hypotheses from a partition with rank less than this one *)
+    lth : declarations
+  ; (* hypotheses from a partition with rank greater than this one *)
+    gth : declarations
+  }
+
+type declarations_or_group =
+  | Decls of declarations
+  | Grp of declaration_groups
+
+val map_decls : (declarations -> declarations) -> declarations_or_group -> declarations_or_group
+
+val map_decls_tuple : (declarations -> declarations * 'a) -> declarations_or_group -> declarations_or_group * 'a
+
 (* Constructors *)
 val vunit : unit -> value
 val vbool : bool -> value

@@ -126,7 +126,7 @@ def write_csv(results, path):
 
 if __name__ == "__main__":
     DIRECTORY = "benchmarks/SinglePrefix/FAT{}"
-    SIZES = [20]
+    SIZES = [4, 8, 10]
     TIMEOUT = 3600
     TRIALS = 10
     RUNS = []

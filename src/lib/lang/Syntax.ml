@@ -135,7 +135,8 @@ and value =
 [@@deriving ord]
 
 and mtbdd =
-  (value Mtbdd.t * ty[@compare fun _ _ -> failwith "Map value comparison not supported"])
+  (value Mtbdd.t * ty
+  [@compare fun _ _ -> failwith "Map value comparison not supported"])
 [@@deriving ord]
 
 and e =
@@ -176,7 +177,8 @@ and func =
   }
 
 and closure =
-  (env * func[@compare fun _ _ -> failwith "Map value comparison not supported"])
+  (env * func
+  [@compare fun _ _ -> failwith "Map value comparison not supported"])
 [@@deriving ord]
 
 and env =
@@ -213,6 +215,45 @@ type declaration =
   | DEdges of (node * node) list
 
 type declarations = declaration list
+
+(* Used for encoding Kirigami-cut networks *)
+type declaration_groups =
+  { base : declarations
+  ; prop : declarations
+  ; guar : declarations
+  ; lth : declarations
+  ; gth : declarations
+  }
+
+type declarations_or_group =
+  | Decls of declarations
+  | Grp of declaration_groups
+
+let map_decls f d_or_g =
+  match d_or_g with
+  | Decls d -> Decls (f d)
+  | Grp g ->
+    let base = f g.base in
+    let prop = f g.prop in
+    let guar = f g.guar in
+    let lth = f g.lth in
+    let gth = f g.gth in
+    Grp { base; prop; guar; lth; gth }
+;;
+
+let map_decls_tuple f d_or_g =
+  match d_or_g with
+  | Decls d ->
+    let d, x = f d in
+    Decls d, x
+  | Grp g ->
+    let base, x = f g.base in
+    let prop, _ = f g.prop in
+    let guar, _ = f g.guar in
+    let lth, _ = f g.lth in
+    let gth, _ = f g.gth in
+    Grp { base; prop; guar; lth; gth }, x
+;;
 
 (** * Handling branches *)
 
@@ -293,9 +334,7 @@ let branchSize b = Printf.printf "%d\n" (PatMap.cardinal b.pmap)
 
 (* equality / hashing *)
 
-let equal_spans (s1 : Span.t) (s2 : Span.t) =
-  s1.start = s2.start && s1.finish = s2.finish
-;;
+let equal_spans (s1 : Span.t) (s2 : Span.t) = s1.start = s2.start && s1.finish = s2.finish
 
 let equal_opt e o1 o2 =
   match o1, o2 with
@@ -431,15 +470,12 @@ and equal_es ~cmp_meta e1 e2 =
   match e1, e2 with
   | EVar x1, EVar x2 -> Var.equals x1 x2
   | EVal v1, EVal v2 -> equal_values ~cmp_meta v1 v2
-  | EOp (op1, es1), EOp (op2, es2) ->
-    equal_op op1 op2 && equal_lists_es ~cmp_meta es1 es2
+  | EOp (op1, es1), EOp (op2, es2) -> equal_op op1 op2 && equal_lists_es ~cmp_meta es1 es2
   | EFun f1, EFun f2 -> equal_funcs ~cmp_meta f1 f2
   | EApp (e1, e2), EApp (e3, e4) ->
     equal_exps ~cmp_meta e1 e3 && equal_exps ~cmp_meta e2 e4
   | EIf (e1, e2, e3), EIf (e4, e5, e6) ->
-    equal_exps ~cmp_meta e1 e4
-    && equal_exps ~cmp_meta e2 e5
-    && equal_exps ~cmp_meta e3 e6
+    equal_exps ~cmp_meta e1 e4 && equal_exps ~cmp_meta e2 e5 && equal_exps ~cmp_meta e3 e6
   | ELet (x1, e1, e2), ELet (x2, e3, e4) ->
     Var.equals x1 x2 && equal_exps ~cmp_meta e1 e3 && equal_exps ~cmp_meta e2 e4
   | ETuple es1, ETuple es2 -> equal_lists_es ~cmp_meta es1 es2
@@ -456,8 +492,7 @@ and equal_lists_es ~cmp_meta es1 es2 =
   match es1, es2 with
   | [], [] -> true
   | [], _ | _, [] -> false
-  | e1 :: es1, e2 :: es2 ->
-    equal_exps ~cmp_meta e1 e2 && equal_lists_es ~cmp_meta es1 es2
+  | e1 :: es1, e2 :: es2 -> equal_exps ~cmp_meta e1 e2 && equal_lists_es ~cmp_meta es1 es2
 
 and equal_branches ~cmp_meta bs1 bs2 =
   let rec equal_branches_lst bs1 bs2 =
@@ -619,15 +654,12 @@ and hash_e ~hash_meta e =
   | ETy (e, ty) -> (19 * ((19 * hash_exp ~hash_meta e) + hash_ty ty)) + 10
   | ERecord map ->
     (19
-    * StringMap.fold (fun l e acc -> acc + +hash_string l + hash_exp ~hash_meta e) map 0
-    )
+    * StringMap.fold (fun l e acc -> acc + +hash_string l + hash_exp ~hash_meta e) map 0)
     + 11
   | EProject (e, label) -> (19 * hash_exp ~hash_meta e) + hash_string label + 12
 
 and hash_var x = hash_string (Var.to_string x)
-
-and hash_es ~hash_meta es =
-  List.fold_left (fun acc e -> acc + hash_exp ~hash_meta e) 0 es
+and hash_es ~hash_meta es = List.fold_left (fun acc e -> acc + hash_exp ~hash_meta e) 0 es
 
 and hash_branches ~hash_meta bs =
   let acc1 =
@@ -649,8 +681,7 @@ and hash_pattern p =
   | POption None -> 6
   | POption (Some p) -> (19 * hash_pattern p) + 7
   | PRecord map ->
-    (19 * StringMap.fold (fun l p acc -> acc + +hash_string l + hash_pattern p) map 0)
-    + 8
+    (19 * StringMap.fold (fun l p acc -> acc + +hash_string l + hash_pattern p) map 0) + 8
   | PNode n -> (19 * n) + 9
   | PEdge (p1, p2) -> (19 * (hash_pattern p1 + (19 * hash_pattern p2))) + 10
 
@@ -1187,9 +1218,7 @@ let rec pattern_vars p =
 let rec free (seen : Var.t PSet.t) (e : exp) : Var.t PSet.t =
   match e.e with
   | EVar v ->
-    if PSet.mem v seen
-    then PSet.create Var.compare
-    else PSet.singleton ~cmp:Var.compare v
+    if PSet.mem v seen then PSet.create Var.compare else PSet.singleton ~cmp:Var.compare v
   | EVal _ -> PSet.create Var.compare
   | EOp (_, es) | ETuple es ->
     List.fold_left

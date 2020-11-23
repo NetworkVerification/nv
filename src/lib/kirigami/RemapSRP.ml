@@ -1,14 +1,10 @@
 open Nv_lang.Syntax
 open Batteries
-open Nv_kirigami.SrpRemapping
+open SrpRemapping
 open Nv_datastructures.AdjGraph
+open Nv_transformations
 
-(** Transformer utilities.
- ** This transformer impl remaps patterns and values to refer to the new node identities.
- ** However, it does not perform any action if the node found has been cut; we may in that
- ** case want to remove the entire offending expression or replace it with some default. *)
-
-let ty_transformer _ ty = Some ty
+let ty_transformer _ t = Some t
 
 let pattern_transformer (part_srp : partitioned_srp) (_ : Transformers.recursors) p t =
   match p, t with
@@ -34,7 +30,40 @@ let value_transformer (part_srp : partitioned_srp) _ v =
   | _ -> None
 ;;
 
-let exp_transformer _ _ = None
+let remove_exps part_srp (recursors : Transformers.recursors) e =
+  let removeExp = recursors.recurse_exp in
+  let removed_nodes =
+    VertexMap.fold
+      (fun u v l ->
+        match v with
+        | Some _ -> l
+        | None -> u :: l)
+      part_srp.node_map
+      []
+  in
+  let cut_from_srp pat =
+    match pat with
+    | PEdge (PNode u, PNode v) -> List.mem u removed_nodes || List.mem v removed_nodes
+    | PNode u -> List.mem u removed_nodes
+    | _ -> false
+  in
+  let update_branches old_bs =
+    foldBranches
+      (fun (p, e) new_bs ->
+        if cut_from_srp p then new_bs else addBranch p (removeExp e) new_bs)
+      emptyBranch
+      old_bs
+  in
+  match e.e with
+  | EMatch (e1, bs) ->
+    let bs' = update_branches bs in
+    Some (ematch (removeExp e1) (optimizeBranches bs'))
+  | _ -> None
+;;
+
+let exp_transformer part_srp (recursors : Transformers.recursors) e =
+  remove_exps part_srp recursors e
+;;
 
 let map_back_transformer (_part_srp : partitioned_srp) _ _ v _ =
   (* TODO: not yet implemented *)
@@ -53,7 +82,7 @@ let make_toplevel
     ty_transformer
     (pattern_transformer part_srp)
     (value_transformer part_srp)
-    exp_transformer
+    (exp_transformer part_srp)
     (map_back_transformer part_srp)
     mask_transformer
 ;;

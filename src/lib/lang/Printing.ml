@@ -181,8 +181,7 @@ let rec pattern_to_string pattern =
   | POption (Some p) -> "Some " ^ pattern_to_string p
   | PRecord map -> print_record "=" pattern_to_string map
   | PNode n -> Printf.sprintf "%dn" n
-  | PEdge (p1, p2) ->
-    Printf.sprintf "%s~%s" (pattern_to_string p1) (pattern_to_string p2)
+  | PEdge (p1, p2) -> Printf.sprintf "%s~%s" (pattern_to_string p1) (pattern_to_string p2)
 ;;
 
 let padding i = String.init i (fun _ -> ' ')
@@ -349,10 +348,7 @@ and op_args_to_string ~show_types prec p op es =
 let value_to_string ?(show_types = false) v = value_to_string_p ~show_types max_prec v
 let exp_to_string ?(show_types = false) e = exp_to_string_p ~show_types max_prec e
 let func_to_string ?(show_types = false) f = func_to_string_p ~show_types max_prec f
-
-let closure_to_string ?(show_types = false) c =
-  closure_to_string_p ~show_types max_prec c
-;;
+let closure_to_string ?(show_types = false) c = closure_to_string_p ~show_types max_prec c
 
 (* TODO: should the let statements use the identifiers defined in Syntax instead? *)
 let rec declaration_to_string ?(show_types = false) d =
@@ -394,4 +390,9 @@ let rec declarations_to_string ?(show_types = false) ds =
   | [] -> ""
   | d :: ds ->
     declaration_to_string ~show_types d ^ "\n" ^ declarations_to_string ~show_types ds
+;;
+
+let declaration_groups_to_string ?(show_types = false) dgs =
+  let f = declarations_to_string ~show_types in
+  f dgs.base ^ "\n" ^ f dgs.prop ^ "\n" ^ f dgs.guar ^ "\n" ^ f dgs.lth ^ "\n" ^ f dgs.gth
 ;;
