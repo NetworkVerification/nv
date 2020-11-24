@@ -70,20 +70,12 @@ let edge_map_decl fnname (m : Edge.t option EdgeMap.t) =
         } )
 ;;
 
-(* Return an identity function representing attribute transfer. *)
-let trans_identity ty =
-  let edge_var = Var.fresh "e" in
-  let x_var = Var.fresh "x" in
-  let x_lambda = efunc (funcFull x_var (Some ty) (Some ty) (annot ty (evar x_var))) in
-  let lambda = efunc (funcFull edge_var (Some TEdge) (Some (TArrow (ty, ty))) x_lambda) in
-  lambda
-;;
-
 (* Apply and partially interpret the given transfer function t on the given edge e and attribute value x. *)
 let apply_trans ty e t x =
   let trans_app = eapp t (annot TEdge (edge_to_exp e)) in
   let trans_curried = annot (TArrow (ty, ty)) trans_app in
-  annot ty (eapp trans_curried x)
+  (* partially interpret the transfer function *)
+  InterpPartialFull.interp_partial (annot ty (eapp trans_curried x))
 ;;
 
 (* Pass in the original init Syntax.exp and update it to perform
@@ -94,40 +86,26 @@ let apply_trans ty e t x =
 let transform_init (init : exp) (trans : exp option) (merge : exp) ty parted_srp
     : Syntax.exp
   =
+  let interp = InterpPartialFull.interp_partial in
   let ({ node_map; inputs; _ } : SrpRemapping.partitioned_srp) = parted_srp in
   let node_var = Var.fresh "node" in
-  let trans_var = Var.fresh "trans" in
-  let merge_var = Var.fresh "merge" in
-  let trans_let e =
-    annot
-      ty
-      (elet
-         trans_var
-         (match trans with
-         | Some e -> e
-         | None -> trans_identity ty)
-         e)
-  in
-  let merge_let e = trans_let (annot ty (elet merge_var merge e)) in
-  let merge_exp = annot (Typing.merge_ty ty) (evar merge_var) in
-  let trans_exp = annot (Typing.trans_ty ty) (evar trans_var) in
   (* function we recursively call to build up the new base node init *)
   let merge_input node node_exp input_exp =
     let ({ var; edge; _ } : SrpRemapping.input_exp) = input_exp in
     let input_exp = annot ty (evar var) in
     (* perform the input transfer on the input exp *)
-    (* let trans_input_exp =
-     *   Option.apply (Option.map (apply_trans ty edge) trans) input_exp
-     * in *)
-    let trans_input_exp = apply_trans ty edge trans_exp input_exp in
+    let trans_input_exp =
+      Option.apply (Option.map (apply_trans ty edge) trans) input_exp
+    in
     (* perform the merge function, using the given node and its current value with the input variable *)
     let curried_node =
-      annot
-        (TArrow (TArrow (ty, ty), ty))
-        (eapp merge_exp (annot TNode (node_to_exp node)))
+      interp
+        (annot
+           (TArrow (TArrow (ty, ty), ty))
+           (eapp merge (annot TNode (node_to_exp node))))
     in
     let curried_node_exp = annot (TArrow (ty, ty)) (eapp curried_node node_exp) in
-    wrap node_exp (eapp curried_node_exp trans_input_exp)
+    interp (wrap node_exp (eapp curried_node_exp trans_input_exp))
   in
   (* we use both node names here since the inputs are organized acc. to new node name, while the old node name
    * is needed to interpret the old function *)
@@ -148,12 +126,7 @@ let transform_init (init : exp) (trans : exp option) (merge : exp) ty parted_srp
    * a match with node as the exp and output_branches as the branches *)
   wrap
     init
-    (efunc
-       (funcFull
-          node_var
-          (Some TNode)
-          (Some ty)
-          (annot ty (merge_let (amatch node_var TNode branches)))))
+    (efunc (funcFull node_var (Some TNode) (Some ty) (amatch node_var TNode branches)))
 ;;
 
 (* Pass in the original trans Syntax.exp and update it to perform
