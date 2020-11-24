@@ -249,18 +249,17 @@ def gen_part_nv(spfile, dest, orientation=HORIZONTAL, verbose=False):
         )
         fwd_cross = [e.tuple for e in graph.es if cross_partition(e) and fwd(e)]
         back_cross = [e.tuple for e in graph.es if cross_partition(e) and not fwd(e)]
-        spine_nodes = nodes[1]
     else:
         nodes = nodes_cut_vertically(graph, dest)
-        spine_nodes = nodes[0]  # inaccurately named
         cross_edges = [
             e.tuple for e in graph.es if (e.source in nodes != e.target in nodes)
         ]
         fwd = lambda e: e.source in nodes[0] and e.target in nodes[1]
+        # FIXME: something seems wrong with these
         fwd_cross = [e.tuple for e in cross_edges and fwd(e)]
         back_cross = [e.tuple for e in cross_edges and not fwd(e)]
     # validate spine and cross edges
-    validate(spine_nodes, fwd_cross + back_cross)
+    validate(nodes[1], fwd_cross + back_cross)
     if verbose:
         print(nodes)
         print(cross_edges)

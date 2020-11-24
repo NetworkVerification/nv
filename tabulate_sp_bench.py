@@ -104,7 +104,7 @@ def run_benchmark(dirformat, nameformat, size, time, trials, multiop):
         sys.exit(1)
     # run nv with verbose, SMT and partitioning flags
     com = [nvpath, "-v", "-m", "-k"]
-    partf = os.path.join(benchdir, nameformat.format(size, "-vpart"))
+    partf = os.path.join(benchdir, nameformat.format(size, "-vpart1"))
     unpartf = os.path.join(benchdir, nameformat.format(size, ""))
     runs = []
     for i in range(trials):
@@ -126,7 +126,7 @@ def write_csv(results, path):
 
 if __name__ == "__main__":
     DIRECTORY = "benchmarks/SinglePrefix/FAT{}"
-    SIZES = [4, 8, 10]
+    SIZES = [4, 8]
     TIMEOUT = 3600
     TRIALS = 10
     RUNS = []
@@ -134,4 +134,4 @@ if __name__ == "__main__":
     for sz in SIZES:
         print("Running benchmark " + DIRECTORY.format(sz))
         RUNS.append(run_benchmark(DIRECTORY, "sp{}{}.nv", sz, TIMEOUT, TRIALS, MULTIOP))
-    write_csv(RUNS, "kirigami-results-v20.csv")
+    write_csv(RUNS, "kirigami-results-v1.csv")
