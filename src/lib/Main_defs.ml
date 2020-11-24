@@ -297,24 +297,17 @@ let parse_input (args : string array)
     let partitions = SrpRemapping.partition_declarations decls in
     let decls =
       Profile.time_profile "Partitioning" (fun () ->
-          List.map (fun p -> p, Partition.transform_declarations decls p) partitions)
+          List.map (fun p -> Partition.transform_declarations decls p) partitions)
     in
     let decls =
-      Profile.time_profile "Remapping partitions" (fun () ->
-          List.map
-            (fun (p, d) ->
-              (* FIXME: perform the remapping within the declarations transforming *)
-              (* the reason for this is due to the fact that some transformations are written using new nodes,
-               * but those transformations could be unintentionally modified by remapping as though the declarations
-               * are all in terms of the old nodes and edges still *)
-              let d', _ = map_decls_tuple (RemapSRP.remap_declarations p) (Grp d) in
-              d')
-            decls)
+      List.map
+        (fun d ->
+          if cfg.print_partitions
+          then print_endline (Printing.declaration_groups_to_string d)
+          else ();
+          Grp d)
+        decls
     in
-    (* if cfg.print_partitions
-     * then
-     *   List.iter (fun d -> print_endline (Printing.declaration_groups_to_string d)) decls
-     * else (); *)
     List.map (fun d -> parse_input_aux cfg info file d fs) decls)
   else [parse_input_aux cfg info file (Decls decls) fs]
 ;;
