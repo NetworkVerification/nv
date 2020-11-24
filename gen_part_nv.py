@@ -247,22 +247,23 @@ def gen_part_nv(spfile, dest, orientation=HORIZONTAL, verbose=False):
         fwd = lambda e: (e.source in nodes[0] and e.target in nodes[1]) or (
             e.source in nodes[1] and e.target in nodes[2]
         )
-        fwd_cross = [e.tuple for e in graph.es if cross_partition(e) and fwd(e)]
-        back_cross = [e.tuple for e in graph.es if cross_partition(e) and not fwd(e)]
+        cross_edges = [e for e in graph.es if cross_partition(e)]
+        fwd_cross = [e.tuple for e in cross_edges and fwd(e)]
+        back_cross = [e.tuple for e in cross_edges and not fwd(e)]
     else:
         nodes = nodes_cut_vertically(graph, dest)
         cross_edges = [
-            e.tuple for e in graph.es if (e.source in nodes != e.target in nodes)
+            e for e in graph.es if (e.source in nodes[0]) != (e.target in nodes[0])
         ]
         fwd = lambda e: e.source in nodes[0] and e.target in nodes[1]
         # FIXME: something seems wrong with these
-        fwd_cross = [e.tuple for e in cross_edges and fwd(e)]
-        back_cross = [e.tuple for e in cross_edges and not fwd(e)]
+        fwd_cross = [e.tuple for e in cross_edges if fwd(e)]
+        back_cross = [e.tuple for e in cross_edges if not fwd(e)]
     # validate spine and cross edges
     validate(nodes[1], fwd_cross + back_cross)
     if verbose:
         print(nodes)
-        print(cross_edges)
+        print([e.tuple for e in cross_edges])
     partition = write_partition_str(nodes)
     interface = write_interface_str(fwd_cross, back_cross)
     # perform the decomposed transfer on the input side
