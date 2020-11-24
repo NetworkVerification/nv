@@ -183,7 +183,8 @@ def nodes_cut_vertically(graph, dest):
     # return half of the spines along with the pods
     group1 = [x.index for x in half_spines] + list(pods)
     # get all nodes not in group1
-    group2 = list(set(graph.vs).difference(set(group1)))
+    all_nodes = set(x.index for x in graph.vs)
+    group2 = [x for x in all_nodes.difference(set(group1))]
     group1.sort()
     group2.sort()
     if dest in group1:
@@ -252,9 +253,12 @@ def gen_part_nv(spfile, dest, orientation=HORIZONTAL, verbose=False):
     else:
         nodes = nodes_cut_vertically(graph, dest)
         spine_nodes = nodes[0]  # inaccurately named
+        cross_edges = [
+            e.tuple for e in graph.es if (e.source in nodes != e.target in nodes)
+        ]
         fwd = lambda e: e.source in nodes[0] and e.target in nodes[1]
-        fwd_cross = [e.tuple for e in graph.es if cross_partition(e) and fwd(e)]
-        back_cross = [e.tuple for e in graph.es if cross_partition(e) and not fwd(e)]
+        fwd_cross = [e.tuple for e in cross_edges and fwd(e)]
+        back_cross = [e.tuple for e in cross_edges and not fwd(e)]
     # validate spine and cross edges
     validate(spine_nodes, fwd_cross + back_cross)
     if verbose:

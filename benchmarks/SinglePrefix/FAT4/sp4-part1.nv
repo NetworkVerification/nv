@@ -1176,6 +1176,6 @@ let interface edge =
   | 18~3 -> Some any
   | _ -> None
 
-let sol = solution {init = init; trans = trans; merge = merge}
+let sol = solution { init = init; trans = trans; merge = merge; interface = interface; rtrans = trans }
 
 assert foldNodes (fun k v acc -> acc && assert_node k v) sol true
