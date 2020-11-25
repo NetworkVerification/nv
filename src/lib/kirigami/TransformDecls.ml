@@ -166,12 +166,11 @@ let transform_merge (e : exp) (ty : ty) (parted_srp : SrpRemapping.partitioned_s
   (* the internal type after matching on the node *)
   let inner_ty = TArrow (ty, TArrow (ty, ty)) in
   let node_var = Var.fresh "node" in
-  (* Simplify the old expression to a smaller expression *)
-  let interp_old old exp =
-    InterpPartialFull.interp_partial (annot inner_ty (eapp old exp))
+  let interp_merge node =
+    InterpPartialFull.interp_partial (annot inner_ty (eapp e node))
   in
   let branches =
-    match_of_node_map node_map (fun _ old -> interp_old e (node_to_exp old)) emptyBranch
+    match_of_node_map node_map (fun _ old -> interp_merge (node_to_exp old)) emptyBranch
   in
   wrap
     e
