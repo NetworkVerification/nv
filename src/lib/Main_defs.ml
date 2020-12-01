@@ -32,6 +32,22 @@ let smt_query_file =
 
 let run_smt_classic_aux file cfg info decls fs =
   let decls, fs =
+    let decls, f = map_decls_tuple UnboxEdges.unbox_declarations decls in
+    decls, f :: fs
+  in
+  let decls, fs =
+    SmtUtils.smt_config.unboxing <- true;
+    let decls, f1 =
+      Profile.time_profile "Unbox options" (fun () ->
+          map_decls_tuple UnboxOptions.unbox_declarations decls)
+    in
+    let decls, f2 =
+      Profile.time_profile "Flattening Tuples" (fun () ->
+          map_decls_tuple TupleFlatten.flatten_declarations decls)
+    in
+    decls, f2 :: f1 :: fs
+  in
+  let decls, fs =
     let decls, f = Renaming.alpha_convert_declarations_or_group decls in
     (*TODO: why are we renaming here?*)
     let decls, _ = map_decls_tuple OptimizeBranches.optimize_declarations decls in
@@ -127,22 +143,6 @@ let run_smt_classic_aux file cfg info decls fs =
 ;;
 
 let run_smt_classic file cfg info decls fs =
-  let decls, fs =
-    let decls, f = UnboxEdges.unbox_declarations decls in
-    decls, f :: fs
-  in
-  let decls, fs =
-    SmtUtils.smt_config.unboxing <- true;
-    let decls, f1 =
-      Profile.time_profile "Unbox options" (fun () ->
-          UnboxOptions.unbox_declarations decls)
-    in
-    let decls, f2 =
-      Profile.time_profile "Flattening Tuples" (fun () ->
-          TupleFlatten.flatten_declarations decls)
-    in
-    decls, f2 :: f1 :: fs
-  in
   let decls =
     if cfg.kirigami
     then (

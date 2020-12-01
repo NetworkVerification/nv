@@ -118,14 +118,10 @@ let transform_trans (e : exp) (attr : ty) (parted_srp : SrpRemapping.partitioned
   in
   let edge_map_match = match_of_edge_map edge_map emptyBranch in
   let branches = mapBranches (fun (pat, edge) -> pat, interp_trans edge) edge_map_match in
-  let x_lambda =
-    efunc
-      (funcFull
-         x_var
-         (Some attr)
-         (Some attr)
-         (annot attr (amatch edge_var TEdge branches)))
+  let body =
+    if isEmptyBranch branches then evar x_var else amatch edge_var TEdge branches
   in
+  let x_lambda = efunc (funcFull x_var (Some attr) (Some attr) (annot attr body)) in
   let lambda =
     efunc (funcFull edge_var (Some TEdge) (Some (TArrow (attr, attr))) x_lambda)
   in
@@ -155,11 +151,12 @@ let add_output_pred
     (attr : ty)
     (sol : exp)
     (n : Vertex.t)
+    (base_nodes : int)
     (edge, pred)
     acc
   =
   (* FIXME: figure out what this is after map unrolling *)
-  let sol_x = annot attr (eop MGet [sol; annot TNode (node_to_exp n)]) in
+  let sol_x = annot attr (eop (TGet (base_nodes, n, n)) [sol]) in
   match pred with
   | Some p ->
     InterpPartialFull.interp_partial
@@ -178,11 +175,12 @@ let outputs_assert
     (parted_srp : SrpRemapping.partitioned_srp)
     : exp list
   =
-  let ({ outputs; _ } : SrpRemapping.partitioned_srp) = parted_srp in
+  let ({ outputs; node_map; _ } : SrpRemapping.partitioned_srp) = parted_srp in
   (* re-map every output to point to its corresponding predicate *)
+  let base_nodes = VertexMap.cardinal node_map in
   let add_preds n outputs acc =
     List.fold_left
-      (fun acc output -> add_output_pred trans attr sol n output acc)
+      (fun acc output -> add_output_pred trans attr sol n base_nodes output acc)
       acc
       outputs
   in
@@ -202,10 +200,14 @@ let transform_assert (e : exp) (_parted_srp : SrpRemapping.partitioned_srp) : ex
 *)
 let interp_interface intfe e : exp option =
   (* print_endline ("interface exp: " ^ Printing.exp_to_string intfe); *)
-  let u, v = e in
-  let node_value n = avalue (vnode n, Some Typing.node_ty, Span.default) in
-  let edge = [node_value u; node_value v] in
-  let intf_app = InterpPartial.interp_partial_fun intfe edge in
+  (* let u, v = e in *)
+  (* let node_value n = avalue (vnode n, Some Typing.node_ty, Span.default) in *)
+  (* let edge = [node_value u; node_value v] in *)
+  let intf_app =
+    InterpPartial.interp_partial_fun
+      intfe
+      [avalue (vedge e, Some Typing.edge_ty, Span.default)]
+  in
   (* if intf_app is not an option, or if the value it contains is not a function,
    * fail *)
   match intf_app.e with
@@ -267,7 +269,12 @@ let transform_solve solve (partition : SrpRemapping.partitioned_srp)
     List.fold_left
       (fun (m, l) { var; rank; pred; _ } ->
         ( (match pred with
-          | Some p -> Map.add (annot TBool (eapp p (annot attr_type (evar var)))) rank m
+          | Some p ->
+            Map.add
+              (InterpPartialFull.interp_partial
+                 (annot TBool (eapp p (annot attr_type (evar var)))))
+              rank
+              m
           | None -> m)
         , (var, Ty attr_type) :: l ))
       (m, l)

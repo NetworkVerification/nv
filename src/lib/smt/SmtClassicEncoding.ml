@@ -35,7 +35,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     (* add the require clauses *)
     BatList.iter
       (fun e ->
-        (* print_endline ("Encoding symbolic exp: " ^ Printing.exp_to_string e); *)
+        print_endline ("Encoding symbolic exp: " ^ Printing.exp_to_string e);
         let es = encode_exp_z3 "" env e in
         ignore (lift1 (fun e -> SmtUtils.add_constraint env e) es))
       requires
