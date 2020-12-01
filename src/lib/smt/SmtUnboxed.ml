@@ -272,7 +272,9 @@ module Unboxed : SmtEncodingSigs.ExprEncoding = struct
       | MMerge
       | MFoldNode
       | MFoldEdge
-      | MForAll -> failwith "internal error (encode_exp_z3)")
+      | MForAll ->
+        print_endline ("e: " ^ Printing.exp_to_string e);
+        failwith "internal error (encode_exp_z3)")
     | ETy (e, _) -> encode_exp_z3_single ~arith descr env e
     | _ ->
       (* we always know this is going to be a singleton list *)

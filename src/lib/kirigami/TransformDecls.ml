@@ -30,21 +30,6 @@ let match_of_node_map
   VertexMap.fold add_node_branch m b
 ;;
 
-(* Return a Let declaration of a function that maps from old nodes to new nodes. *)
-let node_map_decl fnname (m : Vertex.t option VertexMap.t) =
-  let node_var = Var.create "n" in
-  let branches = match_of_node_map m (fun _ -> node_to_exp) emptyBranch in
-  DLet
-    ( Var.create fnname
-    , Some (TArrow (TNode, TNode))
-    , efun
-        { arg = node_var
-        ; argty = Some TNode
-        ; resty = Some TNode
-        ; body = ematch (evar node_var) branches
-        } )
-;;
-
 (** Add match branches using the given map of old edges to new edges. *)
 let match_of_edge_map (m : Edge.t option EdgeMap.t) b =
   let add_edge_branch old_edge new_edge branches =
@@ -55,24 +40,10 @@ let match_of_edge_map (m : Edge.t option EdgeMap.t) b =
   EdgeMap.fold add_edge_branch m b
 ;;
 
-(* Return a Let declaration of a function that maps from old edges to new edges. *)
-let edge_map_decl fnname (m : Edge.t option EdgeMap.t) =
-  let edge_var = Var.create "e" in
-  let branches = match_of_edge_map m emptyBranch in
-  DLet
-    ( Var.create fnname
-    , Some (TArrow (TEdge, TEdge))
-    , efun
-        { arg = edge_var
-        ; argty = Some TEdge
-        ; resty = Some TEdge
-        ; body = ematch (evar edge_var) branches
-        } )
-;;
-
 (* Apply and partially interpret the given transfer function t on the given edge e and attribute value x. *)
 let apply_trans ty e t x =
-  let trans_app = eapp t (annot TEdge (edge_to_exp e)) in
+  let u, v = e in
+  let trans_app = apps t [annot TNode (node_to_exp u); annot TNode (node_to_exp v)] in
   let trans_curried = annot (TArrow (ty, ty)) trans_app in
   (* partially interpret the transfer function *)
   InterpPartialFull.interp_partial (annot ty (eapp trans_curried x))
@@ -187,6 +158,7 @@ let add_output_pred
     (edge, pred)
     acc
   =
+  (* FIXME: figure out what this is after map unrolling *)
   let sol_x = annot attr (eop MGet [sol; annot TNode (node_to_exp n)]) in
   match pred with
   | Some p ->
@@ -229,11 +201,16 @@ let transform_assert (e : exp) (_parted_srp : SrpRemapping.partitioned_srp) : ex
  *  from the interface expression.
 *)
 let interp_interface intfe e : exp option =
-  let intf_app = Interp.apply empty_env (deconstructFun intfe) (vedge e) in
+  (* print_endline ("interface exp: " ^ Printing.exp_to_string intfe); *)
+  let u, v = e in
+  let node_value n = avalue (vnode n, Some Typing.node_ty, Span.default) in
+  let edge = [node_value u; node_value v] in
+  let intf_app = InterpPartial.interp_partial_fun intfe edge in
   (* if intf_app is not an option, or if the value it contains is not a function,
    * fail *)
-  match intf_app with
-  | { v = VOption o; _ } ->
+  match intf_app.e with
+  | ESome exp -> Some exp
+  | EVal { v = VOption o; _ } ->
     begin
       match o with
       | Some { v = VClosure (_env, func); _ } -> Some (efunc func)
@@ -241,7 +218,27 @@ let interp_interface intfe e : exp option =
       (* infer case *)
       | None -> None
     end
-  | _ -> failwith "intf value is not an option; did you type check the input?"
+  | ETuple [{ e = EVal { v = VBool b; _ }; _ }; o] -> if b then Some o else None
+  | _ ->
+    failwith
+      ("expected intf value to be an option but got " ^ Printing.exp_to_string intf_app)
+;;
+
+let update_preds interface partitioned_srp =
+  let intf_opt e = Option.bind interface (fun intfe -> interp_interface intfe e) in
+  { partitioned_srp with
+    inputs =
+      VertexMap.map
+        (fun input_exps ->
+          List.map
+            (fun input_exp -> { input_exp with pred = intf_opt input_exp.edge })
+            input_exps)
+        partitioned_srp.inputs
+  ; outputs =
+      VertexMap.map
+        (fun outputs -> List.map (fun (edge, _) -> edge, intf_opt edge) outputs)
+        partitioned_srp.outputs
+  }
 ;;
 
 (* Transform the given solve and return it along with a new expression to assert
@@ -251,27 +248,7 @@ let transform_solve solve (partition : SrpRemapping.partitioned_srp)
   =
   let ({ aty; var_names; init; trans; merge; interface; decomp } : solve) = solve in
   (* print_endline "in transform_solve"; *)
-  let intf_opt : Edge.t -> exp option =
-    match interface with
-    | Some intfe -> interp_interface intfe
-    | None -> fun (_ : Edge.t) -> None
-  in
-  (* Update the partitioned_srp instance with the interface information *)
-  let partition' =
-    { partition with
-      inputs =
-        VertexMap.map
-          (fun input_exps ->
-            List.map
-              (fun input_exp -> { input_exp with pred = intf_opt input_exp.edge })
-              input_exps)
-          partition.inputs
-    ; outputs =
-        VertexMap.map
-          (fun outputs -> List.map (fun (edge, _) -> edge, intf_opt edge) outputs)
-          partition.outputs
-    }
-  in
+  let partition' = update_preds interface partition in
   let attr_type = aty |> Option.get in
   (* NOTE: we don't perform any kind of verification that the decomposition is sound;
    * if we've got it, we use it! *)

@@ -30,23 +30,7 @@ let smt_query_file =
     lazy (open_out (file ^ "-" ^ string_of_int count ^ "-query"))
 ;;
 
-let run_smt_classic file cfg info decls fs =
-  let decls, fs =
-    let decls, f = map_decls_tuple UnboxEdges.unbox_declarations decls in
-    decls, f :: fs
-  in
-  let decls, fs =
-    SmtUtils.smt_config.unboxing <- true;
-    let decls, f1 =
-      Profile.time_profile "Unbox options" (fun () ->
-          map_decls_tuple UnboxOptions.unbox_declarations decls)
-    in
-    let decls, f2 =
-      Profile.time_profile "Flattening Tuples" (fun () ->
-          map_decls_tuple TupleFlatten.flatten_declarations decls)
-    in
-    decls, f2 :: f1 :: fs
-  in
+let run_smt_classic_aux file cfg info decls fs =
   let decls, fs =
     let decls, f = Renaming.alpha_convert_declarations_or_group decls in
     (*TODO: why are we renaming here?*)
@@ -142,6 +126,45 @@ let run_smt_classic file cfg info decls fs =
   | Some n -> solve_parallel n slices
 ;;
 
+let run_smt_classic file cfg info decls fs =
+  let decls, fs =
+    let decls, f = UnboxEdges.unbox_declarations decls in
+    decls, f :: fs
+  in
+  let decls, fs =
+    SmtUtils.smt_config.unboxing <- true;
+    let decls, f1 =
+      Profile.time_profile "Unbox options" (fun () ->
+          UnboxOptions.unbox_declarations decls)
+    in
+    let decls, f2 =
+      Profile.time_profile "Flattening Tuples" (fun () ->
+          TupleFlatten.flatten_declarations decls)
+    in
+    decls, f2 :: f1 :: fs
+  in
+  let decls =
+    if cfg.kirigami
+    then (
+      (* FIXME: this breaks ToEdge *)
+      (* NOTE: we partition after checking well-formedness so we can reuse edges that don't exist *)
+      let partitions = SrpRemapping.partition_declarations decls in
+      let decls =
+        Profile.time_profile "Partitioning" (fun () ->
+            List.map (fun p -> Partition.transform_declarations decls p) partitions)
+      in
+      List.map
+        (fun d ->
+          if cfg.print_partitions
+          then print_endline (Printing.declaration_groups_to_string d)
+          else ();
+          Grp d)
+        decls)
+    else [Decls decls]
+  in
+  List.map (fun d -> run_smt_classic_aux file cfg info d fs) decls
+;;
+
 let run_smt file cfg info decls fs =
   if cfg.finite_arith then SmtUtils.smt_config.infinite_arith <- false;
   if cfg.smt_parallel then SmtUtils.smt_config.parallel <- true;
@@ -165,6 +188,7 @@ let partialEvalDecls decls =
           ; merge = InterpPartial.interp_partial_opt r.merge
           ; interface =
               BatOption.map (fun i -> InterpPartial.interp_partial_opt i) r.interface
+          ; decomp = None (* don't need to keep? *)
           }
       | DRequire _ | DPartition _ | DNodes _ | DSymbolic _ | DUserTy _ | DEdges _ -> d)
     decls
@@ -173,18 +197,9 @@ let partialEvalDecls decls =
 let run_simulator cfg _ decls fs =
   (* It is important to partially evaluate before optimizing branches and before simulation. *)
   let decls =
-    Profile.time_profile "partial eval took:" (fun () -> map_decls partialEvalDecls decls)
+    Profile.time_profile "partial eval took:" (fun () -> partialEvalDecls decls)
   in
-  let decls, _ = map_decls_tuple OptimizeBranches.optimize_declarations decls in
-  (* TODO:  *)
-  let decls =
-    (* just use these declarations since the requires are ignored,
-     * and drop the guarantees since we generally can't prove them
-     * and the properties at the same time *)
-    match decls with
-    | Decls d -> d
-    | Grp g -> g.base @ g.prop
-  in
+  let decls, _ = OptimizeBranches.optimize_declarations decls in
   try
     let solution, q =
       match cfg.bound with
@@ -205,11 +220,11 @@ let run_simulator cfg _ decls fs =
       print_newline ();
       print_newline ());
     match solution.assertions with
-    | [] -> Success (Some solution), fs
+    | [] -> [Success (Some solution), fs]
     | lst ->
-      if List.for_all (fun b -> b) lst
-      then Success (Some solution), fs
-      else CounterExample solution, fs
+      [ (if List.for_all (fun b -> b) lst
+        then Success (Some solution), fs
+        else CounterExample solution, fs) ]
   with
   | Srp.Require_false -> Console.error "required conditions not satisfied"
 ;;
@@ -220,44 +235,17 @@ let run_compiled file _ _ decls fs =
   let name = Filename.basename path in
   let name = String.mapi (fun i c -> if i = 0 then Char.uppercase_ascii c else c) name in
   let newpath = name in
-  let decls =
-    (* TODO: we may want to consider other fields for this *)
-    match decls with
-    | Decls d -> d
-    | Grp g -> g.base @ g.prop
-  in
   let solution = Loader.simulate newpath decls in
   match solution.assertions with
-  | [] -> Success (Some solution), fs
+  | [] -> [Success (Some solution), fs]
   | lst ->
     if List.for_all (fun b -> b) lst
-    then Success (Some solution), fs
-    else CounterExample solution, fs
-;;
-
-let parse_input_aux cfg info file decls fs =
-  let decls, fs =
-    if cfg.unroll
-    then (
-      let decls, f =
-        (* unrolling maps *)
-        Profile.time_profile "Map unrolling" (fun () -> MapUnrolling.unroll info decls)
-      in
-      (* Inline again after unrolling. Could probably optimize this away during unrolling *)
-      let decls =
-        Profile.time_profile "Inlining" (fun () ->
-            map_decls Inline.inline_declarations decls)
-      in
-      (* (Typing.infer_declarations info decls, f :: fs) (* TODO: is type inf necessary here?*) *)
-      decls, f :: fs)
-    else decls, fs
-  in
-  cfg, info, file, decls, fs
+    then [Success (Some solution), fs]
+    else [CounterExample solution, fs]
 ;;
 
 let parse_input (args : string array)
-    : (Cmdline.t * Console.info * string * declarations_or_group * Solution.map_back list)
-    list
+    : Cmdline.t * Console.info * string * declarations * Solution.map_back list
   =
   let cfg, rest = argparse default "nv" args in
   Cmdline.set_cfg cfg;
@@ -279,7 +267,7 @@ let parse_input (args : string array)
     (* inlining definitions *)
     if cfg.inline
     then (
-      (* Note! Must rename before inling otherwise inling is unsound *)
+      (* Note! Must rename before inlining otherwise inlining is unsound *)
       let decls, f = Renaming.alpha_convert_declarations decls in
       let decls, fs =
         ( Profile.time_profile "Inlining" (fun () ->
@@ -290,24 +278,21 @@ let parse_input (args : string array)
       Typing.infer_declarations info decls, fs)
     else decls, fs
   in
-  if cfg.kirigami
-  then (
-    (* FIXME: this breaks ToEdge *)
-    (* NOTE: we partition after checking well-formedness so we can reuse edges that don't exist *)
-    let partitions = SrpRemapping.partition_declarations decls in
-    let decls =
-      Profile.time_profile "Partitioning" (fun () ->
-          List.map (fun p -> Partition.transform_declarations decls p) partitions)
-    in
-    let decls =
-      List.map
-        (fun d ->
-          if cfg.print_partitions
-          then print_endline (Printing.declaration_groups_to_string d)
-          else ();
-          Grp d)
-        decls
-    in
-    List.map (fun d -> parse_input_aux cfg info file d fs) decls)
-  else [parse_input_aux cfg info file (Decls decls) fs]
+  let decls, fs =
+    if cfg.unroll
+    then (
+      let decls, f =
+        (* unrolling maps *)
+        Profile.time_profile "Map unrolling" (fun () ->
+            MapUnrolling.unroll_decls info decls)
+      in
+      (* Inline again after unrolling. Could probably optimize this away during unrolling *)
+      let decls =
+        Profile.time_profile "Inlining" (fun () -> Inline.inline_declarations decls)
+      in
+      (* (Typing.infer_declarations info decls, f :: fs) (* TODO: is type inf necessary here?*) *)
+      decls, f :: fs)
+    else decls, fs
+  in
+  cfg, info, file, decls, fs
 ;;
