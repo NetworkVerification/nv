@@ -20,9 +20,8 @@ let maplist_to_string (lst : maplist) =
 let add_key mty symbolics (const_keys, symb_keys) keyo =
   match keyo with
   | None -> const_keys, symb_keys
-  | Some { e = EVar var }
-    when BatList.mem_cmp Nv_datastructures.Var.compare var symbolics ->
-    const_keys, VarSet.add var symb_keys
+  | Some { e = EVar var } when BatList.mem_cmp Nv_datastructures.Var.compare var symbolics
+    -> const_keys, VarSet.add var symb_keys
   | Some key ->
     if is_value key
     then ExpSet.add key const_keys, symb_keys
@@ -65,8 +64,7 @@ let rec collect_in_ty symbolics ty acc =
   | TVar _ | QVar _ -> failwith "collect_in_ty: bad ty"
 ;;
 
-let rec collect_in_exp (symbolics : var list) (exp : Syntax.exp) (acc : maplist)
-    : maplist
+let rec collect_in_exp (symbolics : var list) (exp : Syntax.exp) (acc : maplist) : maplist
   =
   (* print_endline @@ "Collecting in expr " ^ Printing.exp_to_string exp; *)
   let curr_ty =
@@ -91,8 +89,7 @@ let rec collect_in_exp (symbolics : var list) (exp : Syntax.exp) (acc : maplist)
     BatList.fold_left (BatPervasives.flip collect_in_exp) acc es
   | EFun f -> collect_in_exp f.body acc
   | ELet (_, e1, e2) | EApp (e1, e2) -> acc |> collect_in_exp e1 |> collect_in_exp e2
-  | EIf (e1, e2, e3) ->
-    acc |> collect_in_exp e1 |> collect_in_exp e2 |> collect_in_exp e3
+  | EIf (e1, e2, e3) -> acc |> collect_in_exp e1 |> collect_in_exp e2 |> collect_in_exp e3
   | ETuple es -> BatList.fold_left (BatPervasives.flip collect_in_exp) acc es
   | ERecord map -> StringMap.fold (fun _ -> collect_in_exp) map acc
   | EProject _ -> failwith ""
@@ -121,10 +118,15 @@ let collect_in_decl (symbolics : var list) (d : declaration) (acc : maplist) : m
   | DAssert exp | DPartition exp (* partitioning *) | DRequire exp ->
     collect_in_exp exp acc
   | DSolve { var_names; init; trans; merge; interface; decomp; _ } ->
-    let explist = match decomp with
+    let explist =
+      match decomp with
       | Some (lt, rt) -> [interface; lt; rt]
-      | None -> [interface] in
-    List.fold_right collect_in_exp ([var_names; init; trans; merge] @ List.filter_map (fun e -> e) explist) acc
+      | None -> [interface]
+    in
+    List.fold_right
+      collect_in_exp
+      ([var_names; init; trans; merge] @ List.filter_map (fun e -> e) explist)
+      acc
   | DNodes _ | DEdges _ -> acc
 ;;
 

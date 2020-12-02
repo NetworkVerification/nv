@@ -401,6 +401,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
       | Some (lt, rt) -> lt, rt
       | None -> Some etrans, None
     in
+    (* construct the output constants *)
     AdjGraph.VertexMap.iter
       (fun v outputs ->
         List.iter
@@ -414,6 +415,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
               ((i, j), pred))
           outputs)
       outputs;
+    (* construct the input constants *)
     AdjGraph.VertexMap.iter
       (fun v inputs ->
         List.iter
@@ -478,6 +480,23 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
             merge_result)
           init
           in_edges
+      in
+      let merged =
+        BatList.fold_left
+          (fun prev_result input ->
+            incr idx;
+            let str = Printf.sprintf "merge%d-%d-%d" count i !idx in
+            let merge_result, x = encode_z3_merge str env emerge_i in
+            let input_list = to_list input in
+            let prev_result_list = to_list prev_result in
+            BatList.iter2
+              (fun y x -> SmtUtils.add_constraint env (mk_term (mk_eq y.t x.t)))
+              (prev_result_list @ input_list)
+              x;
+            merge_result)
+          merged
+          (* TODO: produce a list of input SMT terms to merge *)
+          []
       in
       let lbl_iv = label_vars.(i) in
       add_symbolic env lbl_iv (Ty aty);

@@ -6,8 +6,8 @@ open Syntax
 open Nv_interpreter
 open SrpRemapping
 
-let node_to_exp n = e_val (vnode n)
-let edge_to_exp e = e_val (vedge e)
+let node_to_exp n = annot TNode (e_val (vnode n))
+let edge_to_exp e = annot TEdge (e_val (vedge e))
 let node_to_pat node = exp_to_pattern (node_to_exp node)
 let edge_to_pat edge = exp_to_pattern (edge_to_exp edge)
 
@@ -43,7 +43,7 @@ let match_of_edge_map (m : Edge.t option EdgeMap.t) b =
 (* Apply and partially interpret the given transfer function t on the given edge e and attribute value x. *)
 let apply_trans ty e t x =
   let u, v = e in
-  let trans_app = apps t [annot TNode (node_to_exp u); annot TNode (node_to_exp v)] in
+  let trans_app = apps t [node_to_exp u; node_to_exp v] in
   let trans_curried = annot (TArrow (ty, ty)) trans_app in
   (* partially interpret the transfer function *)
   InterpPartialFull.interp_partial (annot ty (eapp trans_curried x))
@@ -70,10 +70,7 @@ let transform_init (init : exp) (trans : exp option) (merge : exp) ty parted_srp
     in
     (* perform the merge function, using the given node and its current value with the input variable *)
     let curried_node =
-      interp
-        (annot
-           (TArrow (TArrow (ty, ty), ty))
-           (eapp merge (annot TNode (node_to_exp node))))
+      interp (annot (TArrow (TArrow (ty, ty), ty)) (eapp merge (node_to_exp node)))
     in
     let curried_node_exp = annot (TArrow (ty, ty)) (eapp curried_node node_exp) in
     interp (wrap node_exp (eapp curried_node_exp trans_input_exp))
@@ -82,7 +79,7 @@ let transform_init (init : exp) (trans : exp option) (merge : exp) ty parted_srp
    * is needed to interpret the old function *)
   let map_nodes new_node old_node =
     let interp_old_node =
-      InterpPartialFull.interp_partial_fun init [node_to_exp old_node]
+      annot ty (InterpPartialFull.interp_partial_fun init [node_to_exp old_node])
     in
     match VertexMap.Exceptionless.find new_node inputs with
     | Some input_nodes ->
@@ -151,12 +148,13 @@ let add_output_pred
     (attr : ty)
     (sol : exp)
     (n : Vertex.t)
-    (base_nodes : int)
-    (edge, pred)
+    (* (base_nodes : int) *)
+      (edge, pred)
     acc
   =
   (* FIXME: figure out what this is after map unrolling *)
-  let sol_x = annot attr (eop (TGet (base_nodes, n, n)) [sol]) in
+  let sol_x = annot attr (eop MGet [sol; node_to_exp n]) in
+  (* let sol_x = annot attr (eop (TGet (base_nodes, n, n)) [sol]) in *)
   match pred with
   | Some p ->
     InterpPartialFull.interp_partial
@@ -175,12 +173,12 @@ let outputs_assert
     (parted_srp : SrpRemapping.partitioned_srp)
     : exp list
   =
-  let ({ outputs; node_map; _ } : SrpRemapping.partitioned_srp) = parted_srp in
+  let ({ outputs; _ } : SrpRemapping.partitioned_srp) = parted_srp in
   (* re-map every output to point to its corresponding predicate *)
-  let base_nodes = VertexMap.cardinal node_map in
+  (* let base_nodes = VertexMap.cardinal node_map in *)
   let add_preds n outputs acc =
     List.fold_left
-      (fun acc output -> add_output_pred trans attr sol n base_nodes output acc)
+      (fun acc output -> add_output_pred trans attr sol n output acc)
       acc
       outputs
   in
@@ -260,6 +258,7 @@ let transform_solve solve (partition : SrpRemapping.partitioned_srp)
     (* default behaviour: perform the transfer on the output side *)
     | None -> Some trans, None
   in
+  (* TODO: instead of transforming here, remap the expressions *)
   let init' = transform_init init intrans merge attr_type partition' in
   let trans' = transform_trans trans attr_type partition' in
   let merge' = transform_merge merge attr_type partition' in

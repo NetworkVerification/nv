@@ -278,8 +278,9 @@ let rec match_branches branches v =
     strict sense. It will just do function applications over
     expressions, not just values.*)
 let rec interp_exp_partial (env : Syntax.exp Env.t) e =
+  (* print_endline ("interpreting exp: " ^ Printing.exp_to_string e); *)
   match e.e with
-  | ETy (e, _) -> interp_exp_partial env e
+  | ETy (e, t) -> env, aexp (ety (snd (interp_exp_partial env e)) t, e.ety, e.espan)
   | EVar x ->
     (match Env.lookup_opt env x with
     | None -> env, e
