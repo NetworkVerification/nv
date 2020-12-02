@@ -32,32 +32,32 @@ let value_transformer (part_srp : partitioned_srp) _ v =
 
 let remove_exps part_srp (recursors : Transformers.recursors) e =
   let removeExp = recursors.recurse_exp in
-  let removed_nodes =
-    VertexMap.fold
-      (fun u v l ->
-        match v with
-        | Some _ -> l
-        | None -> u :: l)
-      part_srp.node_map
-      []
-  in
-  let cut_from_srp pat =
-    match pat with
-    | PEdge (PNode u, PNode v) -> List.mem u removed_nodes || List.mem v removed_nodes
-    | PNode u -> List.mem u removed_nodes
-    | _ -> false
-  in
   let update_branches old_bs =
     foldBranches
-      (fun (p, e) new_bs ->
-        if cut_from_srp p then new_bs else addBranch p (removeExp e) new_bs)
-      emptyBranch
+      (fun (p, e) bs ->
+        match p with
+        | PEdge (PNode n1, PNode n2) ->
+          let n1' = VertexMap.find_default None n1 part_srp.node_map in
+          let n2' = VertexMap.find_default None n2 part_srp.node_map in
+          (match n1', n2' with
+          | Some u, Some v -> (PEdge (PNode u, PNode v), removeExp e) :: bs
+          | _ -> bs)
+        | PNode u ->
+          (match VertexMap.find_default None u part_srp.node_map with
+          | Some u' -> (PNode u', removeExp e) :: bs
+          | None -> bs)
+        | _ -> (p, removeExp e) :: bs)
+      []
       old_bs
   in
   match e.e with
   | EMatch (e1, bs) ->
-    let bs' = update_branches bs in
-    Some (ematch (removeExp e1) (optimizeBranches bs'))
+    let pat_exps = update_branches bs in
+    (* put the branches back in the same order by going from the back *)
+    let branches =
+      List.fold_right (fun (p, e) b -> addBranch p e b) pat_exps emptyBranch
+    in
+    Some (ematch (removeExp e1) (optimizeBranches branches))
   | _ -> None
 ;;
 
