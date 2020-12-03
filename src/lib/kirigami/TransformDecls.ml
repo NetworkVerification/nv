@@ -241,6 +241,14 @@ let update_preds interface partitioned_srp =
   }
 ;;
 
+let transform_var_names var_names partitioned_srp =
+  (* TODO: eliminate certain var_names elements, depending on what the type is *)
+  match Option.get var_names.ety with
+  | TVar _ -> var_names
+  | TTuple ts -> var_names
+  | _ -> failwith "unexpected type"
+;;
+
 (* Transform the given solve and return it along with a new expression to assert
  * and new expressions to require. *)
 let transform_solve solve (partition : SrpRemapping.partitioned_srp)
