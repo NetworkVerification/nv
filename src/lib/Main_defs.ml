@@ -292,6 +292,15 @@ let parse_input (args : string array)
       (* FIXME: this breaks ToEdge *)
       (* NOTE: we partition after checking well-formedness so we can reuse edges that don't exist *)
       let partitions = SrpRemapping.partition_declarations decls in
+      (* let decls_fs =
+       *   List.map
+       *     (fun p ->
+       *       let decls, f = RemapSRP.remap_declarations p decls in
+       *       p, decls, f :: fs)
+       *     partitions *)
+      (* in *)
+      (* FIXME: remapping before partitioning messes up the order of operations;
+       * want to essentially remap within partitioning? *)
       let decls =
         Profile.time_profile "Partitioning" (fun () ->
             List.map (fun p -> Partition.transform_declarations decls p) partitions)

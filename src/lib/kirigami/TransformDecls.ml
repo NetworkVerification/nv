@@ -11,6 +11,88 @@ let edge_to_exp e = annot TEdge (e_val (vedge e))
 let node_to_pat node = exp_to_pattern (node_to_exp node)
 let edge_to_pat edge = exp_to_pattern (edge_to_exp edge)
 
+let rec remap_pattern parted_srp p =
+  let { node_map; edge_map; _ } = parted_srp in
+  match p with
+  | POption (Some p) -> POption (Some (remap_pattern parted_srp p))
+  | PTuple ps -> PTuple (List.map (remap_pattern parted_srp) ps)
+  | PNode n ->
+    let node = VertexMap.find_default None n node_map in
+    (match node with
+    | Some n -> PNode n
+    | None ->
+      failwith ("pattern " ^ Printing.pattern_to_string p ^ " should have been cut!"))
+  | PEdge (PNode n1, PNode n2) ->
+    let edge = EdgeMap.find_default None (n1, n2) edge_map in
+    (match edge with
+    | Some (n1, n2) -> PEdge (PNode n1, PNode n2)
+    | None ->
+      failwith ("pattern " ^ Printing.pattern_to_string p ^ " should have been cut!"))
+  | _ -> p
+;;
+
+let remap_value parted_srp v =
+  let { node_map; edge_map; _ } = parted_srp in
+  let make_node n = avalue (vnode n, Some TNode, v.vspan) in
+  let make_edge e = avalue (vedge e, Some TEdge, v.vspan) in
+  match v.v with
+  | VNode n ->
+    let new_node = VertexMap.find_default None n node_map in
+    (match new_node with
+    | Some n -> make_node n
+    | None -> failwith ("value " ^ Printing.value_to_string v ^ " should be cut!"))
+  | VEdge e ->
+    let new_edge = EdgeMap.find_default None e edge_map in
+    (match new_edge with
+    | Some e -> make_edge e
+    | None -> failwith ("value " ^ Printing.value_to_string v ^ " should be cut!"))
+  | _ -> v
+;;
+
+let rec remap_exp parted_srp e =
+  let f = remap_exp parted_srp in
+  let { node_map; _ } = parted_srp in
+  let update_branches old_bs =
+    foldBranches
+      (fun (p, e) bs ->
+        match p with
+        | PEdge (PNode n1, PNode n2) ->
+          let n1' = VertexMap.find_default None n1 node_map in
+          let n2' = VertexMap.find_default None n2 node_map in
+          (match n1', n2' with
+          | Some u, Some v -> (PEdge (PNode u, PNode v), f e) :: bs
+          | _ -> bs)
+        | PNode u ->
+          (match VertexMap.find_default None u node_map with
+          | Some u' -> (PNode u', f e) :: bs
+          | None -> bs)
+        | _ -> (p, f e) :: bs)
+      []
+      old_bs
+  in
+  wrap
+    e
+    (match e.e with
+    | EMatch (e1, bs) ->
+      let pat_exps = update_branches bs in
+      (* put the branches back in the same order by going from the back *)
+      let branches =
+        List.fold_right (fun (p, e) b -> addBranch p e b) (List.rev pat_exps) emptyBranch
+      in
+      ematch (f e1) (optimizeBranches branches)
+    | EVal v -> e_val (remap_value parted_srp v)
+    | EOp (op, es) -> eop op (List.map f es)
+    | ESome e -> esome (f e)
+    | ETuple es -> etuple (List.map f es)
+    | EProject (e, l) -> eproject (f e) l
+    | EFun fn -> efun { fn with body = f fn.body }
+    | EApp (e1, e2) -> eapp (f e1) (f e2)
+    | ELet (x, e1, e2) -> elet x (f e1) (f e2)
+    | EIf (test, e1, e2) -> eif (f test) (f e1) (f e2)
+    | ERecord _ -> failwith "remap_exp: records should be unrolled"
+    | ETy _ | EVar _ -> e)
+;;
+
 (* Create an annotated match statement *)
 let amatch v t b = annot t (ematch (aexp (evar v, Some t, Span.default)) b)
 
@@ -267,9 +349,12 @@ let transform_solve solve (partition : SrpRemapping.partitioned_srp)
     | None -> Some trans, None
   in
   (* TODO: instead of transforming here, remap the expressions *)
-  let init' = transform_init init intrans merge attr_type partition' in
-  let trans' = transform_trans trans attr_type partition' in
-  let merge' = transform_merge merge attr_type partition' in
+  let init = remap_exp partition' init in
+  let trans = remap_exp partition' trans in
+  let merge = remap_exp partition' merge in
+  (* let init = transform_init init intrans merge attr_type partition' in
+   * let trans = transform_trans trans attr_type partition' in
+   * let merge = transform_merge merge attr_type partition' in *)
   let assertions = outputs_assert outtrans var_names attr_type partition' in
   (* collect require and symbolic information *)
   let add_requires _ input_exps (m, l) =
@@ -289,12 +374,12 @@ let transform_solve solve (partition : SrpRemapping.partitioned_srp)
   in
   let reqs, symbolics = VertexMap.fold add_requires partition'.inputs (Map.empty, []) in
   ( { solve with
-      init = init'
-    ; trans = trans'
-    ; merge = merge'
+      init
+    ; trans
+    ; merge
     ; (* should this be erased, or kept as reference? *)
       interface = None
-    ; decomp = None
+    ; decomp
     }
   , assertions
   , symbolics

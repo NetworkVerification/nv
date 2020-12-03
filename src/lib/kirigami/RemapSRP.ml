@@ -3,6 +3,7 @@ open Batteries
 open SrpRemapping
 open Nv_datastructures.AdjGraph
 open Nv_transformations
+open Nv_lang
 
 let ty_transformer _ t = Some t
 
@@ -87,6 +88,15 @@ let make_toplevel
     mask_transformer
 ;;
 
-let remap_declarations part_srp =
-  make_toplevel part_srp Transformers.transform_declarations
+let remap_declarations part_srp ds =
+  let ds', f = make_toplevel part_srp Transformers.transform_declarations ds in
+  (* revert any changes to the decomp field *)
+  ( List.map2
+      (fun oldd newd ->
+        match oldd, newd with
+        | DSolve s1, DSolve s2 -> DSolve { s2 with decomp = s1.decomp }
+        | _ -> newd)
+      ds
+      ds'
+  , f )
 ;;

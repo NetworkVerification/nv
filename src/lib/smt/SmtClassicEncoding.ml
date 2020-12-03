@@ -35,7 +35,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     (* add the require clauses *)
     BatList.iter
       (fun e ->
-        print_endline ("Encoding symbolic exp: " ^ Printing.exp_to_string e);
+        (* print_endline ("Encoding symbolic exp: " ^ Printing.exp_to_string e); *)
         let es = encode_exp_z3 "" env e in
         ignore (lift1 (fun e -> SmtUtils.add_constraint env e) es))
       requires
@@ -250,8 +250,8 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
    * hypothesis.
    * Return the transfer result to be used by the node's merge.
    *)
-  let encode_kirigami_input str env trans node aty input_exp =
-    let hyps = create_strings (Var.name input_exp.var) aty in
+  let encode_kirigami_input str env trans hyp input_exp =
+    (* let hyps = create_strings (Var.name input_exp.var) aty in *)
     (* create constants for the hypothesis *)
     let trans =
       match trans with
@@ -259,13 +259,21 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
       | None -> failwith "TODO"
     in
     let enc_z3_trans = encode_z3_trans trans in
-    match input_exp.pred with
-    | Some pred ->
-      let pred, x, pred_es = encode_predicate str env pred in
-      (* don't add the constraint right away, since we want to control whether
-       * we're doing so during initial checking or safety checking *)
-      ()
-    | None -> ()
+    (* match input_exp.pred with
+     * | Some pred ->
+     *   let pred, px, pred_es = encode_predicate str env pred in *)
+    (* don't add the constraint right away, since we want to control whether
+     * we're doing so during initial checking or safety checking *)
+    let i, j = input_exp.edge in
+    let node_value n = avalue (vnode n, Some TNode, Span.default) in
+    let edge = [node_value i; node_value j] in
+    let trans, tx = enc_z3_trans edge (Printf.sprintf "trans-%s" str) env in
+    (* TODO: set the predicate arguments to the hypotheses *)
+    BatList.iter2
+      (fun x y -> SmtUtils.add_constraint env (mk_term (mk_eq x.t y.t)))
+      tx
+      hyp;
+    Some trans
   ;;
 
   (* Encode the given node's output expression.
@@ -273,20 +281,22 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
    * solution variable.
    * Add a constraint for the transfer result for the predicate.
    *)
-  let encode_kirigami_output str env trans node sol (old_edge, pred) =
+  let encode_kirigami_output str env trans old_edge label =
     let trans =
       match trans with
       | Some e -> e
       | None -> failwith "TODO"
     in
     let enc_z3_trans = encode_z3_trans trans in
-    let pred =
-      match pred with
-      | Some e -> e
-      | None -> failwith "TODO"
-    in
-    let pred, x, pred_es = encode_predicate str env pred in
-    ()
+    let i, j = old_edge in
+    let node_value n = avalue (vnode n, Some TNode, Span.default) in
+    let edge = [node_value i; node_value j] in
+    let trans, tx = enc_z3_trans edge (Printf.sprintf "trans-%s" str) env in
+    BatList.iter2
+      (fun e result -> SmtUtils.add_constraint env (mk_term (mk_eq result.t e.t)))
+      tx
+      (to_list label);
+    trans
   ;;
 
   let encode_z3_interface env aty labels interface partitioned_srp =
@@ -401,35 +411,22 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
       | Some (lt, rt) -> lt, rt
       | None -> Some etrans, None
     in
-    (* construct the output constants *)
-    AdjGraph.VertexMap.iter
-      (fun v outputs ->
-        List.iter
-          (fun ((i, j), pred) ->
-            encode_kirigami_output
-              (Printf.sprintf "output%d-%d-%d" count i j)
-              env
-              eouttrans
-              v
-              label_vars.(v)
-              ((i, j), pred))
-          outputs)
-      outputs;
     (* construct the input constants *)
-    AdjGraph.VertexMap.iter
-      (fun v inputs ->
-        List.iter
-          (fun input_exp ->
-            let i, j = input_exp.edge in
-            encode_kirigami_input
-              (Printf.sprintf "input%d-%d-%d" count i j)
-              env
-              eintrans
-              v
-              aty
-              input_exp)
-          inputs)
-      inputs;
+    let input_map =
+      AdjGraph.VertexMap.mapi
+        (fun v inputs ->
+          List.filter_map
+            (fun input_exp ->
+              let i, j = input_exp.edge in
+              encode_kirigami_input
+                (Printf.sprintf "input%d-%d-%d" count i j)
+                env
+                eintrans
+                [] (* FIXME: change to a hypothesis term *)
+                input_exp)
+            inputs)
+        inputs
+    in
     let enc_z3_trans = encode_z3_trans etrans in
     AdjGraph.iter_edges_e
       (fun (i, j) ->
@@ -462,7 +459,6 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
       let emerge_i = InterpPartial.interp_partial_fun emerge [node] in
       (* Printf.printf "merge after interp:\n%s\n\n" (Printing.exp_to_string emerge_i);
        * failwith "bla"; *)
-      (* TODO: encode the inputs merged in at the node *)
       let idx = ref 0 in
       let merged =
         BatList.fold_left
@@ -485,7 +481,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
         BatList.fold_left
           (fun prev_result input ->
             incr idx;
-            let str = Printf.sprintf "merge%d-%d-%d" count i !idx in
+            let str = Printf.sprintf "merge-input%d-%d-%d" count i !idx in
             let merge_result, x = encode_z3_merge str env emerge_i in
             let input_list = to_list input in
             let prev_result_list = to_list prev_result in
@@ -496,7 +492,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
             merge_result)
           merged
           (* TODO: produce a list of input SMT terms to merge *)
-          []
+          (AdjGraph.VertexMap.find i input_map)
       in
       let lbl_iv = label_vars.(i) in
       add_symbolic env lbl_iv (Ty aty);
@@ -510,6 +506,22 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
            merged);
       labelling.(i) <- l
     done;
+    (* construct the output constants *)
+    (* TODO: add predicate constraints on outputs *)
+    let output_map =
+      AdjGraph.VertexMap.mapi
+        (fun v outputs ->
+          List.map
+            (fun ((i, j), _) ->
+              encode_kirigami_output
+                (Printf.sprintf "output%d-%d-%d" count i j)
+                env
+                eouttrans
+                (i, j)
+                labelling.(v))
+            outputs)
+        outputs
+    in
     (* Propagate labels across edges outputs *)
     AdjGraph.EdgeMap.iter
       (fun (i, _) x ->
@@ -631,18 +643,6 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
           (to_list label)
           x)
       !trans_input_map
-  ;;
-
-  let add_output_constraints env outputs xs =
-    (* add the output predicates *)
-    BatList.iter
-      (fun (_, o) ->
-        match o with
-        | Some e ->
-          let es = encode_exp_z3 "" env e in
-          ignore (lift1 (fun e -> SmtUtils.add_constraint env e) es)
-        | None -> ())
-      outputs
   ;;
 
   let encode_z3 (decls : Syntax.declarations) : SmtUtils.smt_env =
