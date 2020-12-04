@@ -93,6 +93,26 @@ let rec remap_exp parted_srp e =
     | ETy _ | EVar _ -> e)
 ;;
 
+let remap_solve parted_srp solve =
+  let init = remap_exp parted_srp solve.init in
+  let trans = remap_exp parted_srp solve.trans in
+  let merge = remap_exp parted_srp solve.merge in
+  { solve with init; trans; merge }
+;;
+
+let remap_assert _parted_srp e =
+  wrap
+    e
+    (match e.e with
+    | EOp (op, _es) ->
+      (match op with
+      | TGet (_size, _lo, _hi) ->
+        (* TODO: remap to true if the accessed term is a cut node *)
+        e
+      | _ -> e)
+    | _ -> e)
+;;
+
 (* Create an annotated match statement *)
 let amatch v t b = annot t (ematch (aexp (evar v, Some t, Span.default)) b)
 
@@ -331,6 +351,27 @@ let transform_var_names var_names partitioned_srp =
   | _ -> failwith "unexpected type"
 ;;
 
+let collect_requires_and_symbolics ty partition
+    : (exp, int) Map.t * (var * ty_or_exp) list
+  =
+  let add_requires _ input_exps (m, l) =
+    List.fold_left
+      (fun (m, l) { var; rank; pred; _ } ->
+        ( (match pred with
+          | Some p ->
+            Map.add
+              (InterpPartialFull.interp_partial
+                 (annot TBool (eapp p (annot ty (evar var)))))
+              rank
+              m
+          | None -> m)
+        , (var, Ty ty) :: l ))
+      (m, l)
+      input_exps
+  in
+  VertexMap.fold add_requires partition.inputs (Map.empty, [])
+;;
+
 (* Transform the given solve and return it along with a new expression to assert
  * and new expressions to require. *)
 let transform_solve solve (partition : SrpRemapping.partitioned_srp)
@@ -348,31 +389,16 @@ let transform_solve solve (partition : SrpRemapping.partitioned_srp)
     (* default behaviour: perform the transfer on the output side *)
     | None -> Some trans, None
   in
-  (* TODO: instead of transforming here, remap the expressions *)
   let init = remap_exp partition' init in
   let trans = remap_exp partition' trans in
   let merge = remap_exp partition' merge in
   (* let init = transform_init init intrans merge attr_type partition' in
    * let trans = transform_trans trans attr_type partition' in
    * let merge = transform_merge merge attr_type partition' in *)
+  (* TODO: don't add this yet *)
   let assertions = outputs_assert outtrans var_names attr_type partition' in
   (* collect require and symbolic information *)
-  let add_requires _ input_exps (m, l) =
-    List.fold_left
-      (fun (m, l) { var; rank; pred; _ } ->
-        ( (match pred with
-          | Some p ->
-            Map.add
-              (InterpPartialFull.interp_partial
-                 (annot TBool (eapp p (annot attr_type (evar var)))))
-              rank
-              m
-          | None -> m)
-        , (var, Ty attr_type) :: l ))
-      (m, l)
-      input_exps
-  in
-  let reqs, symbolics = VertexMap.fold add_requires partition'.inputs (Map.empty, []) in
+  let reqs, symbolics = collect_requires_and_symbolics attr_type partition' in
   ( { solve with
       init
     ; trans

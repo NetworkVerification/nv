@@ -47,6 +47,11 @@ let run_smt_classic file cfg info decls fs =
     in
     decls, f2 :: f1 :: fs
   in
+  (* NOTE: debugging *)
+  print_endline
+    (match decls with
+    | Decls d -> Printing.declarations_to_string d
+    | Grp g -> Printing.declaration_groups_to_string g);
   let decls, fs =
     let decls, f = Renaming.alpha_convert_declarations_or_group decls in
     (*TODO: why are we renaming here?*)
