@@ -28,9 +28,11 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
         let names = create_vars env "" v in
         let sort = SmtUtils.ty_to_sort (Syntax.get_ty_from_tyexp e) in
         let symb = mk_constant env names sort ~cdescr:"Symbolic variable decl" in
-        match sort with
+        (* integers are set to be non-negative *)
+        (match sort with
         | IntSort -> SmtUtils.add_constraint env (mk_term (mk_leq (mk_int 0) symb.t))
         | _ -> ())
+      )
       sym_vars;
     (* add the require clauses *)
     BatList.iter
@@ -40,6 +42,32 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
         ignore (lift1 (fun e -> SmtUtils.add_constraint env e) es))
       requires
   ;;
+
+  let add_assertions env assertions count =
+    match assertions with
+    | [] -> ()
+    | _ ->
+      let assert_vars =
+        List.map
+          (fun eassert ->
+            count := !count + 1;
+            (* print_endline (Printing.exp_to_string eassert); *)
+            let z3_assert = encode_exp_z3 "" env eassert |> to_list |> List.hd in
+            let assert_var =
+              mk_constant env (Printf.sprintf "assert-%d" !count) (ty_to_sort TBool)
+            in
+            SmtUtils.add_constraint env (mk_term (mk_eq assert_var.t z3_assert.t));
+            assert_var)
+          assertions
+      in
+      let all_good =
+        List.fold_left
+          (fun acc v -> mk_and acc v.t)
+          (List.hd assert_vars).t
+          (List.tl assert_vars)
+      in
+      SmtUtils.add_constraint env (mk_term (mk_not all_good))
+        ;;
 
   let encode_z3_merge str env merge =
     let rec loop merge acc =
@@ -243,129 +271,98 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     results, xstr, es
   ;;
 
-  (* Encode the given node's input expression.
-   * Create a symbolic constant for a hypothesis,
-   * and add a constraint for the predicate for that hypothesis.
-   * Create a constant for the transfer result for that
-   * hypothesis.
-   * Return the transfer result to be used by the node's merge.
-   *)
-  let encode_kirigami_input str env trans hyp input_exp =
-    (* let hyps = create_strings (Var.name input_exp.var) aty in *)
-    (* create constants for the hypothesis *)
-    let trans =
-      match trans with
-      | Some e -> e
-      | None -> failwith "TODO"
-    in
-    let enc_z3_trans = encode_z3_trans trans in
-    (* match input_exp.pred with
-     * | Some pred ->
-     *   let pred, px, pred_es = encode_predicate str env pred in *)
-    (* don't add the constraint right away, since we want to control whether
-     * we're doing so during initial checking or safety checking *)
-    let i, j = input_exp.edge in
-    let node_value n = avalue (vnode n, Some TNode, Span.default) in
-    let edge = [node_value i; node_value j] in
-    let trans, tx = enc_z3_trans edge (Printf.sprintf "trans-%s" str) env in
-    (* TODO: set the predicate arguments to the hypotheses *)
-    BatList.iter2
-      (fun x y -> SmtUtils.add_constraint env (mk_term (mk_eq x.t y.t)))
-      tx
-      hyp;
-    Some trans
-  ;;
+  (* Encode the transfer of the given variable across the input/output
+   * decomposed transfer function. *)
+  let encode_kirigami_decomp str env optrans edge var =
+    match optrans with
+    | Some exp ->
+      let enc_z3_trans = encode_z3_trans exp in
+      let i, j = edge in
+      let node_value n = avalue (vnode n, Some TNode, Span.default) in
+      let edge = [node_value i; node_value j] in
+      let trans, tx = enc_z3_trans edge (Printf.sprintf "trans-%s" str) env in
+      BatList.iter2
+        (fun e result -> SmtUtils.add_constraint env (mk_term (mk_eq result.t e.t)))
+        tx
+        (to_list var);
+      trans
+    | None -> var
 
-  (* Encode the given node's output expression.
-   * Create a constant for the transfer result for the node's
-   * solution variable.
-   * Add a constraint for the transfer result for the predicate.
-   *)
-  let encode_kirigami_output str env trans old_edge label =
-    let trans =
-      match trans with
-      | Some e -> e
-      | None -> failwith "TODO"
-    in
-    let enc_z3_trans = encode_z3_trans trans in
-    let i, j = old_edge in
-    let node_value n = avalue (vnode n, Some TNode, Span.default) in
-    let edge = [node_value i; node_value j] in
-    let trans, tx = enc_z3_trans edge (Printf.sprintf "trans-%s" str) env in
-    BatList.iter2
-      (fun e result -> SmtUtils.add_constraint env (mk_term (mk_eq result.t e.t)))
-      tx
-      (to_list label);
-    trans
-  ;;
+  (* let encode_z3_interface env aty labels interface partitioned_srp =
+   *   (\* get edge argument*\)
+   *   let ex1, ex2, ex1ty, ex2ty, interface =
+   *     match interface.e with
+   *     | EFun { arg = ex1; argty = Some ex1ty; body = exp; _ } ->
+   *       (match exp.e with
+   *       | EFun { arg = ex2; argty = Some ex2ty; body = exp; _ } ->
+   *         ex1, ex2, ex1ty, ex2ty, exp
+   *       | _ -> failwith "Expected a function")
+   *     | _ -> failwith "Expected a function"
+   *   in
+   *   let get_pred edge =
+   *     let p = InterpPartial.interp_partial_fun interface edge in
+   *     match p.e with
+   *     | ESome exp -> Some exp
+   *     | EVal { v = VOption o; _ } ->
+   *       (match o with
+   *       | Some _ -> failwith "got a some value, which I didn't expect"
+   *       | None -> None)
+   *     | ETuple [{ e = EVal { v = VBool b; _ }; _ }; p] -> if b then Some p else None
+   *     | _ -> failwith "got a non-option, which I didn't expect"
+   *   in
+   *   let node_value n = avalue (vnode n, Some Typing.node_ty, Span.default) in
+   *   let edge_to_exps (i, j) =
+   *     if SmtUtils.smt_config.unboxing
+   *     then [node_value i; node_value j]
+   *     else
+   *       [ avalue
+   *           ( vtuple [node_value i; node_value j]
+   *           , Some (TTuple [TNode; TNode])
+   *           , Span.default ) ]
+   *   in
+   *   let partitioned_srp =
+   *     { partitioned_srp with
+   *       inputs =
+   *         AdjGraph.VertexMap.map
+   *           (fun input_exps ->
+   *             List.map
+   *               (fun e -> { e with pred = get_pred (edge_to_exps e.edge) })
+   *               input_exps)
+   *           partitioned_srp.inputs
+   *     ; outputs =
+   *         AdjGraph.VertexMap.map
+   *           (fun outputs ->
+   *             List.map (fun (edge, _) -> edge, get_pred (edge_to_exps edge)) outputs)
+   *           partitioned_srp.outputs
+   *     }
+   *   in
+   *   (\* next part is a statement which returns Some fn or None *\)
+   *   (\* want to get back that function *\)
+   *   (\* TODO
+   *    * - extract the interface function
+   *    * - compute the predicate associated with each edge
+   *    * - produce all the requirements for the hypotheses from other partitions
+   *    *   (to be sorted into lesser and greater after)
+   *    * - produce the constraints for the outputs' guarantees
+   *    * - return a map for the inputs to each node, and a map for the outputs of each node
+   *    *\)
+   *   ()
+   * ;; *)
 
-  let encode_z3_interface env aty labels interface partitioned_srp =
-    (* get edge argument*)
-    let ex1, ex2, ex1ty, ex2ty, interface =
-      match interface.e with
-      | EFun { arg = ex1; argty = Some ex1ty; body = exp; _ } ->
-        (match exp.e with
-        | EFun { arg = ex2; argty = Some ex2ty; body = exp; _ } ->
-          ex1, ex2, ex1ty, ex2ty, exp
-        | _ -> failwith "Expected a function")
-      | _ -> failwith "Expected a function"
-    in
-    let get_pred edge =
-      let p = InterpPartial.interp_partial_fun interface edge in
-      match p.e with
-      | ESome exp -> Some exp
-      | EVal { v = VOption o; _ } ->
-        (match o with
-        | Some _ -> failwith "got a some value, which I didn't expect"
-        | None -> None)
-      | ETuple [{ e = EVal { v = VBool b; _ }; _ }; p] -> if b then Some p else None
-      | _ -> failwith "got a non-option, which I didn't expect"
-    in
-    let node_value n = avalue (vnode n, Some Typing.node_ty, Span.default) in
-    let edge_to_exps (i, j) =
-      if SmtUtils.smt_config.unboxing
-      then [node_value i; node_value j]
-      else
-        [ avalue
-            ( vtuple [node_value i; node_value j]
-            , Some (TTuple [TNode; TNode])
-            , Span.default ) ]
-    in
-    let partitioned_srp =
-      { partitioned_srp with
-        inputs =
-          AdjGraph.VertexMap.map
-            (fun input_exps ->
-              List.map
-                (fun e -> { e with pred = get_pred (edge_to_exps e.edge) })
-                input_exps)
-            partitioned_srp.inputs
-      ; outputs =
-          AdjGraph.VertexMap.map
-            (fun outputs ->
-              List.map (fun (edge, _) -> edge, get_pred (edge_to_exps edge)) outputs)
-            partitioned_srp.outputs
-      }
-    in
-    (* next part is a statement which returns Some fn or None *)
-    (* want to get back that function *)
-    (* TODO
-     * - extract the interface function
-     * - compute the predicate associated with each edge
-     * - produce all the requirements for the hypotheses from other partitions
-     *   (to be sorted into lesser and greater after)
-     * - produce the constraints for the outputs' guarantees
-     * - return a map for the inputs to each node, and a map for the outputs of each node
-     *)
-    ()
-  ;;
+  let find_input_symbolics (hyp_var : Var.t) aty =
+    let names = create_strings ("symbolic-" ^ Var.name hyp_var) aty in
+    (* let sorts = ty_to_sorts aty in
+     * let const_default cname csort = { cname; csort; cdescr = ""; cloc = Span.default } in
+     * lift2 (fun n s -> ConstantSet.find (const_default n s) env.const_decls) names sorts *)
+    lift1 (fun s -> mk_term (mk_var s)) names
+    ;;
 
   let encode_kirigami_solve
       env
       graph
       count
       { aty; var_names; init; trans; merge; decomp }
-      { inputs; outputs; rank }
+      { inputs; outputs }
     =
     let aty = oget aty in
     let einit, etrans, emerge = init, trans, merge in
@@ -405,7 +402,6 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     let trans_map = ref AdjGraph.EdgeMap.empty in
     (* trans_input_map maps each edge to the incoming message variable *)
     let trans_input_map = ref AdjGraph.EdgeMap.empty in
-    (* TODO: encode the decomposed transfer for kirigami *)
     let eintrans, eouttrans =
       match decomp with
       | Some (lt, rt) -> lt, rt
@@ -413,17 +409,18 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     in
     (* construct the input constants *)
     let input_map =
-      AdjGraph.VertexMap.mapi
-        (fun v inputs ->
-          List.filter_map
-            (fun input_exp ->
-              let i, j = input_exp.edge in
-              encode_kirigami_input
+      AdjGraph.VertexMap.map
+        (fun inputs ->
+          List.map
+            (fun { edge; var } ->
+              let i, j = edge in
+              encode_kirigami_decomp
                 (Printf.sprintf "input%d-%d-%d" count i j)
                 env
                 eintrans
-                [] (* FIXME: change to a hypothesis term *)
-                input_exp)
+                edge
+                (* get the relevant variables *)
+                (find_input_symbolics var aty))
             inputs)
         inputs
     in
@@ -491,7 +488,6 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
               x;
             merge_result)
           merged
-          (* TODO: produce a list of input SMT terms to merge *)
           (AdjGraph.VertexMap.find i input_map)
       in
       let lbl_iv = label_vars.(i) in
@@ -508,12 +504,12 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     done;
     (* construct the output constants *)
     (* TODO: add predicate constraints on outputs *)
-    let output_map =
+    let _output_map =
       AdjGraph.VertexMap.mapi
         (fun v outputs ->
           List.map
             (fun ((i, j), _) ->
-              encode_kirigami_output
+              encode_kirigami_decomp
                 (Printf.sprintf "output%d-%d-%d" count i j)
                 env
                 eouttrans
@@ -686,7 +682,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
   let kirigami_encode_z3 (dgs : declaration_groups) : SmtUtils.smt_env =
     (* need to use a counter i, as add_assertions gets called for multiple lists *)
     let i = ref (-1) in
-    let symbolics = get_symbolics dgs.base in
+    let symbolics = (get_symbolics dgs.hyps) @ (get_symbolics dgs.base) in
     let graph = get_graph dgs.base |> oget in
     let solves = get_solves dgs.base in
     let simplify_assertion e =
@@ -696,36 +692,12 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     in
     let g_assertions = get_asserts dgs.guar |> List.filter_map simplify_assertion in
     let p_assertions = get_asserts dgs.prop |> List.filter_map simplify_assertion in
+    (* print_endline ("Assertions encoded: " ^ string_of_int (List.length (g_assertions @ p_assertions))); *)
     let requires = get_requires dgs.base in
     let lh_requires = get_requires dgs.lth in
     let gh_requires = get_requires dgs.gth in
     let env = init_solver symbolics ~labels:[] in
     List.iteri (encode_solve env graph) solves;
-    let add_assertions env assertions =
-      match assertions with
-      | [] -> ()
-      | _ ->
-        let assert_vars =
-          List.map
-            (fun eassert ->
-              i := !i + 1;
-              (* print_endline (Printing.exp_to_string eassert); *)
-              let z3_assert = encode_exp_z3 "" env eassert |> to_list |> List.hd in
-              let assert_var =
-                mk_constant env (Printf.sprintf "assert-%d" !i) (ty_to_sort TBool)
-              in
-              SmtUtils.add_constraint env (mk_term (mk_eq assert_var.t z3_assert.t));
-              assert_var)
-            assertions
-        in
-        let all_good =
-          List.fold_left
-            (fun acc v -> mk_and acc v.t)
-            (List.hd assert_vars).t
-            (List.tl assert_vars)
-        in
-        SmtUtils.add_constraint env (mk_term (mk_not all_good))
-    in
     (* these require constraints are always included *)
     add_symbolic_constraints env requires env.symbolics;
     add_symbolic_constraints env lh_requires VarMap.empty;
@@ -735,12 +707,12 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     then ()
     else (
       add_command env ~comdescr:"push" SmtLang.Push;
-      add_assertions env g_assertions;
+      add_assertions env g_assertions i;
       (* pop *)
       add_command env ~comdescr:"pop" SmtLang.Pop);
     (* safety checks: add other hypotheses, test properties *)
     add_symbolic_constraints env gh_requires VarMap.empty;
-    add_assertions env p_assertions;
+    add_assertions env p_assertions i;
     (* print_endline ("Final env.ctx length: " ^ string_of_int (List.length env.ctx)); *)
     env
   ;;

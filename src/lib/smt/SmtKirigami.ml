@@ -15,6 +15,7 @@ let solveKirigami info query chan ~decls =
   in
   let nodes = Nv_datastructures.AdjGraph.nb_vertex (get_graph decls.base |> oget) in
   let assertions = get_asserts decls.prop @ get_asserts decls.guar in
+  (* print_endline ("Assertions found: " ^ string_of_int (List.length assertions)); *)
   solve
     info
     query

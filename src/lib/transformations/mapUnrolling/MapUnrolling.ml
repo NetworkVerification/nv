@@ -36,13 +36,14 @@ let unroll_decls info decls =
 ;;
 
 let unroll_groups info (dgs : declaration_groups) =
-  let maplist = MapUnrollingUtils.collect_map_types_and_keys dgs.base in
+  let maplist = MapUnrollingUtils.collect_map_types_and_keys (dgs.hyps @ dgs.base) in
+  let hyps, hf = unroll_with_maplist info ~maplist dgs.hyps in
   let base, f = unroll_with_maplist info ~maplist dgs.base in
   let prop, _ = unroll_with_maplist info ~maplist dgs.prop in
   let guar, _ = unroll_with_maplist info ~maplist dgs.guar in
   let lth, _ = unroll_with_maplist info ~maplist dgs.lth in
   let gth, _ = unroll_with_maplist info ~maplist dgs.gth in
-  { base; prop; guar; lth; gth }, f
+  { base; prop; guar; hyps; lth; gth }, f % hf
 ;;
 
 let unroll info d_or_g =

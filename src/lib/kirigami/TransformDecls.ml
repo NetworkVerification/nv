@@ -79,7 +79,7 @@ let rec remap_exp parted_srp e =
       let branches =
         List.fold_right (fun (p, e) b -> addBranch p e b) (List.rev pat_exps) emptyBranch
       in
-      ematch (f e1) (optimizeBranches branches)
+      ematch (f e1) branches
     | EVal v -> e_val (remap_value parted_srp v)
     | EOp (op, es) -> eop op (List.map f es)
     | ESome e -> esome (f e)
@@ -287,12 +287,12 @@ let outputs_assert
   VertexMap.fold add_preds outputs []
 ;;
 
-let transform_assert (e : exp) (_parted_srp : SrpRemapping.partitioned_srp) : exp =
+let transform_assert (e : exp) (parted_srp : SrpRemapping.partitioned_srp) : exp =
   (* TODO: drop expressions or simplify them to true if they reference nodes we don't have access to *)
   (* NOTE: this may not even be occurring in the assert itself, but in another part of the program;
    * although maybe that's fine if it's already inlined *)
   (* TODO: can use the SrpRemapping transformer to handle this! *)
-  e
+  remap_exp parted_srp e
 ;;
 
 (** Helper function to extract the edge predicate

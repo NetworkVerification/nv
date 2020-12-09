@@ -106,7 +106,8 @@ module Pat = struct
         0
         ps1
         ps2
-    | _, _ -> failwith (Printf.sprintf "No comparison between non-concrete patterns")
+    | _, _ ->
+      failwith (Printf.sprintf "No comparison between non-concrete patterns")
   ;;
 end
 
@@ -221,6 +222,7 @@ type declaration_groups =
   { base : declarations
   ; prop : declarations
   ; guar : declarations
+  ; hyps : declarations
   ; lth : declarations
   ; gth : declarations
   }
@@ -234,11 +236,12 @@ let map_decls f d_or_g =
   | Decls d -> Decls (f d)
   | Grp g ->
     let base = f g.base in
+    let hyps = f g.hyps in
     let prop = f g.prop in
     let guar = f g.guar in
     let lth = f g.lth in
     let gth = f g.gth in
-    Grp { base; prop; guar; lth; gth }
+    Grp { base; prop; guar; hyps; lth; gth }
 ;;
 
 let map_decls_tuple f d_or_g =
@@ -247,12 +250,13 @@ let map_decls_tuple f d_or_g =
     let d, x = f d in
     Decls d, x
   | Grp g ->
-    let base, x = f g.base in
+    let base, x1 = f g.base in
+    let hyps, x2 = f g.hyps in
     let prop, _ = f g.prop in
     let guar, _ = f g.guar in
     let lth, _ = f g.lth in
     let gth, _ = f g.gth in
-    Grp { base; prop; guar; lth; gth }, x
+    Grp { base; prop; guar; hyps; lth; gth }, (x1 % x2)
 ;;
 
 (** * Handling branches *)

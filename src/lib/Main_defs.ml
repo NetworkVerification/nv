@@ -30,37 +30,7 @@ let smt_query_file =
     lazy (open_out (file ^ "-" ^ string_of_int count ^ "-query"))
 ;;
 
-let run_smt_classic file cfg info decls fs =
-  let decls, fs =
-    let decls, f = map_decls_tuple UnboxEdges.unbox_declarations decls in
-    decls, f :: fs
-  in
-  let decls, fs =
-    SmtUtils.smt_config.unboxing <- true;
-    let decls, f1 =
-      Profile.time_profile "Unbox options" (fun () ->
-          map_decls_tuple UnboxOptions.unbox_declarations decls)
-    in
-    let decls, f2 =
-      Profile.time_profile "Flattening Tuples" (fun () ->
-          map_decls_tuple TupleFlatten.flatten_declarations decls)
-    in
-    decls, f2 :: f1 :: fs
-  in
-  (* NOTE: debugging *)
-  print_endline
-    (match decls with
-    | Decls d -> Printing.declarations_to_string d
-    | Grp g -> Printing.declaration_groups_to_string g);
-  let decls, fs =
-    let decls, f = Renaming.alpha_convert_declarations_or_group decls in
-    (*TODO: why are we renaming here?*)
-    let decls, _ = map_decls_tuple OptimizeBranches.optimize_declarations decls in
-    (* The _ should match the identity function *)
-    let decls, f' = RenameForSMT.rename_declarations_or_group decls in
-    (* Maybe we should wrap this into the previous renaming... *)
-    decls, f' :: f :: fs
-  in
+let run_smt_classic_aux file cfg info decls fs =
   let get_answer decls fs =
     let solve_fun =
       match decls with
@@ -146,6 +116,39 @@ let run_smt_classic file cfg info decls fs =
   | None -> solve_slices slices
   | Some n -> solve_parallel n slices
 ;;
+
+let run_smt_classic file cfg info decls fs =
+  let decls, fs =
+    let decls, f = map_decls_tuple UnboxEdges.unbox_declarations decls in
+    decls, f :: fs
+  in
+  let decls, fs =
+    SmtUtils.smt_config.unboxing <- true;
+    let decls, f1 =
+      Profile.time_profile "Unbox options" (fun () ->
+          map_decls_tuple UnboxOptions.unbox_declarations decls)
+    in
+    let decls, f2 =
+      Profile.time_profile "Flattening Tuples" (fun () ->
+          map_decls_tuple TupleFlatten.flatten_declarations decls)
+    in
+    decls, f2 :: f1 :: fs
+  in
+  (* NOTE: debugging *)
+  print_endline
+    (match decls with
+    | Decls d -> Printing.declarations_to_string d
+    | Grp g -> Printing.declaration_groups_to_string g);
+  let decls, fs =
+    let decls, f = Renaming.alpha_convert_declarations_or_group decls in
+    (*TODO: why are we renaming here?*)
+    let decls, _ = map_decls_tuple OptimizeBranches.optimize_declarations decls in
+    (* The _ should match the identity function *)
+    let decls, f' = RenameForSMT.rename_declarations_or_group decls in
+    (* Maybe we should wrap this into the previous renaming... *)
+    decls, f' :: f :: fs
+  in
+  run_smt_classic_aux file cfg info decls fs
 
 let run_smt file cfg info decls fs =
   if cfg.finite_arith then SmtUtils.smt_config.infinite_arith <- false;
@@ -297,15 +300,6 @@ let parse_input (args : string array)
       (* FIXME: this breaks ToEdge *)
       (* NOTE: we partition after checking well-formedness so we can reuse edges that don't exist *)
       let partitions = SrpRemapping.partition_declarations decls in
-      (* let decls_fs =
-       *   List.map
-       *     (fun p ->
-       *       let decls, f = RemapSRP.remap_declarations p decls in
-       *       p, decls, f :: fs)
-       *     partitions *)
-      (* in *)
-      (* FIXME: remapping before partitioning messes up the order of operations;
-       * want to essentially remap within partitioning? *)
       let decls =
         Profile.time_profile "Partitioning" (fun () ->
             List.map (fun p -> Partition.transform_declarations decls p) partitions)

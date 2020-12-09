@@ -191,6 +191,8 @@ type declaration_groups =
     prop : declarations
   ; (* guarantees satisfied by the partition *)
     guar : declarations
+  ; (* declarations for the symbolics representing hypotheses *)
+    hyps : declarations
   ; (* hypotheses from a partition with rank less than this one *)
     lth : declarations
   ; (* hypotheses from a partition with rank greater than this one *)
@@ -203,7 +205,7 @@ type declarations_or_group =
 
 val map_decls : (declarations -> declarations) -> declarations_or_group -> declarations_or_group
 
-val map_decls_tuple : (declarations -> declarations * 'a) -> declarations_or_group -> declarations_or_group * 'a
+val map_decls_tuple : (declarations -> declarations * ('a -> 'a)) -> declarations_or_group -> declarations_or_group * ('a -> 'a)
 
 (* Constructors *)
 val vunit : unit -> value

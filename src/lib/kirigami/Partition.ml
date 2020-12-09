@@ -50,26 +50,27 @@ let transform_declaration parted_srp decl : transform_result =
 let transform_declarations decls parted_srp =
   let transformed_decls = List.map (transform_declaration parted_srp) decls in
   (* divide up the declarations as appropriate *)
-  let rec split_decls (net, guar, lt_hyp, gt_hyp, prop) l =
+  let rec split_decls (net, guar, hyps, lt_hyp, gt_hyp, prop) l =
     match l with
-    | [] -> net, guar, lt_hyp, gt_hyp, prop
+    | [] -> net, guar, hyps, lt_hyp, gt_hyp, prop
     | h :: t ->
       begin
         match h with
-        | Network d -> split_decls (d :: net, guar, lt_hyp, gt_hyp, prop) t
+        | Network d -> split_decls (d :: net, guar, hyps, lt_hyp, gt_hyp, prop) t
         | Solution (d, s, g, lh, gh) ->
-          split_decls (s @ (d :: net), g @ guar, lh @ lt_hyp, gh @ gt_hyp, prop) t
-        | Property p -> split_decls (net, guar, lt_hyp, gt_hyp, p :: prop) t
-        | None -> split_decls (net, guar, lt_hyp, gt_hyp, prop) t
+          split_decls (d :: net, g @ guar, s @ hyps, lh @ lt_hyp, gh @ gt_hyp, prop) t
+        | Property p -> split_decls (net, guar, hyps, lt_hyp, gt_hyp, p :: prop) t
+        | None -> split_decls (net, guar, hyps, lt_hyp, gt_hyp, prop) t
       end
   in
-  let base, guar, lth, gth, prop = split_decls ([], [], [], [], []) transformed_decls in
-  { base; prop; guar; lth; gth }
+  let base, guar, hyps, lth, gth, prop = split_decls ([], [], [], [], [], []) transformed_decls in
+  { base; prop; guar; hyps; lth; gth }
 ;;
 
 let lift (f : declarations -> declarations) decls =
   { lth = f decls.lth
   ; gth = f decls.gth
+  ; hyps = f decls.hyps
   ; guar = f decls.guar
   ; prop = f decls.prop
   ; base = f decls.base
@@ -79,8 +80,9 @@ let lift (f : declarations -> declarations) decls =
 let lift_mb (f : declarations -> declarations * Nv_solution.Solution.map_back) decls =
   let lth, _lhf = f decls.lth in
   let gth, _ghf = f decls.gth in
+  let hyps, _hf = f decls.hyps in
   let guar, _gf = f decls.guar in
   let prop, _pf = f decls.prop in
   let base, f = f decls.base in
-  { lth; gth; guar; prop; base }, f
+  { lth; gth; hyps; guar; prop; base }, f
 ;;
