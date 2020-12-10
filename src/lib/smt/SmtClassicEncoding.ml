@@ -13,13 +13,13 @@ open SrpRemapping
 module type ClassicEncodingSig =
   SmtEncodingSigs.Encoding
     with type network_type = Syntax.declarations
-     and type part_network_type = Syntax.declaration_groups
+     and type part_network_type = Syntax.declaration_groups * partitioned_srp
 
 module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig = struct
   open E
 
   type network_type = Syntax.declarations
-  type part_network_type = Syntax.declaration_groups
+  type part_network_type = Syntax.declaration_groups * partitioned_srp
 
   let add_symbolic_constraints env requires sym_vars =
     (* Declare the symbolic variables: ignore the expression in case of SMT *)
@@ -281,6 +281,10 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
       let node_value n = avalue (vnode n, Some TNode, Span.default) in
       let edge = [node_value i; node_value j] in
       let trans, tx = enc_z3_trans edge (Printf.sprintf "trans-%s" str) env in
+      print_endline ("Printing var");
+      BatList.iter (fun t -> print_endline (SmtLang.term_to_smt () () t)) (to_list var);
+      print_endline ("Printing trans");
+      BatList.iter (fun t -> print_endline (SmtLang.term_to_smt () () t)) (to_list trans);
       BatList.iter2
         (fun e result -> SmtUtils.add_constraint env (mk_term (mk_eq result.t e.t)))
         tx
@@ -349,20 +353,27 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
    *   ()
    * ;; *)
 
-  let find_input_symbolics (hyp_var : Var.t) aty =
-    let names = create_strings ("symbolic-" ^ Var.name hyp_var) aty in
-    (* let sorts = ty_to_sorts aty in
-     * let const_default cname csort = { cname; csort; cdescr = ""; cloc = Span.default } in
-     * lift2 (fun n s -> ConstantSet.find (const_default n s) env.const_decls) names sorts *)
-    lift1 (fun s -> mk_term (mk_var s)) names
+  let find_input_symbolics env (hyp_var : Var.t) aty =
+    let prefix = "symbolic-" ^ Var.name hyp_var in
+    (* let names = create_strings prefix aty in *)
+    (* hopefully this comes out in the right order! *)
+    print_endline (string_of_int (ConstantSet.cardinal env.const_decls));
+    let names = ConstantSet.fold
+        (fun { cname; _ } l -> if String.starts_with cname prefix
+          then (mk_term (mk_var cname)) :: l
+          else (print_endline cname; l))
+        env.const_decls []
+    in
+    of_list names
+    (* lift1 (fun s -> mk_term (mk_var s)) names *)
     ;;
 
   let encode_kirigami_solve
       env
       graph
+      { inputs; outputs }
       count
       { aty; var_names; init; trans; merge; decomp }
-      { inputs; outputs }
     =
     let aty = oget aty in
     let einit, etrans, emerge = init, trans, merge in
@@ -420,7 +431,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
                 eintrans
                 edge
                 (* get the relevant variables *)
-                (find_input_symbolics var aty))
+                (find_input_symbolics env var aty))
             inputs)
         inputs
     in
@@ -679,7 +690,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     env
   ;;
 
-  let kirigami_encode_z3 (dgs : declaration_groups) : SmtUtils.smt_env =
+  let kirigami_encode_z3 (dgs, part) : SmtUtils.smt_env =
     (* need to use a counter i, as add_assertions gets called for multiple lists *)
     let i = ref (-1) in
     let symbolics = (get_symbolics dgs.hyps) @ (get_symbolics dgs.base) in
@@ -697,9 +708,10 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     let lh_requires = get_requires dgs.lth in
     let gh_requires = get_requires dgs.gth in
     let env = init_solver symbolics ~labels:[] in
-    List.iteri (encode_solve env graph) solves;
+    add_symbolic_constraints env [] env.symbolics;
+    List.iteri (encode_kirigami_solve env graph part) solves;
     (* these require constraints are always included *)
-    add_symbolic_constraints env requires env.symbolics;
+    add_symbolic_constraints env requires VarMap.empty;
     add_symbolic_constraints env lh_requires VarMap.empty;
     (* ranked initial checks: test guarantees *)
     (* push *)

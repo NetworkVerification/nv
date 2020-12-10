@@ -7,7 +7,7 @@ open Smt
 open Nv_lang
 
 (* Solver for Kirigami *)
-let solveKirigami info query chan ~decls =
+let solveKirigami info query chan ~part ~decls =
   let open Nv_lang.Syntax in
   let module ExprEnc = (val expr_encoding smt_config) in
   let module Enc = (val (module SmtClassicEncoding.ClassicEncoding (ExprEnc))
@@ -20,7 +20,7 @@ let solveKirigami info query chan ~decls =
     info
     query
     chan
-    (fun () -> Enc.kirigami_encode_z3 decls)
+    (fun () -> Enc.kirigami_encode_z3 (decls, part))
     nodes
     assertions
     (decls.lth @ decls.gth)

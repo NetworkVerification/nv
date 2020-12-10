@@ -30,7 +30,7 @@ let smt_query_file =
     lazy (open_out (file ^ "-" ^ string_of_int count ^ "-query"))
 ;;
 
-let run_smt_classic_aux file cfg info decls fs =
+let run_smt_classic_aux file cfg info decls part fs =
   (* NOTE: debugging *)
   print_endline
     (match decls with
@@ -56,7 +56,7 @@ let run_smt_classic_aux file cfg info decls fs =
             ~full_chan:(smt_query_file file)
             ~decls:d
         else Smt.solveClassic ~decls:d
-      | Grp g -> SmtKirigami.solveKirigami ~decls:g
+      | Grp g -> SmtKirigami.solveKirigami ~part:(part |> oget) ~decls:g
     in
     match solve_fun info cfg.query (smt_query_file file) with
     | Unsat -> Success None, []
@@ -148,7 +148,7 @@ let run_smt_classic file cfg info decls fs =
     in
     decls, f2 :: f1 :: fs
   in
-  let decls = if cfg.kirigami then (
+  let decls, parts = if cfg.kirigami then (
       (* FIXME: this breaks ToEdge *)
       (* NOTE: we partition after checking well-formedness so we can reuse edges that don't exist *)
       let partitions = SrpRemapping.partition_declarations decls in
@@ -162,10 +162,11 @@ let run_smt_classic file cfg info decls fs =
           then print_endline (Printing.declaration_groups_to_string d)
           else ();
           Grp d)
-        decls)
-    else [Decls decls] in
+        decls,
+      List.map BatOption.some partitions)
+    else [Decls decls], [None] in
   (* List.map (fun d -> cfg, info, file, d, fs) decls *)
-  List.map (fun decls -> run_smt_classic_aux file cfg info decls fs) decls
+  List.map2 (fun decls part -> run_smt_classic_aux file cfg info decls part fs) decls parts
 
 let run_smt file cfg info decls fs =
   if cfg.finite_arith then SmtUtils.smt_config.infinite_arith <- false;

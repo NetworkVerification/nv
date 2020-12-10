@@ -305,9 +305,7 @@ let rec prune_conjuncts rubric e =
    * then we could end up with the wrong rubric length.
    * additionally, internal projected elements could be used together as part of a
    * single conjunct.
-   * a better approach may be to determine the outermost And and only use a rubric that
-   * covers the number of nodes in the global network, so we can just eliminate elements
-   * that way *)
+   * a better approach may be  *)
   print_endline (Nv_utils.OCamlUtils.list_to_string string_of_bool rubric);
   print_endline (Printing.exp_to_string e);
   match e.e with
@@ -339,9 +337,14 @@ let transform_assert (e : exp) (width : int) (parted_srp : SrpRemapping.partitio
   let { node_map; _ } = parted_srp in
   (* create a list of bool of length n * k; zip it against the conjuncts and replace any
    * for which the corresponding bool is false with the statement "true" *)
-  let rubric = VertexMap.fold (fun _ v l -> (match v with
+  (* FIXME: can't just drop the ones that refer to old nodes, as the assignment order
+   * has ALSO changed in the solutions; need to use the remap information as given.
+   * for instance, in the second partition of the network 0 = 1
+   * where 1 is remapped to 0, we want to drop the case of 0 and also change references
+   * to the solution for node 1 to references to the solution for node 0 *)
+  let rubric = VertexMap.fold (fun _ v l -> l @ (match v with
       | Some _ -> List.make width true
-      | None -> List.make width false) @ l) node_map [] in
+      | None -> List.make width false)) node_map [] in
   (* TODO: drop expressions or simplify them to true if they reference nodes we don't have access to *)
   let e = (match e.e with
    | EMatch _ ->
