@@ -9,4 +9,4 @@ val transform_solve
 (* Wrap the given assert exp in a new exp that maps over new nodes.
  * TODO
  *)
-val transform_assert : exp -> SrpRemapping.partitioned_srp -> exp
+val transform_assert : exp -> int -> SrpRemapping.partitioned_srp -> exp

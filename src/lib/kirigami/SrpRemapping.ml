@@ -53,6 +53,10 @@ type partitioned_srp =
   ; outputs : (Edge.t * exp option) list VertexMap.t
   }
 
+(** Return the number of nodes in the global network. *)
+let get_global_nodes parted_srp = VertexMap.cardinal parted_srp.node_map
+
+
 (** Map each vertex in the list of vertices to a partition number.
  *  Return the map and the number of partitions.
 *)

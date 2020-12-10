@@ -51,6 +51,9 @@ type partitioned_srp =
   ; outputs : (Edge.t * exp option) list VertexMap.t
   }
 
+(** Return the number of nodes in the global network. *)
+val get_global_nodes : partitioned_srp -> int
+
 (** Create a list of partitioned SRP structures,
  * where each structure represents one partition's topological structure
  * for each possible partition in the given declarations.

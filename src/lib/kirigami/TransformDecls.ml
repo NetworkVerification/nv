@@ -11,6 +11,8 @@ let edge_to_exp e = annot TEdge (e_val (vedge e))
 let node_to_pat node = exp_to_pattern (node_to_exp node)
 let edge_to_pat edge = exp_to_pattern (edge_to_exp edge)
 
+let etrue = aexp (e_val (vbool true), Some TBool, Span.default)
+
 let rec remap_pattern parted_srp p =
   let { node_map; edge_map; _ } = parted_srp in
   match p with
@@ -287,11 +289,80 @@ let outputs_assert
   VertexMap.fold add_preds outputs []
 ;;
 
-let transform_assert (e : exp) (parted_srp : SrpRemapping.partitioned_srp) : exp =
+(** Collect all the conjuncts in the given expression. *)
+let rec collect_conjuncts l e =
+  (* print_endline (Printing.exp_to_string e); *)
+  match e.e with
+  | EOp (And, es) -> List.flatten (List.map (collect_conjuncts []) es) @ l
+  | _ -> e :: l
+  ;;
+
+(** Replace subexpressions in a nested series of EOp Ands according to the
+ ** given rubric list: if the head of the rubric is true, keep the subexpression;
+ ** if it is false, replace the subexpression with true. *)
+let rec prune_conjuncts rubric e =
+  (* FIXME: we don't want to burrow down super deeply; if a nested foldNodes is used,
+   * then we could end up with the wrong rubric length.
+   * additionally, internal projected elements could be used together as part of a
+   * single conjunct.
+   * a better approach may be to determine the outermost And and only use a rubric that
+   * covers the number of nodes in the global network, so we can just eliminate elements
+   * that way *)
+  print_endline (Nv_utils.OCamlUtils.list_to_string string_of_bool rubric);
+  print_endline (Printing.exp_to_string e);
+  match e.e with
+  | EOp (And, [e2; e3]) -> (match rubric with
+    | [] -> failwith "rubric shorter than number of conjuncts"
+    | h :: t -> let e2' = if h then e2 else etrue in
+      wrap e (eop And [e2'; prune_conjuncts t e3] ))
+  | EOp (And, _) -> failwith "and has wrong number of arguments"
+  (* this case should be the last one *)
+  | _ -> (match rubric with
+    | [] -> failwith "rubric shorter than number of conjuncts"
+    | [b] -> if b then e else etrue
+    | _ -> failwith "rubric longer than number of conjuncts")
+  ;;
+
+(** Assume the assert is of the form:
+ ** assert foldNodes (fun u v acc -> assertNode u v && acc) sol true
+ ** which simplifies after map unrolling to:
+ ** assert (match (sol-proj-0, sol-proj-1, ..., sol-proj-n) with
+ **  | UnrollingFoldVar-0, UnrollingFoldVar-1, ..., UnrollingFoldVar-n -> true &&
+ **    (assertNode 0n UnrollingFoldVar-0) && (assertNode 1n UnrollingFoldVar-1)
+ **    && ... && (assertNode n UnrollingFoldVar-n)
+ ** After tuple flattening, the fold variables may be further subdivided, where
+ ** for a k-tuple attribute, we have n*k variables:
+ ** the 0..k projected variables will belong to node 0,
+ ** the k..2k variables belong to node 1, and so on.
+ **)
+let transform_assert (e : exp) (width : int) (parted_srp : SrpRemapping.partitioned_srp) : exp =
+  let { node_map; _ } = parted_srp in
+  (* create a list of bool of length n * k; zip it against the conjuncts and replace any
+   * for which the corresponding bool is false with the statement "true" *)
+  let rubric = VertexMap.fold (fun _ v l -> (match v with
+      | Some _ -> List.make width true
+      | None -> List.make width false) @ l) node_map [] in
   (* TODO: drop expressions or simplify them to true if they reference nodes we don't have access to *)
-  (* NOTE: this may not even be occurring in the assert itself, but in another part of the program;
-   * although maybe that's fine if it's already inlined *)
-  (* TODO: can use the SrpRemapping transformer to handle this! *)
+  let e = (match e.e with
+   | EMatch _ ->
+     (* TODO: if there is only one branch, use interp to simplify;
+      * we should be left with an EOp statement which we can prune *)
+     (* NOTE: this will also lead to a simplification of the "true" at the start of the
+      * statement, so our width should not be off by 1 *)
+     let e1 = InterpPartialFull.interp_partial e in
+     (match e1.e with
+     | EOp (And, _) ->
+       prune_conjuncts rubric e1
+       (* let conjs = collect_conjuncts [] e1 in
+        * if (List.length conjs) = width then
+        *   print_endline "got all conjuncts"
+        * else
+        *   print_endline
+        *     ("found and length different from what I expected: expected "
+        *      ^ (string_of_int width) ^ ", got "
+        *      ^ (string_of_int (List.length conjs))) *)
+     | _ -> print_endline ("not an and: " ^ Printing.exp_to_string e1); e)
+   | _ -> e) in
   remap_exp parted_srp e
 ;;
 
@@ -300,13 +371,14 @@ let transform_assert (e : exp) (parted_srp : SrpRemapping.partitioned_srp) : exp
 *)
 let interp_interface intfe e : exp option =
   (* print_endline ("interface exp: " ^ Printing.exp_to_string intfe); *)
-  (* let u, v = e in *)
-  (* let node_value n = avalue (vnode n, Some Typing.node_ty, Span.default) in *)
-  (* let edge = [node_value u; node_value v] in *)
+  let u, v = e in
+  let node_value n = avalue (vnode n, Some Typing.node_ty, Span.default) in
+  let edge = [node_value u; node_value v] in
   let intf_app =
     InterpPartial.interp_partial_fun
       intfe
-      [avalue (vedge e, Some Typing.edge_ty, Span.default)]
+      edge
+      (* [avalue (vedge e, Some Typing.edge_ty, Span.default)] *)
   in
   (* if intf_app is not an option, or if the value it contains is not a function,
    * fail *)
@@ -320,6 +392,7 @@ let interp_interface intfe e : exp option =
       (* infer case *)
       | None -> None
     end
+  (* ETuple case handles an unboxed option *)
   | ETuple [{ e = EVal { v = VBool b; _ }; _ }; o] -> if b then Some o else None
   | _ ->
     failwith
@@ -396,7 +469,8 @@ let transform_solve solve (partition : SrpRemapping.partitioned_srp)
    * let trans = transform_trans trans attr_type partition' in
    * let merge = transform_merge merge attr_type partition' in *)
   (* TODO: don't add this yet *)
-  let assertions = outputs_assert outtrans var_names attr_type partition' in
+  let assertions = [] in
+  (* let assertions = outputs_assert outtrans var_names attr_type partition' in *)
   (* collect require and symbolic information *)
   let reqs, symbolics = collect_requires_and_symbolics attr_type partition' in
   ( { solve with
