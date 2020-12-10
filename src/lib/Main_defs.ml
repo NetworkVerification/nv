@@ -31,6 +31,20 @@ let smt_query_file =
 ;;
 
 let run_smt_classic_aux file cfg info decls fs =
+  (* NOTE: debugging *)
+  print_endline
+    (match decls with
+    | Decls d -> Printing.declarations_to_string d
+    | Grp g -> Printing.declaration_groups_to_string g);
+  let decls, fs =
+    let decls, f = Renaming.alpha_convert_declarations_or_group decls in
+    (*TODO: why are we renaming here?*)
+    let decls, _ = map_decls_tuple OptimizeBranches.optimize_declarations decls in
+    (* The _ should match the identity function *)
+    let decls, f' = RenameForSMT.rename_declarations_or_group decls in
+    (* Maybe we should wrap this into the previous renaming... *)
+    decls, f' :: f :: fs
+  in
   let get_answer decls fs =
     let solve_fun =
       match decls with
@@ -119,36 +133,39 @@ let run_smt_classic_aux file cfg info decls fs =
 
 let run_smt_classic file cfg info decls fs =
   let decls, fs =
-    let decls, f = map_decls_tuple UnboxEdges.unbox_declarations decls in
+    let decls, f = UnboxEdges.unbox_declarations decls in
     decls, f :: fs
   in
   let decls, fs =
     SmtUtils.smt_config.unboxing <- true;
     let decls, f1 =
       Profile.time_profile "Unbox options" (fun () ->
-          map_decls_tuple UnboxOptions.unbox_declarations decls)
+          UnboxOptions.unbox_declarations decls)
     in
     let decls, f2 =
       Profile.time_profile "Flattening Tuples" (fun () ->
-          map_decls_tuple TupleFlatten.flatten_declarations decls)
+          TupleFlatten.flatten_declarations decls)
     in
     decls, f2 :: f1 :: fs
   in
-  (* NOTE: debugging *)
-  print_endline
-    (match decls with
-    | Decls d -> Printing.declarations_to_string d
-    | Grp g -> Printing.declaration_groups_to_string g);
-  let decls, fs =
-    let decls, f = Renaming.alpha_convert_declarations_or_group decls in
-    (*TODO: why are we renaming here?*)
-    let decls, _ = map_decls_tuple OptimizeBranches.optimize_declarations decls in
-    (* The _ should match the identity function *)
-    let decls, f' = RenameForSMT.rename_declarations_or_group decls in
-    (* Maybe we should wrap this into the previous renaming... *)
-    decls, f' :: f :: fs
-  in
-  run_smt_classic_aux file cfg info decls fs
+  let decls = if cfg.kirigami then (
+      (* FIXME: this breaks ToEdge *)
+      (* NOTE: we partition after checking well-formedness so we can reuse edges that don't exist *)
+      let partitions = SrpRemapping.partition_declarations decls in
+      let decls =
+        Profile.time_profile "Partitioning" (fun () ->
+            List.map (fun p -> Partition.transform_declarations decls p) partitions)
+      in
+      List.map
+        (fun d ->
+          if cfg.print_partitions
+          then print_endline (Printing.declaration_groups_to_string d)
+          else ();
+          Grp d)
+        decls)
+    else [Decls decls] in
+  (* List.map (fun d -> cfg, info, file, d, fs) decls *)
+  List.map (fun decls -> run_smt_classic_aux file cfg info decls fs) decls
 
 let run_smt file cfg info decls fs =
   if cfg.finite_arith then SmtUtils.smt_config.infinite_arith <- false;
@@ -181,11 +198,11 @@ let partialEvalDecls decls =
 
 let run_simulator cfg _ decls fs =
   (* It is important to partially evaluate before optimizing branches and before simulation. *)
-  let decls =
-    match decls with
-    | Decls d -> d
-    | Grp g -> g.base @ g.prop
-  in
+  (* let decls =
+   *   match decls with
+   *   | Decls d -> d
+   *   | Grp g -> g.base @ g.prop
+   * in *)
   let decls =
     Profile.time_profile "partial eval took:" (fun () -> partialEvalDecls decls)
   in
@@ -221,11 +238,11 @@ let run_simulator cfg _ decls fs =
 
 (** Native simulator - compiles SRP to OCaml *)
 let run_compiled file _ _ decls fs =
-  let decls =
-    match decls with
-    | Decls d -> d
-    | Grp g -> g.base @ g.prop
-  in
+  (* let decls =
+   *   match decls with
+   *   | Decls d -> d
+   *   | Grp g -> g.base @ g.prop
+   * in *)
   let path = Filename.remove_extension file in
   let name = Filename.basename path in
   let name = String.mapi (fun i c -> if i = 0 then Char.uppercase_ascii c else c) name in
@@ -245,12 +262,12 @@ let parse_input_aux cfg info file decls fs =
     then (
       let decls, f =
         (* unrolling maps *)
-        Profile.time_profile "Map unrolling" (fun () -> MapUnrolling.unroll info decls)
+        Profile.time_profile "Map unrolling" (fun () -> MapUnrolling.unroll_decls info decls)
       in
       (* Inline again after unrolling. Could probably optimize this away during unrolling *)
       let decls =
         Profile.time_profile "Inlining" (fun () ->
-            map_decls Inline.inline_declarations decls)
+            Inline.inline_declarations decls)
       in
       (* (Typing.infer_declarations info decls, f :: fs) (* TODO: is type inf necessary here?*) *)
       decls, f :: fs)
@@ -260,8 +277,7 @@ let parse_input_aux cfg info file decls fs =
 ;;
 
 let parse_input (args : string array)
-    : (Cmdline.t * Console.info * string * declarations_or_group * Solution.map_back list)
-    list
+    : (Cmdline.t * Console.info * string * declarations * Solution.map_back list)
   =
   let cfg, rest = argparse default "nv" args in
   Cmdline.set_cfg cfg;
@@ -294,24 +310,5 @@ let parse_input (args : string array)
       (Typing.infer_declarations info) decls, fs)
     else decls, fs
   in
-  let decls =
-    if cfg.kirigami
-    then (
-      (* FIXME: this breaks ToEdge *)
-      (* NOTE: we partition after checking well-formedness so we can reuse edges that don't exist *)
-      let partitions = SrpRemapping.partition_declarations decls in
-      let decls =
-        Profile.time_profile "Partitioning" (fun () ->
-            List.map (fun p -> Partition.transform_declarations decls p) partitions)
-      in
-      List.map
-        (fun d ->
-          if cfg.print_partitions
-          then print_endline (Printing.declaration_groups_to_string d)
-          else ();
-          Grp d)
-        decls)
-    else [Decls decls]
-  in
-  List.map (fun d -> parse_input_aux cfg info file d fs) decls
+  parse_input_aux cfg info file decls fs
 ;;

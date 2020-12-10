@@ -59,8 +59,8 @@ let rec val_to_pat v =
 ;;
 
 let rec match_branches branches v env =
-  Syntax.iterBranches (fun (p,e) ->  Printf.printf "%s\n" (Printing.pattern_to_string p)) branches;
-  Printf.printf "val: %s\n" (Printing.value_to_string v);
+  (* Syntax.iterBranches (fun (p,e) ->  Printf.printf "%s\n" (Printing.pattern_to_string p)) branches;
+   * Printf.printf "val: %s\n" (Printing.value_to_string v); *)
   match Syntax.lookUpPat (val_to_pat v) branches with
   | Found e -> Some (env, e)
   | Rest ls -> match_branches_lst ls v env
