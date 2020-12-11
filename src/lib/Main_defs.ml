@@ -131,7 +131,19 @@ let run_smt_classic_aux file cfg info decls part fs =
   | Some n -> solve_parallel n slices
 ;;
 
-let run_smt_classic file cfg info decls fs =
+let run_smt_partitioned file cfg info decls parts fs =
+  let pds = Profile.time_profile "Partitioning" (fun () ->
+    List.map
+      (fun p ->
+        let d = Partition.transform_declarations decls p in
+        if cfg.print_partitions
+        then print_endline (Printing.declaration_groups_to_string d)
+        else ();
+        (Some p, Grp d)) parts)
+  in
+  List.map (fun (p, d) -> run_smt_classic_aux file cfg info d p fs) pds
+
+let run_smt_classic file cfg info decls parts fs =
   let decls, fs =
     let decls, f = UnboxEdges.unbox_declarations decls in
     decls, f :: fs
@@ -148,33 +160,17 @@ let run_smt_classic file cfg info decls fs =
     in
     decls, f2 :: f1 :: fs
   in
-  let decls, parts = if cfg.kirigami then (
-      (* FIXME: this breaks ToEdge *)
-      (* NOTE: we partition after checking well-formedness so we can reuse edges that don't exist *)
-      let partitions = SrpRemapping.partition_declarations decls in
-      let decls =
-        Profile.time_profile "Partitioning" (fun () ->
-            List.map (fun p -> Partition.transform_declarations decls p) partitions)
-      in
-      List.map
-        (fun d ->
-          if cfg.print_partitions
-          then print_endline (Printing.declaration_groups_to_string d)
-          else ();
-          Grp d)
-        decls,
-      List.map BatOption.some partitions)
-    else [Decls decls], [None] in
-  (* List.map (fun d -> cfg, info, file, d, fs) decls *)
-  List.map2 (fun decls part -> run_smt_classic_aux file cfg info decls part fs) decls parts
+  match parts with
+  | Some p -> run_smt_partitioned file cfg info decls p fs
+  | None -> [run_smt_classic_aux file cfg info (Decls decls) None fs]
 
-let run_smt file cfg info decls fs =
+let run_smt file cfg info decls parts fs =
   if cfg.finite_arith then SmtUtils.smt_config.infinite_arith <- false;
   if cfg.smt_parallel then SmtUtils.smt_config.parallel <- true;
   (* if cfg.func then
        run_smt_func file cfg info decls fs
      else *)
-  run_smt_classic file cfg info decls fs
+  run_smt_classic file cfg info decls parts fs
 ;;
 
 let partialEvalDecls decls =
@@ -257,7 +253,7 @@ let run_compiled file _ _ decls fs =
     else CounterExample solution, fs
 ;;
 
-let parse_input_aux cfg info file decls fs =
+let parse_input_aux cfg info file decls parts fs =
   let decls, fs =
     if cfg.unroll
     then (
@@ -274,11 +270,10 @@ let parse_input_aux cfg info file decls fs =
       decls, f :: fs)
     else decls, fs
   in
-  cfg, info, file, decls, fs
+  cfg, info, file, decls, parts, fs
 ;;
 
 let parse_input (args : string array)
-    : (Cmdline.t * Console.info * string * declarations * Solution.map_back list)
   =
   let cfg, rest = argparse default "nv" args in
   Cmdline.set_cfg cfg;
@@ -311,5 +306,16 @@ let parse_input (args : string array)
       (Typing.infer_declarations info) decls, fs)
     else decls, fs
   in
-  parse_input_aux cfg info file decls fs
+  let partitions, decls =
+    if cfg.kirigami
+    then (
+      let parts = SrpRemapping.partition_declarations decls in
+      let new_symbolics =
+        let aty = get_attr_type decls |> oget in
+        Partition.get_hyp_symbolics aty parts
+      in
+      Some parts, new_symbolics @ decls)
+    else None, decls
+  in
+  parse_input_aux cfg info file decls partitions fs
 ;;

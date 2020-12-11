@@ -251,12 +251,12 @@ let map_decls_tuple f d_or_g =
     Decls d, x
   | Grp g ->
     let base, x1 = f g.base in
-    let hyps, x2 = f g.hyps in
+    let hyps, _ = f g.hyps in
     let prop, _ = f g.prop in
     let guar, _ = f g.guar in
     let lth, _ = f g.lth in
     let gth, _ = f g.gth in
-    Grp { base; prop; guar; hyps; lth; gth }, (x2 % x1)
+    Grp { base; prop; guar; hyps; lth; gth }, x1
 ;;
 
 (** * Handling branches *)

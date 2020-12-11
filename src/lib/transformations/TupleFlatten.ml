@@ -254,6 +254,10 @@ let rec flattened_size ty =
 ;;
 
 let unflatten_list (vs : value list) (tys : ty list) =
+  print_endline (Nv_utils.OCamlUtils.list_to_string Printing.value_to_string vs);
+  print_endline (Nv_utils.OCamlUtils.list_to_string Printing.ty_to_string tys);
+  (* FIXME: need to add in some dummy elements in the solution, so that when we call
+   * this during mapback it has enough nodes *)
   let vs, excess =
     List.fold_left
       (fun (acc, rest) ty ->
@@ -270,10 +274,15 @@ let unflatten_list (vs : value list) (tys : ty list) =
 ;;
 
 let map_back_transformer recurse _ v orig_ty =
+  (* print_endline ((Printing.value_to_string v) ^ ": " ^ (Printing.ty_to_string orig_ty)); *)
   match v.v, orig_ty with
   | VTuple vs, TTuple tys ->
     let vs' = unflatten_list vs tys in
     Some (vtuple (List.map2 recurse vs' tys))
+  (* | _, TTuple _ ->
+   *   failwith ("original type was a tuple, but value "
+   *             ^ (Printing.value_to_string v)
+   *             ^ " is no longer one!") *)
   | _ -> None
 ;;
 

@@ -127,7 +127,7 @@ let solve info query chan net_or_srp nodes assertions requires =
       time_profile_absolute "Encoding network" (fun () ->
           let env = net_or_srp () in
           (* debugging *)
-          print_endline (env_to_smt ~verbose:smt_config.verbose info env);
+          (* print_endline (env_to_smt ~verbose:smt_config.verbose info env); *)
           if smt_config.optimize
           then propagate_eqs env
           else (StringMap.empty, StringMap.empty), env)

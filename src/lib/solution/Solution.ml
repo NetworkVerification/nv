@@ -185,7 +185,7 @@ let print_fun nodes { sol_val; mask } =
   let m =
     match sol_val.v with
     | VMap m -> m
-    | _ -> failwith "Solution must be a map"
+    | _ -> failwith ("Solution must be a map; got " ^ (Printing.value_to_string sol_val))
   in
   let f =
     match mask with

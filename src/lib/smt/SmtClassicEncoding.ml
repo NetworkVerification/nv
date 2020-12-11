@@ -9,6 +9,7 @@ open Nv_utils.OCamlUtils
 open Nv_kirigami
 open Batteries
 open SrpRemapping
+open AdjGraph
 
 module type ClassicEncodingSig =
   SmtEncodingSigs.Encoding
@@ -295,14 +296,13 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
   let find_input_symbolics env (hyp_var : Var.t) aty =
     let prefix = "symbolic-" ^ Var.name hyp_var in
     (* let names = create_strings prefix aty in *)
-    (* hopefully this comes out in the right order! *)
-    print_endline (string_of_int (ConstantSet.cardinal env.const_decls));
     let names = ConstantSet.fold
         (fun { cname; _ } l -> if String.starts_with cname prefix
           then (mk_term (mk_var cname)) :: l
           else (print_endline cname; l))
         env.const_decls []
     in
+    (* hopefully this comes out in the right order! *)
     (* order of names is reversed by fold, so flip them around *)
     of_list (List.rev names)
     (* lift1 (fun s -> mk_term (mk_var s)) names *)
@@ -317,7 +317,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     =
     let aty = oget aty in
     let einit, etrans, emerge = init, trans, merge in
-    let nodes = AdjGraph.nb_vertex graph in
+    let nodes = nb_vertex graph in
     (* Extract variable names from e, and split them up based on which node they
        belong to. In the end, label_vars.(i) is the list of attribute variables
        for node i *)
@@ -350,9 +350,9 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     (* incoming_map is a map from vertices to list of incoming edges *)
     let incoming_map = Array.make nodes [] in
     (* trans_map maps each edge to the variable that holds the result *)
-    let trans_map = ref AdjGraph.EdgeMap.empty in
+    let trans_map = ref EdgeMap.empty in
     (* trans_input_map maps each edge to the incoming message variable *)
-    let trans_input_map = ref AdjGraph.EdgeMap.empty in
+    let trans_input_map = ref EdgeMap.empty in
     let eintrans, eouttrans =
       match decomp with
       | Some (lt, rt) -> lt, rt
@@ -360,7 +360,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     in
     (* construct the input constants *)
     let input_map =
-      AdjGraph.VertexMap.map
+      VertexMap.map
         (fun inputs ->
           List.map
             (fun { edge; var } ->
@@ -376,7 +376,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
         inputs
     in
     let enc_z3_trans = encode_z3_trans etrans in
-    AdjGraph.iter_edges_e
+    iter_edges_e
       (fun (i, j) ->
         incoming_map.(j) <- (i, j) :: incoming_map.(j);
         let node_value n = avalue (vnode n, Some Typing.node_ty, Span.default) in
@@ -391,8 +391,8 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
         in
         (* Printf.printf "etrans:%s\n" (Printing.exp_to_string etrans); *)
         let trans, x = enc_z3_trans edge (Printf.sprintf "trans%d-%d-%d" count i j) env in
-        trans_input_map := AdjGraph.EdgeMap.add (i, j) x !trans_input_map;
-        trans_map := AdjGraph.EdgeMap.add (i, j) trans !trans_map)
+        trans_input_map := EdgeMap.add (i, j) x !trans_input_map;
+        trans_map := EdgeMap.add (i, j) trans !trans_map)
       graph;
     (* Setup labelling functions *)
     let attr_sort = ty_to_sorts aty in
@@ -412,7 +412,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
         BatList.fold_left
           (fun prev_result (x, y) ->
             incr idx;
-            let trans = AdjGraph.EdgeMap.find (x, y) !trans_map in
+            let trans = EdgeMap.find (x, y) !trans_map in
             let str = Printf.sprintf "merge%d-%d-%d" count i !idx in
             let merge_result, x = encode_z3_merge str env emerge_i in
             let trans_list = to_list trans in
@@ -425,11 +425,12 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
           init
           in_edges
       in
-      let inputs = AdjGraph.VertexMap.find i input_map in
-      print_endline (Nv_utils.OCamlUtils.list_to_string
-                       (fun terms -> Nv_utils.OCamlUtils.list_to_string
-                           (SmtLang.term_to_smt () ()) (to_list terms))
-                       inputs);
+      (* if there are no inputs, then return [] so we can skip *)
+      let inputs = VertexMap.find_default [] i input_map in
+      (* print_endline (Nv_utils.OCamlUtils.list_to_string
+       *                  (fun terms -> Nv_utils.OCamlUtils.list_to_string
+       *                      (SmtLang.term_to_smt () ()) (to_list terms))
+       *                  inputs); *)
       let merged =
         BatList.fold_left
           (fun prev_result input ->
@@ -461,7 +462,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     (* construct the output constants *)
     (* TODO: add predicate constraints on outputs *)
     let _output_map =
-      AdjGraph.VertexMap.mapi
+      VertexMap.mapi
         (fun v outputs ->
           List.map
             (fun ((i, j), _) ->
@@ -475,7 +476,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
         outputs
     in
     (* Propagate labels across edges outputs *)
-    AdjGraph.EdgeMap.iter
+    EdgeMap.iter
       (fun (i, _) x ->
         let label = labelling.(i) in
         BatList.iter2
@@ -488,7 +489,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
   let encode_solve env graph count { aty; var_names; init; trans; merge } =
     let aty = oget aty in
     let einit, etrans, emerge = init, trans, merge in
-    let nodes = AdjGraph.nb_vertex graph in
+    let nodes = nb_vertex graph in
     (* Extract variable names from e, and split them up based on which node they
        belong to. In the end, label_vars.(i) is the list of attribute variables
        for node i *)
@@ -521,11 +522,11 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     (* incoming_map is a map from vertices to list of incoming edges *)
     let incoming_map = Array.make nodes [] in
     (* trans_map maps each edge to the variable that holds the result *)
-    let trans_map = ref AdjGraph.EdgeMap.empty in
+    let trans_map = ref EdgeMap.empty in
     (* trans_input_map maps each edge to the incoming message variable *)
-    let trans_input_map = ref AdjGraph.EdgeMap.empty in
+    let trans_input_map = ref EdgeMap.empty in
     let enc_z3_trans = encode_z3_trans etrans in
-    AdjGraph.iter_edges_e
+    iter_edges_e
       (fun (i, j) ->
         incoming_map.(j) <- (i, j) :: incoming_map.(j);
         let node_value n = avalue (vnode n, Some Typing.node_ty, Span.default) in
@@ -540,8 +541,8 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
         in
         (* Printf.printf "etrans:%s\n" (Printing.exp_to_string etrans); *)
         let trans, x = enc_z3_trans edge (Printf.sprintf "trans%d-%d-%d" count i j) env in
-        trans_input_map := AdjGraph.EdgeMap.add (i, j) x !trans_input_map;
-        trans_map := AdjGraph.EdgeMap.add (i, j) trans !trans_map)
+        trans_input_map := EdgeMap.add (i, j) x !trans_input_map;
+        trans_map := EdgeMap.add (i, j) trans !trans_map)
       graph;
     (* Setup labelling functions *)
     let attr_sort = ty_to_sorts aty in
@@ -561,7 +562,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
         BatList.fold_left
           (fun prev_result (x, y) ->
             incr idx;
-            let trans = AdjGraph.EdgeMap.find (x, y) !trans_map in
+            let trans = EdgeMap.find (x, y) !trans_map in
             let str = Printf.sprintf "merge%d-%d-%d" count i !idx in
             let merge_result, x = encode_z3_merge str env emerge_i in
             let trans_list = to_list trans in
@@ -587,7 +588,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
       labelling.(i) <- l
     done;
     (* Propagate labels across edges outputs *)
-    AdjGraph.EdgeMap.iter
+    EdgeMap.iter
       (fun (i, _) x ->
         let label = labelling.(i) in
         BatList.iter2
@@ -653,6 +654,10 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     let lh_requires = get_requires dgs.lth in
     let gh_requires = get_requires dgs.gth in
     let env = init_solver symbolics ~labels:[] in
+    (* encode the symbolics and requires first,
+     * so we can find them when we do the kirigami_solve
+     * NOTE: could instead pass in the list of symbolics
+     * to encode_kirigami_solve if this is bad *)
     add_symbolic_constraints env [] env.symbolics;
     List.iteri (encode_kirigami_solve env graph part) solves;
     (* these require constraints are always included *)

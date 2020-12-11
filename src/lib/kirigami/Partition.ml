@@ -9,8 +9,6 @@ open Nv_interpreter
 open Nv_utils.OCamlUtils
 open SrpRemapping
 
-let of_decls d = Decls d
-
 type transform_result =
   | Network of declaration
   (* Solution: return Solve, Symbolics, Asserts, and two groups of Requires *)
@@ -23,25 +21,48 @@ type transform_result =
   | Property of declaration
   | None
 
+(** Return a new set of declarations of all symbolics added by partitions. *)
+let get_hyp_symbolics ty partitions =
+  let add_partition_hyps l part =
+    VertexMap.fold
+      (fun _ input_exps l -> (List.map (fun ie -> DSymbolic (ie.var, Ty ty)) input_exps) @ l)
+      part.inputs
+      l
+  in
+  List.fold_left add_partition_hyps [] partitions
+
+let valid_hyps parted_srp =
+  let get_vars _ input_exps l =
+    (List.map (fun ie -> ie.var) input_exps) @ l
+  in
+  VertexMap.fold get_vars parted_srp.inputs []
+
 (* Return a transformed version of the given declaration, and optionally any new Kirigami constraints
  * that need to be added with it. *)
 let transform_declaration parted_srp decl : transform_result =
-  let ({ nodes; edges; rank } : partitioned_srp) = parted_srp in
+  let ({ nodes; edges; _ } : partitioned_srp) = parted_srp in
+  let valid_hyps = valid_hyps parted_srp in
   match decl with
   | DNodes _ -> Network (DNodes nodes)
   | DEdges _ -> Network (DEdges edges)
+  (* drop any hypotheses that don't belong to this partition *)
+  | DSymbolic (v, _) ->
+    if (String.starts_with (Var.name v) "hyp" && not (List.mem v valid_hyps))
+    then None
+    else Network decl
   | DSolve s ->
-    let solve', assert', symbolics, reqs = transform_solve s parted_srp in
-    let sort_hyp exp r (lt, gt) =
-      if r < rank then DRequire exp :: lt, gt else lt, DRequire exp :: gt
-    in
-    let lesser_req_decls, greater_req_decls = Map.foldi sort_hyp reqs ([], []) in
-    Solution
-      ( DSolve solve'
-      , List.map (fun (v, t) -> DSymbolic (v, t)) symbolics
-      , List.map (fun e -> DAssert e) assert'
-      , lesser_req_decls
-      , greater_req_decls )
+    let solve' = transform_solve s parted_srp in
+    (* let sort_hyp exp r (lt, gt) =
+     *   if r < rank then DRequire exp :: lt, gt else lt, DRequire exp :: gt
+     * in *)
+    (* let lesser_req_decls, greater_req_decls = Map.foldi sort_hyp reqs ([], []) in *)
+    Network (DSolve solve')
+    (* Solution
+     *   ( DSolve solve'
+     *   , List.map (fun (v, t) -> DSymbolic (v, t)) symbolics
+     *   , List.map (fun e -> DAssert e) assert'
+     *   , lesser_req_decls
+     *   , greater_req_decls ) *)
   | DPartition _ -> None
   | DAssert e -> Property (DAssert (transform_assert e parted_srp))
   | _ -> Network decl

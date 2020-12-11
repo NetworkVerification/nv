@@ -14,14 +14,14 @@ let handle_op result =
 let main_func () =
   Printexc.record_backtrace true;
   (* let inputs = parse_input Sys.argv in *)
-  let cfg, info, file, decls, fs = parse_input Sys.argv in
+  let cfg, info, file, decls, parts, fs = parse_input Sys.argv in
   (* if cfg.check_monotonicity then *)
   (*   checkPolicy info cfg file decls; *)
   (* List.iter
    *   (fun (cfg, info, file, net, fs) -> *)
       let networkOp =
         if cfg.smt
-        then run_smt file cfg info decls fs
+        then run_smt file cfg info decls parts fs
         else if cfg.simulate
         then [run_simulator cfg info decls fs]
         else if cfg.compile

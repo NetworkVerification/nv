@@ -321,17 +321,24 @@ let rec prune_conjuncts rubric e =
     | _ -> failwith "rubric longer than number of conjuncts")
   ;;
 
+(* the and statement is nested as follows:
+ * And (And (And x0 x1) x2) x3
+ * so we need to recurse in until we have dropped
+ * the right number of nodes?
+ **)
 let rec remap_conjuncts nodes e =
   print_endline (Printing.exp_to_string e);
   if (nodes > 0) then
     (match e.e with
-    | EOp (And, [e2; e3]) ->
-      let e3' = remap_conjuncts (nodes - 1) e3 in
-      wrap e (eop And [e2; e3'])
+    | EOp (And, [e2; _]) ->
+      (* go deeper *)
+      remap_conjuncts (nodes - 1) e2
+      (* let e3' = remap_conjuncts (nodes - 1) e3 in
+       * wrap e (eop And [e2; e3']) *)
     | EOp (And, _) -> failwith "and has wrong number of arguments"
     (* this case should be the last one *)
     | _ -> e)
-  else etrue
+  else e
   ;;
 
 (** Assume the assert is of the form:
@@ -433,12 +440,22 @@ let update_preds interface partitioned_srp =
   }
 ;;
 
-let transform_var_names var_names _partitioned_srp =
-  (* TODO: eliminate certain var_names elements, depending on what the type is *)
-  match Option.get var_names.ety with
-  | TVar _ -> var_names
-  | TTuple _ts -> var_names
-  | _ -> failwith "unexpected type"
+let transform_var_names var_names aty partitioned_srp =
+  let { nodes; _ } = partitioned_srp in
+  let new_width = nodes * match aty with
+    | TTuple ts -> List.length ts
+    | _ -> 1
+  in
+  match var_names.e with
+  | EVar _ -> var_names
+  | ETuple es ->
+    let ty = var_names.ety |> Option.get in
+    let ty = match ty with
+      | TTuple ts -> TTuple (List.take new_width ts)
+      | _ -> failwith "unexpected type"
+    in
+    annot ty (etuple (List.take new_width es))
+  | _ -> failwith "unexpected var_names exp"
 ;;
 
 let collect_requires_and_symbolics ty partition
@@ -468,43 +485,52 @@ let collect_requires_and_symbolics ty partition
   VertexMap.fold add_requires partition.inputs (Map.empty, [])
 ;;
 
+let get_ranked_hypotheses ty partition : (exp, int) Map.t =
+  let symb_to_var (v, toe) =
+    let ty = get_ty_from_tyexp toe in
+    annot ty (evar v)
+  in
+  let add_requires _ input_exps m =
+    List.fold_left
+      (fun m { var; rank; pred; _ } ->
+         (* FIXME: need to make sure we're referring to the correct variables,
+          * which should already be floating around somewhere *)
+         let symbs = Nv_transformations.TupleFlatten.proj_symbolic (var, Ty ty) in
+           (match pred with
+            | Some p ->
+              let args = List.map symb_to_var symbs in
+              Map.add
+                (InterpPartialFull.interp_partial
+                  (annot TBool (apps p args)))
+                rank
+                m
+            | None -> m))
+      m
+      input_exps
+  in
+  VertexMap.fold add_requires partition.inputs Map.empty
+;;
+
+
 (* Transform the given solve and return it along with a new expression to assert
  * and new expressions to require. *)
 let transform_solve solve (partition : SrpRemapping.partitioned_srp)
-    : solve * exp list * (var * ty_or_exp) list * (exp, int) Map.t
+    : solve
   =
-  let ({ aty; init; trans; merge; interface; decomp } : solve) = solve in
+  let ({ aty; var_names; init; trans; merge; interface; _ } : solve) = solve in
   (* print_endline "in transform_solve"; *)
   let partition' = update_preds interface partition in
-  let attr_type = aty |> Option.get in
-  (* NOTE: we don't perform any kind of verification that the decomposition is sound;
-   * if we've got it, we use it! *)
-  (* let outtrans, intrans =
-   *   match decomp with
-   *   | Some (lt, rt) -> lt, rt
-   *   (\* default behaviour: perform the transfer on the output side *\)
-   *   | None -> Some trans, None
-   * in *)
   let init = remap_exp partition' init in
   let trans = remap_exp partition' trans in
   let merge = remap_exp partition' merge in
-  (* let init = transform_init init intrans merge attr_type partition' in
-   * let trans = transform_trans trans attr_type partition' in
-   * let merge = transform_merge merge attr_type partition' in *)
-  (* TODO: don't add this yet *)
-  let assertions = [] in
-  (* let assertions = outputs_assert outtrans var_names attr_type partition' in *)
+  (* let var_names = transform_var_names var_names (aty |> Option.get) partition in *)
   (* collect require and symbolic information *)
-  let reqs, symbolics = collect_requires_and_symbolics attr_type partition' in
-  ( { solve with
-      init
+  { solve with
+      var_names
+    ; init
     ; trans
     ; merge
     ; (* should this be erased, or kept as reference? *)
       interface = None
-    ; decomp
-    }
-  , assertions
-  , symbolics
-  , reqs )
+  }
 ;;
