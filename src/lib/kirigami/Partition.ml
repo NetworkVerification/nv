@@ -25,12 +25,8 @@ type transform_result =
 
 (* Return a transformed version of the given declaration, and optionally any new Kirigami constraints
  * that need to be added with it. *)
-let transform_declaration aty parted_srp decl : transform_result =
+let transform_declaration parted_srp decl : transform_result =
   let ({ nodes; edges; rank } : partitioned_srp) = parted_srp in
-  let aty_width = match aty with
-    | TTuple ts -> List.length ts
-    | _ -> 1
-  in
   match decl with
   | DNodes _ -> Network (DNodes nodes)
   | DEdges _ -> Network (DEdges edges)
@@ -47,13 +43,12 @@ let transform_declaration aty parted_srp decl : transform_result =
       , lesser_req_decls
       , greater_req_decls )
   | DPartition _ -> None
-  | DAssert e -> Property (DAssert (transform_assert e aty_width parted_srp))
+  | DAssert e -> Property (DAssert (transform_assert e parted_srp))
   | _ -> Network decl
 ;;
 
 let transform_declarations decls parted_srp =
-  let aty = get_attr_type decls |> Option.get in
-  let transformed_decls = List.map (transform_declaration aty parted_srp) decls in
+  let transformed_decls = List.map (transform_declaration parted_srp) decls in
   (* divide up the declarations as appropriate *)
   let rec split_decls (net, guar, hyps, lt_hyp, gt_hyp, prop) l =
     match l with
@@ -63,7 +58,7 @@ let transform_declarations decls parted_srp =
         match h with
         | Network d -> split_decls (d :: net, guar, hyps, lt_hyp, gt_hyp, prop) t
         | Solution (d, s, g, lh, gh) ->
-          split_decls (d :: net, g @ guar, s @ hyps, lh @ lt_hyp, gh @ gt_hyp, prop) t
+          split_decls (s @ (d :: net), g @ guar, hyps, lh @ lt_hyp, gh @ gt_hyp, prop) t
         | Property p -> split_decls (net, guar, hyps, lt_hyp, gt_hyp, p :: prop) t
         | None -> split_decls (net, guar, hyps, lt_hyp, gt_hyp, prop) t
       end

@@ -1,6 +1,8 @@
 open Nv_lang.Syntax
 open Nv_solution
 
+val proj_symbolic : var * ty_or_exp -> (var * ty_or_exp) list
+
 (** [flatten ds] flattens nested tuples *)
 val flatten_declarations : declarations -> declarations * Solution.map_back
 

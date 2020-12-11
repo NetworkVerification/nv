@@ -321,6 +321,19 @@ let rec prune_conjuncts rubric e =
     | _ -> failwith "rubric longer than number of conjuncts")
   ;;
 
+let rec remap_conjuncts nodes e =
+  print_endline (Printing.exp_to_string e);
+  if (nodes > 0) then
+    (match e.e with
+    | EOp (And, [e2; e3]) ->
+      let e3' = remap_conjuncts (nodes - 1) e3 in
+      wrap e (eop And [e2; e3'])
+    | EOp (And, _) -> failwith "and has wrong number of arguments"
+    (* this case should be the last one *)
+    | _ -> e)
+  else etrue
+  ;;
+
 (** Assume the assert is of the form:
  ** assert foldNodes (fun u v acc -> assertNode u v && acc) sol true
  ** which simplifies after map unrolling to:
@@ -333,8 +346,8 @@ let rec prune_conjuncts rubric e =
  ** the 0..k projected variables will belong to node 0,
  ** the k..2k variables belong to node 1, and so on.
  **)
-let transform_assert (e : exp) (width : int) (parted_srp : SrpRemapping.partitioned_srp) : exp =
-  let { node_map; _ } = parted_srp in
+let transform_assert (e : exp) (parted_srp : SrpRemapping.partitioned_srp) : exp =
+  let { nodes; _ } = parted_srp in
   (* create a list of bool of length n * k; zip it against the conjuncts and replace any
    * for which the corresponding bool is false with the statement "true" *)
   (* FIXME: can't just drop the ones that refer to old nodes, as the assignment order
@@ -342,9 +355,9 @@ let transform_assert (e : exp) (width : int) (parted_srp : SrpRemapping.partitio
    * for instance, in the second partition of the network 0 = 1
    * where 1 is remapped to 0, we want to drop the case of 0 and also change references
    * to the solution for node 1 to references to the solution for node 0 *)
-  let rubric = VertexMap.fold (fun _ v l -> l @ (match v with
-      | Some _ -> List.make width true
-      | None -> List.make width false)) node_map [] in
+  (* let rubric = VertexMap.fold (fun _ v l -> l @ (match v with
+   *     | Some _ -> List.make width true
+   *     | None -> List.make width false)) node_map [] in *)
   (* TODO: drop expressions or simplify them to true if they reference nodes we don't have access to *)
   let e = (match e.e with
    | EMatch _ ->
@@ -355,7 +368,8 @@ let transform_assert (e : exp) (width : int) (parted_srp : SrpRemapping.partitio
      let e1 = InterpPartialFull.interp_partial e in
      (match e1.e with
      | EOp (And, _) ->
-       prune_conjuncts rubric e1
+       remap_conjuncts nodes e1
+       (* prune_conjuncts rubric e1 *)
        (* let conjs = collect_conjuncts [] e1 in
         * if (List.length conjs) = width then
         *   print_endline "got all conjuncts"
@@ -419,29 +433,35 @@ let update_preds interface partitioned_srp =
   }
 ;;
 
-let transform_var_names var_names partitioned_srp =
+let transform_var_names var_names _partitioned_srp =
   (* TODO: eliminate certain var_names elements, depending on what the type is *)
   match Option.get var_names.ety with
   | TVar _ -> var_names
-  | TTuple ts -> var_names
+  | TTuple _ts -> var_names
   | _ -> failwith "unexpected type"
 ;;
 
 let collect_requires_and_symbolics ty partition
     : (exp, int) Map.t * (var * ty_or_exp) list
   =
+  let symb_to_var (v, toe) =
+    let ty = get_ty_from_tyexp toe in
+    annot ty (evar v)
+  in
   let add_requires _ input_exps (m, l) =
     List.fold_left
       (fun (m, l) { var; rank; pred; _ } ->
-        ( (match pred with
-          | Some p ->
-            Map.add
-              (InterpPartialFull.interp_partial
-                 (annot TBool (eapp p (annot ty (evar var)))))
-              rank
-              m
-          | None -> m)
-        , (var, Ty ty) :: l ))
+         (let symbs = Nv_transformations.TupleFlatten.proj_symbolic (var, Ty ty) in
+           (match pred with
+            | Some p ->
+              let args = List.map symb_to_var symbs in
+              Map.add
+                (InterpPartialFull.interp_partial
+                  (annot TBool (apps p args)))
+                rank
+                m
+            | None -> m)
+        , symbs @ l ))
       (m, l)
       input_exps
   in
@@ -453,18 +473,18 @@ let collect_requires_and_symbolics ty partition
 let transform_solve solve (partition : SrpRemapping.partitioned_srp)
     : solve * exp list * (var * ty_or_exp) list * (exp, int) Map.t
   =
-  let ({ aty; var_names; init; trans; merge; interface; decomp } : solve) = solve in
+  let ({ aty; init; trans; merge; interface; decomp } : solve) = solve in
   (* print_endline "in transform_solve"; *)
   let partition' = update_preds interface partition in
   let attr_type = aty |> Option.get in
   (* NOTE: we don't perform any kind of verification that the decomposition is sound;
    * if we've got it, we use it! *)
-  let outtrans, intrans =
-    match decomp with
-    | Some (lt, rt) -> lt, rt
-    (* default behaviour: perform the transfer on the output side *)
-    | None -> Some trans, None
-  in
+  (* let outtrans, intrans =
+   *   match decomp with
+   *   | Some (lt, rt) -> lt, rt
+   *   (\* default behaviour: perform the transfer on the output side *\)
+   *   | None -> Some trans, None
+   * in *)
   let init = remap_exp partition' init in
   let trans = remap_exp partition' trans in
   let merge = remap_exp partition' merge in

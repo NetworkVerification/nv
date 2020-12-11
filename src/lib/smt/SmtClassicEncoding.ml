@@ -292,67 +292,6 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
       trans
     | None -> var
 
-  (* let encode_z3_interface env aty labels interface partitioned_srp =
-   *   (\* get edge argument*\)
-   *   let ex1, ex2, ex1ty, ex2ty, interface =
-   *     match interface.e with
-   *     | EFun { arg = ex1; argty = Some ex1ty; body = exp; _ } ->
-   *       (match exp.e with
-   *       | EFun { arg = ex2; argty = Some ex2ty; body = exp; _ } ->
-   *         ex1, ex2, ex1ty, ex2ty, exp
-   *       | _ -> failwith "Expected a function")
-   *     | _ -> failwith "Expected a function"
-   *   in
-   *   let get_pred edge =
-   *     let p = InterpPartial.interp_partial_fun interface edge in
-   *     match p.e with
-   *     | ESome exp -> Some exp
-   *     | EVal { v = VOption o; _ } ->
-   *       (match o with
-   *       | Some _ -> failwith "got a some value, which I didn't expect"
-   *       | None -> None)
-   *     | ETuple [{ e = EVal { v = VBool b; _ }; _ }; p] -> if b then Some p else None
-   *     | _ -> failwith "got a non-option, which I didn't expect"
-   *   in
-   *   let node_value n = avalue (vnode n, Some Typing.node_ty, Span.default) in
-   *   let edge_to_exps (i, j) =
-   *     if SmtUtils.smt_config.unboxing
-   *     then [node_value i; node_value j]
-   *     else
-   *       [ avalue
-   *           ( vtuple [node_value i; node_value j]
-   *           , Some (TTuple [TNode; TNode])
-   *           , Span.default ) ]
-   *   in
-   *   let partitioned_srp =
-   *     { partitioned_srp with
-   *       inputs =
-   *         AdjGraph.VertexMap.map
-   *           (fun input_exps ->
-   *             List.map
-   *               (fun e -> { e with pred = get_pred (edge_to_exps e.edge) })
-   *               input_exps)
-   *           partitioned_srp.inputs
-   *     ; outputs =
-   *         AdjGraph.VertexMap.map
-   *           (fun outputs ->
-   *             List.map (fun (edge, _) -> edge, get_pred (edge_to_exps edge)) outputs)
-   *           partitioned_srp.outputs
-   *     }
-   *   in
-   *   (\* next part is a statement which returns Some fn or None *\)
-   *   (\* want to get back that function *\)
-   *   (\* TODO
-   *    * - extract the interface function
-   *    * - compute the predicate associated with each edge
-   *    * - produce all the requirements for the hypotheses from other partitions
-   *    *   (to be sorted into lesser and greater after)
-   *    * - produce the constraints for the outputs' guarantees
-   *    * - return a map for the inputs to each node, and a map for the outputs of each node
-   *    *\)
-   *   ()
-   * ;; *)
-
   let find_input_symbolics env (hyp_var : Var.t) aty =
     let prefix = "symbolic-" ^ Var.name hyp_var in
     (* let names = create_strings prefix aty in *)
@@ -364,7 +303,8 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
           else (print_endline cname; l))
         env.const_decls []
     in
-    of_list names
+    (* order of names is reversed by fold, so flip them around *)
+    of_list (List.rev names)
     (* lift1 (fun s -> mk_term (mk_var s)) names *)
     ;;
 
@@ -485,6 +425,11 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
           init
           in_edges
       in
+      let inputs = AdjGraph.VertexMap.find i input_map in
+      print_endline (Nv_utils.OCamlUtils.list_to_string
+                       (fun terms -> Nv_utils.OCamlUtils.list_to_string
+                           (SmtLang.term_to_smt () ()) (to_list terms))
+                       inputs);
       let merged =
         BatList.fold_left
           (fun prev_result input ->
@@ -499,7 +444,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
               x;
             merge_result)
           merged
-          (AdjGraph.VertexMap.find i input_map)
+          inputs
       in
       let lbl_iv = label_vars.(i) in
       add_symbolic env lbl_iv (Ty aty);

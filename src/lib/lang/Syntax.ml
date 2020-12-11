@@ -256,7 +256,7 @@ let map_decls_tuple f d_or_g =
     let guar, _ = f g.guar in
     let lth, _ = f g.lth in
     let gth, _ = f g.gth in
-    Grp { base; prop; guar; hyps; lth; gth }, (x1 % x2)
+    Grp { base; prop; guar; hyps; lth; gth }, (x2 % x1)
 ;;
 
 (** * Handling branches *)
