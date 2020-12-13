@@ -47,6 +47,10 @@ let transform_declaration parted_srp decl : transform_result =
   | DEdges _ -> Network (DEdges edges)
   (* drop any hypotheses that don't belong to this partition *)
   | DSymbolic (v, _) ->
+    (* print_endline (Var.name v);
+     * print_endline (Nv_utils.OCamlUtils.list_to_string Var.name valid_hyps); *)
+    (* get the original variable form in case it's been projected *)
+    let v = snd (unproj_var v) in
     if (String.starts_with (Var.name v) "hyp" && not (List.mem v valid_hyps))
     then None
     else Network decl

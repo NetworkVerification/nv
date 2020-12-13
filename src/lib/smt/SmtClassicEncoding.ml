@@ -250,26 +250,31 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     | _ -> failwith "internal error"
   ;;
 
-  let encode_predicate str env pred =
+  let encode_predicate pred =
     let xs, exp = encode_predicate_aux pred [] in
     let expty = oget exp.ety in
     let expsorts = ty_to_sorts expty in
-    let xstr =
-      BatList.rev_map
-        (fun (x, xsort) ->
-          mk_constant
-            env
-            (create_vars env str x)
-            xsort
-            ~cdescr:"predicate x argument"
-            ~cloc:pred.espan)
-        xs
-    in
-    let names = create_strings (Printf.sprintf "%s-result" str) expty in
-    let results = lift2 (mk_constant env) names expsorts in
-    let es = encode_exp_z3 str env exp in
-    (* can't add constraints yet, since we behave differently depending on what the predicate is for *)
-    results, xstr, es
+    fun str env ->
+      let xstr =
+        BatList.rev_map
+          (fun (x, xsort) ->
+            mk_constant
+              env
+              (create_vars env str x)
+              xsort
+              ~cdescr:"predicate x argument"
+              ~cloc:pred.espan)
+          xs
+      in
+      let names = create_strings (Printf.sprintf "%s-result" str) expty in
+      let results = lift2 (mk_constant env) names expsorts in
+      let es = encode_exp_z3 str env exp in
+      ignore
+        (lift2
+           (fun e result -> SmtUtils.add_constraint env (mk_term (mk_eq result.t e.t)))
+           es
+           results);
+      results, xstr
   ;;
 
   (* Encode the transfer of the given variable across the input/output
@@ -277,50 +282,91 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
   let encode_kirigami_decomp str env optrans edge var =
     match optrans with
     | Some exp ->
-      let enc_z3_trans = encode_z3_trans exp in
       let i, j = edge in
       let node_value n = avalue (vnode n, Some TNode, Span.default) in
       let edge = [node_value i; node_value j] in
-      let trans, tx = enc_z3_trans edge (Printf.sprintf "trans-%s" str) env in
-      print_endline ("Printing var");
-      BatList.iter (fun t -> print_endline (SmtLang.term_to_smt () () t)) (to_list var);
-      print_endline ("Printing trans");
-      BatList.iter (fun t -> print_endline (SmtLang.term_to_smt () () t)) (to_list trans);
+      let trans, tx = encode_z3_trans exp edge (Printf.sprintf "trans-%s" str) env in
+      (* print_endline ("Printing var");
+       * BatList.iter (fun t -> print_endline (SmtLang.term_to_smt () () t)) (to_list var);
+       * print_endline ("Printing trans");
+       * BatList.iter (fun t -> print_endline (SmtLang.term_to_smt () () t)) (to_list trans); *)
       BatList.iter2
-        (fun e result -> SmtUtils.add_constraint env (mk_term (mk_eq result.t e.t)))
+        (fun x v -> SmtUtils.add_constraint env (mk_term (mk_eq v.t x.t)))
         tx
         (to_list var);
       trans
     | None -> var
+  ;;
 
-  let find_input_symbolics env (hyp_var : Var.t) aty =
+  let find_input_symbolics env (hyp_var : Var.t) =
     let prefix = "symbolic-" ^ Var.name hyp_var in
-    (* let names = create_strings prefix aty in *)
     let names = ConstantSet.fold
         (fun { cname; _ } l -> if String.starts_with cname prefix
           then (mk_term (mk_var cname)) :: l
           else (print_endline cname; l))
         env.const_decls []
     in
+    (* sanity check: *)
+    if (List.length names = 0) then
+      failwith "couldn't find the corresponding constant for hyp in smt_env"
+    else
+      ();
     (* hopefully this comes out in the right order! *)
     (* order of names is reversed by fold, so flip them around *)
     of_list (List.rev names)
-    (* lift1 (fun s -> mk_term (mk_var s)) names *)
-    ;;
+  ;;
+
+  type hyp_order = Lesser of term E.t | Greater of term E.t
+
+  (* map from base nodes to a list of inputs,
+   * where each input is a 2-tuple of
+   * 1. transfer encoding
+   * 2. predicate encoding
+  *)
+  let encode_kirigami_inputs env r inputs eintrans count =
+    let encode_input { edge; rank; var; pred } =
+      let i, j = edge in
+      let xs = find_input_symbolics env var in
+      (* get the relevant predicate *)
+      let hyp = (match pred with
+        | Some p ->
+          let pred, px = encode_predicate p (Printf.sprintf "input-pred%d-%d-%d" count i j) env in
+          BatList.iter2
+            (fun x v -> SmtUtils.add_constraint env (mk_term (mk_eq v.t x.t)))
+            px
+            (to_list xs);
+          Some (if rank < r then Lesser pred else Greater pred)
+        | None -> None)
+      in
+      (encode_kirigami_decomp
+        (Printf.sprintf "input%d-%d-%d" count i j)
+        env
+        eintrans
+        edge
+        (find_input_symbolics env var),
+      hyp)
+    in
+    VertexMap.map (fun inputs -> List.map encode_input inputs) inputs
+   ;;
 
   let encode_kirigami_solve
       env
       graph
-      { inputs; outputs }
+      parted_srp
       count
       { aty; var_names; init; trans; merge; decomp }
     =
     let aty = oget aty in
     let einit, etrans, emerge = init, trans, merge in
+    let { rank; inputs; outputs } = parted_srp in
+    (* save the number of nodes in the global network *)
+    let old_nodes = SrpRemapping.get_global_nodes parted_srp in
     let nodes = nb_vertex graph in
     (* Extract variable names from e, and split them up based on which node they
        belong to. In the end, label_vars.(i) is the list of attribute variables
        for node i *)
+    (* NOTE: as we don't modify var_names as part of Kirigami,
+     * label_vars has a length proportional to the number of nodes in the original network *)
     let label_vars : var E.t array =
       let aty_len =
         match aty with
@@ -359,22 +405,8 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
       | None -> Some etrans, None
     in
     (* construct the input constants *)
-    let input_map =
-      VertexMap.map
-        (fun inputs ->
-          List.map
-            (fun { edge; var } ->
-              let i, j = edge in
-              encode_kirigami_decomp
-                (Printf.sprintf "input%d-%d-%d" count i j)
-                env
-                eintrans
-                edge
-                (* get the relevant variables *)
-                (find_input_symbolics env var aty))
-            inputs)
-        inputs
-    in
+
+    let input_map = encode_kirigami_inputs env rank inputs eintrans count in
     let enc_z3_trans = encode_z3_trans etrans in
     iter_edges_e
       (fun (i, j) ->
@@ -433,12 +465,14 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
        *                  inputs); *)
       let merged =
         BatList.fold_left
-          (fun prev_result input ->
+          (fun prev_result (input, _) ->
             incr idx;
             let str = Printf.sprintf "merge-input%d-%d-%d" count i !idx in
             let merge_result, x = encode_z3_merge str env emerge_i in
             let input_list = to_list input in
             let prev_result_list = to_list prev_result in
+            print_endline ("inputs: " ^ string_of_int (List.length input_list)
+                           ^ "; prev_result: " ^ string_of_int (List.length prev_result_list));
             BatList.iter2
               (fun y x -> SmtUtils.add_constraint env (mk_term (mk_eq y.t x.t)))
               (prev_result_list @ input_list)
@@ -459,19 +493,26 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
            merged);
       labelling.(i) <- l
     done;
+    (* add dummy labels *)
+    for i = nodes to old_nodes - 1 do
+      let lbl_iv = label_vars.(i) in
+      add_symbolic env lbl_iv (Ty aty);
+      ignore (lift2 (fun lbl s -> mk_constant env (create_vars env "" lbl) s) lbl_iv attr_sort)
+    done;
     (* construct the output constants *)
     (* TODO: add predicate constraints on outputs *)
-    let _output_map =
+    let output_map =
       VertexMap.mapi
         (fun v outputs ->
           List.map
-            (fun ((i, j), _) ->
-              encode_kirigami_decomp
+            (fun ((i, j), pred) ->
+              (encode_kirigami_decomp
                 (Printf.sprintf "output%d-%d-%d" count i j)
                 env
                 eouttrans
                 (i, j)
-                labelling.(v))
+                labelling.(v)),
+              Option.map encode_predicate pred)
             outputs)
         outputs
     in
@@ -483,7 +524,8 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
           (fun label x -> SmtUtils.add_constraint env (mk_term (mk_eq label.t x.t)))
           (to_list label)
           x)
-      !trans_input_map
+      !trans_input_map;
+    input_map, output_map
   ;;
 
   let encode_solve env graph count { aty; var_names; init; trans; merge } =
@@ -659,7 +701,27 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
      * NOTE: could instead pass in the list of symbolics
      * to encode_kirigami_solve if this is bad *)
     add_symbolic_constraints env [] env.symbolics;
-    List.iteri (encode_kirigami_solve env graph part) solves;
+    let inputs, outputs = List.split (List.mapi (encode_kirigami_solve env graph part) solves) in
+    let lesser_hyps, greater_hyps =
+      List.fold_left
+        (fun (lh, gh) input_map ->
+           VertexMap.fold
+             (fun _ inputs (lh, gh) ->
+                List.fold_left
+                  (fun (lh, gh) (_, pred) -> match pred with
+                    | Some (Lesser p) -> p :: lh, gh
+                    | Some (Greater p) -> lh, p :: gh
+                    | None -> lh, gh)
+                  (lh, gh)
+                  inputs
+             )
+             input_map
+             (lh, gh)
+        )
+        ([], [])
+        inputs
+    in
+    (* TODO: add assertions over inputs and outputs *)
     (* these require constraints are always included *)
     add_symbolic_constraints env requires VarMap.empty;
     add_symbolic_constraints env lh_requires VarMap.empty;

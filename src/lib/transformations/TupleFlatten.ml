@@ -254,10 +254,6 @@ let rec flattened_size ty =
 ;;
 
 let unflatten_list (vs : value list) (tys : ty list) =
-  print_endline (Nv_utils.OCamlUtils.list_to_string Printing.value_to_string vs);
-  print_endline (Nv_utils.OCamlUtils.list_to_string Printing.ty_to_string tys);
-  (* FIXME: need to add in some dummy elements in the solution, so that when we call
-   * this during mapback it has enough nodes *)
   let vs, excess =
     List.fold_left
       (fun (acc, rest) ty ->

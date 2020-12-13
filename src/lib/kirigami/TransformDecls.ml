@@ -327,7 +327,7 @@ let rec prune_conjuncts rubric e =
  * the right number of nodes?
  **)
 let rec remap_conjuncts nodes e =
-  print_endline (Printing.exp_to_string e);
+  (* print_endline (Printing.exp_to_string e); *)
   if (nodes > 0) then
     (match e.e with
     | EOp (And, [e2; _]) ->
@@ -517,7 +517,7 @@ let get_ranked_hypotheses ty partition : (exp, int) Map.t =
 let transform_solve solve (partition : SrpRemapping.partitioned_srp)
     : solve
   =
-  let ({ aty; var_names; init; trans; merge; interface; _ } : solve) = solve in
+  let ({ init; trans; merge; interface; _ } : solve) = solve in
   (* print_endline "in transform_solve"; *)
   let partition' = update_preds interface partition in
   let init = remap_exp partition' init in
@@ -526,8 +526,7 @@ let transform_solve solve (partition : SrpRemapping.partitioned_srp)
   (* let var_names = transform_var_names var_names (aty |> Option.get) partition in *)
   (* collect require and symbolic information *)
   { solve with
-      var_names
-    ; init
+      init
     ; trans
     ; merge
     ; (* should this be erased, or kept as reference? *)

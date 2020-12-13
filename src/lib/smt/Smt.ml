@@ -36,10 +36,8 @@ let env_to_smt ?(verbose = false) ?(name_asserts = false) info (env : smt_env) =
       smt_command_to_smt ~name_asserts:true ~count:!count info c.com)
     else fun c -> smt_command_to_smt info c.com
   in
-  (* print_endline ("env.ctx length: " ^ string_of_int (List.length env.ctx)); *)
   let context = BatList.rev_map map_fun env.ctx in
   let context = BatString.concat "\n" context in
-  (* print_endline context; *)
   (* Emit constants *)
   let constants = ConstantSet.to_list env.const_decls in
   let constants =

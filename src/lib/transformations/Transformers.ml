@@ -284,14 +284,14 @@ let map_back_sol
     (sol : Solution.t)
     : Solution.t
   =
-  print_endline name;
+  (* print_endline name; *)
   (* print_endline (VarMap.to_string (fun t -> Printing.ty_to_string t) solve_tys); *)
   let map_back_mask = map_back_mask ~name sol mask_transformer in
   let map_back_value = map_back_value ~name sol map_back_transformer in
   let solves =
     List.map
       (fun (v, { Solution.sol_val; mask }) ->
-        print_endline ((Nv_datastructures.Var.name v) ^ ": " ^ (Printing.value_to_string sol_val));
+        (* print_endline ((Nv_datastructures.Var.name v) ^ ": " ^ (Printing.value_to_string sol_val)); *)
         let aty = VarMap.find v solve_tys in
         ( v
         , { Solution.sol_val = map_back_value sol_val aty
