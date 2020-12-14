@@ -514,17 +514,16 @@ let get_ranked_hypotheses ty partition : (exp, int) Map.t =
 
 (* Transform the given solve and return it along with a new expression to assert
  * and new expressions to require. *)
-let transform_solve solve (partition : SrpRemapping.partitioned_srp)
-    : solve
+let transform_solve solve (partition : partitioned_srp)
+    : partitioned_srp * solve
   =
   let ({ init; trans; merge; interface; _ } : solve) = solve in
-  (* print_endline "in transform_solve"; *)
   let partition' = update_preds interface partition in
   let init = remap_exp partition' init in
   let trans = remap_exp partition' trans in
   let merge = remap_exp partition' merge in
-  (* let var_names = transform_var_names var_names (aty |> Option.get) partition in *)
   (* collect require and symbolic information *)
+  partition',
   { solve with
       init
     ; trans

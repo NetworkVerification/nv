@@ -11,13 +11,8 @@ open SrpRemapping
 
 type transform_result =
   | Network of declaration
-  (* Solution: return Solve, Symbolics, Asserts, and two groups of Requires *)
-  | Solution of
-      (declaration
-      * declaration list
-      * declaration list
-      * declaration list
-      * declaration list)
+  (* Solution: return Solve and updated partitioned SRP *)
+  | Solution of (declaration * partitioned_srp)
   | Property of declaration
   | None
 
@@ -55,12 +50,12 @@ let transform_declaration parted_srp decl : transform_result =
     then None
     else Network decl
   | DSolve s ->
-    let solve' = transform_solve s parted_srp in
+    let part', solve' = transform_solve s parted_srp in
     (* let sort_hyp exp r (lt, gt) =
      *   if r < rank then DRequire exp :: lt, gt else lt, DRequire exp :: gt
      * in *)
     (* let lesser_req_decls, greater_req_decls = Map.foldi sort_hyp reqs ([], []) in *)
-    Network (DSolve solve')
+    Solution (DSolve solve', part')
     (* Solution
      *   ( DSolve solve'
      *   , List.map (fun (v, t) -> DSymbolic (v, t)) symbolics
@@ -75,21 +70,22 @@ let transform_declaration parted_srp decl : transform_result =
 let transform_declarations decls parted_srp =
   let transformed_decls = List.map (transform_declaration parted_srp) decls in
   (* divide up the declarations as appropriate *)
-  let rec split_decls (net, guar, hyps, lt_hyp, gt_hyp, prop) l =
+  let rec split_decls (net, prop, part) l =
     match l with
-    | [] -> net, guar, hyps, lt_hyp, gt_hyp, prop
+    | [] -> net, prop, part
     | h :: t ->
       begin
         match h with
-        | Network d -> split_decls (d :: net, guar, hyps, lt_hyp, gt_hyp, prop) t
-        | Solution (d, s, g, lh, gh) ->
-          split_decls (s @ (d :: net), g @ guar, hyps, lh @ lt_hyp, gh @ gt_hyp, prop) t
-        | Property p -> split_decls (net, guar, hyps, lt_hyp, gt_hyp, p :: prop) t
-        | None -> split_decls (net, guar, hyps, lt_hyp, gt_hyp, prop) t
+        | Network d -> split_decls (d :: net, prop, part) t
+        | Solution (d, p) ->
+          split_decls (d :: net, prop, p) t
+        | Property p -> split_decls (net, p :: prop, part) t
+        | None -> split_decls (net, prop, part) t
       end
   in
-  let base, guar, hyps, lth, gth, prop = split_decls ([], [], [], [], [], []) transformed_decls in
-  { base; prop; guar; hyps; lth; gth }
+  let base, prop, part = split_decls ([], [], parted_srp) transformed_decls in
+  (* FIXME: this leads to issues if there are multiple solves *)
+  part, { base; prop; guar = []; hyps = []; lth = []; gth = [] }
 ;;
 
 let lift (f : declarations -> declarations) decls =

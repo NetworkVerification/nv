@@ -13,4 +13,4 @@ val get_hyp_symbolics : ty -> partitioned_srp list -> declarations
 val transform_declarations
   :  declarations
   -> partitioned_srp
-  -> declaration_groups
+  -> partitioned_srp * declaration_groups

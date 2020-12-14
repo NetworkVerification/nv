@@ -31,11 +31,11 @@ let smt_query_file =
 ;;
 
 let run_smt_classic_aux file cfg info decls part fs =
-  (* NOTE: debugging *)
-  print_endline
-    (match decls with
-    | Decls d -> Printing.declarations_to_string d
-    | Grp g -> Printing.declaration_groups_to_string g);
+  (* debugging *)
+  (* print_endline
+   *   (match decls with
+   *   | Decls d -> Printing.declarations_to_string d
+   *   | Grp g -> Printing.declaration_groups_to_string g); *)
   let decls, fs =
     let decls, f = Renaming.alpha_convert_declarations_or_group decls in
     (*TODO: why are we renaming here?*)
@@ -135,7 +135,7 @@ let run_smt_partitioned file cfg info decls parts fs =
   let pds = Profile.time_profile "Partitioning" (fun () ->
     List.map
       (fun p ->
-        let d = Partition.transform_declarations decls p in
+        let (p, d) = Partition.transform_declarations decls p in
         if cfg.print_partitions
         then print_endline (Printing.declaration_groups_to_string d)
         else ();
