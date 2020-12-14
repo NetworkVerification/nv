@@ -1,0 +1,36 @@
+symbolic hyp_1_0 : int32
+let internal_trans e x = match e with
+ | 0n~1n -> x +u32 1u32
+ | 1n~0n -> x +u32 1u32
+ | 1n~2n -> x +u32 2u32
+ | 2n~1n -> x +u32 2u32
+
+let internal_merge n x y = match n with
+ | 2n -> 6u32
+ | 1n -> if x <u32 y then x else y
+ | 0n -> if x <u32 y then x else y
+
+let edges = {1n-0n;0n-2n;}
+let nodes = 3
+let assert n x = match n with
+ | 1n -> true
+ | 2n -> (fun a -> 1u32 <u32 a) x
+ | _ -> (fun n x -> true) (match n with | 0n -> 2n) x
+
+let init node = match node with
+ | 2n -> (fun n -> (match n with | 0n -> 0u32 | _ -> 10u32)) (match 0n with | 0n -> 2n | 1n -> 1n) 
+ | 1n -> hyp_1_0
+ | _ -> (fun n -> (match n with | 0n -> 0u32 | _ -> 10u32)) (match node with | 0n -> 2n | 1n -> 1n) 
+
+let trans edge x = match edge with
+ | 0n~2n -> internal_trans 2~1 x
+ | 1n~0n -> x
+ | _ -> internal_trans edge x
+
+let merge node x y = match node with
+ | 2n -> y
+ | _ -> (fun n -> internal_merge n x y) (match node with | 0n -> 2n | 1n -> 1n) 
+
+type attribute = int32
+require (fun a -> a = 3u32) hyp_1_0
+
