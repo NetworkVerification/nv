@@ -51,6 +51,14 @@ let map3i f lst1 lst2 lst3 =
   aux 0 lst1 lst2 lst3
 ;;
 
+let rec split3 lst =
+  match lst with
+  | [] -> [], [], []
+  | (h1, h2, h3) :: t ->
+    let (t1, t2, t3) = split3 t in
+    h1 :: t1, h2 :: t2, h3 :: t3
+;;
+
 let rec combine3 lst1 lst2 lst3 =
   match lst1, lst2, lst3 with
   | [], [], [] -> []

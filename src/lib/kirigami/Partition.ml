@@ -13,6 +13,8 @@ type transform_result =
   | Network of declaration
   (* Solution: return Solve and updated partitioned SRP *)
   | Solution of (declaration * partitioned_srp)
+  (* TODO: see if we can drop this!
+   * currently has an issue in renaming with an unbound solution variable when we do *)
   | Property of declaration
   | None
 
@@ -86,24 +88,4 @@ let transform_declarations decls parted_srp =
   let base, prop, part = split_decls ([], [], parted_srp) transformed_decls in
   (* FIXME: this leads to issues if there are multiple solves *)
   part, { base; prop; guar = []; hyps = []; lth = []; gth = [] }
-;;
-
-let lift (f : declarations -> declarations) decls =
-  { lth = f decls.lth
-  ; gth = f decls.gth
-  ; hyps = f decls.hyps
-  ; guar = f decls.guar
-  ; prop = f decls.prop
-  ; base = f decls.base
-  }
-;;
-
-let lift_mb (f : declarations -> declarations * Nv_solution.Solution.map_back) decls =
-  let lth, _lhf = f decls.lth in
-  let gth, _ghf = f decls.gth in
-  let hyps, _hf = f decls.hyps in
-  let guar, _gf = f decls.guar in
-  let prop, _pf = f decls.prop in
-  let base, f = f decls.base in
-  { lth; gth; hyps; guar; prop; base }, f
 ;;

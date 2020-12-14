@@ -231,9 +231,9 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     let xs, exp = encode_predicate_aux pred [] in
     let expty = oget exp.ety in
     let expsorts = ty_to_sorts expty in
-    fun str env ->
+    fun str env args ->
       let xstr =
-        BatList.rev_map
+        BatList.map
           (fun (x, xsort) ->
             mk_constant
               env
@@ -253,7 +253,11 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
            (fun e result -> SmtUtils.add_constraint env (mk_term (mk_eq result.t e.t)))
            es
            results);
-      results, xstr
+      BatList.iter2
+        (fun y x -> SmtUtils.add_constraint env (mk_term (mk_eq y.t x.t)))
+        xstr
+        (to_list args);
+      results
   ;;
 
   (* Encode the transfer of the given variable across the input/output
@@ -265,12 +269,8 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
       let node_value n = avalue (vnode n, Some TNode, Span.default) in
       let edge = [node_value i; node_value j] in
       let trans, tx = encode_z3_trans exp edge (Printf.sprintf "trans-%s" str) env in
-      (* print_endline ("Printing var");
-       * BatList.iter (fun t -> print_endline (SmtLang.term_to_smt () () t)) (to_list var);
-       * print_endline ("Printing trans");
-       * BatList.iter (fun t -> print_endline (SmtLang.term_to_smt () () t)) (to_list trans); *)
       BatList.iter2
-        (fun x v -> SmtUtils.add_constraint env (mk_term (mk_eq v.t x.t)))
+        (fun y x -> SmtUtils.add_constraint env (mk_term (mk_eq y.t x.t)))
         tx
         (to_list var);
       trans
@@ -282,7 +282,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     let names = ConstantSet.fold
         (fun { cname; _ } l -> if String.starts_with cname prefix
           then (mk_term (mk_var cname)) :: l
-          else (print_endline cname; l))
+          else l (* (print_endline cname; l) *))
         env.const_decls []
     in
     (* sanity check: *)
@@ -290,12 +290,11 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
       failwith "couldn't find the corresponding constant for hyp in smt_env"
     else
       ();
-    (* hopefully this comes out in the right order! *)
     (* order of names is reversed by fold, so flip them around *)
     of_list (List.rev names)
   ;;
 
-  type hyp_order = Lesser of term E.t | Greater of term E.t
+  type 'a hyp_order = Lesser of 'a | Greater of 'a
 
   (* map from base nodes to a list of inputs,
    * where each input is a 2-tuple of
@@ -309,11 +308,9 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
       (* get the relevant predicate *)
       let hyp = (match pred with
         | Some p ->
-          let pred, px = encode_predicate p (Printf.sprintf "input-pred%d-%d-%d" count i j) env in
-          BatList.iter2
-            (fun x v -> SmtUtils.add_constraint env (mk_term (mk_eq v.t x.t)))
-            px
-            (to_list xs);
+          (* FIXME: change to return a Lesser (fun, arg) or Greater (fun, arg),
+           * so that we don't add constraints too early *)
+          let pred = encode_predicate p (Printf.sprintf "input-pred%d-%d-%d" count i j) env xs in
           Some (if rank < r then Lesser pred else Greater pred)
         | None -> None)
       in
@@ -332,24 +329,18 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
   let encode_kirigami_outputs env outputs eouttrans labelling count =
     let encode_output v (edge, pred) =
       let i, j = edge in
-      let guar = (match pred with
-          | Some p ->
-            let trans = encode_kirigami_decomp
-              (Printf.sprintf "output%d-%d-%d" count i j)
-              env
-              eouttrans
-              (i, j)
-              labelling.(v)
-            in
-            let pred, px = encode_predicate p (Printf.sprintf "output-pred%d-%d-%d" count i j) env in
-            BatList.iter2
-              (fun x v -> SmtUtils.add_constraint env (mk_term (mk_eq v.t x.t)))
-              px
-              (to_list trans);
-            Some pred
-          | None -> None)
-      in
-      guar
+      match pred with
+        | Some p ->
+          let trans = encode_kirigami_decomp
+            (Printf.sprintf "output%d-%d-%d" count i j)
+            env
+            eouttrans
+            (i, j)
+            labelling.(v)
+          in
+          let pred = encode_predicate p (Printf.sprintf "output-pred%d-%d-%d" count i j) env in
+          Some (pred, trans)
+        | None -> None
     in
     VertexMap.fold (fun v outputs l -> (List.filter_map (encode_output v) outputs) @ l) outputs []
   ;;
@@ -499,15 +490,12 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
            merged);
       labelling.(i) <- l
     done;
-    (* add dummy labels *)
+    (* add dummy labels for cut nodes; just need to make sure there's as many as before *)
     for i = nodes to old_nodes - 1 do
       let lbl_iv = label_vars.(i) in
       add_symbolic env lbl_iv (Ty aty);
       ignore (lift2 (fun lbl s -> mk_constant env (create_vars env "" lbl) s) lbl_iv attr_sort)
     done;
-    (* construct the output constants *)
-    (* TODO: add predicate constraints on outputs *)
-    let output_terms = encode_kirigami_outputs env outputs eouttrans labelling count in
     (* Propagate labels across edges outputs *)
     EdgeMap.iter
       (fun (i, _) x ->
@@ -517,7 +505,24 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
           (to_list label)
           x)
       !trans_input_map;
-    input_map, output_terms
+    (* construct the output constants *)
+    let guarantees = encode_kirigami_outputs env outputs eouttrans labelling count in
+    (* divide up the hypotheses *)
+    let lesser_hyps, greater_hyps =
+      VertexMap.fold
+        (fun _ inputs hyps ->
+           List.fold_left
+             (fun (lh, gh) (_, pred) -> match pred with
+                | Some (Lesser p) -> p :: lh, gh
+                | Some (Greater p) -> lh, p :: gh
+                | None -> lh, gh)
+             hyps
+             inputs
+        )
+        input_map
+        ([], [])
+    in
+    lesser_hyps, greater_hyps, guarantees
   ;;
 
   let encode_solve env graph count { aty; var_names; init; trans; merge } =
@@ -681,66 +686,44 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
       let simplified = InterpPartialFull.interp_partial e in
       if Syntax.equal_exps ~cmp_meta:false etrue simplified then None else Some simplified
     in
-    (* let g_assertions = get_asserts dgs.guar |> List.filter_map simplify_assertion in *)
     let p_assertions = get_asserts dgs.prop |> List.filter_map simplify_assertion in
-    (* print_endline ("Assertions encoded: " ^ string_of_int (List.length (g_assertions @ p_assertions))); *)
     let requires = get_requires dgs.base in
-    (* let lh_requires = get_requires dgs.lth in
-     * let gh_requires = get_requires dgs.gth in *)
     let env = init_solver symbolics ~labels:[] in
     (* encode the symbolics and requires first,
      * so we can find them when we do the kirigami_solve
      * NOTE: could instead pass in the list of symbolics
      * to encode_kirigami_solve if this is bad *)
     add_symbolic_constraints env [] env.symbolics;
-    let inputs, outputs = List.split (List.mapi (encode_kirigami_solve env graph part) solves) in
-    let lesser_hyps, greater_hyps =
-      List.fold_left
-        (fun (lh, gh) input_map ->
-           VertexMap.fold
-             (fun _ inputs (lh, gh) ->
-                List.fold_left
-                  (fun (lh, gh) (_, pred) -> match pred with
-                    | Some (Lesser p) -> p :: lh, gh
-                    | Some (Greater p) -> lh, p :: gh
-                    | None -> lh, gh)
-                  (lh, gh)
-                  inputs
-             )
-             input_map
-             (lh, gh)
-        )
-        ([], [])
-        inputs
+    let lesser_hyps, greater_hyps, outputs =
+      split3 (List.mapi (encode_kirigami_solve env graph part) solves)
     in
-    (* TODO: add assertions over inputs and outputs *)
+    let add_hypothesis_assertions str hyps =
+      match hyps with
+      | [] -> ()
+      | _ ->
+        let assert_vars =
+          List.mapi
+            (fun i hyp ->
+              let hyp = to_list hyp |> List.hd in
+              let assert_var =
+                mk_constant env (Printf.sprintf "assert-%s-%d" str i) (ty_to_sort TBool)
+              in
+              SmtUtils.add_constraint env (mk_term (mk_eq assert_var.t hyp.t));
+              assert_var)
+            hyps
+        in
+        let all_good =
+          List.fold_left
+            (fun acc v -> mk_and acc v.t)
+            (List.hd assert_vars).t
+            (List.tl assert_vars)
+        in
+        SmtUtils.add_constraint env (mk_term all_good)
+    in
     (* these require constraints are always included *)
     add_symbolic_constraints env requires VarMap.empty;
-    (* add_symbolic_constraints env lh_requires VarMap.empty; *)
-    (match lesser_hyps with
-    | [] -> ()
-    | _ ->
-      let assert_vars =
-        List.mapi
-          (fun i hyp ->
-            let hyp = to_list hyp |> List.hd in
-            let assert_var =
-              mk_constant env (Printf.sprintf "assert-lesser-hyp-%d" i) (ty_to_sort TBool)
-            in
-            SmtUtils.add_constraint env (mk_term (mk_eq assert_var.t hyp.t));
-            assert_var)
-          lesser_hyps
-      in
-      let all_good =
-        List.fold_left
-          (fun acc v -> mk_and acc v.t)
-          (List.hd assert_vars).t
-          (List.tl assert_vars)
-      in
-      SmtUtils.add_constraint env (mk_term all_good)
-    );
+    add_hypothesis_assertions "lesser-hyp" (List.flatten lesser_hyps);
     (* ranked initial checks: test guarantees *)
-    (* push *)
     let guarantees = List.flatten outputs in
     if List.is_empty guarantees
     then ()
@@ -748,8 +731,8 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
       add_command env ~comdescr:"push" SmtLang.Push;
       let guar_vars =
         List.mapi
-          (fun i guar ->
-            let g = to_list guar |> List.hd in
+          (fun i (guar, v) ->
+            let g = to_list (guar v) |> List.hd in
             let assert_var =
               mk_constant env (Printf.sprintf "assert-guar-%d" i) (ty_to_sort TBool)
             in
@@ -764,35 +747,10 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
           (List.tl guar_vars)
       in
       SmtUtils.add_constraint env (mk_term (mk_not all_good));
-      (* add_assertions env g_assertions i; *)
-      (* pop *)
       add_command env ~comdescr:"pop" SmtLang.Pop);
     (* safety checks: add other hypotheses, test properties *)
-    (* add_symbolic_constraints env gh_requires VarMap.empty; *)
-    (match greater_hyps with
-    | [] -> ()
-    | _ ->
-      let assert_vars =
-        List.mapi
-          (fun i hyp ->
-            let hyp = to_list hyp |> List.hd in
-            let assert_var =
-              mk_constant env (Printf.sprintf "assert-greater-hyp-%d" i) (ty_to_sort TBool)
-            in
-            SmtUtils.add_constraint env (mk_term (mk_eq assert_var.t hyp.t));
-            assert_var)
-          greater_hyps
-      in
-      let all_good =
-        List.fold_left
-          (fun acc v -> mk_and acc v.t)
-          (List.hd assert_vars).t
-          (List.tl assert_vars)
-      in
-      SmtUtils.add_constraint env (mk_term all_good)
-    );
+    add_hypothesis_assertions "greater-hyp" (List.flatten greater_hyps);
     add_assertions env p_assertions i;
-    (* print_endline ("Final env.ctx length: " ^ string_of_int (List.length env.ctx)); *)
     env
   ;;
 end
