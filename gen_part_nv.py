@@ -120,10 +120,12 @@ def write_interface_str(fwd_cross, back_cross):
     output += anyb + nbb + hob
     output += "match edge with\n"
     for (start, end) in fwd_cross:
-        output += f"  | {start}~{end} -> Some hasOnlyBgp\n"
-    for (start, end) in back_cross:
-        output += f"  | {start}~{end} -> Some any\n"
-    output += "  | _ -> None\n"
+        output += f"  | {start}~{end} -> hasOnlyBgp\n"
+    # NOTE(tim): I think we can drop this second for loop
+    # now that we use bare functions
+    # for (start, end) in back_cross:
+    #     output += f"  | {start}~{end} -> any\n"
+    output += "  | _ -> any\n"
     return output
 
 
@@ -248,8 +250,8 @@ def gen_part_nv(spfile, dest, orientation=HORIZONTAL, verbose=False):
             e.source in nodes[1] and e.target in nodes[2]
         )
         cross_edges = [e for e in graph.es if cross_partition(e)]
-        fwd_cross = [e.tuple for e in cross_edges and fwd(e)]
-        back_cross = [e.tuple for e in cross_edges and not fwd(e)]
+        fwd_cross = [e.tuple for e in cross_edges if fwd(e)]
+        back_cross = [e.tuple for e in cross_edges if not fwd(e)]
     else:
         nodes = nodes_cut_vertically(graph, dest)
         cross_edges = [

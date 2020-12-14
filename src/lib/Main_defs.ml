@@ -31,19 +31,20 @@ let smt_query_file =
 ;;
 
 let run_smt_classic_aux file cfg info decls part fs =
-  (* debugging *)
-  (* print_endline
-   *   (match decls with
-   *   | Decls d -> Printing.declarations_to_string d
-   *   | Grp g -> Printing.declaration_groups_to_string g); *)
-  let decls, fs =
-    let decls, f = Renaming.alpha_convert_declarations_or_group decls in
-    (*TODO: why are we renaming here?*)
-    let decls, _ = map_decls_tuple OptimizeBranches.optimize_declarations decls in
-    (* The _ should match the identity function *)
-    let decls, f' = RenameForSMT.rename_declarations_or_group decls in
-    (* Maybe we should wrap this into the previous renaming... *)
-    decls, f' :: f :: fs
+  (* Attribute Slicing requires the net to have an assertion and for its attribute
+     to be a tuple type. *)
+  let slices =
+    (* Disable slicing until we figure out it works in the new model *)
+    (* match cfg.slicing, net.assertion, net.attr_type with
+       | true, Some _, TTuple _ ->
+       AttributeSlicing.slice_network net
+       |> List.map (dmap (fun (net, f) -> net, f :: fs))
+       | _ -> *)
+    [(fun () -> decls, fs)]
+  in
+  (* NOTE: slicing can introduce units, so if we ever re-introduce it,
+   * this code needs to be moved up to use UnboxUnits *)
+  let slices = List.map (dmap (fun (decls, fs) -> decls, fs)) slices
   in
   let get_answer decls fs =
     let solve_fun =
@@ -68,24 +69,6 @@ let run_smt_classic_aux file cfg info decls part fs =
         if List.for_all (fun b -> b) lst
         then Success (Some solution), fs
         else CounterExample solution, fs)
-  in
-  (* Attribute Slicing requires the net to have an assertion and for its attribute
-     to be a tuple type. *)
-  let slices =
-    (* Disable slicing until we figure out it works in the new model *)
-    (* match cfg.slicing, net.assertion, net.attr_type with
-       | true, Some _, TTuple _ ->
-       AttributeSlicing.slice_network net
-       |> List.map (dmap (fun (net, f) -> net, f :: fs))
-       | _ -> *)
-    [(fun () -> decls, fs)]
-  in
-  let slices =
-    List.map
-      (dmap (fun (decls, fs) ->
-           let decls, f = map_decls_tuple UnboxUnits.unbox_declarations decls in
-           decls, f :: fs))
-      slices
   in
   (* Return the first slice that returns a counterexample, or the result of the
      last slice if all of them succeed *)
@@ -159,6 +142,16 @@ let run_smt_classic file cfg info decls parts fs =
           TupleFlatten.flatten_declarations decls)
     in
     decls, f2 :: f1 :: fs
+  in
+  let decls, fs =
+    let decls, f = Renaming.alpha_convert_declarations decls in
+    (*TODO: why are we renaming here?*)
+    let decls, _ = OptimizeBranches.optimize_declarations decls in
+    (* The _ should match the identity function *)
+    let decls, f' = RenameForSMT.rename_declarations decls in
+    (* Maybe we should wrap this into the previous renaming... *)
+    let decls, f'' = UnboxUnits.unbox_declarations decls in
+    decls, f'' :: f' :: f :: fs
   in
   match parts with
   | Some p -> run_smt_partitioned file cfg info decls p fs
@@ -310,6 +303,22 @@ let parse_input (args : string array)
     if cfg.kirigami
     then (
       let parts = SrpRemapping.partition_declarations decls in
+      (* List.iter
+       *   (fun SrpRemapping.{ node_map; edge_map } ->
+       *      print_endline "Node map";
+       *      print_endline
+       *        (AdjGraph.VertexMap.to_string
+       *           (fun o -> match o with
+       *              | Some v -> Printf.sprintf "Some %d" v
+       *              | None -> "None") node_map);
+       *      print_endline "Edge map";
+       *      print_endline
+       *        (AdjGraph.EdgeMap.to_string
+       *           (fun o -> match o with
+       *              | Some (i,j) -> Printf.sprintf "Some (%d,%d)" i j
+       *              | None -> "None") edge_map
+       *        );
+       *   ) parts; *)
       let new_symbolics =
         let aty = get_attr_type decls |> oget in
         Partition.get_hyp_symbolics aty parts

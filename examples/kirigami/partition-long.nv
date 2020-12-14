@@ -16,8 +16,8 @@ let partition node = match node with
   | _ -> 1u8
 
 let interface edge = match edge with
-  | 1~2 -> Some (fun x -> x = 2)
-  | 2~1 -> Some (fun x -> true)
+  | 1~2 -> (fun x -> x = 2)
+  | 2~1 -> (fun x -> true)
 
 let merge node x y =
   if x < y then x else y

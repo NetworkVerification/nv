@@ -263,6 +263,8 @@ module Unboxed : SmtEncodingSigs.ExprEncoding = struct
             | _ -> failwith "AtMost requires a list of integers as second arg")
           | _ -> failwith "AtMost operator requires a list of boolean variables")
         | _ -> failwith "Invalid number of arguments to AtMost")
+      | TGet (_, _, _)
+      | TSet (_, _, _)
       | MCreate
       | MGet
       | MSet

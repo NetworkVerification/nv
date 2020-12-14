@@ -58,16 +58,19 @@ let rec remap_exp parted_srp e =
     foldBranches
       (fun (p, e) bs ->
         match p with
-        | PEdge (PNode n1, PNode n2) ->
+        | PTuple [PNode n1; PNode n2] ->
+        (* | PEdge (PNode n1, PNode n2) -> *)
           let n1' = VertexMap.find_default None n1 node_map in
           let n2' = VertexMap.find_default None n2 node_map in
+          (* print_endline (Printf.sprintf "Remapping edge (%d,%d)" n1 n2); *)
           (match n1', n2' with
-          | Some u, Some v -> (PEdge (PNode u, PNode v), f e) :: bs
+          | Some u, Some v -> (PTuple [PNode u; PNode v], f e) :: bs
           | _ -> bs)
         | PNode u ->
           (match VertexMap.find_default None u node_map with
           | Some u' -> (PNode u', f e) :: bs
           | None -> bs)
+        | PEdge _ -> failwith "edges should be unboxed before partitioning"
         | _ -> (p, f e) :: bs)
       []
       old_bs
@@ -100,19 +103,6 @@ let remap_solve parted_srp solve =
   let trans = remap_exp parted_srp solve.trans in
   let merge = remap_exp parted_srp solve.merge in
   { solve with init; trans; merge }
-;;
-
-let remap_assert _parted_srp e =
-  wrap
-    e
-    (match e.e with
-    | EOp (op, _es) ->
-      (match op with
-      | TGet (_size, _lo, _hi) ->
-        (* TODO: remap to true if the accessed term is a cut node *)
-        e
-      | _ -> e)
-    | _ -> e)
 ;;
 
 (* Create an annotated match statement *)
