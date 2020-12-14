@@ -35,39 +35,39 @@ let interface edge =
   in
   match edge with
   (* 1 edges - 1 gets the route to 10 via 8 *)
-  | 1~8 -> Some any
-  | 1~14 -> Some any
-  | 1~16 -> Some any
-  | 1~18 -> Some any
-  | 8~1 -> Some hasOnlyBgp
-  | 14~1 -> Some any
-  | 16~1 -> Some any
-  | 18~1 -> Some any
+  | 1~8 -> any
+  | 1~14 -> any
+  | 1~16 -> any
+  | 1~18 -> any
+  | 8~1 -> hasOnlyBgp
+  | 14~1 -> any
+  | 16~1 -> any
+  | 18~1 -> any
   (* 3 edges - 3 gets the route to 10 via 8 *)
-  | 3~8 -> Some any
-  | 3~14 -> Some any
-  | 3~16 -> Some any
-  | 3~18 -> Some any
-  | 8~3 -> Some hasOnlyBgp
-  | 14~3 -> Some any
-  | 16~3 -> Some any
-  | 18~3 -> Some any
+  | 3~8 -> any
+  | 3~14 -> any
+  | 3~16 -> any
+  | 3~18 -> any
+  | 8~3 -> hasOnlyBgp
+  | 14~3 -> any
+  | 16~3 -> any
+  | 18~3 -> any
   (* 4 edges - 4 gets the route to 10 via 6 *)
-  | 4~6 -> Some any
-  | 4~13 -> Some any
-  | 4~15 -> Some any
-  | 4~17 -> Some any
-  | 6~4 -> Some hasOnlyBgp
-  | 13~4 -> Some any
-  | 15~4 -> Some any
-  | 17~4 -> Some any
+  | 4~6 -> any
+  | 4~13 -> any
+  | 4~15 -> any
+  | 4~17 -> any
+  | 6~4 -> hasOnlyBgp
+  | 13~4 -> any
+  | 15~4 -> any
+  | 17~4 -> any
   (* 7 edges - 7 gets the route to 10 via 6 *)
-  | 7~6 -> Some any
-  | 7~13 -> Some any
-  | 7~15 -> Some any
-  | 7~17 -> Some any
-  | 6~7 -> Some hasOnlyBgp
-  | 13~7 -> Some any
-  | 15~7 -> Some any
-  | 17~7 -> Some any
+  | 7~6 -> any
+  | 7~13 -> any
+  | 7~15 -> any
+  | 7~17 -> any
+  | 6~7 -> hasOnlyBgp
+  | 13~7 -> any
+  | 15~7 -> any
+  | 17~7 -> any
   | _ -> None

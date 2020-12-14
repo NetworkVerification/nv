@@ -44,41 +44,41 @@ let interface edge =
   in
   match edge with
   (* 1 edges - 1 gets the route to 10 via 8 *)
-  | 1~8 -> Some any
+  | 1~8 -> any
   | 1~14 -> Some hasBgp
   | 1~16 -> Some hasBgp
   | 1~18 -> Some hasBgp
   | 8~1 -> Some hasBgp
-  | 14~1 -> Some any
-  | 16~1 -> Some any
-  | 18~1 -> Some any
+  | 14~1 -> any
+  | 16~1 -> any
+  | 18~1 -> any
   (* 3 edges - 3 gets the route to 10 via 8 *)
-  | 3~8 -> Some any
+  | 3~8 -> any
   | 3~14 -> Some hasBgp
   | 3~16 -> Some hasBgp
   | 3~18 -> Some hasBgp
   | 8~3 -> Some hasBgp
-  | 14~3 -> Some any
-  | 16~3 -> Some any
-  | 18~3 -> Some any
+  | 14~3 -> any
+  | 16~3 -> any
+  | 18~3 -> any
   (* 4 edges - 4 gets the route to 10 via 6 *)
-  | 4~6 -> Some any
+  | 4~6 -> any
   | 4~13 -> Some hasBgp
   | 4~15 -> Some hasBgp
   | 4~17 -> Some hasBgp
   | 6~4 -> Some hasBgp
-  | 13~4 -> Some any
-  | 15~4 -> Some any
-  | 17~4 -> Some any
+  | 13~4 -> any
+  | 15~4 -> any
+  | 17~4 -> any
   (* 7 edges - 7 gets the route to 10 via 6 *)
-  | 7~6 -> Some any
+  | 7~6 -> any
   | 7~13 -> Some hasBgp
   | 7~15 -> Some hasBgp
   | 7~17 -> Some hasBgp
   | 6~7 -> Some hasBgp
-  | 13~7 -> Some any
-  | 15~7 -> Some any
-  | 17~7 -> Some any
+  | 13~7 -> any
+  | 15~7 -> any
+  | 17~7 -> any
   | _ -> None
 
 let sol = solution {init = init; trans = trans; merge = merge; interface = interface}

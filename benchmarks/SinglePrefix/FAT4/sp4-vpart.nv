@@ -42,23 +42,23 @@ let interface edge =
   in
   match edge with
   (* 1 edges - 1 gets the route to 10 via 8 *)
-  | 1~8 -> Some nothingButBgp
-  | 1~18 -> Some nothingButBgp
-  | 8~1 -> Some hasOnlyBgp
-  | 18~1 -> Some hasOnlyBgp
+  | 1~8 -> nothingButBgp
+  | 1~18 -> nothingButBgp
+  | 8~1 -> hasOnlyBgp
+  | 18~1 -> hasOnlyBgp
   (* 3 edges - 3 gets the route to 10 via 8 *)
-  | 3~8 -> Some nothingButBgp
-  | 3~18 -> Some nothingButBgp
-  | 8~3 -> Some hasOnlyBgp
-  | 18~3 -> Some hasOnlyBgp
+  | 3~8 -> nothingButBgp
+  | 3~18 -> nothingButBgp
+  | 8~3 -> hasOnlyBgp
+  | 18~3 -> hasOnlyBgp
   (* 4 edges - 4 gets the route to 10 via 6 *)
-  | 4~13 -> Some hasOnlyBgp
-  | 4~15 -> Some hasOnlyBgp
-  | 13~4 -> Some nothingButBgp
-  | 15~4 -> Some nothingButBgp
+  | 4~13 -> hasOnlyBgp
+  | 4~15 -> hasOnlyBgp
+  | 13~4 -> nothingButBgp
+  | 15~4 -> nothingButBgp
   (* 7 edges - 7 gets the route to 10 via 6 *)
-  | 7~13 -> Some hasOnlyBgp
-  | 7~15 -> Some hasOnlyBgp
-  | 13~7 -> Some nothingButBgp
-  | 15~7 -> Some nothingButBgp
+  | 7~13 -> hasOnlyBgp
+  | 7~15 -> hasOnlyBgp
+  | 13~7 -> nothingButBgp
+  | 15~7 -> nothingButBgp
   | _ -> None

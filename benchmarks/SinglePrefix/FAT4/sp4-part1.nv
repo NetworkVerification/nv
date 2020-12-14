@@ -1142,38 +1142,38 @@ let interface edge =
         c = None && s = None && o = None && isSome b && sel = Some 3u2
     in
     match edge with
-  | 1~14 -> Some hasOnlyBgp
-  | 1~16 -> Some hasOnlyBgp
-  | 1~18 -> Some hasOnlyBgp
-  | 3~14 -> Some hasOnlyBgp
-  | 3~16 -> Some hasOnlyBgp
-  | 3~18 -> Some hasOnlyBgp
-  | 4~13 -> Some hasOnlyBgp
-  | 4~15 -> Some hasOnlyBgp
-  | 4~17 -> Some hasOnlyBgp
-  | 6~4 -> Some hasOnlyBgp
-  | 6~7 -> Some hasOnlyBgp
-  | 7~13 -> Some hasOnlyBgp
-  | 7~15 -> Some hasOnlyBgp
-  | 7~17 -> Some hasOnlyBgp
-  | 8~1 -> Some hasOnlyBgp
-  | 8~3 -> Some hasOnlyBgp
-  | 1~8 -> Some any
-  | 3~8 -> Some any
-  | 4~6 -> Some any
-  | 7~6 -> Some any
-  | 13~4 -> Some any
-  | 13~7 -> Some any
-  | 14~1 -> Some any
-  | 14~3 -> Some any
-  | 15~4 -> Some any
-  | 15~7 -> Some any
-  | 16~1 -> Some any
-  | 16~3 -> Some any
-  | 17~4 -> Some any
-  | 17~7 -> Some any
-  | 18~1 -> Some any
-  | 18~3 -> Some any
+  | 1~14 -> hasOnlyBgp
+  | 1~16 -> hasOnlyBgp
+  | 1~18 -> hasOnlyBgp
+  | 3~14 -> hasOnlyBgp
+  | 3~16 -> hasOnlyBgp
+  | 3~18 -> hasOnlyBgp
+  | 4~13 -> hasOnlyBgp
+  | 4~15 -> hasOnlyBgp
+  | 4~17 -> hasOnlyBgp
+  | 6~4 -> hasOnlyBgp
+  | 6~7 -> hasOnlyBgp
+  | 7~13 -> hasOnlyBgp
+  | 7~15 -> hasOnlyBgp
+  | 7~17 -> hasOnlyBgp
+  | 8~1 -> hasOnlyBgp
+  | 8~3 -> hasOnlyBgp
+  | 1~8 -> any
+  | 3~8 -> any
+  | 4~6 -> any
+  | 7~6 -> any
+  | 13~4 -> any
+  | 13~7 -> any
+  | 14~1 -> any
+  | 14~3 -> any
+  | 15~4 -> any
+  | 15~7 -> any
+  | 16~1 -> any
+  | 16~3 -> any
+  | 17~4 -> any
+  | 17~7 -> any
+  | 18~1 -> any
+  | 18~3 -> any
   | _ -> None
 
 let sol = solution { init = init; trans = trans; merge = merge; interface = interface; rtrans = trans }

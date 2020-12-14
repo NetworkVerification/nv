@@ -35,39 +35,39 @@ let interface edge =
   in
   match edge with
   (* 1 edges - 1 gets the route to 10 via 8 *)
-  | 1~8 -> Some nothingButBgp
-  | 1~14 -> Some hasOnlyBgp
-  | 1~16 -> Some hasOnlyBgp
-  | 1~18 -> Some hasOnlyBgp
-  | 8~1 -> Some hasOnlyBgp
-  | 14~1 -> Some nothingButBgp
-  | 16~1 -> Some nothingButBgp
-  | 18~1 -> Some nothingButBgp
+  | 1~8 -> nothingButBgp
+  | 1~14 -> hasOnlyBgp
+  | 1~16 -> hasOnlyBgp
+  | 1~18 -> hasOnlyBgp
+  | 8~1 -> hasOnlyBgp
+  | 14~1 -> nothingButBgp
+  | 16~1 -> nothingButBgp
+  | 18~1 -> nothingButBgp
   (* 3 edges - 3 gets the route to 10 via 8 *)
-  | 3~8 -> Some nothingButBgp
-  | 3~14 -> Some hasOnlyBgp
-  | 3~16 -> Some hasOnlyBgp
-  | 3~18 -> Some hasOnlyBgp
-  | 8~3 -> Some hasOnlyBgp
-  | 14~3 -> Some nothingButBgp
-  | 16~3 -> Some nothingButBgp
-  | 18~3 -> Some nothingButBgp
+  | 3~8 -> nothingButBgp
+  | 3~14 -> hasOnlyBgp
+  | 3~16 -> hasOnlyBgp
+  | 3~18 -> hasOnlyBgp
+  | 8~3 -> hasOnlyBgp
+  | 14~3 -> nothingButBgp
+  | 16~3 -> nothingButBgp
+  | 18~3 -> nothingButBgp
   (* 4 edges - 4 gets the route to 10 via 6 *)
-  | 4~6 -> Some nothingButBgp
-  | 4~13 -> Some hasOnlyBgp
-  | 4~15 -> Some hasOnlyBgp
-  | 4~17 -> Some hasOnlyBgp
-  | 6~4 -> Some hasOnlyBgp
-  | 13~4 -> Some nothingButBgp
-  | 15~4 -> Some nothingButBgp
-  | 17~4 -> Some nothingButBgp
+  | 4~6 -> nothingButBgp
+  | 4~13 -> hasOnlyBgp
+  | 4~15 -> hasOnlyBgp
+  | 4~17 -> hasOnlyBgp
+  | 6~4 -> hasOnlyBgp
+  | 13~4 -> nothingButBgp
+  | 15~4 -> nothingButBgp
+  | 17~4 -> nothingButBgp
   (* 7 edges - 7 gets the route to 10 via 6 *)
-  | 7~6 -> Some nothingButBgp
-  | 7~13 -> Some hasOnlyBgp
-  | 7~15 -> Some hasOnlyBgp
-  | 7~17 -> Some hasOnlyBgp
-  | 6~7 -> Some hasOnlyBgp
-  | 13~7 -> Some nothingButBgp
-  | 15~7 -> Some nothingButBgp
-  | 17~7 -> Some nothingButBgp
+  | 7~6 -> nothingButBgp
+  | 7~13 -> hasOnlyBgp
+  | 7~15 -> hasOnlyBgp
+  | 7~17 -> hasOnlyBgp
+  | 6~7 -> hasOnlyBgp
+  | 13~7 -> nothingButBgp
+  | 15~7 -> nothingButBgp
+  | 17~7 -> nothingButBgp
   | _ -> None

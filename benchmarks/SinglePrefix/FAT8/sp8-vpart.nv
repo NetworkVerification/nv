@@ -64,132 +64,132 @@ let interface edge =
       c = None && s = None && o = None && isSome b && sel = Some 3u2
   in
   match edge with
-  | 9~66 -> Some any
-  | 9~70 -> Some any
-  | 9~71 -> Some any
-  | 9~72 -> Some any
-  | 11~56 -> Some any
-  | 11~57 -> Some any
-  | 11~67 -> Some any
-  | 11~68 -> Some any
-  | 14~66 -> Some any
-  | 14~70 -> Some any
-  | 14~71 -> Some any
-  | 14~72 -> Some any
-  | 15~56 -> Some any
-  | 15~57 -> Some any
-  | 15~67 -> Some any
-  | 15~68 -> Some any
-  | 25~66 -> Some any
-  | 25~70 -> Some any
-  | 25~71 -> Some any
-  | 25~72 -> Some any
-  | 30~66 -> Some any
-  | 30~70 -> Some any
-  | 30~71 -> Some any
-  | 30~72 -> Some any
-  | 32~56 -> Some any
-  | 32~57 -> Some any
-  | 32~67 -> Some any
-  | 32~68 -> Some any
-  | 38~56 -> Some any
-  | 38~57 -> Some any
-  | 38~67 -> Some any
-  | 38~68 -> Some any
-  | 40~47 -> Some any
-  | 40~61 -> Some any
-  | 40~69 -> Some any
-  | 40~75 -> Some any
-  | 41~47 -> Some any
-  | 41~61 -> Some any
-  | 41~69 -> Some any
-  | 41~75 -> Some any
-  | 43~47 -> Some any
-  | 43~61 -> Some any
-  | 43~69 -> Some any
-  | 43~75 -> Some any
-  | 44~49 -> Some any
-  | 44~52 -> Some any
-  | 44~54 -> Some any
-  | 44~55 -> Some any
-  | 46~47 -> Some any
-  | 46~61 -> Some any
-  | 46~69 -> Some any
-  | 46~75 -> Some any
-  | 47~40 -> Some any
-  | 47~41 -> Some any
-  | 47~43 -> Some any
-  | 47~46 -> Some any
-  | 49~44 -> Some any
-  | 49~60 -> Some any
-  | 49~65 -> Some any
-  | 49~78 -> Some any
-  | 52~44 -> Some any
-  | 52~60 -> Some any
-  | 52~65 -> Some any
-  | 52~78 -> Some any
-  | 54~44 -> Some any
-  | 54~60 -> Some any
-  | 54~65 -> Some any
-  | 54~78 -> Some any
-  | 55~44 -> Some any
-  | 55~60 -> Some any
-  | 55~65 -> Some any
-  | 55~78 -> Some any
-  | 56~11 -> Some hasOnlyBgp
-  | 56~15 -> Some hasOnlyBgp
-  | 56~32 -> Some hasOnlyBgp
-  | 56~38 -> Some hasOnlyBgp
-  | 57~11 -> Some hasOnlyBgp
-  | 57~15 -> Some hasOnlyBgp
-  | 57~32 -> Some hasOnlyBgp
-  | 57~38 -> Some hasOnlyBgp
-  | 60~49 -> Some hasOnlyBgp
-  | 60~52 -> Some hasOnlyBgp
-  | 60~54 -> Some hasOnlyBgp
-  | 60~55 -> Some hasOnlyBgp
-  | 61~40 -> Some hasOnlyBgp
-  | 61~41 -> Some hasOnlyBgp
-  | 61~43 -> Some hasOnlyBgp
-  | 61~46 -> Some hasOnlyBgp
-  | 65~49 -> Some hasOnlyBgp
-  | 65~52 -> Some hasOnlyBgp
-  | 65~54 -> Some hasOnlyBgp
-  | 65~55 -> Some hasOnlyBgp
-  | 66~9 -> Some hasOnlyBgp
-  | 66~14 -> Some hasOnlyBgp
-  | 66~25 -> Some hasOnlyBgp
-  | 66~30 -> Some hasOnlyBgp
-  | 67~11 -> Some hasOnlyBgp
-  | 67~15 -> Some hasOnlyBgp
-  | 67~32 -> Some hasOnlyBgp
-  | 67~38 -> Some hasOnlyBgp
-  | 68~11 -> Some hasOnlyBgp
-  | 68~15 -> Some hasOnlyBgp
-  | 68~32 -> Some hasOnlyBgp
-  | 68~38 -> Some hasOnlyBgp
-  | 69~40 -> Some hasOnlyBgp
-  | 69~41 -> Some hasOnlyBgp
-  | 69~43 -> Some hasOnlyBgp
-  | 69~46 -> Some hasOnlyBgp
-  | 70~9 -> Some hasOnlyBgp
-  | 70~14 -> Some hasOnlyBgp
-  | 70~25 -> Some hasOnlyBgp
-  | 70~30 -> Some hasOnlyBgp
-  | 71~9 -> Some hasOnlyBgp
-  | 71~14 -> Some hasOnlyBgp
-  | 71~25 -> Some hasOnlyBgp
-  | 71~30 -> Some hasOnlyBgp
-  | 72~9 -> Some hasOnlyBgp
-  | 72~14 -> Some hasOnlyBgp
-  | 72~25 -> Some hasOnlyBgp
-  | 72~30 -> Some hasOnlyBgp
-  | 75~40 -> Some hasOnlyBgp
-  | 75~41 -> Some hasOnlyBgp
-  | 75~43 -> Some hasOnlyBgp
-  | 75~46 -> Some hasOnlyBgp
-  | 78~49 -> Some hasOnlyBgp
-  | 78~52 -> Some hasOnlyBgp
-  | 78~54 -> Some hasOnlyBgp
-  | 78~55 -> Some hasOnlyBgp
+  | 9~66 -> any
+  | 9~70 -> any
+  | 9~71 -> any
+  | 9~72 -> any
+  | 11~56 -> any
+  | 11~57 -> any
+  | 11~67 -> any
+  | 11~68 -> any
+  | 14~66 -> any
+  | 14~70 -> any
+  | 14~71 -> any
+  | 14~72 -> any
+  | 15~56 -> any
+  | 15~57 -> any
+  | 15~67 -> any
+  | 15~68 -> any
+  | 25~66 -> any
+  | 25~70 -> any
+  | 25~71 -> any
+  | 25~72 -> any
+  | 30~66 -> any
+  | 30~70 -> any
+  | 30~71 -> any
+  | 30~72 -> any
+  | 32~56 -> any
+  | 32~57 -> any
+  | 32~67 -> any
+  | 32~68 -> any
+  | 38~56 -> any
+  | 38~57 -> any
+  | 38~67 -> any
+  | 38~68 -> any
+  | 40~47 -> any
+  | 40~61 -> any
+  | 40~69 -> any
+  | 40~75 -> any
+  | 41~47 -> any
+  | 41~61 -> any
+  | 41~69 -> any
+  | 41~75 -> any
+  | 43~47 -> any
+  | 43~61 -> any
+  | 43~69 -> any
+  | 43~75 -> any
+  | 44~49 -> any
+  | 44~52 -> any
+  | 44~54 -> any
+  | 44~55 -> any
+  | 46~47 -> any
+  | 46~61 -> any
+  | 46~69 -> any
+  | 46~75 -> any
+  | 47~40 -> any
+  | 47~41 -> any
+  | 47~43 -> any
+  | 47~46 -> any
+  | 49~44 -> any
+  | 49~60 -> any
+  | 49~65 -> any
+  | 49~78 -> any
+  | 52~44 -> any
+  | 52~60 -> any
+  | 52~65 -> any
+  | 52~78 -> any
+  | 54~44 -> any
+  | 54~60 -> any
+  | 54~65 -> any
+  | 54~78 -> any
+  | 55~44 -> any
+  | 55~60 -> any
+  | 55~65 -> any
+  | 55~78 -> any
+  | 56~11 -> hasOnlyBgp
+  | 56~15 -> hasOnlyBgp
+  | 56~32 -> hasOnlyBgp
+  | 56~38 -> hasOnlyBgp
+  | 57~11 -> hasOnlyBgp
+  | 57~15 -> hasOnlyBgp
+  | 57~32 -> hasOnlyBgp
+  | 57~38 -> hasOnlyBgp
+  | 60~49 -> hasOnlyBgp
+  | 60~52 -> hasOnlyBgp
+  | 60~54 -> hasOnlyBgp
+  | 60~55 -> hasOnlyBgp
+  | 61~40 -> hasOnlyBgp
+  | 61~41 -> hasOnlyBgp
+  | 61~43 -> hasOnlyBgp
+  | 61~46 -> hasOnlyBgp
+  | 65~49 -> hasOnlyBgp
+  | 65~52 -> hasOnlyBgp
+  | 65~54 -> hasOnlyBgp
+  | 65~55 -> hasOnlyBgp
+  | 66~9 -> hasOnlyBgp
+  | 66~14 -> hasOnlyBgp
+  | 66~25 -> hasOnlyBgp
+  | 66~30 -> hasOnlyBgp
+  | 67~11 -> hasOnlyBgp
+  | 67~15 -> hasOnlyBgp
+  | 67~32 -> hasOnlyBgp
+  | 67~38 -> hasOnlyBgp
+  | 68~11 -> hasOnlyBgp
+  | 68~15 -> hasOnlyBgp
+  | 68~32 -> hasOnlyBgp
+  | 68~38 -> hasOnlyBgp
+  | 69~40 -> hasOnlyBgp
+  | 69~41 -> hasOnlyBgp
+  | 69~43 -> hasOnlyBgp
+  | 69~46 -> hasOnlyBgp
+  | 70~9 -> hasOnlyBgp
+  | 70~14 -> hasOnlyBgp
+  | 70~25 -> hasOnlyBgp
+  | 70~30 -> hasOnlyBgp
+  | 71~9 -> hasOnlyBgp
+  | 71~14 -> hasOnlyBgp
+  | 71~25 -> hasOnlyBgp
+  | 71~30 -> hasOnlyBgp
+  | 72~9 -> hasOnlyBgp
+  | 72~14 -> hasOnlyBgp
+  | 72~25 -> hasOnlyBgp
+  | 72~30 -> hasOnlyBgp
+  | 75~40 -> hasOnlyBgp
+  | 75~41 -> hasOnlyBgp
+  | 75~43 -> hasOnlyBgp
+  | 75~46 -> hasOnlyBgp
+  | 78~49 -> hasOnlyBgp
+  | 78~52 -> hasOnlyBgp
+  | 78~54 -> hasOnlyBgp
+  | 78~55 -> hasOnlyBgp
   | _ -> None

@@ -1107,26 +1107,26 @@ aggregation-8=16, aggregation-13=17, aggregation-12=18,
 edge-10=19}*)
 
 let partition node = match node with
-  | 1n -> 0u8
   | 2n -> 0u8
-  | 3n -> 0u8
   | 6n -> 0u8
   | 8n -> 0u8
   | 10n -> 0u8
-  | 11n -> 0u8
-  | 12n -> 0u8
-  | 13n -> 0u8
-  | 14n -> 0u8
-  | 0n -> 1u8
+  | 1n -> 1u8
+  | 3n -> 1u8
   | 4n -> 1u8
-  | 5n -> 1u8
   | 7n -> 1u8
-  | 9n -> 1u8
-  | 15n -> 1u8
-  | 16n -> 1u8
-  | 17n -> 1u8
-  | 18n -> 1u8
-  | 19n -> 1u8
+  | 0n -> 2u8
+  | 5n -> 2u8
+  | 9n -> 2u8
+  | 11n -> 2u8
+  | 12n -> 2u8
+  | 13n -> 2u8
+  | 14n -> 2u8
+  | 15n -> 2u8
+  | 16n -> 2u8
+  | 17n -> 2u8
+  | 18n -> 2u8
+  | 19n -> 2u8
 
 let interface edge =
   let any x = true
@@ -1142,23 +1142,23 @@ let interface edge =
         c = None && s = None && o = None && isSome b && sel = Some 3u2
     in
     match edge with
+  | 1~14 -> hasOnlyBgp
   | 1~16 -> hasOnlyBgp
   | 1~18 -> hasOnlyBgp
+  | 3~14 -> hasOnlyBgp
   | 3~16 -> hasOnlyBgp
   | 3~18 -> hasOnlyBgp
+  | 4~13 -> hasOnlyBgp
+  | 4~15 -> hasOnlyBgp
+  | 4~17 -> hasOnlyBgp
   | 6~4 -> hasOnlyBgp
   | 6~7 -> hasOnlyBgp
-  | 13~4 -> hasOnlyBgp
-  | 13~7 -> hasOnlyBgp
-  | 4~6 -> any
-  | 4~13 -> any
-  | 7~6 -> any
-  | 7~13 -> any
-  | 16~1 -> any
-  | 16~3 -> any
-  | 18~1 -> any
-  | 18~3 -> any
-  | _ -> None
+  | 7~13 -> hasOnlyBgp
+  | 7~15 -> hasOnlyBgp
+  | 7~17 -> hasOnlyBgp
+  | 8~1 -> hasOnlyBgp
+  | 8~3 -> hasOnlyBgp
+  | _ -> any
 
 let sol = solution { init = init; trans = trans; merge = merge; interface = interface; rtrans = trans }
 

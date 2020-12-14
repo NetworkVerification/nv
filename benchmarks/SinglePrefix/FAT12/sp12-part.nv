@@ -65,868 +65,868 @@ let interface edge =
         c = None && s = None && o = None && isSome b
     in
     match edge with
-  | 0~94 -> Some nothingButBgp
-  | 0~95 -> Some nothingButBgp
-  | 0~96 -> Some nothingButBgp
-  | 0~98 -> Some nothingButBgp
-  | 0~100 -> Some nothingButBgp
-  | 0~107 -> Some nothingButBgp
-  | 1~138 -> Some nothingButBgp
-  | 1~140 -> Some nothingButBgp
-  | 1~142 -> Some nothingButBgp
-  | 1~143 -> Some nothingButBgp
-  | 1~144 -> Some nothingButBgp
-  | 1~145 -> Some nothingButBgp
-  | 2~124 -> Some nothingButBgp
-  | 2~127 -> Some nothingButBgp
-  | 2~130 -> Some nothingButBgp
-  | 2~133 -> Some nothingButBgp
-  | 2~169 -> Some nothingButBgp
-  | 2~170 -> Some nothingButBgp
-  | 7~160 -> Some nothingButBgp
-  | 7~172 -> Some nothingButBgp
-  | 7~173 -> Some nothingButBgp
-  | 7~174 -> Some nothingButBgp
-  | 7~175 -> Some nothingButBgp
-  | 7~176 -> Some nothingButBgp
-  | 8~125 -> Some nothingButBgp
-  | 8~128 -> Some nothingButBgp
-  | 8~131 -> Some nothingButBgp
-  | 8~134 -> Some nothingButBgp
-  | 8~161 -> Some nothingButBgp
-  | 8~162 -> Some nothingButBgp
-  | 9~111 -> Some nothingButBgp
-  | 9~113 -> Some nothingButBgp
-  | 9~115 -> Some nothingButBgp
-  | 9~117 -> Some nothingButBgp
-  | 9~120 -> Some nothingButBgp
-  | 9~122 -> Some nothingButBgp
-  | 11~125 -> Some nothingButBgp
-  | 11~128 -> Some nothingButBgp
-  | 11~131 -> Some nothingButBgp
-  | 11~134 -> Some nothingButBgp
-  | 11~161 -> Some nothingButBgp
-  | 11~162 -> Some nothingButBgp
-  | 13~111 -> Some nothingButBgp
-  | 13~113 -> Some nothingButBgp
-  | 13~115 -> Some nothingButBgp
-  | 13~117 -> Some nothingButBgp
-  | 13~120 -> Some nothingButBgp
-  | 13~122 -> Some nothingButBgp
-  | 14~124 -> Some nothingButBgp
-  | 14~127 -> Some nothingButBgp
-  | 14~130 -> Some nothingButBgp
-  | 14~133 -> Some nothingButBgp
-  | 14~169 -> Some nothingButBgp
-  | 14~170 -> Some nothingButBgp
-  | 15~160 -> Some nothingButBgp
-  | 15~172 -> Some nothingButBgp
-  | 15~173 -> Some nothingButBgp
-  | 15~174 -> Some nothingButBgp
-  | 15~175 -> Some nothingButBgp
-  | 15~176 -> Some nothingButBgp
-  | 16~94 -> Some nothingButBgp
-  | 16~95 -> Some nothingButBgp
-  | 16~96 -> Some nothingButBgp
-  | 16~98 -> Some nothingButBgp
-  | 16~100 -> Some nothingButBgp
-  | 16~107 -> Some nothingButBgp
-  | 17~138 -> Some nothingButBgp
-  | 17~140 -> Some nothingButBgp
-  | 17~142 -> Some nothingButBgp
-  | 17~143 -> Some nothingButBgp
-  | 17~144 -> Some nothingButBgp
-  | 17~145 -> Some nothingButBgp
-  | 18~94 -> Some nothingButBgp
-  | 18~95 -> Some nothingButBgp
-  | 18~96 -> Some nothingButBgp
-  | 18~98 -> Some nothingButBgp
-  | 18~100 -> Some nothingButBgp
-  | 18~107 -> Some nothingButBgp
-  | 19~138 -> Some nothingButBgp
-  | 19~140 -> Some nothingButBgp
-  | 19~142 -> Some nothingButBgp
-  | 19~143 -> Some nothingButBgp
-  | 19~144 -> Some nothingButBgp
-  | 19~145 -> Some nothingButBgp
-  | 26~124 -> Some nothingButBgp
-  | 26~127 -> Some nothingButBgp
-  | 26~130 -> Some nothingButBgp
-  | 26~133 -> Some nothingButBgp
-  | 26~169 -> Some nothingButBgp
-  | 26~170 -> Some nothingButBgp
-  | 27~160 -> Some nothingButBgp
-  | 27~172 -> Some nothingButBgp
-  | 27~173 -> Some nothingButBgp
-  | 27~174 -> Some nothingButBgp
-  | 27~175 -> Some nothingButBgp
-  | 27~176 -> Some nothingButBgp
-  | 28~125 -> Some nothingButBgp
-  | 28~128 -> Some nothingButBgp
-  | 28~131 -> Some nothingButBgp
-  | 28~134 -> Some nothingButBgp
-  | 28~161 -> Some nothingButBgp
-  | 28~162 -> Some nothingButBgp
-  | 29~111 -> Some nothingButBgp
-  | 29~113 -> Some nothingButBgp
-  | 29~115 -> Some nothingButBgp
-  | 29~117 -> Some nothingButBgp
-  | 29~120 -> Some nothingButBgp
-  | 29~122 -> Some nothingButBgp
-  | 30~111 -> Some nothingButBgp
-  | 30~113 -> Some nothingButBgp
-  | 30~115 -> Some nothingButBgp
-  | 30~117 -> Some nothingButBgp
-  | 30~120 -> Some nothingButBgp
-  | 30~122 -> Some nothingButBgp
-  | 31~160 -> Some nothingButBgp
-  | 31~172 -> Some nothingButBgp
-  | 31~173 -> Some nothingButBgp
-  | 31~174 -> Some nothingButBgp
-  | 31~175 -> Some nothingButBgp
-  | 31~176 -> Some nothingButBgp
-  | 32~125 -> Some nothingButBgp
-  | 32~128 -> Some nothingButBgp
-  | 32~131 -> Some nothingButBgp
-  | 32~134 -> Some nothingButBgp
-  | 32~161 -> Some nothingButBgp
-  | 32~162 -> Some nothingButBgp
-  | 33~138 -> Some nothingButBgp
-  | 33~140 -> Some nothingButBgp
-  | 33~142 -> Some nothingButBgp
-  | 33~143 -> Some nothingButBgp
-  | 33~144 -> Some nothingButBgp
-  | 33~145 -> Some nothingButBgp
-  | 34~124 -> Some nothingButBgp
-  | 34~127 -> Some nothingButBgp
-  | 34~130 -> Some nothingButBgp
-  | 34~133 -> Some nothingButBgp
-  | 34~169 -> Some nothingButBgp
-  | 34~170 -> Some nothingButBgp
-  | 35~94 -> Some nothingButBgp
-  | 35~95 -> Some nothingButBgp
-  | 35~96 -> Some nothingButBgp
-  | 35~98 -> Some nothingButBgp
-  | 35~100 -> Some nothingButBgp
-  | 35~107 -> Some nothingButBgp
-  | 36~94 -> Some nothingButBgp
-  | 36~95 -> Some nothingButBgp
-  | 36~96 -> Some nothingButBgp
-  | 36~98 -> Some nothingButBgp
-  | 36~100 -> Some nothingButBgp
-  | 36~107 -> Some nothingButBgp
-  | 37~138 -> Some nothingButBgp
-  | 37~140 -> Some nothingButBgp
-  | 37~142 -> Some nothingButBgp
-  | 37~143 -> Some nothingButBgp
-  | 37~144 -> Some nothingButBgp
-  | 37~145 -> Some nothingButBgp
-  | 39~124 -> Some nothingButBgp
-  | 39~127 -> Some nothingButBgp
-  | 39~130 -> Some nothingButBgp
-  | 39~133 -> Some nothingButBgp
-  | 39~169 -> Some nothingButBgp
-  | 39~170 -> Some nothingButBgp
-  | 40~160 -> Some nothingButBgp
-  | 40~172 -> Some nothingButBgp
-  | 40~173 -> Some nothingButBgp
-  | 40~174 -> Some nothingButBgp
-  | 40~175 -> Some nothingButBgp
-  | 40~176 -> Some nothingButBgp
-  | 45~125 -> Some nothingButBgp
-  | 45~128 -> Some nothingButBgp
-  | 45~131 -> Some nothingButBgp
-  | 45~134 -> Some nothingButBgp
-  | 45~161 -> Some nothingButBgp
-  | 45~162 -> Some nothingButBgp
-  | 47~111 -> Some nothingButBgp
-  | 47~113 -> Some nothingButBgp
-  | 47~115 -> Some nothingButBgp
-  | 47~117 -> Some nothingButBgp
-  | 47~120 -> Some nothingButBgp
-  | 47~122 -> Some nothingButBgp
-  | 49~124 -> Some nothingButBgp
-  | 49~127 -> Some nothingButBgp
-  | 49~130 -> Some nothingButBgp
-  | 49~133 -> Some nothingButBgp
-  | 49~169 -> Some nothingButBgp
-  | 49~170 -> Some nothingButBgp
-  | 51~160 -> Some nothingButBgp
-  | 51~172 -> Some nothingButBgp
-  | 51~173 -> Some nothingButBgp
-  | 51~174 -> Some nothingButBgp
-  | 51~175 -> Some nothingButBgp
-  | 51~176 -> Some nothingButBgp
-  | 53~125 -> Some nothingButBgp
-  | 53~128 -> Some nothingButBgp
-  | 53~131 -> Some nothingButBgp
-  | 53~134 -> Some nothingButBgp
-  | 53~161 -> Some nothingButBgp
-  | 53~162 -> Some nothingButBgp
-  | 54~111 -> Some nothingButBgp
-  | 54~113 -> Some nothingButBgp
-  | 54~115 -> Some nothingButBgp
-  | 54~117 -> Some nothingButBgp
-  | 54~120 -> Some nothingButBgp
-  | 54~122 -> Some nothingButBgp
-  | 57~94 -> Some nothingButBgp
-  | 57~95 -> Some nothingButBgp
-  | 57~96 -> Some nothingButBgp
-  | 57~98 -> Some nothingButBgp
-  | 57~100 -> Some nothingButBgp
-  | 57~107 -> Some nothingButBgp
-  | 58~138 -> Some nothingButBgp
-  | 58~140 -> Some nothingButBgp
-  | 58~142 -> Some nothingButBgp
-  | 58~143 -> Some nothingButBgp
-  | 58~144 -> Some nothingButBgp
-  | 58~145 -> Some nothingButBgp
-  | 60~111 -> Some hasOnlyBgp
-  | 60~113 -> Some hasOnlyBgp
-  | 60~115 -> Some hasOnlyBgp
-  | 60~117 -> Some hasOnlyBgp
-  | 60~120 -> Some hasOnlyBgp
-  | 60~122 -> Some hasOnlyBgp
-  | 65~94 -> Some hasOnlyBgp
-  | 65~95 -> Some hasOnlyBgp
-  | 65~96 -> Some hasOnlyBgp
-  | 65~98 -> Some hasOnlyBgp
-  | 65~100 -> Some hasOnlyBgp
-  | 65~107 -> Some hasOnlyBgp
-  | 66~160 -> Some hasOnlyBgp
-  | 66~172 -> Some hasOnlyBgp
-  | 66~173 -> Some hasOnlyBgp
-  | 66~174 -> Some hasOnlyBgp
-  | 66~175 -> Some hasOnlyBgp
-  | 66~176 -> Some hasOnlyBgp
-  | 68~125 -> Some hasOnlyBgp
-  | 68~128 -> Some hasOnlyBgp
-  | 68~131 -> Some hasOnlyBgp
-  | 68~134 -> Some hasOnlyBgp
-  | 68~161 -> Some hasOnlyBgp
-  | 68~162 -> Some hasOnlyBgp
-  | 70~138 -> Some hasOnlyBgp
-  | 70~140 -> Some hasOnlyBgp
-  | 70~142 -> Some hasOnlyBgp
-  | 70~143 -> Some hasOnlyBgp
-  | 70~144 -> Some hasOnlyBgp
-  | 70~145 -> Some hasOnlyBgp
-  | 72~124 -> Some hasOnlyBgp
-  | 72~127 -> Some hasOnlyBgp
-  | 72~130 -> Some hasOnlyBgp
-  | 72~133 -> Some hasOnlyBgp
-  | 72~169 -> Some hasOnlyBgp
-  | 72~170 -> Some hasOnlyBgp
-  | 75~124 -> Some nothingButBgp
-  | 75~127 -> Some nothingButBgp
-  | 75~130 -> Some nothingButBgp
-  | 75~133 -> Some nothingButBgp
-  | 75~169 -> Some nothingButBgp
-  | 75~170 -> Some nothingButBgp
-  | 77~160 -> Some nothingButBgp
-  | 77~172 -> Some nothingButBgp
-  | 77~173 -> Some nothingButBgp
-  | 77~174 -> Some nothingButBgp
-  | 77~175 -> Some nothingButBgp
-  | 77~176 -> Some nothingButBgp
-  | 80~94 -> Some nothingButBgp
-  | 80~95 -> Some nothingButBgp
-  | 80~96 -> Some nothingButBgp
-  | 80~98 -> Some nothingButBgp
-  | 80~100 -> Some nothingButBgp
-  | 80~107 -> Some nothingButBgp
-  | 81~138 -> Some nothingButBgp
-  | 81~140 -> Some nothingButBgp
-  | 81~142 -> Some nothingButBgp
-  | 81~143 -> Some nothingButBgp
-  | 81~144 -> Some nothingButBgp
-  | 81~145 -> Some nothingButBgp
-  | 82~124 -> Some nothingButBgp
-  | 82~127 -> Some nothingButBgp
-  | 82~130 -> Some nothingButBgp
-  | 82~133 -> Some nothingButBgp
-  | 82~169 -> Some nothingButBgp
-  | 82~170 -> Some nothingButBgp
-  | 88~125 -> Some nothingButBgp
-  | 88~128 -> Some nothingButBgp
-  | 88~131 -> Some nothingButBgp
-  | 88~134 -> Some nothingButBgp
-  | 88~161 -> Some nothingButBgp
-  | 88~162 -> Some nothingButBgp
-  | 89~111 -> Some nothingButBgp
-  | 89~113 -> Some nothingButBgp
-  | 89~115 -> Some nothingButBgp
-  | 89~117 -> Some nothingButBgp
-  | 89~120 -> Some nothingButBgp
-  | 89~122 -> Some nothingButBgp
-  | 90~125 -> Some nothingButBgp
-  | 90~128 -> Some nothingButBgp
-  | 90~131 -> Some nothingButBgp
-  | 90~134 -> Some nothingButBgp
-  | 90~161 -> Some nothingButBgp
-  | 90~162 -> Some nothingButBgp
-  | 91~111 -> Some nothingButBgp
-  | 91~113 -> Some nothingButBgp
-  | 91~115 -> Some nothingButBgp
-  | 91~117 -> Some nothingButBgp
-  | 91~120 -> Some nothingButBgp
-  | 91~122 -> Some nothingButBgp
-  | 94~0 -> Some hasOnlyBgp
-  | 94~16 -> Some hasOnlyBgp
-  | 94~18 -> Some hasOnlyBgp
-  | 94~35 -> Some hasOnlyBgp
-  | 94~36 -> Some hasOnlyBgp
-  | 94~57 -> Some hasOnlyBgp
-  | 94~65 -> Some nothingButBgp
-  | 94~80 -> Some hasOnlyBgp
-  | 94~97 -> Some hasOnlyBgp
-  | 94~148 -> Some hasOnlyBgp
-  | 94~151 -> Some hasOnlyBgp
-  | 94~179 -> Some hasOnlyBgp
-  | 95~0 -> Some hasOnlyBgp
-  | 95~16 -> Some hasOnlyBgp
-  | 95~18 -> Some hasOnlyBgp
-  | 95~35 -> Some hasOnlyBgp
-  | 95~36 -> Some hasOnlyBgp
-  | 95~57 -> Some hasOnlyBgp
-  | 95~65 -> Some nothingButBgp
-  | 95~80 -> Some hasOnlyBgp
-  | 95~97 -> Some hasOnlyBgp
-  | 95~148 -> Some hasOnlyBgp
-  | 95~151 -> Some hasOnlyBgp
-  | 95~179 -> Some hasOnlyBgp
-  | 96~0 -> Some hasOnlyBgp
-  | 96~16 -> Some hasOnlyBgp
-  | 96~18 -> Some hasOnlyBgp
-  | 96~35 -> Some hasOnlyBgp
-  | 96~36 -> Some hasOnlyBgp
-  | 96~57 -> Some hasOnlyBgp
-  | 96~65 -> Some nothingButBgp
-  | 96~80 -> Some hasOnlyBgp
-  | 96~97 -> Some hasOnlyBgp
-  | 96~148 -> Some hasOnlyBgp
-  | 96~151 -> Some hasOnlyBgp
-  | 96~179 -> Some hasOnlyBgp
-  | 97~94 -> Some nothingButBgp
-  | 97~95 -> Some nothingButBgp
-  | 97~96 -> Some nothingButBgp
-  | 97~98 -> Some nothingButBgp
-  | 97~100 -> Some nothingButBgp
-  | 97~107 -> Some nothingButBgp
-  | 98~0 -> Some hasOnlyBgp
-  | 98~16 -> Some hasOnlyBgp
-  | 98~18 -> Some hasOnlyBgp
-  | 98~35 -> Some hasOnlyBgp
-  | 98~36 -> Some hasOnlyBgp
-  | 98~57 -> Some hasOnlyBgp
-  | 98~65 -> Some nothingButBgp
-  | 98~80 -> Some hasOnlyBgp
-  | 98~97 -> Some hasOnlyBgp
-  | 98~148 -> Some hasOnlyBgp
-  | 98~151 -> Some hasOnlyBgp
-  | 98~179 -> Some hasOnlyBgp
-  | 99~138 -> Some nothingButBgp
-  | 99~140 -> Some nothingButBgp
-  | 99~142 -> Some nothingButBgp
-  | 99~143 -> Some nothingButBgp
-  | 99~144 -> Some nothingButBgp
-  | 99~145 -> Some nothingButBgp
-  | 100~0 -> Some hasOnlyBgp
-  | 100~16 -> Some hasOnlyBgp
-  | 100~18 -> Some hasOnlyBgp
-  | 100~35 -> Some hasOnlyBgp
-  | 100~36 -> Some hasOnlyBgp
-  | 100~57 -> Some hasOnlyBgp
-  | 100~65 -> Some nothingButBgp
-  | 100~80 -> Some hasOnlyBgp
-  | 100~97 -> Some hasOnlyBgp
-  | 100~148 -> Some hasOnlyBgp
-  | 100~151 -> Some hasOnlyBgp
-  | 100~179 -> Some hasOnlyBgp
-  | 106~160 -> Some nothingButBgp
-  | 106~172 -> Some nothingButBgp
-  | 106~173 -> Some nothingButBgp
-  | 106~174 -> Some nothingButBgp
-  | 106~175 -> Some nothingButBgp
-  | 106~176 -> Some nothingButBgp
-  | 107~0 -> Some hasOnlyBgp
-  | 107~16 -> Some hasOnlyBgp
-  | 107~18 -> Some hasOnlyBgp
-  | 107~35 -> Some hasOnlyBgp
-  | 107~36 -> Some hasOnlyBgp
-  | 107~57 -> Some hasOnlyBgp
-  | 107~65 -> Some nothingButBgp
-  | 107~80 -> Some hasOnlyBgp
-  | 107~97 -> Some hasOnlyBgp
-  | 107~148 -> Some hasOnlyBgp
-  | 107~151 -> Some hasOnlyBgp
-  | 107~179 -> Some hasOnlyBgp
-  | 110~124 -> Some nothingButBgp
-  | 110~127 -> Some nothingButBgp
-  | 110~130 -> Some nothingButBgp
-  | 110~133 -> Some nothingButBgp
-  | 110~169 -> Some nothingButBgp
-  | 110~170 -> Some nothingButBgp
-  | 111~9 -> Some hasOnlyBgp
-  | 111~13 -> Some hasOnlyBgp
-  | 111~29 -> Some hasOnlyBgp
-  | 111~30 -> Some hasOnlyBgp
-  | 111~47 -> Some hasOnlyBgp
-  | 111~54 -> Some hasOnlyBgp
-  | 111~60 -> Some nothingButBgp
-  | 111~89 -> Some hasOnlyBgp
-  | 111~91 -> Some hasOnlyBgp
-  | 111~136 -> Some hasOnlyBgp
-  | 111~166 -> Some hasOnlyBgp
-  | 111~177 -> Some hasOnlyBgp
-  | 112~160 -> Some nothingButBgp
-  | 112~172 -> Some nothingButBgp
-  | 112~173 -> Some nothingButBgp
-  | 112~174 -> Some nothingButBgp
-  | 112~175 -> Some nothingButBgp
-  | 112~176 -> Some nothingButBgp
-  | 113~9 -> Some hasOnlyBgp
-  | 113~13 -> Some hasOnlyBgp
-  | 113~29 -> Some hasOnlyBgp
-  | 113~30 -> Some hasOnlyBgp
-  | 113~47 -> Some hasOnlyBgp
-  | 113~54 -> Some hasOnlyBgp
-  | 113~60 -> Some nothingButBgp
-  | 113~89 -> Some hasOnlyBgp
-  | 113~91 -> Some hasOnlyBgp
-  | 113~136 -> Some hasOnlyBgp
-  | 113~166 -> Some hasOnlyBgp
-  | 113~177 -> Some hasOnlyBgp
-  | 114~125 -> Some nothingButBgp
-  | 114~128 -> Some nothingButBgp
-  | 114~131 -> Some nothingButBgp
-  | 114~134 -> Some nothingButBgp
-  | 114~161 -> Some nothingButBgp
-  | 114~162 -> Some nothingButBgp
-  | 115~9 -> Some hasOnlyBgp
-  | 115~13 -> Some hasOnlyBgp
-  | 115~29 -> Some hasOnlyBgp
-  | 115~30 -> Some hasOnlyBgp
-  | 115~47 -> Some hasOnlyBgp
-  | 115~54 -> Some hasOnlyBgp
-  | 115~60 -> Some nothingButBgp
-  | 115~89 -> Some hasOnlyBgp
-  | 115~91 -> Some hasOnlyBgp
-  | 115~136 -> Some hasOnlyBgp
-  | 115~166 -> Some hasOnlyBgp
-  | 115~177 -> Some hasOnlyBgp
-  | 117~9 -> Some hasOnlyBgp
-  | 117~13 -> Some hasOnlyBgp
-  | 117~29 -> Some hasOnlyBgp
-  | 117~30 -> Some hasOnlyBgp
-  | 117~47 -> Some hasOnlyBgp
-  | 117~54 -> Some hasOnlyBgp
-  | 117~60 -> Some hasOnlyBgp
-  | 117~89 -> Some hasOnlyBgp
-  | 117~91 -> Some hasOnlyBgp
-  | 117~136 -> Some hasOnlyBgp
-  | 117~166 -> Some hasOnlyBgp
-  | 117~177 -> Some hasOnlyBgp
-  | 120~9 -> Some hasOnlyBgp
-  | 120~13 -> Some hasOnlyBgp
-  | 120~29 -> Some hasOnlyBgp
-  | 120~30 -> Some hasOnlyBgp
-  | 120~47 -> Some hasOnlyBgp
-  | 120~54 -> Some hasOnlyBgp
-  | 120~60 -> Some hasOnlyBgp
-  | 120~89 -> Some hasOnlyBgp
-  | 120~91 -> Some hasOnlyBgp
-  | 120~136 -> Some hasOnlyBgp
-  | 120~166 -> Some hasOnlyBgp
-  | 120~177 -> Some hasOnlyBgp
-  | 122~9 -> Some hasOnlyBgp
-  | 122~13 -> Some hasOnlyBgp
-  | 122~29 -> Some hasOnlyBgp
-  | 122~30 -> Some hasOnlyBgp
-  | 122~47 -> Some hasOnlyBgp
-  | 122~54 -> Some hasOnlyBgp
-  | 122~60 -> Some hasOnlyBgp
-  | 122~89 -> Some hasOnlyBgp
-  | 122~91 -> Some hasOnlyBgp
-  | 122~136 -> Some hasOnlyBgp
-  | 122~166 -> Some hasOnlyBgp
-  | 122~177 -> Some hasOnlyBgp
-  | 124~2 -> Some hasOnlyBgp
-  | 124~14 -> Some hasOnlyBgp
-  | 124~26 -> Some hasOnlyBgp
-  | 124~34 -> Some hasOnlyBgp
-  | 124~39 -> Some hasOnlyBgp
-  | 124~49 -> Some hasOnlyBgp
-  | 124~72 -> Some nothingButBgp
-  | 124~75 -> Some hasOnlyBgp
-  | 124~82 -> Some hasOnlyBgp
-  | 124~110 -> Some hasOnlyBgp
-  | 124~139 -> Some hasOnlyBgp
-  | 124~153 -> Some hasOnlyBgp
-  | 125~8 -> Some hasOnlyBgp
-  | 125~11 -> Some hasOnlyBgp
-  | 125~28 -> Some hasOnlyBgp
-  | 125~32 -> Some hasOnlyBgp
-  | 125~45 -> Some hasOnlyBgp
-  | 125~53 -> Some hasOnlyBgp
-  | 125~68 -> Some nothingButBgp
-  | 125~88 -> Some hasOnlyBgp
-  | 125~90 -> Some hasOnlyBgp
-  | 125~114 -> Some hasOnlyBgp
-  | 125~157 -> Some hasOnlyBgp
-  | 125~164 -> Some hasOnlyBgp
-  | 127~2 -> Some hasOnlyBgp
-  | 127~14 -> Some hasOnlyBgp
-  | 127~26 -> Some hasOnlyBgp
-  | 127~34 -> Some hasOnlyBgp
-  | 127~39 -> Some hasOnlyBgp
-  | 127~49 -> Some hasOnlyBgp
-  | 127~72 -> Some nothingButBgp
-  | 127~75 -> Some hasOnlyBgp
-  | 127~82 -> Some hasOnlyBgp
-  | 127~110 -> Some hasOnlyBgp
-  | 127~139 -> Some hasOnlyBgp
-  | 127~153 -> Some hasOnlyBgp
-  | 128~8 -> Some hasOnlyBgp
-  | 128~11 -> Some hasOnlyBgp
-  | 128~28 -> Some hasOnlyBgp
-  | 128~32 -> Some hasOnlyBgp
-  | 128~45 -> Some hasOnlyBgp
-  | 128~53 -> Some hasOnlyBgp
-  | 128~68 -> Some nothingButBgp
-  | 128~88 -> Some hasOnlyBgp
-  | 128~90 -> Some hasOnlyBgp
-  | 128~114 -> Some hasOnlyBgp
-  | 128~157 -> Some hasOnlyBgp
-  | 128~164 -> Some hasOnlyBgp
-  | 130~2 -> Some hasOnlyBgp
-  | 130~14 -> Some hasOnlyBgp
-  | 130~26 -> Some hasOnlyBgp
-  | 130~34 -> Some hasOnlyBgp
-  | 130~39 -> Some hasOnlyBgp
-  | 130~49 -> Some hasOnlyBgp
-  | 130~72 -> Some nothingButBgp
-  | 130~75 -> Some hasOnlyBgp
-  | 130~82 -> Some hasOnlyBgp
-  | 130~110 -> Some hasOnlyBgp
-  | 130~139 -> Some hasOnlyBgp
-  | 130~153 -> Some hasOnlyBgp
-  | 131~8 -> Some hasOnlyBgp
-  | 131~11 -> Some hasOnlyBgp
-  | 131~28 -> Some hasOnlyBgp
-  | 131~32 -> Some hasOnlyBgp
-  | 131~45 -> Some hasOnlyBgp
-  | 131~53 -> Some hasOnlyBgp
-  | 131~68 -> Some nothingButBgp
-  | 131~88 -> Some hasOnlyBgp
-  | 131~90 -> Some hasOnlyBgp
-  | 131~114 -> Some hasOnlyBgp
-  | 131~157 -> Some hasOnlyBgp
-  | 131~164 -> Some hasOnlyBgp
-  | 133~2 -> Some hasOnlyBgp
-  | 133~14 -> Some hasOnlyBgp
-  | 133~26 -> Some hasOnlyBgp
-  | 133~34 -> Some hasOnlyBgp
-  | 133~39 -> Some hasOnlyBgp
-  | 133~49 -> Some hasOnlyBgp
-  | 133~72 -> Some nothingButBgp
-  | 133~75 -> Some hasOnlyBgp
-  | 133~82 -> Some hasOnlyBgp
-  | 133~110 -> Some hasOnlyBgp
-  | 133~139 -> Some hasOnlyBgp
-  | 133~153 -> Some hasOnlyBgp
-  | 134~8 -> Some hasOnlyBgp
-  | 134~11 -> Some hasOnlyBgp
-  | 134~28 -> Some hasOnlyBgp
-  | 134~32 -> Some hasOnlyBgp
-  | 134~45 -> Some hasOnlyBgp
-  | 134~53 -> Some hasOnlyBgp
-  | 134~68 -> Some nothingButBgp
-  | 134~88 -> Some hasOnlyBgp
-  | 134~90 -> Some hasOnlyBgp
-  | 134~114 -> Some hasOnlyBgp
-  | 134~157 -> Some hasOnlyBgp
-  | 134~164 -> Some hasOnlyBgp
-  | 136~111 -> Some nothingButBgp
-  | 136~113 -> Some nothingButBgp
-  | 136~115 -> Some nothingButBgp
-  | 136~117 -> Some nothingButBgp
-  | 136~120 -> Some nothingButBgp
-  | 136~122 -> Some nothingButBgp
-  | 138~1 -> Some hasOnlyBgp
-  | 138~17 -> Some hasOnlyBgp
-  | 138~19 -> Some hasOnlyBgp
-  | 138~33 -> Some hasOnlyBgp
-  | 138~37 -> Some hasOnlyBgp
-  | 138~58 -> Some hasOnlyBgp
-  | 138~70 -> Some nothingButBgp
-  | 138~81 -> Some hasOnlyBgp
-  | 138~99 -> Some hasOnlyBgp
-  | 138~149 -> Some hasOnlyBgp
-  | 138~152 -> Some hasOnlyBgp
-  | 138~171 -> Some hasOnlyBgp
-  | 139~124 -> Some nothingButBgp
-  | 139~127 -> Some nothingButBgp
-  | 139~130 -> Some nothingButBgp
-  | 139~133 -> Some nothingButBgp
-  | 139~169 -> Some nothingButBgp
-  | 139~170 -> Some nothingButBgp
-  | 140~1 -> Some hasOnlyBgp
-  | 140~17 -> Some hasOnlyBgp
-  | 140~19 -> Some hasOnlyBgp
-  | 140~33 -> Some hasOnlyBgp
-  | 140~37 -> Some hasOnlyBgp
-  | 140~58 -> Some hasOnlyBgp
-  | 140~70 -> Some nothingButBgp
-  | 140~81 -> Some hasOnlyBgp
-  | 140~99 -> Some hasOnlyBgp
-  | 140~149 -> Some hasOnlyBgp
-  | 140~152 -> Some hasOnlyBgp
-  | 140~171 -> Some hasOnlyBgp
-  | 141~160 -> Some nothingButBgp
-  | 141~172 -> Some nothingButBgp
-  | 141~173 -> Some nothingButBgp
-  | 141~174 -> Some nothingButBgp
-  | 141~175 -> Some nothingButBgp
-  | 141~176 -> Some nothingButBgp
-  | 142~1 -> Some hasOnlyBgp
-  | 142~17 -> Some hasOnlyBgp
-  | 142~19 -> Some hasOnlyBgp
-  | 142~33 -> Some hasOnlyBgp
-  | 142~37 -> Some hasOnlyBgp
-  | 142~58 -> Some hasOnlyBgp
-  | 142~70 -> Some nothingButBgp
-  | 142~81 -> Some hasOnlyBgp
-  | 142~99 -> Some hasOnlyBgp
-  | 142~149 -> Some hasOnlyBgp
-  | 142~152 -> Some hasOnlyBgp
-  | 142~171 -> Some hasOnlyBgp
-  | 143~1 -> Some hasOnlyBgp
-  | 143~17 -> Some hasOnlyBgp
-  | 143~19 -> Some hasOnlyBgp
-  | 143~33 -> Some hasOnlyBgp
-  | 143~37 -> Some hasOnlyBgp
-  | 143~58 -> Some hasOnlyBgp
-  | 143~70 -> Some nothingButBgp
-  | 143~81 -> Some hasOnlyBgp
-  | 143~99 -> Some hasOnlyBgp
-  | 143~149 -> Some hasOnlyBgp
-  | 143~152 -> Some hasOnlyBgp
-  | 143~171 -> Some hasOnlyBgp
-  | 144~1 -> Some hasOnlyBgp
-  | 144~17 -> Some hasOnlyBgp
-  | 144~19 -> Some hasOnlyBgp
-  | 144~33 -> Some hasOnlyBgp
-  | 144~37 -> Some hasOnlyBgp
-  | 144~58 -> Some hasOnlyBgp
-  | 144~70 -> Some nothingButBgp
-  | 144~81 -> Some hasOnlyBgp
-  | 144~99 -> Some hasOnlyBgp
-  | 144~149 -> Some hasOnlyBgp
-  | 144~152 -> Some hasOnlyBgp
-  | 144~171 -> Some hasOnlyBgp
-  | 145~1 -> Some hasOnlyBgp
-  | 145~17 -> Some hasOnlyBgp
-  | 145~19 -> Some hasOnlyBgp
-  | 145~33 -> Some hasOnlyBgp
-  | 145~37 -> Some hasOnlyBgp
-  | 145~58 -> Some hasOnlyBgp
-  | 145~70 -> Some nothingButBgp
-  | 145~81 -> Some hasOnlyBgp
-  | 145~99 -> Some hasOnlyBgp
-  | 145~149 -> Some hasOnlyBgp
-  | 145~152 -> Some hasOnlyBgp
-  | 145~171 -> Some hasOnlyBgp
-  | 148~94 -> Some nothingButBgp
-  | 148~95 -> Some nothingButBgp
-  | 148~96 -> Some nothingButBgp
-  | 148~98 -> Some nothingButBgp
-  | 148~100 -> Some nothingButBgp
-  | 148~107 -> Some nothingButBgp
-  | 149~138 -> Some nothingButBgp
-  | 149~140 -> Some nothingButBgp
-  | 149~142 -> Some nothingButBgp
-  | 149~143 -> Some nothingButBgp
-  | 149~144 -> Some nothingButBgp
-  | 149~145 -> Some nothingButBgp
-  | 151~94 -> Some nothingButBgp
-  | 151~95 -> Some nothingButBgp
-  | 151~96 -> Some nothingButBgp
-  | 151~98 -> Some nothingButBgp
-  | 151~100 -> Some nothingButBgp
-  | 151~107 -> Some nothingButBgp
-  | 152~138 -> Some nothingButBgp
-  | 152~140 -> Some nothingButBgp
-  | 152~142 -> Some nothingButBgp
-  | 152~143 -> Some nothingButBgp
-  | 152~144 -> Some nothingButBgp
-  | 152~145 -> Some nothingButBgp
-  | 153~124 -> Some nothingButBgp
-  | 153~127 -> Some nothingButBgp
-  | 153~130 -> Some nothingButBgp
-  | 153~133 -> Some nothingButBgp
-  | 153~169 -> Some nothingButBgp
-  | 153~170 -> Some nothingButBgp
-  | 154~160 -> Some nothingButBgp
-  | 154~172 -> Some nothingButBgp
-  | 154~173 -> Some nothingButBgp
-  | 154~174 -> Some nothingButBgp
-  | 154~175 -> Some nothingButBgp
-  | 154~176 -> Some nothingButBgp
-  | 157~125 -> Some nothingButBgp
-  | 157~128 -> Some nothingButBgp
-  | 157~131 -> Some nothingButBgp
-  | 157~134 -> Some nothingButBgp
-  | 157~161 -> Some nothingButBgp
-  | 157~162 -> Some nothingButBgp
-  | 160~7 -> Some hasOnlyBgp
-  | 160~15 -> Some hasOnlyBgp
-  | 160~27 -> Some hasOnlyBgp
-  | 160~31 -> Some hasOnlyBgp
-  | 160~40 -> Some hasOnlyBgp
-  | 160~51 -> Some hasOnlyBgp
-  | 160~66 -> Some nothingButBgp
-  | 160~77 -> Some hasOnlyBgp
-  | 160~106 -> Some hasOnlyBgp
-  | 160~112 -> Some hasOnlyBgp
-  | 160~141 -> Some hasOnlyBgp
-  | 160~154 -> Some hasOnlyBgp
-  | 161~8 -> Some hasOnlyBgp
-  | 161~11 -> Some hasOnlyBgp
-  | 161~28 -> Some hasOnlyBgp
-  | 161~32 -> Some hasOnlyBgp
-  | 161~45 -> Some hasOnlyBgp
-  | 161~53 -> Some hasOnlyBgp
-  | 161~68 -> Some nothingButBgp
-  | 161~88 -> Some hasOnlyBgp
-  | 161~90 -> Some hasOnlyBgp
-  | 161~114 -> Some hasOnlyBgp
-  | 161~157 -> Some hasOnlyBgp
-  | 161~164 -> Some hasOnlyBgp
-  | 162~8 -> Some hasOnlyBgp
-  | 162~11 -> Some hasOnlyBgp
-  | 162~28 -> Some hasOnlyBgp
-  | 162~32 -> Some hasOnlyBgp
-  | 162~45 -> Some hasOnlyBgp
-  | 162~53 -> Some hasOnlyBgp
-  | 162~68 -> Some nothingButBgp
-  | 162~88 -> Some hasOnlyBgp
-  | 162~90 -> Some hasOnlyBgp
-  | 162~114 -> Some hasOnlyBgp
-  | 162~157 -> Some hasOnlyBgp
-  | 162~164 -> Some hasOnlyBgp
-  | 164~125 -> Some nothingButBgp
-  | 164~128 -> Some nothingButBgp
-  | 164~131 -> Some nothingButBgp
-  | 164~134 -> Some nothingButBgp
-  | 164~161 -> Some nothingButBgp
-  | 164~162 -> Some nothingButBgp
-  | 166~111 -> Some nothingButBgp
-  | 166~113 -> Some nothingButBgp
-  | 166~115 -> Some nothingButBgp
-  | 166~117 -> Some nothingButBgp
-  | 166~120 -> Some nothingButBgp
-  | 166~122 -> Some nothingButBgp
-  | 169~2 -> Some hasOnlyBgp
-  | 169~14 -> Some hasOnlyBgp
-  | 169~26 -> Some hasOnlyBgp
-  | 169~34 -> Some hasOnlyBgp
-  | 169~39 -> Some hasOnlyBgp
-  | 169~49 -> Some hasOnlyBgp
-  | 169~72 -> Some nothingButBgp
-  | 169~75 -> Some hasOnlyBgp
-  | 169~82 -> Some hasOnlyBgp
-  | 169~110 -> Some hasOnlyBgp
-  | 169~139 -> Some hasOnlyBgp
-  | 169~153 -> Some hasOnlyBgp
-  | 170~2 -> Some hasOnlyBgp
-  | 170~14 -> Some hasOnlyBgp
-  | 170~26 -> Some hasOnlyBgp
-  | 170~34 -> Some hasOnlyBgp
-  | 170~39 -> Some hasOnlyBgp
-  | 170~49 -> Some hasOnlyBgp
-  | 170~72 -> Some nothingButBgp
-  | 170~75 -> Some hasOnlyBgp
-  | 170~82 -> Some hasOnlyBgp
-  | 170~110 -> Some hasOnlyBgp
-  | 170~139 -> Some hasOnlyBgp
-  | 170~153 -> Some hasOnlyBgp
-  | 171~138 -> Some nothingButBgp
-  | 171~140 -> Some nothingButBgp
-  | 171~142 -> Some nothingButBgp
-  | 171~143 -> Some nothingButBgp
-  | 171~144 -> Some nothingButBgp
-  | 171~145 -> Some nothingButBgp
-  | 172~7 -> Some hasOnlyBgp
-  | 172~15 -> Some hasOnlyBgp
-  | 172~27 -> Some hasOnlyBgp
-  | 172~31 -> Some hasOnlyBgp
-  | 172~40 -> Some hasOnlyBgp
-  | 172~51 -> Some hasOnlyBgp
-  | 172~66 -> Some nothingButBgp
-  | 172~77 -> Some hasOnlyBgp
-  | 172~106 -> Some hasOnlyBgp
-  | 172~112 -> Some hasOnlyBgp
-  | 172~141 -> Some hasOnlyBgp
-  | 172~154 -> Some hasOnlyBgp
-  | 173~7 -> Some hasOnlyBgp
-  | 173~15 -> Some hasOnlyBgp
-  | 173~27 -> Some hasOnlyBgp
-  | 173~31 -> Some hasOnlyBgp
-  | 173~40 -> Some hasOnlyBgp
-  | 173~51 -> Some hasOnlyBgp
-  | 173~66 -> Some nothingButBgp
-  | 173~77 -> Some hasOnlyBgp
-  | 173~106 -> Some hasOnlyBgp
-  | 173~112 -> Some hasOnlyBgp
-  | 173~141 -> Some hasOnlyBgp
-  | 173~154 -> Some hasOnlyBgp
-  | 174~7 -> Some hasOnlyBgp
-  | 174~15 -> Some hasOnlyBgp
-  | 174~27 -> Some hasOnlyBgp
-  | 174~31 -> Some hasOnlyBgp
-  | 174~40 -> Some hasOnlyBgp
-  | 174~51 -> Some hasOnlyBgp
-  | 174~66 -> Some nothingButBgp
-  | 174~77 -> Some hasOnlyBgp
-  | 174~106 -> Some hasOnlyBgp
-  | 174~112 -> Some hasOnlyBgp
-  | 174~141 -> Some hasOnlyBgp
-  | 174~154 -> Some hasOnlyBgp
-  | 175~7 -> Some hasOnlyBgp
-  | 175~15 -> Some hasOnlyBgp
-  | 175~27 -> Some hasOnlyBgp
-  | 175~31 -> Some hasOnlyBgp
-  | 175~40 -> Some hasOnlyBgp
-  | 175~51 -> Some hasOnlyBgp
-  | 175~66 -> Some nothingButBgp
-  | 175~77 -> Some hasOnlyBgp
-  | 175~106 -> Some hasOnlyBgp
-  | 175~112 -> Some hasOnlyBgp
-  | 175~141 -> Some hasOnlyBgp
-  | 175~154 -> Some hasOnlyBgp
-  | 176~7 -> Some hasOnlyBgp
-  | 176~15 -> Some hasOnlyBgp
-  | 176~27 -> Some hasOnlyBgp
-  | 176~31 -> Some hasOnlyBgp
-  | 176~40 -> Some hasOnlyBgp
-  | 176~51 -> Some hasOnlyBgp
-  | 176~66 -> Some nothingButBgp
-  | 176~77 -> Some hasOnlyBgp
-  | 176~106 -> Some hasOnlyBgp
-  | 176~112 -> Some hasOnlyBgp
-  | 176~141 -> Some hasOnlyBgp
-  | 176~154 -> Some hasOnlyBgp
-  | 177~111 -> Some nothingButBgp
-  | 177~113 -> Some nothingButBgp
-  | 177~115 -> Some nothingButBgp
-  | 177~117 -> Some nothingButBgp
-  | 177~120 -> Some nothingButBgp
-  | 177~122 -> Some nothingButBgp
-  | 179~94 -> Some nothingButBgp
-  | 179~95 -> Some nothingButBgp
-  | 179~96 -> Some nothingButBgp
-  | 179~98 -> Some nothingButBgp
-  | 179~100 -> Some nothingButBgp
-  | 179~107 -> Some nothingButBgp
+  | 0~94 -> nothingButBgp
+  | 0~95 -> nothingButBgp
+  | 0~96 -> nothingButBgp
+  | 0~98 -> nothingButBgp
+  | 0~100 -> nothingButBgp
+  | 0~107 -> nothingButBgp
+  | 1~138 -> nothingButBgp
+  | 1~140 -> nothingButBgp
+  | 1~142 -> nothingButBgp
+  | 1~143 -> nothingButBgp
+  | 1~144 -> nothingButBgp
+  | 1~145 -> nothingButBgp
+  | 2~124 -> nothingButBgp
+  | 2~127 -> nothingButBgp
+  | 2~130 -> nothingButBgp
+  | 2~133 -> nothingButBgp
+  | 2~169 -> nothingButBgp
+  | 2~170 -> nothingButBgp
+  | 7~160 -> nothingButBgp
+  | 7~172 -> nothingButBgp
+  | 7~173 -> nothingButBgp
+  | 7~174 -> nothingButBgp
+  | 7~175 -> nothingButBgp
+  | 7~176 -> nothingButBgp
+  | 8~125 -> nothingButBgp
+  | 8~128 -> nothingButBgp
+  | 8~131 -> nothingButBgp
+  | 8~134 -> nothingButBgp
+  | 8~161 -> nothingButBgp
+  | 8~162 -> nothingButBgp
+  | 9~111 -> nothingButBgp
+  | 9~113 -> nothingButBgp
+  | 9~115 -> nothingButBgp
+  | 9~117 -> nothingButBgp
+  | 9~120 -> nothingButBgp
+  | 9~122 -> nothingButBgp
+  | 11~125 -> nothingButBgp
+  | 11~128 -> nothingButBgp
+  | 11~131 -> nothingButBgp
+  | 11~134 -> nothingButBgp
+  | 11~161 -> nothingButBgp
+  | 11~162 -> nothingButBgp
+  | 13~111 -> nothingButBgp
+  | 13~113 -> nothingButBgp
+  | 13~115 -> nothingButBgp
+  | 13~117 -> nothingButBgp
+  | 13~120 -> nothingButBgp
+  | 13~122 -> nothingButBgp
+  | 14~124 -> nothingButBgp
+  | 14~127 -> nothingButBgp
+  | 14~130 -> nothingButBgp
+  | 14~133 -> nothingButBgp
+  | 14~169 -> nothingButBgp
+  | 14~170 -> nothingButBgp
+  | 15~160 -> nothingButBgp
+  | 15~172 -> nothingButBgp
+  | 15~173 -> nothingButBgp
+  | 15~174 -> nothingButBgp
+  | 15~175 -> nothingButBgp
+  | 15~176 -> nothingButBgp
+  | 16~94 -> nothingButBgp
+  | 16~95 -> nothingButBgp
+  | 16~96 -> nothingButBgp
+  | 16~98 -> nothingButBgp
+  | 16~100 -> nothingButBgp
+  | 16~107 -> nothingButBgp
+  | 17~138 -> nothingButBgp
+  | 17~140 -> nothingButBgp
+  | 17~142 -> nothingButBgp
+  | 17~143 -> nothingButBgp
+  | 17~144 -> nothingButBgp
+  | 17~145 -> nothingButBgp
+  | 18~94 -> nothingButBgp
+  | 18~95 -> nothingButBgp
+  | 18~96 -> nothingButBgp
+  | 18~98 -> nothingButBgp
+  | 18~100 -> nothingButBgp
+  | 18~107 -> nothingButBgp
+  | 19~138 -> nothingButBgp
+  | 19~140 -> nothingButBgp
+  | 19~142 -> nothingButBgp
+  | 19~143 -> nothingButBgp
+  | 19~144 -> nothingButBgp
+  | 19~145 -> nothingButBgp
+  | 26~124 -> nothingButBgp
+  | 26~127 -> nothingButBgp
+  | 26~130 -> nothingButBgp
+  | 26~133 -> nothingButBgp
+  | 26~169 -> nothingButBgp
+  | 26~170 -> nothingButBgp
+  | 27~160 -> nothingButBgp
+  | 27~172 -> nothingButBgp
+  | 27~173 -> nothingButBgp
+  | 27~174 -> nothingButBgp
+  | 27~175 -> nothingButBgp
+  | 27~176 -> nothingButBgp
+  | 28~125 -> nothingButBgp
+  | 28~128 -> nothingButBgp
+  | 28~131 -> nothingButBgp
+  | 28~134 -> nothingButBgp
+  | 28~161 -> nothingButBgp
+  | 28~162 -> nothingButBgp
+  | 29~111 -> nothingButBgp
+  | 29~113 -> nothingButBgp
+  | 29~115 -> nothingButBgp
+  | 29~117 -> nothingButBgp
+  | 29~120 -> nothingButBgp
+  | 29~122 -> nothingButBgp
+  | 30~111 -> nothingButBgp
+  | 30~113 -> nothingButBgp
+  | 30~115 -> nothingButBgp
+  | 30~117 -> nothingButBgp
+  | 30~120 -> nothingButBgp
+  | 30~122 -> nothingButBgp
+  | 31~160 -> nothingButBgp
+  | 31~172 -> nothingButBgp
+  | 31~173 -> nothingButBgp
+  | 31~174 -> nothingButBgp
+  | 31~175 -> nothingButBgp
+  | 31~176 -> nothingButBgp
+  | 32~125 -> nothingButBgp
+  | 32~128 -> nothingButBgp
+  | 32~131 -> nothingButBgp
+  | 32~134 -> nothingButBgp
+  | 32~161 -> nothingButBgp
+  | 32~162 -> nothingButBgp
+  | 33~138 -> nothingButBgp
+  | 33~140 -> nothingButBgp
+  | 33~142 -> nothingButBgp
+  | 33~143 -> nothingButBgp
+  | 33~144 -> nothingButBgp
+  | 33~145 -> nothingButBgp
+  | 34~124 -> nothingButBgp
+  | 34~127 -> nothingButBgp
+  | 34~130 -> nothingButBgp
+  | 34~133 -> nothingButBgp
+  | 34~169 -> nothingButBgp
+  | 34~170 -> nothingButBgp
+  | 35~94 -> nothingButBgp
+  | 35~95 -> nothingButBgp
+  | 35~96 -> nothingButBgp
+  | 35~98 -> nothingButBgp
+  | 35~100 -> nothingButBgp
+  | 35~107 -> nothingButBgp
+  | 36~94 -> nothingButBgp
+  | 36~95 -> nothingButBgp
+  | 36~96 -> nothingButBgp
+  | 36~98 -> nothingButBgp
+  | 36~100 -> nothingButBgp
+  | 36~107 -> nothingButBgp
+  | 37~138 -> nothingButBgp
+  | 37~140 -> nothingButBgp
+  | 37~142 -> nothingButBgp
+  | 37~143 -> nothingButBgp
+  | 37~144 -> nothingButBgp
+  | 37~145 -> nothingButBgp
+  | 39~124 -> nothingButBgp
+  | 39~127 -> nothingButBgp
+  | 39~130 -> nothingButBgp
+  | 39~133 -> nothingButBgp
+  | 39~169 -> nothingButBgp
+  | 39~170 -> nothingButBgp
+  | 40~160 -> nothingButBgp
+  | 40~172 -> nothingButBgp
+  | 40~173 -> nothingButBgp
+  | 40~174 -> nothingButBgp
+  | 40~175 -> nothingButBgp
+  | 40~176 -> nothingButBgp
+  | 45~125 -> nothingButBgp
+  | 45~128 -> nothingButBgp
+  | 45~131 -> nothingButBgp
+  | 45~134 -> nothingButBgp
+  | 45~161 -> nothingButBgp
+  | 45~162 -> nothingButBgp
+  | 47~111 -> nothingButBgp
+  | 47~113 -> nothingButBgp
+  | 47~115 -> nothingButBgp
+  | 47~117 -> nothingButBgp
+  | 47~120 -> nothingButBgp
+  | 47~122 -> nothingButBgp
+  | 49~124 -> nothingButBgp
+  | 49~127 -> nothingButBgp
+  | 49~130 -> nothingButBgp
+  | 49~133 -> nothingButBgp
+  | 49~169 -> nothingButBgp
+  | 49~170 -> nothingButBgp
+  | 51~160 -> nothingButBgp
+  | 51~172 -> nothingButBgp
+  | 51~173 -> nothingButBgp
+  | 51~174 -> nothingButBgp
+  | 51~175 -> nothingButBgp
+  | 51~176 -> nothingButBgp
+  | 53~125 -> nothingButBgp
+  | 53~128 -> nothingButBgp
+  | 53~131 -> nothingButBgp
+  | 53~134 -> nothingButBgp
+  | 53~161 -> nothingButBgp
+  | 53~162 -> nothingButBgp
+  | 54~111 -> nothingButBgp
+  | 54~113 -> nothingButBgp
+  | 54~115 -> nothingButBgp
+  | 54~117 -> nothingButBgp
+  | 54~120 -> nothingButBgp
+  | 54~122 -> nothingButBgp
+  | 57~94 -> nothingButBgp
+  | 57~95 -> nothingButBgp
+  | 57~96 -> nothingButBgp
+  | 57~98 -> nothingButBgp
+  | 57~100 -> nothingButBgp
+  | 57~107 -> nothingButBgp
+  | 58~138 -> nothingButBgp
+  | 58~140 -> nothingButBgp
+  | 58~142 -> nothingButBgp
+  | 58~143 -> nothingButBgp
+  | 58~144 -> nothingButBgp
+  | 58~145 -> nothingButBgp
+  | 60~111 -> hasOnlyBgp
+  | 60~113 -> hasOnlyBgp
+  | 60~115 -> hasOnlyBgp
+  | 60~117 -> hasOnlyBgp
+  | 60~120 -> hasOnlyBgp
+  | 60~122 -> hasOnlyBgp
+  | 65~94 -> hasOnlyBgp
+  | 65~95 -> hasOnlyBgp
+  | 65~96 -> hasOnlyBgp
+  | 65~98 -> hasOnlyBgp
+  | 65~100 -> hasOnlyBgp
+  | 65~107 -> hasOnlyBgp
+  | 66~160 -> hasOnlyBgp
+  | 66~172 -> hasOnlyBgp
+  | 66~173 -> hasOnlyBgp
+  | 66~174 -> hasOnlyBgp
+  | 66~175 -> hasOnlyBgp
+  | 66~176 -> hasOnlyBgp
+  | 68~125 -> hasOnlyBgp
+  | 68~128 -> hasOnlyBgp
+  | 68~131 -> hasOnlyBgp
+  | 68~134 -> hasOnlyBgp
+  | 68~161 -> hasOnlyBgp
+  | 68~162 -> hasOnlyBgp
+  | 70~138 -> hasOnlyBgp
+  | 70~140 -> hasOnlyBgp
+  | 70~142 -> hasOnlyBgp
+  | 70~143 -> hasOnlyBgp
+  | 70~144 -> hasOnlyBgp
+  | 70~145 -> hasOnlyBgp
+  | 72~124 -> hasOnlyBgp
+  | 72~127 -> hasOnlyBgp
+  | 72~130 -> hasOnlyBgp
+  | 72~133 -> hasOnlyBgp
+  | 72~169 -> hasOnlyBgp
+  | 72~170 -> hasOnlyBgp
+  | 75~124 -> nothingButBgp
+  | 75~127 -> nothingButBgp
+  | 75~130 -> nothingButBgp
+  | 75~133 -> nothingButBgp
+  | 75~169 -> nothingButBgp
+  | 75~170 -> nothingButBgp
+  | 77~160 -> nothingButBgp
+  | 77~172 -> nothingButBgp
+  | 77~173 -> nothingButBgp
+  | 77~174 -> nothingButBgp
+  | 77~175 -> nothingButBgp
+  | 77~176 -> nothingButBgp
+  | 80~94 -> nothingButBgp
+  | 80~95 -> nothingButBgp
+  | 80~96 -> nothingButBgp
+  | 80~98 -> nothingButBgp
+  | 80~100 -> nothingButBgp
+  | 80~107 -> nothingButBgp
+  | 81~138 -> nothingButBgp
+  | 81~140 -> nothingButBgp
+  | 81~142 -> nothingButBgp
+  | 81~143 -> nothingButBgp
+  | 81~144 -> nothingButBgp
+  | 81~145 -> nothingButBgp
+  | 82~124 -> nothingButBgp
+  | 82~127 -> nothingButBgp
+  | 82~130 -> nothingButBgp
+  | 82~133 -> nothingButBgp
+  | 82~169 -> nothingButBgp
+  | 82~170 -> nothingButBgp
+  | 88~125 -> nothingButBgp
+  | 88~128 -> nothingButBgp
+  | 88~131 -> nothingButBgp
+  | 88~134 -> nothingButBgp
+  | 88~161 -> nothingButBgp
+  | 88~162 -> nothingButBgp
+  | 89~111 -> nothingButBgp
+  | 89~113 -> nothingButBgp
+  | 89~115 -> nothingButBgp
+  | 89~117 -> nothingButBgp
+  | 89~120 -> nothingButBgp
+  | 89~122 -> nothingButBgp
+  | 90~125 -> nothingButBgp
+  | 90~128 -> nothingButBgp
+  | 90~131 -> nothingButBgp
+  | 90~134 -> nothingButBgp
+  | 90~161 -> nothingButBgp
+  | 90~162 -> nothingButBgp
+  | 91~111 -> nothingButBgp
+  | 91~113 -> nothingButBgp
+  | 91~115 -> nothingButBgp
+  | 91~117 -> nothingButBgp
+  | 91~120 -> nothingButBgp
+  | 91~122 -> nothingButBgp
+  | 94~0 -> hasOnlyBgp
+  | 94~16 -> hasOnlyBgp
+  | 94~18 -> hasOnlyBgp
+  | 94~35 -> hasOnlyBgp
+  | 94~36 -> hasOnlyBgp
+  | 94~57 -> hasOnlyBgp
+  | 94~65 -> nothingButBgp
+  | 94~80 -> hasOnlyBgp
+  | 94~97 -> hasOnlyBgp
+  | 94~148 -> hasOnlyBgp
+  | 94~151 -> hasOnlyBgp
+  | 94~179 -> hasOnlyBgp
+  | 95~0 -> hasOnlyBgp
+  | 95~16 -> hasOnlyBgp
+  | 95~18 -> hasOnlyBgp
+  | 95~35 -> hasOnlyBgp
+  | 95~36 -> hasOnlyBgp
+  | 95~57 -> hasOnlyBgp
+  | 95~65 -> nothingButBgp
+  | 95~80 -> hasOnlyBgp
+  | 95~97 -> hasOnlyBgp
+  | 95~148 -> hasOnlyBgp
+  | 95~151 -> hasOnlyBgp
+  | 95~179 -> hasOnlyBgp
+  | 96~0 -> hasOnlyBgp
+  | 96~16 -> hasOnlyBgp
+  | 96~18 -> hasOnlyBgp
+  | 96~35 -> hasOnlyBgp
+  | 96~36 -> hasOnlyBgp
+  | 96~57 -> hasOnlyBgp
+  | 96~65 -> nothingButBgp
+  | 96~80 -> hasOnlyBgp
+  | 96~97 -> hasOnlyBgp
+  | 96~148 -> hasOnlyBgp
+  | 96~151 -> hasOnlyBgp
+  | 96~179 -> hasOnlyBgp
+  | 97~94 -> nothingButBgp
+  | 97~95 -> nothingButBgp
+  | 97~96 -> nothingButBgp
+  | 97~98 -> nothingButBgp
+  | 97~100 -> nothingButBgp
+  | 97~107 -> nothingButBgp
+  | 98~0 -> hasOnlyBgp
+  | 98~16 -> hasOnlyBgp
+  | 98~18 -> hasOnlyBgp
+  | 98~35 -> hasOnlyBgp
+  | 98~36 -> hasOnlyBgp
+  | 98~57 -> hasOnlyBgp
+  | 98~65 -> nothingButBgp
+  | 98~80 -> hasOnlyBgp
+  | 98~97 -> hasOnlyBgp
+  | 98~148 -> hasOnlyBgp
+  | 98~151 -> hasOnlyBgp
+  | 98~179 -> hasOnlyBgp
+  | 99~138 -> nothingButBgp
+  | 99~140 -> nothingButBgp
+  | 99~142 -> nothingButBgp
+  | 99~143 -> nothingButBgp
+  | 99~144 -> nothingButBgp
+  | 99~145 -> nothingButBgp
+  | 100~0 -> hasOnlyBgp
+  | 100~16 -> hasOnlyBgp
+  | 100~18 -> hasOnlyBgp
+  | 100~35 -> hasOnlyBgp
+  | 100~36 -> hasOnlyBgp
+  | 100~57 -> hasOnlyBgp
+  | 100~65 -> nothingButBgp
+  | 100~80 -> hasOnlyBgp
+  | 100~97 -> hasOnlyBgp
+  | 100~148 -> hasOnlyBgp
+  | 100~151 -> hasOnlyBgp
+  | 100~179 -> hasOnlyBgp
+  | 106~160 -> nothingButBgp
+  | 106~172 -> nothingButBgp
+  | 106~173 -> nothingButBgp
+  | 106~174 -> nothingButBgp
+  | 106~175 -> nothingButBgp
+  | 106~176 -> nothingButBgp
+  | 107~0 -> hasOnlyBgp
+  | 107~16 -> hasOnlyBgp
+  | 107~18 -> hasOnlyBgp
+  | 107~35 -> hasOnlyBgp
+  | 107~36 -> hasOnlyBgp
+  | 107~57 -> hasOnlyBgp
+  | 107~65 -> nothingButBgp
+  | 107~80 -> hasOnlyBgp
+  | 107~97 -> hasOnlyBgp
+  | 107~148 -> hasOnlyBgp
+  | 107~151 -> hasOnlyBgp
+  | 107~179 -> hasOnlyBgp
+  | 110~124 -> nothingButBgp
+  | 110~127 -> nothingButBgp
+  | 110~130 -> nothingButBgp
+  | 110~133 -> nothingButBgp
+  | 110~169 -> nothingButBgp
+  | 110~170 -> nothingButBgp
+  | 111~9 -> hasOnlyBgp
+  | 111~13 -> hasOnlyBgp
+  | 111~29 -> hasOnlyBgp
+  | 111~30 -> hasOnlyBgp
+  | 111~47 -> hasOnlyBgp
+  | 111~54 -> hasOnlyBgp
+  | 111~60 -> nothingButBgp
+  | 111~89 -> hasOnlyBgp
+  | 111~91 -> hasOnlyBgp
+  | 111~136 -> hasOnlyBgp
+  | 111~166 -> hasOnlyBgp
+  | 111~177 -> hasOnlyBgp
+  | 112~160 -> nothingButBgp
+  | 112~172 -> nothingButBgp
+  | 112~173 -> nothingButBgp
+  | 112~174 -> nothingButBgp
+  | 112~175 -> nothingButBgp
+  | 112~176 -> nothingButBgp
+  | 113~9 -> hasOnlyBgp
+  | 113~13 -> hasOnlyBgp
+  | 113~29 -> hasOnlyBgp
+  | 113~30 -> hasOnlyBgp
+  | 113~47 -> hasOnlyBgp
+  | 113~54 -> hasOnlyBgp
+  | 113~60 -> nothingButBgp
+  | 113~89 -> hasOnlyBgp
+  | 113~91 -> hasOnlyBgp
+  | 113~136 -> hasOnlyBgp
+  | 113~166 -> hasOnlyBgp
+  | 113~177 -> hasOnlyBgp
+  | 114~125 -> nothingButBgp
+  | 114~128 -> nothingButBgp
+  | 114~131 -> nothingButBgp
+  | 114~134 -> nothingButBgp
+  | 114~161 -> nothingButBgp
+  | 114~162 -> nothingButBgp
+  | 115~9 -> hasOnlyBgp
+  | 115~13 -> hasOnlyBgp
+  | 115~29 -> hasOnlyBgp
+  | 115~30 -> hasOnlyBgp
+  | 115~47 -> hasOnlyBgp
+  | 115~54 -> hasOnlyBgp
+  | 115~60 -> nothingButBgp
+  | 115~89 -> hasOnlyBgp
+  | 115~91 -> hasOnlyBgp
+  | 115~136 -> hasOnlyBgp
+  | 115~166 -> hasOnlyBgp
+  | 115~177 -> hasOnlyBgp
+  | 117~9 -> hasOnlyBgp
+  | 117~13 -> hasOnlyBgp
+  | 117~29 -> hasOnlyBgp
+  | 117~30 -> hasOnlyBgp
+  | 117~47 -> hasOnlyBgp
+  | 117~54 -> hasOnlyBgp
+  | 117~60 -> hasOnlyBgp
+  | 117~89 -> hasOnlyBgp
+  | 117~91 -> hasOnlyBgp
+  | 117~136 -> hasOnlyBgp
+  | 117~166 -> hasOnlyBgp
+  | 117~177 -> hasOnlyBgp
+  | 120~9 -> hasOnlyBgp
+  | 120~13 -> hasOnlyBgp
+  | 120~29 -> hasOnlyBgp
+  | 120~30 -> hasOnlyBgp
+  | 120~47 -> hasOnlyBgp
+  | 120~54 -> hasOnlyBgp
+  | 120~60 -> hasOnlyBgp
+  | 120~89 -> hasOnlyBgp
+  | 120~91 -> hasOnlyBgp
+  | 120~136 -> hasOnlyBgp
+  | 120~166 -> hasOnlyBgp
+  | 120~177 -> hasOnlyBgp
+  | 122~9 -> hasOnlyBgp
+  | 122~13 -> hasOnlyBgp
+  | 122~29 -> hasOnlyBgp
+  | 122~30 -> hasOnlyBgp
+  | 122~47 -> hasOnlyBgp
+  | 122~54 -> hasOnlyBgp
+  | 122~60 -> hasOnlyBgp
+  | 122~89 -> hasOnlyBgp
+  | 122~91 -> hasOnlyBgp
+  | 122~136 -> hasOnlyBgp
+  | 122~166 -> hasOnlyBgp
+  | 122~177 -> hasOnlyBgp
+  | 124~2 -> hasOnlyBgp
+  | 124~14 -> hasOnlyBgp
+  | 124~26 -> hasOnlyBgp
+  | 124~34 -> hasOnlyBgp
+  | 124~39 -> hasOnlyBgp
+  | 124~49 -> hasOnlyBgp
+  | 124~72 -> nothingButBgp
+  | 124~75 -> hasOnlyBgp
+  | 124~82 -> hasOnlyBgp
+  | 124~110 -> hasOnlyBgp
+  | 124~139 -> hasOnlyBgp
+  | 124~153 -> hasOnlyBgp
+  | 125~8 -> hasOnlyBgp
+  | 125~11 -> hasOnlyBgp
+  | 125~28 -> hasOnlyBgp
+  | 125~32 -> hasOnlyBgp
+  | 125~45 -> hasOnlyBgp
+  | 125~53 -> hasOnlyBgp
+  | 125~68 -> nothingButBgp
+  | 125~88 -> hasOnlyBgp
+  | 125~90 -> hasOnlyBgp
+  | 125~114 -> hasOnlyBgp
+  | 125~157 -> hasOnlyBgp
+  | 125~164 -> hasOnlyBgp
+  | 127~2 -> hasOnlyBgp
+  | 127~14 -> hasOnlyBgp
+  | 127~26 -> hasOnlyBgp
+  | 127~34 -> hasOnlyBgp
+  | 127~39 -> hasOnlyBgp
+  | 127~49 -> hasOnlyBgp
+  | 127~72 -> nothingButBgp
+  | 127~75 -> hasOnlyBgp
+  | 127~82 -> hasOnlyBgp
+  | 127~110 -> hasOnlyBgp
+  | 127~139 -> hasOnlyBgp
+  | 127~153 -> hasOnlyBgp
+  | 128~8 -> hasOnlyBgp
+  | 128~11 -> hasOnlyBgp
+  | 128~28 -> hasOnlyBgp
+  | 128~32 -> hasOnlyBgp
+  | 128~45 -> hasOnlyBgp
+  | 128~53 -> hasOnlyBgp
+  | 128~68 -> nothingButBgp
+  | 128~88 -> hasOnlyBgp
+  | 128~90 -> hasOnlyBgp
+  | 128~114 -> hasOnlyBgp
+  | 128~157 -> hasOnlyBgp
+  | 128~164 -> hasOnlyBgp
+  | 130~2 -> hasOnlyBgp
+  | 130~14 -> hasOnlyBgp
+  | 130~26 -> hasOnlyBgp
+  | 130~34 -> hasOnlyBgp
+  | 130~39 -> hasOnlyBgp
+  | 130~49 -> hasOnlyBgp
+  | 130~72 -> nothingButBgp
+  | 130~75 -> hasOnlyBgp
+  | 130~82 -> hasOnlyBgp
+  | 130~110 -> hasOnlyBgp
+  | 130~139 -> hasOnlyBgp
+  | 130~153 -> hasOnlyBgp
+  | 131~8 -> hasOnlyBgp
+  | 131~11 -> hasOnlyBgp
+  | 131~28 -> hasOnlyBgp
+  | 131~32 -> hasOnlyBgp
+  | 131~45 -> hasOnlyBgp
+  | 131~53 -> hasOnlyBgp
+  | 131~68 -> nothingButBgp
+  | 131~88 -> hasOnlyBgp
+  | 131~90 -> hasOnlyBgp
+  | 131~114 -> hasOnlyBgp
+  | 131~157 -> hasOnlyBgp
+  | 131~164 -> hasOnlyBgp
+  | 133~2 -> hasOnlyBgp
+  | 133~14 -> hasOnlyBgp
+  | 133~26 -> hasOnlyBgp
+  | 133~34 -> hasOnlyBgp
+  | 133~39 -> hasOnlyBgp
+  | 133~49 -> hasOnlyBgp
+  | 133~72 -> nothingButBgp
+  | 133~75 -> hasOnlyBgp
+  | 133~82 -> hasOnlyBgp
+  | 133~110 -> hasOnlyBgp
+  | 133~139 -> hasOnlyBgp
+  | 133~153 -> hasOnlyBgp
+  | 134~8 -> hasOnlyBgp
+  | 134~11 -> hasOnlyBgp
+  | 134~28 -> hasOnlyBgp
+  | 134~32 -> hasOnlyBgp
+  | 134~45 -> hasOnlyBgp
+  | 134~53 -> hasOnlyBgp
+  | 134~68 -> nothingButBgp
+  | 134~88 -> hasOnlyBgp
+  | 134~90 -> hasOnlyBgp
+  | 134~114 -> hasOnlyBgp
+  | 134~157 -> hasOnlyBgp
+  | 134~164 -> hasOnlyBgp
+  | 136~111 -> nothingButBgp
+  | 136~113 -> nothingButBgp
+  | 136~115 -> nothingButBgp
+  | 136~117 -> nothingButBgp
+  | 136~120 -> nothingButBgp
+  | 136~122 -> nothingButBgp
+  | 138~1 -> hasOnlyBgp
+  | 138~17 -> hasOnlyBgp
+  | 138~19 -> hasOnlyBgp
+  | 138~33 -> hasOnlyBgp
+  | 138~37 -> hasOnlyBgp
+  | 138~58 -> hasOnlyBgp
+  | 138~70 -> nothingButBgp
+  | 138~81 -> hasOnlyBgp
+  | 138~99 -> hasOnlyBgp
+  | 138~149 -> hasOnlyBgp
+  | 138~152 -> hasOnlyBgp
+  | 138~171 -> hasOnlyBgp
+  | 139~124 -> nothingButBgp
+  | 139~127 -> nothingButBgp
+  | 139~130 -> nothingButBgp
+  | 139~133 -> nothingButBgp
+  | 139~169 -> nothingButBgp
+  | 139~170 -> nothingButBgp
+  | 140~1 -> hasOnlyBgp
+  | 140~17 -> hasOnlyBgp
+  | 140~19 -> hasOnlyBgp
+  | 140~33 -> hasOnlyBgp
+  | 140~37 -> hasOnlyBgp
+  | 140~58 -> hasOnlyBgp
+  | 140~70 -> nothingButBgp
+  | 140~81 -> hasOnlyBgp
+  | 140~99 -> hasOnlyBgp
+  | 140~149 -> hasOnlyBgp
+  | 140~152 -> hasOnlyBgp
+  | 140~171 -> hasOnlyBgp
+  | 141~160 -> nothingButBgp
+  | 141~172 -> nothingButBgp
+  | 141~173 -> nothingButBgp
+  | 141~174 -> nothingButBgp
+  | 141~175 -> nothingButBgp
+  | 141~176 -> nothingButBgp
+  | 142~1 -> hasOnlyBgp
+  | 142~17 -> hasOnlyBgp
+  | 142~19 -> hasOnlyBgp
+  | 142~33 -> hasOnlyBgp
+  | 142~37 -> hasOnlyBgp
+  | 142~58 -> hasOnlyBgp
+  | 142~70 -> nothingButBgp
+  | 142~81 -> hasOnlyBgp
+  | 142~99 -> hasOnlyBgp
+  | 142~149 -> hasOnlyBgp
+  | 142~152 -> hasOnlyBgp
+  | 142~171 -> hasOnlyBgp
+  | 143~1 -> hasOnlyBgp
+  | 143~17 -> hasOnlyBgp
+  | 143~19 -> hasOnlyBgp
+  | 143~33 -> hasOnlyBgp
+  | 143~37 -> hasOnlyBgp
+  | 143~58 -> hasOnlyBgp
+  | 143~70 -> nothingButBgp
+  | 143~81 -> hasOnlyBgp
+  | 143~99 -> hasOnlyBgp
+  | 143~149 -> hasOnlyBgp
+  | 143~152 -> hasOnlyBgp
+  | 143~171 -> hasOnlyBgp
+  | 144~1 -> hasOnlyBgp
+  | 144~17 -> hasOnlyBgp
+  | 144~19 -> hasOnlyBgp
+  | 144~33 -> hasOnlyBgp
+  | 144~37 -> hasOnlyBgp
+  | 144~58 -> hasOnlyBgp
+  | 144~70 -> nothingButBgp
+  | 144~81 -> hasOnlyBgp
+  | 144~99 -> hasOnlyBgp
+  | 144~149 -> hasOnlyBgp
+  | 144~152 -> hasOnlyBgp
+  | 144~171 -> hasOnlyBgp
+  | 145~1 -> hasOnlyBgp
+  | 145~17 -> hasOnlyBgp
+  | 145~19 -> hasOnlyBgp
+  | 145~33 -> hasOnlyBgp
+  | 145~37 -> hasOnlyBgp
+  | 145~58 -> hasOnlyBgp
+  | 145~70 -> nothingButBgp
+  | 145~81 -> hasOnlyBgp
+  | 145~99 -> hasOnlyBgp
+  | 145~149 -> hasOnlyBgp
+  | 145~152 -> hasOnlyBgp
+  | 145~171 -> hasOnlyBgp
+  | 148~94 -> nothingButBgp
+  | 148~95 -> nothingButBgp
+  | 148~96 -> nothingButBgp
+  | 148~98 -> nothingButBgp
+  | 148~100 -> nothingButBgp
+  | 148~107 -> nothingButBgp
+  | 149~138 -> nothingButBgp
+  | 149~140 -> nothingButBgp
+  | 149~142 -> nothingButBgp
+  | 149~143 -> nothingButBgp
+  | 149~144 -> nothingButBgp
+  | 149~145 -> nothingButBgp
+  | 151~94 -> nothingButBgp
+  | 151~95 -> nothingButBgp
+  | 151~96 -> nothingButBgp
+  | 151~98 -> nothingButBgp
+  | 151~100 -> nothingButBgp
+  | 151~107 -> nothingButBgp
+  | 152~138 -> nothingButBgp
+  | 152~140 -> nothingButBgp
+  | 152~142 -> nothingButBgp
+  | 152~143 -> nothingButBgp
+  | 152~144 -> nothingButBgp
+  | 152~145 -> nothingButBgp
+  | 153~124 -> nothingButBgp
+  | 153~127 -> nothingButBgp
+  | 153~130 -> nothingButBgp
+  | 153~133 -> nothingButBgp
+  | 153~169 -> nothingButBgp
+  | 153~170 -> nothingButBgp
+  | 154~160 -> nothingButBgp
+  | 154~172 -> nothingButBgp
+  | 154~173 -> nothingButBgp
+  | 154~174 -> nothingButBgp
+  | 154~175 -> nothingButBgp
+  | 154~176 -> nothingButBgp
+  | 157~125 -> nothingButBgp
+  | 157~128 -> nothingButBgp
+  | 157~131 -> nothingButBgp
+  | 157~134 -> nothingButBgp
+  | 157~161 -> nothingButBgp
+  | 157~162 -> nothingButBgp
+  | 160~7 -> hasOnlyBgp
+  | 160~15 -> hasOnlyBgp
+  | 160~27 -> hasOnlyBgp
+  | 160~31 -> hasOnlyBgp
+  | 160~40 -> hasOnlyBgp
+  | 160~51 -> hasOnlyBgp
+  | 160~66 -> nothingButBgp
+  | 160~77 -> hasOnlyBgp
+  | 160~106 -> hasOnlyBgp
+  | 160~112 -> hasOnlyBgp
+  | 160~141 -> hasOnlyBgp
+  | 160~154 -> hasOnlyBgp
+  | 161~8 -> hasOnlyBgp
+  | 161~11 -> hasOnlyBgp
+  | 161~28 -> hasOnlyBgp
+  | 161~32 -> hasOnlyBgp
+  | 161~45 -> hasOnlyBgp
+  | 161~53 -> hasOnlyBgp
+  | 161~68 -> nothingButBgp
+  | 161~88 -> hasOnlyBgp
+  | 161~90 -> hasOnlyBgp
+  | 161~114 -> hasOnlyBgp
+  | 161~157 -> hasOnlyBgp
+  | 161~164 -> hasOnlyBgp
+  | 162~8 -> hasOnlyBgp
+  | 162~11 -> hasOnlyBgp
+  | 162~28 -> hasOnlyBgp
+  | 162~32 -> hasOnlyBgp
+  | 162~45 -> hasOnlyBgp
+  | 162~53 -> hasOnlyBgp
+  | 162~68 -> nothingButBgp
+  | 162~88 -> hasOnlyBgp
+  | 162~90 -> hasOnlyBgp
+  | 162~114 -> hasOnlyBgp
+  | 162~157 -> hasOnlyBgp
+  | 162~164 -> hasOnlyBgp
+  | 164~125 -> nothingButBgp
+  | 164~128 -> nothingButBgp
+  | 164~131 -> nothingButBgp
+  | 164~134 -> nothingButBgp
+  | 164~161 -> nothingButBgp
+  | 164~162 -> nothingButBgp
+  | 166~111 -> nothingButBgp
+  | 166~113 -> nothingButBgp
+  | 166~115 -> nothingButBgp
+  | 166~117 -> nothingButBgp
+  | 166~120 -> nothingButBgp
+  | 166~122 -> nothingButBgp
+  | 169~2 -> hasOnlyBgp
+  | 169~14 -> hasOnlyBgp
+  | 169~26 -> hasOnlyBgp
+  | 169~34 -> hasOnlyBgp
+  | 169~39 -> hasOnlyBgp
+  | 169~49 -> hasOnlyBgp
+  | 169~72 -> nothingButBgp
+  | 169~75 -> hasOnlyBgp
+  | 169~82 -> hasOnlyBgp
+  | 169~110 -> hasOnlyBgp
+  | 169~139 -> hasOnlyBgp
+  | 169~153 -> hasOnlyBgp
+  | 170~2 -> hasOnlyBgp
+  | 170~14 -> hasOnlyBgp
+  | 170~26 -> hasOnlyBgp
+  | 170~34 -> hasOnlyBgp
+  | 170~39 -> hasOnlyBgp
+  | 170~49 -> hasOnlyBgp
+  | 170~72 -> nothingButBgp
+  | 170~75 -> hasOnlyBgp
+  | 170~82 -> hasOnlyBgp
+  | 170~110 -> hasOnlyBgp
+  | 170~139 -> hasOnlyBgp
+  | 170~153 -> hasOnlyBgp
+  | 171~138 -> nothingButBgp
+  | 171~140 -> nothingButBgp
+  | 171~142 -> nothingButBgp
+  | 171~143 -> nothingButBgp
+  | 171~144 -> nothingButBgp
+  | 171~145 -> nothingButBgp
+  | 172~7 -> hasOnlyBgp
+  | 172~15 -> hasOnlyBgp
+  | 172~27 -> hasOnlyBgp
+  | 172~31 -> hasOnlyBgp
+  | 172~40 -> hasOnlyBgp
+  | 172~51 -> hasOnlyBgp
+  | 172~66 -> nothingButBgp
+  | 172~77 -> hasOnlyBgp
+  | 172~106 -> hasOnlyBgp
+  | 172~112 -> hasOnlyBgp
+  | 172~141 -> hasOnlyBgp
+  | 172~154 -> hasOnlyBgp
+  | 173~7 -> hasOnlyBgp
+  | 173~15 -> hasOnlyBgp
+  | 173~27 -> hasOnlyBgp
+  | 173~31 -> hasOnlyBgp
+  | 173~40 -> hasOnlyBgp
+  | 173~51 -> hasOnlyBgp
+  | 173~66 -> nothingButBgp
+  | 173~77 -> hasOnlyBgp
+  | 173~106 -> hasOnlyBgp
+  | 173~112 -> hasOnlyBgp
+  | 173~141 -> hasOnlyBgp
+  | 173~154 -> hasOnlyBgp
+  | 174~7 -> hasOnlyBgp
+  | 174~15 -> hasOnlyBgp
+  | 174~27 -> hasOnlyBgp
+  | 174~31 -> hasOnlyBgp
+  | 174~40 -> hasOnlyBgp
+  | 174~51 -> hasOnlyBgp
+  | 174~66 -> nothingButBgp
+  | 174~77 -> hasOnlyBgp
+  | 174~106 -> hasOnlyBgp
+  | 174~112 -> hasOnlyBgp
+  | 174~141 -> hasOnlyBgp
+  | 174~154 -> hasOnlyBgp
+  | 175~7 -> hasOnlyBgp
+  | 175~15 -> hasOnlyBgp
+  | 175~27 -> hasOnlyBgp
+  | 175~31 -> hasOnlyBgp
+  | 175~40 -> hasOnlyBgp
+  | 175~51 -> hasOnlyBgp
+  | 175~66 -> nothingButBgp
+  | 175~77 -> hasOnlyBgp
+  | 175~106 -> hasOnlyBgp
+  | 175~112 -> hasOnlyBgp
+  | 175~141 -> hasOnlyBgp
+  | 175~154 -> hasOnlyBgp
+  | 176~7 -> hasOnlyBgp
+  | 176~15 -> hasOnlyBgp
+  | 176~27 -> hasOnlyBgp
+  | 176~31 -> hasOnlyBgp
+  | 176~40 -> hasOnlyBgp
+  | 176~51 -> hasOnlyBgp
+  | 176~66 -> nothingButBgp
+  | 176~77 -> hasOnlyBgp
+  | 176~106 -> hasOnlyBgp
+  | 176~112 -> hasOnlyBgp
+  | 176~141 -> hasOnlyBgp
+  | 176~154 -> hasOnlyBgp
+  | 177~111 -> nothingButBgp
+  | 177~113 -> nothingButBgp
+  | 177~115 -> nothingButBgp
+  | 177~117 -> nothingButBgp
+  | 177~120 -> nothingButBgp
+  | 177~122 -> nothingButBgp
+  | 179~94 -> nothingButBgp
+  | 179~95 -> nothingButBgp
+  | 179~96 -> nothingButBgp
+  | 179~98 -> nothingButBgp
+  | 179~100 -> nothingButBgp
+  | 179~107 -> nothingButBgp
   | _ -> None
