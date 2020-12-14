@@ -407,20 +407,22 @@ let interp_interface intfe e : exp option =
   (* if intf_app is not an option, or if the value it contains is not a function,
    * fail *)
   match intf_app.e with
-  | ESome exp -> Some exp
-  | EVal { v = VOption o; _ } ->
-    begin
-      match o with
-      | Some { v = VClosure (_env, func); _ } -> Some (efunc func)
-      | Some _ -> failwith "expected a closure, got something else instead!"
-      (* infer case *)
-      | None -> None
-    end
-  (* ETuple case handles an unboxed option *)
-  | ETuple [{ e = EVal { v = VBool b; _ }; _ }; o] -> if b then Some o else None
+  | EFun _ -> Some intf_app
+  | EVal { v = VClosure _; _ } -> Some intf_app
+  (* | ESome exp -> Some exp
+   * | EVal { v = VOption o; _ } ->
+   *   begin
+   *     match o with
+   *     | Some { v = VClosure (_env, func); _ } -> Some (efunc func)
+   *     | Some _ -> failwith "expected a closure, got something else instead!"
+   *     (\* infer case *\)
+   *     | None -> None
+   *   end
+   * (\* ETuple case handles an unboxed option *\)
+   * | ETuple [{ e = EVal { v = VBool b; _ }; _ }; o] -> if b then Some o else None *)
   | _ ->
     failwith
-      ("expected intf value to be an option but got " ^ Printing.exp_to_string intf_app)
+      ("expected intf value to be a function but got " ^ Printing.exp_to_string intf_app)
 ;;
 
 let update_preds interface partitioned_srp =

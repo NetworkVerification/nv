@@ -28,7 +28,7 @@ let solve_ty aty =
 (* TODO: do we want a special partition ID type? is i8 a sensible number? *)
 (* partitioning *)
 let partition_ty = TArrow (node_ty, TInt 8)
-let interface_ty aty = TArrow (edge_ty, TOption (TArrow (aty, TBool)))
+let interface_ty aty = TArrow (edge_ty, TArrow (aty, TBool))
 
 (* same type for both sides *)
 let decomp_ty = trans_ty

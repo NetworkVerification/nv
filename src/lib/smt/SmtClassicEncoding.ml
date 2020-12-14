@@ -310,8 +310,8 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
         | Some p ->
           (* FIXME: change to return a Lesser (fun, arg) or Greater (fun, arg),
            * so that we don't add constraints too early *)
-          let pred = encode_predicate p (Printf.sprintf "input-pred%d-%d-%d" count i j) env xs in
-          Some (if rank < r then Lesser pred else Greater pred)
+          let pred = encode_predicate p (Printf.sprintf "input-pred%d-%d-%d" count i j) env in
+          Some (if rank < r then Lesser (pred, xs) else Greater (pred, xs))
         | None -> None)
       in
       (encode_kirigami_decomp
@@ -703,8 +703,8 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
       | _ ->
         let assert_vars =
           List.mapi
-            (fun i hyp ->
-              let hyp = to_list hyp |> List.hd in
+            (fun i (hyp, x) ->
+              let hyp = to_list (hyp x) |> List.hd in
               let assert_var =
                 mk_constant env (Printf.sprintf "assert-%s-%d" str i) (ty_to_sort TBool)
               in
