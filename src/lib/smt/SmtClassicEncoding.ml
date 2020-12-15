@@ -42,32 +42,6 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
       requires
   ;;
 
-  let add_assertions env assertions count =
-    match assertions with
-    | [] -> ()
-    | _ ->
-      let assert_vars =
-        List.map
-          (fun eassert ->
-            count := !count + 1;
-            (* print_endline (Printing.exp_to_string eassert); *)
-            let z3_assert = encode_exp_z3 "" env eassert |> to_list |> List.hd in
-            let assert_var =
-              mk_constant env (Printf.sprintf "assert-%d" !count) (ty_to_sort TBool)
-            in
-            SmtUtils.add_constraint env (mk_term (mk_eq assert_var.t z3_assert.t));
-            assert_var)
-          assertions
-      in
-      let all_good =
-        List.fold_left
-          (fun acc v -> mk_and acc v.t)
-          (List.hd assert_vars).t
-          (List.tl assert_vars)
-      in
-      SmtUtils.add_constraint env (mk_term (mk_not all_good))
-        ;;
-
   let encode_z3_merge str env merge =
     let rec loop merge acc =
       match merge.e with
@@ -629,6 +603,32 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
       !trans_input_map
   ;;
 
+  let add_assertions str env f assertions ~(negate : bool) =
+    match assertions with
+    | [] -> ()
+    | _ ->
+      let assert_vars =
+        List.mapi
+          (fun i eassert ->
+            (* print_endline (Printing.exp_to_string eassert); *)
+            let z3_assert = (f eassert) |> to_list |> List.hd in
+            let assert_var =
+              mk_constant env (Printf.sprintf "%s-%d" str i) (ty_to_sort TBool)
+            in
+            SmtUtils.add_constraint env (mk_term (mk_eq assert_var.t z3_assert.t));
+            assert_var)
+          assertions
+      in
+      let all_good =
+        List.fold_left
+          (fun acc v -> mk_and acc v.t)
+          (List.hd assert_vars).t
+          (List.tl assert_vars)
+      in
+      let term = if negate then mk_not all_good else all_good in
+      SmtUtils.add_constraint env (mk_term term)
+  ;;
+
   let encode_z3 (decls : Syntax.declarations) : SmtUtils.smt_env =
     let symbolics = get_symbolics decls in
     let graph = get_graph decls |> oget in
@@ -638,62 +638,13 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     let env = init_solver symbolics ~labels:[] in
     List.iteri (encode_solve env graph) solves;
     (* add assertions at the end *)
-    (match assertions with
-    | [] -> ()
-    | _ ->
-      (* Encode every assertion as an expression and record the name of the
-          corresponding smt variable *)
-      let assert_vars =
-        List.mapi
-          (fun i eassert ->
-            let z3_assert = encode_exp_z3 "" env eassert |> to_list |> List.hd in
-            let assert_var =
-              mk_constant env (Printf.sprintf "assert-%d" i) (ty_to_sort TBool)
-            in
-            SmtUtils.add_constraint env (mk_term (mk_eq assert_var.t z3_assert.t));
-            assert_var)
-          assertions
-      in
-      (* Expression representing the conjunction of the assertion variables *)
-      let all_good =
-        List.fold_left
-          (fun acc v -> mk_and acc v.t)
-          (List.hd assert_vars).t
-          (List.tl assert_vars)
-      in
-      SmtUtils.add_constraint env (mk_term (mk_not all_good)));
+    add_assertions "assert" env (fun e -> encode_exp_z3 "" env e) assertions ~negate:true;
     (* add any require clauses constraints *)
     add_symbolic_constraints env requires env.symbolics;
     env
   ;;
 
-  let add_hypothesis_assertions str env hyps =
-    match hyps with
-    | [] -> ()
-    | _ ->
-      let assert_vars =
-        List.mapi
-          (fun i (hyp, x) ->
-            let hyp = to_list (hyp x) |> List.hd in
-            let assert_var =
-              mk_constant env (Printf.sprintf "assert-%s-%d" str i) (ty_to_sort TBool)
-            in
-            SmtUtils.add_constraint env (mk_term (mk_eq assert_var.t hyp.t));
-            assert_var)
-          hyps
-      in
-      let all_good =
-        List.fold_left
-          (fun acc v -> mk_and acc v.t)
-          (List.hd assert_vars).t
-          (List.tl assert_vars)
-      in
-      SmtUtils.add_constraint env (mk_term all_good)
-  ;;
-
   let kirigami_encode_z3 part ds : SmtUtils.smt_env =
-    (* need to use a counter i, as add_assertions gets called for multiple lists *)
-    let i = ref (-1) in
     let symbolics = get_symbolics ds in
     let graph = get_graph ds |> oget in
     let solves = get_solves ds in
@@ -703,40 +654,19 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     (* encode the symbolics first, so we can find them when we do the kirigami_solve
      * NOTE: could instead pass in the list of symbolics to encode_kirigami_solve *)
     add_symbolic_constraints env [] env.symbolics;
-    let lesser_hyps, greater_hyps, outputs =
+    let lesser_hyps, greater_hyps, guarantees =
       split3 (List.mapi (encode_kirigami_solve env graph part) solves)
     in
-    (* these require constraints are always included *)
+    (* these constraints are included in both scopes *)
     add_symbolic_constraints env requires VarMap.empty;
-    add_hypothesis_assertions "lesser-hyp" env (List.flatten lesser_hyps);
-    (* ranked initial checks: test guarantees *)
-    let guarantees = List.flatten outputs in
-    if List.is_empty guarantees
-    then ()
-    else (
-      add_command env ~comdescr:"push" SmtLang.Push;
-      let guar_vars =
-        List.mapi
-          (fun i (guar, v) ->
-            let g = to_list (guar v) |> List.hd in
-            let assert_var =
-              mk_constant env (Printf.sprintf "assert-guar-%d" i) (ty_to_sort TBool)
-            in
-            SmtUtils.add_constraint env (mk_term (mk_eq assert_var.t g.t));
-            assert_var)
-          guarantees
-      in
-      let all_good =
-        List.fold_left
-          (fun acc v -> mk_and acc v.t)
-          (List.hd guar_vars).t
-          (List.tl guar_vars)
-      in
-      SmtUtils.add_constraint env (mk_term (mk_not all_good));
-      add_command env ~comdescr:"pop" SmtLang.Pop);
-    (* safety checks: add other hypotheses, test properties *)
-    add_hypothesis_assertions "greater-hyp" env (List.flatten greater_hyps);
-    add_assertions env assertions i;
+    add_assertions "lesser-hyp" env (fun (h, v) -> h v) (List.flatten lesser_hyps) ~negate:false;
+    (* ranked initial checks: test guarantees in separate scope *)
+    add_command env ~comdescr:"push" SmtLang.Push;
+    add_assertions "assert-guar" env (fun (g, v) -> g v) (List.flatten guarantees) ~negate:true;
+    add_command env ~comdescr:"pop" SmtLang.Pop;
+    (* safety checks: add other hypotheses, test original assertions *)
+    add_assertions "greater-hyp" env (fun (h, v) -> h v) (List.flatten greater_hyps) ~negate:false;
+    add_assertions "assert" env (fun e -> encode_exp_z3 "" env e) assertions ~negate:true;
     env
   ;;
 end
