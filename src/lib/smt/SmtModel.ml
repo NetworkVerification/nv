@@ -12,7 +12,7 @@ open Batteries
 let eval_model
     (symbolics : Syntax.ty_or_exp VarMap.t)
     (num_nodes : int)
-    (assertions : Syntax.exp list)
+    (assertions : int)
     (renaming : string StringMap.t * smt_term StringMap.t)
     : command list
   =
@@ -39,7 +39,7 @@ let eval_model
         let ec = mk_echo ("\"" ^ var assu ^ "\"") |> mk_command in
         ec :: ev :: acc)
       base
-      assertions
+      (List.range 1 `To assertions)
   in
   (* Compute eval statements for symbolic variables *)
   let symbols =

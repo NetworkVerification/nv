@@ -70,9 +70,9 @@ let expr_encoding smt_config =
 ;;
 
 (* Asks the SMT solver to return a model and translates it to NV lang *)
-let ask_for_model query chan info env solver renaming nodes eassert =
+let ask_for_model query chan info env solver renaming nodes asserts =
   (* build a counterexample based on the model provided by Z3 *)
-  let model = eval_model env.SmtUtils.symbolics nodes eassert renaming in
+  let model = eval_model env.SmtUtils.symbolics nodes asserts renaming in
   let model_question = commands_to_smt smt_config.verbose info model in
   ask_solver solver model_question;
   if query then printQuery chan model_question;
@@ -87,7 +87,7 @@ let ask_for_model query chan info env solver renaming nodes eassert =
 
 (** Asks the smt solver whether the query was unsat or not
     and returns a model if it was sat.*)
-let get_sat query chan info env solver renaming nodes eassert reply =
+let get_sat query chan info env solver renaming nodes asserts reply =
   ask_solver
     solver
     "(get-info :all-statistics)\n\n                         (echo \"end stats\")\n";
@@ -101,7 +101,7 @@ let get_sat query chan info env solver renaming nodes eassert reply =
   Printf.printf "Z3 stats:\n %s\n" rs;
   match reply with
   | UNSAT -> Unsat
-  | SAT -> ask_for_model query chan info env solver renaming nodes eassert
+  | SAT -> ask_for_model query chan info env solver renaming nodes asserts
   | UNKNOWN -> Unknown
   | _ -> failwith "unexpected answer from solver\n"
 ;;
@@ -114,7 +114,7 @@ let solver =
      solver)
 ;;
 
-let solve info query chan net_or_srp nodes assertions requires =
+let solve info query chan net_or_srp nodes assertions =
   let solver = Lazy.force solver in
   let print_and_ask q =
     if query then printQuery chan q;
@@ -162,6 +162,5 @@ let solveClassic info query chan ~decls =
     chan
     (fun () -> Enc.encode_z3 decls)
     (Nv_datastructures.AdjGraph.nb_vertex (get_graph decls |> oget))
-    (get_asserts decls)
-    (get_requires decls)
+    (List.length (get_asserts decls))
 ;;

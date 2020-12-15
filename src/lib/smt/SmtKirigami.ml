@@ -14,7 +14,7 @@ let solveKirigami info query chan ~part ~decls =
                       : SmtClassicEncoding.ClassicEncodingSig)
   in
   let nodes = Nv_datastructures.AdjGraph.nb_vertex (get_graph decls.base |> oget) in
-  let assertions = get_asserts decls.prop @ get_asserts decls.guar in
+  let assertions = get_asserts decls.prop in
   (* print_endline ("Assertions found: " ^ string_of_int (List.length assertions)); *)
   solve
     info
@@ -22,6 +22,5 @@ let solveKirigami info query chan ~part ~decls =
     chan
     (fun () -> Enc.kirigami_encode_z3 (decls, part))
     nodes
-    assertions
-    (decls.lth @ decls.gth)
+    (List.length assertions)
 ;;

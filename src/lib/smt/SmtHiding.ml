@@ -530,7 +530,7 @@ let solve_hiding info query partial_chan ~full_chan ?(starting_vars = []) ~decls
         solver
         renaming
         nodes
-        (get_asserts decls)
+        (List.length (get_asserts decls))
     in
     time_profile_absolute "Solving with hiding" (fun () ->
         refineModel
