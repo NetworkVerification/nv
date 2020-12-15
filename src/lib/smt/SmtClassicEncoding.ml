@@ -251,8 +251,14 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
 
   let find_input_symbolics env (hyp_var : Var.t) =
     let prefix = "symbolic-" ^ Var.name hyp_var in
+    (* add an extra little character after to avoid matching
+     * "hyp_0~10" when looking for "hyp_0~1" *)
+    (* TODO: use a more robust approach like a regular expression *)
+    let matches_format name =
+      String.starts_with name (prefix ^ "~") || String.starts_with name (prefix ^ "-")
+    in
     let names = ConstantSet.fold
-        (fun { cname; _ } l -> if String.starts_with cname prefix
+        (fun { cname; _ } l -> if matches_format cname
           then (mk_term (mk_var cname)) :: l
           else l (* (print_endline cname; l) *))
         env.const_decls []
@@ -262,10 +268,6 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
       failwith "couldn't find the corresponding constant for hyp in smt_env"
     else
       ();
-    (* sort in ascending order, with higher projection indices numerically later
-     * simply using the names sorted as returned will lead to proj~10 coming
-     * before proj~1
-     *)
     (* order of names is reversed by fold, so flip them around *)
     of_list (List.rev names)
   ;;
