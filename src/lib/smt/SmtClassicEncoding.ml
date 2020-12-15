@@ -14,13 +14,11 @@ open AdjGraph
 module type ClassicEncodingSig =
   SmtEncodingSigs.Encoding
     with type network_type = Syntax.declarations
-     and type part_network_type = Syntax.declarations * partitioned_srp
 
 module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig = struct
   open E
 
   type network_type = Syntax.declarations
-  type part_network_type = Syntax.declarations * partitioned_srp
 
   let add_symbolic_constraints env requires sym_vars =
     (* Declare the symbolic variables: ignore the expression in case of SMT *)
@@ -693,7 +691,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
       SmtUtils.add_constraint env (mk_term all_good)
   ;;
 
-  let kirigami_encode_z3 (ds, part) : SmtUtils.smt_env =
+  let kirigami_encode_z3 part ds : SmtUtils.smt_env =
     (* need to use a counter i, as add_assertions gets called for multiple lists *)
     let i = ref (-1) in
     let symbolics = get_symbolics ds in

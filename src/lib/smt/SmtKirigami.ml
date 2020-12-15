@@ -20,7 +20,7 @@ let solveKirigami info query chan ~part ~decls =
     info
     query
     chan
-    (fun () -> Enc.kirigami_encode_z3 (decls, part))
+    (fun () -> Enc.kirigami_encode_z3 part decls)
     nodes
     (List.length assertions)
 ;;
