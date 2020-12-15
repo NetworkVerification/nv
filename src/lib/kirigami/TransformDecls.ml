@@ -77,10 +77,8 @@ and remap_branches parted_srp bs =
       (fun (p, e) bs ->
         match p with
         | PTuple [PNode n1; PNode n2] ->
-        (* | PEdge (PNode n1, PNode n2) -> *)
           let n1' = VertexMap.find_default None n1 node_map in
           let n2' = VertexMap.find_default None n2 node_map in
-          (* print_endline (Printf.sprintf "Remapping edge (%d,%d)" n1 n2); *)
           (match n1', n2' with
           | Some u, Some v -> (PTuple [PNode u; PNode v], f e) :: bs
           | _ -> bs)
@@ -98,7 +96,6 @@ and remap_branches parted_srp bs =
   List.fold_right (fun (p, e) b -> addBranch p e b) (List.rev pat_exps) emptyBranch
 
 and remap_exp_op parted_srp op es =
-  (* print_endline (Printing.exp_to_string (eop op es)); *)
   let f = remap_exp parted_srp in
   let ty = (List.hd es).ety |> Option.get in
   (* check if the operation is over nodes *)
@@ -135,15 +132,11 @@ let remap_solve parted_srp solve =
  ** so we need to recurse in until we have dropped the right number of nodes.
  **)
 let rec remap_conjuncts nodes e =
-  Printf.printf "remap_conjuncts: %d nodes\n" nodes;
-  print_endline (Printing.exp_to_string e);
   if (nodes > 0) then
     (match e.e with
     | EOp (And, [e2; _]) ->
       (* go deeper *)
       remap_conjuncts (nodes - 1) e2
-      (* let e3' = remap_conjuncts (nodes - 1) e3 in
-       * wrap e (eop And [e2; e3']) *)
     | EOp (And, _) -> failwith "and has wrong number of arguments"
     (* this case should be the last one *)
     | _ -> e)
@@ -164,7 +157,6 @@ let rec remap_conjuncts nodes e =
  **)
 let transform_assert (e : exp) (parted_srp : SrpRemapping.partitioned_srp) : exp =
   let { nodes; _ } = parted_srp in
-  Printf.printf "transform_assert: %d nodes\n" nodes;
   let e = (match e.e with
    | EMatch _ ->
      (* if there is only one branch, use interp to simplify;

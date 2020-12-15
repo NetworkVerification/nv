@@ -370,13 +370,12 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     let trans_map = ref EdgeMap.empty in
     (* trans_input_map maps each edge to the incoming message variable *)
     let trans_input_map = ref EdgeMap.empty in
-    let eintrans, eouttrans =
+    let eouttrans, eintrans =
       match decomp with
       | Some (lt, rt) -> lt, rt
       | None -> Some etrans, None
     in
     (* construct the input constants *)
-
     let input_map = encode_kirigami_inputs env rank inputs eintrans count in
     let enc_z3_trans = encode_z3_trans etrans in
     iter_edges_e

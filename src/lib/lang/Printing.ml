@@ -365,6 +365,7 @@ let rec declaration_to_string ?(show_types = false) d =
   | DSymbolic (x, Ty ty) -> "symbolic " ^ Var.to_string x ^ " : " ^ ty_to_string ty
   | DAssert e -> "assert " ^ exp_to_string e
   | DSolve { aty; var_names; init; trans; merge } ->
+    (* FIXME: doesn't print interface or decomp *)
     Printf.sprintf
       "let %s = solution<%s> {init = %s; trans = %s; merge = %s}"
       (exp_to_string var_names)
