@@ -111,12 +111,14 @@ def run_benchmark(dirformat, nameformat, size, time, trials, multiop):
         sys.exit(1)
     # run nv with verbose, SMT and partitioning flags
     com = [nvpath, "-v", "-m"]
-    partf = os.path.join(benchdir, nameformat.format(size, "-part1"))
+    partf = os.path.join(benchdir, nameformat.format(size, "-part"))
+    vpartf = os.path.join(benchdir, nameformat.format(size, "-vpart"))
     unpartf = os.path.join(benchdir, nameformat.format(size, ""))
     runs = []
     for i in range(trials):
         print("Running trial " + str(i + 1) + " of " + str(trials))
         partcom = run_command(com + ["-k", partf], time)
+        vpartcom = run_command(com + ["-k", vpartf], time)
         unpartcom = run_command(com + [unpartf], time)
         runs.append(join_result_dicts(partcom, unpartcom))
     mean = mean_float_dict(runs, multiop)
