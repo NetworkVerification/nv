@@ -506,7 +506,7 @@ open SmtLang
 module Constant = struct
   type t = constant
 
-  let compare x y = compare x.cname y.cname
+  let compare x y = BatString.numeric_compare x.cname y.cname
 end
 
 module ConstantSet = BatSet.Make (Constant)
