@@ -8,26 +8,6 @@ open SrpRemapping
 
 let ebool b = aexp (e_val (vbool b), Some TBool, Span.default)
 
-let rec remap_pattern parted_srp p =
-  let { node_map; edge_map; _ } = parted_srp in
-  match p with
-  | POption (Some p) -> POption (Some (remap_pattern parted_srp p))
-  | PTuple ps -> PTuple (List.map (remap_pattern parted_srp) ps)
-  | PNode n ->
-    let node = VertexMap.find_default None n node_map in
-    (match node with
-    | Some n -> PNode n
-    | None ->
-      failwith ("pattern " ^ Printing.pattern_to_string p ^ " should have been cut!"))
-  | PEdge (PNode n1, PNode n2) ->
-    let edge = EdgeMap.find_default None (n1, n2) edge_map in
-    (match edge with
-    | Some (n1, n2) -> PEdge (PNode n1, PNode n2)
-    | None ->
-      failwith ("pattern " ^ Printing.pattern_to_string p ^ " should have been cut!"))
-  | _ -> p
-;;
-
 let remap_value parted_srp v =
   let { node_map; edge_map; _ } = parted_srp in
   let make_node n = avalue (vnode n, Some TNode, v.vspan) in
@@ -36,14 +16,8 @@ let remap_value parted_srp v =
   | VNode n ->
     let new_node = VertexMap.find_default None n node_map in
     Option.map make_node new_node
-    (* (match new_node with
-     * | Some n -> make_node n
-     * | None -> failwith ("value " ^ Printing.value_to_string v ^ " should be cut!")) *)
   | VEdge e ->
     let new_edge = EdgeMap.find_default None e edge_map in
-    (* (match new_edge with
-     * | Some e -> make_edge e
-     * | None -> failwith ("value " ^ Printing.value_to_string v ^ " should be cut!")) *)
     Option.map make_edge new_edge
   | _ -> Some v
 ;;
