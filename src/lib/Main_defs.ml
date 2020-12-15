@@ -282,6 +282,17 @@ let parse_input (args : string array)
   let decls = Typing.infer_declarations info decls in
   Typing.check_annot_decls decls;
   if not cfg.no_wellformed then Wellformed.check info decls;
+  let partitions, decls =
+    if cfg.kirigami
+    then (
+      let parts = SrpRemapping.partition_declarations decls in
+      let new_symbolics =
+        let aty = get_attr_type decls |> oget in
+        Partition.get_hyp_symbolics aty parts
+      in
+      Some parts, new_symbolics @ decls)
+    else None, decls
+  in
   let decls, f = RecordUnrolling.unroll_declarations decls in
   let fs = [f] in
   let decls, fs =
@@ -298,33 +309,6 @@ let parse_input (args : string array)
       in
       (Typing.infer_declarations info) decls, fs)
     else decls, fs
-  in
-  let partitions, decls =
-    if cfg.kirigami
-    then (
-      let parts = SrpRemapping.partition_declarations decls in
-      (* List.iter
-       *   (fun SrpRemapping.{ node_map; edge_map } ->
-       *      print_endline "Node map";
-       *      print_endline
-       *        (AdjGraph.VertexMap.to_string
-       *           (fun o -> match o with
-       *              | Some v -> Printf.sprintf "Some %d" v
-       *              | None -> "None") node_map);
-       *      print_endline "Edge map";
-       *      print_endline
-       *        (AdjGraph.EdgeMap.to_string
-       *           (fun o -> match o with
-       *              | Some (i,j) -> Printf.sprintf "Some (%d,%d)" i j
-       *              | None -> "None") edge_map
-       *        );
-       *   ) parts; *)
-      let new_symbolics =
-        let aty = get_attr_type decls |> oget in
-        Partition.get_hyp_symbolics aty parts
-      in
-      Some parts, new_symbolics @ decls)
-    else None, decls
   in
   parse_input_aux cfg info file decls partitions fs
 ;;

@@ -40,20 +40,43 @@ let remap_value parted_srp v =
   match v.v with
   | VNode n ->
     let new_node = VertexMap.find_default None n node_map in
-    (match new_node with
-    | Some n -> make_node n
-    | None -> failwith ("value " ^ Printing.value_to_string v ^ " should be cut!"))
+    Option.map make_node new_node
+    (* (match new_node with
+     * | Some n -> make_node n
+     * | None -> failwith ("value " ^ Printing.value_to_string v ^ " should be cut!")) *)
   | VEdge e ->
     let new_edge = EdgeMap.find_default None e edge_map in
-    (match new_edge with
-    | Some e -> make_edge e
-    | None -> failwith ("value " ^ Printing.value_to_string v ^ " should be cut!"))
-  | _ -> v
+    (* (match new_edge with
+     * | Some e -> make_edge e
+     * | None -> failwith ("value " ^ Printing.value_to_string v ^ " should be cut!")) *)
+    Option.map make_edge new_edge
+  | _ -> Some v
 ;;
 
 let rec remap_exp parted_srp e =
   let f = remap_exp parted_srp in
+  wrap
+    e
+    (match e.e with
+    | EMatch (e1, bs) -> ematch (f e1) (remap_branches parted_srp bs)
+    | EVal v -> (match (remap_value parted_srp v) with
+        | Some v1 -> e_val v1
+        | None -> failwith ("remap_value given " ^ (Printing.value_to_string v) ^ ", which should be cut")
+      )
+    | EOp (op, es) -> remap_exp_op parted_srp op es
+    | ESome e -> esome (f e)
+    | ETuple es -> etuple (List.map f es)
+    | EProject (e, l) -> eproject (f e) l
+    | EFun fn -> efun { fn with body = f fn.body }
+    | EApp (e1, e2) -> eapp (f e1) (f e2)
+    | ELet (x, e1, e2) -> elet x (f e1) (f e2)
+    | EIf (test, e1, e2) -> eif (f test) (f e1) (f e2)
+    | ERecord _ -> failwith "remap_exp: records should be unrolled"
+    | ETy _ | EVar _ -> e)
+
+and remap_branches parted_srp bs =
   let { node_map; _ } = parted_srp in
+  let f = remap_exp parted_srp in
   let update_branches old_bs =
     foldBranches
       (fun (p, e) bs ->
@@ -75,27 +98,33 @@ let rec remap_exp parted_srp e =
       []
       old_bs
   in
-  wrap
-    e
-    (match e.e with
-    | EMatch (e1, bs) ->
-      let pat_exps = update_branches bs in
-      (* put the branches back in the same order by going from the back *)
-      let branches =
-        List.fold_right (fun (p, e) b -> addBranch p e b) (List.rev pat_exps) emptyBranch
-      in
-      ematch (f e1) branches
-    | EVal v -> e_val (remap_value parted_srp v)
-    | EOp (op, es) -> eop op (List.map f es)
-    | ESome e -> esome (f e)
-    | ETuple es -> etuple (List.map f es)
-    | EProject (e, l) -> eproject (f e) l
-    | EFun fn -> efun { fn with body = f fn.body }
-    | EApp (e1, e2) -> eapp (f e1) (f e2)
-    | ELet (x, e1, e2) -> elet x (f e1) (f e2)
-    | EIf (test, e1, e2) -> eif (f test) (f e1) (f e2)
-    | ERecord _ -> failwith "remap_exp: records should be unrolled"
-    | ETy _ | EVar _ -> e)
+  let pat_exps = update_branches bs in
+  (* put the branches back in the same order by going from the back *)
+  List.fold_right (fun (p, e) b -> addBranch p e b) (List.rev pat_exps) emptyBranch
+
+and remap_exp_op parted_srp op es =
+  print_endline (Printing.exp_to_string (eop op es));
+  let f = remap_exp parted_srp in
+  let ty = (List.hd es).ety |> Option.get in
+  (* check if the operation is over nodes or edges *)
+  (* if so, if any nodes or edges are cut, the op simplifies to false *)
+  match ty with
+  | TNode ->
+    (match op with
+     | Eq | NLess | NLeq ->
+       (* NOTE: won't be able to fix expressions where both sides are non-values *)
+       let remap_node_exp n =
+         if (is_value n) then
+           Option.map e_val (remap_value parted_srp (to_value n))
+         else Some (f n)
+        in
+        let es1 = List.map remap_node_exp es in
+        if List.exists Option.is_none es1 then
+          annot TBool (e_val (vbool false))
+        else eop op (List.map Option.get es1)
+     | _ -> failwith (Printf.sprintf "unexpected operator %s over nodes" (show_op op)))
+  | TEdge -> failwith "not implemented; edges should already be unboxed"
+  | _ -> eop op (List.map f es)
 ;;
 
 let remap_solve parted_srp solve =
