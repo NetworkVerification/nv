@@ -225,7 +225,7 @@ let rec map_back_value
     | VRecord vmap, TRecord tmap ->
       vrecord
       @@ StringMap.mapi (fun l v -> map_back_value v (StringMap.find l tmap)) vmap
-    | VMap bdd, TMap (kty, vty) ->
+    | VMap bdd, TMap (_kty, vty) ->
       let op_key = e_val v, BatSet.PSet.empty in
       vmap (BddMap.map op_key (fun v -> map_back_value v vty) bdd)
     | VClosure _, _ -> failwith @@ name ^ ": Can't have closures in attributes"
@@ -307,6 +307,7 @@ let map_back_sol
           | Not_found -> x, v)
         sol.symbolics
   ; assertions = sol.assertions
+  ; guarantees = sol.guarantees
   ; (* These transformations shouldn't change the truth value of the assertion *)
     solves
   ; nodes = sol.nodes

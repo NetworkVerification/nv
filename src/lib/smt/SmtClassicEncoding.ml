@@ -662,7 +662,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     add_assertions "lesser-hyp" env (fun (h, v) -> h v) (List.flatten lesser_hyps) ~negate:false;
     (* ranked initial checks: test guarantees in separate scope *)
     add_command env ~comdescr:"push" SmtLang.Push;
-    add_assertions "assert-guar" env (fun (g, v) -> g v) (List.flatten guarantees) ~negate:true;
+    add_assertions "guarantee" env (fun (g, v) -> g v) (List.flatten guarantees) ~negate:true;
     add_command env ~comdescr:"pop" SmtLang.Pop;
     (* safety checks: add other hypotheses, test original assertions *)
     add_assertions "greater-hyp" env (fun (h, v) -> h v) (List.flatten greater_hyps) ~negate:false;

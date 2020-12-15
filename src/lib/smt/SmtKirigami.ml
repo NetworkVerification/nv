@@ -5,6 +5,8 @@ open SolverUtil
 open SmtEncodingSigs
 open Smt
 open Nv_lang
+open Nv_datastructures.AdjGraph
+open Nv_kirigami.SrpRemapping
 
 (* Solver for Kirigami *)
 let solveKirigami info query chan ~part ~decls =
@@ -14,13 +16,14 @@ let solveKirigami info query chan ~part ~decls =
                       : SmtClassicEncoding.ClassicEncodingSig)
   in
   let nodes = Nv_datastructures.AdjGraph.nb_vertex (get_graph decls |> oget) in
-  let assertions = get_asserts decls in
-  (* print_endline ("Assertions found: " ^ string_of_int (List.length assertions)); *)
+  let assertions = List.length (get_asserts decls) in
+  let guarantees = VertexMap.fold (fun _ l acc -> List.length l + acc) part.outputs 0 in
   solve
     info
     query
     chan
     (fun () -> Enc.kirigami_encode_z3 part decls)
     nodes
-    (List.length assertions)
+    assertions
+    guarantees
 ;;

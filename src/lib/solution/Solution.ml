@@ -22,9 +22,11 @@ type sol =
 type t =
   { symbolics : (var * value) list
   ; solves : (var * sol) list
-  ; assertions : bool list
   ; (* One for each assert statement *)
-    nodes : int
+    assertions : bool list
+  ; (* Kirigami's special asserts *)
+    guarantees : bool list
+  ; nodes : int
   }
 
 type map_back = t -> t
@@ -224,6 +226,20 @@ let print_solution (solution : t) =
         print_endline (print_fun solution.nodes v))
       solution.solves
   end;
+  (match solution.guarantees with
+  | [] -> ()
+  | guars ->
+    let failed =
+      BatList.fold_righti (fun i b acc -> if not b then i :: acc else acc) guars []
+    in
+    (match failed with
+    | [] ->
+      print_string [green; Bold] "Success: ";
+      Printf.printf "All guarantees passed\n"
+    | _ ->
+      BatList.iter
+        (fun i -> print_string [red; Bold] (Printf.sprintf "Guarantee %d failed\n" i))
+        failed));
   (match solution.assertions with
   | [] ->
     print_string [green; Bold] "Success: ";
@@ -238,7 +254,7 @@ let print_solution (solution : t) =
       Printf.printf "All assertions passed\n"
     | _ ->
       BatList.iter
-        (fun i -> print_string [red; Bold] (Printf.sprintf "Assertion %d failed" i))
+        (fun i -> print_string [red; Bold] (Printf.sprintf "Assertion %d failed\n" i))
         failed));
   print_newline ()
 ;;
