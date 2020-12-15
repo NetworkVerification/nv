@@ -48,18 +48,15 @@ let run_smt_classic_aux file cfg info decls part fs =
   in
   let get_answer decls fs =
     let solve_fun =
-      match decls with
-      | Decls d ->
-        if cfg.hiding
-        then
+      if cfg.kirigami then
+        SmtKirigami.solveKirigami ~part:(part |> oget)
+      else if cfg.hiding then
           SmtHiding.solve_hiding
             ~starting_vars:[]
             ~full_chan:(smt_query_file file)
-            ~decls:d
-        else Smt.solveClassic ~decls:d
-      | Grp g -> SmtKirigami.solveKirigami ~part:(part |> oget) ~decls:g
+        else Smt.solveClassic
     in
-    match solve_fun info cfg.query (smt_query_file file) with
+    match solve_fun info cfg.query (smt_query_file file) decls with
     | Unsat -> Success None, []
     | Unknown -> Console.error "SMT returned unknown"
     | Sat solution ->
@@ -120,9 +117,9 @@ let run_smt_partitioned file cfg info decls parts fs =
       (fun p ->
         let (p, d) = Partition.transform_declarations decls p in
         if cfg.print_partitions
-        then print_endline (Printing.declaration_groups_to_string d)
+        then print_endline (Printing.declarations_to_string d)
         else ();
-        (Some p, Grp d)) parts)
+        (Some p, d)) parts)
   in
   List.map (fun (p, d) -> run_smt_classic_aux file cfg info d p fs) pds
 
@@ -155,7 +152,7 @@ let run_smt_classic file cfg info decls parts fs =
   in
   match parts with
   | Some p -> run_smt_partitioned file cfg info decls p fs
-  | None -> [run_smt_classic_aux file cfg info (Decls decls) None fs]
+  | None -> [run_smt_classic_aux file cfg info decls None fs]
 
 let run_smt file cfg info decls parts fs =
   if cfg.finite_arith then SmtUtils.smt_config.infinite_arith <- false;
@@ -252,7 +249,7 @@ let parse_input_aux cfg info file decls parts fs =
     then (
       let decls, f =
         (* unrolling maps *)
-        Profile.time_profile "Map unrolling" (fun () -> MapUnrolling.unroll_decls info decls)
+        Profile.time_profile "Map unrolling" (fun () -> MapUnrolling.unroll info decls)
       in
       (* Inline again after unrolling. Could probably optimize this away during unrolling *)
       let decls =

@@ -173,25 +173,3 @@ let rename_declarations (ds : declarations) =
   let prog, _ = alpha_convert_aux bmap Env.empty ds in
   prog, adjust_solution !bmap
 ;;
-
-let rename_declaration_groups (dgs : declaration_groups) =
-  (* Renaming order: base loaded into env first, then everything else *)
-  let bmap = ref Collections.VarMap.empty in
-  let hyps, henv = alpha_convert_aux bmap Env.empty dgs.hyps in
-  let base, env = alpha_convert_aux bmap henv dgs.base in
-  let prop, _ = alpha_convert_aux bmap env dgs.prop in
-  let guar, _ = alpha_convert_aux bmap env dgs.guar in
-  let lth, _ = alpha_convert_aux bmap env dgs.lth in
-  let gth, _ = alpha_convert_aux bmap env dgs.gth in
-  { base; prop; guar; hyps; lth; gth }, adjust_solution !bmap
-;;
-
-let rename_declarations_or_group d_or_g =
-  match d_or_g with
-  | Decls d ->
-    let d, f = rename_declarations d in
-    Decls d, f
-  | Grp g ->
-    let g, f = rename_declaration_groups g in
-    Grp g, f
-;;

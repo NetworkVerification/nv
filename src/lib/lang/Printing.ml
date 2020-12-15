@@ -391,9 +391,3 @@ let rec declarations_to_string ?(show_types = false) ds =
   | d :: ds ->
     declaration_to_string ~show_types d ^ "\n" ^ declarations_to_string ~show_types ds
 ;;
-
-let declaration_groups_to_string ?(show_types = false) dgs =
-  let f = declarations_to_string ~show_types in
-  Printf.sprintf "base:\n%s\nprop:\n%s\nguar:\n%s\nhyps:\n%s\nlth:\n%s\ngth:\n%s"
-    (f dgs.base) (f dgs.prop) (f dgs.guar) (f dgs.hyps) (f dgs.lth) (f dgs.gth)
-;;

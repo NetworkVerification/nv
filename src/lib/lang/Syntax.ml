@@ -217,48 +217,6 @@ type declaration =
 
 type declarations = declaration list
 
-(* Used for encoding Kirigami-cut networks *)
-type declaration_groups =
-  { base : declarations
-  ; prop : declarations
-  ; guar : declarations
-  ; hyps : declarations
-  ; lth : declarations
-  ; gth : declarations
-  }
-
-type declarations_or_group =
-  | Decls of declarations
-  | Grp of declaration_groups
-
-let map_decls f d_or_g =
-  match d_or_g with
-  | Decls d -> Decls (f d)
-  | Grp g ->
-    let base = f g.base in
-    let hyps = f g.hyps in
-    let prop = f g.prop in
-    let guar = f g.guar in
-    let lth = f g.lth in
-    let gth = f g.gth in
-    Grp { base; prop; guar; hyps; lth; gth }
-;;
-
-let map_decls_tuple f d_or_g =
-  match d_or_g with
-  | Decls d ->
-    let d, x = f d in
-    Decls d, x
-  | Grp g ->
-    let base, x1 = f g.base in
-    let hyps, _ = f g.hyps in
-    let prop, _ = f g.prop in
-    let guar, _ = f g.guar in
-    let lth, _ = f g.lth in
-    let gth, _ = f g.gth in
-    Grp { base; prop; guar; hyps; lth; gth }, x1
-;;
-
 (** * Handling branches *)
 
 let rec is_irrefutable pat =

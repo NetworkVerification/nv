@@ -13,8 +13,8 @@ let solveKirigami info query chan ~part ~decls =
   let module Enc = (val (module SmtClassicEncoding.ClassicEncoding (ExprEnc))
                       : SmtClassicEncoding.ClassicEncodingSig)
   in
-  let nodes = Nv_datastructures.AdjGraph.nb_vertex (get_graph decls.base |> oget) in
-  let assertions = get_asserts decls.prop in
+  let nodes = Nv_datastructures.AdjGraph.nb_vertex (get_graph decls |> oget) in
+  let assertions = get_asserts decls in
   (* print_endline ("Assertions found: " ^ string_of_int (List.length assertions)); *)
   solve
     info

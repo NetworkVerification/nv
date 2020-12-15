@@ -39,7 +39,7 @@ let eval_model
         let ec = mk_echo ("\"" ^ var assu ^ "\"") |> mk_command in
         ec :: ev :: acc)
       base
-      (List.range 1 `To assertions)
+      (List.range 0 `To (assertions - 1))
   in
   (* Compute eval statements for symbolic variables *)
   let symbols =

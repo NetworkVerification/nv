@@ -14,13 +14,13 @@ open AdjGraph
 module type ClassicEncodingSig =
   SmtEncodingSigs.Encoding
     with type network_type = Syntax.declarations
-     and type part_network_type = Syntax.declaration_groups * partitioned_srp
+     and type part_network_type = Syntax.declarations * partitioned_srp
 
 module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig = struct
   open E
 
   type network_type = Syntax.declarations
-  type part_network_type = Syntax.declaration_groups * partitioned_srp
+  type part_network_type = Syntax.declarations * partitioned_srp
 
   let add_symbolic_constraints env requires sym_vars =
     (* Declare the symbolic variables: ignore the expression in case of SMT *)
@@ -693,19 +693,14 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
       SmtUtils.add_constraint env (mk_term all_good)
   ;;
 
-  let kirigami_encode_z3 (dgs, part) : SmtUtils.smt_env =
+  let kirigami_encode_z3 (ds, part) : SmtUtils.smt_env =
     (* need to use a counter i, as add_assertions gets called for multiple lists *)
     let i = ref (-1) in
-    let symbolics = get_symbolics dgs.base in
-    let graph = get_graph dgs.base |> oget in
-    let solves = get_solves dgs.base in
-    let simplify_assertion e =
-      let etrue = Syntax.e_val (Syntax.vbool true) in
-      let simplified = InterpPartialFull.interp_partial e in
-      if Syntax.equal_exps ~cmp_meta:false etrue simplified then None else Some simplified
-    in
-    let p_assertions = get_asserts dgs.prop |> List.filter_map simplify_assertion in
-    let requires = get_requires dgs.base in
+    let symbolics = get_symbolics ds in
+    let graph = get_graph ds |> oget in
+    let solves = get_solves ds in
+    let assertions = get_asserts ds |> List.map InterpPartialFull.interp_partial in
+    let requires = get_requires ds in
     let env = init_solver symbolics ~labels:[] in
     (* encode the symbolics first, so we can find them when we do the kirigami_solve
      * NOTE: could instead pass in the list of symbolics to encode_kirigami_solve *)
@@ -743,7 +738,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
       add_command env ~comdescr:"pop" SmtLang.Pop);
     (* safety checks: add other hypotheses, test properties *)
     add_hypothesis_assertions "greater-hyp" env (List.flatten greater_hyps);
-    add_assertions env p_assertions i;
+    add_assertions env assertions i;
     env
   ;;
 end
