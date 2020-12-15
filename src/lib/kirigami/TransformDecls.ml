@@ -135,7 +135,8 @@ let remap_solve parted_srp solve =
  ** so we need to recurse in until we have dropped the right number of nodes.
  **)
 let rec remap_conjuncts nodes e =
-  (* print_endline (Printing.exp_to_string e); *)
+  Printf.printf "remap_conjuncts: %d nodes\n" nodes;
+  print_endline (Printing.exp_to_string e);
   if (nodes > 0) then
     (match e.e with
     | EOp (And, [e2; _]) ->
@@ -163,13 +164,17 @@ let rec remap_conjuncts nodes e =
  **)
 let transform_assert (e : exp) (parted_srp : SrpRemapping.partitioned_srp) : exp =
   let { nodes; _ } = parted_srp in
+  Printf.printf "transform_assert: %d nodes\n" nodes;
   let e = (match e.e with
    | EMatch _ ->
      (* if there is only one branch, use interp to simplify;
       * we should be left with an EOp statement which we can prune *)
      let e1 = InterpPartialFull.interp_partial e in
      (match e1.e with
-     | EOp (And, _) -> remap_conjuncts nodes e1
+      (* we want to supply the *difference* between the current nodes and the
+       * number of nodes in the original SRP, because we want to descend down
+       * the chain of ands until there are only *nodes* many conjuncts left *)
+     | EOp (And, _) -> remap_conjuncts (get_global_nodes parted_srp - nodes) e1
      | _ -> print_endline ("not an and: " ^ Printing.exp_to_string e1); e)
    | _ -> e) in
   remap_exp parted_srp e

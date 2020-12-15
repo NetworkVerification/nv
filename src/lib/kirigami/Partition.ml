@@ -27,7 +27,7 @@ let get_hyp_symbolics ty partitions =
 
 let valid_hyps parted_srp =
   let get_vars _ input_exps l =
-    (List.map (fun ie -> ie.var) input_exps) @ l
+    (List.map (fun ie -> "symbolic-" ^ Var.name ie.var) input_exps) @ l
   in
   VertexMap.fold get_vars parted_srp.inputs []
 
@@ -42,10 +42,10 @@ let transform_declaration parted_srp decl : transform_result =
   (* drop any hypotheses that don't belong to this partition *)
   | DSymbolic (v, _) ->
     (* print_endline (Var.name v);
-     * print_endline (Nv_utils.OCamlUtils.list_to_string Var.name valid_hyps); *)
+     * print_endline (Nv_utils.OCamlUtils.list_to_string (fun s -> s) valid_hyps); *)
     (* get the original variable form in case it's been projected *)
     let v = snd (unproj_var v) in
-    if (String.starts_with (Var.name v) "hyp" && not (List.mem v valid_hyps))
+    if (String.starts_with (Var.name v) "symbolic-hyp" && not (List.mem (Var.name v) valid_hyps))
     then None
     else Network decl
   | DSolve s ->
