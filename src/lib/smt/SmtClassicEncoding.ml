@@ -290,6 +290,10 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
       failwith "couldn't find the corresponding constant for hyp in smt_env"
     else
       ();
+    (* sort in ascending order, with higher projection indices numerically later
+     * simply using the names sorted as returned will lead to proj~10 coming
+     * before proj~1
+     *)
     (* order of names is reversed by fold, so flip them around *)
     of_list (List.rev names)
   ;;
@@ -308,8 +312,6 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
       (* get the relevant predicate *)
       let hyp = (match pred with
         | Some p ->
-          (* FIXME: change to return a Lesser (fun, arg) or Greater (fun, arg),
-           * so that we don't add constraints too early *)
           let pred = encode_predicate p (Printf.sprintf "input-pred%d-%d-%d" count i j) env in
           Some (if rank < r then Lesser (pred, xs) else Greater (pred, xs))
         | None -> None)
@@ -434,8 +436,6 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
       let init = encode_z3_init (Printf.sprintf "init%d-%d" count i) env einit_i in
       let in_edges = incoming_map.(i) in
       let emerge_i = InterpPartial.interp_partial_fun emerge [node] in
-      (* Printf.printf "merge after interp:\n%s\n\n" (Printing.exp_to_string emerge_i);
-       * failwith "bla"; *)
       let idx = ref 0 in
       let merged =
         BatList.fold_left
@@ -456,10 +456,6 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
       in
       (* if there are no inputs, then return [] so we can skip *)
       let inputs = VertexMap.find_default [] i input_map in
-      (* print_endline (Nv_utils.OCamlUtils.list_to_string
-       *                  (fun terms -> Nv_utils.OCamlUtils.list_to_string
-       *                      (SmtLang.term_to_smt () ()) (to_list terms))
-       *                  inputs); *)
       let merged =
         BatList.fold_left
           (fun prev_result (input, _) ->
@@ -468,8 +464,6 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
             let merge_result, x = encode_z3_merge str env emerge_i in
             let input_list = to_list input in
             let prev_result_list = to_list prev_result in
-            (* print_endline ("inputs: " ^ string_of_int (List.length input_list)
-             *                ^ "; prev_result: " ^ string_of_int (List.length prev_result_list)); *)
             BatList.iter2
               (fun y x -> SmtUtils.add_constraint env (mk_term (mk_eq y.t x.t)))
               (prev_result_list @ input_list)
@@ -675,10 +669,34 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     env
   ;;
 
+  let add_hypothesis_assertions str env hyps =
+    match hyps with
+    | [] -> ()
+    | _ ->
+      let assert_vars =
+        List.mapi
+          (fun i (hyp, x) ->
+            let hyp = to_list (hyp x) |> List.hd in
+            let assert_var =
+              mk_constant env (Printf.sprintf "assert-%s-%d" str i) (ty_to_sort TBool)
+            in
+            SmtUtils.add_constraint env (mk_term (mk_eq assert_var.t hyp.t));
+            assert_var)
+          hyps
+      in
+      let all_good =
+        List.fold_left
+          (fun acc v -> mk_and acc v.t)
+          (List.hd assert_vars).t
+          (List.tl assert_vars)
+      in
+      SmtUtils.add_constraint env (mk_term all_good)
+  ;;
+
   let kirigami_encode_z3 (dgs, part) : SmtUtils.smt_env =
     (* need to use a counter i, as add_assertions gets called for multiple lists *)
     let i = ref (-1) in
-    let symbolics = (get_symbolics dgs.hyps) @ (get_symbolics dgs.base) in
+    let symbolics = get_symbolics dgs.base in
     let graph = get_graph dgs.base |> oget in
     let solves = get_solves dgs.base in
     let simplify_assertion e =
@@ -689,40 +707,15 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     let p_assertions = get_asserts dgs.prop |> List.filter_map simplify_assertion in
     let requires = get_requires dgs.base in
     let env = init_solver symbolics ~labels:[] in
-    (* encode the symbolics and requires first,
-     * so we can find them when we do the kirigami_solve
-     * NOTE: could instead pass in the list of symbolics
-     * to encode_kirigami_solve if this is bad *)
+    (* encode the symbolics first, so we can find them when we do the kirigami_solve
+     * NOTE: could instead pass in the list of symbolics to encode_kirigami_solve *)
     add_symbolic_constraints env [] env.symbolics;
     let lesser_hyps, greater_hyps, outputs =
       split3 (List.mapi (encode_kirigami_solve env graph part) solves)
     in
-    let add_hypothesis_assertions str hyps =
-      match hyps with
-      | [] -> ()
-      | _ ->
-        let assert_vars =
-          List.mapi
-            (fun i (hyp, x) ->
-              let hyp = to_list (hyp x) |> List.hd in
-              let assert_var =
-                mk_constant env (Printf.sprintf "assert-%s-%d" str i) (ty_to_sort TBool)
-              in
-              SmtUtils.add_constraint env (mk_term (mk_eq assert_var.t hyp.t));
-              assert_var)
-            hyps
-        in
-        let all_good =
-          List.fold_left
-            (fun acc v -> mk_and acc v.t)
-            (List.hd assert_vars).t
-            (List.tl assert_vars)
-        in
-        SmtUtils.add_constraint env (mk_term all_good)
-    in
     (* these require constraints are always included *)
     add_symbolic_constraints env requires VarMap.empty;
-    add_hypothesis_assertions "lesser-hyp" (List.flatten lesser_hyps);
+    add_hypothesis_assertions "lesser-hyp" env (List.flatten lesser_hyps);
     (* ranked initial checks: test guarantees *)
     let guarantees = List.flatten outputs in
     if List.is_empty guarantees
@@ -749,7 +742,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
       SmtUtils.add_constraint env (mk_term (mk_not all_good));
       add_command env ~comdescr:"pop" SmtLang.Pop);
     (* safety checks: add other hypotheses, test properties *)
-    add_hypothesis_assertions "greater-hyp" (List.flatten greater_hyps);
+    add_hypothesis_assertions "greater-hyp" env (List.flatten greater_hyps);
     add_assertions env p_assertions i;
     env
   ;;
