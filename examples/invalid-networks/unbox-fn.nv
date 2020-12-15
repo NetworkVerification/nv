@@ -1,0 +1,30 @@
+(* This network is invalid due to the use of an optional function. 
+ * If we attempt to transform this network, NV will throw an error,
+ * complaining that it can't generate a default value.
+ * This is because of how NV's option unboxing behaviour works: if
+ * there are options over functions in the network following inlining,
+ * NV is unable to convert those options over functions into tuples,
+ * as NV needs to be able to provide a default value for the second
+ * element of the tuple representing the old option for the None case.
+ * As there is no default function we could provide, this leads to an
+ * error.
+ *)
+type attribute = option[int->int]
+
+let nodes = 2
+let edges = {0=1;}
+
+let init n = match n with
+  | 0n -> Some (fun x -> x + 1)
+  | 1n -> None
+
+let trans e x = x
+
+let merge n x y = match (x, y) with
+  | (_, None) -> x
+  | (None, _) -> y
+  | (Some a, Some b) -> if (a 0) > (b 0) then x else y
+
+let sol = solution { init = init; trans = trans; merge = merge; }
+
+assert sol[1n] = Some (fun x -> x + 1)
