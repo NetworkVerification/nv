@@ -9,12 +9,12 @@ type attribute = option[route]
 
 (* predicate that a route r exactly has length l and nexthop n *)
 let exact_route r l n = match r with
-  | Some r -> r.len = l && r.nexthop = n
+  | Some r -> r.len = l (* && r.nexthop = n *)
   | None -> false
 
 (* predicate that a route r has length at least l and exactly nexthop n *)
 let gt_min_len_route r l n = match r with
-  | Some r -> r.len >= l && r.nexthop = n
+  | Some r -> r.len >= l (* && r.nexthop = n *)
   | None -> false
 
 (* chosen destination *)
@@ -109,6 +109,6 @@ let init node = if node = dest then
 
 (* -------- Assert --------------------------------------------------------------- *)
 
-let sol = solution { init = init; trans = trans; merge = merge; interface = interface; }
+let sol = solution { init = init; trans = trans; merge = merge; interface = interface }
 
 assert foldNodes (fun u v acc -> acc && isSome v) sol true

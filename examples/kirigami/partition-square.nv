@@ -17,7 +17,7 @@ let partition node = match node with
   | _ -> 1u8
 
 let interface edge = match edge with
-  | 1~2 -> (fun x -> x = 2)
+  | 1~2 -> (fun x -> x <= 2)
   | 2~1 -> (fun x -> true)
   | 0~3 -> (fun x -> x = 1)
   | 3~0 -> (fun x -> true)
