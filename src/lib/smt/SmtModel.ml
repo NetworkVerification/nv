@@ -7,6 +7,7 @@ open SmtUtils
 open SmtLang
 open SolverUtil
 open Batteries
+open Nv_utils.OCamlUtils
 
 (** Emits the code that evaluates the model returned by Z3. *)
 let eval_model
@@ -40,7 +41,7 @@ let eval_model
         let ec = mk_echo ("\"" ^ var assu ^ "\"") |> mk_command in
         ec :: ev :: acc)
       base
-      (List.range 0 `To (guarantees - 1))
+      (list_seq guarantees)
   in
   (* Compute eval statements for assertions *)
   let assertion_cmds =
@@ -52,7 +53,7 @@ let eval_model
         let ec = mk_echo ("\"" ^ var assu ^ "\"") |> mk_command in
         ec :: ev :: acc)
       guarantee_cmds
-      (List.range 0 `To (assertions - 1))
+      (list_seq assertions)
   in
   (* Compute eval statements for symbolic variables *)
   let symbols =

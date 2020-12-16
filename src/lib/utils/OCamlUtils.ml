@@ -19,6 +19,12 @@ type 'a delayed = unit -> 'a
 let dmap (f : 'a -> 'b) (x : 'a delayed) : 'b delayed = fun () -> f (x ())
 
 (*** List Utilities ***)
+(** Generate an ascending list of numbers [0,n). *)
+let rec list_seq n =
+  match n with
+  | 0 -> []
+  | _ -> (list_seq (n - 1)) @ [n - 1]
+
 let rec list_to_string f lst =
   Printf.sprintf "[%s]" @@ BatString.concat ";" @@ List.map f lst
 ;;
