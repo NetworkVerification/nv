@@ -48,14 +48,16 @@ def mean_float_dict(dicts, multiop=LIST_OPERATIONS):
     return averaged
 
 
-def join_result_dicts(parted, unparted):
+def join_result_dicts(parted, vparted, unparted):
     """
-    Join the two dictionaries representing partitioned runs and an unpartitioned run
+    Join the three dictionaries representing two partitioned runs and an unpartitioned run
     into a single dictionary.
     """
     joined = dict()
     for (key, val) in parted.items():
         joined[key + " (part)"] = val
+    for (key, val) in vparted.items():
+        joined[key + " (vpart)"] = val
     joined.update(unparted)
     return joined
 
@@ -120,7 +122,7 @@ def run_benchmark(dirformat, nameformat, size, time, trials, multiop):
         partcom = run_command(com + ["-k", partf], time)
         vpartcom = run_command(com + ["-k", vpartf], time)
         unpartcom = run_command(com + [unpartf], time)
-        runs.append(join_result_dicts(partcom, unpartcom))
+        runs.append(join_result_dicts(partcom, vpartcom, unpartcom))
     mean = mean_float_dict(runs, multiop)
     mean["Benchmark"] = benchdir
     return mean
