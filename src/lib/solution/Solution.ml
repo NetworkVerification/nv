@@ -242,8 +242,10 @@ let print_solution (solution : t) =
         failed));
   (match solution.assertions with
   | [] ->
-    print_string [green; Bold] "Success: ";
-    Printf.printf "No assertions provided, so none failed\n"
+    if solution.guarantees = [] then
+      (print_string [green; Bold] "Success: ";
+       Printf.printf "No assertions provided, so none failed\n")
+    else ()
   | asns ->
     let failed =
       BatList.fold_righti (fun i b acc -> if not b then i :: acc else acc) asns []

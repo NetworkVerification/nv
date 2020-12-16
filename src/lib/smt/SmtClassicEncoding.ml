@@ -652,6 +652,8 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     let assertions = get_asserts ds |> List.map InterpPartialFull.interp_partial in
     let requires = get_requires ds in
     let env = init_solver symbolics ~labels:[] in
+    (* second env only for safety check *)
+    (* let env2 = init_solver [] ~labels:[] in *)
     (* encode the symbolics first, so we can find them when we do the kirigami_solve
      * NOTE: could instead pass in the list of symbolics to encode_kirigami_solve *)
     add_symbolic_constraints env [] env.symbolics;
@@ -664,6 +666,8 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     (* ranked initial checks: test guarantees in separate scope *)
     add_command env ~comdescr:"push" SmtLang.Push;
     add_assertions "guarantee" env (fun (g, v) -> g v) (List.flatten guarantees) ~negate:true;
+    (* marker to break up encoding into 2 parts *)
+    add_command env ~comdescr:"" (SmtLang.mk_echo "\"#END_OF_GUARANTEES#\"");
     add_command env ~comdescr:"pop" SmtLang.Pop;
     (* safety checks: add other hypotheses, test original assertions *)
     add_assertions "greater-hyp" env (fun (h, v) -> h v) (List.flatten greater_hyps) ~negate:false;

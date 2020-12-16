@@ -139,8 +139,8 @@
       | _ -> failwith "solution must take a direct record expression"
     in
     let decomp = match (interface, ltrans, rtrans) with
-    | (None, None, None) -> None
-    | (Some _, None, None) -> Some (None, None)
+    (* see SmtClassicEncoding.ml for default behaviour when both ltrans and rtrans are None *)
+    | (_, None, None) -> None
     | (Some _, Some _, Some _) -> Some (ltrans, rtrans)
     | (Some _, Some _, None) -> Some (ltrans, None)
     | (Some _, None, Some _) -> Some (None, rtrans)
