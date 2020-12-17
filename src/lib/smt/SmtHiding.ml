@@ -529,7 +529,7 @@ let solve_hiding info query partial_chan ~full_chan ?(starting_vars = []) ~decls
         full_env
         solver
         renaming
-        nodes
+        (list_seq nodes)
         (List.length (get_asserts decls))
         0
     in

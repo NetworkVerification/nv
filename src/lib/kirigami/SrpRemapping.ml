@@ -56,6 +56,16 @@ type partitioned_srp =
 (** Return the number of nodes in the global network. *)
 let get_global_nodes parted_srp = VertexMap.cardinal parted_srp.node_map
 
+(** Return a list of nodes which inverts the node_map list to give the old numbering
+ ** of the current partition's nodes. *)
+let get_old_nodes parted_srp =
+  let add_node old_node new_node l =
+    match new_node with
+    | Some v -> (v, old_node) :: l
+    | None -> l
+  in
+  let pairs = VertexMap.fold add_node parted_srp.node_map [] in
+  List.map (fun (_, u) -> u) (List.sort Pervasives.compare pairs)
 
 (** Map each vertex in the list of vertices to a partition number.
  *  Return the map and the number of partitions.

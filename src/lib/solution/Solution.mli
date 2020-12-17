@@ -15,7 +15,7 @@ type t =
     assertions : bool list
   ; (* Used by Kirigami *)
     guarantees : bool list
-  ; nodes : int
+  ; nodes : int list
   }
 
 type map_back = t -> t

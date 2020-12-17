@@ -161,7 +161,7 @@ let solveClassic info query chan ~decls =
     query
     chan
     (fun () -> Enc.encode_z3 decls)
-    (Nv_datastructures.AdjGraph.nb_vertex (get_graph decls |> oget))
+    (list_seq (Nv_datastructures.AdjGraph.nb_vertex (get_graph decls |> oget)))
     (List.length (get_asserts decls))
     0
 ;;

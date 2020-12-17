@@ -12,7 +12,7 @@ open Nv_utils.OCamlUtils
 (** Emits the code that evaluates the model returned by Z3. *)
 let eval_model
     (symbolics : Syntax.ty_or_exp VarMap.t)
-    (num_nodes : int)
+    (num_nodes : int list)
     (assertions : int)
     (guarantees : int)
     (renaming : string StringMap.t * smt_term StringMap.t)

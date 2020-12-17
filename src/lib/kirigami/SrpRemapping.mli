@@ -54,6 +54,10 @@ type partitioned_srp =
 (** Return the number of nodes in the global network. *)
 val get_global_nodes : partitioned_srp -> int
 
+(** Return the list of old nodes in the network in order of how they were remapped, i.e.
+ ** the 0th element of the list remaps to node 0, the 1st remaps to node 1 and so on. *)
+val get_old_nodes : partitioned_srp -> int list
+
 (** Create a list of partitioned SRP structures,
  * where each structure represents one partition's topological structure
  * for each possible partition in the given declarations.

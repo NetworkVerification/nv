@@ -26,7 +26,7 @@ type t =
     assertions : bool list
   ; (* Kirigami's special asserts *)
     guarantees : bool list
-  ; nodes : int
+  ; nodes : int list
   }
 
 type map_back = t -> t
@@ -194,9 +194,9 @@ let print_fun nodes { sol_val; mask } =
     | None -> fun x -> Printing.value_to_string ~show_types:false x
     | Some m -> fun x -> print_masked m x
   in
-  for i = nodes - 1 downto 0 do
+  for i = (List.length nodes) - 1 downto 0 do
     let v = BddMap.find m (vnode i) in
-    solString := (i, f v) :: !solString
+    solString := (List.nth nodes i, f v) :: !solString
   done;
   PrimitiveCollections.printList
     (fun (u, s) -> Printf.sprintf "Node %d\n---------\n%s" u s)

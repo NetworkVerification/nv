@@ -69,7 +69,6 @@ let solveKirigami info query chan ~part ~decls =
   let module Enc = (val (module SmtClassicEncoding.ClassicEncoding (ExprEnc))
                       : SmtClassicEncoding.ClassicEncodingSig)
   in
-  let nodes = Nv_datastructures.AdjGraph.nb_vertex (get_graph decls |> oget) in
   let assertions = List.length (get_asserts decls) in
   let guarantees = VertexMap.fold (fun _ l acc -> List.length l + acc) part.outputs 0 in
   solve
@@ -77,7 +76,7 @@ let solveKirigami info query chan ~part ~decls =
     query
     chan
     (fun () -> Enc.kirigami_encode_z3 part decls)
-    nodes
+    (get_old_nodes part)
     assertions
     guarantees
 ;;
