@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
+"""
+Main module to generate, run and tabulate the Kirigami benchmarks.
+"""
 
-# Main module to generate, run and tabulate the Kirigami benchmarks.
-import argparse
 import sys
 import os
 import re
@@ -36,8 +37,9 @@ def create_benchmarks(gen_horizontal, gen_vertical):
 
 
 def clean_benchmarks(dry_run):
-    pat = re.compile("^sp\d*-(v?)part\d*\.nv$", re.M)
-    for root, dirs, files in os.walk(BENCH_DIR):
+    """Remove old benchmarks."""
+    pat = re.compile(r"^sp\d*-(v?)part\d*\.nv$", re.M)
+    for root, _, files in os.walk(BENCH_DIR):
         for fname in files:
             if pat.search(fname):
                 bench_path = os.path.join(root, fname)
@@ -47,7 +49,14 @@ def clean_benchmarks(dry_run):
                     os.remove(bench_path)
 
 
-def tabulate_fattree_benchmarks(sizes=[4, 8, 10, 12, 16, 20], timeout=3600,trials=10):
+def save_results(runs):
+    """Save runs to CSV."""
+    timestamp = datetime.now()
+    time = timestamp.strftime("%Y-%m-%d-%H:%M:%S")
+    return write_csv(runs, f"kirigami-results-{time}.csv")
+
+
+def tabulate_fattree_benchmarks(sizes, timeout=3600, trials=10, save_progress=True):
     """
     Run all the vertical and horizontal benchmarks.
     """
@@ -56,13 +65,9 @@ def tabulate_fattree_benchmarks(sizes=[4, 8, 10, 12, 16, 20], timeout=3600,trial
         directory = f"{BENCH_DIR}/FAT{size}"
         results = run_benchmark(directory, "sp{}{}.nv", size, timeout, trials, DISTINCT_OPERATIONS)
         runs.append(results)
+        if save_progress:
+            save_results(runs)
     return runs
-
-
-def save_results(runs):
-    timestamp = datetime.now()
-    time = timestamp.strftime("%Y-%m-%d-%H:%M:%S")
-    return write_csv(runs, f"kirigami-results-{time}.csv")
 
 
 if __name__ == "__main__":
@@ -74,4 +79,4 @@ if __name__ == "__main__":
     if OP == "list":
         clean_benchmarks(dry_run=True)
     if OP == "run":
-        save_results(tabulate_fattree_benchmarks(sizes=[4,8]))
+        save_results(tabulate_fattree_benchmarks(sizes=[4, 8, 10, 12]))
