@@ -319,9 +319,7 @@ def gen_part_nv(spfile, dest, cut, verbose=False):
     graph = construct_graph(sptext)
     if verbose:
         print(str(graph))
-    # sys.exit(0)
     # get the three parts
-    # include_sp = f'include "{os.path.basename(spfile)}"'
     preamble = write_preamble(os.path.basename(spfile), cut)
     include_sp, footer = split_prefooter(sptext)
     nodes = cut_nodes(graph, dest, cut)

@@ -8,7 +8,8 @@ import sys
 import re
 import csv
 
-# constants for mean_float_dict's handling of operations that run multiple times across partitions
+# constants for mean_float_dict's handling of operations that run multiple
+# times across partitions
 # produce an int total of the time each operation took
 SUM_OPERATIONS = 0
 # produce a list of the time each operation took (default)
@@ -39,26 +40,26 @@ def mean_float_dict(dicts, multiop=LIST_OPERATIONS):
             averaged[key] = newval
         elif multiop == SUM_OPERATIONS:
             averaged[key] = sum(newval)
-        # otherwise, just return a list of each time that operation was profiled
+        # otherwise, just return a list of each time that
+        # operation was profiled
         elif multiop == DISTINCT_OPERATIONS:
             for (i, nv) in enumerate(newval):
                 averaged[key + " " + str(i)] = nv
         else:
-            raise NotImplemented()
+            raise NotImplementedError()
     return averaged
 
 
-def join_result_dicts(parted, vparted, unparted):
+def join_result_dicts(*dicts):
     """
-    Join the three dictionaries representing two partitioned runs and an unpartitioned run
-    into a single dictionary.
+    Join the results dictionaries into a single dictionary.
     """
     joined = dict()
-    for (key, val) in parted.items():
-        joined[key + " (part)"] = val
-    for (key, val) in vparted.items():
-        joined[key + " (vpart)"] = val
-    joined.update(unparted)
+    for (cut, d) in dicts:
+        for (key, val) in d.items():
+            if cut is None:
+                cut = "monolithic"
+            joined[key + f" ({cut})"] = val
     return joined
 
 
@@ -101,7 +102,7 @@ def run_command(com, time):
         return {}
 
 
-def run_benchmark(dirformat, nameformat, size, time, trials, multiop):
+def run_benchmark(dirformat, benches, size, time, trials, multiop):
     """
     Run the partitioned and unpartitioned benchmarks in the given directory,
     and return a dictionary of profiling information.
@@ -109,20 +110,22 @@ def run_benchmark(dirformat, nameformat, size, time, trials, multiop):
     benchdir = dirformat.format(size)
     nvpath = os.path.join(os.getcwd(), "nv")
     if not os.path.exists(nvpath):
-        print("Did not find an 'nv' executable in the current working directory!")
+        print("Did not find 'nv' executable in the current working directory")
         sys.exit(1)
     # run nv with verbose, SMT and partitioning flags
     com = [nvpath, "-v", "-m"]
-    partf = os.path.join(benchdir, nameformat.format(size, "-part"))
-    vpartf = os.path.join(benchdir, nameformat.format(size, "-vpart"))
-    unpartf = os.path.join(benchdir, nameformat.format(size, ""))
     runs = []
     for i in range(trials):
         print("Running trial " + str(i + 1) + " of " + str(trials))
-        partcom = run_command(com + ["-k", partf], time)
-        vpartcom = run_command(com + ["-k", vpartf], time)
-        unpartcom = run_command(com + [unpartf], time)
-        runs.append(join_result_dicts(partcom, vpartcom, unpartcom))
+        results = []
+        for (cut, name) in benches:
+            path = os.path.join(benchdir, name.format(size))
+            if cut:
+                args = com + ["-k", path]
+            else:
+                args = com + [path]
+            results.append((cut, run_command(args, time)))
+        runs.append(join_result_dicts(*results))
     mean = mean_float_dict(runs, multiop)
     mean["Benchmark"] = benchdir
     return mean
@@ -131,7 +134,9 @@ def run_benchmark(dirformat, nameformat, size, time, trials, multiop):
 def write_csv(results, path):
     """Write the results dictionaries to a CSV."""
     with open(path, "w") as csvf:
-        writer = csv.DictWriter(csvf, fieldnames=results[0].keys(), restval="error")
+        # use the last results, which will have the most keys
+        writer = csv.DictWriter(csvf, fieldnames=results[-1].keys(),
+                                restval="")
         writer.writeheader()
         for result in results:
             writer.writerow(result)
@@ -144,7 +149,12 @@ if __name__ == "__main__":
     TRIALS = 10
     RUNS = []
     MULTIOP = DISTINCT_OPERATIONS
+    BENCHES = [(None, "sp{}.nv"),
+               # ("horizontal", "sp{}-part.nv"),
+               # ("vertical", "sp{}-vpart.nv"),
+               ("pods", "sp{}-pods.nv")]
     for sz in SIZES:
         print("Running benchmark " + DIRECTORY.format(sz))
-        RUNS.append(run_benchmark(DIRECTORY, "sp{}{}.nv", sz, TIMEOUT, TRIALS, MULTIOP))
-    write_csv(RUNS, "kirigami-results-h1.csv")
+        RUNS.append(run_benchmark(DIRECTORY, BENCHES, sz, TIMEOUT, TRIALS,
+                                  MULTIOP))
+    write_csv(RUNS, "kirigami-results-test.csv")

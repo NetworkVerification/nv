@@ -7,7 +7,7 @@ import sys
 import os
 import re
 from datetime import datetime
-from gen_part_nv import gen_part_nv, HORIZONTAL, VERTICAL
+from gen_part_nv import gen_part_nv
 from tabulate_sp_bench import run_benchmark, write_csv, DISTINCT_OPERATIONS
 
 BENCH_DIR = "benchmarks/SinglePrefix"
@@ -38,7 +38,7 @@ def create_benchmarks():
 
 def clean_benchmarks(dry_run):
     """Remove old benchmarks."""
-    pat = re.compile(r"^sp\d*-(v?)part\d*\.nv$", re.M)
+    pat = re.compile(r"^sp\d*-(part|vpart|pods)\d*\.nv$", re.M)
     for root, _, files in os.walk(BENCH_DIR):
         for fname in files:
             if pat.search(fname):
@@ -56,14 +56,20 @@ def save_results(runs):
     return write_csv(runs, f"kirigami-results-{time}.csv")
 
 
-def tabulate_fattree_benchmarks(sizes, timeout=3600, trials=10, save_progress=True):
+def tabulate_fattree_benchmarks(sizes, timeout=3600, trials=10,
+                                save_progress=True):
     """
     Run all the vertical and horizontal benchmarks.
     """
     runs = []
     for size in sizes:
         directory = f"{BENCH_DIR}/FAT{size}"
-        results = run_benchmark(directory, "sp{}{}.nv", size, timeout, trials, DISTINCT_OPERATIONS)
+        benches = [(None, "sp{}.nv"),
+                   ("horizontal", "sp{}-part.nv"),
+                   ("vertical", "sp{}-vpart.nv"),
+                   ("pods", "sp{}-pods.nv")]
+        results = run_benchmark(directory, benches, size, timeout, trials,
+                                DISTINCT_OPERATIONS)
         runs.append(results)
         if save_progress:
             save_results(runs)
@@ -73,7 +79,7 @@ def tabulate_fattree_benchmarks(sizes, timeout=3600, trials=10, save_progress=Tr
 if __name__ == "__main__":
     OP = sys.argv[1]
     if OP == "make":
-        create_benchmarks(True, True)
+        create_benchmarks()
     if OP == "clean":
         clean_benchmarks(dry_run=False)
     if OP == "list":
