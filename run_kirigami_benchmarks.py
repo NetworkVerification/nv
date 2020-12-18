@@ -12,6 +12,7 @@ from tabulate_sp_bench import run_benchmark, write_csv, DISTINCT_OPERATIONS
 
 BENCH_DIR = "benchmarks/SinglePrefix"
 
+
 def get_benchmarks():
     """Return the list of input benchmark files with their destinations."""
     benches = [
@@ -25,15 +26,14 @@ def get_benchmarks():
     return benches
 
 
-def create_benchmarks(gen_horizontal, gen_vertical):
+def create_benchmarks():
     """
     Generate the necessary benchmarks to use.
     """
     for (inputf, dest) in get_benchmarks():
-        if gen_horizontal:
-            gen_part_nv(inputf, dest, HORIZONTAL)
-        if gen_vertical:
-            gen_part_nv(inputf, dest, VERTICAL)
+        gen_part_nv(inputf, dest, 'h')
+        gen_part_nv(inputf, dest, 'v')
+        gen_part_nv(inputf, dest, 'pods')
 
 
 def clean_benchmarks(dry_run):
