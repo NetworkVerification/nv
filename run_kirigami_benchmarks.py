@@ -64,10 +64,10 @@ def tabulate_fattree_benchmarks(sizes, timeout=3600, trials=10,
     runs = []
     for size in sizes:
         directory = f"{BENCH_DIR}/FAT{size}"
-        benches = [(None, "sp{}.nv"),
-                   ("horizontal", "sp{}-part.nv"),
-                   ("vertical", "sp{}-vpart.nv"),
-                   ("pods", "sp{}-pods.nv")]
+        benches = [(None, f"sp{size}.nv"),
+                   ("horizontal", f"sp{size}-part.nv"),
+                   ("vertical", f"sp{size}-vpart.nv"),
+                   ("pods", f"sp{size}-pods.nv")]
         results = run_benchmark(directory, benches, size, timeout, trials,
                                 DISTINCT_OPERATIONS)
         runs.append(results)
@@ -85,4 +85,4 @@ if __name__ == "__main__":
     if OP == "list":
         clean_benchmarks(dry_run=True)
     if OP == "run":
-        save_results(tabulate_fattree_benchmarks(sizes=[4, 8, 10, 12]))
+        save_results(tabulate_fattree_benchmarks(sizes=[10, 12, 16, 20]))
