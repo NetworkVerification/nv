@@ -42,3 +42,6 @@ nv
 
 # __pycache__ from running scripts
 __pycache__/
+
+# Tabulate CSVs
+*.csv
