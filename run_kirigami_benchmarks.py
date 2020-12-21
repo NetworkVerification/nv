@@ -85,4 +85,5 @@ if __name__ == "__main__":
     if OP == "list":
         clean_benchmarks(dry_run=True)
     if OP == "run":
-        save_results(tabulate_fattree_benchmarks(sizes=[10, 12, 16, 20]))
+        SIZES = [int(n) for n in sys.argv[2:]]
+        save_results(tabulate_fattree_benchmarks(SIZES))

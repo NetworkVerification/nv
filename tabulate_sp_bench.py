@@ -137,7 +137,7 @@ def write_csv(results, path):
     # get all field names
     fields = set()
     for result in results:
-        fields.union(set(result.keys()))
+        fields.update(set(result.keys()))
     with open(path, "w") as csvf:
         # use the last results, which will have the most keys
         writer = csv.DictWriter(csvf, fieldnames=list(fields),
