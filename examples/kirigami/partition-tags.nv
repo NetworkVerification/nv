@@ -1,42 +1,43 @@
-type route = { lp: int; len: int; tags: set[int] }
+type route = { len: int; tags: set[int] }
 type attribute = option[route]
 
-let nodes = 2
+let nodes = 3
 
-let edges = { 0=1; }
+let edges = { 0=1; 1=2; }
 
 let omap2 f x y = match (x, y) with
  | (_, None) -> x
  | (None, _) -> y
  | (Some a, Some b) -> Some (f a b)
 
-let cmpRoutes a b =
-  if a.lp > b.lp then a else
-  if a.lp = b.lp && a.len < b.len then a else b
+let cmpRoutes a b = if a.len < b.len then a else b
 
 let merge n x y = omap2 cmpRoutes x y
 
 let trans e x = match x with 
  | Some r -> (match e with
-    | 0~1 -> if r.tags[1] then None else Some { lp = 100; len = r.len + 1; tags = r.tags[0 := true] }
-    | 1~0 -> if r.tags[0] then None else Some { lp = 100; len = r.len + 1; tags = r.tags[1 := true] })
+    | 0~1 -> if r.tags[1] then None else Some { len = r.len + 1; tags = r.tags[0 := true] }
+    | 1~0 -> if r.tags[0] then None else Some { len = r.len + 1; tags = r.tags[1 := true] }
+    | 1~2 -> if r.tags[2] then None else Some { len = r.len + 1; tags = r.tags[1 := true] }
+    | 2~1 -> if r.tags[1] then None else Some { len = r.len + 1; tags = r.tags[2 := true] })
  | None -> None
 
 let init n = match n with
- | 0n -> Some { lp = 100; len = 0; tags = {} }
- | 1n -> None
+ | 0n -> Some { len = 0; tags = {} }
+ | _ -> None
 
 let partition n = match n with
  | 0n -> 0u8
- | 1n -> 1u8
+ | 1n -> 0u8
+ | 2n -> 1u8
 
 let isSome x = match x with
  | None -> false
  | _ -> true
 
 let interface e = match e with
- | 0~1 -> (fun a -> match a with | None -> false | Some r -> !r.tags[1])
- | 1~0 -> fun a -> true
+ | 1~2 -> (fun a -> match a with | None -> false | Some r -> !r.tags[2])
+ | 2~1 -> fun a -> true
 
 let sol = solution { init = init; trans = trans; merge = merge; interface = interface; rtrans = trans }
 
