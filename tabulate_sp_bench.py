@@ -43,8 +43,8 @@ def mean_float_dict(dicts, multiop=LIST_OPERATIONS):
         # otherwise, just return a list of each time that
         # operation was profiled
         elif multiop == DISTINCT_OPERATIONS:
-            for (i, nv) in enumerate(newval):
-                averaged[key + " " + str(i)] = nv
+            for (i, val) in enumerate(newval):
+                averaged[key + " " + str(i)] = val
         else:
             raise NotImplementedError()
     return averaged
@@ -55,8 +55,8 @@ def join_result_dicts(*dicts):
     Join the results dictionaries into a single dictionary.
     """
     joined = dict()
-    for (cut, d) in dicts:
-        for (key, val) in d.items():
+    for (cut, results) in dicts:
+        for (key, val) in results.items():
             if cut is None:
                 cut = "monolithic"
             joined[key + f" ({cut})"] = val
@@ -119,11 +119,12 @@ def run_benchmark(dirformat, benches, size, time, trials, multiop):
         print("Running trial " + str(i + 1) + " of " + str(trials))
         results = []
         for (cut, name) in benches:
-            path = os.path.join(benchdir, name.format(size))
+            path = os.path.join(benchdir, name)
             if cut:
                 args = com + ["-k", path]
             else:
                 args = com + [path]
+            print(f"Running {' '.join(args)}")
             results.append((cut, run_command(args, time)))
         runs.append(join_result_dicts(*results))
     mean = mean_float_dict(runs, multiop)
@@ -133,9 +134,13 @@ def run_benchmark(dirformat, benches, size, time, trials, multiop):
 
 def write_csv(results, path):
     """Write the results dictionaries to a CSV."""
+    # get all field names
+    fields = set()
+    for result in results:
+        fields.update(set(result.keys()))
     with open(path, "w") as csvf:
         # use the last results, which will have the most keys
-        writer = csv.DictWriter(csvf, fieldnames=results[-1].keys(),
+        writer = csv.DictWriter(csvf, fieldnames=list(fields),
                                 restval="")
         writer.writeheader()
         for result in results:
@@ -149,12 +154,12 @@ if __name__ == "__main__":
     TRIALS = 10
     RUNS = []
     MULTIOP = DISTINCT_OPERATIONS
-    BENCHES = [(None, "sp{}.nv"),
-               # ("horizontal", "sp{}-part.nv"),
-               # ("vertical", "sp{}-vpart.nv"),
-               ("pods", "sp{}-pods.nv")]
     for sz in SIZES:
         print("Running benchmark " + DIRECTORY.format(sz))
-        RUNS.append(run_benchmark(DIRECTORY, BENCHES, sz, TIMEOUT, TRIALS,
+        benchmarks = [(None, f"sp{sz}.nv"),
+                      ("horizontal", f"sp{sz}-part.nv"),
+                      ("vertical", f"sp{sz}-vpart.nv"),
+                      ("pods", f"sp{sz}-pods.nv")]
+        RUNS.append(run_benchmark(DIRECTORY, benchmarks, sz, TIMEOUT, TRIALS,
                                   MULTIOP))
     write_csv(RUNS, "kirigami-results-test.csv")
