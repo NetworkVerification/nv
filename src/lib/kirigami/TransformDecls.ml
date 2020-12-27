@@ -149,27 +149,30 @@ let transform_assert (e : exp) (parted_srp : SrpRemapping.partitioned_srp) : exp
 (** Helper function to extract the edge predicate
  *  from the interface expression.
 *)
-let interp_interface intfe e : exp option =
-  let u, v = e in
+let interp_interface edge intfe =
+  let u, v = edge in
   let node_value n = avalue (vnode n, Some Typing.node_ty, Span.default) in
   let edge = [node_value u; node_value v] in
   let intf_app = InterpPartial.interp_partial_fun intfe edge in
   match intf_app.e with
-  | EFun _ -> Some intf_app
-  | EVal { v = VClosure _; _ } -> Some intf_app
+  | EFun _ -> intf_app
+  | EVal { v = VClosure _; _ } -> intf_app
   | _ ->
     failwith
       ("expected intf value to be a function but got " ^ Printing.exp_to_string intf_app)
 ;;
 
 let update_preds interface partitioned_srp =
-  let intf_opt e = Option.bind interface (fun intfe -> interp_interface intfe e) in
+  let intf_opt e = Option.map (interp_interface e) interface in
   { partitioned_srp with
     inputs =
       VertexMap.map
         (fun input_exps ->
           List.map
-            (fun input_exp -> { input_exp with pred = intf_opt input_exp.edge })
+            (fun input_exp ->
+               let pred = intf_opt input_exp.edge in
+               (* print_endline (Printing.exp_to_string (Option.get pred)); *)
+               { input_exp with pred })
             input_exps)
         partitioned_srp.inputs
   ; outputs =

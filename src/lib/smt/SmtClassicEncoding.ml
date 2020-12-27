@@ -218,6 +218,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
       let names = create_strings (Printf.sprintf "%s-result" str) expty in
       let results = lift2 (mk_constant env) names expsorts in
       let es = encode_exp_z3 str env exp in
+      (* print_endline (SmtLang.term_to_smt () () (List.hd (to_list es))); *)
       (* sanity check that assertions evaluate to bools *)
       assert (List.length (to_list es) = 1);
       ignore

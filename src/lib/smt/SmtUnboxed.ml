@@ -279,8 +279,10 @@ module Unboxed : SmtEncodingSigs.ExprEncoding = struct
         failwith "internal error (encode_exp_z3)")
     | ETy (e, _) -> encode_exp_z3_single ~arith descr env e
     | _ ->
+      (* Printf.printf "expr: %s\n" (Printing.exp_to_string e); *)
       (* we always know this is going to be a singleton list *)
       let es = encode_exp_z3 descr env e in
+      assert ((List.length es) = 1);
       BatList.hd es
 
   and encode_exp_z3 descr env (e : exp) : term list =
@@ -319,7 +321,8 @@ module Unboxed : SmtEncodingSigs.ExprEncoding = struct
         let ze1 = encode_exp_z3 descr env e1 in
         let ze2 = encode_exp_z3_single descr env e2 in
         BatList.modify_at lo (fun _ -> ze2) ze1
-      | _ -> [encode_exp_z3_single descr env e])
+      | _ ->
+        [encode_exp_z3_single descr env e])
     | EVal v
       when match v.vty with
            | Some (TTuple _) -> true
