@@ -106,7 +106,7 @@ let rec check_annot (e : exp) =
   | EMatch (e, bs) ->
     check_annot e;
     iterBranches (fun (_, e) -> check_annot e) bs
-  | ETy (e, _) | EProject (e, _) -> check_annot e
+  | ETy (e, _) | EProject (e, _) | EIgnore e -> check_annot e
   | ERecord map -> StringMap.iter (fun _ -> check_annot) map
 ;;
 
@@ -663,6 +663,11 @@ let rec infer_exp i info env record_types (e : exp) : exp =
       let e, t1 = infer_exp e |> textract in
       unify info e t t1;
       texp (ety e t1, t1, e.espan)
+    | EIgnore e ->
+      let e, _t = infer_exp e |> textract in
+      (* unify info e TBool t; *)
+      (* ignore statement has type bool, but inner type can be anything with a default *)
+      texp (eignore e, TBool, e.espan)
   in
   (* Printf.printf "infer_exp: %s\n" (Printing.exp_to_string e) ;
      Printf.printf "type: %s\n" (Printing.ty_to_string (oget exp.ety)) ;

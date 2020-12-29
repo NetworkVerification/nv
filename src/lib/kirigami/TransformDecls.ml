@@ -6,8 +6,6 @@ open Syntax
 open Nv_interpreter
 open SrpRemapping
 
-let ebool b = aexp (e_val (vbool b), Some TBool, Span.default)
-
 let remap_value parted_srp v =
   let { node_map; edge_map; _ } = parted_srp in
   let make_node n = avalue (vnode n, Some TNode, v.vspan) in
@@ -28,10 +26,12 @@ let rec remap_exp parted_srp e =
     e
     (match e.e with
     | EMatch (e1, bs) -> ematch (f e1) (remap_branches parted_srp bs)
-    | EVal v -> (match (remap_value parted_srp v) with
-        | Some v1 -> e_val v1
-        | None -> failwith ("remap_value given " ^ (Printing.value_to_string v) ^ ", which should be cut")
-      )
+    | EVal v ->
+      (match remap_value parted_srp v with
+      | Some v1 -> e_val v1
+      | None ->
+        failwith
+          ("remap_value given " ^ Printing.value_to_string v ^ ", which should be cut"))
     | EOp (op, es) -> remap_exp_op parted_srp op es
     | ESome e -> esome (f e)
     | ETuple es -> etuple (List.map f es)
@@ -40,8 +40,10 @@ let rec remap_exp parted_srp e =
     | EApp (e1, e2) -> eapp (f e1) (f e2)
     | ELet (x, e1, e2) -> elet x (f e1) (f e2)
     | EIf (test, e1, e2) -> eif (f test) (f e1) (f e2)
+    | EIgnore e -> eignore (f e)
     | ERecord _ -> failwith "remap_exp: records should be unrolled"
-    | ETy _ | EVar _ -> e)
+    | ETy (e, t) -> ety (f e) t
+    | EVar _ -> e)
 
 and remap_branches parted_srp bs =
   let { node_map; _ } = parted_srp in
@@ -77,18 +79,18 @@ and remap_exp_op parted_srp op es =
   match ty with
   | TNode ->
     (match op with
-     | Eq | NLess | NLeq ->
-       (* NOTE: won't be able to fix expressions where both sides are non-values *)
-       let remap_node_exp n =
-         if (is_value n) then
-           Option.map e_val (remap_value parted_srp (to_value n))
-         else Some (f n)
-       in
-       let es1 = List.map remap_node_exp es in
-       if List.exists Option.is_none es1 then
-         ebool false
-       else eop op (List.map Option.get es1)
-     | _ -> failwith (Printf.sprintf "unexpected operator %s over nodes" (show_op op)))
+    | Eq | NLess | NLeq ->
+      (* NOTE: won't be able to fix expressions where both sides are non-values *)
+      let remap_node_exp n =
+        if is_value n
+        then Option.map e_val (remap_value parted_srp (to_value n))
+        else Some (f n)
+      in
+      let es1 = List.map remap_node_exp es in
+      if List.exists Option.is_none es1
+      then ebool false
+      else eop op (List.map Option.get es1)
+    | _ -> failwith (Printf.sprintf "unexpected operator %s over nodes" (show_op op)))
   | TEdge -> failwith "not implemented; edges should already be unboxed"
   | _ -> eop op (List.map f es)
 ;;
@@ -100,14 +102,45 @@ let remap_solve parted_srp solve =
   { solve with init; trans; merge }
 ;;
 
+(** Transform a predicate which may contain ignore statements:
+ ** ignore statements not in requires are replaced with "true" and
+ ** ignore statements in requires are replaced with an
+ ** equality which compares the expression with the default value.
+ *)
+let rec transform_ignore is_require e =
+  let f = transform_ignore is_require in
+  wrap
+    e
+    (match e.e with
+    | EIgnore e1 ->
+      if is_require
+      then (
+        let ty = e1.ety |> Option.get in
+        aexp (eop Eq [e1; Generators.default_value_exp ty], Some TBool, e.espan))
+      else ebool true
+    | EMatch (e1, bs) -> ematch (f e1) (mapBranches (fun (p, e) -> p, f e) bs)
+    | EOp (op, es) -> eop op (List.map f es)
+    | ESome e -> esome (f e)
+    | ETuple es -> etuple (List.map f es)
+    | EProject (e, l) -> eproject (f e) l
+    | EFun fn -> efun { fn with body = f fn.body }
+    | EApp (e1, e2) -> eapp (f e1) (f e2)
+    | ELet (x, e1, e2) -> elet x (f e1) (f e2)
+    | EIf (e1, e2, e3) -> eif (f e1) (f e2) (f e3)
+    | ERecord _ -> failwith "transform_ignore: records should be unrolled"
+    | ETy (e, t) -> ety (f e) t
+    | EVal _ | EVar _ -> e)
+;;
+
 (** Remap an and expression by dropping conjuncts that refer to cut nodes.
  ** The and statement is nested as follows:
  ** And (And (And x0 x1) x2) x3
  ** so we need to recurse in until we have dropped the right number of nodes.
  **)
 let rec remap_conjuncts nodes e =
-  if (nodes > 0) then
-    (match e.e with
+  if nodes > 0
+  then (
+    match e.e with
     | EOp (And, [e2; _]) ->
       (* go deeper *)
       remap_conjuncts (nodes - 1) e2
@@ -115,7 +148,7 @@ let rec remap_conjuncts nodes e =
     (* this case should be the last one *)
     | _ -> e)
   else e
-  ;;
+;;
 
 (** Assume the assert is of the form:
  ** assert foldNodes (fun u v acc -> assertNode u v && acc) sol true
@@ -131,18 +164,22 @@ let rec remap_conjuncts nodes e =
  **)
 let transform_assert (e : exp) (parted_srp : SrpRemapping.partitioned_srp) : exp =
   let { nodes; _ } = parted_srp in
-  let e = (match e.e with
-   | EMatch _ ->
-     (* if there is only one branch, use interp to simplify;
-      * we should be left with an EOp statement which we can prune *)
-     let e1 = InterpPartialFull.interp_partial e in
-     (match e1.e with
+  let e =
+    match e.e with
+    | EMatch _ ->
+      (* if there is only one branch, use interp to simplify;
+       * we should be left with an EOp statement which we can prune *)
+      let e1 = InterpPartialFull.interp_partial e in
+      (match e1.e with
       (* we want to supply the *difference* between the current nodes and the
        * number of nodes in the original SRP, because we want to descend down
        * the chain of ands until there are only *nodes* many conjuncts left *)
-     | EOp (And, _) -> remap_conjuncts (get_global_nodes parted_srp - nodes) e1
-     | _ -> print_endline ("not an and: " ^ Printing.exp_to_string e1); e)
-   | _ -> e) in
+      | EOp (And, _) -> remap_conjuncts (get_global_nodes parted_srp - nodes) e1
+      | _ ->
+        print_endline ("not an and: " ^ Printing.exp_to_string e1);
+        e)
+    | _ -> e
+  in
   remap_exp parted_srp e
 ;;
 
@@ -170,23 +207,25 @@ let update_preds interface partitioned_srp =
         (fun input_exps ->
           List.map
             (fun input_exp ->
-               let pred = intf_opt input_exp.edge in
-               (* print_endline (Printing.exp_to_string (Option.get pred)); *)
-               { input_exp with pred })
+              let pred = intf_opt input_exp.edge in
+              let pred = Option.map (transform_ignore true) pred in
+              (* print_endline (Printing.exp_to_string (Option.get pred)); *)
+              { input_exp with pred })
             input_exps)
         partitioned_srp.inputs
   ; outputs =
       VertexMap.map
-        (fun outputs -> List.map (fun (edge, _) -> edge, intf_opt edge) outputs)
+        (fun outputs ->
+          List.map
+            (fun (edge, _) -> edge, Option.map (transform_ignore false) (intf_opt edge))
+            outputs)
         partitioned_srp.outputs
   }
 ;;
 
 (* Transform the given solve and return it along with a new expression to assert
  * and new expressions to require. *)
-let transform_solve solve (partition : partitioned_srp)
-    : partitioned_srp * solve
-  =
+let transform_solve solve (partition : partitioned_srp) : partitioned_srp * solve =
   let partition' = update_preds solve.interface partition in
   let solve' = remap_solve partition' solve in
   (* erase interface information now that it's in the partition *)

@@ -271,6 +271,7 @@ let rec track_tuples_exp e =
   | ETy _
   | ERecord _
   | EProject _
+  | EIgnore _
   | EIf _
   | EOp _ -> ()
 
@@ -362,6 +363,8 @@ and exp_to_ocaml_string e =
   | ETy (e, _) -> exp_to_ocaml_string e
   | ERecord map -> record_to_ocaml_record "=" exp_to_ocaml_string map
   | EProject (e, l) -> Printf.sprintf "(%s.%s)" (exp_to_ocaml_string e) l
+  (* default to true *)
+  | EIgnore _ -> value_to_ocaml_string (vbool true)
 
 and op_args_to_ocaml_string op es =
   match es with

@@ -58,6 +58,9 @@ val get_global_nodes : partitioned_srp -> int
  ** the 0th element of the list remaps to node 0, the 1st remaps to node 1 and so on. *)
 val get_old_nodes : partitioned_srp -> int list
 
+(** Return a string representation of the partitioned SRP. *)
+val string_of_partitioned_srp : partitioned_srp -> string
+
 (** Create a list of partitioned SRP structures,
  * where each structure represents one partition's topological structure
  * for each possible partition in the given declarations.

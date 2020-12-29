@@ -222,6 +222,7 @@
 %token <Nv_datastructures.Span.t> MINUS
 %token <Nv_datastructures.Span.t> FILTER
 %token <Nv_datastructures.Span.t> TSET
+%token <Nv_datastructures.Span.t> IGNORE
 
 %token EOF
 
@@ -341,6 +342,7 @@ expr:
     | COMBINE exprsspace                { exp (eop MMerge $2) $1 }
     | CREATEMAP exprsspace              { exp (eop MCreate $2) $1 }
     | SOME expr                         { exp (esome $2) (Span.extend $1 $2.espan) }
+    | IGNORE expr                       { exp (eignore $2) (Span.extend $1 $2.espan) }
     | NOT expr                          { exp (eop Not [$2]) (Span.extend $1 $2.espan) }
     | expr AND expr                     { exp (eop And [$1;$3]) (Span.extend $1.espan $3.espan) }
     | expr OR expr                      { exp (eop Or [$1;$3]) (Span.extend $1.espan $3.espan) }

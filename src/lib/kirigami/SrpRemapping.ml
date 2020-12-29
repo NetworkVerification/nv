@@ -2,8 +2,10 @@
    after the SRP has been split *)
 open Batteries
 open Nv_datastructures.AdjGraph
+open Nv_lang
 open Nv_lang.Syntax
 open Nv_datastructures
+open Nv_utils.OCamlUtils
 
 (* A record for managing the input node information *)
 type input_exp =
@@ -66,6 +68,33 @@ let get_old_nodes parted_srp =
   in
   let pairs = VertexMap.fold add_node parted_srp.node_map [] in
   List.map (fun (_, u) -> u) (List.sort Pervasives.compare pairs)
+;;
+
+let string_of_input_exp { var; rank; edge; pred } =
+  Printf.sprintf
+    "var %s (%d)\n%s: pred %s"
+    (Var.to_string var)
+    rank
+    (Edge.to_string edge)
+    (ostring Printing.exp_to_string pred)
+;;
+
+let string_of_partitioned_srp p =
+  let nmap = VertexMap.to_string (ostring string_of_int) p.node_map in
+  let output_to_string (e, p) =
+    Printf.sprintf "%s: pred %s" (Edge.to_string e) (ostring Printing.exp_to_string p)
+  in
+  let inputs = VertexMap.to_string (list_to_string string_of_input_exp) p.inputs in
+  let outputs = VertexMap.to_string (list_to_string output_to_string) p.outputs in
+  Printf.sprintf
+    "Partition %d: %d nodes, %d edges\nnode_map:%s\ninputs:\n%s\noutputs:\n%s\n"
+    p.rank
+    p.nodes
+    (List.length p.edges)
+    nmap
+    inputs
+    outputs
+;;
 
 (** Map each vertex in the list of vertices to a partition number.
  *  Return the map and the number of partitions.

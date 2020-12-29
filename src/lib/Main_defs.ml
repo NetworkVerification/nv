@@ -44,17 +44,14 @@ let run_smt_classic_aux file cfg info decls part fs =
   in
   (* NOTE: slicing can introduce units, so if we ever re-introduce it,
    * this code needs to be moved up to use UnboxUnits *)
-  let slices = List.map (dmap (fun (decls, fs) -> decls, fs)) slices
-  in
+  let slices = List.map (dmap (fun (decls, fs) -> decls, fs)) slices in
   let get_answer decls fs =
     let solve_fun =
-      if cfg.kirigami then
-        SmtKirigami.solveKirigami ~part:(part |> oget)
-      else if cfg.hiding then
-          SmtHiding.solve_hiding
-            ~starting_vars:[]
-            ~full_chan:(smt_query_file file)
-        else Smt.solveClassic
+      if cfg.kirigami
+      then SmtKirigami.solveKirigami ~part:(part |> oget)
+      else if cfg.hiding
+      then SmtHiding.solve_hiding ~starting_vars:[] ~full_chan:(smt_query_file file)
+      else Smt.solveClassic
     in
     match solve_fun info cfg.query (smt_query_file file) decls with
     | Unsat -> Success None, []
@@ -112,16 +109,19 @@ let run_smt_classic_aux file cfg info decls part fs =
 ;;
 
 let run_smt_partitioned file cfg info decls parts fs =
-  let pds = Profile.time_profile "Partitioning" (fun () ->
-    List.map
-      (fun p ->
-        let (p, d) = Partition.transform_declarations decls p in
-        if cfg.print_partitions
-        then print_endline (Printing.declarations_to_string d)
-        else ();
-        (Some p, d)) parts)
+  let pds =
+    Profile.time_profile "Partitioning" (fun () ->
+        List.map
+          (fun p ->
+            let p, d = Partition.transform_declarations decls p in
+            if cfg.print_partitions
+            then print_endline (SrpRemapping.string_of_partitioned_srp p)
+            else ();
+            Some p, d)
+          parts)
   in
   List.map (fun (p, d) -> run_smt_classic_aux file cfg info d p fs) pds
+;;
 
 let run_smt_classic file cfg info decls parts fs =
   let decls, fs =
@@ -153,6 +153,7 @@ let run_smt_classic file cfg info decls parts fs =
   match parts with
   | Some p -> run_smt_partitioned file cfg info decls p fs
   | None -> [run_smt_classic_aux file cfg info decls None fs]
+;;
 
 let run_smt file cfg info decls parts fs =
   if cfg.finite_arith then SmtUtils.smt_config.infinite_arith <- false;
@@ -253,8 +254,7 @@ let parse_input_aux cfg info file decls parts fs =
       in
       (* Inline again after unrolling. Could probably optimize this away during unrolling *)
       let decls =
-        Profile.time_profile "Inlining" (fun () ->
-            Inline.inline_declarations decls)
+        Profile.time_profile "Inlining" (fun () -> Inline.inline_declarations decls)
       in
       (* (Typing.infer_declarations info decls, f :: fs) (* TODO: is type inf necessary here?*) *)
       decls, f :: fs)
@@ -263,8 +263,7 @@ let parse_input_aux cfg info file decls parts fs =
   cfg, info, file, decls, parts, fs
 ;;
 
-let parse_input (args : string array)
-  =
+let parse_input (args : string array) =
   let cfg, rest = argparse default "nv" args in
   Cmdline.set_cfg cfg;
   Cmdline.update_cfg_dependencies ();

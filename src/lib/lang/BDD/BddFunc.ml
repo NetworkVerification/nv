@@ -648,7 +648,8 @@ let rec eval (env : t Env.t) (e : exp) : t =
   | EMatch (e1, branches) ->
     let v1 = eval env e1 in
     eval_matches env (oget e1.ety) v1 branches (Value (BddMap.default_value (oget e.ety)))
-  | EFun _ | EApp _ | ERecord _ | EProject _ -> failwith "internal error (eval)"
+  | EFun _ | EApp _ | ERecord _ | EProject _ | EIgnore _ ->
+    failwith "internal error (eval)"
 
 and eval_matches env key_ty v1 branches default =
   if isEmptyBranch branches
@@ -874,7 +875,7 @@ and eval_branch env (g : t) p =
           and the conditions and use them to return the right value
           from the env. *)
     (*NOTE: will their be conditions under each match holds? These are concrete
-    values, maybe this can be simplified. *)
+      values, maybe this can be simplified. *)
     let matches =
       Mtbdd.guardleafs
         (Mapleaf.mapleaf1

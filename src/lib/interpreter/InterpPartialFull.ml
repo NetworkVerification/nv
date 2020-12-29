@@ -324,6 +324,7 @@ let rec interp_exp_partial (env : Syntax.exp Env.t) e =
         (etuple (BatList.map (fun e -> snd (interp_exp_partial env e)) es), e.ety, e.espan)
     )
   | ESome e' -> env, aexp (esome (snd (interp_exp_partial env e')), e.ety, e.espan)
+  | EIgnore e' -> env, aexp (eignore (snd (interp_exp_partial env e')), e.ety, e.espan)
   | EMatch (e1, branches) ->
     let _, pe1 = interp_exp_partial env e1 in
     (match match_branches branches pe1 with

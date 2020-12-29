@@ -19,17 +19,20 @@ type transform_result =
 let get_hyp_symbolics ty partitions =
   let add_partition_hyps l part =
     VertexMap.fold
-      (fun _ input_exps l -> (List.map (fun ie -> DSymbolic (ie.var, Ty ty)) input_exps) @ l)
+      (fun _ input_exps l ->
+        List.map (fun ie -> DSymbolic (ie.var, Ty ty)) input_exps @ l)
       part.inputs
       l
   in
   List.fold_left add_partition_hyps [] partitions
+;;
 
 let valid_hyps parted_srp =
   let get_vars _ input_exps l =
-    (List.map (fun ie -> "symbolic-" ^ Var.name ie.var) input_exps) @ l
+    List.map (fun ie -> "symbolic-" ^ Var.name ie.var) input_exps @ l
   in
   VertexMap.fold get_vars parted_srp.inputs []
+;;
 
 (** Return a transformed version of the given declaration, and optionally any new Kirigami constraints
  ** that need to be added with it. *)
@@ -45,7 +48,8 @@ let transform_declaration parted_srp decl : transform_result =
      * print_endline (Nv_utils.OCamlUtils.list_to_string (fun s -> s) valid_hyps); *)
     (* get the original variable form in case it's been projected *)
     let v = snd (unproj_var v) in
-    if (String.starts_with (Var.name v) "symbolic-hyp" && not (List.mem (Var.name v) valid_hyps))
+    if String.starts_with (Var.name v) "symbolic-hyp"
+       && not (List.mem (Var.name v) valid_hyps)
     then None
     else Network decl
   | DSolve s ->

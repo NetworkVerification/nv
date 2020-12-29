@@ -86,6 +86,7 @@ and show_e ~show_meta e =
   | ETy (e, ty) -> Printf.sprintf "ETy (%s,%s)" (show_exp ~show_meta e) (show_ty ty)
   | ERecord map -> show_record (show_exp ~show_meta) "ERecord" map
   | EProject (e, label) -> Printf.sprintf "%s.%s" (show_exp ~show_meta e) label
+  | EIgnore e -> Printf.sprintf "EIgnore (%s)" (show_exp ~show_meta e)
 
 and show_func ~show_meta f =
   Printf.sprintf

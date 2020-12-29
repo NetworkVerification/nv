@@ -106,8 +106,7 @@ module Pat = struct
         0
         ps1
         ps2
-    | _, _ ->
-      failwith (Printf.sprintf "No comparison between non-concrete patterns")
+    | _, _ -> failwith (Printf.sprintf "No comparison between non-concrete patterns")
   ;;
 end
 
@@ -154,6 +153,7 @@ and e =
   | ETy of exp * ty
   | ERecord of exp StringMap.t
   | EProject of exp * string
+  | EIgnore of exp
 [@@deriving ord]
 
 and exp =
@@ -448,6 +448,7 @@ and equal_es ~cmp_meta e1 e2 =
   | ERecord map1, ERecord map2 -> StringMap.equal (equal_exps ~cmp_meta) map1 map2
   | EProject (e1, label1), EProject (e2, label2) ->
     String.equal label1 label2 && equal_exps ~cmp_meta e1 e2
+  | EIgnore e3, EIgnore e4 -> equal_exps ~cmp_meta e3 e4
   | _, _ -> false
 
 and equal_lists_es ~cmp_meta es1 es2 =
@@ -619,6 +620,7 @@ and hash_e ~hash_meta e =
     * StringMap.fold (fun l e acc -> acc + +hash_string l + hash_exp ~hash_meta e) map 0)
     + 11
   | EProject (e, label) -> (19 * hash_exp ~hash_meta e) + hash_string label + 12
+  | EIgnore e -> (19 * hash_exp ~hash_meta e) + 13
 
 and hash_var x = hash_string (Var.to_string x)
 and hash_es ~hash_meta es = List.fold_left (fun acc e -> acc + hash_exp ~hash_meta e) 0 es
@@ -782,6 +784,8 @@ let erecord map = exp (ERecord map)
 let esome e = exp (ESome e)
 let ematch e bs = exp (EMatch (e, bs))
 let ety e ty = exp (ETy (e, ty))
+let eignore e = exp (EIgnore e)
+let ebool b = aexp (e_val (vbool b), Some TBool, Span.default)
 let empty_env = { ty = Env.empty; value = Env.empty }
 let update_value env x v = { env with value = Env.update env.value x v }
 
@@ -802,7 +806,8 @@ let rec is_value e =
   | ERecord map -> StringMap.for_all (fun _ e -> is_value e) map
   | ESome e -> is_value e
   | ETy (e, _) -> is_value e
-  | EVar _ | EOp _ | EFun _ | EApp _ | EIf _ | ELet _ | EMatch _ | EProject _ -> false
+  | EVar _ | EOp _ | EFun _ | EApp _ | EIf _ | ELet _ | EMatch _ | EProject _ | EIgnore _
+    -> false
 ;;
 
 let rec to_value e =
@@ -854,15 +859,15 @@ let rec exp_to_pattern e =
   | ETy (e, _) -> exp_to_pattern e
   | EVar x -> PVar x
   | ERecord rs -> PRecord (StringMap.map exp_to_pattern rs)
-  | EProject _ | EOp _ | EFun _ | EApp _ | EIf _ | ELet _ | EMatch _ ->
+  | EProject _ | EOp _ | EFun _ | EApp _ | EIf _ | ELet _ | EMatch _ | EIgnore _ ->
     failwith "can't use these expressions as patterns"
 ;;
 
 (* e must be a literal *)
 let rec exp_to_value (e : exp) : value =
   match e.e with
-  | EVar _ | EOp _ | EFun _ | EApp _ | EIf _ | ELet _ | EMatch _ | EProject _ ->
-    failwith "Not a literal"
+  | EVar _ | EOp _ | EFun _ | EApp _ | EIf _ | ELet _ | EMatch _ | EProject _ | EIgnore _
+    -> failwith "Not a literal"
   | ESome exp2 -> voption (Some (exp_to_value exp2))
   | ETuple es -> vtuple (List.map exp_to_value es)
   | EVal v -> v
@@ -1154,6 +1159,7 @@ let rec get_exp_vars (e : exp) : var list =
   | ETy (e, t) -> get_exp_vars e @ get_ty_vars t
   | ERecord em -> StringMap.fold (fun _s e l -> get_exp_vars e @ l) em []
   | EProject (e, _s) -> get_exp_vars e
+  | EIgnore e -> get_exp_vars e
   | _ -> []
 ;;
 
@@ -1199,7 +1205,7 @@ let rec free (seen : Var.t PSet.t) (e : exp) : Var.t PSet.t =
   | ELet (x, e1, e2) ->
     let seen = PSet.add x seen in
     PSet.union (free seen e1) (free seen e2)
-  | ESome e | ETy (e, _) | EProject (e, _) -> free seen e
+  | ESome e | ETy (e, _) | EProject (e, _) | EIgnore e -> free seen e
   | EMatch (e, bs) ->
     let bs1 =
       PatMap.fold
@@ -1239,7 +1245,7 @@ let rec free_ty (seen : Var.t PSet.t) (e : exp) : (Var.t * ty) PSet.t =
   | ELet (x, e1, e2) ->
     let seen = PSet.add x seen in
     PSet.union (free_ty seen e1) (free_ty seen e2)
-  | ESome e | ETy (e, _) | EProject (e, _) -> free_ty seen e
+  | ESome e | ETy (e, _) | EProject (e, _) | EIgnore e -> free_ty seen e
   | EMatch (e, bs) ->
     let bs1 =
       PatMap.fold
@@ -1295,6 +1301,7 @@ let rec free_dead_vars (e : exp) =
     let e1 = free_dead_vars e1 in
     ematch e1 (mapBranches (fun (ps, e) -> ps, free_dead_vars e) branches)
   | EProject (e, l) -> eproject (free_dead_vars e) l
+  | EIgnore e -> eignore (free_dead_vars e)
 ;;
 
 let compare_vs = compare_value

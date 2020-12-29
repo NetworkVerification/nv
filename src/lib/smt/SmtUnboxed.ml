@@ -282,7 +282,7 @@ module Unboxed : SmtEncodingSigs.ExprEncoding = struct
       (* Printf.printf "expr: %s\n" (Printing.exp_to_string e); *)
       (* we always know this is going to be a singleton list *)
       let es = encode_exp_z3 descr env e in
-      assert ((List.length es) = 1);
+      assert (List.length es = 1);
       BatList.hd es
 
   and encode_exp_z3 descr env (e : exp) : term list =
@@ -321,8 +321,7 @@ module Unboxed : SmtEncodingSigs.ExprEncoding = struct
         let ze1 = encode_exp_z3 descr env e1 in
         let ze2 = encode_exp_z3_single descr env e2 in
         BatList.modify_at lo (fun _ -> ze2) ze1
-      | _ ->
-        [encode_exp_z3_single descr env e])
+      | _ -> [encode_exp_z3_single descr env e])
     | EVal v
       when match v.vty with
            | Some (TTuple _) -> true
@@ -359,6 +358,7 @@ module Unboxed : SmtEncodingSigs.ExprEncoding = struct
     | ETy (e, _) -> encode_exp_z3 descr env e
     | EFun _ | EApp _ -> failwith "function in smt encoding"
     | ERecord _ | EProject _ -> failwith "record in smt encoding"
+    | EIgnore _ -> failwith "ignore in smt encoding"
     | _ ->
       (* Printf.printf "expr: %s\n" (Syntax.show_exp ~show_meta:false e); *)
       [encode_exp_z3_single descr env e]

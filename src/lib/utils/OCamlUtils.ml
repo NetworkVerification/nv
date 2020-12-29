@@ -13,17 +13,25 @@ let omap (f : 'a -> 'b) (x : 'a option) : 'b option =
   | Some y -> Some (f y)
 ;;
 
+let ostring (f : 'a -> string) (x : 'a option) : string =
+  match x with
+  | None -> "None"
+  | Some v -> "Some " ^ f v
+;;
+
 (*** Delayed computation ***)
 type 'a delayed = unit -> 'a
 
 let dmap (f : 'a -> 'b) (x : 'a delayed) : 'b delayed = fun () -> f (x ())
 
 (*** List Utilities ***)
+
 (** Generate an ascending list of numbers [0,n). *)
 let rec list_seq n =
   match n with
   | 0 -> []
-  | _ -> (list_seq (n - 1)) @ [n - 1]
+  | _ -> list_seq (n - 1) @ [n - 1]
+;;
 
 let rec list_to_string f lst =
   Printf.sprintf "[%s]" @@ BatString.concat ";" @@ List.map f lst
@@ -61,7 +69,7 @@ let rec split3 lst =
   match lst with
   | [] -> [], [], []
   | (h1, h2, h3) :: t ->
-    let (t1, t2, t3) = split3 t in
+    let t1, t2, t3 = split3 t in
     h1 :: t1, h2 :: t2, h3 :: t3
 ;;
 

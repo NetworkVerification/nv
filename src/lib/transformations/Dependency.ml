@@ -111,6 +111,7 @@ let rec compute_dependencies_exp (acc : depmap) (e : exp) : depresult =
   | EFun _ | EApp _ -> failwith "Must inline before doing dependency analysis"
   | ERecord _ | EProject _ ->
     failwith "Must unroll records before doing dependency analysis"
+  | EIgnore _ -> failwith "Must simplify ignores before doing dependency analysis"
 
 and compute_dependencies_branch acc test_deps (pat, body) : depresult =
   (* Printf.printf "On branch %s -> %s\n" (Printing.pattern_to_string pat) (Printing.exp_to_string body); *)

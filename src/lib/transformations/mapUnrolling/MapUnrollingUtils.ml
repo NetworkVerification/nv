@@ -93,7 +93,7 @@ let rec collect_in_exp (symbolics : var list) (exp : Syntax.exp) (acc : maplist)
   | ETuple es -> BatList.fold_left (BatPervasives.flip collect_in_exp) acc es
   | ERecord map -> StringMap.fold (fun _ -> collect_in_exp) map acc
   | EProject _ -> failwith ""
-  | ESome e -> collect_in_exp e acc
+  | ESome e | EIgnore e -> collect_in_exp e acc
   | EMatch (e, branches) ->
     let acc = collect_in_exp e acc in
     foldBranches (fun (_, e) acc -> collect_in_exp e acc) acc branches

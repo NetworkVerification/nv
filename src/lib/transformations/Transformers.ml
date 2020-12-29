@@ -145,6 +145,7 @@ and transform_exp ~(name : string) (transformers : transformers) (e : exp) : exp
       | ETuple es -> etuple (List.map transform_exp es)
       | ERecord map -> erecord (StringMap.map transform_exp map)
       | EProject (e, l) -> eproject (transform_exp e) l
+      | EIgnore e -> eignore (transform_exp e)
       | EFun f ->
         efun
           { f with
@@ -195,7 +196,8 @@ let transform_decl ~(name : string) (transformers : transformers) (d : declarati
       , transform_exp trans
       , transform_exp merge )
     in
-    DSolve { aty = omap transform_ty aty; var_names; init; trans; merge; interface; decomp }
+    DSolve
+      { aty = omap transform_ty aty; var_names; init; trans; merge; interface; decomp }
   | DSymbolic (x, toe) ->
     let x, toe' = transform_symbolic (x, toe) in
     DSymbolic (x, toe')
@@ -223,8 +225,7 @@ let rec map_back_value
     | VOption (Some v'), TOption ty' -> voption (Some (map_back_value v' ty'))
     | VTuple vs, TTuple tys -> vtuple (List.map2 map_back_value vs tys)
     | VRecord vmap, TRecord tmap ->
-      vrecord
-      @@ StringMap.mapi (fun l v -> map_back_value v (StringMap.find l tmap)) vmap
+      vrecord @@ StringMap.mapi (fun l v -> map_back_value v (StringMap.find l tmap)) vmap
     | VMap bdd, TMap (_kty, vty) ->
       let op_key = e_val v, BatSet.PSet.empty in
       vmap (BddMap.map op_key (fun v -> map_back_value v vty) bdd)

@@ -77,7 +77,7 @@ let rec check_closure info (x : VarSet.t) (e : exp) =
   | ETuple es -> List.iter (check_closure info x) es
   | ERecord map -> StringMap.iter (fun _ -> check_closure info x) map
   | EProject (e, _) -> check_closure info x e
-  | ESome e -> check_closure info x e
+  | ESome e | EIgnore e -> check_closure info x e
   | EMatch (e, bs) ->
     check_closure info x e;
     iterBranches
