@@ -36,7 +36,7 @@ let isSome x = match x with
  | _ -> true
 
 let interface e = match e with
- | 1~2 -> (fun a -> match a with | None -> false | Some r -> !r.tags[2])
+ | 1~2 -> (fun a -> match a with | None -> false | Some r -> ignore r.tags)
  | 2~1 -> fun a -> true
 
 let sol = solution { init = init; trans = trans; merge = merge; interface = interface; rtrans = trans }

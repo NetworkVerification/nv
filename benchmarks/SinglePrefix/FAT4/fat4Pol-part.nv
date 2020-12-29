@@ -109,9 +109,6 @@ let betterOspf o1 o2 =
 let betterBgp b1 b2 =
   if b1.lp > b2.lp then true
   else if b2.lp > b1.lp then false
-  (* add community tag tiebreak *)
-  else if (b1.comms[65538] || b1.comms[65537] || b1.comms[65536]) then false
-  else if (b2.comms[65538] || b2.comms[65537] || b2.comms[65536]) then true
   else if b1.aslen < b2.aslen then true
   else if b2.aslen < b1.aslen then false
   else if b1.med >= b2.med then true else false
@@ -399,7 +396,7 @@ if (d = (1174407682, 31u6)) || (d = (167773696, 31u6)) || (d = (167773184, 31u6)
   | Some prot ->
     (let b = if (prot = 3u2) then match x0.bgp with
                   | None -> ({bgpAd = 20u8; lp = 100; aslen = 0; med = 80; comms = {}})
-                  | Some b -> { b with lp = 100; med = 80; }
+                  | Some b -> b
           else ({bgpAd = 20u8; lp = 100; aslen = 0; med = 80; comms = {}}) in
   match e with
    | (0~18) ->
@@ -1695,8 +1692,6 @@ let partition node = match node with
 let interface edge =
   let any x = true
     in
-    let exclude v bgp = !bgp.comms[v] in
-    let include v bgp = bgp.comms[v] in
     let hasOnlyBgp f x =
       match x with
       | { connected = c; static = s; ospf = o; bgp = b; selected = sel } ->
@@ -1704,29 +1699,23 @@ let interface edge =
         | Some b1 -> f b1
         | None -> false)
     in
-    let spine b =
-      exclude 393216 b && exclude 262144 b && exclude 262145 b
-      && exclude 262146 b && exclude 65537 b && exclude 65536 b
-      && exclude 65538 b && exclude 327680 b && exclude 327681 b
-      && exclude 327682 b && include 131075 b
-    in
     match edge with
-  | 1~14 -> hasOnlyBgp (fun b -> exclude 262144 b && exclude 327680 b)
-  | 1~16 -> hasOnlyBgp (fun b -> exclude 262145 b && exclude 327681 b)
-  | 1~18 -> hasOnlyBgp (fun b -> exclude 262146 b && exclude 327682 b)
-  | 3~14 -> hasOnlyBgp (fun b -> exclude 262144 b && exclude 327680 b)
-  | 3~16 -> hasOnlyBgp (fun b -> exclude 262145 b && exclude 327681 b)
-  | 3~18 -> hasOnlyBgp (fun b -> exclude 262146 b && exclude 327682 b)
-  | 4~13 -> hasOnlyBgp (fun b -> exclude 262144 b && exclude 327680 b)
-  | 4~15 -> hasOnlyBgp (fun b -> exclude 262145 b && exclude 327681 b)
-  | 4~17 -> hasOnlyBgp (fun b -> exclude 262146 b && exclude 327682 b)
-  | 6~4 -> hasOnlyBgp spine
-  | 6~7 -> hasOnlyBgp spine
-  | 7~13 -> hasOnlyBgp (fun b -> exclude 262144 b && exclude 327680 b)
-  | 7~15 -> hasOnlyBgp (fun b -> exclude 262145 b && exclude 327681 b)
-  | 7~17 -> hasOnlyBgp(fun b -> exclude 262146 b && exclude 327682 b)
-  | 8~1 -> hasOnlyBgp spine
-  | 8~3 -> hasOnlyBgp spine
+  | 1~14 -> hasOnlyBgp (fun b -> ignore b.comms)
+  | 1~16 -> hasOnlyBgp (fun b -> ignore b.comms)
+  | 1~18 -> hasOnlyBgp (fun b -> ignore b.comms)
+  | 3~14 -> hasOnlyBgp (fun b -> ignore b.comms)
+  | 3~16 -> hasOnlyBgp (fun b -> ignore b.comms)
+  | 3~18 -> hasOnlyBgp (fun b -> ignore b.comms)
+  | 4~13 -> hasOnlyBgp (fun b -> ignore b.comms)
+  | 4~15 -> hasOnlyBgp (fun b -> ignore b.comms)
+  | 4~17 -> hasOnlyBgp (fun b -> ignore b.comms)
+  | 6~4 -> hasOnlyBgp (fun b -> ignore b.comms)
+  | 6~7 -> hasOnlyBgp (fun b -> ignore b.comms)
+  | 7~13 -> hasOnlyBgp (fun b -> ignore b.comms)
+  | 7~15 -> hasOnlyBgp (fun b -> ignore b.comms)
+  | 7~17 -> hasOnlyBgp (fun b -> ignore b.comms)
+  | 8~1 -> hasOnlyBgp (fun b -> ignore b.comms)
+  | 8~3 -> hasOnlyBgp (fun b -> ignore b.comms)
   | _ -> any
 
 let sol = solution { init = init; trans = trans; merge = merge; interface = interface; rtrans = trans }
