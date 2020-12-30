@@ -17,7 +17,7 @@ type input_exp =
     rank : int
   ; (* the associated predicate expression: a function over attributes *)
     (* optional: if not given, then assumed to always hold (true) *)
-    pred : exp option
+    preds : exp list
   }
 
 (** A type for transforming the declarations over the old SRP
@@ -52,7 +52,7 @@ type partitioned_srp =
      * output node as an `assert` on the solution
      *)
     inputs : input_exp list VertexMap.t
-  ; outputs : (Edge.t * exp option) list VertexMap.t
+  ; outputs : (Edge.t * exp list) list VertexMap.t
   }
 
 (** Return the number of nodes in the global network. *)
@@ -70,19 +70,22 @@ let get_old_nodes parted_srp =
   List.map (fun (_, u) -> u) (List.sort Pervasives.compare pairs)
 ;;
 
-let string_of_input_exp { var; rank; edge; pred } =
+let string_of_input_exp { var; rank; edge; preds } =
   Printf.sprintf
-    "var %s (%d)\n%s: pred %s"
+    "var %s (%d)\n%s: preds %s"
     (Var.to_string var)
     rank
     (Edge.to_string edge)
-    (ostring Printing.exp_to_string pred)
+    (list_to_string Printing.exp_to_string preds)
 ;;
 
 let string_of_partitioned_srp p =
   let nmap = VertexMap.to_string (ostring string_of_int) p.node_map in
   let output_to_string (e, p) =
-    Printf.sprintf "%s: pred %s" (Edge.to_string e) (ostring Printing.exp_to_string p)
+    Printf.sprintf
+      "%s: preds %s"
+      (Edge.to_string e)
+      (list_to_string Printing.exp_to_string p)
   in
   let inputs = VertexMap.to_string (list_to_string string_of_input_exp) p.inputs in
   let outputs = VertexMap.to_string (list_to_string output_to_string) p.outputs in
@@ -186,8 +189,7 @@ let map_edges_to_parts partitions (old_edge, (edge, srp_edge)) =
       if i1 = j
       then
         { partition with
-          outputs =
-            VertexMap.modify_def [] u (List.cons (old_edge, None)) partition.outputs
+          outputs = VertexMap.modify_def [] u (List.cons (old_edge, [])) partition.outputs
         }
       else if (* input case *)
               i2 = j
@@ -195,7 +197,7 @@ let map_edges_to_parts partitions (old_edge, (edge, srp_edge)) =
         (* construct the record of the new input information: used when creating the
          * symbolic variable and the require predicate *)
         let hyp_var = Var.fresh (Printf.sprintf "hyp_%s" (Edge.to_string old_edge)) in
-        let input_exp = { edge = old_edge; var = hyp_var; rank = i1; pred = None } in
+        let input_exp = { edge = old_edge; var = hyp_var; rank = i1; preds = [] } in
         { partition with
           inputs = VertexMap.modify_def [] v (List.cons input_exp) partition.inputs
         })

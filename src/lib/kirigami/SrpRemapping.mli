@@ -13,7 +13,7 @@ type input_exp =
     rank : int
   ; (* the associated predicate expression: a function over attributes *)
     (* optional: if not given, then assumed to always hold *)
-    pred : exp option
+    preds : exp list
   }
 
 (** A type for transforming the declarations over the old SRP
@@ -48,7 +48,7 @@ type partitioned_srp =
      * output node as an `assert` on the solution
      *)
     inputs : input_exp list VertexMap.t
-  ; outputs : (Edge.t * exp option) list VertexMap.t
+  ; outputs : (Edge.t * exp list) list VertexMap.t
   }
 
 (** Return the number of nodes in the global network. *)

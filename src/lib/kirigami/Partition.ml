@@ -61,18 +61,11 @@ let transform_declaration parted_srp decl : transform_result =
 ;;
 
 let transform_declarations decls parted_srp =
-  let transformed_decls = List.map (transform_declaration parted_srp) decls in
-  (* divide up the declarations as appropriate *)
-  let rec split_decls (net, part) l =
-    match l with
-    | [] -> net, part
-    | h :: t ->
-      (match h with
-      | Network d -> split_decls (d :: net, part) t
-      | Solution (d, p) -> split_decls (d :: net, p) t
-      | None -> split_decls (net, part) t)
+  let add_new_decl (part, decls) d =
+    match transform_declaration part d with
+    | Network d -> part, d :: decls
+    | Solution (d, p) -> p, d :: decls
+    | None -> part, decls
   in
-  let decls, part = split_decls ([], parted_srp) transformed_decls in
-  (* FIXME: this leads to issues if there are multiple solves *)
-  part, decls
+  List.fold_left add_new_decl (parted_srp, []) decls
 ;;
