@@ -117,11 +117,11 @@ let collect_in_decl (symbolics : var list) (d : declaration) (acc : maplist) : m
   | DUserTy (_, ty) -> collect_in_ty ty acc
   | DAssert exp | DPartition exp (* partitioning *) | DRequire exp ->
     collect_in_exp exp acc
-  | DSolve { var_names; init; trans; merge; interface; decomp; _ } ->
+  | DSolve { var_names; init; trans; merge; interface; decomp; global } ->
     let explist =
       match decomp with
-      | Some (lt, rt) -> [interface; lt; rt]
-      | None -> [interface]
+      | Some (lt, rt) -> [interface; lt; rt; global]
+      | None -> [interface; global]
     in
     List.fold_right
       collect_in_exp

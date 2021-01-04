@@ -325,9 +325,7 @@ let construct_starting_env (full_env : smt_env) : smt_env * hiding_map =
 (* Gets a different kind of model than the code in Smt.ml: here, we want values
    for each _SMT_ variable, rather than for the corresponding NV variables *)
 let get_model verbose info _query _chan solver =
-  let q =
-    Printf.sprintf "%s\n" (GetModel |> mk_command |> command_to_smt verbose info)
-  in
+  let q = Printf.sprintf "%s\n" (GetModel |> mk_command |> command_to_smt verbose info) in
   (* if query then
      printQuery chan q; *)
   ask_solver_blocking solver q;
@@ -531,6 +529,7 @@ let solve_hiding info query partial_chan ~full_chan ?(starting_vars = []) ~decls
         renaming
         (list_seq nodes)
         (List.length (get_asserts decls))
+        0
         0
     in
     time_profile_absolute "Solving with hiding" (fun () ->

@@ -12,13 +12,12 @@ open Nv_utils.OCamlUtils
 (** Emits the code that evaluates the model returned by Z3. *)
 let eval_model
     (symbolics : Syntax.ty_or_exp VarMap.t)
-    (num_nodes : int list)
     (assertions : int)
     (guarantees : int)
+    (globals : int)
     (renaming : string StringMap.t * smt_term StringMap.t)
     : command list
   =
-  ignore num_nodes;
   let renaming, valMap = renaming in
   let var x = "Var:" ^ x in
   let find_renamed_term str =
@@ -31,6 +30,17 @@ let eval_model
     mk_term smt_term
   in
   let base = [mk_echo "\"end_of_model\"" |> mk_command] in
+  let global_cmds =
+    List.fold_lefti
+      (fun acc i _ ->
+        let assu = Printf.sprintf "assert-global-%d" i in
+        let tm = find_renamed_term assu in
+        let ev = mk_eval tm |> mk_command in
+        let ec = mk_echo ("\"" ^ var assu ^ "\"") |> mk_command in
+        ec :: ev :: acc)
+      base
+      (list_seq globals)
+  in
   (* Compute eval statements for guarantees (Kirigami) *)
   let guarantee_cmds =
     List.fold_lefti
@@ -40,7 +50,7 @@ let eval_model
         let ev = mk_eval tm |> mk_command in
         let ec = mk_echo ("\"" ^ var assu ^ "\"") |> mk_command in
         ec :: ev :: acc)
-      base
+      global_cmds
       (list_seq guarantees)
   in
   (* Compute eval statements for assertions *)
@@ -124,6 +134,7 @@ let translate_model_unboxed nodes (m : (string, string) BatMap.t) : Nv_solution.
           in
           symbolics, solves, assertions, guar :: guarantees
         | k when BatString.starts_with k "assert" ->
+          (* TODO: make sure this works for assert-globals *)
           let asn =
             match nvval.v with
             | VBool b -> b

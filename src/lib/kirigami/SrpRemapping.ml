@@ -99,8 +99,8 @@ let string_of_partitioned_srp p =
 ;;
 
 let map_predicates f partitioned_srp =
-  let inf ie = { ie with preds = f ie.edge true :: ie.preds } in
-  let outf (e, ps) = e, f e false :: ps in
+  let inf ie = { ie with preds = f ie.edge true ie.preds } in
+  let outf (e, ps) = e, f e false ps in
   { partitioned_srp with
     inputs = VertexMap.map (fun is -> List.map inf is) partitioned_srp.inputs
   ; outputs = VertexMap.map (fun os -> List.map outf os) partitioned_srp.outputs

@@ -118,7 +118,7 @@ let check_annot_decl (d : declaration) =
   | DAssert e
   | DPartition e (* partitioning *)
   | DRequire e -> check_annot e
-  | DSolve { var_names; init; trans; merge; interface; decomp; _ } ->
+  | DSolve { var_names; init; trans; merge; interface; decomp; global } ->
     let check_opt o =
       match o with
       | Some e -> check_annot e
@@ -133,7 +133,8 @@ let check_annot_decl (d : declaration) =
     | Some (lt, rt) ->
       check_opt lt;
       check_opt rt
-    | None -> ())
+    | None -> ());
+    check_opt global
   | DNodes _ | DEdges _ | DSymbolic _ | DUserTy _ -> ()
 ;;
 

@@ -64,7 +64,10 @@ val string_of_partitioned_srp : partitioned_srp -> string
 (** Map a function over the inputs and outputs of the partitioned SRP.
  ** The function should take an edge as an argument and a boolean as its second argument;
  ** the boolean will be true for inputs and false for outputs. *)
-val map_predicates : (Edge.t -> bool -> exp) -> partitioned_srp -> partitioned_srp
+val map_predicates
+  :  (Edge.t -> bool -> exp list -> exp list)
+  -> partitioned_srp
+  -> partitioned_srp
 
 (** Create a list of partitioned SRP structures,
  * where each structure represents one partition's topological structure

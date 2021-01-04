@@ -96,14 +96,15 @@ let process_includes (fname : string) : string list =
   List.rev imports
 ;;
 
-module DeclG = Graph.Persistent.Digraph.Concrete(struct
-    type t = Syntax.declaration
-    let compare = Pervasives.compare
-    let equal = (fun a b -> compare a b = 0)
-    let hash = Hashtbl.hash
-  end)
+module DeclG = Graph.Persistent.Digraph.Concrete (struct
+  type t = Syntax.declaration
 
-module DeclSort = Graph.Topological.Make(DeclG)
+  let compare = Pervasives.compare
+  let equal a b = compare a b = 0
+  let hash = Hashtbl.hash
+end)
+
+module DeclSort = Graph.Topological.Make (DeclG)
 
 (** Compute two maps:
   * - the map from each declaration to the list of variables it depends on.
@@ -113,51 +114,81 @@ module DeclSort = Graph.Topological.Make(DeclG)
 *)
 let get_decl_vars (var_m, decl_m) d =
   let open Syntax in
-  let extend_map_list k newv m = Map.modify_opt k (fun oldv -> match oldv with
-      | Some old -> Some (newv @ old)
-      | None -> Some (newv)) m
+  let extend_map_list k newv m =
+    Map.modify_opt
+      k
+      (fun oldv ->
+        match oldv with
+        | Some old -> Some (newv @ old)
+        | None -> Some newv)
+      m
   in
   match d with
-  | DLet (v, _, e) -> let vars = get_exp_vars e in
-    (extend_map_list d vars var_m, Map.add v d decl_m)
-  | DSymbolic (v, t_or_e) -> let deps = match t_or_e with
-      | Ty t -> (get_ty_vars t)
-      | Exp e -> (get_exp_vars e)
-    in (extend_map_list d deps var_m, Map.add v d decl_m)
-  | DUserTy (v, t) -> let deps = get_ty_vars t in
-    (extend_map_list d deps var_m, Map.add v d decl_m)
-  | DAssert e -> (extend_map_list d (get_exp_vars e) var_m, decl_m)
-  | DRequire e -> (extend_map_list d (get_exp_vars e) var_m, decl_m)
-  | DPartition e -> (extend_map_list d (get_exp_vars e) var_m, decl_m)
-  | DSolve {aty; var_names; init; trans; merge; interface} -> begin
-      let ty_vars = match aty with
-        | Some t -> (get_ty_vars t)
-        | None -> [] in
-      let interface_vars = match interface with
-        | Some i -> (get_exp_vars i)
-        | None -> [] in
-      (extend_map_list d (ty_vars @
-                          (get_exp_vars var_names) @
-                          (get_exp_vars init) @
-                          (get_exp_vars trans) @
-                          (get_exp_vars merge) @ interface_vars) var_m, decl_m)
-    end
+  | DLet (v, _, e) ->
+    let vars = get_exp_vars e in
+    extend_map_list d vars var_m, Map.add v d decl_m
+  | DSymbolic (v, t_or_e) ->
+    let deps =
+      match t_or_e with
+      | Ty t -> get_ty_vars t
+      | Exp e -> get_exp_vars e
+    in
+    extend_map_list d deps var_m, Map.add v d decl_m
+  | DUserTy (v, t) ->
+    let deps = get_ty_vars t in
+    extend_map_list d deps var_m, Map.add v d decl_m
+  | DAssert e -> extend_map_list d (get_exp_vars e) var_m, decl_m
+  | DRequire e -> extend_map_list d (get_exp_vars e) var_m, decl_m
+  | DPartition e -> extend_map_list d (get_exp_vars e) var_m, decl_m
+  | DSolve { aty; var_names; init; trans; merge; interface; decomp; global } ->
+    let oget_exp_vars o =
+      match o with
+      | Some e -> get_exp_vars e
+      | None -> []
+    in
+    let ty_vars =
+      match aty with
+      | Some t -> get_ty_vars t
+      | None -> []
+    in
+    let decomp_vars =
+      match decomp with
+      | Some (lt, rt) -> oget_exp_vars lt @ oget_exp_vars rt
+      | None -> []
+    in
+    ( extend_map_list
+        d
+        (ty_vars
+        @ get_exp_vars var_names
+        @ get_exp_vars init
+        @ get_exp_vars trans
+        @ get_exp_vars merge
+        @ oget_exp_vars interface
+        @ decomp_vars
+        @ oget_exp_vars global)
+        var_m
+    , decl_m )
   (* DNodes and DEdges *)
-  | _ -> (extend_map_list d [] var_m, decl_m)
+  | _ -> extend_map_list d [] var_m, decl_m
+;;
 
 let sort_decls ds =
   let open Syntax in
   let open Nv_datastructures.AdjGraph in
   (* Add a dependency from k to each decl in decls in g;
    * we add k to the graph as well in case it has no dependencies *)
-  let add_dep k decls g = List.fold_left (fun g v -> DeclG.add_edge g k v) (DeclG.add_vertex g k) decls in
+  let add_dep k decls g =
+    List.fold_left (fun g v -> DeclG.add_edge g k v) (DeclG.add_vertex g k) decls
+  in
   (* Ordering:
    * - Sort the user-defined types
    * - Sort the symbolics based on which depends on another
    * - Sort the let bindings based on which depends on another
    * - Add links from the let bindings to all other declarations
-  *)
-  let (decl_to_vars, var_to_decl) = List.fold_left get_decl_vars (Map.empty, Map.empty) ds in
+   *)
+  let decl_to_vars, var_to_decl =
+    List.fold_left get_decl_vars (Map.empty, Map.empty) ds
+  in
   let map_vars_to_decls vars : declaration list =
     (* if a variable is not in var_to_decls, we just ignore it,
      * as it's probably initialized inside the declaration itself *)
@@ -167,12 +198,13 @@ let sort_decls ds =
   let dep_graph : DeclG.t = Map.foldi add_dep decl_to_decls DeclG.empty in
   (* return the newly sorted declarations *)
   DeclSort.fold List.cons dep_graph []
+;;
 
 let parse fname =
   let files_to_parse = process_includes fname in
   let t = Console.read_files files_to_parse in
   let old_ds = List.concat (List.map read_from_file files_to_parse) in
-  (* print_endline @@ Printing.declarations_to_string ds; *) 
+  (* print_endline @@ Printing.declarations_to_string ds; *)
   let ds = sort_decls old_ds in
   (* check that the lists have equal length *)
   assert (List.compare_lengths old_ds ds = 0);

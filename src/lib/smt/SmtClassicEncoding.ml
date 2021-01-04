@@ -284,22 +284,22 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
    *)
   let encode_kirigami_inputs env r inputs eintrans count =
     let encode_input { edge; rank; var; preds } =
-      let i, j = edge in
+      let u, v = edge in
       let xs = find_input_symbolics env var in
       (* get the relevant predicate *)
-      let pred_to_hyp p =
+      let pred_to_hyp i p =
         let pred =
-          encode_predicate p (Printf.sprintf "input-pred%d-%d-%d" count i j) env
+          encode_predicate p (Printf.sprintf "input-pred%d-%d-%d-%d" count i u v) env
         in
         pred, xs
       in
-      let hyps = List.map pred_to_hyp preds in
+      let hyps = List.mapi pred_to_hyp preds in
       ( encode_kirigami_decomp
-          (Printf.sprintf "input%d-%d-%d" count i j)
+          (Printf.sprintf "input%d-%d-%d" count u v)
           env
           eintrans
           edge
-          (find_input_symbolics env var)
+          xs
       , if rank < r then Lesser hyps else Greater hyps )
     in
     VertexMap.map (fun inputs -> List.map encode_input inputs) inputs
@@ -307,23 +307,23 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
 
   (* Return a list of output SMT terms to assert. *)
   let encode_kirigami_outputs env outputs eouttrans labelling count =
-    let encode_output v (edge, preds) =
-      let i, j = edge in
-      let pred_to_guar p =
+    let encode_output vtx (edge, preds) =
+      let u, v = edge in
+      let pred_to_guar i p =
         let trans =
           encode_kirigami_decomp
-            (Printf.sprintf "output%d-%d-%d" count i j)
+            (Printf.sprintf "output%d-%d-%d" count u v)
             env
             eouttrans
-            (i, j)
-            labelling.(v)
+            edge
+            labelling.(vtx)
         in
         let pred =
-          encode_predicate p (Printf.sprintf "output-pred%d-%d-%d" count i j) env
+          encode_predicate p (Printf.sprintf "output-pred%d-%d-%d-%d" count i u v) env
         in
         pred, trans
       in
-      List.map pred_to_guar preds
+      List.mapi pred_to_guar preds
     in
     VertexMap.fold
       (fun v outputs l -> List.flatten (List.map (encode_output v) outputs) @ l)
@@ -331,12 +331,22 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
       []
   ;;
 
+  let encode_kirigami_global str env global arglist count =
+    let encode_global i l =
+      let pred =
+        encode_predicate global (Printf.sprintf "global-assert-%s-%d-%d" str count i) env
+      in
+      pred, l
+    in
+    List.mapi encode_global arglist
+  ;;
+
   let encode_kirigami_solve
       env
       graph
       parted_srp
       count
-      { aty; var_names; init; trans; merge; decomp }
+      { aty; var_names; init; trans; merge; decomp; global }
     =
     let aty = oget aty in
     let einit, etrans, emerge = init, trans, merge in
@@ -411,11 +421,13 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     let attr_sort = ty_to_sorts aty in
     (* Compute the labelling as the merge of all inputs *)
     let labelling = Array.make nodes (of_list []) in
+    let inits = ref [] in
     for i = 0 to nodes - 1 do
       (* compute each init attribute *)
       let node = avalue (vnode i, Some Typing.node_ty, Span.default) in
       let einit_i = Nv_interpreter.InterpPartial.interp_partial_fun einit [node] in
       let init = encode_z3_init (Printf.sprintf "init%d-%d" count i) env einit_i in
+      inits := init :: !inits;
       let in_edges = incoming_map.(i) in
       let emerge_i = InterpPartial.interp_partial_fun emerge [node] in
       let idx = ref 0 in
@@ -466,7 +478,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
            merged);
       labelling.(i) <- l
     done;
-    (* add dummy labels for cut nodes; just need to make sure there's as many as before *)
+    (* Kirigami: add dummy labels for cut nodes; just need to make sure there's as many as before *)
     for i = nodes to old_nodes - 1 do
       let lbl_iv = label_vars.(i) in
       add_symbolic env lbl_iv (Ty aty);
@@ -484,6 +496,29 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
       !trans_input_map;
     (* construct the output constants *)
     let guarantees = encode_kirigami_outputs env outputs eouttrans labelling count in
+    (* construct the global assertions *)
+    let global_reqs, global_asserts =
+      match global with
+      | Some g ->
+        let input_vars =
+          VertexMap.fold
+            (fun _ inputs l ->
+              List.fold_left (fun l ie -> find_input_symbolics env ie.var :: l) l inputs)
+            inputs
+            []
+        in
+        ( encode_kirigami_global "input" env g input_vars count
+        , (* need to be over both the initial values and the final results *)
+          encode_kirigami_global "init" env g !inits count
+          @ encode_kirigami_global "result" env g (Array.to_list labelling) count
+          @ encode_kirigami_global
+              "output"
+              env
+              g
+              (List.map Tuple2.second guarantees)
+              count )
+      | None -> [], []
+    in
     (* divide up the hypotheses *)
     let lesser_hyps, greater_hyps =
       VertexMap.fold
@@ -498,7 +533,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
         input_map
         ([], [])
     in
-    lesser_hyps, greater_hyps, guarantees
+    lesser_hyps, greater_hyps, guarantees, global_reqs, global_asserts
   ;;
 
   let encode_solve env graph count { aty; var_names; init; trans; merge } =
@@ -666,11 +701,33 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     (* encode the symbolics first, so we can find them when we do the kirigami_solve
      * NOTE: could instead pass in the list of symbolics to encode_kirigami_solve *)
     add_symbolic_constraints env [] env.symbolics;
-    let lesser_hyps, greater_hyps, guarantees =
-      split3 (List.mapi (encode_kirigami_solve env graph part) solves)
+    let lesser_hyps, greater_hyps, guarantees, global_reqs, global_asserts =
+      List.fold_lefti
+        (fun (lhs, ghs, gus, grs, gas) i s ->
+          let lh, gh, gu, gr, ga = encode_kirigami_solve env graph part i s in
+          lh :: lhs, gh :: ghs, gu :: gus, gr :: grs, ga :: gas)
+        ([], [], [], [], [])
+        solves
     in
     (* these constraints are included in both scopes *)
     add_symbolic_constraints env requires VarMap.empty;
+    add_assertions
+      "req-global"
+      env
+      (fun (r, v) -> r v)
+      (List.flatten global_reqs)
+      ~negate:false;
+    (* global checks scope *)
+    add_command env ~comdescr:"push" SmtLang.Push;
+    add_assertions
+      "assert-global"
+      env
+      (fun (g, v) -> g v)
+      (List.flatten global_asserts)
+      ~negate:true;
+    (* marker to break up encoding  *)
+    add_command env ~comdescr:"" (SmtLang.mk_echo "\"#END_OF_SCOPE#\"");
+    add_command env ~comdescr:"pop" SmtLang.Pop;
     add_assertions
       "lesser-hyp"
       env
@@ -685,8 +742,8 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
       (fun (g, v) -> g v)
       (List.flatten guarantees)
       ~negate:true;
-    (* marker to break up encoding into 2 parts *)
-    add_command env ~comdescr:"" (SmtLang.mk_echo "\"#END_OF_GUARANTEES#\"");
+    (* marker to break up encoding *)
+    add_command env ~comdescr:"" (SmtLang.mk_echo "\"#END_OF_SCOPE#\"");
     add_command env ~comdescr:"pop" SmtLang.Pop;
     (* safety checks: add other hypotheses, test original assertions *)
     add_assertions

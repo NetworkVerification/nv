@@ -200,15 +200,16 @@ let interp_interface edge intfe =
 ;;
 
 let update_preds interface partitioned_srp =
-  let intf edge b =
+  let intf edge b preds =
     let p = interp_interface edge interface in
-    transform_ignore b p
+    transform_ignore b p :: preds
   in
   SrpRemapping.map_predicates intf partitioned_srp
 ;;
 
 let add_globals global partitioned_srp =
-  let gf _ _ = global in
+  (* only do for outputs, not inputs *)
+  let gf _ b preds = if b then preds else global :: preds in
   SrpRemapping.map_predicates gf partitioned_srp
 ;;
 
@@ -221,9 +222,10 @@ let transform_solve solve (partition : partitioned_srp) : partitioned_srp * solv
       | Some interface -> update_preds interface partition
       | None -> partition
     in
-    match solve.global with
-    | Some global -> add_globals global p1
-    | None -> p1
+    p1
+    (* match solve.global with
+     * | Some global -> add_globals global p1
+     * | None -> p1 *)
   in
   let solve' = remap_solve partition' solve in
   (* erase interface information now that it's in the partition *)

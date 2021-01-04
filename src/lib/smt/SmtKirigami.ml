@@ -1,3 +1,4 @@
+open Batteries
 open Nv_lang
 open Nv_lang.Collections
 open Nv_utils.Profile
@@ -10,14 +11,14 @@ open SmtOptimizations
 open Nv_datastructures.AdjGraph
 open Nv_kirigami.SrpRemapping
 
-let solve info query chan net_or_srp nodes assertions guarantees =
+let solve info query chan net_or_srp nodes assertions guarantees globals =
   let solver = Lazy.force solver in
   let print_and_ask q =
     if query then printQuery chan q;
     ask_solver_blocking solver q
   in
   let solve_aux () =
-    let renaming, env  =
+    let renaming, env =
       time_profile_absolute "Encoding network" (fun () ->
           let env = net_or_srp () in
           (* debugging *)
@@ -39,28 +40,51 @@ let solve info query chan net_or_srp nodes assertions guarantees =
      * and then add the rest of the encoding,
      * call check_sat + get_sat again, and then return reply2
      *)
-    let enc_part1, enc_part2 = BatString.split smt_encoding ~by:"(echo \"#END_OF_GUARANTEES#\")" in
-    print_and_ask enc_part1;
-    let q = check_sat info in
-    print_and_ask q;
-    let reply = solver |> parse_reply in
-    let ret1 = get_sat query chan info env solver renaming nodes 0 guarantees reply in
-    print_and_ask enc_part2;
-    let q = check_sat info in
-    print_and_ask q;
-    let reply2 = solver |> parse_reply in
-    let ret2 = get_sat query chan info env solver renaming nodes assertions 0 reply2 in
-    ret1, ret2
+    let enc_parts = String.split_on_string smt_encoding ~by:"(echo \"#END_OF_SCOPE#\")" in
+    (* 3 parts if we have globals, otherwise 2 parts *)
+    let enc_part0, enc_part1, enc_part2 =
+      match enc_parts with
+      | [a; b; c] -> Some a, b, c
+      | [a; b] -> None, a, b
+      | _ -> failwith "solveKirigami: wrong number of scopes"
+    in
+    let get_ret enc assertions guarantees =
+      print_and_ask enc;
+      let q = check_sat info in
+      print_and_ask q;
+      let reply = solver |> parse_reply in
+      get_sat
+        query
+        chan
+        info
+        env
+        solver
+        renaming
+        nodes
+        assertions
+        guarantees
+        globals
+        reply
+    in
+    let ret0 = Option.map (fun enc -> get_ret enc 0 0) enc_part0 in
+    let ret1 = get_ret enc_part1 0 guarantees in
+    let ret2 = get_ret enc_part2 assertions 0 in
+    let and_ret r1 r2 =
+      match r1 with
+      | Unsat -> r2
+      | _ -> r1
+    in
+    match ret0 with
+    | Some Unsat -> and_ret ret1 ret2
+    | Some r -> r
+    | None -> and_ret ret1 ret2
   in
   (* Initial check *)
   print_and_ask "(push)";
-  let (ret1, ret2) = solve_aux () in
+  let ret = solve_aux () in
   print_and_ask "(pop)";
-  match ret1 with
-  | Unsat -> ret2
-  | _ -> ret1
+  ret
 ;;
-
 
 (* Solver for Kirigami *)
 let solveKirigami info query chan ~part ~decls =
@@ -70,7 +94,10 @@ let solveKirigami info query chan ~part ~decls =
                       : SmtClassicEncoding.ClassicEncodingSig)
   in
   let assertions = List.length (get_asserts decls) in
-  let guarantees = VertexMap.fold (fun _ l acc -> List.length l + acc) part.outputs 0 in
+  (* count up a guarantee for every predicate on every output *)
+  let outputs = VertexMap.fold (fun _ l acc -> l @ acc) part.outputs [] in
+  let guarantees = List.fold_left (fun acc (_, ps) -> List.length ps + acc) 0 outputs in
+  let globals = List.length outputs + (2 * part.nodes) in
   solve
     info
     query
@@ -79,4 +106,5 @@ let solveKirigami info query chan ~part ~decls =
     (get_old_nodes part)
     assertions
     guarantees
+    globals
 ;;
