@@ -13,15 +13,20 @@ import igraph
 # Partition cut types
 CUTS = [
     # vertical cut: 2 parts
-    "v", "vertical",
+    "v",
+    "vertical",
     # horizontal cut: 3 parts
-    "h", "horizontal",
+    "h",
+    "horizontal",
     # horizontal cut with all pods separate
-    "p", "pods",
+    "p",
+    "pods",
     # horizontal cut with all spines and pods separate
-    "s", "spines",
+    "s",
+    "spines",
     # full cut with every node in its own partition
-    "f", "full",
+    "f",
+    "full",
 ]
 
 # Group
@@ -30,6 +35,10 @@ CUTS = [
 CORE = 0
 AGGREGATION = 1
 EDGE = 2
+
+# Network types
+SP = 0
+FATPOL = 1
 
 
 def to_grp(name):
@@ -75,8 +84,7 @@ def find_nodes(text):
     prog = re.compile(r"(core|aggregation|edge)-\d*=(\d*)")
     # find all nodes
     matches = prog.finditer(text)
-    vertices = [(int(match.group(2)), to_grp(match.group(1)))
-                for match in matches]
+    vertices = [(int(match.group(2)), to_grp(match.group(1))) for match in matches]
     vertices.sort()
     return vertices
 
@@ -88,13 +96,13 @@ def write_preamble(spname, cut):
     vim_modeline = "(* vim: set syntax=ocaml: *)"
     if cut == "v" or cut == "vertical":
         oriented = "Vertically partitioned"
-    elif cut == 'h' or cut == 'horizontal':
+    elif cut == "h" or cut == "horizontal":
         oriented = "Horizontally partitioned"
-    elif cut == 'p' or cut == 'pods':
+    elif cut == "p" or cut == "pods":
         oriented = "Partitioned into pods"
-    elif cut == 's' or cut == 'spines':
+    elif cut == "s" or cut == "spines":
         oriented = "Partitioned into pods and individual spines"
-    elif cut == 'f' or cut == 'full':
+    elif cut == "f" or cut == "full":
         oriented = "Fully partitioned"
     else:
         raise Exception("Unexpected cut type")
@@ -114,35 +122,43 @@ def write_partition_str(partitions):
     return output
 
 
-def write_interface_str(fwd_edges):
+def write_interface_str(fwd_edges, net_type):
     """
     Return the string representation of the interface function.
     """
     output = "let interface edge =\n"
-    common_block = """match x with
-      | { connected = c; static = s; ospf = o; bgp = b; selected = sel } ->
-        c = None && s = None && o = None"""
-    anyb = """  let any x = true
-    in
+    output += """  let hasOnlyBgp f x =
+        x.selected = Some 3u2 && (match x.bgp with 
+        | Some b -> f b
+        | None -> false)
+      in
     """
-    hob = f"""let hasOnlyBgp x =
-      {common_block} && isSome b && sel = Some 3u2
-    in
-    """
-    output += anyb + hob
     output += "match edge with\n"
     for (start, end) in fwd_edges:
-        output += f"  | {start}~{end} -> hasOnlyBgp\n"
-    output += "  | _ -> any\n"
+        if net_type == SP:
+            fn = "(fun b -> true)"
+        elif net_type == FATPOL:
+            fn = "(fun b -> ignore b.comms)"
+        else:
+            raise Exception("Unexpected net type")
+        output += f"  | {start}~{end} -> hasOnlyBgp {fn}\n"
+    output += "  | _ -> (fun x -> true)\n"
     return output
 
 
 def get_part_fname(spfile, cut):
     """
-    Return the name of the partition file for the corresponding spX.nv file.
+    Return the name of the partition file for the corresponding nv file,
+    and the network type.
     """
     spdir, spname = os.path.split(spfile)
     root, nvext = os.path.splitext(spname)
+    if root.startswith("sp"):
+        net_type = SP
+    elif root.startswith("fat"):
+        net_type = FATPOL
+    else:
+        raise Exception("Unexpected network type based on name")
     prefix = f"{root}-{cut}"
     partfile = os.path.join(spdir, prefix + nvext)
     suffix = 1
@@ -150,7 +166,7 @@ def get_part_fname(spfile, cut):
     while os.path.exists(partfile):
         partfile = os.path.join(spdir, prefix + str(suffix) + nvext)
         suffix += 1
-    return partfile
+    return partfile, net_type
 
 
 def nodes_cut_fully(graph, dest):
@@ -276,8 +292,9 @@ def get_cross_edges(graph, partitions):
     for (i, part) in enumerate(partitions):
         for node in part:
             node_to_part[node] = i
-    return [e.tuple for e in graph.es
-            if node_to_part[e.source] < node_to_part[e.target]]
+    return [
+        e.tuple for e in graph.es if node_to_part[e.source] < node_to_part[e.target]
+    ]
 
 
 def cut_nodes(graph, dest, cut):
@@ -305,12 +322,12 @@ def split_prefooter(sptext):
     prog = re.compile(r"\(\* {((edge|core|aggregation)-\d+=\d+,?\s*)*}\*\)")
     match = prog.search(sptext)
     end = match.end()
-    return (sptext[: end + 1], sptext[end + 1:])
+    return (sptext[: end + 1], sptext[end + 1 :])
 
 
 def gen_part_nv(spfile, dest, cut, verbose=False):
     """Generate the partition file."""
-    part = get_part_fname(spfile, cut)
+    part, net_type = get_part_fname(spfile, cut)
     if verbose:
         print("Outfile: " + part)
     with open(spfile, "r") as inputfile:
@@ -322,6 +339,11 @@ def gen_part_nv(spfile, dest, cut, verbose=False):
     # get the three parts
     preamble = write_preamble(os.path.basename(spfile), cut)
     include_sp, footer = split_prefooter(sptext)
+    # FIXME: handle this with global assertions
+    if net_type == FATPOL:
+        include_sp = re.sub(
+            "Some b -> b", "Some b -> { b with lp = 100; med = 80 }", include_sp
+        )
     nodes = cut_nodes(graph, dest, cut)
     # TODO: validate spine and cross edges
     fwd_cross = get_cross_edges(graph, nodes)
@@ -330,10 +352,12 @@ def gen_part_nv(spfile, dest, cut, verbose=False):
         print(nodes)
         print([e for e in fwd_cross])
     partition = write_partition_str(nodes)
-    interface = write_interface_str(fwd_cross)
+    interface = write_interface_str(fwd_cross, net_type)
     # perform the decomposed transfer on the input side
-    repl = (r"solution { init = init; trans = trans; merge = merge;"
-            r" interface = interface; rtrans = trans }")
+    repl = (
+        r"solution { init = init; trans = trans; merge = merge;"
+        r" interface = interface; rtrans = trans }"
+    )
     solution = re.sub(r"solution {.*}", repl, footer)
     # put 'em all together
     output = "\n".join([preamble, include_sp, partition, interface, solution])
@@ -344,15 +368,16 @@ def gen_part_nv(spfile, dest, cut, verbose=False):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Generate partitioned versions of network benchmarks.")
-    parser.add_argument('file', type=str,
-                        help="the unpartitioned network file")
-    parser.add_argument('dest', type=int,
-                        help="the destination node in a shortest-path network")
-    parser.add_argument('cut', type=str, choices=CUTS,
-                        help="the type of cut to make")
-    parser.add_argument('-v', '--verbose', action="store_true",
-                        help="increase verbosity of output")
+        description="Generate partitioned versions of network benchmarks."
+    )
+    parser.add_argument("file", type=str, help="the unpartitioned network file")
+    parser.add_argument(
+        "dest", type=int, help="the destination node in a shortest-path network"
+    )
+    parser.add_argument("cut", type=str, choices=CUTS, help="the type of cut to make")
+    parser.add_argument(
+        "-v", "--verbose", action="store_true", help="increase verbosity of output"
+    )
     args = parser.parse_args()
     gen_part_nv(args.file, args.dest, args.cut, verbose=args.verbose)
 
