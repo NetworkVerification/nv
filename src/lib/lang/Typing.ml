@@ -29,6 +29,7 @@ let solve_ty aty =
 (* partitioning *)
 let partition_ty = TArrow (node_ty, TInt 8)
 let interface_ty aty = TArrow (edge_ty, TArrow (aty, TBool))
+let global_ty aty = TArrow (aty, TBool)
 
 (* same type for both sides *)
 let decomp_ty = trans_ty
@@ -898,7 +899,7 @@ and infer_declaration i info env record_types d : ty Env.t * declaration =
     let ty = oget e'.ety in
     unify info e ty TBool;
     env, DRequire e'
-  | DSolve { aty; var_names; init; trans; merge; interface; decomp } ->
+  | DSolve { aty; var_names; init; trans; merge; interface; decomp; global } ->
     (* Note: This only works before map unrolling *)
     let solve_aty =
       match aty with
@@ -928,6 +929,7 @@ and infer_declaration i info env record_types d : ty Env.t * declaration =
         Some (lt', rt')
       | None -> None
     in
+    let global' = lift_unify global (global_ty solve_aty) in
     let var =
       match var_names.e with
       | EVar x -> x
@@ -943,6 +945,7 @@ and infer_declaration i info env record_types d : ty Env.t * declaration =
         ; merge = merge'
         ; interface = interface'
         ; decomp = decomp'
+        ; global = global'
         } )
   | DUserTy _ | DNodes _ | DEdges _ -> env, d
 ;;

@@ -193,15 +193,17 @@ and ty_or_exp =
 
 (* var_names should be an exp that uses only the EVar and ETuple constructors *)
 (* interface is an optional expression to describe the network hypotheses *)
-(* TODO: add a flag to control how the trans function is cut *)
+(* global is an optional expression to check that every node satisfies some predicate *)
 type solve =
   { aty : ty option
   ; var_names : exp
   ; init : exp
   ; trans : exp
   ; merge : exp
-  ; interface : exp option
+  ; (* TODO: put all the partitioning stuff together in another type *)
+    interface : exp option
   ; decomp : (exp option * exp option) option
+  ; global : exp option
   }
 
 type declaration =

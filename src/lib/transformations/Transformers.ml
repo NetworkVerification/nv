@@ -183,13 +183,14 @@ let transform_decl ~(name : string) (transformers : transformers) (d : declarati
   match d with
   | DLet (x, tyo, e) -> DLet (x, omap transform_ty tyo, transform_exp e)
   | DAssert e -> DAssert (transform_exp e)
-  | DSolve { aty; var_names; init; trans; merge; interface; decomp } ->
+  | DSolve { aty; var_names; init; trans; merge; interface; decomp; global } ->
     let interface = omap transform_exp interface in
     let decomp =
       match decomp with
       | Some (lt, rt) -> Some (omap transform_exp lt, omap transform_exp rt)
       | None -> None
     in
+    let global = omap transform_exp global in
     let var_names, init, trans, merge =
       ( transform_exp var_names
       , transform_exp init
@@ -197,7 +198,15 @@ let transform_decl ~(name : string) (transformers : transformers) (d : declarati
       , transform_exp merge )
     in
     DSolve
-      { aty = omap transform_ty aty; var_names; init; trans; merge; interface; decomp }
+      { aty = omap transform_ty aty
+      ; var_names
+      ; init
+      ; trans
+      ; merge
+      ; interface
+      ; decomp
+      ; global
+      }
   | DSymbolic (x, toe) ->
     let x, toe' = transform_symbolic (x, toe) in
     DSymbolic (x, toe')

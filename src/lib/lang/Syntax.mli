@@ -168,6 +168,7 @@ type solve =
   ; merge : exp
   ; interface : exp option
   ; decomp : (exp option * exp option) option
+  ; global : exp option
   }
 
 type declaration =

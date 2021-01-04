@@ -200,36 +200,30 @@ let interp_interface edge intfe =
 ;;
 
 let update_preds interface partitioned_srp =
-  let intf edge = interp_interface edge interface in
-  { partitioned_srp with
-    inputs =
-      VertexMap.map
-        (fun input_exps ->
-          List.map
-            (fun input_exp ->
-              let pred = intf input_exp.edge in
-              let pred = transform_ignore true pred in
-              (* print_endline (Printing.exp_to_string (Option.get pred)); *)
-              { input_exp with preds = pred :: input_exp.preds })
-            input_exps)
-        partitioned_srp.inputs
-  ; outputs =
-      VertexMap.map
-        (fun outputs ->
-          List.map
-            (fun (edge, ps) -> edge, transform_ignore false (intf edge) :: ps)
-            outputs)
-        partitioned_srp.outputs
-  }
+  let intf edge b =
+    let p = interp_interface edge interface in
+    transform_ignore b p
+  in
+  SrpRemapping.map_predicates intf partitioned_srp
+;;
+
+let add_globals global partitioned_srp =
+  let gf _ _ = global in
+  SrpRemapping.map_predicates gf partitioned_srp
 ;;
 
 (* Transform the given solve and return it along with a new expression to assert
  * and new expressions to require. *)
 let transform_solve solve (partition : partitioned_srp) : partitioned_srp * solve =
   let partition' =
-    match solve.interface with
-    | Some interface -> update_preds interface partition
-    | None -> partition
+    let p1 =
+      match solve.interface with
+      | Some interface -> update_preds interface partition
+      | None -> partition
+    in
+    match solve.global with
+    | Some global -> add_globals global p1
+    | None -> p1
   in
   let solve' = remap_solve partition' solve in
   (* erase interface information now that it's in the partition *)

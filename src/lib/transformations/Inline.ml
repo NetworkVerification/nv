@@ -156,7 +156,7 @@ let inline_declaration (env : exp Env.t) (d : declaration) =
       env, Some (DSymbolic (x, Exp e'))
     | Ty _ -> env, Some (DSymbolic (x, e)))
   | DAssert e -> env, Some (DAssert (inline_exp env e))
-  | DSolve { aty; var_names; init; trans; merge; interface; decomp } ->
+  | DSolve { aty; var_names; init; trans; merge; interface; decomp; global } ->
     (* Like with symbolics, inline within the functions but don't inline e in future expressions *)
     let interface = omap (inline_exp env) interface in
     let decomp =
@@ -164,10 +164,11 @@ let inline_declaration (env : exp Env.t) (d : declaration) =
       | Some (lt, rt) -> Some (omap (inline_exp env) lt, omap (inline_exp env) rt)
       | None -> None
     in
+    let global = omap (inline_exp env) global in
     let init, trans, merge =
       inline_exp env init, inline_exp env trans, inline_exp env merge
     in
-    env, Some (DSolve { aty; var_names; init; trans; merge; interface; decomp })
+    env, Some (DSolve { aty; var_names; init; trans; merge; interface; decomp; global })
   | DPartition e -> env, Some (DPartition (inline_exp env e))
   | DRequire e -> env, Some (DRequire (inline_exp env e))
   | DUserTy _ | DNodes _ | DEdges _ -> env, Some d
