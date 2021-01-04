@@ -12,7 +12,7 @@ open SrpRemapping
 type transform_result =
   | Network of declaration
   (* Solution: return Solve and updated partitioned SRP *)
-  | Solution of (declaration * partitioned_srp)
+  | Solution of (partitioned_srp * declaration)
   | None
 
 (** Return a new set of declarations of all symbolics added by partitions. *)
@@ -54,7 +54,7 @@ let transform_declaration parted_srp decl : transform_result =
     else Network decl
   | DSolve s ->
     let part', solve' = transform_solve s parted_srp in
-    Solution (DSolve solve', part')
+    Solution (part', DSolve solve')
   | DPartition _ -> None
   | DAssert e -> Network (DAssert (transform_assert e parted_srp))
   | _ -> Network decl
@@ -64,7 +64,7 @@ let transform_declarations decls parted_srp =
   let add_new_decl (part, decls) d =
     match transform_declaration part d with
     | Network d -> part, d :: decls
-    | Solution (d, p) -> p, d :: decls
+    | Solution (p, d) -> p, d :: decls
     | None -> part, decls
   in
   List.fold_left add_new_decl (parted_srp, []) decls

@@ -15,8 +15,7 @@ type input_exp =
     var : Var.t
   ; (* the partition rank of the associated output *)
     rank : int
-  ; (* the associated predicate expression: a function over attributes *)
-    (* optional: if not given, then assumed to always hold (true) *)
+  ; (* the associated predicate expressions: functions over attributes *)
     preds : exp list
   }
 
@@ -97,6 +96,15 @@ let string_of_partitioned_srp p =
     nmap
     inputs
     outputs
+;;
+
+let map_predicates f partitioned_srp =
+  let inf ie = { ie with preds = f ie.edge true :: ie.preds } in
+  let outf (e, ps) = e, f e false :: ps in
+  { partitioned_srp with
+    inputs = VertexMap.map (fun is -> List.map inf is) partitioned_srp.inputs
+  ; outputs = VertexMap.map (fun os -> List.map outf os) partitioned_srp.outputs
+  }
 ;;
 
 (** Map each vertex in the list of vertices to a partition number.
