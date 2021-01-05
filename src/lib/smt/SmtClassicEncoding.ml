@@ -353,6 +353,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     let { rank; inputs; outputs } = parted_srp in
     (* save the number of nodes in the global network *)
     let old_nodes = SrpRemapping.get_global_nodes parted_srp in
+    let remapping = Array.of_list (SrpRemapping.get_old_nodes parted_srp) in
     let nodes = nb_vertex graph in
     (* Extract variable names from e, and split them up based on which node they
        belong to. In the end, label_vars.(i) is the list of attribute variables
@@ -413,7 +414,12 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
                 , Span.default ) ]
         in
         (* Printf.printf "etrans:%s\n" (Printing.exp_to_string etrans); *)
-        let trans, x = enc_z3_trans edge (Printf.sprintf "trans%d-%d-%d" count i j) env in
+        let trans, x =
+          enc_z3_trans
+            edge
+            (Printf.sprintf "trans%d-%d-%d" count remapping.(i) remapping.(j))
+            env
+        in
         trans_input_map := EdgeMap.add (i, j) x !trans_input_map;
         trans_map := EdgeMap.add (i, j) trans !trans_map)
       graph;
@@ -426,7 +432,9 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
       (* compute each init attribute *)
       let node = avalue (vnode i, Some Typing.node_ty, Span.default) in
       let einit_i = Nv_interpreter.InterpPartial.interp_partial_fun einit [node] in
-      let init = encode_z3_init (Printf.sprintf "init%d-%d" count i) env einit_i in
+      let init =
+        encode_z3_init (Printf.sprintf "init%d-%d" count remapping.(i)) env einit_i
+      in
       inits := init :: !inits;
       let in_edges = incoming_map.(i) in
       let emerge_i = InterpPartial.interp_partial_fun emerge [node] in
@@ -436,7 +444,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
           (fun prev_result (x, y) ->
             incr idx;
             let trans = EdgeMap.find (x, y) !trans_map in
-            let str = Printf.sprintf "merge%d-%d-%d" count i !idx in
+            let str = Printf.sprintf "merge%d-%d-%d" count remapping.(i) !idx in
             let merge_result, x = encode_z3_merge str env emerge_i in
             let trans_list = to_list trans in
             let prev_result_list = to_list prev_result in
@@ -454,7 +462,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
         BatList.fold_left
           (fun prev_result (input, _) ->
             incr idx;
-            let str = Printf.sprintf "merge-input%d-%d-%d" count i !idx in
+            let str = Printf.sprintf "merge-input%d-%d-%d" count remapping.(i) !idx in
             let merge_result, x = encode_z3_merge str env emerge_i in
             let input_list = to_list input in
             let prev_result_list = to_list prev_result in
