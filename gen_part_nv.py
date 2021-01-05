@@ -126,23 +126,34 @@ def write_interface_str(fwd_edges, net_type):
     """
     Return the string representation of the interface function.
     """
-    output = "let interface edge =\n"
-    output += """  let hasOnlyBgp f x =
-        x.selected = Some 3u2 && (match x.bgp with
-        | Some b -> f b
-        | None -> false)
-      in
-    """
-    output += "match edge with\n"
+    output = "let interface edge ="
+    output += """
+  let hasOnlyBgp f x =
+    x.selected = Some 3u2 && (match x.bgp with
+      | Some b -> f b
+      | None -> false)
+  in"""
+    if net_type == FATPOL:
+        output += """
+  let ignoreBgp x = match x.bgp with
+    | Some b -> ignore b.comms
+    | None -> true
+  in"""
+        default = (
+            "(fun x -> match x.bgp with | Some b -> ignore b.comms | None -> true)"
+        )
+    elif net_type == SP:
+        default = "(fun x -> true)"
+    else:
+        raise Exception("Unexpected net type")
+    output += "\n  match edge with\n"
     for (start, end) in fwd_edges:
         if net_type == SP:
             fn = "(fun b -> true)"
         elif net_type == FATPOL:
             fn = "(fun b -> ignore b.comms)"
-        else:
-            raise Exception("Unexpected net type")
         output += f"  | {start}~{end} -> hasOnlyBgp {fn}\n"
-    output += "  | _ -> (fun x -> true)\n"
+    output += f"  | _ -> {default}\n"
     return output
 
 
@@ -288,11 +299,22 @@ def get_cross_edges(graph, partitions):
     functions.
     """
     # construct a map of nodes to their partitions
-    node_part = dict()
-    for (i, part) in enumerate(partitions):
-        for node in part:
-            node_part[node] = i
+    node_part = {node: i for (i, part) in enumerate(partitions) for node in part}
     return [e.tuple for e in graph.es if node_part[e.source] < node_part[e.target]]
+
+
+def get_vertical_cross_edges(graph, partitions, dest):
+    all_cross = get_cross_edges(graph, partitions)
+    updated = []
+    for e in all_cross:
+        # prune non-destination-pod cross edges
+        node = graph.vs[e[0]]
+        neighbors = [v["id"] for v in node.neighbors()]
+        if node["g"] == AGGREGATION and dest not in neighbors:
+            continue
+        else:
+            updated.append(e)
+    return updated
 
 
 def cut_nodes(graph, dest, cut):
@@ -342,12 +364,14 @@ def gen_part_nv(spfile, dest, cut, verbose=False):
 let global x = match x.bgp with
   | Some b -> b.lp = 100 && b.med = 80
   | None -> true
-        """
+"""
         include_sp += global_def
     nodes = cut_nodes(graph, dest, cut)
-    # TODO: validate spine and cross edges
-    fwd_cross = get_cross_edges(graph, nodes)
-    # validate(nodes[1], fwd_cross)
+    # special case for handling vertical cuts
+    if net_type == FATPOL and (cut == "vertical" or cut == "v"):
+        fwd_cross = get_vertical_cross_edges(graph, nodes, dest)
+    else:
+        fwd_cross = get_cross_edges(graph, nodes)
     if verbose:
         print(nodes)
         print([e for e in fwd_cross])
