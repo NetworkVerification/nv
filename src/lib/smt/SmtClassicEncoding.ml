@@ -696,8 +696,6 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     let assertions = get_asserts ds |> List.map InterpPartialFull.interp_partial in
     let requires = get_requires ds in
     let env = init_solver symbolics ~labels:[] in
-    (* second env only for safety check *)
-    (* let env2 = init_solver [] ~labels:[] in *)
     (* encode the symbolics first, so we can find them when we do the kirigami_solve
      * NOTE: could instead pass in the list of symbolics to encode_kirigami_solve *)
     add_symbolic_constraints env [] env.symbolics;
@@ -705,53 +703,35 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
       List.fold_lefti
         (fun (lhs, ghs, gus, grs, gas) i s ->
           let lh, gh, gu, gr, ga = encode_kirigami_solve env graph part i s in
-          lh :: lhs, gh :: ghs, gu :: gus, gr :: grs, ga :: gas)
+          lh @ lhs, gh @ ghs, gu @ gus, gr @ grs, ga @ gas)
         ([], [], [], [], [])
         solves
     in
+    (* helper for applying tuples of constraints *)
+    let apply (f, v) = f v in
+    (* helper for scoping separate checks *)
+    let scope_checks env f =
+      add_command env ~comdescr:"push" SmtLang.Push;
+      f env;
+      (* marker to break up encoding *)
+      add_command env ~comdescr:"" (SmtLang.mk_echo "\"#END_OF_SCOPE#\"");
+      add_command env ~comdescr:"pop" SmtLang.Pop
+    in
     (* these constraints are included in both scopes *)
     add_symbolic_constraints env requires VarMap.empty;
-    add_assertions
-      "req-global"
-      env
-      (fun (r, v) -> r v)
-      (List.flatten global_reqs)
-      ~negate:false;
+    add_assertions "req-global" env apply global_reqs ~negate:false;
     (* global checks scope *)
-    add_command env ~comdescr:"push" SmtLang.Push;
-    add_assertions
-      "assert-global"
-      env
-      (fun (g, v) -> g v)
-      (List.flatten global_asserts)
-      ~negate:true;
-    (* marker to break up encoding  *)
-    add_command env ~comdescr:"" (SmtLang.mk_echo "\"#END_OF_SCOPE#\"");
-    add_command env ~comdescr:"pop" SmtLang.Pop;
-    add_assertions
-      "lesser-hyp"
-      env
-      (fun (h, v) -> h v)
-      (List.flatten lesser_hyps)
-      ~negate:false;
+    (match global_asserts with
+    | [] -> ()
+    | _ ->
+      scope_checks env (fun env ->
+          add_assertions "assert-global" env apply global_asserts ~negate:true));
+    add_assertions "lesser-hyp" env apply lesser_hyps ~negate:false;
     (* ranked initial checks: test guarantees in separate scope *)
-    add_command env ~comdescr:"push" SmtLang.Push;
-    add_assertions
-      "guarantee"
-      env
-      (fun (g, v) -> g v)
-      (List.flatten guarantees)
-      ~negate:true;
-    (* marker to break up encoding *)
-    add_command env ~comdescr:"" (SmtLang.mk_echo "\"#END_OF_SCOPE#\"");
-    add_command env ~comdescr:"pop" SmtLang.Pop;
+    scope_checks env (fun env ->
+        add_assertions "guarantee" env apply guarantees ~negate:true);
     (* safety checks: add other hypotheses, test original assertions *)
-    add_assertions
-      "greater-hyp"
-      env
-      (fun (h, v) -> h v)
-      (List.flatten greater_hyps)
-      ~negate:false;
+    add_assertions "greater-hyp" env apply greater_hyps ~negate:false;
     add_assertions "assert" env (fun e -> encode_exp_z3 "" env e) assertions ~negate:true;
     env
   ;;

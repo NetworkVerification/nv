@@ -48,7 +48,7 @@ let solve info query chan net_or_srp nodes assertions guarantees globals =
       | [a; b] -> None, a, b
       | _ -> failwith "solveKirigami: wrong number of scopes"
     in
-    let get_ret enc assertions guarantees =
+    let get_ret enc assertions guarantees globals =
       print_and_ask enc;
       let q = check_sat info in
       print_and_ask q;
@@ -66,9 +66,9 @@ let solve info query chan net_or_srp nodes assertions guarantees globals =
         globals
         reply
     in
-    let ret0 = Option.map (fun enc -> get_ret enc 0 0) enc_part0 in
-    let ret1 = get_ret enc_part1 0 guarantees in
-    let ret2 = get_ret enc_part2 assertions 0 in
+    let ret0 = Option.map (fun enc -> get_ret enc 0 0 globals) enc_part0 in
+    let ret1 = get_ret enc_part1 0 guarantees 0 in
+    let ret2 = get_ret enc_part2 assertions 0 0 in
     let and_ret r1 r2 =
       match r1 with
       | Unsat -> r2
