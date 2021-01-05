@@ -74,7 +74,7 @@ def find_edges(text):
         r" --> (core|aggregation|edge)-\d*,Serial\d*\*\)"
     )
     matches = prog.finditer(text)
-    outputs = [(int(match.group(1)), int(match.group(2))) for match in matches]
+    outputs = [(int(m.group(1)), int(m.group(2))) for m in matches]
     outputs.sort()
     return outputs
 
@@ -84,7 +84,7 @@ def find_nodes(text):
     prog = re.compile(r"(core|aggregation|edge)-\d*=(\d*)")
     # find all nodes
     matches = prog.finditer(text)
-    vertices = [(int(match.group(2)), to_grp(match.group(1))) for match in matches]
+    vertices = [(int(m.group(2)), to_grp(m.group(1))) for m in matches]
     vertices.sort()
     return vertices
 
@@ -128,7 +128,7 @@ def write_interface_str(fwd_edges, net_type):
     """
     output = "let interface edge =\n"
     output += """  let hasOnlyBgp f x =
-        x.selected = Some 3u2 && (match x.bgp with 
+        x.selected = Some 3u2 && (match x.bgp with
         | Some b -> f b
         | None -> false)
       in
@@ -288,13 +288,11 @@ def get_cross_edges(graph, partitions):
     functions.
     """
     # construct a map of nodes to their partitions
-    node_to_part = dict()
+    node_part = dict()
     for (i, part) in enumerate(partitions):
         for node in part:
-            node_to_part[node] = i
-    return [
-        e.tuple for e in graph.es if node_to_part[e.source] < node_to_part[e.target]
-    ]
+            node_part[node] = i
+    return [e.tuple for e in graph.es if node_part[e.source] < node_part[e.target]]
 
 
 def cut_nodes(graph, dest, cut):
@@ -339,11 +337,13 @@ def gen_part_nv(spfile, dest, cut, verbose=False):
     # get the three parts
     preamble = write_preamble(os.path.basename(spfile), cut)
     include_sp, footer = split_prefooter(sptext)
-    # FIXME: handle this with global assertions
     if net_type == FATPOL:
-        include_sp = re.sub(
-            "Some b -> b", "Some b -> { b with lp = 100; med = 80 }", include_sp
-        )
+        global_def = """
+let global x = match x.bgp with
+  | Some b -> b.lp = 100 && b.med = 80
+  | None -> true
+        """
+        include_sp += global_def
     nodes = cut_nodes(graph, dest, cut)
     # TODO: validate spine and cross edges
     fwd_cross = get_cross_edges(graph, nodes)
@@ -354,10 +354,16 @@ def gen_part_nv(spfile, dest, cut, verbose=False):
     partition = write_partition_str(nodes)
     interface = write_interface_str(fwd_cross, net_type)
     # perform the decomposed transfer on the input side
-    repl = (
-        r"solution { init = init; trans = trans; merge = merge;"
-        r" interface = interface; rtrans = trans }"
-    )
+    if net_type == SP:
+        repl = (
+            r"solution { init = init; trans = trans; merge = merge;"
+            r" interface = interface; rtrans = trans }"
+        )
+    elif net_type == FATPOL:
+        repl = (
+            r"solution { init = init; trans = trans; merge = merge;"
+            r" interface = interface; rtrans = trans; global = global }"
+        )
     solution = re.sub(r"solution {.*}", repl, footer)
     # put 'em all together
     output = "\n".join([preamble, include_sp, partition, interface, solution])
@@ -370,13 +376,13 @@ def main():
     parser = argparse.ArgumentParser(
         description="Generate partitioned versions of network benchmarks."
     )
-    parser.add_argument("file", type=str, help="the unpartitioned network file")
+    parser.add_argument("file", type=str, help="unpartitioned network file")
     parser.add_argument(
-        "dest", type=int, help="the destination node in a shortest-path network"
+        "dest", type=int, help="destination node in a shortest-path network"
     )
-    parser.add_argument("cut", type=str, choices=CUTS, help="the type of cut to make")
+    parser.add_argument("cut", type=str, choices=CUTS, help="type of cut")
     parser.add_argument(
-        "-v", "--verbose", action="store_true", help="increase verbosity of output"
+        "-v", "--verbose", action="store_true", help="increase verbosity"
     )
     args = parser.parse_args()
     gen_part_nv(args.file, args.dest, args.cut, verbose=args.verbose)
