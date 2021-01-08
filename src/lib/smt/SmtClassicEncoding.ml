@@ -725,17 +725,17 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
       add_command env ~comdescr:"" (SmtLang.mk_echo "\"#END_OF_SCOPE#\"");
       add_command env ~comdescr:"pop" SmtLang.Pop
     in
-    (* these constraints are included in both scopes *)
+    (* these constraints are included in all scopes *)
     add_symbolic_constraints env requires VarMap.empty;
     add_assertions "req-global" env apply global_reqs ~negate:false;
-    (* global checks scope *)
+    (* global checks *)
     (match global_asserts with
     | [] -> ()
     | _ ->
       scope_checks env (fun env ->
           add_assertions "assert-global" env apply global_asserts ~negate:true));
+    (* ranked initial checks *)
     add_assertions "lesser-hyp" env apply lesser_hyps ~negate:false;
-    (* ranked initial checks: test guarantees in separate scope *)
     scope_checks env (fun env ->
         add_assertions "guarantee" env apply guarantees ~negate:true);
     (* safety checks: add other hypotheses, test original assertions *)
