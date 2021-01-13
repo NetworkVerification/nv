@@ -31,13 +31,13 @@ let merge n x y =
 
 let sol = solution { init = init; trans = trans; merge = merge; }
 
-    (* This should succeed *)
-    assert
-      (match (sol[1n], sol[2n]) with
-       | (Some x, Some y) -> x <= 2 && y <= 2 && !(x = y)
-       | _ -> false)
+(* This should succeed *)
+assert
+  (match (sol[1n], sol[2n]) with
+   | (Some x, Some y) -> x <= 2 && y <= 2 && !(x = y)
+   | _ -> false)
 
-    (* These should fail *)
-    (* assert (sol[1n] = Some 1 && sol[2n] = Some 1) *)
-    (* assert (sol[1n] = Some 1 && sol[2n] = Some 2) *)
-    assert (sol[1n] = Some 2 && sol[2n] = Some 1)
+(* These should fail *)
+(* assert (sol[1n] = Some 1 && sol[2n] = Some 1) *)
+(* assert (sol[1n] = Some 1 && sol[2n] = Some 2) *)
+assert (sol[1n] = Some 2 && sol[2n] = Some 1)
