@@ -200,17 +200,11 @@ let interp_interface edge intfe =
 ;;
 
 let update_preds interface partitioned_srp =
-  let intf edge b preds =
+  let intf edge _b preds =
     let p = interp_interface edge interface in
-    transform_ignore b p :: preds
+    p :: preds
   in
   SrpRemapping.map_predicates intf partitioned_srp
-;;
-
-let add_globals global partitioned_srp =
-  (* only do for outputs, not inputs *)
-  let gf _ b preds = if b then preds else global :: preds in
-  SrpRemapping.map_predicates gf partitioned_srp
 ;;
 
 (* Transform the given solve and return it along with a new expression to assert
