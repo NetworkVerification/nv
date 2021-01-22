@@ -1,4 +1,5 @@
 open Batteries
+open Syntax
 
 let read ?(filename : string option = None) lexbuf =
   let get_info () =
@@ -113,7 +114,6 @@ module DeclSort = Graph.Topological.Make (DeclG)
   * to the list of declarations it depends on.
 *)
 let get_decl_vars (var_m, decl_m) d =
-  let open Syntax in
   let extend_map_list k newv m =
     Map.modify_opt
       k
@@ -138,7 +138,9 @@ let get_decl_vars (var_m, decl_m) d =
     let deps = get_ty_vars t in
     extend_map_list d deps var_m, Map.add v d decl_m
   | DAssert e -> extend_map_list d (get_exp_vars e) var_m, decl_m
-  | DRequire e -> extend_map_list d (get_exp_vars e) var_m, decl_m
+  | DRequire e ->
+    let vars = get_exp_vars e in
+    extend_map_list d vars var_m, decl_m
   | DPartition e -> extend_map_list d (get_exp_vars e) var_m, decl_m
   | DSolve { aty; var_names; init; trans; merge; interface; decomp; global } ->
     let oget_exp_vars o =
@@ -156,24 +158,24 @@ let get_decl_vars (var_m, decl_m) d =
       | Some (lt, rt) -> oget_exp_vars lt @ oget_exp_vars rt
       | None -> []
     in
-    ( extend_map_list
-        d
-        (ty_vars
-        @ get_exp_vars var_names
-        @ get_exp_vars init
-        @ get_exp_vars trans
-        @ get_exp_vars merge
-        @ oget_exp_vars interface
-        @ decomp_vars
-        @ oget_exp_vars global)
-        var_m
-    , decl_m )
+    (* var names are introduced by the solve, rest is used by the solve *)
+    let var_names = get_exp_vars var_names in
+    let vars =
+      ty_vars
+      @ get_exp_vars init
+      @ get_exp_vars trans
+      @ get_exp_vars merge
+      @ oget_exp_vars interface
+      @ decomp_vars
+      @ oget_exp_vars global
+    in
+    ( extend_map_list d vars var_m
+    , List.fold_left (fun m v -> Map.add v d m) decl_m var_names )
   (* DNodes and DEdges *)
   | _ -> extend_map_list d [] var_m, decl_m
 ;;
 
 let sort_decls ds =
-  let open Syntax in
   let open Nv_datastructures.AdjGraph in
   (* Add a dependency from k to each decl in decls in g;
    * we add k to the graph as well in case it has no dependencies *)
