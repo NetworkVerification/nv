@@ -114,65 +114,53 @@ module DeclSort = Graph.Topological.Make (DeclG)
   * to the list of declarations it depends on.
 *)
 let get_decl_vars (var_m, decl_m) d =
-  let extend_map_list k newv m =
-    Map.modify_opt
-      k
-      (fun oldv ->
-        match oldv with
-        | Some old -> Some (newv @ old)
-        | None -> Some newv)
-      m
+  let vars, decl_m =
+    match d with
+    | DLet (v, _, e) -> get_exp_vars e, Map.add v d decl_m
+    | DSymbolic (v, t_or_e) ->
+      let deps =
+        match t_or_e with
+        | Ty t -> get_ty_vars t
+        | Exp e -> get_exp_vars e
+      in
+      deps, Map.add v d decl_m
+    | DUserTy (v, t) -> get_ty_vars t, Map.add v d decl_m
+    | DAssert e -> get_exp_vars e, decl_m
+    | DRequire e -> get_exp_vars e, decl_m
+    | DPartition e -> get_exp_vars e, decl_m
+    | DSolve { aty; var_names; init; trans; merge; interface; decomp; global } ->
+      let oget_exp_vars o =
+        match o with
+        | Some e -> get_exp_vars e
+        | None -> []
+      in
+      let ty_vars =
+        match aty with
+        | Some t -> get_ty_vars t
+        | None -> []
+      in
+      let decomp_vars =
+        match decomp with
+        | Some (lt, rt) -> oget_exp_vars lt @ oget_exp_vars rt
+        | None -> []
+      in
+      let vars =
+        ty_vars
+        @ get_exp_vars init
+        @ get_exp_vars trans
+        @ get_exp_vars merge
+        @ oget_exp_vars interface
+        @ decomp_vars
+        @ oget_exp_vars global
+      in
+      let decl_m =
+        List.fold_left (fun m v -> Map.add v d m) decl_m (get_exp_vars var_names)
+      in
+      vars, decl_m
+    (* DNodes and DEdges *)
+    | _ -> [], decl_m
   in
-  match d with
-  | DLet (v, _, e) ->
-    let vars = get_exp_vars e in
-    extend_map_list d vars var_m, Map.add v d decl_m
-  | DSymbolic (v, t_or_e) ->
-    let deps =
-      match t_or_e with
-      | Ty t -> get_ty_vars t
-      | Exp e -> get_exp_vars e
-    in
-    extend_map_list d deps var_m, Map.add v d decl_m
-  | DUserTy (v, t) ->
-    let deps = get_ty_vars t in
-    extend_map_list d deps var_m, Map.add v d decl_m
-  | DAssert e -> extend_map_list d (get_exp_vars e) var_m, decl_m
-  | DRequire e ->
-    let vars = get_exp_vars e in
-    extend_map_list d vars var_m, decl_m
-  | DPartition e -> extend_map_list d (get_exp_vars e) var_m, decl_m
-  | DSolve { aty; var_names; init; trans; merge; interface; decomp; global } ->
-    let oget_exp_vars o =
-      match o with
-      | Some e -> get_exp_vars e
-      | None -> []
-    in
-    let ty_vars =
-      match aty with
-      | Some t -> get_ty_vars t
-      | None -> []
-    in
-    let decomp_vars =
-      match decomp with
-      | Some (lt, rt) -> oget_exp_vars lt @ oget_exp_vars rt
-      | None -> []
-    in
-    (* var names are introduced by the solve, rest is used by the solve *)
-    let var_names = get_exp_vars var_names in
-    let vars =
-      ty_vars
-      @ get_exp_vars init
-      @ get_exp_vars trans
-      @ get_exp_vars merge
-      @ oget_exp_vars interface
-      @ decomp_vars
-      @ oget_exp_vars global
-    in
-    ( extend_map_list d vars var_m
-    , List.fold_left (fun m v -> Map.add v d m) decl_m var_names )
-  (* DNodes and DEdges *)
-  | _ -> extend_map_list d [] var_m, decl_m
+  Map.modify_def [] d (fun v -> v @ vars) var_m, decl_m
 ;;
 
 let sort_decls ds =

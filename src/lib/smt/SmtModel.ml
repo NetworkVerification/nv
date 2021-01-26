@@ -134,7 +134,6 @@ let translate_model_unboxed nodes (m : (string, string) BatMap.t) : Nv_solution.
           in
           symbolics, solves, assertions, guar :: guarantees
         | k when BatString.starts_with k "assert" ->
-          (* TODO: make sure this works for assert-globals *)
           let asn =
             match nvval.v with
             | VBool b -> b
