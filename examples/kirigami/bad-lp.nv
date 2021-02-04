@@ -1,0 +1,32 @@
+(* vim: set syntax=ocaml: *)
+type attribute = (int, int)
+
+let nodes = 2
+let edges = { 0=1; }
+
+let trans e x = let (a, b) = x in (a, b + 1)
+
+let merge n x y =
+  let (a, b) = x in
+  let (c, d) = y in
+  if a > c then x else
+  if c > a then y else
+  if b < d then x else y
+
+let init n = match n with
+  | 0n -> (100, 0)
+  | 1n -> (100, 16)
+
+let partition n = match n with
+  | 0n -> 0u8
+  | 1n -> 1u8
+
+let interface e = match e with
+  | 0~1 -> fun x -> let (a, b) = x in a = 101
+  | 1~0 -> fun x -> let (a, b) = x in a = 101
+
+let sol = solution { init = init; trans = trans; merge = merge; interface = interface; }
+
+let assertNode n v = let (a, b) = v in a = 101
+
+assert (foldNodes (fun u v acc -> acc && assertNode u v) sol true)
