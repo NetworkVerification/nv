@@ -24,7 +24,6 @@ let rec iter_exp f (e : exp) =
   | ETy (e, _) -> iter_exp f e
   | ERecord map -> Collections.StringMap.iter (fun _ -> f) map
   | EProject (e, _) -> iter_exp f e
-  | EIgnore e -> iter_exp f e
 ;;
 
 let iter_exp_decl f d =

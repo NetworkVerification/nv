@@ -108,7 +108,6 @@ and e = private
   | ETy of exp * ty
   | ERecord of exp StringMap.t
   | EProject of exp * string
-  | EIgnore of exp
 
 and exp = private
   { e : e
@@ -208,7 +207,6 @@ val eproject : exp -> string -> exp
 val esome : exp -> exp
 val ematch : exp -> branches -> exp
 val ety : exp -> ty -> exp
-val eignore : exp -> exp
 val ebool : bool -> exp
 val deconstructFun : exp -> func
 val exp_to_pattern : exp -> pattern

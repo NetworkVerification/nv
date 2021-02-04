@@ -55,7 +55,6 @@ let rec substitute x e1 e2 =
   | ETuple es -> etuple (BatList.map (fun e -> substitute x e e2) es) |> wrap e1
   | ERecord map -> erecord (StringMap.map (fun e -> substitute x e e2) map) |> wrap e1
   | EProject (e, l) -> eproject (substitute x e e2) l
-  | EIgnore e -> eignore (substitute x e e2) |> wrap e1
   | EOp (op, es) -> eop op (BatList.map (fun e -> substitute x e e2) es) |> wrap e1
   | EVal _ -> e1
 
@@ -84,7 +83,7 @@ let rec inline_app env e1 e2 : exp =
       let branches = mapBranches (fun (p, e) -> inline_branch_app env e2 (p, e)) bs in
       ematch e branches |> wrap e1
     | EApp _ -> eapp e1 e2 |> wrap e1
-    | ESome _ | ETuple _ | EOp _ | EVal _ | ERecord _ | EProject _ | EIgnore _ ->
+    | ESome _ | ETuple _ | EOp _ | EVal _ | ERecord _ | EProject _ ->
       failwith (Printf.sprintf "inline_app: %s" (Nv_lang.Printing.exp_to_string e1))
   in
   (* Printf.printf "inline_app e1: %s\ninline_app e2: %s)\n"
@@ -123,7 +122,6 @@ and inline_exp (env : exp Env.t) (e : exp) : exp =
   | ERecord map -> erecord (StringMap.map (inline_exp env) map) |> wrap e
   | EProject (e, l) -> eproject (inline_exp env e) l |> wrap e
   | ESome e1 -> esome (inline_exp env e1) |> wrap e
-  | EIgnore e1 -> eignore (inline_exp env e1) |> wrap e
   | EMatch (e1, bs) ->
     ematch (inline_exp env e1) (mapBranches (fun (p, e) -> inline_branch env (p, e)) bs)
     |> wrap e

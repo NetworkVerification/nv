@@ -90,7 +90,6 @@ let rec alpha_convert_exp (env : Var.t Env.t) (e : exp) =
     erecord (StringMap.map (fun e -> alpha_convert_exp env e) map) |> wrap e
   | EProject (e, l) -> eproject (alpha_convert_exp env e) l |> wrap e
   | ESome e1 -> esome (alpha_convert_exp env e1) |> wrap e
-  | EIgnore e1 -> eignore (alpha_convert_exp env e1) |> wrap e
   | EMatch (e1, bs) ->
     let bs' =
       mapBranches

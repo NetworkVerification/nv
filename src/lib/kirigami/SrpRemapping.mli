@@ -62,10 +62,10 @@ val get_old_nodes : partitioned_srp -> int list
 val string_of_partitioned_srp : partitioned_srp -> string
 
 (** Map a function over the inputs and outputs of the partitioned SRP.
- ** The function should take an edge as an argument and a boolean as its second argument;
- ** the boolean will be true for inputs and false for outputs. *)
+ ** The function should take an edge as an argument and a list of predicates as its second argument.
+ **)
 val map_predicates
-  :  (Edge.t -> bool -> exp list -> exp list)
+  :  (Edge.t -> exp list -> exp list)
   -> partitioned_srp
   -> partitioned_srp
 

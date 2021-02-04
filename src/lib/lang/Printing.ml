@@ -81,7 +81,6 @@ let prec_exp e =
   | ETy (_, _) -> max_prec
   | ERecord _ -> 0
   | EProject _ -> 0
-  | EIgnore _ -> max_prec
 ;;
 
 let rec sep s f xs =
@@ -317,7 +316,6 @@ and exp_to_string_p ~show_types prec e =
     | ETy (e, t) -> exp_to_string_p prec e ^ ty_to_string t
     | ERecord map -> print_record "=" (exp_to_string_p prec) map
     | EProject (e, l) -> exp_to_string_p prec e ^ "." ^ l
-    | EIgnore e -> "ignore(" ^ exp_to_string_p prec e ^ ")"
   in
   if show_types
   then Printf.sprintf "(%s : %s)" s (tyo_to_string e.ety)

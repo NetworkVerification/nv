@@ -40,7 +40,6 @@ let rec remap_exp parted_srp e =
     | EApp (e1, e2) -> eapp (f e1) (f e2)
     | ELet (x, e1, e2) -> elet x (f e1) (f e2)
     | EIf (test, e1, e2) -> eif (f test) (f e1) (f e2)
-    | EIgnore e -> eignore (f e)
     | ERecord _ -> failwith "remap_exp: records should be unrolled"
     | ETy (e, t) -> ety (f e) t
     | EVar _ -> e)
@@ -100,36 +99,6 @@ let remap_solve parted_srp solve =
   let trans = remap_exp parted_srp solve.trans in
   let merge = remap_exp parted_srp solve.merge in
   { solve with init; trans; merge }
-;;
-
-(** Transform a predicate which may contain ignore statements:
- ** ignore statements not in requires are replaced with "true" and
- ** ignore statements in requires are replaced with an
- ** equality which compares the expression with the default value.
- *)
-let rec transform_ignore is_require e =
-  let f = transform_ignore is_require in
-  wrap
-    e
-    (match e.e with
-    | EIgnore e1 ->
-      if is_require
-      then (
-        let ty = e1.ety |> Option.get in
-        aexp (eop Eq [e1; Generators.default_value_exp ty], Some TBool, e.espan))
-      else ebool true
-    | EMatch (e1, bs) -> ematch (f e1) (mapBranches (fun (p, e) -> p, f e) bs)
-    | EOp (op, es) -> eop op (List.map f es)
-    | ESome e -> esome (f e)
-    | ETuple es -> etuple (List.map f es)
-    | EProject (e, l) -> eproject (f e) l
-    | EFun fn -> efun { fn with body = f fn.body }
-    | EApp (e1, e2) -> eapp (f e1) (f e2)
-    | ELet (x, e1, e2) -> elet x (f e1) (f e2)
-    | EIf (e1, e2, e3) -> eif (f e1) (f e2) (f e3)
-    | ERecord _ -> failwith "transform_ignore: records should be unrolled"
-    | ETy (e, t) -> ety (f e) t
-    | EVal _ | EVar _ -> e)
 ;;
 
 (** Remap an and expression by dropping conjuncts that refer to cut nodes.
@@ -200,7 +169,7 @@ let interp_interface edge intfe =
 ;;
 
 let update_preds interface partitioned_srp =
-  let intf edge _b preds =
+  let intf edge preds =
     let p = interp_interface edge interface in
     p :: preds
   in
@@ -217,9 +186,6 @@ let transform_solve solve (partition : partitioned_srp) : partitioned_srp * solv
       | None -> partition
     in
     p1
-    (* match solve.global with
-     * | Some global -> add_globals global p1
-     * | None -> p1 *)
   in
   let solve' = remap_solve partition' solve in
   (* erase interface information now that it's in the partition *)

@@ -69,7 +69,6 @@ let rec interp_exp env e =
       failwith
         ("value " ^ value_to_string v ^ " did not match any pattern in match statement"))
   | ERecord _ | EProject _ -> failwith "Record found during interpretation"
-  | EIgnore _ -> failwith "ignore statement found during interpretation"
 
 and interp_op env ty op es =
   (* if arity op != List.length es then

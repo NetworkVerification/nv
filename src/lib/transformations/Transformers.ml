@@ -145,7 +145,6 @@ and transform_exp ~(name : string) (transformers : transformers) (e : exp) : exp
       | ETuple es -> etuple (List.map transform_exp es)
       | ERecord map -> erecord (StringMap.map transform_exp map)
       | EProject (e, l) -> eproject (transform_exp e) l
-      | EIgnore e -> eignore (transform_exp e)
       | EFun f ->
         efun
           { f with

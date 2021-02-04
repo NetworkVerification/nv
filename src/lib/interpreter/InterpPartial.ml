@@ -223,7 +223,6 @@ let rec interp_exp_partial_opt isapp env expEnv e =
         (* |> simplify_match *)
       | Some (penv, e) -> interp_exp_partial_opt false env penv e)
   | ERecord _ | EProject _ -> failwith "Record found during partial interpretation"
-  | EIgnore _ -> failwith "ignore statement found during partial interpretation"
 
 and interp_op_partial_opt env expEnv _ op es =
   let pes = BatList.map (interp_exp_partial_opt false env expEnv) es in
@@ -311,7 +310,6 @@ let rec interp_exp_partial isapp env e =
   | ETuple es ->
     aexp (etuple (BatList.map (interp_exp_partial false env) es), e.ety, e.espan)
   | ESome e' -> aexp (esome (interp_exp_partial false env e'), e.ety, e.espan)
-  | EIgnore e' -> aexp (eignore (interp_exp_partial false env e'), e.ety, e.espan)
   | EMatch (e1, branches) ->
     (* Printf.printf "match: %s\n" (Printing.exp_to_string e); *)
     let pe1 = interp_exp_partial false env e1 in
