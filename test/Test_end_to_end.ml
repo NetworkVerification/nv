@@ -3,14 +3,16 @@ open Nv
 open Nv_lang
 open Nv_solution
 open Main_defs
+open Nv_kirigami
 
 type testfun =
   string
   -> Cmdline.t
   -> Console.info
   -> Syntax.declarations
+  -> SrpRemapping.partitioned_srp list option
   -> (Solution.t -> Solution.t) list
-  -> Main_defs.answer * (Solution.t -> Solution.t) list
+  -> (Main_defs.answer * (Solution.t -> Solution.t) list) list
 
 type test =
   { testname : string
@@ -43,7 +45,7 @@ let bool_of_answer (a : answer * (Solution.t -> Solution.t) list) =
 let simulator_test filename expected : test =
   { testname = filename ^ "_simulator"
   ; args = Array.of_list ["nv"; "-s"; filename_prefix ^ filename]
-  ; testfun = (fun _ cfg info decls fs -> run_simulator cfg info decls fs)
+  ; testfun = (fun _ cfg info decls _ fs -> [run_simulator cfg info decls fs])
   ; expected
   }
 ;;
@@ -92,8 +94,8 @@ let compiler_test filename expected : test =
   { testname = filename ^ "_compiled"
   ; args = Array.of_list ["nv"; "-compile"; filename_prefix ^ filename]
   ; testfun =
-      (fun _ cfg info decls fs ->
-        run_compiled (filename_prefix ^ filename) cfg info decls fs)
+      (fun _ cfg info decls _ fs ->
+        [run_compiled (filename_prefix ^ filename) cfg info decls fs])
   ; expected
   }
 ;;
@@ -269,8 +271,9 @@ let parallel_tests =
 let make_ounit_test test =
   test.testname
   >:: fun _ ->
-  let cfg, info, file, decls, fs = parse_input test.args in
-  let result = bool_of_answer @@ test.testfun file cfg info decls fs in
+  let cfg, info, file, decls, parts, fs = parse_input test.args in
+  (* checking that every part is true = taking the conjunction using for_all *)
+  let result = List.for_all bool_of_answer (test.testfun file cfg info decls parts fs) in
   assert_equal ~printer:string_of_bool test.expected result
 ;;
 
