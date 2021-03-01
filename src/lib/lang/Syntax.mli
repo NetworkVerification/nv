@@ -158,6 +158,16 @@ val optimizeBranches : branches -> branches
 val branchToList : branches -> (PatMap.key * exp) list
 val branchSize : branches -> unit
 
+type partitioning =
+  {
+    interface : exp
+  ; decomp : exp option * exp option
+  ; global : exp option
+  }
+
+val lift_partitioning : (exp -> exp) -> partitioning -> partitioning
+val fold_partitioning : (exp -> 'a -> 'a) -> partitioning -> 'a -> 'a
+
 (* var_names should be an exp that uses only the EVar and ETuple constructors *)
 type solve =
   { aty : ty option
@@ -165,9 +175,7 @@ type solve =
   ; init : exp
   ; trans : exp
   ; merge : exp
-  ; interface : exp option
-  ; decomp : (exp option * exp option) option
-  ; global : exp option
+  ; part : partitioning option
   }
 
 type declaration =

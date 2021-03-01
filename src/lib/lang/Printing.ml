@@ -364,15 +364,21 @@ let rec declaration_to_string ?(show_types = false) d =
   | DSymbolic (x, Exp e) -> "symbolic " ^ Var.to_string x ^ " = " ^ exp_to_string e
   | DSymbolic (x, Ty ty) -> "symbolic " ^ Var.to_string x ^ " : " ^ ty_to_string ty
   | DAssert e -> "assert " ^ exp_to_string e
-  | DSolve { aty; var_names; init; trans; merge; interface; decomp } ->
-    (* FIXME: doesn't print global *)
+  | DSolve { aty; var_names; init; trans; merge; part } ->
     let oprint s o =
       match o with
       | None -> ""
       | Some e -> Printf.sprintf "; %s = %s" s (exp_to_string e)
     in
+    let part_to_string {interface; decomp = (lt, rt); global} =
+      Printf.sprintf "interface = %s%s%s%s"
+        (exp_to_string interface)
+        (oprint "ltrans" lt)
+        (oprint "rtrans" rt)
+        (oprint "global" global)
+    in
     Printf.sprintf
-      "let %s = solution<%s> {init = %s; trans = %s; merge = %s%s%s}"
+      "let %s = solution<%s> {init = %s; trans = %s; merge = %s%s}"
       (exp_to_string var_names)
       (match aty with
       | None -> "None"
@@ -380,10 +386,11 @@ let rec declaration_to_string ?(show_types = false) d =
       (exp_to_string init)
       (exp_to_string trans)
       (exp_to_string merge)
-      (oprint "interface" interface)
-      (match decomp with
-      | None -> ""
-      | Some (lt, rt) -> oprint "ltrans" lt ^ oprint "rtrans" rt)
+      (match part with
+       | Some p ->
+         (part_to_string p)
+       | None -> ""
+      )
   | DPartition e -> "let partition = " ^ exp_to_string e (* partitioning *)
   | DRequire e -> "require " ^ exp_to_string e
   | DNodes n -> "let nodes = " ^ string_of_int n

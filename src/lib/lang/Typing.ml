@@ -118,7 +118,7 @@ let check_annot_decl (d : declaration) =
   | DAssert e
   | DPartition e (* partitioning *)
   | DRequire e -> check_annot e
-  | DSolve { var_names; init; trans; merge; interface; decomp; global } ->
+  | DSolve { var_names; init; trans; merge; part } ->
     let check_opt o =
       match o with
       | Some e -> check_annot e
@@ -128,13 +128,14 @@ let check_annot_decl (d : declaration) =
     check_annot init;
     check_annot trans;
     check_annot merge;
-    check_opt interface;
-    (match decomp with
-    | Some (lt, rt) ->
-      check_opt lt;
-      check_opt rt
-    | None -> ());
-    check_opt global
+    (match part with
+     | Some {interface; decomp = (lt, rt); global} ->
+       check_annot interface;
+       check_opt lt;
+       check_opt rt;
+       check_opt global
+     | None -> ()
+    )
   | DNodes _ | DEdges _ | DSymbolic _ | DUserTy _ -> ()
 ;;
 
@@ -895,7 +896,7 @@ and infer_declaration i info env record_types d : ty Env.t * declaration =
     let ty = oget e'.ety in
     unify info e ty TBool;
     env, DRequire e'
-  | DSolve { aty; var_names; init; trans; merge; interface; decomp; global } ->
+  | DSolve { aty; var_names; init; trans; merge; part } ->
     (* Note: This only works before map unrolling *)
     let solve_aty =
       match aty with
@@ -916,16 +917,16 @@ and infer_declaration i info env record_types d : ty Env.t * declaration =
         Some x'
       | None -> None
     in
-    let interface' = lift_unify interface (interface_ty solve_aty) in
-    let decomp' =
-      match decomp with
-      | Some (lt, rt) ->
+    let part' = match part with
+      | Some { interface; decomp = (lt, rt); global } ->
+        let interface' = infer_exp interface in
+        unify info interface (oget interface'.ety) (interface_ty solve_aty);
         let lt' = lift_unify lt (decomp_ty solve_aty) in
         let rt' = lift_unify rt (decomp_ty solve_aty) in
-        Some (lt', rt')
+        let global' = lift_unify global (global_ty solve_aty) in
+        Some { interface = interface'; decomp = (lt', rt'); global = global' }
       | None -> None
     in
-    let global' = lift_unify global (global_ty solve_aty) in
     let var =
       match var_names.e with
       | EVar x -> x
@@ -939,9 +940,7 @@ and infer_declaration i info env record_types d : ty Env.t * declaration =
         ; init = init'
         ; trans = trans'
         ; merge = merge'
-        ; interface = interface'
-        ; decomp = decomp'
-        ; global = global'
+        ; part = part'
         } )
   | DUserTy _ | DNodes _ | DEdges _ -> env, d
 ;;
