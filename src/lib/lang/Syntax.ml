@@ -190,6 +190,36 @@ and ty_or_exp =
   | Ty of ty
   | Exp of exp
 
+type partitioning =
+  {
+    interface : exp
+  ; decomp : exp option * exp option
+  ; global : exp option
+  }
+
+(* Lift a function over the partitioning *)
+let lift_partitioning f part =
+  let { interface ; decomp = (lt, rt); global } = part in
+  let interface = f interface in
+  let decomp = (Option.map f lt, Option.map f rt) in
+  let global = Option.map f global in
+  {
+    interface
+  ; decomp
+  ; global
+  }
+;;
+
+let fold_partitioning f part acc =
+  let { interface ; decomp = (lt, rt); global } = part in
+  let acc = f interface acc in
+  let acc = Option.apply (Option.map f lt) acc in
+  let acc = Option.apply (Option.map f rt) acc in
+  let acc = Option.apply (Option.map f global) acc in
+  acc
+;;
+
+
 (* var_names should be an exp that uses only the EVar and ETuple constructors *)
 (* interface is an optional expression to describe the network hypotheses *)
 (* global is an optional expression to check that every node satisfies some predicate *)
@@ -199,10 +229,7 @@ type solve =
   ; init : exp
   ; trans : exp
   ; merge : exp
-  ; (* TODO: put all the partitioning stuff together in another type *)
-    interface : exp option
-  ; decomp : (exp option * exp option) option
-  ; global : exp option
+  ; part : partitioning option
   }
 
 type declaration =

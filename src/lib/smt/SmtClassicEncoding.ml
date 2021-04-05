@@ -346,7 +346,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
       graph
       parted_srp
       count
-      { aty; var_names; init; trans; merge; decomp; global }
+      { aty; var_names; init; trans; merge; decomp; _ }
     =
     let aty = oget aty in
     let einit, etrans, emerge = init, trans, merge in
@@ -504,29 +504,6 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
       !trans_input_map;
     (* construct the output constants *)
     let guarantees = encode_kirigami_outputs env outputs eouttrans labelling count in
-    (* construct the global assertions *)
-    (* let global_reqs, global_asserts =
-     *   match global with
-     *   | Some g ->
-     *     let input_vars =
-     *       VertexMap.fold
-     *         (fun _ inputs l ->
-     *           List.fold_left (fun l ie -> find_input_symbolics env ie.var :: l) l inputs)
-     *         inputs
-     *         []
-     *     in
-     *     ( encode_kirigami_global "input" env g input_vars count
-     *     , (\* need to be over both the initial values and the final results *\)
-     *       encode_kirigami_global "init" env g !inits count
-     *       @ encode_kirigami_global "result" env g (Array.to_list labelling) count
-     *       @ encode_kirigami_global
-     *           "output"
-     *           env
-     *           g
-     *           (List.map Tuple2.second guarantees)
-     *           count )
-     *   | None -> [], []
-     * in *)
     (* divide up the hypotheses *)
     let lesser_hyps, greater_hyps =
       VertexMap.fold
@@ -542,7 +519,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
         ([], [])
     in
     (* lesser_hyps, greater_hyps, guarantees, global_reqs, global_asserts *)
-    lesser_hyps @ greater_hyps, guarantees
+    lesser_hyps, greater_hyps, guarantees
   ;;
 
   let encode_solve env graph count { aty; var_names; init; trans; merge } =
@@ -708,12 +685,12 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     (* encode the symbolics first, so we can find them when we do the kirigami_solve
      * NOTE: could instead pass in the list of symbolics to encode_kirigami_solve *)
     add_symbolic_constraints env [] env.symbolics;
-    let hyps, guarantees =
+    let lesser_hyps, greater_hyps, guarantees =
       List.fold_lefti
-        (fun (hs, gs) i s ->
-          let h, g = encode_kirigami_solve env graph part i s in
-          h @ hs, g @ gs)
-        ([], [])
+        (fun (lhs, ghs, gs) i s ->
+          let lh, gh, g = encode_kirigami_solve env graph part i s in
+          lh @ lhs, gh @ ghs, g @ gs)
+        ([], [], [])
         solves
     in
     (* helper for applying tuples of constraints *)
@@ -728,19 +705,12 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     in
     (* these constraints are included in all scopes *)
     add_symbolic_constraints env requires VarMap.empty;
-    (* add_assertions "req-global" env apply global_reqs ~negate:false; *)
-    (* global checks *)
-    (* (match global_asserts with
-     * | [] -> ()
-     * | _ ->
-     *   scope_checks env (fun env ->
-     *       add_assertions "assert-global" env apply global_asserts ~negate:true)); *)
     (* ranked initial checks *)
-    add_assertions "hypothesis" env apply hyps ~negate:false;
+    add_assertions "lesser-hyp" env apply lesser_hyps ~negate:false;
     scope_checks env (fun env ->
         add_assertions "guarantee" env apply guarantees ~negate:true);
     (* safety checks: add other hypotheses, test original assertions *)
-    (* add_assertions "greater-hyp" env apply greater_hyps ~negate:false; *)
+    add_assertions "greater-hyp" env apply greater_hyps ~negate:false;
     add_assertions "assert" env (fun e -> encode_exp_z3 "" env e) assertions ~negate:true;
     env
   ;;

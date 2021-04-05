@@ -139,16 +139,12 @@
          StringMap.Exceptionless.find "global" m
       | _ -> failwith "solution must take a direct record expression"
     in
-    let decomp = match (interface, ltrans, rtrans) with
-    (* see SmtClassicEncoding.ml for default behaviour when both ltrans and rtrans are None *)
-    | (_, None, None) -> None
-    | (Some _, Some _, Some _) -> Some (ltrans, rtrans)
-    | (Some _, Some _, None) -> Some (ltrans, None)
-    | (Some _, None, Some _) -> Some (None, rtrans)
-    | (None, Some _, _) -> failwith "found transfer decomposition without an interface"
-    | (None, None, Some _) -> failwith "found transfer decomposition without an interface"
+    let part = match interface with
+      | Some interface ->
+         Some {interface; decomp = (ltrans, rtrans); global}
+      | None -> None
     in
-    DSolve ({aty = None; var_names = evar x; init; trans; merge; interface; decomp; global})
+    DSolve ({aty = None; var_names = evar x; init; trans; merge; part})
 
 %}
 
