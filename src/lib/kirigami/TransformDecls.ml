@@ -154,8 +154,10 @@ let transform_assert (e : exp) (parted_srp : SrpRemapping.partitioned_srp) : exp
 
 (** Helper function to extract the edge predicate
  *  from the interface expression.
+ ** If the given interface has only a bare term t rather than a predicate function,
+ ** construct a predicate function (fun x -> x = t).
 *)
-let interp_interface edge intfe =
+let interp_interface edge intfe aty =
   let u, v = edge in
   let node_value n = avalue (vnode n, Some Typing.node_ty, Span.default) in
   let edge = [node_value u; node_value v] in
@@ -164,13 +166,20 @@ let interp_interface edge intfe =
   | EFun _ -> intf_app
   | EVal { v = VClosure _; _ } -> intf_app
   | _ ->
-    failwith
-      ("expected intf value to be a function but got " ^ Printing.exp_to_string intf_app)
+    let x = Var.fresh "x" in
+    let x_e = aexp (evar x, aty, Span.default) in
+    let cmp = aexp (eop Eq [x_e; intf_app], Some TBool, Span.default) in
+    let f = funcFull x aty (Some TBool) cmp in
+    efunc f
 ;;
 
-let update_preds interface partitioned_srp =
+(* failwith
+ *   ("expected intf value to be a function but got " ^ Printing.exp_to_string intf_app) *)
+
+let update_preds aty interface partitioned_srp =
   let intf edge preds =
-    let p = interp_interface edge interface in
+    let p = interp_interface edge interface aty in
+    print_endline (Printing.exp_to_string p);
     p :: preds
   in
   SrpRemapping.map_predicates intf partitioned_srp
@@ -182,7 +191,7 @@ let transform_solve solve (partition : partitioned_srp) : partitioned_srp * solv
   let partition' =
     let p1 =
       match solve.interface with
-      | Some interface -> update_preds interface partition
+      | Some interface -> update_preds solve.aty interface partition
       | None -> partition
     in
     p1
