@@ -5,6 +5,7 @@ Main module to generate, run and tabulate the Kirigami benchmarks.
 
 import sys
 import os
+import subprocess
 import re
 from datetime import datetime
 from gen_part_nv import gen_part_nv
@@ -28,11 +29,53 @@ def get_benchmarks():
     return benches
 
 
-def create_benchmarks():
+def parse_sim(output):
+    pat = re.compile(r"Node (\d+)\n-*\n((?:.|\n)+?)\n\n", re.M)
+    solutions = dict()
+    for match in re.finditer(pat, output):
+        node = int(match.group(1))
+        sol = match.group(2)
+        solutions[node] = sol
+    return solutions
+
+
+def run_nv_simulate(path):
+    """
+    Run nv's simulation tool and capture its output.
+    """
+    nvpath = os.path.join(os.getcwd(), "nv")
+    if not os.path.exists(nvpath):
+        print("Did not find 'nv' executable in the current working directory")
+        sys.exit(1)
+    args = [nvpath, "-v", "-s"]
+    print(f"Running {' '.join(args)}")
+    try:
+        proc = subprocess.run(args, text=True, check=True, capture_output=True)
+        return parse_sim(proc.stdout)
+    except subprocess.CalledProcessError as exn:
+        print(exn.stderr)
+        return {}
+    except subprocess.TimeoutExpired as exn:
+        print(exn.stderr)
+        return {}
+
+
+def simulate_benchmarks(benchmarks):
+    """
+    Simulate the given benchmarks and collect the results of simulation.
+    """
+    all_solutions = dict()
+    for (inputf, _) in benchmarks:
+        solutions = run_nv_simulate(inputf)
+        all_solutions[inputf] = solutions
+    return all_solutions
+
+
+def create_benchmarks(benchmarks):
     """
     Generate the necessary benchmarks to use.
     """
-    for (inputf, dest) in get_benchmarks():
+    for (inputf, dest) in benchmarks:
         gen_part_nv(inputf, dest, "h")
         gen_part_nv(inputf, dest, "v")
         gen_part_nv(inputf, dest, "pods")
@@ -94,7 +137,7 @@ def tabulate_fattree_benchmarks(
 if __name__ == "__main__":
     OP = sys.argv[1]
     if OP == "make":
-        create_benchmarks()
+        create_benchmarks(get_benchmarks())
     if OP == "clean":
         clean_benchmarks(dry_run=False)
     if OP == "list":

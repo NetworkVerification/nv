@@ -87,7 +87,7 @@ def join_result_dicts(*dicts):
     return joined
 
 
-def parse_output(output):
+def parse_smt(output):
     """
     Parse the output of an NV command.
     Returns a dictionary of strings to lists of floats.
@@ -108,9 +108,9 @@ def parse_output(output):
     return profile
 
 
-def run_nv(path, cut, time):
+def run_nv_smt(path, cut, time):
     """
-    Run nv and capture its output.
+    Run nv's SMT tool and capture its output.
     If it doesn't finish within the given time, kill it.
     """
     nvpath = os.path.join(os.getcwd(), "nv")
@@ -128,7 +128,7 @@ def run_nv(path, cut, time):
         proc = subprocess.run(
             args, text=True, check=True, capture_output=True, timeout=time
         )
-        return parse_output(proc.stdout)
+        return parse_smt(proc.stdout)
     except subprocess.CalledProcessError as exn:
         print(exn.stderr)
         return {}
@@ -138,7 +138,7 @@ def run_nv(path, cut, time):
 
 
 def run_bench(cut, path, time):
-    return (cut, run_nv(path, cut, time))
+    return (cut, run_nv_smt(path, cut, time))
 
 
 def run_benchmarks_sync(benchdir, benches, time):
