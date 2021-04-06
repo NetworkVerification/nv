@@ -131,7 +131,7 @@ let get_decl_vars (var_m, decl_m) d =
     | DSolve { aty; var_names; init; trans; merge; part } ->
       let part_vars =
         match part with
-        | Some p -> fold_partitioning (fun e l -> get_exp_vars e @ l) p []
+        | Some p -> fold_part (fun e l -> get_exp_vars e @ l) p []
         | None -> []
       in
       let ty_vars =
@@ -140,11 +140,7 @@ let get_decl_vars (var_m, decl_m) d =
         | None -> []
       in
       let vars =
-        ty_vars
-        @ get_exp_vars init
-        @ get_exp_vars trans
-        @ get_exp_vars merge
-        @ part_vars
+        ty_vars @ get_exp_vars init @ get_exp_vars trans @ get_exp_vars merge @ part_vars
       in
       let decl_m =
         List.fold_left (fun m v -> Map.add v d m) decl_m (get_exp_vars var_names)

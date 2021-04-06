@@ -370,12 +370,12 @@ let rec declaration_to_string ?(show_types = false) d =
       | None -> ""
       | Some e -> Printf.sprintf "; %s = %s" s (exp_to_string e)
     in
-    let part_to_string {interface; decomp = (lt, rt); global} =
-      Printf.sprintf "interface = %s%s%s%s"
+    let part_to_string { interface; decomp = lt, rt } =
+      Printf.sprintf
+        "interface = %s%s%s"
         (exp_to_string interface)
         (oprint "ltrans" lt)
         (oprint "rtrans" rt)
-        (oprint "global" global)
     in
     Printf.sprintf
       "let %s = solution<%s> {init = %s; trans = %s; merge = %s%s}"
@@ -387,10 +387,8 @@ let rec declaration_to_string ?(show_types = false) d =
       (exp_to_string trans)
       (exp_to_string merge)
       (match part with
-       | Some p ->
-         (part_to_string p)
-       | None -> ""
-      )
+      | Some p -> part_to_string p
+      | None -> "")
   | DPartition e -> "let partition = " ^ exp_to_string e (* partitioning *)
   | DRequire e -> "require " ^ exp_to_string e
   | DNodes n -> "let nodes = " ^ string_of_int n

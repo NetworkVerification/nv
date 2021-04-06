@@ -162,11 +162,11 @@ type partitioning =
   {
     interface : exp
   ; decomp : exp option * exp option
-  ; global : exp option
   }
 
-val lift_partitioning : (exp -> exp) -> partitioning -> partitioning
-val fold_partitioning : (exp -> 'a -> 'a) -> partitioning -> 'a -> 'a
+val iter_part : (exp -> unit) -> partitioning -> unit
+val map_part : (exp -> exp) -> partitioning -> partitioning
+val fold_part : (exp -> 'a -> 'a) -> partitioning -> 'a -> 'a
 
 (* var_names should be an exp that uses only the EVar and ETuple constructors *)
 type solve =

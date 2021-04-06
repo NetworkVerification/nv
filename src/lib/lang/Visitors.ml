@@ -37,9 +37,7 @@ let iter_exp_decl f d =
   | DSolve { var_names; init; trans; merge; part; _ } ->
     let part_exps =
       match part with
-      | Some { interface; decomp = (lt, rt); global } ->
-        let ocons o = Option.apply (Option.map List.cons o) in
-        ocons global (ocons rt (ocons lt [interface]))
+      | Some p -> fold_part List.cons p []
       | None -> []
     in
     List.iter (iter_exp (f d)) ([var_names; init; trans; merge] @ part_exps)

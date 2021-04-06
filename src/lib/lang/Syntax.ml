@@ -191,34 +191,31 @@ and ty_or_exp =
   | Exp of exp
 
 type partitioning =
-  {
-    interface : exp
+  { interface : exp
   ; decomp : exp option * exp option
-  ; global : exp option
   }
 
-(* Lift a function over the partitioning *)
-let lift_partitioning f part =
-  let { interface ; decomp = (lt, rt); global } = part in
-  let interface = f interface in
-  let decomp = (Option.map f lt, Option.map f rt) in
-  let global = Option.map f global in
-  {
-    interface
-  ; decomp
-  ; global
-  }
+let iter_part f part =
+  let { interface; decomp = lt, rt } = part in
+  f interface;
+  Option.may f lt;
+  Option.may f rt
 ;;
 
-let fold_partitioning f part acc =
-  let { interface ; decomp = (lt, rt); global } = part in
+let map_part f part =
+  let { interface; decomp = lt, rt } = part in
+  let interface = f interface in
+  let decomp = Option.map f lt, Option.map f rt in
+  { interface; decomp }
+;;
+
+let fold_part f part acc =
+  let { interface; decomp = lt, rt } = part in
   let acc = f interface acc in
   let acc = Option.apply (Option.map f lt) acc in
   let acc = Option.apply (Option.map f rt) acc in
-  let acc = Option.apply (Option.map f global) acc in
   acc
 ;;
-
 
 (* var_names should be an exp that uses only the EVar and ETuple constructors *)
 (* interface is an optional expression to describe the network hypotheses *)

@@ -346,7 +346,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
       graph
       parted_srp
       count
-      { aty; var_names; init; trans; merge; decomp; _ }
+      { aty; var_names; init; trans; merge; part; _ }
     =
     let aty = oget aty in
     let einit, etrans, emerge = init, trans, merge in
@@ -393,8 +393,8 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     (* trans_input_map maps each edge to the incoming message variable *)
     let trans_input_map = ref EdgeMap.empty in
     let eouttrans, eintrans =
-      match decomp with
-      | Some (lt, rt) -> lt, rt
+      match part with
+      | Some { decomp = lt, rt; _ } -> lt, rt
       | None -> Some etrans, None
     in
     (* construct the input constants *)
@@ -676,6 +676,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
   ;;
 
   let kirigami_encode_z3 part ds : SmtUtils.smt_env =
+    print_endline (Printing.declarations_to_string ds);
     let symbolics = get_symbolics ds in
     let graph = get_graph ds |> oget in
     let solves = get_solves ds in

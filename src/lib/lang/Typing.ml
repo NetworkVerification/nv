@@ -119,23 +119,11 @@ let check_annot_decl (d : declaration) =
   | DPartition e (* partitioning *)
   | DRequire e -> check_annot e
   | DSolve { var_names; init; trans; merge; part } ->
-    let check_opt o =
-      match o with
-      | Some e -> check_annot e
-      | None -> ()
-    in
     check_annot var_names;
     check_annot init;
     check_annot trans;
     check_annot merge;
-    (match part with
-     | Some {interface; decomp = (lt, rt); global} ->
-       check_annot interface;
-       check_opt lt;
-       check_opt rt;
-       check_opt global
-     | None -> ()
-    )
+    Option.may (iter_part check_annot) part
   | DNodes _ | DEdges _ | DSymbolic _ | DUserTy _ -> ()
 ;;
 
@@ -917,14 +905,14 @@ and infer_declaration i info env record_types d : ty Env.t * declaration =
         Some x'
       | None -> None
     in
-    let part' = match part with
-      | Some { interface; decomp = (lt, rt); global } ->
+    let part' =
+      match part with
+      | Some { interface; decomp = lt, rt } ->
         let interface' = infer_exp interface in
         unify info interface (oget interface'.ety) (interface_ty solve_aty);
         let lt' = lift_unify lt (decomp_ty solve_aty) in
         let rt' = lift_unify rt (decomp_ty solve_aty) in
-        let global' = lift_unify global (global_ty solve_aty) in
-        Some { interface = interface'; decomp = (lt', rt'); global = global' }
+        Some { interface = interface'; decomp = lt', rt' }
       | None -> None
     in
     let var =

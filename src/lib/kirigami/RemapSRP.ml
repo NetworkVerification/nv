@@ -93,8 +93,13 @@ let remap_declarations part_srp ds =
   (* revert any changes to the decomp field *)
   ( List.map2
       (fun oldd newd ->
+        let revert_decomp p1 p2 =
+          match p1, p2 with
+          | Some p1, Some p2 -> Some { p2 with decomp = p1.decomp }
+          | _ -> failwith "remap_declarations: partition not consistent between p1 and p2"
+        in
         match oldd, newd with
-        | DSolve s1, DSolve s2 -> DSolve { s2 with decomp = s1.decomp }
+        | DSolve s1, DSolve s2 -> DSolve { s2 with part = revert_decomp s1.part s2.part }
         | _ -> newd)
       ds
       ds'

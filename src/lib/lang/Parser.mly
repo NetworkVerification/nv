@@ -127,7 +127,7 @@
       |> Integer.of_int
 
   let make_dsolve x r =
-    let (init, trans, merge, interface, ltrans, rtrans, global) =
+    let (init, trans, merge, interface, ltrans, rtrans) =
       match r.e with
       | ERecord m ->
          StringMap.find "init" m,
@@ -135,13 +135,16 @@
          StringMap.find "merge" m,
          StringMap.Exceptionless.find "interface" m,
          StringMap.Exceptionless.find "ltrans" m,
-         StringMap.Exceptionless.find "rtrans" m,
-         StringMap.Exceptionless.find "global" m
+         StringMap.Exceptionless.find "rtrans" m
       | _ -> failwith "solution must take a direct record expression"
     in
     let part = match interface with
       | Some interface ->
-         Some {interface; decomp = (ltrans, rtrans); global}
+         let ltrans, rtrans = match (ltrans, rtrans) with
+           | (None, None) -> Some trans, None
+           | _ -> ltrans, rtrans
+         in
+         Some {interface; decomp = (ltrans, rtrans)}
       | None -> None
     in
     DSolve ({aty = None; var_names = evar x; init; trans; merge; part})

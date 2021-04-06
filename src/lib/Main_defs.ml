@@ -176,9 +176,7 @@ let partialEvalDecls decls =
             init = InterpPartial.interp_partial_opt r.init
           ; trans = InterpPartial.interp_partial_opt r.trans
           ; merge = InterpPartial.interp_partial_opt r.merge
-          ; interface =
-              BatOption.map (fun i -> InterpPartial.interp_partial_opt i) r.interface
-          ; decomp = None (* don't need to keep? *)
+          ; part = omap (map_part (fun i -> InterpPartial.interp_partial_opt i)) r.part
           }
       | DRequire _ | DPartition _ | DNodes _ | DSymbolic _ | DUserTy _ | DEdges _ -> d)
     decls

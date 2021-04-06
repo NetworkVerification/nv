@@ -189,14 +189,9 @@ let update_preds aty interface partitioned_srp =
  * and new expressions to require. *)
 let transform_solve solve (partition : partitioned_srp) : partitioned_srp * solve =
   let partition' =
-    let p1 =
-      match solve.interface with
-      | Some interface -> update_preds solve.aty interface partition
-      | None -> partition
-    in
-    p1
+    match solve.part with
+    | Some { interface; _ } -> update_preds solve.aty interface partition
+    | None -> partition
   in
-  let solve' = remap_solve partition' solve in
-  (* erase interface information now that it's in the partition *)
-  partition', { solve' with interface = None }
+  partition', remap_solve partition' solve
 ;;
