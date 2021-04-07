@@ -4,8 +4,10 @@ gen_part_nv.py [spfile]
 A module for generating spX-part.nv fileoutput from spX.nv files.
 """
 import os
+import sys
 import re
 import argparse
+import subprocess
 
 # used for constructing the graph
 import igraph
@@ -122,7 +124,7 @@ def write_partition_str(partitions):
     return output
 
 
-def write_interface_str(fwd_edges, net_type):
+def write_interface_str(edges, net_type):
     """
     Return the string representation of the interface function.
     """
@@ -147,7 +149,7 @@ def write_interface_str(fwd_edges, net_type):
     else:
         raise Exception("Unexpected net type")
     output += "\n  match edge with\n"
-    for (start, end) in fwd_edges:
+    for (start, end) in edges:
         if net_type == SP:
             fn = "(fun b -> true)"
         elif net_type == FATPOL:
@@ -284,14 +286,6 @@ def nodes_cut_vertically(graph, dest):
         return group2, group1
 
 
-def validate(spine_nodes, cross_edges):
-    """Validate that every cross edge goes to or from a spine node."""
-    for (start, end) in cross_edges:
-        if start not in spine_nodes and end not in spine_nodes:
-            warn = "Warning: Edge {},{} does not connect to the spine!"
-            print(warn.format(start, end))
-
-
 def get_cross_edges(graph, partitions):
     """
     Get the edges in the network which go from lower-ranked partitions to
@@ -343,6 +337,48 @@ def split_prefooter(sptext):
     match = prog.search(sptext)
     end = match.end()
     return (sptext[: end + 1], sptext[end + 1 :])
+
+
+def parse_sim(output):
+    pat = re.compile(r"Node (\d+)\n-*\n((?:.|\n)+?)\n\n", re.M)
+    solutions = dict()
+    for match in re.finditer(pat, output):
+        node = int(match.group(1))
+        sol = match.group(2)
+        solutions[node] = sol
+    return solutions
+
+
+def run_nv_simulate(path):
+    """
+    Run nv's simulation tool and capture its output.
+    """
+    nvpath = os.path.join(os.getcwd(), "nv")
+    if not os.path.exists(nvpath):
+        print("Did not find 'nv' executable in the current working directory")
+        sys.exit(1)
+    args = [nvpath, "-v", "-s"] + [path]
+    print(f"Running {' '.join(args)}")
+    try:
+        proc = subprocess.run(args, text=True, check=True, capture_output=True)
+        return parse_sim(proc.stdout)
+    except subprocess.CalledProcessError as exn:
+        print(exn.stderr)
+        return {}
+    except subprocess.TimeoutExpired as exn:
+        print(exn.stderr)
+        return {}
+
+
+def write_interface_from_sim(edges, solution):
+    """
+    Write an interface string based on the given simulation.
+    """
+    output = "let interface edge =\n  match edge with\n"
+    for (start, end) in edges:
+        sol = solution[start]
+        output += f"  | {start}~{end} -> {sol}\n"
+    return output
 
 
 def gen_part_nv(spfile, dest, cut, verbose=False):

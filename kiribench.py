@@ -3,12 +3,11 @@
 Main module to generate, run and tabulate the Kirigami benchmarks.
 """
 
-import sys
+import argparse
 import os
-import subprocess
 import re
 from datetime import datetime
-from gen_part_nv import gen_part_nv
+from gen_part_nv import gen_part_nv, run_nv_simulate
 from tabulate_sp_bench import (
     run_trials_sync,
     run_trials_parallel,
@@ -27,37 +26,6 @@ def get_benchmarks():
     # ]
     benches = [(f"{BENCH_DIR}/FAT{sz}/fat{sz}Pol.nv", d) for (sz, d) in common]
     return benches
-
-
-def parse_sim(output):
-    pat = re.compile(r"Node (\d+)\n-*\n((?:.|\n)+?)\n\n", re.M)
-    solutions = dict()
-    for match in re.finditer(pat, output):
-        node = int(match.group(1))
-        sol = match.group(2)
-        solutions[node] = sol
-    return solutions
-
-
-def run_nv_simulate(path):
-    """
-    Run nv's simulation tool and capture its output.
-    """
-    nvpath = os.path.join(os.getcwd(), "nv")
-    if not os.path.exists(nvpath):
-        print("Did not find 'nv' executable in the current working directory")
-        sys.exit(1)
-    args = [nvpath, "-v", "-s"]
-    print(f"Running {' '.join(args)}")
-    try:
-        proc = subprocess.run(args, text=True, check=True, capture_output=True)
-        return parse_sim(proc.stdout)
-    except subprocess.CalledProcessError as exn:
-        print(exn.stderr)
-        return {}
-    except subprocess.TimeoutExpired as exn:
-        print(exn.stderr)
-        return {}
 
 
 def simulate_benchmarks(benchmarks):
@@ -134,14 +102,29 @@ def tabulate_fattree_benchmarks(
     return runs
 
 
+OPERATIONS = [
+    "make",
+    "clean",
+    "list",
+    "run",
+    "sim",
+]
+
 if __name__ == "__main__":
-    OP = sys.argv[1]
-    if OP == "make":
+    parser = argparse.ArgumentParser(
+        description="Frontend for benchmarking the Kirigami tool."
+    )
+    parser.add_argument("op", type=str, choices=OPERATIONS, help="operation to run")
+    parser.add_argument("sizes", type=int, nargs="*")
+    args = parser.parse_args()
+    if args.op == "make":
         create_benchmarks(get_benchmarks())
-    if OP == "clean":
+    if args.op == "clean":
         clean_benchmarks(dry_run=False)
-    if OP == "list":
+    if args.op == "list":
         clean_benchmarks(dry_run=True)
-    if OP == "run":
-        SIZES = [int(n) for n in sys.argv[2:]]
-        save_results(tabulate_fattree_benchmarks(SIZES, parallel=True))
+    if args.op == "run":
+        save_results(tabulate_fattree_benchmarks(args.sizes, parallel=True))
+    if args.op == "sim":
+        sols = simulate_benchmarks(get_benchmarks())
+        print(sols)
