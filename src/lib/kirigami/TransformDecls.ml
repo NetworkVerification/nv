@@ -120,7 +120,7 @@ let rec remap_conjuncts nodes e =
 ;;
 
 (** Assume the assert is of the form:
- ** assert foldNodes (fun u v acc -> assertNode u v && acc) sol true
+ ** assert foldNodes (fun u v acc -> acc && assertNode u v) sol true
  ** which simplifies after map unrolling to:
  ** assert (match (sol-proj-0, sol-proj-1, ..., sol-proj-n) with
  **  | UnrollingFoldVar-0, UnrollingFoldVar-1, ..., UnrollingFoldVar-n -> true &&
@@ -145,7 +145,12 @@ let transform_assert (e : exp) (parted_srp : SrpRemapping.partitioned_srp) : exp
        * the chain of ands until there are only *nodes* many conjuncts left *)
       | EOp (And, _) -> remap_conjuncts (get_global_nodes parted_srp - nodes) e1
       | _ ->
-        print_endline ("not an and: " ^ Printing.exp_to_string e1);
+        print_endline
+          ("Warning: while transforming the assert, I got something unexpected.\n\
+            Please check that the assert is of the form \"assert foldNodes (fun u v acc \
+            -> acc && assertNode u v) sol true\"\n\
+            Interpretation returned the following (expected an and operation): "
+          ^ Printing.exp_to_string e1);
         e)
     | _ -> e
   in
@@ -157,7 +162,7 @@ let transform_assert (e : exp) (parted_srp : SrpRemapping.partitioned_srp) : exp
  ** If the given interface has only a bare term t rather than a predicate function,
  ** construct a predicate function (fun x -> x = t).
 *)
-let interp_interface edge intfe aty =
+let interp_interface edge intfe =
   let u, v = edge in
   let node_value n = avalue (vnode n, Some Typing.node_ty, Span.default) in
   let edge = [node_value u; node_value v] in
@@ -166,20 +171,13 @@ let interp_interface edge intfe aty =
   | EFun _ -> intf_app
   | EVal { v = VClosure _; _ } -> intf_app
   | _ ->
-    let x = Var.fresh "x" in
-    let x_e = aexp (evar x, aty, Span.default) in
-    let cmp = aexp (eop Eq [x_e; intf_app], Some TBool, Span.default) in
-    let f = funcFull x aty (Some TBool) cmp in
-    efunc f
+    failwith
+      ("expected intf value to be a function but got " ^ Printing.exp_to_string intf_app)
 ;;
 
-(* failwith
- *   ("expected intf value to be a function but got " ^ Printing.exp_to_string intf_app) *)
-
-let update_preds aty interface partitioned_srp =
+let update_preds interface partitioned_srp =
   let intf edge preds =
-    let p = interp_interface edge interface aty in
-    print_endline (Printing.exp_to_string p);
+    let p = interp_interface edge interface in
     p :: preds
   in
   SrpRemapping.map_predicates intf partitioned_srp
@@ -190,7 +188,7 @@ let update_preds aty interface partitioned_srp =
 let transform_solve solve (partition : partitioned_srp) : partitioned_srp * solve =
   let partition' =
     match solve.part with
-    | Some { interface; _ } -> update_preds solve.aty interface partition
+    | Some { interface; _ } -> update_preds interface partition
     | None -> partition
   in
   partition', remap_solve partition' solve
