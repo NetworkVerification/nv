@@ -1107,26 +1107,26 @@ aggregation-8=16, aggregation-13=17, aggregation-12=18,
 edge-10=19}*)
 
 let partition node = match node with
-  | 10n -> 0u8
-  | 6n -> 1u8
-  | 8n -> 2u8
-  | 2n -> 3u8
-  | 4n -> 4u8
-  | 7n -> 5u8
-  | 1n -> 6u8
-  | 3n -> 7u8
-  | 13n -> 8u8
-  | 15n -> 9u8
-  | 17n -> 10u8
-  | 14n -> 11u8
-  | 16n -> 12u8
-  | 18n -> 13u8
-  | 11n -> 14u8
-  | 12n -> 15u8
-  | 5n -> 16u8
-  | 19n -> 17u8
-  | 0n -> 18u8
-  | 9n -> 19u8
+  | 10n -> 0
+  | 6n -> 1
+  | 8n -> 2
+  | 2n -> 3
+  | 4n -> 4
+  | 7n -> 5
+  | 1n -> 6
+  | 3n -> 7
+  | 13n -> 8
+  | 15n -> 9
+  | 17n -> 10
+  | 14n -> 11
+  | 16n -> 12
+  | 18n -> 13
+  | 11n -> 14
+  | 12n -> 15
+  | 5n -> 16
+  | 19n -> 17
+  | 0n -> 18
+  | 9n -> 19
 
 let interface edge =
   let any x = true

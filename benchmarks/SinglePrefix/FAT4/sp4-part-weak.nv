@@ -11,11 +11,11 @@ include "sp4.nv"
 
 (* split along spine-pod edges *)
 let partition node = match node with
-  | 1n -> 0u8
-  | 3n -> 0u8
-  | 4n -> 0u8
-  | 7n -> 0u8
-  | _ -> 1u8
+  | 1n -> 0
+  | 3n -> 0
+  | 4n -> 0
+  | 7n -> 0
+  | _ -> 1
 
 let interface edge =
   let any x = true in
