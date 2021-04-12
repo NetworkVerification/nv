@@ -1,4 +1,5 @@
 (* vim: set syntax=ocaml: *)
+(* Example showcasing how a higher LP can "hijack" the solution. *)
 type attribute = (int, int)
 
 let nodes = 2
