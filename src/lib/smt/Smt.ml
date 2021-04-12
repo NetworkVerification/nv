@@ -70,9 +70,9 @@ let expr_encoding smt_config =
 ;;
 
 (* Asks the SMT solver to return a model and translates it to NV lang *)
-let ask_for_model query chan info env solver renaming nodes asserts guars globals =
+let ask_for_model query chan info env solver renaming nodes asserts guars =
   (* build a counterexample based on the model provided by Z3 *)
-  let model = eval_model env.SmtUtils.symbolics asserts guars globals renaming in
+  let model = eval_model env.SmtUtils.symbolics asserts guars renaming in
   let model_question = commands_to_smt smt_config.verbose info model in
   ask_solver solver model_question;
   if query then printQuery chan model_question;
@@ -87,7 +87,7 @@ let ask_for_model query chan info env solver renaming nodes asserts guars global
 
 (** Asks the smt solver whether the query was unsat or not
     and returns a model if it was sat.*)
-let get_sat query chan info env solver renaming nodes asserts guars globals reply =
+let get_sat query chan info env solver renaming nodes asserts guars reply =
   ask_solver
     solver
     "(get-info :all-statistics)\n\n                         (echo \"end stats\")\n";
@@ -101,7 +101,7 @@ let get_sat query chan info env solver renaming nodes asserts guars globals repl
   Printf.printf "Z3 stats:\n %s\n" rs;
   match reply with
   | UNSAT -> Unsat
-  | SAT -> ask_for_model query chan info env solver renaming nodes asserts guars globals
+  | SAT -> ask_for_model query chan info env solver renaming nodes asserts guars
   | UNKNOWN -> Unknown
   | _ -> failwith "unexpected answer from solver\n"
 ;;
@@ -142,7 +142,7 @@ let solve info query chan net_or_srp nodes assertions =
     let q = check_sat info in
     print_and_ask q;
     let reply = solver |> parse_reply in
-    get_sat query chan info env solver renaming nodes assertions 0 0 reply
+    get_sat query chan info env solver renaming nodes assertions 0 reply
   in
   print_and_ask "(push)";
   let ret = solve_aux () in

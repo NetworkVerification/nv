@@ -1,30 +1,32 @@
 type t =
-  { debug: bool       [@short "-d"]    (** enable a debugging backtrace for nv     *)
-  ; verbose: bool     [@short "-v"]    (** print out the srp solution              *)
-  ; no_wellformed: bool                (** don't check if the network is well-formed *)
-  ; simulate: bool    [@short "-s"]    (** simulate the network on given inputs    *)
-  ; bound: int option                  (** bound the number of simulation steps    *)
-  ; smt: bool         [@short "-m"]    (** search for bugs using an smt solver     *)
-  ; query: bool                        (** emit the query used by the smt solver   *)
-  ; unbox: bool                        (** unboxes options and flattens tuples     *)
-  ; hiding: bool                       (** Use the hiding abstraction during SMT solving *)
-  ; smt_parallel: bool                 (** use parallel smt/sat solving*)
-  ; finite_arith: bool                 (** set to false to use finite arithmetic in SMT *)
-  ; hashcons: bool    [@short "-c"]    (** enables hashconsing of all ast terms    *)
-  ; memoize: bool     [@short "-z"]    (** memoizes the interpreter for reuse      *)
-  ; no_caching: bool                   (** disables mtbdd operation caching        *)
-  ; no_cutoff: bool                    (** disables mtbdd early termination        *)
-  ; inline: bool      [@short "-i"]    (** inline the policy before simulation     *)
-  ; compile: bool                      (** compile network to OCaml code before simulation *)
-  ; unroll: bool                       (** whether to unroll maps or not           *)
-  (* ; draw: bool                         (\** emits a .jpg file of the graph          *\) *)
-  ; depth: int                         (** search depth for refinement procedure   *)
-  ; check_monotonicity: bool           (** checks monotonicity of trans function   *)
-  ; kirigami: bool    [@short "-k"]     (** enable partitioning features           *)
-  ; print_remap: bool  [@short "-R"]   (** print the remapping of nodes in kirigami  *)
-  ; print_partitions : bool            (** print the partitioned declarations in kirigami *)
-  ; link_failures: int                 (** adds at most k link failures to the network  *)
-  ; slicing: bool                      (** Try to slice the network's attribute *)
+  { debug : bool [@short "-d"] (** enable a debugging backtrace for nv     *)
+  ; verbose : bool [@short "-v"] (** print out the srp solution              *)
+  ; no_wellformed : bool (** don't check if the network is well-formed *)
+  ; simulate : bool [@short "-s"] (** simulate the network on given inputs    *)
+  ; bound : int option (** bound the number of simulation steps    *)
+  ; smt : bool [@short "-m"] (** search for bugs using an smt solver     *)
+  ; query : bool (** emit the query used by the smt solver   *)
+  ; unbox : bool (** unboxes options and flattens tuples     *)
+  ; hiding : bool (** Use the hiding abstraction during SMT solving *)
+  ; smt_parallel : bool (** use parallel smt/sat solving*)
+  ; finite_arith : bool (** set to false to use finite arithmetic in SMT *)
+  ; hashcons : bool [@short "-c"] (** enables hashconsing of all ast terms    *)
+  ; memoize : bool [@short "-z"] (** memoizes the interpreter for reuse      *)
+  ; no_caching : bool (** disables mtbdd operation caching        *)
+  ; no_cutoff : bool (** disables mtbdd early termination        *)
+  ; inline : bool [@short "-i"] (** inline the policy before simulation     *)
+  ; compile : bool (** compile network to OCaml code before simulation *)
+  ; unroll : bool
+        (* ; draw: bool                         (\** emits a .jpg file of the graph          *\) *)
+        (** whether to unroll maps or not           *)
+  ; depth : int (** search depth for refinement procedure   *)
+  ; check_monotonicity : bool (** checks monotonicity of trans function   *)
+  ; kirigami : bool [@short "-k"] (** enable partitioning features           *)
+  ; ranked : bool (** use the ranked check for kirigami       *)
+  ; print_remap : bool [@short "-R"] (** print the remapping of nodes in kirigami  *)
+  ; print_partitions : bool (** print the partitioned declarations in kirigami *)
+  ; link_failures : int (** adds at most k link failures to the network  *)
+  ; slicing : bool (** Try to slice the network's attribute *)
   ; parallelize : int option [@short "-p"] (** Try to parallelize using n cores **)
   }
 [@@deriving
@@ -52,15 +54,16 @@ let default =
   ; unroll = false
   ; unbox = false
   ; finite_arith = false (* ; draw=false *)
-  ; depth=20
-  ; check_monotonicity=false
-  ; link_failures=0
-  ; hiding=false
+  ; depth = 20
+  ; check_monotonicity = false
+  ; link_failures = 0
+  ; hiding = false
   ; kirigami = false
+  ; ranked = false
   ; print_remap = false
   ; print_partitions = false
-  ; slicing=false
-  ; parallelize= None
+  ; slicing = false
+  ; parallelize = None
   }
 ;;
 
@@ -81,5 +84,6 @@ let update_cfg_dependencies () =
   if !cfg.smt_parallel then cfg := { !cfg with finite_arith = true };
   if !cfg.print_remap then cfg := { !cfg with kirigami = true };
   if !cfg.print_partitions then cfg := { !cfg with kirigami = true };
+  if !cfg.ranked then cfg := { !cfg with kirigami = true };
   ()
 ;;

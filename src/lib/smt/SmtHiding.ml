@@ -530,7 +530,6 @@ let solve_hiding info query partial_chan ~full_chan ?(starting_vars = []) ~decls
         (list_seq nodes)
         (List.length (get_asserts decls))
         0
-        0
     in
     time_profile_absolute "Solving with hiding" (fun () ->
         refineModel

@@ -48,7 +48,7 @@ let run_smt_classic_aux file cfg info decls part fs =
   let get_answer decls fs =
     let solve_fun =
       if cfg.kirigami
-      then SmtKirigami.solveKirigami ~part:(part |> oget)
+      then SmtKirigami.solveKirigami ~check_ranked:cfg.ranked ~part:(part |> oget)
       else if cfg.hiding
       then SmtHiding.solve_hiding ~starting_vars:[] ~full_chan:(smt_query_file file)
       else Smt.solveClassic

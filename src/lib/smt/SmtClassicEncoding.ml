@@ -675,8 +675,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     env
   ;;
 
-  let kirigami_encode_z3 part ds : SmtUtils.smt_env =
-    print_endline (Printing.declarations_to_string ds);
+  let kirigami_encode_z3 ?(check_ranked = false) part ds : SmtUtils.smt_env =
     let symbolics = get_symbolics ds in
     let graph = get_graph ds |> oget in
     let solves = get_solves ds in
@@ -708,8 +707,11 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     add_symbolic_constraints env requires VarMap.empty;
     (* ranked initial checks *)
     add_assertions "lesser-hyp" env apply lesser_hyps ~negate:false;
-    scope_checks env (fun env ->
-        add_assertions "guarantee" env apply guarantees ~negate:true);
+    if check_ranked
+    then
+      scope_checks env (fun env ->
+          add_assertions "guarantee" env apply guarantees ~negate:true)
+    else add_assertions "guarantee" env apply guarantees ~negate:true;
     (* safety checks: add other hypotheses, test original assertions *)
     add_assertions "greater-hyp" env apply greater_hyps ~negate:false;
     add_assertions "assert" env (fun e -> encode_exp_z3 "" env e) assertions ~negate:true;

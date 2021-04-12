@@ -14,7 +14,6 @@ let eval_model
     (symbolics : Syntax.ty_or_exp VarMap.t)
     (assertions : int)
     (guarantees : int)
-    (globals : int)
     (renaming : string StringMap.t * smt_term StringMap.t)
     : command list
   =
@@ -30,17 +29,6 @@ let eval_model
     mk_term smt_term
   in
   let base = [mk_echo "\"end_of_model\"" |> mk_command] in
-  let global_cmds =
-    List.fold_lefti
-      (fun acc i _ ->
-        let assu = Printf.sprintf "assert-global-%d" i in
-        let tm = find_renamed_term assu in
-        let ev = mk_eval tm |> mk_command in
-        let ec = mk_echo ("\"" ^ var assu ^ "\"") |> mk_command in
-        ec :: ev :: acc)
-      base
-      (list_seq globals)
-  in
   (* Compute eval statements for guarantees (Kirigami) *)
   let guarantee_cmds =
     List.fold_lefti
@@ -50,7 +38,7 @@ let eval_model
         let ev = mk_eval tm |> mk_command in
         let ec = mk_echo ("\"" ^ var assu ^ "\"") |> mk_command in
         ec :: ev :: acc)
-      global_cmds
+      base
       (list_seq guarantees)
   in
   (* Compute eval statements for assertions *)

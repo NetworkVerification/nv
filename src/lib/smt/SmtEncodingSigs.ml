@@ -38,7 +38,12 @@ module type Encoding = sig
   type network_type
 
   val encode_z3 : network_type -> smt_env
-  val kirigami_encode_z3 : partitioned_srp -> network_type -> smt_env
+
+  val kirigami_encode_z3
+    :  ?check_ranked:bool
+    -> partitioned_srp
+    -> network_type
+    -> smt_env
 
   val add_symbolic_constraints
     :  smt_env
