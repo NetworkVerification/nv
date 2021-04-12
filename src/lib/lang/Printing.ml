@@ -350,6 +350,20 @@ let exp_to_string ?(show_types = false) e = exp_to_string_p ~show_types max_prec
 let func_to_string ?(show_types = false) f = func_to_string_p ~show_types max_prec f
 let closure_to_string ?(show_types = false) c = closure_to_string_p ~show_types max_prec c
 
+let part_to_string ?(show_types = false) { interface; decomp = lt, rt } =
+  let exp_to_string = exp_to_string ~show_types in
+  let oprint s o =
+    match o with
+    | None -> ""
+    | Some e -> Printf.sprintf "; %s = %s" s (exp_to_string e)
+  in
+  Printf.sprintf
+    "; interface = %s%s%s"
+    (exp_to_string interface)
+    (oprint "ltrans" lt)
+    (oprint "rtrans" rt)
+;;
+
 (* TODO: should the let statements use the identifiers defined in Syntax instead? *)
 let rec declaration_to_string ?(show_types = false) d =
   let exp_to_string = exp_to_string ~show_types in
@@ -365,18 +379,6 @@ let rec declaration_to_string ?(show_types = false) d =
   | DSymbolic (x, Ty ty) -> "symbolic " ^ Var.to_string x ^ " : " ^ ty_to_string ty
   | DAssert e -> "assert " ^ exp_to_string e
   | DSolve { aty; var_names; init; trans; merge; part } ->
-    let oprint s o =
-      match o with
-      | None -> ""
-      | Some e -> Printf.sprintf "; %s = %s" s (exp_to_string e)
-    in
-    let part_to_string { interface; decomp = lt, rt } =
-      Printf.sprintf
-        "interface = %s%s%s"
-        (exp_to_string interface)
-        (oprint "ltrans" lt)
-        (oprint "rtrans" rt)
-    in
     Printf.sprintf
       "let %s = solution<%s> {init = %s; trans = %s; merge = %s%s}"
       (exp_to_string var_names)
@@ -387,8 +389,8 @@ let rec declaration_to_string ?(show_types = false) d =
       (exp_to_string trans)
       (exp_to_string merge)
       (match part with
-      | Some p -> part_to_string p
-      | None -> "")
+      | None -> ""
+      | Some p -> part_to_string p)
   | DPartition e -> "let partition = " ^ exp_to_string e (* partitioning *)
   | DRequire e -> "require " ^ exp_to_string e
   | DNodes n -> "let nodes = " ^ string_of_int n
