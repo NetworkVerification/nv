@@ -25,7 +25,7 @@ let assert node m =
   | 0n -> m[1n] = Some 1 && m[2n] = Some 2 && m[3n] = Some 3
   | _ -> true
 
-let partition node = if node = 0n then 0u8 else 1u8
+let partition node = if node = 0n then 0 else 1
 
 let interface edge = match edge with
   | 0~1 -> Some (fun m -> m[0n] = Some 1)

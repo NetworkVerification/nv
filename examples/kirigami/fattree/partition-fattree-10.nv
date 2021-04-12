@@ -53,13 +53,13 @@ let edges = {
 }
 
 let partition node = match node with
-  | 6n -> 0u8
-  | 7n -> 0u8
-  | 8n -> 0u8
-  | 9n -> 0u8
-  | 0n -> 1u8
-  | 1n -> 1u8
-  | _ -> 2u8
+  | 6n -> 0
+  | 7n -> 0
+  | 8n -> 0
+  | 9n -> 0
+  | 0n -> 1
+  | 1n -> 1
+  | _ -> 2
 
 let interface edge = match edge with
   | 0~2 -> (fun a -> exact_route a 3 0n)

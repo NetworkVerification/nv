@@ -8,8 +8,8 @@ let edges = {
 }
 
 let partition node = match node with
-  | 0n -> 0u8
-  | 1n -> 1u8
+  | 0n -> 0
+  | 1n -> 1
 
 let interface edge = match edge with
   | 0~1 -> (fun x -> x = 1)

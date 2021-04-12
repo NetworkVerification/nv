@@ -20,9 +20,9 @@ let assert n x = match n with
  | _ -> x[2n] && x[0n] && x[1n]
 
 let partition n = match n with
- | 0n -> 0u8
- | 1n -> 1u8
- | 2n -> 2u8
+ | 0n -> 0
+ | 1n -> 1
+ | 2n -> 2
 
 (* Every hypothesis leaving a node
  * minimally must include the node

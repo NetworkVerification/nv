@@ -19,10 +19,10 @@ let trans e x = match e with
 let merge n x y = if x < y then x else y
 
 let partition n = match n with
-  | 0n -> 0u8
-  | 1n -> 1u8
-  | 2n -> 1u8
-  | 3n -> 0u8
+  | 0n -> 0
+  | 1n -> 1
+  | 2n -> 1
+  | 3n -> 0
 
 let interface e = match e with
   | 0~1 -> Some (fun a -> a <= 2)

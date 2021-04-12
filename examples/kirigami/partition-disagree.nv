@@ -1,9 +1,9 @@
 include "../disagree.nv"
 
 let partition n = match n with
-  | 0n -> 0u8
-  | 1n -> 1u8
-  | 2n -> 2u8
+  | 0n -> 0
+  | 1n -> 1
+  | 2n -> 2
 
 let interface e = 
   let eq t x = match x with

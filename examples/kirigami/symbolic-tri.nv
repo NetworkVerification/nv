@@ -26,8 +26,8 @@ let trans edge x = x + 1
 let merge node x y = if x < y then x else y
 
 let partition node = match node with
-  | 0n -> 0u8
-  | _ -> 1u8
+  | 0n -> 0
+  | _ -> 1
 
 (* There are two solutions to this network:
  * Solution 1:

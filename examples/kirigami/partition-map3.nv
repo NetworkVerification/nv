@@ -13,9 +13,9 @@ let edges = {
 }
 
 let partition node = match node with
-  | 0n -> 0u8
-  | 1n -> 0u8
-  | _ -> 1u8
+  | 0n -> 0
+  | 1n -> 0
+  | _ -> 1
 
 let interface edge = match edge with
   | 1~2 -> Some (fun x -> x[0n] = Some 2 && x[1n] = Some 1)

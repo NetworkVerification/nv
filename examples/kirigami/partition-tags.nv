@@ -28,9 +28,9 @@ let init n = match n with
  | _ -> None
 
 let partition n = match n with
- | 0n -> 0u8
- | 1n -> 0u8
- | 2n -> 1u8
+ | 0n -> 0
+ | 1n -> 0
+ | 2n -> 1
 
 let isSome x = match x with
  | None -> false

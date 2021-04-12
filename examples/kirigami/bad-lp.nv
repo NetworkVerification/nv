@@ -19,8 +19,8 @@ let init n = match n with
   | 1n -> (100, 16)
 
 let partition n = match n with
-  | 0n -> 0u8
-  | 1n -> 1u8
+  | 0n -> 0
+  | 1n -> 1
 
 let interface e = match e with
   | 0~1 -> fun x -> let (a, b) = x in a = 101

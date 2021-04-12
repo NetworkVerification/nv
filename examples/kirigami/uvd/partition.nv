@@ -36,8 +36,8 @@ let init n = match n with
 
 (* Partition *)
 let partition node = match node with
-  | 2n -> 0u8
-  | _ -> 1u8
+  | 2n -> 0
+  | _ -> 1
 
 let interface edge = match edge with
   | 1~2 -> Some (fun a -> a = 1 || a = 2)

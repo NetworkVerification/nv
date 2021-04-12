@@ -25,14 +25,9 @@ let solve_ty aty =
     @@ StringMap.empty)
 ;;
 
-(* TODO: do we want a special partition ID type? is i8 a sensible number? *)
 (* partitioning *)
-let partition_ty = TArrow (node_ty, TInt 8)
-let interface_ty aty = TArrow (edge_ty, aty)
-let global_ty aty = TArrow (aty, TBool)
-
-(* same type for both sides *)
-let decomp_ty = trans_ty
+let partition_ty = TArrow (node_ty, TInt 32)
+let interface_ty aty = TArrow (edge_ty, TArrow (aty, TBool))
 
 (* end partitioning *)
 
@@ -910,8 +905,8 @@ and infer_declaration i info env record_types d : ty Env.t * declaration =
       | Some { interface; decomp = lt, rt } ->
         let interface' = infer_exp interface in
         unify info interface (oget interface'.ety) (interface_ty solve_aty);
-        let lt' = lift_unify lt (decomp_ty solve_aty) in
-        let rt' = lift_unify rt (decomp_ty solve_aty) in
+        let lt' = lift_unify lt (trans_ty solve_aty) in
+        let rt' = lift_unify rt (trans_ty solve_aty) in
         Some { interface = interface'; decomp = lt', rt' }
       | None -> None
     in

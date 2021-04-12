@@ -11,12 +11,12 @@ let edges = {
 }
 
 let partition node = match node with
-  | 0n -> 0u8
-  | 1n -> 1u8
+  | 0n -> 0
+  | 1n -> 1
 
-let interface edge = match edge with
-  | 0~1 -> Some (fun x -> x = Some 0 || x = Some 1)
-  | 1~0 -> Some (fun x -> x = Some 0 || x = Some 1)
+let interface edge x = match edge with
+  | 0~1 -> x = Some 0 || x = Some 1
+  | 1~0 -> x = Some 0 || x = Some 1
 
 let merge node x y = match (x, y) with
  | (Some a, Some b) -> if a < b then x else y
@@ -34,8 +34,8 @@ let init node =
 
 let sol = solution { init = init; trans = trans; merge = merge; interface = interface }
 
-let assertNode node x acc = match x with
- | Some a -> a < 2 && acc
+let assertNode node x = match x with
+ | Some a -> a < 2
  | None -> false
 
-assert (foldNodes assertNode sol true)
+assert (foldNodes (fun u v acc -> acc && assertNode u v) sol true)

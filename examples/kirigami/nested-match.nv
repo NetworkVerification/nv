@@ -33,9 +33,9 @@ let init n = match n with
 let assert n x = true
 
 let partition n = match n with
-| 0n -> 0u8
-| 1n -> 1u8
-| 2n -> 2u8
+| 0n -> 0
+| 1n -> 1
+| 2n -> 2
 
 let interface e = match e with
 | 0~1 -> Some (fun a -> a = 1)
