@@ -35,11 +35,6 @@ let solve ?(check_ranked = false) info query chan net_or_srp nodes assertions gu
     (* print query to a file if asked to *)
 
     (* Printf.printf "communicating with solver"; *)
-    (* TODO: split the encoding after the guarantees;
-     * then call check_sat + get_sat, return reply,
-     * and then add the rest of the encoding,
-     * call check_sat + get_sat again, and then return reply2
-     *)
     let get_ret enc assertions guarantees =
       print_and_ask enc;
       let q = check_sat info in
@@ -52,6 +47,7 @@ let solve ?(check_ranked = false) info query chan net_or_srp nodes assertions gu
       let enc_parts =
         String.split_on_string smt_encoding ~by:"(echo \"#END_OF_SCOPE#\")"
       in
+      (* ranked checks have multiple scopes to test guarantees & assertions separately *)
       let enc_part1, enc_part2 =
         match enc_parts with
         | [a; b] -> a, b
@@ -59,6 +55,7 @@ let solve ?(check_ranked = false) info query chan net_or_srp nodes assertions gu
       in
       let ret1 = get_ret enc_part1 0 guarantees in
       let ret2 = get_ret enc_part2 assertions 0 in
+      (* TODO: return both results, instead of the and *)
       match ret1 with
       | Unsat -> ret2
       | _ -> ret1)

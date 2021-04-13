@@ -707,11 +707,11 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     add_symbolic_constraints env requires VarMap.empty;
     (* ranked initial checks *)
     add_assertions "lesser-hyp" env apply lesser_hyps ~negate:false;
-    if check_ranked
-    then
-      scope_checks env (fun env ->
-          add_assertions "guarantee" env apply guarantees ~negate:true)
-    else add_assertions "guarantee" env apply guarantees ~negate:true;
+    let add_guarantees env =
+      add_assertions "guarantee" env apply guarantees ~negate:true
+    in
+    (* if performing ranked check, scope the guarantees separately *)
+    if check_ranked then scope_checks env add_guarantees else add_guarantees env;
     (* safety checks: add other hypotheses, test original assertions *)
     add_assertions "greater-hyp" env apply greater_hyps ~negate:false;
     add_assertions "assert" env (fun e -> encode_exp_z3 "" env e) assertions ~negate:true;
