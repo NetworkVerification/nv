@@ -120,7 +120,7 @@ def write_partition_str(partitions):
     """
     output = "let partition node = match node with\n"
     for i, nodes in enumerate(partitions):
-        output += "\n".join([f"  | {node}n -> {i}u8" for node in nodes]) + "\n"
+        output += "\n".join([f"  | {node}n -> {i}" for node in nodes]) + "\n"
     return output
 
 
@@ -128,24 +128,22 @@ def write_interface_str(edges, net_type):
     """
     Return the string representation of the interface function.
     """
-    output = "let interface edge ="
+    output = "let interface edge x ="
     output += """
-  let hasOnlyBgp f x =
+  let hasOnlyBgp f =
     x.selected = Some 3u2 && (match x.bgp with
       | Some b -> f b
       | None -> false)
   in"""
     if net_type == FATPOL:
         output += """
-  let ignoreBgp x = match x.bgp with
+  let ignoreBgp = match x.bgp with
     | Some b -> ignore b.comms
     | None -> true
   in"""
-        default = (
-            "(fun x -> match x.bgp with | Some b -> ignore b.comms | None -> true)"
-        )
+        default = "match x.bgp with | Some b -> ignore b.comms | None -> true"
     elif net_type == SP:
-        default = "(fun x -> true)"
+        default = "true"
     else:
         raise Exception("Unexpected net type")
     output += "\n  match edge with\n"
@@ -159,7 +157,7 @@ def write_interface_str(edges, net_type):
     return output
 
 
-def get_part_fname(spfile, cut):
+def get_part_fname(spfile, cut, simulate):
     """
     Return the name of the partition file for the corresponding nv file,
     and the network type.
@@ -172,7 +170,9 @@ def get_part_fname(spfile, cut):
         net_type = FATPOL
     else:
         raise Exception("Unexpected network type based on name")
-    prefix = f"{root}-{cut}"
+    # mark simulated solutions with an x for exact
+    sim = "-x" if simulate else ""
+    prefix = f"{root}-{cut}{sim}"
     partfile = os.path.join(spdir, prefix + nvext)
     suffix = 1
     # don't overwrite an existing path: instead, create a new file
@@ -286,19 +286,26 @@ def nodes_cut_vertically(graph, dest):
         return group2, group1
 
 
-def get_cross_edges(graph, partitions):
+def get_cross_edges(graph, partitions, ranked=False):
     """
-    Get the edges in the network which go from lower-ranked partitions to
-    higher-ranked partitions. These edges are used to determine the interface
-    functions.
+    Get the edges in the network which go between partitions.
+    If ranked is True, only include edges which go from lower-ranked partitions
+    to higher-ranked partitions.
+    These edges are used to determine the interface functions.
     """
     # construct a map of nodes to their partitions
-    node_part = {node: i for (i, part) in enumerate(partitions) for node in part}
-    return [e.tuple for e in graph.es if node_part[e.source] < node_part[e.target]]
+    n_parts = {node: i for (i, part) in enumerate(partitions) for node in part}
+
+    def edge_predicate(e):
+        src = n_parts[e.source]
+        tgt = n_parts[e.target]
+        return (ranked and src < tgt) or (not ranked and src != tgt)
+
+    return [e.tuple for e in graph.es if edge_predicate(e)]
 
 
 def get_vertical_cross_edges(graph, partitions, dest):
-    all_cross = get_cross_edges(graph, partitions)
+    all_cross = get_cross_edges(graph, partitions, ranked=True)
     updated = []
     for e in all_cross:
         # prune non-destination-pod cross edges
@@ -374,18 +381,24 @@ def write_interface_from_sim(edges, solution):
     """
     Write an interface string based on the given simulation.
     """
-    output = "let interface edge =\n  match edge with\n"
+    output = "let interface edge a =\n  match edge with\n"
     for (start, end) in edges:
         sol = solution[start]
-        output += f"  | {start}~{end} -> {sol}\n"
+        output += f"  | {start}~{end} -> a = {sol}\n"
     return output
 
 
-def gen_part_nv(spfile, dest, cut, verbose=False):
+# TODO: make the dest optional if simulate is True
+def gen_part_nv(spfile, dest, cut, simulate=True, verbose=False):
     """Generate the partition file."""
-    part, net_type = get_part_fname(spfile, cut)
+    part, net_type = get_part_fname(spfile, cut, simulate)
     if verbose:
         print("Outfile: " + part)
+    if simulate:
+        # generate the solution from simulation
+        solution = run_nv_simulate(spfile)
+        if verbose:
+            print("Simulated " + spfile)
     with open(spfile, "r") as inputfile:
         sptext = inputfile.read()
     # compute the graph topology
@@ -395,35 +408,28 @@ def gen_part_nv(spfile, dest, cut, verbose=False):
     # get the three parts
     preamble = write_preamble(os.path.basename(spfile), cut)
     include_sp, footer = split_prefooter(sptext)
-    if net_type == FATPOL:
-        global_def = """
-let global x = match x.bgp with
-  | Some b -> b.lp = 100 && b.med = 80
-  | None -> true
-"""
-        include_sp += global_def
     nodes = cut_nodes(graph, dest, cut)
-    # special case for handling vertical cuts
-    if net_type == FATPOL and (cut == "vertical" or cut == "v"):
-        fwd_cross = get_vertical_cross_edges(graph, nodes, dest)
+    # get the cross edges
+    if simulate:
+        edges = get_cross_edges(graph, nodes, ranked=False)
+    elif net_type == FATPOL and (cut == "vertical" or cut == "v"):
+        # special case for handling vertical cuts
+        edges = get_vertical_cross_edges(graph, nodes, dest)
     else:
-        fwd_cross = get_cross_edges(graph, nodes)
+        edges = get_cross_edges(graph, nodes, ranked=True)
     if verbose:
         print(nodes)
-        print([e for e in fwd_cross])
+        print([e for e in edges])
     partition = write_partition_str(nodes)
-    interface = write_interface_str(fwd_cross, net_type)
+    if simulate:
+        interface = write_interface_from_sim(edges, solution)
+    else:
+        interface = write_interface_str(edges, net_type)
     # perform the decomposed transfer on the input side
-    if net_type == SP:
-        repl = (
-            r"solution { init = init; trans = trans; merge = merge;"
-            r" interface = interface; rtrans = trans }"
-        )
-    elif net_type == FATPOL:
-        repl = (
-            r"solution { init = init; trans = trans; merge = merge;"
-            r" interface = interface; rtrans = trans; global = global }"
-        )
+    repl = (
+        r"solution { init = init; trans = trans; merge = merge;"
+        r" interface = interface; rtrans = trans }"
+    )
     solution = re.sub(r"solution {.*}", repl, footer)
     # put 'em all together
     output = "\n".join([preamble, include_sp, partition, interface, solution])
@@ -432,20 +438,61 @@ let global x = match x.bgp with
     print(f"Saved network to {part}")
 
 
-def main():
+class ParseFileDest(argparse.Action):
+    """
+    An argparse parser for collecting files paired with their destination.
+    """
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        setattr(namespace, self.dest, dict())
+        print(values)
+        for value in values:
+            try:
+                f, d = value.split(":")
+                getattr(namespace, self.dest)[f] = int(d)
+            except ValueError:
+                break
+
+    def format_usage():
+        return "file.nv:node"
+
+
+def parser():
     parser = argparse.ArgumentParser(
         description="Generate partitioned versions of network benchmarks."
     )
-    parser.add_argument("file", type=str, help="unpartitioned network file")
     parser.add_argument(
-        "dest", type=int, help="destination node in a shortest-path network"
+        "files",
+        nargs="+",
+        action=ParseFileDest,
+        help='unpartitioned network files with their unique associated \
+        destination nodes, separated by a colon, e.g. "simple.nv:0"',
     )
-    parser.add_argument("cut", type=str, choices=CUTS, help="type of cut")
+    parser.add_argument(
+        "-c",
+        "--cuts",
+        required=True,
+        nargs="+",
+        choices=CUTS,
+        help="types of cut across the network topology",
+    )
+    parser.add_argument(
+        "-s",
+        "--simulate",
+        action="store_true",
+        help="generate interface by simulating the given benchmark",
+    )
     parser.add_argument(
         "-v", "--verbose", action="store_true", help="increase verbosity"
     )
-    args = parser.parse_args()
-    gen_part_nv(args.file, args.dest, args.cut, verbose=args.verbose)
+    return parser
+
+
+def main():
+    args = parser().parse_args()
+    for (file, dest) in args.files.items():
+        for cut in args.cuts:
+            gen_part_nv(file, dest, cut, verbose=args.verbose)
 
 
 if __name__ == "__main__":
