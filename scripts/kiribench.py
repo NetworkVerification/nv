@@ -18,13 +18,10 @@ from tabulate_sp_bench import (
 BENCH_DIR = "benchmarks/SinglePrefix"
 
 
-def get_benchmarks():
+def get_benchmarks(fmtstr=f"{BENCH_DIR}/" + "FAT{0}/fat{0}Pol.nv"):
     """Return the list of input benchmark files with their destinations."""
     common = [(4, 10), (8, 12), (10, 13), (12, 64), (16, 0), (20, 0)]
-    # benches = [
-    #         (f"{BENCH_DIR}/FAT{sz}/sp{sz}.nv", d) for (sz, d) in common
-    # ]
-    benches = [(f"{BENCH_DIR}/FAT{sz}/fat{sz}Pol.nv", d) for (sz, d) in common]
+    benches = [(fmtstr.format(sz), d) for (sz, d) in common]
     return benches
 
 
@@ -72,25 +69,32 @@ def save_results(runs):
     return write_csv(runs, f"kirigami-results-{time}.csv")
 
 
-def tabulate_fattree_benchmarks(sizes, cuts, timeout=3600, trials=10, parallel=False):
+def tabulate_fattree_benchmarks(
+    directory, benchstr, sizes, cuts, timeout=3600, trials=10, parallel=False
+):
     """
     Run all the vertical and horizontal benchmarks.
+    directory should be the containing directory for all the benchmarks for the given
+    cuts.
+    benchstr should be the base name of the NV file, excluding the extension, with a
+    str.format position for the size.
+    The unpartitioned file should have the format "{benchstr.format(size)}.nv".
+    The partitioned files should have the format "{benchstr.format(size)}-{cut}.nv".
     """
     runs = []
     for size in sizes:
-        directory = f"{BENCH_DIR}/FAT{size}"
-        benches = [(None, f"sp{size}.nv")] + [
-            (cut, f"sp{size}-{cut}.nv") for cut in cuts
+        sim = "-x"  # for the simulation benchmarks
+        benches = [(None, f"{benchstr.format(size)}.nv")] + [
+            (cut, f"{benchstr.format(size)}-{cut}{sim}.nv") for cut in cuts
         ]
-        # benches = [(None, f"fat{size}Pol.nv")] + [
-        #     (cut, f"fat{size}Pol-{cut}.nv") for cut in cuts
-        # ]
         if parallel:
             fn = run_trials_parallel
         else:
             fn = run_trials_sync
         try:
-            results = fn(directory, benches, timeout, trials, DISTINCT_OPERATIONS)
+            results = fn(
+                directory.format(size), benches, timeout, trials, DISTINCT_OPERATIONS
+            )
             runs.append(results)
         except KeyboardInterrupt:
             print("User interrupted benchmarking. Saving partial results...")
@@ -104,7 +108,12 @@ def main():
     )
     subparsers = parser.add_subparsers(dest="op")
     parser.add_argument(
-        "cuts", nargs="+", choices=CUTS, help="types of cut across the network"
+        "-c",
+        "--cuts",
+        nargs="+",
+        choices=CUTS,
+        default=["h", "v", "p"],
+        help="types of cut across the network (default: %(default)s)",
     )
 
     parser_make = subparsers.add_parser("make")
@@ -150,11 +159,17 @@ def main():
 
     args = parser.parse_args()
     if args.op == "make":
-        create_benchmarks(get_benchmarks(), args.cuts, simulate=args.simulate)
+        fmtstr = f"{BENCH_DIR}/" + "FAT{0}/fat{0}Pol.nv"  # or "FAT{}/sp{}.nv"
+        benchmarks = get_benchmarks(fmtstr)
+        create_benchmarks(benchmarks, args.cuts, simulate=args.simulate)
     if args.op == "clean":
         clean_benchmarks(args.cuts, dry_run=args.dry_run)
     if args.op == "run":
+        directory = f"{BENCH_DIR}/" + "FAT{0}"
+        benchstr = "fat{0}Pol"
         results = tabulate_fattree_benchmarks(
+            directory,
+            benchstr,
             args.sizes,
             args.cuts,
             timeout=args.timeout,

@@ -348,12 +348,41 @@ def split_prefooter(sptext):
 
 def parse_sim(output):
     pat = re.compile(r"Node (\d+)\n-*\n((?:.|\n)+?)\n\n", re.M)
-    solutions = dict()
-    for match in re.finditer(pat, output):
-        node = int(match.group(1))
-        sol = match.group(2)
-        solutions[node] = sol
-    return solutions
+    return dict((int(m.group(1)), m.group(2)) for m in pat.finditer(output))
+
+
+def format_fatPol_sols(sols):
+    """
+    Parse the printed solution for a fatPol benchmark and
+    return a correctly-formatted NV attribute.
+    """
+
+    def record_to_str(d):
+        return "{" + "; ".join([f"{k}={v}" for k, v in d.items()]) + "}"
+
+    ribpat = re.compile(r"(\w*)= (Some\(((?:.|\n)*?)\)|None);", re.M)
+    bgppat = re.compile(r"(\w*)= (\d*u\d*|{ (?:\d*u32 \|-> true\n?)* });", re.M)
+    commslines = re.compile(r"\n", re.M)
+    commspat = re.compile(r"(\d*u32) \|-> true", re.M)
+    new_sols = dict()
+    for k, v in sols.items():
+        # parse the RIB
+        rib = dict()
+        rib = dict(m.group(1, 3) for m in ribpat.finditer(v))
+        bgpsol = rib.get("bgp")
+        if bgpsol is not None:
+            bgp = dict(m.group(1, 2) for m in bgppat.finditer(bgpsol))
+            commssol = bgp.get("comms")
+            if commssol is not None:
+                oneline = commslines.sub(r", ", commssol)
+                bgp["comms"] = commspat.sub(r"\1", oneline)
+            rib["bgp"] = f"{record_to_str(bgp)}"
+        # Add Some wrapper as needed for rib components
+        rib = dict(
+            (k, f"Some({v})" if v is not None else f"{v}") for k, v in rib.items()
+        )
+        new_sols[k] = record_to_str(rib)
+    return new_sols
 
 
 def run_nv_simulate(path):
@@ -368,7 +397,7 @@ def run_nv_simulate(path):
     print(f"Running {' '.join(args)}")
     try:
         proc = subprocess.run(args, text=True, check=True, capture_output=True)
-        return parse_sim(proc.stdout)
+        return format_fatPol_sols(parse_sim(proc.stdout))
     except subprocess.CalledProcessError as exn:
         print(exn.stderr)
         return {}
@@ -445,7 +474,6 @@ class ParseFileDest(argparse.Action):
 
     def __call__(self, parser, namespace, values, option_string=None):
         setattr(namespace, self.dest, dict())
-        print(values)
         for value in values:
             try:
                 f, d = value.split(":")
