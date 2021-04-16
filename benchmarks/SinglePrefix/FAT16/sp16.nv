@@ -1,6 +1,3 @@
-(* NOTE: some topological information is malformed in this network,
- * leading the gen_part_nv.py tool to construct an incorrect network.
-*)
 type ospfType = {ospfAd: int8; weight: int16; areaType:int2; areaId: int;}
 type bgpType = {bgpAd: int8; lp: int; aslen: int; med:int; comms:set[int];}
 type rib = {
@@ -52030,8 +52027,8 @@ let assert_node u x =
    aggregation-167=54, aggregation-166=55, aggregation-165=56, aggregation-164=57,
    aggregation-291=58, aggregation-290=59, core-1=60, aggregation-279=61,
    core-0=62, aggregation-278=63, core-3=64, edge-108=65, core-2=66, edge-107=67,
-   core-5=68, core-4=69, edge-109=70, core-7=71, edge-104=72, aggregation-273=73,
-   core-6=74, aggregation-272=75, aggregation-151=76, core-9=77, edge-106=78,
+   core-5=68, core-4=69, edge-109=70, edge-104=71, core-7=72, aggregation-273=73,
+   core-6=74, aggregation-272=75, aggregation-151=76, edge-106=77, core-9=78,
    aggregation-150=79, edge-105=80, core-8=81, edge-221=82, aggregation-277=83,
    edge-220=84, aggregation-276=85, edge-223=86, aggregation-275=87, edge-222=88,
    aggregation-274=89, aggregation-149=90, aggregation-148=91, aggregation-147=92,

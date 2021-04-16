@@ -49,7 +49,7 @@ def clean_benchmarks(cuts, dry_run):
     """Remove old benchmarks."""
     # pat = re.compile(r"^sp\d*-(part|vpart|pods)\d*\.nv$", re.M)
     cutpat = "|".join(cuts)
-    pat = re.compile(r"^fat\d*Pol-(" + cutpat + r")\d*\.nv$", re.M)
+    pat = re.compile(r"^(fat\d*Pol|sp\d*)-(" + cutpat + r")(-x)?\d*\.nv$", re.M)
     if dry_run:
         print("clean will remove:")
     for root, _, files in os.walk(BENCH_DIR):
