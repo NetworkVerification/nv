@@ -400,7 +400,8 @@ def run_nv_simulate(path):
     print(f"Running {' '.join(args)}")
     try:
         proc = subprocess.run(args, text=True, check=True, capture_output=True)
-        return format_fatPol_sols(parse_sim(proc.stdout))
+        return parse_sim(proc.stdout)
+        # return format_fatPol_sols(parse_sim(proc.stdout))
     except subprocess.CalledProcessError as exn:
         print(exn.stderr)
         return {}
