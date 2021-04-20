@@ -57,18 +57,22 @@
     else
       DLet (id, None, e)
 
+  let make_dict exprs default span : exp =
+    let rec updates e exprs =
+      match exprs with
+      | [] -> e
+      | (k, v) :: tl ->
+         let e = exp (eop MSet [e; k; v]) span in
+         updates e tl
+    in
+    let e = exp (eop MCreate [default]) span in
+    updates e exprs
+
   let make_set exprs span =
     let tru = exp (e_val (value (vbool true) span)) span in
-    let rec updates e exprs =
-        match exprs with
-        | [] -> e
-        | expr :: tl ->
-            let e = exp (eop MSet [e; expr; tru]) span in
-            updates e tl
-    in
-    let e = exp (e_val (value (vbool false) span)) span in
-    let e = exp (eop MCreate [e]) span in
-    updates e exprs
+    let fls = exp (e_val (value (vbool false) span)) span in
+    let exprs = List.map (fun e -> (e, tru)) exprs in
+    make_dict exprs fls span
 
   let find_record_type (lab : string) : 'a StringMap.t =
     let rec aux lst =
@@ -222,6 +226,7 @@
 %token <Nv_datastructures.Span.t> MINUS
 %token <Nv_datastructures.Span.t> FILTER
 %token <Nv_datastructures.Span.t> TSET
+%token <Nv_datastructures.Span.t> MAPSTO
 
 %token EOF
 
@@ -304,6 +309,17 @@ component:
 components:
     | component                         { [$1] }
     | component components              { $1 :: $2 }
+;
+
+map_keyval_expr:
+  | expr MAPSTO expr                          { (Some $1, $3) }
+  | UNDERSCORE MAPSTO expr                    { (None, $3) }
+;
+
+map_keyval_exprs:
+  | map_keyval_expr                           { [$1] }
+  | map_keyval_expr SEMI                      { [$1] }
+  | map_keyval_expr SEMI map_keyval_exprs     { $1::$3 }               
 ;
 
 record_entry_expr:
@@ -409,6 +425,12 @@ expr:
                                           exp (eproject $2 (Nv_datastructures.Var.name v)) (Span.extend $1 $3) in
                                           let lst = fill_record $4 mk_project in
                                           exp (erecord (make_record_map lst)) (Span.extend $1 $3)
+                                        }
+    | LBRACE map_keyval_exprs RBRACE    { let default = List.assoc_opt None $2 in
+                                          let exprs = List.filter_map (fun (ko,v) -> Option.map (fun k -> (k, v)) ko) $2 in
+                                          match default with
+                                          | Some d -> make_dict exprs d (Span.extend $1 $3)
+                                          | None -> failwith "map initialization expression without default found"
                                         }
     | LBRACE exprs RBRACE               { make_set $2 (Span.extend $1 $3) }
     | LBRACE RBRACE                     { make_set [] (Span.extend $1 $2) }

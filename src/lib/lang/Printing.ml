@@ -246,8 +246,11 @@ and map_to_string ~show_types sep_s term_s m =
     ^ sep_s
     ^ value_to_string_p ~show_types max_prec v
   in
-  let bs, _ = BddMap.bindings m in
-  Printf.sprintf "{ %s }" (term term_s binding_to_string bs)
+  let bs, dv = BddMap.bindings m in
+  let dv_string = value_to_string_p ~show_types max_prec dv in
+  match bs with
+  | [] -> Printf.sprintf "{ _ |-> %s }" dv_string
+  | _ -> Printf.sprintf "{ %s ; _ |-> %s}" (term term_s binding_to_string bs) dv_string
 
 and value_to_string_p ~show_types prec v =
   let value_to_string_p = value_to_string_p ~show_types in
@@ -256,7 +259,7 @@ and value_to_string_p ~show_types prec v =
   | VBool true -> "true"
   | VBool false -> "false"
   | VInt i -> Integer.to_string i
-  | VMap m -> map_to_string ~show_types " |-> " "\n" m
+  | VMap m -> map_to_string ~show_types " |-> " "; " m
   | VTuple vs ->
     if List.is_empty vs
     then "VTuple0"
