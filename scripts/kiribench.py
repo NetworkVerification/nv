@@ -107,14 +107,6 @@ def main():
         description="Frontend for benchmarking the Kirigami tool."
     )
     subparsers = parser.add_subparsers(dest="op")
-    parser.add_argument(
-        "-c",
-        "--cuts",
-        nargs="+",
-        choices=CUTS,
-        default=["h", "v", "p"],
-        help="types of cut across the network (default: %(default)s)",
-    )
 
     parser_make = subparsers.add_parser("make")
     parser_make.add_argument(
@@ -122,6 +114,14 @@ def main():
         "--simulate",
         action="store_true",
         help="generate interface by simulating the given benchmark",
+    )
+    parser_make.add_argument(
+        "-c",
+        "--cuts",
+        nargs="+",
+        choices=CUTS,
+        default=["h", "v", "p"],
+        help="types of cut across the network (default: %(default)s)",
     )
 
     parser_run = subparsers.add_parser("run")
@@ -148,6 +148,14 @@ def main():
         help="number of seconds to run each trial for (default: %(default)s)",
         default=3600,
     )
+    parser_run.add_argument(
+        "-c",
+        "--cuts",
+        nargs="+",
+        choices=CUTS,
+        default=["h", "v", "p"],
+        help="types of cut across the network (default: %(default)s)",
+    )
 
     parser_clean = subparsers.add_parser("clean")
     parser_clean.add_argument(
@@ -156,17 +164,26 @@ def main():
         action="store_true",
         help="print benchmarks without deleting anything",
     )
+    parser_clean.add_argument(
+        "-c",
+        "--cuts",
+        nargs="+",
+        choices=CUTS,
+        default=["h", "v", "p"],
+        help="types of cut across the network (default: %(default)s)",
+    )
 
     args = parser.parse_args()
+    directory = f"{BENCH_DIR}/" + "FAT{0}/"
+    # benchstr = "fat{0}Pol"
+    benchstr = "sp{0}"
     if args.op == "make":
-        fmtstr = f"{BENCH_DIR}/" + "FAT{0}/fat{0}Pol.nv"  # or "FAT{}/sp{}.nv"
+        fmtstr = directory + benchstr + ".nv"
         benchmarks = get_benchmarks(fmtstr)
         create_benchmarks(benchmarks, args.cuts, simulate=args.simulate)
     if args.op == "clean":
         clean_benchmarks(args.cuts, dry_run=args.dry_run)
     if args.op == "run":
-        directory = f"{BENCH_DIR}/" + "FAT{0}"
-        benchstr = "fat{0}Pol"
         results = tabulate_fattree_benchmarks(
             directory,
             benchstr,
