@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-gen_part_nv.py [spfile]
+gen_part_nv.py [nvfile]
 A module for generating spX-part.nv fileoutput from spX.nv files.
 """
 import os
@@ -157,12 +157,12 @@ def write_interface_str(edges, net_type):
     return output
 
 
-def get_part_fname(spfile, cut, simulate):
+def get_part_fname(nvfile, cut, simulate):
     """
     Return the name of the partition file for the corresponding nv file,
     and the network type.
     """
-    spdir, spname = os.path.split(spfile)
+    spdir, spname = os.path.split(nvfile)
     root, nvext = os.path.splitext(spname)
     if root.startswith("sp"):
         net_type = SP
@@ -339,19 +339,24 @@ def cut_nodes(graph, dest, cut):
     return nodes
 
 
-def split_prefooter(sptext):
+def split_prefooter(text):
+    """
+    Return all program text before and after the declaration of
+    the fattree node types, split into two.
+    """
     prog = re.compile(r"\(\* {((edge|core|aggregation)-\d+=\d+,?\s*)*}\*\)")
-    match = prog.search(sptext)
+    match = prog.search(text)
     end = match.end()
-    return (sptext[: end + 1], sptext[end + 1 :])
+    return (text[: end + 1], text[end + 1 :])
 
 
 def parse_sim(output):
+    """Parse the nv simulator solution."""
     pat = re.compile(r"Node (\d+)\n-*\n((?:.|\n)+?)\n\n", re.M)
     return dict((int(m.group(1)), m.group(2)) for m in pat.finditer(output))
 
 
-def format_fatPol_sols(sols):
+def format_fatPol_sols(sols, atype):
     """
     Parse the printed solution for a fatPol benchmark and
     return a correctly-formatted NV attribute.
@@ -386,9 +391,7 @@ def format_fatPol_sols(sols):
 
 
 def run_nv_simulate(path):
-    """
-    Run nv's simulation tool and capture its output.
-    """
+    """ Run nv's simulation tool and capture its output. """
     nvpath = os.path.join(os.getcwd(), "nv")
     if not os.path.exists(nvpath):
         print("Did not find 'nv' executable in the current working directory")
@@ -418,25 +421,25 @@ def write_interface_from_sim(edges, solution):
 
 
 # TODO: make the dest optional if simulate is True
-def gen_part_nv(spfile, dest, cut, simulate=True, verbose=False):
+def gen_part_nv(nvfile, dest, cut, simulate=True, verbose=False):
     """Generate the partition file."""
-    part, net_type = get_part_fname(spfile, cut, simulate)
+    part, net_type = get_part_fname(nvfile, cut, simulate)
     if verbose:
         print("Outfile: " + part)
     if simulate:
         # generate the solution from simulation
-        solution = run_nv_simulate(spfile)
+        solution = run_nv_simulate(nvfile)
         if verbose:
-            print("Simulated " + spfile)
-    with open(spfile, "r") as inputfile:
-        sptext = inputfile.read()
+            print("Simulated " + nvfile)
+    with open(nvfile, "r") as inputfile:
+        text = inputfile.read()
     # compute the graph topology
-    graph = construct_graph(sptext)
+    graph = construct_graph(text)
     if verbose:
         print(str(graph))
     # get the three parts
-    preamble = write_preamble(os.path.basename(spfile), cut)
-    include_sp, footer = split_prefooter(sptext)
+    preamble = write_preamble(os.path.basename(nvfile), cut)
+    # include_sp, footer = split_prefooter(text)
     nodes = cut_nodes(graph, dest, cut)
     # get the cross edges
     if simulate:
@@ -459,9 +462,11 @@ def gen_part_nv(spfile, dest, cut, simulate=True, verbose=False):
         r"solution { init = init; trans = trans; merge = merge;"
         r" interface = interface; rtrans = trans }"
     )
-    solution = re.sub(r"solution {.*}", repl, footer)
+    # include_sp = re.sub(r"solution {.*}", repl, include_sp)
+    # footer = re.sub(r"solution {.*}", repl, footer)
+    text = re.sub(r"solution {.*}", repl, text)
     # put 'em all together
-    output = "\n".join([preamble, include_sp, partition, interface, solution])
+    output = "\n".join([preamble, text, partition, interface])
     with open(part, "w") as outfile:
         outfile.write(output)
     print(f"Saved network to {part}")
