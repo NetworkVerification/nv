@@ -248,7 +248,9 @@ and map_to_string ~show_types sep_s term_s m =
   in
   let bs, dv = BddMap.bindings m in
   let dv_string = value_to_string_p ~show_types max_prec dv in
-  Printf.sprintf "{ %s ; _ |-> %s}" (term term_s binding_to_string bs) dv_string
+  match bs with
+  | [] -> Printf.sprintf "{ _ |-> %s }" dv_string
+  | _ -> Printf.sprintf "{ %s ; _ |-> %s}" (term term_s binding_to_string bs) dv_string
 
 and value_to_string_p ~show_types prec v =
   let value_to_string_p = value_to_string_p ~show_types in

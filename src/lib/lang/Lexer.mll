@@ -107,6 +107,7 @@ rule token = parse
   | "{"               { LBRACE (position lexbuf) }
   | "}"               { RBRACE (position lexbuf) }
   | "_"               { UNDERSCORE (position lexbuf) }
+  | "|->"             { MAPSTO (position lexbuf) }
   | "."               { DOT (position lexbuf) }
   | "/"               { SLASH (position lexbuf) }
   | wspace            { token lexbuf }

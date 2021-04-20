@@ -1,0 +1,27 @@
+(* vim: set syntax=ocaml: *)
+(* Example testing the new initialization syntax for dictionaries.
+ * See issue #64.
+ *)
+type attribute = dict[int, dict[tnode, set[int]]]
+
+let nodes = 3
+
+let edges = {
+    0=1;
+    1=2;
+    0=2;
+}
+
+let init n = match n with
+  | 0n -> (createDict (createDict ({})))[0 := {0n |-> {0, 1}; _ |-> {}}]
+  | 1n -> {1 |-> {1n |-> {}; _ |-> {}}; 2 |-> {1n |-> {0}; _ |-> {}}; _ |-> createDict ({})}
+  | 2n -> (createDict ({_ |-> {}}))[0 := (createDict ({}))[2n := {0}]][1 := {2n |-> {2, 3, 4}; _ |-> {}}]
+
+let trans e x = x
+
+let merge n x y =
+    let f1 s1 s2 = s1 union s2 in
+    let f2 d1 d2 = combine f1 d1 d2 in 
+    combine f2 x y
+
+let sol = solution {init = init; trans = trans; merge = merge}
