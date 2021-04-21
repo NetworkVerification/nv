@@ -184,11 +184,6 @@ let partialEvalDecls decls =
 
 let run_simulator cfg _ decls fs =
   (* It is important to partially evaluate before optimizing branches and before simulation. *)
-  (* let decls =
-   *   match decls with
-   *   | Decls d -> d
-   *   | Grp g -> g.base @ g.prop
-   * in *)
   let decls =
     Profile.time_profile "partial eval took:" (fun () -> partialEvalDecls decls)
   in
