@@ -37,6 +37,7 @@ CUTS = [
 CORE = 0
 AGGREGATION = 1
 EDGE = 2
+NONFAT = -1
 
 # Network types
 SP = 0
@@ -51,39 +52,49 @@ def to_grp(name):
     elif name == "edge":
         return EDGE
     else:
-        raise Exception("group name not recognized!")
+        return NONFAT
 
 
-def construct_graph(text):
+def construct_graph(text, is_fattree):
     """
     Construct a digraph from the given edge and node information.
     """
     g = igraph.Graph(directed=True)
-    for (v, grp) in find_nodes(text):
+    nodes = find_nodes(text, is_fattree)
+    for (v, grp) in nodes:
         g.add_vertex(g=grp)
-    g.add_edges(find_edges(text))
+    edges = find_edges(text, is_fattree)
+    g.add_edges(edges)
     # add stable node numbering
     for v in g.vs:
         v["id"] = v.index
     return g
 
 
-def find_edges(text):
+def find_edges(text, is_fattree):
     """Return the edges."""
-    prog = re.compile(
-        r"(\d*)-(\d*); "
-        r"\(\*(core|aggregation|edge)-\d*,Serial\d*"
-        r" --> (core|aggregation|edge)-\d*,Serial\d*\*\)"
-    )
+    if is_fattree:
+        pat = (
+            r"(\d*)-(\d*); "
+            r"\(\*(core|aggregation|edge)-\d*,Serial\d*"
+            r" --> (core|aggregation|edge)-\d*,Serial\d*\*\)"
+        )
+    else:
+        pat = r"(\d*)-(\d*); \(\*[\w/,]* --> [\w/,]*\*\)"
+    prog = re.compile(pat)
     matches = prog.finditer(text)
     outputs = [(int(m.group(1)), int(m.group(2))) for m in matches]
     outputs.sort()
     return outputs
 
 
-def find_nodes(text):
+def find_nodes(text, is_fattree):
     """Return the nodes."""
-    prog = re.compile(r"(core|aggregation|edge)-\d*=(\d*)")
+    if is_fattree:
+        pat = r"(core|aggregation|edge)-\d*=(\d*)"
+    else:
+        pat = r"(\w+)(?:-\d*)?=(\d+)"
+    prog = re.compile(pat)
     # find all nodes
     matches = prog.finditer(text)
     vertices = [(int(m.group(2)), to_grp(m.group(1))) for m in matches]
@@ -157,6 +168,16 @@ def write_interface_str(edges, net_type):
     return output
 
 
+def get_net_type(root):
+    if root.startswith("sp"):
+        net_type = SP
+    elif root.startswith("fat"):
+        net_type = FATPOL
+    else:
+        net_type = NONFAT
+    return net_type
+
+
 def get_part_fname(nvfile, cut, simulate):
     """
     Return the name of the partition file for the corresponding nv file,
@@ -164,12 +185,7 @@ def get_part_fname(nvfile, cut, simulate):
     """
     spdir, spname = os.path.split(nvfile)
     root, nvext = os.path.splitext(spname)
-    if root.startswith("sp"):
-        net_type = SP
-    elif root.startswith("fat"):
-        net_type = FATPOL
-    else:
-        raise Exception("Unexpected network type based on name")
+    net_type = get_net_type(root)
     # mark simulated solutions with an x for exact
     sim = "-x" if simulate else ""
     prefix = f"{root}-{cut}{sim}"
@@ -435,7 +451,7 @@ def gen_part_nv(nvfile, dest, cut, simulate=True, verbose=False):
     with open(nvfile, "r") as inputfile:
         text = inputfile.read()
     # compute the graph topology
-    graph = construct_graph(text)
+    graph = construct_graph(text, net_type != NONFAT)
     if verbose:
         print(str(graph))
     # get the three parts
@@ -471,6 +487,20 @@ def gen_part_nv(nvfile, dest, cut, simulate=True, verbose=False):
     with open(part, "w") as outfile:
         outfile.write(output)
     print(f"Saved network to {part}")
+
+
+def print_graph(nvfile):
+    """Print the associated graph for the given NV file."""
+    _, spname = os.path.split(nvfile)
+    root, _ = os.path.splitext(spname)
+    net_type = get_net_type(root)
+    with open(nvfile, "r") as inputfile:
+        text = inputfile.read()
+    # compute the graph topology
+    graph = construct_graph(text, net_type != NONFAT)
+    print(str(graph))
+    # adj = graph.get_adjlist(mode="all")
+    # assert all([len(l) % 2 == 0 for l in adj])
 
 
 class ParseFileDest(argparse.Action):
@@ -519,14 +549,23 @@ def parser():
     parser.add_argument(
         "-v", "--verbose", action="store_true", help="increase verbosity"
     )
+    parser.add_argument(
+        "-p",
+        "--print",
+        action="store_true",
+        help="print topology info instead of generating partition",
+    )
     return parser
 
 
 def main():
     args = parser().parse_args()
     for (file, dest) in args.files.items():
-        for cut in args.cuts:
-            gen_part_nv(file, dest, cut, verbose=args.verbose)
+        if args.print:
+            print_graph(file)
+        else:
+            for cut in args.cuts:
+                gen_part_nv(file, dest, cut, verbose=args.verbose)
 
 
 if __name__ == "__main__":
