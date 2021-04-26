@@ -270,7 +270,7 @@ let parse_input (args : string array) =
   let decls = ToEdge.toEdge_decl decls :: decls in
   let decls = Typing.infer_declarations info decls in
   Typing.check_annot_decls decls;
-  if not cfg.no_wellformed then Wellformed.check info decls;
+  Wellformed.check info decls;
   let partitions, decls =
     if cfg.kirigami
     then (

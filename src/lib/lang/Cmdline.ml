@@ -1,7 +1,6 @@
 type t =
   { debug : bool [@short "-d"] (** enable a debugging backtrace for nv     *)
   ; verbose : bool [@short "-v"] (** print out the srp solution              *)
-  ; no_wellformed : bool (** don't check if the network is well-formed *)
   ; simulate : bool [@short "-s"] (** simulate the network on given inputs    *)
   ; bound : int option (** bound the number of simulation steps    *)
   ; smt : bool [@short "-m"] (** search for bugs using an smt solver     *)
@@ -23,7 +22,6 @@ type t =
   ; check_monotonicity : bool (** checks monotonicity of trans function   *)
   ; kirigami : bool [@short "-k"] (** enable partitioning features           *)
   ; ranked : bool (** use the ranked check for kirigami       *)
-  ; print_remap : bool [@short "-R"] (** print the remapping of nodes in kirigami  *)
   ; print_partitions : bool (** print the partitioned declarations in kirigami *)
   ; link_failures : int (** adds at most k link failures to the network  *)
   ; slicing : bool (** Try to slice the network's attribute *)
@@ -40,7 +38,6 @@ let default =
   { debug = false
   ; verbose = false
   ; simulate = false
-  ; no_wellformed = false
   ; bound = None
   ; smt = false
   ; smt_parallel = false
@@ -60,7 +57,6 @@ let default =
   ; hiding = false
   ; kirigami = false
   ; ranked = false
-  ; print_remap = false
   ; print_partitions = false
   ; slicing = false
   ; parallelize = None
@@ -82,7 +78,6 @@ let update_cfg_dependencies () =
   if !cfg.slicing then cfg := { !cfg with unbox = true };
   if !cfg.hiding then cfg := { !cfg with unbox = true };
   if !cfg.smt_parallel then cfg := { !cfg with finite_arith = true };
-  if !cfg.print_remap then cfg := { !cfg with kirigami = true };
   if !cfg.print_partitions then cfg := { !cfg with kirigami = true };
   if !cfg.ranked then cfg := { !cfg with kirigami = true };
   ()
