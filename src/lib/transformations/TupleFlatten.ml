@@ -270,15 +270,10 @@ let unflatten_list (vs : value list) (tys : ty list) =
 ;;
 
 let map_back_transformer recurse _ v orig_ty =
-  (* print_endline ((Printing.value_to_string v) ^ ": " ^ (Printing.ty_to_string orig_ty)); *)
   match v.v, orig_ty with
   | VTuple vs, TTuple tys ->
     let vs' = unflatten_list vs tys in
     Some (vtuple (List.map2 recurse vs' tys))
-  (* | _, TTuple _ ->
-   *   failwith ("original type was a tuple, but value "
-   *             ^ (Printing.value_to_string v)
-   *             ^ " is no longer one!") *)
   | _ -> None
 ;;
 

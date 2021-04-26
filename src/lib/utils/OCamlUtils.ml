@@ -30,7 +30,7 @@ let dmap (f : 'a -> 'b) (x : 'a delayed) : 'b delayed = fun () -> f (x ())
 let rec list_seq n =
   match n with
   | 0 -> []
-  | _ -> list_seq (n - 1) @ [n - 1]
+  | _ -> if n < 0 then failwith "list_seq: given negative n" else list_seq (n - 1) @ [n - 1]
 ;;
 
 let rec list_to_string f lst =
