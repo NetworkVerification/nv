@@ -12,3 +12,14 @@ let mapbetter f o1 o2 =
 let flipEdge e =
   match e with
   | a~b -> toEdge b a
+
+let isSome o =
+  match o with
+  | Some _ -> true
+  | None -> false
+
+(* set utilities *)
+
+let subset s t = s inter t = s
+
+let disjoint s t = s inter t = {}

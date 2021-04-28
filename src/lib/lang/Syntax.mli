@@ -158,6 +158,16 @@ val optimizeBranches : branches -> branches
 val branchToList : branches -> (PatMap.key * exp) list
 val branchSize : branches -> unit
 
+type partitioning =
+  {
+    interface : exp
+  ; decomp : exp option * exp option
+  }
+
+val iter_part : (exp -> unit) -> partitioning -> unit
+val map_part : (exp -> exp) -> partitioning -> partitioning
+val fold_part : (exp -> 'a -> 'a) -> partitioning -> 'a -> 'a
+
 (* var_names should be an exp that uses only the EVar and ETuple constructors *)
 type solve =
   { aty : ty option
@@ -165,6 +175,7 @@ type solve =
   ; init : exp
   ; trans : exp
   ; merge : exp
+  ; part : partitioning option
   }
 
 type declaration =
@@ -204,6 +215,7 @@ val eproject : exp -> string -> exp
 val esome : exp -> exp
 val ematch : exp -> branches -> exp
 val ety : exp -> ty -> exp
+val ebool : bool -> exp
 val deconstructFun : exp -> func
 val exp_to_pattern : exp -> pattern
 
@@ -282,11 +294,15 @@ val free : Var.t BatSet.PSet.t -> exp -> Var.t BatSet.PSet.t
 val free_ty : Var.t BatSet.PSet.t -> exp -> (Var.t * ty) BatSet.PSet.t
 val free_dead_vars : exp -> exp
 
-(** [get_ty_from_tyexp t] @return the type wrapped by [Ty] or the type
+(** [get_ty_from_tyexp t]
+ * @return the type wrapped by [Ty] or the type
     of the expression wrapped by [Exp]. Fails if the expression has no
     type. *)
 val get_ty_from_tyexp : ty_or_exp -> ty
 
 val bool_of_val : value -> bool option
+val int_of_val : value -> int option
 val proj_var : int -> var -> var
 val unproj_var : var -> int * var
+val get_ty_vars : ty -> var list
+val get_exp_vars : exp -> var list

@@ -1,0 +1,120 @@
+(* vim: set syntax=ocaml: *)
+
+include "../utils.nv"
+
+(* In this example, every node of the network is its own partition.
+ * Each node expects to get a route from at least one of its neighbours,
+ * without knowing which one: only that /some/ neighbour will share a route.
+ * We then want to ensure that any node that does receive a route advertises
+ * it to all of its neighbours.
+ * There may however be filters on some input~base edges which drop routes.
+ *)
+
+type attribute = option[int]
+
+let nodes = 24
+
+(* Standard diamond topology:
+ *   0
+ *  / \
+ * 1 - 2
+ *  \ /
+ *   3
+ *)
+let edges = {
+  (* cut 0=1; edges *)
+  0-4;
+  5-1;
+  1-6;
+  7-0;
+  (* cut 0=2; edge *)
+  0-8;
+  9-2;
+  2-10;
+  11-0;
+  (* cut 1=2; edge *)
+  1-12;
+  13-2;
+  2-14;
+  15-1;
+  (* cut 1=3; edge *)
+  1-16;
+  17-3;
+  3-18;
+  19-1;
+  (* cut 2=3; edge *)
+  2-20;
+  21-3;
+  3-22;
+  23-2;
+}
+
+(* hypotheses *)
+symbolic h_0_1 : option[int]
+symbolic h_1_0 : option[int]
+symbolic h_0_2 : option[int]
+symbolic h_2_0 : option[int]
+symbolic h_1_2 : option[int]
+symbolic h_2_1 : option[int]
+symbolic h_1_3 : option[int]
+symbolic h_3_1 : option[int]
+symbolic h_2_3 : option[int]
+symbolic h_3_2 : option[int]
+
+(* predicates *)
+let pred x = match x with
+  | Some _ -> true
+  | None -> false
+require (pred h_0_1)
+require (pred h_1_0)
+require (pred h_0_2)
+require (pred h_2_0)
+require (pred h_1_2)
+require (pred h_2_1)
+require (pred h_1_3)
+require (pred h_3_1)
+require (pred h_2_3)
+require (pred h_3_2)
+
+let init node = match node with
+  | 0n -> Some 0
+  | 5n -> h_0_1
+  | 7n -> h_1_0
+  | 9n -> h_0_2
+  | 11n -> h_2_0
+  | 13n -> h_1_2
+  | 15n -> h_2_1
+  | 17n -> h_1_3
+  | 19n -> h_3_1
+  | 21n -> h_2_3
+  | 23n -> h_3_2
+  | _ -> None
+
+let trans edge x = match edge with
+  | 5~1 -> x
+  | 7~0 -> x
+  | 9~2 -> x
+  | 11~0 -> x
+  | 13~2 -> x
+  | 15~1 -> x
+  | 17~3 -> x
+  | 19~1 -> x
+  | 21~3 -> x
+  | 23~2 -> x
+  | _ -> mapo (fun x -> x + 1) x
+
+let merge node x y = match node with
+  | _ -> mapbetter (fun x y -> if x < y then x else y) x y
+
+let assert node x = match node with
+  | 4n -> (pred x)
+  | 6n -> (pred x)
+  | 8n -> (pred x)
+  | 10n -> (pred x)
+  | 12n -> (pred x)
+  | 14n -> (pred x)
+  | 16n -> (pred x)
+  | 18n -> (pred x)
+  | 20n -> (pred x)
+  | 22n -> (pred x)
+  | _ -> isSome x

@@ -11,9 +11,11 @@ type sol =
 type t =
   { symbolics : (var * value) list
   ; solves : (var * sol) list
-  ; assertions : bool list
   ; (* One for each assert statement *)
-    nodes : int
+    assertions : bool list
+  ; (* Used by Kirigami *)
+    guarantees : bool list
+  ; nodes : int list
   }
 
 type map_back = t -> t

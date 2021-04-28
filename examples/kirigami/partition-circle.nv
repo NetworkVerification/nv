@@ -1,0 +1,41 @@
+(* circle.nv:
+   Implements shortest paths on a 2-node network
+   with no destination. *)
+
+type attribute = option[int]
+
+let nodes = 2
+
+let edges = {
+ 0=1;
+}
+
+let partition node = match node with
+  | 0n -> 0
+  | 1n -> 1
+
+let interface edge x = match edge with
+  | 0~1 -> x = Some 0 || x = Some 1
+  | 1~0 -> x = Some 0 || x = Some 1
+
+let merge node x y = match (x, y) with
+ | (Some a, Some b) -> if a < b then x else y
+ | (_, None) -> x
+ | (None, _) -> y
+
+let trans edge x = match x with
+ | Some a -> Some a
+ | None -> None
+
+let init node =
+  match node with
+  | 0n -> Some 1
+  | _ -> Some 2
+
+let sol = solution { init = init; trans = trans; merge = merge; interface = interface }
+
+let assertNode node x = match x with
+ | Some a -> a < 2
+ | None -> false
+
+assert (foldNodes (fun u v acc -> acc && assertNode u v) sol true)

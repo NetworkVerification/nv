@@ -39,3 +39,9 @@ nv
 
 # Native install files
 *.install
+
+# __pycache__ from running scripts
+__pycache__/
+
+# Tabulate CSVs
+*.csv

@@ -7,16 +7,16 @@ open SmtUtils
 open SmtLang
 open SolverUtil
 open Batteries
+open Nv_utils.OCamlUtils
 
 (** Emits the code that evaluates the model returned by Z3. *)
 let eval_model
     (symbolics : Syntax.ty_or_exp VarMap.t)
-    (num_nodes : int)
-    (assertions : Syntax.exp list)
+    (assertions : int)
+    (guarantees : int)
     (renaming : string StringMap.t * smt_term StringMap.t)
     : command list
   =
-  ignore num_nodes;
   let renaming, valMap = renaming in
   let var x = "Var:" ^ x in
   let find_renamed_term str =
@@ -29,6 +29,18 @@ let eval_model
     mk_term smt_term
   in
   let base = [mk_echo "\"end_of_model\"" |> mk_command] in
+  (* Compute eval statements for guarantees (Kirigami) *)
+  let guarantee_cmds =
+    List.fold_lefti
+      (fun acc i _ ->
+        let assu = Printf.sprintf "guarantee-%d" i in
+        let tm = find_renamed_term assu in
+        let ev = mk_eval tm |> mk_command in
+        let ec = mk_echo ("\"" ^ var assu ^ "\"") |> mk_command in
+        ec :: ev :: acc)
+      base
+      (list_seq guarantees)
+  in
   (* Compute eval statements for assertions *)
   let assertion_cmds =
     List.fold_lefti
@@ -38,8 +50,8 @@ let eval_model
         let ev = mk_eval tm |> mk_command in
         let ec = mk_echo ("\"" ^ var assu ^ "\"") |> mk_command in
         ec :: ev :: acc)
-      base
-      assertions
+      guarantee_cmds
+      (list_seq assertions)
   in
   (* Compute eval statements for symbolic variables *)
   let symbols =
@@ -97,32 +109,40 @@ let box_vals (xs : (int * Syntax.value) list) =
 
 let translate_model_unboxed nodes (m : (string, string) BatMap.t) : Nv_solution.Solution.t
   =
-  let symbolics, solves, assertions =
+  let symbolics, solves, assertions, guarantees =
     BatMap.foldi
-      (fun k v (symbolics, solves, assertions) ->
+      (fun k v (symbolics, solves, assertions, guarantees) ->
         let nvval = parse_val v in
         match k with
+        | k when BatString.starts_with k "guarantee" ->
+          let guar =
+            match nvval.v with
+            | VBool b -> b
+            | _ -> failwith "Bad guarantee"
+          in
+          symbolics, solves, assertions, guar :: guarantees
         | k when BatString.starts_with k "assert" ->
           let asn =
             match nvval.v with
             | VBool b -> b
             | _ -> failwith "Bad assert"
           in
-          symbolics, solves, asn :: assertions
+          symbolics, solves, asn :: assertions, guarantees
         | k when BatString.starts_with k "solve" ->
           let kname = Var.of_var_string k in
-          symbolics, (kname, nvval) :: solves, assertions
+          symbolics, (kname, nvval) :: solves, assertions, guarantees
         | k ->
           let new_symbolics = (Var.of_var_string k, nvval) :: symbolics in
-          new_symbolics, solves, assertions)
+          new_symbolics, solves, assertions, guarantees)
       m
-      ([], [], [])
+      ([], [], [], [])
   in
   let box v = { sol_val = v; mask = None; attr_ty = Syntax.TUnit } in
   (*Tunit is arbitrary here**)
   { symbolics = List.rev symbolics
   ; solves = List.rev_map (fun (k, v) -> k, box v) solves
   ; assertions = List.rev assertions
+  ; guarantees = List.rev guarantees
   ; nodes
   }
 ;;

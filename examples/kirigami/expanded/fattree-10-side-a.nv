@@ -1,0 +1,170 @@
+(* vim: set syntax=ocaml: *)
+include "../../utils.nv"
+
+(* fattree-10 side A: spine view *)
+
+(* Each node keeps track of who its next hop is to and how long the total route is. *)
+type route = { len: int; nexthop: tnode }
+type attribute = option[route]
+
+(* --- Predicates ----------------------------------------------------------------- *)
+
+(* predicate that a route r exactly has length l and nexthop n *)
+let exact_route r l n = match r with
+  | Some r -> r.len = l && r.nexthop = n
+  | None -> false
+
+(* predicate that a route r has length at least l and exactly nexthop n *)
+let min_len_route r l n = match r with
+  | Some r -> r.len >= l && r.nexthop = n
+  | None -> false
+
+let max_len_route r l n = match r with
+  | Some r -> r.len <= l && r.nexthop = n
+  | None -> false
+
+let some_route r l n = match r with
+  | Some _ -> true
+  | None -> false
+
+let any_route r l n = true
+
+(* --- Hypotheses ----------------------------------------------------------------- *)
+
+(* chosen destination *)
+let dest = 9n
+
+(* node hypotheses *)
+(* h_i_j is the hypothesis on j's input that represents a message coming from i *)
+symbolic h_2_0 : option[route]
+symbolic h_6_0 : option[route]
+symbolic h_3_1 : option[route]
+symbolic h_7_1 : option[route]
+
+(* requirements on the hypotheses *)
+let pred_0_2 x = any_route x 3 0n
+let pred_2_0 x = any_route x 4 2n
+let pred_0_6 x = any_route x 3 0n
+let pred_6_0 x = some_route x 2 6n
+let pred_1_3 x = any_route x 3 1n
+let pred_3_1 x = any_route x 4 3n
+let pred_1_7 x = any_route x 3 1n
+let pred_7_1 x = some_route x 2 7n
+
+(* as the destination is 9n, hypotheses entering 9's pod do not need to be exact *)
+require (pred_2_0 h_2_0)
+require (pred_6_0 h_6_0)
+require (pred_3_1 h_3_1)
+require (pred_7_1 h_7_1)
+
+(* --- Topology ------------------------------------------------------------------ *)
+(* 10 node fattree, partitioned along the 4 bidirectional spine-pod edges *)
+
+(* base_nodes = 2 + input_nodes = 4 + output_nodes = 4 *)
+let nodes = 10
+
+(*
+  Edge arrangement:
+  0 to 2 and 6
+  1 to 3 and 7
+
+   0  1
+  | \/ \
+  | /\  \
+  2 3 6 7
+  |X| |X|
+  4 5 8 9
+
+*)
+let edges = {
+  (* cut 0=2 edge *)
+  0-2;
+  3-0;
+  (* cut 0=6 edge *)
+  0-4;
+  5-0;
+  (* cut 1=3 edge *)
+  1-6;
+  7-1;
+  (* cut 1=7 edge *)
+  1-8;
+  9-1;
+}
+
+(* --- Policy Definition --------------------------------------------------------- *)
+
+(* -------- Merge ---------------------------------------------------------------- *)
+(* between two routes, pick the shorter one;
+ * if the routes have the same length, pick the one with the lower node number
+ *)
+let compare_routes r1 r2 =
+  if (r1.len < r2.len) then r1 else 
+  if (r1.len = r2.len && r1.nexthop <n r2.nexthop) then r1 else r2
+
+(* merge compares two routes and selects the best *)
+let merge node x y = match node with
+  | 2n -> y
+  | 4n -> y
+  | 6n -> y
+  | 8n -> y
+  | _ -> mapbetter compare_routes x y
+(* NOTE: in this particular case, we don't need the specific cases for
+ * the output nodes, since they are initialized to None, so the merge
+ * works the same way
+ * is the same as setting the output's solution to trans(L(base)),
+ * because the base node is the output's only choice and its initial value is None
+ *)
+
+(* -------- Transfer ------------------------------------------------------------- *)
+(* update a route to increase len by one and give this node as the next hop *)
+let update_route node r =
+  let new_len = r.len + 1 in
+  { len = new_len; nexthop = node }
+
+(* update the route if it exists, using the source node and ignoring the sink *)
+let transfer_route src snk x = mapo (fun r -> update_route src r) x
+
+(* the final trans function in the partitioned SRP uses the original trans for all non-input edges
+ * and the identity function for the others *)
+let trans edge x = match edge with
+  (* use identity for all input~base edges *)
+  | 3~0 -> x
+  | 5~0 -> x
+  | 7~1 -> x
+  | 9~1 -> x
+  (* use original edge transfer for base~output edges *)
+  | 0~2 -> transfer_route 0n 2n x
+  | 0~4 -> transfer_route 0n 6n x
+  | 1~6 -> transfer_route 1n 3n x
+  | 1~8 -> transfer_route 1n 7n x
+  (* otherwise use original transfer *)
+  | src~snk -> transfer_route src snk x
+
+(* -------- Init ----------------------------------------------------------------- *)
+let init node = if node = dest then
+  Some { len = 0; nexthop = node } else 
+  match node with
+  | 3n -> h_2_0
+  | 5n -> h_6_0
+  | 7n -> h_3_1
+  | 9n -> h_7_1
+  | _ -> None
+
+(* -------- Assert --------------------------------------------------------------- *)
+
+(* Exact assert: SC A and SC B (since the transfer is identity) *)
+let assert node x = 
+  match node with
+  (* Check that the outputs satisfy the inputs *)
+  | 2n -> pred_2_0 x
+  | 4n -> pred_6_0 x
+  | 6n -> pred_3_1 x
+  | 8n -> pred_7_1 x
+  (* Don't check anything on the inputs *)
+  | 3n -> true
+  | 5n -> true
+  | 7n -> true
+  | 9n -> true
+  (* Check that everyone can reach the destination *)
+  | _ -> isSome x
+

@@ -67,7 +67,7 @@ let build_proj_func n =
 ;;
 
 (** Builds a table (function) that maps record projector names to the respective
-   functions *)
+    functions *)
 let build_proj_funcs () =
   let branches =
     IntSet.fold
@@ -93,7 +93,7 @@ let build_constructor n =
 ;;
 
 (** Builds a table (function) that maps each record to a function that takes as
-   arguments a value for each of its fields and creates the record*)
+    arguments a value for each of its fields and creates the record*)
 let build_constructors () =
   let branches =
     IntSet.fold
@@ -220,8 +220,8 @@ let rec ty_to_ocaml_string t =
 ;;
 
 (** Returns an OCaml string that contains the hashconsed int of the function
-   body and a tuple with the free variables that appear in the function. Used
-   for caching BDD operations.
+    body and a tuple with the free variables that appear in the function. Used
+    for caching BDD operations.
     NOTE: In general this is sound only if you inline, because we do not capture the environment
     of any function that is called and may have free variables.
 *)
@@ -233,12 +233,12 @@ let getFuncCache (e : exp) : string =
     let freeList = BatSet.PSet.to_list free in
     let closure = Collections.printList (fun x -> varname x) freeList "(" "," ")" in
     Printf.sprintf "(%d, %s)" (Collections.ExpIds.fresh_id exp_store f.body) closure
-    (*FIXME: annoying BatSet printing outputs null character at the end so I am using the code above*)
-    (* let closure = BatIO.output_string () in
-     *   BatSet.PSet.print ~first:"(" ~sep:"," ~last:")"
-     *     (fun out x -> BatIO.write_string out (varname x))
-     *     closure free;
-     *   Printf.sprintf "(%d, %s)" f.body.etag (BatInnerIO.close_out closure) *)
+  (*FIXME: annoying BatSet printing outputs null character at the end so I am using the code above*)
+  (* let closure = BatIO.output_string () in
+   *   BatSet.PSet.print ~first:"(" ~sep:"," ~last:")"
+   *     (fun out x -> BatIO.write_string out (varname x))
+   *     closure free;
+   *   Printf.sprintf "(%d, %s)" f.body.etag (BatInnerIO.close_out closure) *)
   | _ ->
     (*assume there are no free variables, but this needs to be fixed: always inline*)
     Printf.sprintf "(%d, ())" (Collections.ExpIds.fresh_id exp_store e)
@@ -247,7 +247,7 @@ let getFuncCache (e : exp) : string =
 (** Function walking through an NV expression to record tuple types.
     This is done by the compiler on the go, but not for
     operations like mapIte because these expressions are never translated to OCaml, so we manually have to do it.
-   Expect this function to be called somewhere in the MapIte case.*)
+    Expect this function to be called somewhere in the MapIte case.*)
 
 let rec track_tuples_exp e =
   match e.e with
@@ -378,7 +378,6 @@ and op_args_to_ocaml_string op es =
 and func_to_ocaml_string f =
   Printf.sprintf "(fun %s -> %s)" (varname f.arg) (exp_to_ocaml_string f.body)
 
-(* Printf.sprintf "(fun (%s : %s) -> %s)" (varname f.arg) (ty_to_ocaml_string (OCamlUtils.oget f.argty)) (exp_to_ocaml_string f.body) *)
 and branch_to_ocaml_string (p, e) =
   Printf.sprintf "| %s -> %s\n" (pattern_to_ocaml_string p) (exp_to_ocaml_string e)
 

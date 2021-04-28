@@ -1,0 +1,50 @@
+(* vim: set syntax=ocaml: *)
+type attribute = (int, int)
+
+let nodes = 6
+let edges = {
+  0-2; (* y_01 *)
+  3-1; (* x_01 *)
+  1-4; (* y_10 *)
+  5-0; (* x_10 *)
+}
+
+symbolic k_01 : int
+symbolic k_10 : int
+symbolic hyp_01 : int
+symbolic hyp_10 : int
+require (hyp_01 = 3)
+require (hyp_10 = 3)
+require (k_01 = 1)
+require (k_10 > 3)
+
+let init n = match n with
+ | 0n -> (2, 0)
+ | 1n -> (2, 0)
+ | 2n -> (99, 0)
+ | 3n -> (hyp_01, k_01)
+ | 4n -> (99, 0)
+ | 5n -> (hyp_10, k_10)
+
+let trans e x = 
+  match e with 
+  | 0~2 -> x
+  | 1~4 -> x
+  | _ -> let (x1, x2) = x in (x1, x2 + 1)
+
+let merge n x y =
+ let (x1, x2) = x in
+ let (y1, y2) = y in
+ if x1 < y1 then x else y
+
+let sol = solution { init = init; trans = trans; merge = merge; }
+
+let getMeasure x = let (_, k) = x in k
+
+(* require (getMeasure (sol[2n])) <= k_01 *)
+(* require (getMeasure (sol[4n])) <= k_10 *)
+
+(* assert k_10 <= getMeasure (sol[2n])
+assert k_01 <= getMeasure (sol[4n]) *)
+assert (getMeasure (sol[2n])) <= k_01
+assert (getMeasure (sol[4n])) <= k_10

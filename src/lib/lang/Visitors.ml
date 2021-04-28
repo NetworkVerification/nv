@@ -1,4 +1,5 @@
 open Syntax
+open Batteries
 
 let rec iter_exp f (e : exp) =
   f e;
@@ -33,8 +34,13 @@ let iter_exp_decl f d =
   | DPartition e (* partitioning *)
   | DRequire e
   | DSymbolic (_, Exp e) -> iter_exp (f d) e
-  | DSolve { var_names; init; trans; merge; _ } ->
-    List.iter (iter_exp (f d)) [var_names; init; trans; merge]
+  | DSolve { var_names; init; trans; merge; part; _ } ->
+    let part_exps =
+      match part with
+      | Some p -> fold_part List.cons p []
+      | None -> []
+    in
+    List.iter (iter_exp (f d)) ([var_names; init; trans; merge] @ part_exps)
   | DNodes _ | DEdges _ | DSymbolic _ | DUserTy _ -> ()
 ;;
 

@@ -1,0 +1,114 @@
+(* vim: set syntax=ocaml: *)
+include "../../utils.nv"
+
+(* Each node keeps track of who its next hop is to and how long the total route is. *)
+type route = { len: int; nexthop: tnode }
+type attribute = option[route]
+
+(* --- Predicates ----------------------------------------------------------------- *)
+
+(* predicate that a route r exactly has length l and nexthop n *)
+let exact_route r l n = match r with
+  | Some r -> r.len = l (* && r.nexthop = n *)
+  | None -> false
+
+(* predicate that a route r has length at least l and exactly nexthop n *)
+let gt_min_len_route r l n = match r with
+  | Some r -> r.len >= l (* && r.nexthop = n *)
+  | None -> false
+
+(* chosen destination *)
+let dest = 9n
+
+(* --- Topology ------------------------------------------------------------------ *)
+(* 10 node fattree *)
+let nodes = 10
+
+(*
+  Edge arrangement:
+  0 to 2 and 6
+  1 to 3 and 7
+
+   0  1
+  | \/ \
+  | /\  \
+  2 3 6 7
+  |X| |X|
+  4 5 8 9
+
+*)
+let edges = {
+  0=2;
+  0=6;
+  1=3;
+  1=7;
+  2=4;
+  2=5;
+  3=4;
+  3=5;
+  6=8;
+  6=9;
+  7=8;
+  7=9;
+}
+
+let partition node = match node with
+  | 6n -> 0
+  | 7n -> 0
+  | 8n -> 0
+  | 9n -> 0
+  | 0n -> 1
+  | 1n -> 1
+  | _ -> 2
+
+let interface edge = match edge with
+  | 0~2 -> (fun a -> exact_route a 3 0n)
+  | 2~0 -> (fun a -> gt_min_len_route a 4 2n)
+  | 0~6 -> (fun a -> gt_min_len_route a 3 0n)
+  | 6~0 -> (fun a -> exact_route a 2 6n)
+  | 1~3 -> (fun a -> exact_route a 3 1n)
+  | 3~1 -> (fun a -> gt_min_len_route a 4 3n)
+  | 1~7 -> (fun a -> gt_min_len_route a 3 1n)
+  | 7~1 -> (fun a -> exact_route a 2 7n)
+  | _ -> (fun a -> true)
+
+(* --- Policy Definition --------------------------------------------------------- *)
+
+(* -------- Merge ---------------------------------------------------------------- *)
+(* between two routes, pick the shorter one;
+ * if the routes have the same length, pick the one with the lower node number
+ *)
+let compare_routes r1 r2 =
+  if (r1.len < r2.len) then r1 else 
+  if (r1.len = r2.len && r1.nexthop <n r2.nexthop) then r1 else r2
+
+(* merge compares two routes and selects the best *)
+let merge node x y = mapbetter compare_routes x y
+(* NOTE: this definition shows that the SMT encoding of the output's solution
+ * is the same as setting the output's solution to trans(L(base)),
+ * because the base node is the output's only choice and its initial value is None
+ *)
+
+(* -------- Transfer ------------------------------------------------------------- *)
+(* update a route to increase len by one and give this node as the next hop *)
+let update_route node r =
+  let new_len = r.len + 1 in
+  { len = new_len; nexthop = node }
+
+(* update the route if it exists, using the source node and ignoring the sink *)
+let transfer_route src snk x = mapo (fun r -> update_route src r) x
+
+(* the final trans function in the partitioned SRP uses the original trans for all non-input edges
+ * and the identity function for the others *)
+let trans edge x = match edge with
+  | src~snk -> transfer_route src snk x
+
+(* -------- Init ----------------------------------------------------------------- *)
+let init node = if node = dest then
+  Some { len = 0; nexthop = node } else None
+
+(* -------- Assert --------------------------------------------------------------- *)
+
+let sol = solution { init = init; trans = trans; merge = merge; interface = interface }
+
+assert foldNodes (fun u v acc -> acc && isSome v) sol true

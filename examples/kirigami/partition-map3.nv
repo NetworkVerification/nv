@@ -1,0 +1,43 @@
+(* vim: set syntax=ocaml: *)
+include "../utils.nv"
+
+type attribute = dict[tnode, option[int]]
+
+let nodes = 5
+
+let edges = {
+ 0=1;
+ 1=2;
+ 2=3;
+ 3=4;
+}
+
+let partition node = match node with
+  | 0n -> 0
+  | 1n -> 0
+  | _ -> 1
+
+let interface edge = match edge with
+  | 1~2 -> Some (fun x -> x[0n] = Some 2 && x[1n] = Some 1)
+  | 2~1 -> Some (fun x -> x[4n] = Some 3)
+  | _ -> None
+
+let merge node x y =
+  combine (fun o1 o2 -> mapbetter (fun n1 n2 -> if n1 < n2 then n1 else n2) o1 o2) x y
+
+let trans edge x = map (fun o -> mapo (fun n -> n + 1) o) x
+
+let init node =
+  let m = (createDict None : dict[tnode, option[int]]) in
+  m[node := Some 0]
+
+let sol = solution {init = init; trans = trans; merge = merge; interface = interface}
+
+let o_lt o t = match o with
+  | Some x -> x < t
+  | None -> false
+
+let routes_lt x t = foldNodes (fun u v acc -> acc && o_lt v t) x true
+
+assert foldNodes (fun u v acc -> acc && routes_lt v 5) sol true
+

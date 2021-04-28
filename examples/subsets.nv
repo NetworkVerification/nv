@@ -1,0 +1,27 @@
+type attribute = set[int]
+
+let nodes = 3
+
+let edges = {0-1;}
+
+let subset s t = s inter t = s
+
+let disjoint s t = s inter t = {}
+
+symbolic h : set[int]
+require (subset ({0}) h)
+require (disjoint ({1, 2}) h)
+
+let init n = match n with
+ | 0n -> h
+ | 1n -> {}
+ | 2n -> {2}
+
+let trans e x = if x[1] then {} else x[1 := true]
+
+let merge n x y = x union y
+
+let sol = solution { init = init; trans = trans; merge = merge; }
+
+assert (!sol[0n][2] && !sol[1n][2])
+assert (subset ({0}) (sol[0n])) && (subset ({0, 1}) (sol[1n]))

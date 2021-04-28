@@ -22,9 +22,11 @@ type sol =
 type t =
   { symbolics : (var * value) list
   ; solves : (var * sol) list
-  ; assertions : bool list
   ; (* One for each assert statement *)
-    nodes : int
+    assertions : bool list
+  ; (* Kirigami's special asserts *)
+    guarantees : bool list
+  ; nodes : int list
   }
 
 type map_back = t -> t
@@ -185,16 +187,16 @@ let print_fun nodes { sol_val; mask } =
   let m =
     match sol_val.v with
     | VMap m -> m
-    | _ -> failwith "Solution must be a map"
+    | _ -> failwith ("Solution must be a map; got " ^ (Printing.value_to_string sol_val))
   in
   let f =
     match mask with
     | None -> fun x -> Printing.value_to_string ~show_types:false x
     | Some m -> fun x -> print_masked m x
   in
-  for i = nodes - 1 downto 0 do
+  for i = (List.length nodes) - 1 downto 0 do
     let v = BddMap.find m (vnode i) in
-    solString := (i, f v) :: !solString
+    solString := (List.nth nodes i, f v) :: !solString
   done;
   PrimitiveCollections.printList
     (fun (u, s) -> Printf.sprintf "Node %d\n---------\n%s" u s)
@@ -224,10 +226,26 @@ let print_solution (solution : t) =
         print_endline (print_fun solution.nodes v))
       solution.solves
   end;
+  (match solution.guarantees with
+  | [] -> ()
+  | guars ->
+    let failed =
+      BatList.fold_righti (fun i b acc -> if not b then i :: acc else acc) guars []
+    in
+    (match failed with
+    | [] ->
+      print_string [green; Bold] "Success: ";
+      Printf.printf "All guarantees passed\n"
+    | _ ->
+      BatList.iter
+        (fun i -> print_string [red; Bold] (Printf.sprintf "Guarantee %d failed\n" i))
+        failed));
   (match solution.assertions with
   | [] ->
-    print_string [green; Bold] "Success: ";
-    Printf.printf "No assertions provided, so none failed\n"
+    if solution.guarantees = [] then
+      (print_string [green; Bold] "Success: ";
+       Printf.printf "No assertions provided, so none failed\n")
+    else ()
   | asns ->
     let failed =
       BatList.fold_righti (fun i b acc -> if not b then i :: acc else acc) asns []
@@ -238,7 +256,7 @@ let print_solution (solution : t) =
       Printf.printf "All assertions passed\n"
     | _ ->
       BatList.iter
-        (fun i -> print_string [red; Bold] (Printf.sprintf "Assertion %d failed" i))
+        (fun i -> print_string [red; Bold] (Printf.sprintf "Assertion %d failed\n" i))
         failed));
   print_newline ()
 ;;

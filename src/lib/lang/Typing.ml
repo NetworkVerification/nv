@@ -25,10 +25,9 @@ let solve_ty aty =
     @@ StringMap.empty)
 ;;
 
-(* TODO: do we want a special partition ID type? is i8 a sensible number? *)
 (* partitioning *)
-let partition_ty = TArrow (node_ty, TInt 8)
-let interface_ty aty = TArrow (edge_ty, TOption aty)
+let partition_ty = TArrow (node_ty, TInt 32)
+let interface_ty aty = TArrow (edge_ty, TArrow (aty, TBool))
 
 (* end partitioning *)
 
@@ -114,11 +113,12 @@ let check_annot_decl (d : declaration) =
   | DAssert e
   | DPartition e (* partitioning *)
   | DRequire e -> check_annot e
-  | DSolve { var_names; init; trans; merge; _ } ->
+  | DSolve { var_names; init; trans; merge; part } ->
     check_annot var_names;
     check_annot init;
     check_annot trans;
-    check_annot merge
+    check_annot merge;
+    Option.may (iter_part check_annot) part
   | DNodes _ | DEdges _ | DSymbolic _ | DUserTy _ -> ()
 ;;
 
@@ -879,7 +879,7 @@ and infer_declaration i info env record_types d : ty Env.t * declaration =
     let ty = oget e'.ety in
     unify info e ty TBool;
     env, DRequire e'
-  | DSolve { aty; var_names; init; trans; merge } ->
+  | DSolve { aty; var_names; init; trans; merge; part } ->
     (* Note: This only works before map unrolling *)
     let solve_aty =
       match aty with
@@ -892,6 +892,24 @@ and infer_declaration i info env record_types d : ty Env.t * declaration =
     unify info init (oget init'.ety) (init_ty solve_aty);
     unify info trans (oget trans'.ety) (trans_ty solve_aty);
     unify info merge (oget merge'.ety) (merge_ty solve_aty);
+    let lift_unify o ty =
+      match o with
+      | Some x ->
+        let x' = infer_exp x in
+        unify info x (oget x'.ety) ty;
+        Some x'
+      | None -> None
+    in
+    let part' =
+      match part with
+      | Some { interface; decomp = lt, rt } ->
+        let interface' = infer_exp interface in
+        unify info interface (oget interface'.ety) (interface_ty solve_aty);
+        let lt' = lift_unify lt (trans_ty solve_aty) in
+        let rt' = lift_unify rt (trans_ty solve_aty) in
+        Some { interface = interface'; decomp = lt', rt' }
+      | None -> None
+    in
     let var =
       match var_names.e with
       | EVar x -> x
@@ -905,6 +923,7 @@ and infer_declaration i info env record_types d : ty Env.t * declaration =
         ; init = init'
         ; trans = trans'
         ; merge = merge'
+        ; part = part'
         } )
   | DUserTy _ | DNodes _ | DEdges _ -> env, d
 ;;

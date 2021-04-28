@@ -1,0 +1,16 @@
+type attribute = dict[tnode, int]
+
+let nodes = 2
+let edges = { 0=1; }
+
+let init n = 
+ let m = (createDict 16 : dict[tnode, int]) in 
+ m[n := 1]
+
+let trans e x = x
+
+let merge n x y = combine (fun x y -> if x < y then x else y) x y
+
+let sol = solution { init = init; trans = trans; merge = merge; }
+
+assert (sol[0n][0n] = 1 || sol[0n][0n] = 0)

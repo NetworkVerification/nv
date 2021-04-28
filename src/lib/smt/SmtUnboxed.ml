@@ -263,6 +263,8 @@ module Unboxed : SmtEncodingSigs.ExprEncoding = struct
             | _ -> failwith "AtMost requires a list of integers as second arg")
           | _ -> failwith "AtMost operator requires a list of boolean variables")
         | _ -> failwith "Invalid number of arguments to AtMost")
+      | TGet (_, _, _)
+      | TSet (_, _, _)
       | MCreate
       | MGet
       | MSet
@@ -272,11 +274,15 @@ module Unboxed : SmtEncodingSigs.ExprEncoding = struct
       | MMerge
       | MFoldNode
       | MFoldEdge
-      | MForAll -> failwith "internal error (encode_exp_z3)")
+      | MForAll ->
+        print_endline ("e: " ^ Printing.exp_to_string e);
+        failwith "internal error (encode_exp_z3)")
     | ETy (e, _) -> encode_exp_z3_single ~arith descr env e
     | _ ->
+      (* Printf.printf "expr: %s\n" (Printing.exp_to_string e); *)
       (* we always know this is going to be a singleton list *)
       let es = encode_exp_z3 descr env e in
+      assert (List.length es = 1);
       BatList.hd es
 
   and encode_exp_z3 descr env (e : exp) : term list =

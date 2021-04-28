@@ -1,0 +1,55 @@
+(* vim: set syntax=ocaml: *)
+type route = { lp : int; len: int; tags: set[int] }
+type attribute = option[route]
+
+let nodes = 3
+
+let edges = { 0=1; 1=2; }
+
+let omap2 f x y = match (x, y) with
+ | (_, None) -> x
+ | (None, _) -> y
+ | (Some a, Some b) -> Some (f a b)
+
+let cmpRoutes a b = 
+  if a.lp > b.lp then a else
+  if b.lp > a.lp then b else 
+  if a.len < b.len then a else b
+
+let merge n x y = omap2 cmpRoutes x y
+
+let trans e x = match x with 
+ | Some r -> (match e with
+    | 0~1 -> if r.tags[1] then None else Some { lp = r.lp; len = r.len + 1; tags = r.tags[0 := true] }
+    | 1~0 -> if r.tags[0] then None else Some { lp = r.lp; len = r.len + 1; tags = r.tags[1 := true] }
+    | 1~2 -> if r.tags[2] then None else Some { lp = r.lp; len = r.len + 1; tags = r.tags[1 := true] }
+    | 2~1 -> if r.tags[1] then None else Some { lp = r.lp; len = r.len + 1; tags = r.tags[2 := true] })
+ | None -> None
+
+let init n = match n with
+ | 0n -> Some { lp = 100; len = 0; tags = {} }
+ | _ -> None
+
+let partition n = match n with
+ | 0n -> 0
+ | 1n -> 0
+ | 2n -> 1
+
+let isSome x = match x with
+ | None -> false
+ | _ -> true
+
+let interface e = match e with
+ | 1~2 -> (fun a -> match a with | None -> false | Some r -> ignore r.tags)
+ | 2~1 -> fun a -> true
+
+let global x = match x with
+  | Some r -> r.lp = 100
+  | None -> true
+
+let sol = solution { init = init; trans = trans; merge = merge; interface = interface; rtrans = trans; global = global; }
+
+let assertNode u v = isSome v
+
+assert foldNodes (fun u v acc -> acc && assertNode u v) sol true
+

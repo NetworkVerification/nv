@@ -182,14 +182,15 @@ let transform_decl ~(name : string) (transformers : transformers) (d : declarati
   match d with
   | DLet (x, tyo, e) -> DLet (x, omap transform_ty tyo, transform_exp e)
   | DAssert e -> DAssert (transform_exp e)
-  | DSolve { aty; var_names; init; trans; merge } ->
+  | DSolve { aty; var_names; init; trans; merge; part } ->
+    let part = omap (map_part transform_exp) part in
     let var_names, init, trans, merge =
       ( transform_exp var_names
       , transform_exp init
       , transform_exp trans
       , transform_exp merge )
     in
-    DSolve { aty = omap transform_ty aty; var_names; init; trans; merge }
+    DSolve { aty = omap transform_ty aty; var_names; init; trans; merge; part }
   | DSymbolic (x, toe) ->
     let x, toe' = transform_symbolic (x, toe) in
     DSymbolic (x, toe')
@@ -218,7 +219,7 @@ let rec map_back_value
     | VTuple vs, TTuple tys -> vtuple (List.map2 map_back_value vs tys)
     | VRecord vmap, TRecord tmap ->
       vrecord @@ StringMap.mapi (fun l v -> map_back_value v (StringMap.find l tmap)) vmap
-    | VMap bdd, TMap (kty, vty) ->
+    | VMap bdd, TMap (_kty, vty) ->
       let op_key = e_val v, BatSet.PSet.empty in
       vmap (BddMap.map op_key (fun v -> map_back_value v vty) bdd)
     | VClosure _, _ -> failwith @@ name ^ ": Can't have closures in attributes"
@@ -297,6 +298,7 @@ let map_back_sol
           | Not_found -> x, v)
         sol.symbolics
   ; assertions = sol.assertions
+  ; guarantees = sol.guarantees
   ; (* These transformations shouldn't change the truth value of the assertion *)
     solves
   ; nodes = sol.nodes

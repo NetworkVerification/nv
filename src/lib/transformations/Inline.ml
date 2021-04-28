@@ -1,9 +1,10 @@
 open Nv_lang.Syntax
 open Nv_datastructures
 open Nv_lang.Collections
+open Nv_utils.OCamlUtils
 
 let is_function_ty e =
-  match get_inner_type (Nv_utils.OCamlUtils.oget e.ety) with
+  match get_inner_type (oget e.ety) with
   | TArrow _ -> true
   | _ -> false
 ;;
@@ -153,13 +154,14 @@ let inline_declaration (env : exp Env.t) (d : declaration) =
       env, Some (DSymbolic (x, Exp e'))
     | Ty _ -> env, Some (DSymbolic (x, e)))
   | DAssert e -> env, Some (DAssert (inline_exp env e))
-  | DSolve { aty; var_names; init; trans; merge } ->
+  | DSolve { aty; var_names; init; trans; merge; part } ->
     (* Like with symbolics, inline within the functions but don't inline e in future expressions *)
+    let part = omap (map_part (inline_exp env)) part in
     let init, trans, merge =
       inline_exp env init, inline_exp env trans, inline_exp env merge
     in
-    env, Some (DSolve { aty; var_names; init; trans; merge })
-  | DPartition e -> env, Some (DPartition (inline_exp env e)) (* partitioning *)
+    env, Some (DSolve { aty; var_names; init; trans; merge; part })
+  | DPartition e -> env, Some (DPartition (inline_exp env e))
   | DRequire e -> env, Some (DRequire (inline_exp env e))
   | DUserTy _ | DNodes _ | DEdges _ -> env, Some d
 ;;

@@ -1,6 +1,7 @@
 (** * SMT encoding of network *)
 open Batteries
 
+open Nv_lang
 open Nv_lang.Collections
 open Nv_utils.Profile
 open SolverUtil
@@ -106,13 +107,12 @@ let propagate_eqs_for_hiding (env : smt_env) =
          (fun cdecl ->
            if StringMap.mem cdecl.cname newValMap
            then false
-           else begin
+           else (
              try
                let repr = StringMap.find cdecl.cname renaming in
                if repr = cdecl.cname then true else false
              with
-             | Not_found -> true
-           end)
+             | Not_found -> true))
          env.const_decls;
   (renaming, valMap), env
 ;;
@@ -481,7 +481,7 @@ let full_solver =
      solver)
 ;;
 
-let solve_hiding info query partial_chan ~full_chan ?(starting_vars = []) decls =
+let solve_hiding info query partial_chan ~full_chan ?(starting_vars = []) ~decls =
   let partial_solver = Lazy.force partial_solver in
   let full_solver = Lazy.force full_solver in
   let print_and_ask solver chan q =
@@ -527,8 +527,9 @@ let solve_hiding info query partial_chan ~full_chan ?(starting_vars = []) decls 
         full_env
         solver
         renaming
-        nodes
-        (get_asserts decls)
+        (list_seq nodes)
+        (List.length (get_asserts decls))
+        0
     in
     time_profile_absolute "Solving with hiding" (fun () ->
         refineModel

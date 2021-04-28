@@ -2,6 +2,7 @@ open Nv_lang
 open Nv_datastructures
 open Syntax
 open Collections
+open Nv_utils.OCamlUtils
 
 (* Maps fresh names back to the original names *)
 let map_back bmap new_name old_name =
@@ -119,24 +120,26 @@ let alpha_convert_declaration bmap (env : Var.t Env.t) (d : declaration) =
     map_back bmap y x;
     let env = Env.update env x y in
     env, DSymbolic (y, Ty ty)
-  | DSolve { aty; var_names; init; trans; merge } ->
+  | DSolve { aty; var_names; init; trans; merge; part } ->
+    let part = omap (map_part (alpha_convert_exp env)) part in
     let init, trans, merge =
       alpha_convert_exp env init, alpha_convert_exp env trans, alpha_convert_exp env merge
     in
     let env, y = rename_solve_vars bmap env var_names in
-    env, DSolve { aty; var_names = y; init; trans; merge }
+    env, DSolve { aty; var_names = y; init; trans; merge; part }
   | DAssert e -> env, DAssert (alpha_convert_exp env e)
   | DPartition e -> env, DPartition (alpha_convert_exp env e) (* partitioning *)
   | DRequire e -> env, DRequire (alpha_convert_exp env e)
   | DUserTy _ | DNodes _ | DEdges _ -> env, d
 ;;
 
-let rec alpha_convert_aux bmap env (ds : declarations) : declarations =
+let rec alpha_convert_aux bmap env (ds : declarations) : declarations * Var.t Env.t =
   match ds with
-  | [] -> []
+  | [] -> [], env
   | d :: ds' ->
     let env', d' = alpha_convert_declaration bmap env d in
-    d' :: alpha_convert_aux bmap env' ds'
+    let ds, e = alpha_convert_aux bmap env' ds' in
+    d' :: ds, e
 ;;
 
 let update_symbolics bmap smap =
@@ -156,9 +159,9 @@ let adjust_solution bmap (s : Nv_solution.Solution.t) =
   }
 ;;
 
-let rec alpha_convert_declarations (ds : declarations) =
+let alpha_convert_declarations (ds : declarations) =
   (* Var.reset () ; *)
   let bmap = ref Collections.VarMap.empty in
-  let prog = alpha_convert_aux bmap Env.empty ds in
+  let prog, _ = alpha_convert_aux bmap Env.empty ds in
   prog, adjust_solution !bmap
 ;;

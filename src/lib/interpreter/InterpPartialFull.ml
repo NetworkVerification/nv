@@ -220,22 +220,27 @@ let rec matchExp branches pe1 =
 ;;
 
 let rec matchExpPatFull pat pe1 env =
+  (* Printf.printf
+   *   "pat:%s, exp:%s\n"
+   *   (Printing.pattern_to_string pat)
+   *   (Printing.exp_to_string pe1); *)
   match pat, pe1.e with
   | PWild, _ -> Match env
   | PUnit, _ -> Match env
   | PVar x, _ -> Match (Env.update env x pe1)
-  | POption (Some p), ESome e -> matchExpPat p e env
+  | POption (Some p), ESome e -> matchExpPatFull p e env
+  | POption None, ESome _ -> NoMatch
   | PTuple ps, ETuple es ->
     (match ps, es with
     | [], [] -> Match env
     | p :: ps, e :: es ->
-      (match matchExpPat p e env with
+      (match matchExpPatFull p e env with
       | Delayed -> Delayed
-      | Match env -> matchExpPat (PTuple ps) (etuple es) env
+      | Match env -> matchExpPatFull (PTuple ps) (etuple es) env
       | NoMatch -> NoMatch)
     | _, _ -> Delayed)
   | _, EVal _ -> matches pat pe1
-  | _, _ -> NoMatch
+  | _, _ -> Delayed
 ;;
 
 (* more aggressive expression matcher.
@@ -273,8 +278,9 @@ let rec match_branches branches v =
     strict sense. It will just do function applications over
     expressions, not just values.*)
 let rec interp_exp_partial (env : Syntax.exp Env.t) e =
+  (* print_endline ("interpreting exp: " ^ Printing.exp_to_string e); *)
   match e.e with
-  | ETy (e, _) -> interp_exp_partial env e
+  | ETy (e, t) -> env, aexp (ety (snd (interp_exp_partial env e)) t, e.ety, e.espan)
   | EVar x ->
     (match Env.lookup_opt env x with
     | None -> env, e

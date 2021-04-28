@@ -48,7 +48,9 @@ let pattern_transformer _ p _ = Some p
 
 let value_transformer _ v =
   match v.v with
-  | VMap _ -> failwith "This should be impossible, but if not we'll have to implement it"
+  | VMap _ ->
+    print_endline (Printing.value_to_string v);
+    failwith "This should be impossible, but if not we'll have to implement it"
   | _ -> None
 ;;
 

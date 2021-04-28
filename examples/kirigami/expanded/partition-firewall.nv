@@ -1,0 +1,66 @@
+(* vim: set syntax=ocaml: *)
+
+(* In this example, we want to check
+ * the property that every path to the
+ * destination 0 goes through the firewall
+ * installed at node 1.
+ *)
+
+let nodes = 9
+(* Topology:
+ *         2
+ *        / \
+ * 4 -/- 3   0
+ *        \ /
+ *         1
+ *)
+let edges = {
+  0=1;
+  0=2;
+  1=3;
+  2=3;
+  (* cut 3-4 edge *)
+  3-5;
+  6-4;
+  (* cut 4-3 edge *)
+  4-7;
+  8-3;
+}
+
+type attribute = (int, bool)
+
+symbolic h_3_4 : (int, bool)
+symbolic h_4_3 : (int, bool)
+
+(* TODO: requires *)
+
+let merge node x y =  
+  let (x1, a) = x in
+  let (y1, b) = y in
+  if x1 < y1 then x else y
+
+let trans edge x =
+  match edge with
+  (* input~base *)
+  | 6~4 -> x
+  | 8~3 -> x
+  (* drop traffic that doesn't go via the firewall *)
+  | 2~0 -> (16, false)
+  | _ -> let (x1, b) = x in
+    (x1 + 1, b)
+
+let init node =
+  match node with
+  | 0n -> (0, true)
+  | 1n -> (1, true)
+  | 6n -> h_3_4
+  | 8n -> h_4_3
+  | _ -> (15, false)
+
+let assert node x =
+  match node with
+  (* TODO: output asserts *)
+  | _ -> let (x1, b) = x in
+  x1 <= 3 && b
+
+

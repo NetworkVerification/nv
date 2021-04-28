@@ -99,10 +99,9 @@ module Pat = struct
       BatList.fold_left2
         (fun b p1 p2 ->
           if b = 0
-          then begin
+          then (
             let c = compare p1 p2 in
-            if c = 0 then b else c
-          end
+            if c = 0 then b else c)
           else b)
         0
         ps1
@@ -191,13 +190,43 @@ and ty_or_exp =
   | Ty of ty
   | Exp of exp
 
+type partitioning =
+  { interface : exp
+  ; decomp : exp option * exp option
+  }
+
+let iter_part f part =
+  let { interface; decomp = lt, rt } = part in
+  f interface;
+  Option.may f lt;
+  Option.may f rt
+;;
+
+let map_part f part =
+  let { interface; decomp = lt, rt } = part in
+  let interface = f interface in
+  let decomp = Option.map f lt, Option.map f rt in
+  { interface; decomp }
+;;
+
+let fold_part f part acc =
+  let { interface; decomp = lt, rt } = part in
+  let acc = f interface acc in
+  let acc = Option.apply (Option.map f lt) acc in
+  let acc = Option.apply (Option.map f rt) acc in
+  acc
+;;
+
 (* var_names should be an exp that uses only the EVar and ETuple constructors *)
+(* interface is an optional expression to describe the network hypotheses *)
+(* global is an optional expression to check that every node satisfies some predicate *)
 type solve =
   { aty : ty option
   ; var_names : exp
   ; init : exp
   ; trans : exp
   ; merge : exp
+  ; part : partitioning option
   }
 
 type declaration =
@@ -778,6 +807,7 @@ let erecord map = exp (ERecord map)
 let esome e = exp (ESome e)
 let ematch e bs = exp (EMatch (e, bs))
 let ety e ty = exp (ETy (e, ty))
+let ebool b = aexp (e_val (vbool b), Some TBool, Span.default)
 let empty_env = { ty = Env.empty; value = Env.empty }
 let update_value env x v = { env with value = Env.update env.value x v }
 
@@ -972,7 +1002,7 @@ let get_trans ds =
 let get_init ds =
   get_decl ds (fun d ->
       match d with
-      | DLet (x, _, e) when Var.name x = "merge" -> Some e
+      | DLet (x, _, e) when Var.name x = "init" -> Some e
       | _ -> None)
 ;;
 
@@ -994,15 +1024,12 @@ let get_solves ds =
     ds
 ;;
 
-(* partitioning *)
 let get_partition ds =
   get_decl ds (fun d ->
       match d with
       | DPartition e -> Some e
       | _ -> None)
 ;;
-
-(* end partitioning *)
 
 let get_edges ds =
   try
@@ -1099,6 +1126,12 @@ let bool_of_val (v : value) : bool option =
   | _ -> None
 ;;
 
+let int_of_val (v : value) : int option =
+  match v.v with
+  | VInt i -> Some (Integer.to_int i)
+  | _ -> None
+;;
+
 let proj_var (n : int) (x : var) =
   let s, i = Var.from_var x in
   Var.to_var (Printf.sprintf "%s-proj-%d" s n, i)
@@ -1111,6 +1144,43 @@ let unproj_var (x : var) =
     | Not_found -> s, "-1"
   in
   int_of_string n, Var.to_var (name, i)
+;;
+
+(** Get the variables referenced by the given type. *)
+let rec get_ty_vars (t : ty) : var list =
+  match t with
+  | TVar tv ->
+    begin
+      match !tv with
+      | Unbound (tn, _) -> [tn]
+      | Link t -> get_ty_vars t
+    end
+  | QVar n -> [n]
+  | TArrow (t1, t2) -> get_ty_vars t1 @ get_ty_vars t2
+  | TTuple ts -> List.fold_left (fun l t -> get_ty_vars t @ l) [] ts
+  | TOption t -> get_ty_vars t
+  | TMap (t1, t2) -> get_ty_vars t1 @ get_ty_vars t2
+  | TRecord tm -> StringMap.fold (fun _s t l -> get_ty_vars t @ l) tm []
+  | _ -> []
+;;
+
+(** Get the variables referenced by the given expression. *)
+let rec get_exp_vars (e : exp) : var list =
+  match e.e with
+  | EVar v -> [v]
+  | EOp (_, es) -> List.fold_left (fun l e -> get_exp_vars e @ l) [] es
+  | EFun func -> get_exp_vars func.body
+  | EApp (e1, e2) -> get_exp_vars e1 @ get_exp_vars e2
+  | EIf (e1, e2, e3) -> get_exp_vars e1 @ get_exp_vars e2 @ get_exp_vars e3
+  | ELet (v, e1, e2) -> [v] @ get_exp_vars e1 @ get_exp_vars e2
+  | ETuple es -> List.fold_left (fun l e -> get_exp_vars e @ l) [] es
+  | ESome e -> get_exp_vars e
+  | EMatch (e, bs) ->
+    get_exp_vars e @ foldBranches (fun (_, e) l -> get_exp_vars e @ l) [] bs
+  | ETy (e, t) -> get_exp_vars e @ get_ty_vars t
+  | ERecord em -> StringMap.fold (fun _s e l -> get_exp_vars e @ l) em []
+  | EProject (e, _s) -> get_exp_vars e
+  | _ -> []
 ;;
 
 open BatSet

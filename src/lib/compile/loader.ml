@@ -52,5 +52,5 @@ let simulate name decls =
     "Native simulation took: %f secs to complete\n%!"
     (finish_time -. start_time);
   (* Get the computed solutions *)
-  build_solutions (AdjGraph.nb_vertex graph) Srp.record_fns !SrpSimulator.solved
+  build_solutions (list_seq (AdjGraph.nb_vertex graph)) Srp.record_fns !SrpSimulator.solved
 ;;

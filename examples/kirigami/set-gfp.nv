@@ -1,0 +1,37 @@
+(* vim: set syntax=ocaml: *)
+
+type attribute = set[tnode]
+
+let nodes = 3
+
+let edges = {
+    0=1;
+    1=2;
+    0=2;
+}
+
+let merge n x y = x union y
+
+let trans e x = x
+
+let init n = {n}
+
+let assert n x = match n with
+ | _ -> x[2n] && x[0n] && x[1n]
+
+let partition n = match n with
+ | 0n -> 0
+ | 1n -> 1
+ | 2n -> 2
+
+(* Every hypothesis leaving a node
+ * minimally must include the node
+ * it is leaving
+ *)
+let interface e = match e with
+ | 0~1 -> Some (fun a -> a[0n])
+ | 0~2 -> Some (fun a -> a[0n])
+ | 1~0 -> Some (fun a -> a[1n])
+ | 1~2 -> Some (fun a -> a[1n])
+ | 2~0 -> Some (fun a -> a[2n])
+ | 2~1 -> Some (fun a -> a[2n])

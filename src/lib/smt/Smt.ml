@@ -1,5 +1,6 @@
 (** * SMT encoding of network *)
 
+open Nv_lang
 open Nv_lang.Collections
 open Nv_solution.Solution
 open Nv_utils.Profile
@@ -69,9 +70,9 @@ let expr_encoding smt_config =
 ;;
 
 (* Asks the SMT solver to return a model and translates it to NV lang *)
-let ask_for_model query chan info env solver renaming nodes eassert =
+let ask_for_model query chan info env solver renaming nodes asserts guars =
   (* build a counterexample based on the model provided by Z3 *)
-  let model = eval_model env.SmtUtils.symbolics nodes eassert renaming in
+  let model = eval_model env.SmtUtils.symbolics asserts guars renaming in
   let model_question = commands_to_smt smt_config.verbose info model in
   ask_solver solver model_question;
   if query then printQuery chan model_question;
@@ -86,7 +87,7 @@ let ask_for_model query chan info env solver renaming nodes eassert =
 
 (** Asks the smt solver whether the query was unsat or not
     and returns a model if it was sat.*)
-let get_sat query chan info env solver renaming nodes eassert reply =
+let get_sat query chan info env solver renaming nodes asserts guars reply =
   ask_solver
     solver
     "(get-info :all-statistics)\n\n                         (echo \"end stats\")\n";
@@ -100,7 +101,7 @@ let get_sat query chan info env solver renaming nodes eassert reply =
   Printf.printf "Z3 stats:\n %s\n" rs;
   match reply with
   | UNSAT -> Unsat
-  | SAT -> ask_for_model query chan info env solver renaming nodes eassert
+  | SAT -> ask_for_model query chan info env solver renaming nodes asserts guars
   | UNKNOWN -> Unknown
   | _ -> failwith "unexpected answer from solver\n"
 ;;
@@ -113,7 +114,7 @@ let solver =
      solver)
 ;;
 
-let solve info query chan net_or_srp nodes assertions requires =
+let solve info query chan net_or_srp nodes assertions =
   let solver = Lazy.force solver in
   let print_and_ask q =
     if query then printQuery chan q;
@@ -123,6 +124,8 @@ let solve info query chan net_or_srp nodes assertions requires =
     let renaming, env =
       time_profile_absolute "Encoding network" (fun () ->
           let env = net_or_srp () in
+          (* debugging *)
+          (* print_endline (env_to_smt ~verbose:smt_config.verbose info env); *)
           if smt_config.optimize
           then propagate_eqs env
           else (StringMap.empty, StringMap.empty), env)
@@ -139,7 +142,7 @@ let solve info query chan net_or_srp nodes assertions requires =
     let q = check_sat info in
     print_and_ask q;
     let reply = solver |> parse_reply in
-    get_sat query chan info env solver renaming nodes assertions reply
+    get_sat query chan info env solver renaming nodes assertions 0 reply
   in
   print_and_ask "(push)";
   let ret = solve_aux () in
@@ -147,7 +150,7 @@ let solve info query chan net_or_srp nodes assertions requires =
   ret
 ;;
 
-let solveClassic info query chan decls =
+let solveClassic info query chan ~decls =
   let open Nv_lang.Syntax in
   let module ExprEnc = (val expr_encoding smt_config) in
   let module Enc = (val (module SmtClassicEncoding.ClassicEncoding (ExprEnc))
@@ -158,7 +161,6 @@ let solveClassic info query chan decls =
     query
     chan
     (fun () -> Enc.encode_z3 decls)
-    (Nv_datastructures.AdjGraph.nb_vertex (get_graph decls |> oget))
-    (get_asserts decls)
-    (get_requires decls)
+    (list_seq (Nv_datastructures.AdjGraph.nb_vertex (get_graph decls |> oget)))
+    (List.length (get_asserts decls))
 ;;

@@ -220,6 +220,8 @@ let build_solutions graph record_fns sols =
   { symbolics = []
   ; (*TODO: but it's not important for simulation.*)
     assertions = []
+  ; (*TODO: but it's not important for simulation.*)
+    guarantees = []
   ; solves =
       List.map
         (fun (name, sol) ->

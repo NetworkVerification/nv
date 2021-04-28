@@ -10,6 +10,7 @@ open Nv_transformations
 open Nv_compile
 open Nv_utils
 open OCamlUtils
+open Nv_kirigami
 
 type answer =
   | Success of Solution.t option
@@ -29,35 +30,26 @@ let smt_query_file =
     lazy (open_out (file ^ "-" ^ string_of_int count ^ "-query"))
 ;;
 
-let run_smt_classic file cfg info decls fs =
-  let decls, fs =
-    let decls, f = UnboxEdges.unbox_declarations decls in
-    decls, f :: fs
+let run_smt_classic_aux file cfg info decls part fs =
+  (* Attribute Slicing requires the net to have an assertion and for its attribute
+     to be a tuple type. *)
+  let slices =
+    (* Disable slicing until we figure out it works in the new model *)
+    (* match cfg.slicing, net.assertion, net.attr_type with
+       | true, Some _, TTuple _ ->
+       AttributeSlicing.slice_network net
+       |> List.map (dmap (fun (net, f) -> net, f :: fs))
+       | _ -> *)
+    [(fun () -> decls, fs)]
   in
-  let decls, fs =
-    SmtUtils.smt_config.unboxing <- true;
-    let decls, f1 =
-      Profile.time_profile "Unbox options" (fun () ->
-          UnboxOptions.unbox_declarations decls)
-    in
-    let decls, f2 =
-      Profile.time_profile "Flattening Tuples" (fun () ->
-          TupleFlatten.flatten_declarations decls)
-    in
-    decls, f2 :: f1 :: fs
-  in
-  let decls, fs =
-    let decls, f = Renaming.alpha_convert_declarations decls in
-    (*TODO: why are we renaming here?*)
-    let decls, _ = OptimizeBranches.optimize_declarations decls in
-    (* The _ should match the identity function *)
-    let decls, f' = RenameForSMT.rename_declarations decls in
-    (* Maybe we should wrap this into the previous renaming... *)
-    decls, f' :: f :: fs
-  in
+  (* NOTE: slicing can introduce units, so if we ever re-introduce it,
+   * this code needs to be moved up to use UnboxUnits *)
+  let slices = List.map (dmap (fun (decls, fs) -> decls, fs)) slices in
   let get_answer decls fs =
     let solve_fun =
-      if cfg.hiding
+      if cfg.kirigami
+      then SmtKirigami.solveKirigami ~check_ranked:cfg.ranked ~part:(part |> oget)
+      else if cfg.hiding
       then SmtHiding.solve_hiding ~starting_vars:[] ~full_chan:(smt_query_file file)
       else Smt.solveClassic
     in
@@ -71,24 +63,6 @@ let run_smt_classic file cfg info decls fs =
         if List.for_all (fun b -> b) lst
         then Success (Some solution), fs
         else CounterExample solution, fs)
-  in
-  (* Attribute Slicing requires the net to have an assertion and for its attribute
-     to be a tuple type. *)
-  let slices =
-    (* Disable slicing until we figure out it works in the new model *)
-    (* match cfg.slicing, net.assertion, net.attr_type with
-       | true, Some _, TTuple _ ->
-       AttributeSlicing.slice_network net
-       |> List.map (dmap (fun (net, f) -> net, f :: fs))
-       | _ -> *)
-    [(fun () -> decls, fs)]
-  in
-  let slices =
-    List.map
-      (dmap (fun (decls, fs) ->
-           let decls, f = UnboxUnits.unbox_declarations decls in
-           decls, f :: fs))
-      slices
   in
   (* Return the first slice that returns a counterexample, or the result of the
      last slice if all of them succeed *)
@@ -134,13 +108,60 @@ let run_smt_classic file cfg info decls fs =
   | Some n -> solve_parallel n slices
 ;;
 
-let run_smt file cfg info decls fs =
+let run_smt_partitioned file cfg info decls parts fs =
+  let pds =
+    Profile.time_profile "Partitioning" (fun () ->
+        List.map
+          (fun p ->
+            let p, d = Partition.transform_declarations decls p in
+            if cfg.print_partitions
+            then print_endline (SrpRemapping.string_of_partitioned_srp p)
+            else ();
+            Some p, d)
+          parts)
+  in
+  List.map (fun (p, d) -> run_smt_classic_aux file cfg info d p fs) pds
+;;
+
+let run_smt_classic file cfg info decls parts fs =
+  let decls, fs =
+    let decls, f = UnboxEdges.unbox_declarations decls in
+    decls, f :: fs
+  in
+  let decls, fs =
+    SmtUtils.smt_config.unboxing <- true;
+    let decls, f1 =
+      Profile.time_profile "Unbox options" (fun () ->
+          UnboxOptions.unbox_declarations decls)
+    in
+    let decls, f2 =
+      Profile.time_profile "Flattening Tuples" (fun () ->
+          TupleFlatten.flatten_declarations decls)
+    in
+    decls, f2 :: f1 :: fs
+  in
+  let decls, fs =
+    let decls, f = Renaming.alpha_convert_declarations decls in
+    (*TODO: why are we renaming here?*)
+    let decls, _ = OptimizeBranches.optimize_declarations decls in
+    (* The _ should match the identity function *)
+    let decls, f' = RenameForSMT.rename_declarations decls in
+    (* Maybe we should wrap this into the previous renaming... *)
+    let decls, f'' = UnboxUnits.unbox_declarations decls in
+    decls, f'' :: f' :: f :: fs
+  in
+  match parts with
+  | Some p -> run_smt_partitioned file cfg info decls p fs
+  | None -> [run_smt_classic_aux file cfg info decls None fs]
+;;
+
+let run_smt file cfg info decls parts fs =
   if cfg.finite_arith then SmtUtils.smt_config.infinite_arith <- false;
   if cfg.smt_parallel then SmtUtils.smt_config.parallel <- true;
   (* if cfg.func then
-    run_smt_func file cfg info decls fs
-  else *)
-  run_smt_classic file cfg info decls fs
+       run_smt_func file cfg info decls fs
+     else *)
+  run_smt_classic file cfg info decls parts fs
 ;;
 
 let partialEvalDecls decls =
@@ -155,13 +176,9 @@ let partialEvalDecls decls =
             init = InterpPartial.interp_partial_opt r.init
           ; trans = InterpPartial.interp_partial_opt r.trans
           ; merge = InterpPartial.interp_partial_opt r.merge
+          ; part = omap (map_part (fun i -> InterpPartial.interp_partial_opt i)) r.part
           }
-      | DRequire _
-      | DPartition _
-      | DNodes _
-      | DSymbolic _
-      | DUserTy _
-      | DEdges _ -> d)
+      | DRequire _ | DPartition _ | DNodes _ | DSymbolic _ | DUserTy _ | DEdges _ -> d)
     decls
 ;;
 
@@ -202,6 +219,11 @@ let run_simulator cfg _ decls fs =
 
 (** Native simulator - compiles SRP to OCaml *)
 let run_compiled file _ _ decls fs =
+  (* let decls =
+   *   match decls with
+   *   | Decls d -> d
+   *   | Grp g -> g.base @ g.prop
+   * in *)
   let path = Filename.remove_extension file in
   let name = Filename.basename path in
   let name = String.mapi (fun i c -> if i = 0 then Char.uppercase_ascii c else c) name in
@@ -213,6 +235,25 @@ let run_compiled file _ _ decls fs =
     if List.for_all (fun b -> b) lst
     then Success (Some solution), fs
     else CounterExample solution, fs
+;;
+
+let parse_input_aux cfg info file decls parts fs =
+  let decls, fs =
+    if cfg.unroll
+    then (
+      let decls, f =
+        (* unrolling maps *)
+        Profile.time_profile "Map unrolling" (fun () -> MapUnrolling.unroll info decls)
+      in
+      (* Inline again after unrolling. Could probably optimize this away during unrolling *)
+      let decls =
+        Profile.time_profile "Inlining" (fun () -> Inline.inline_declarations decls)
+      in
+      (* (Typing.infer_declarations info decls, f :: fs) (* TODO: is type inf necessary here?*) *)
+      decls, f :: fs)
+    else decls, fs
+  in
+  cfg, info, file, decls, parts, fs
 ;;
 
 let parse_input (args : string array) =
@@ -230,13 +271,24 @@ let parse_input (args : string array) =
   let decls = Typing.infer_declarations info decls in
   Typing.check_annot_decls decls;
   Wellformed.check info decls;
+  let partitions, decls =
+    if cfg.kirigami
+    then (
+      let parts = SrpRemapping.partition_declarations decls in
+      let new_symbolics =
+        let aty = get_attr_type decls |> oget in
+        Partition.get_hyp_symbolics aty parts
+      in
+      Some parts, new_symbolics @ decls)
+    else None, decls
+  in
   let decls, f = RecordUnrolling.unroll_declarations decls in
   let fs = [f] in
   let decls, fs =
     (* inlining definitions *)
     if cfg.inline
     then (
-      (* Note! Must rename before inling otherwise inling is unsound *)
+      (* Note! Must rename before inlining otherwise inlining is unsound *)
       let decls, f = Renaming.alpha_convert_declarations decls in
       let decls, fs =
         ( Profile.time_profile "Inlining" (fun () ->
@@ -244,23 +296,8 @@ let parse_input (args : string array) =
               (* TODO: We could probably propagate type information through inlining *))
         , f :: fs )
       in
-      Typing.infer_declarations info decls, fs)
+      (Typing.infer_declarations info) decls, fs)
     else decls, fs
   in
-  let decls, fs =
-    if cfg.unroll
-    then (
-      let decls, f =
-        (* unrolling maps *)
-        Profile.time_profile "Map unrolling" (fun () -> MapUnrolling.unroll info decls)
-      in
-      (* Inline again after unrolling. Could probably optimize this away during unrolling *)
-      let decls =
-        Profile.time_profile "Inlining" (fun () -> Inline.inline_declarations decls)
-      in
-      (* (Typing.infer_declarations info decls, f :: fs) (* TODO: is type inf necessary here?*) *)
-      decls, f :: fs)
-    else decls, fs
-  in
-  cfg, info, file, decls, fs
+  parse_input_aux cfg info file decls partitions fs
 ;;

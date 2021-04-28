@@ -874,7 +874,7 @@ and eval_branch env (g : t) p =
           and the conditions and use them to return the right value
           from the env. *)
     (*NOTE: will their be conditions under each match holds? These are concrete
-    values, maybe this can be simplified. *)
+      values, maybe this can be simplified. *)
     let matches =
       Mtbdd.guardleafs
         (Mapleaf.mapleaf1

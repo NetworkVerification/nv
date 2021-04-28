@@ -1,0 +1,40 @@
+(* vim: set syntax=ocaml: *)
+
+type attribute = int
+
+let nodes = 4
+
+let edges = {
+ 0=1;
+ 1=2;
+ 2=3;
+ 3=0;
+}
+
+let partition node = match node with
+  | 0n -> 0
+  | 1n -> 0
+  | _ -> 1
+
+let interface edge = match edge with
+  | 1~2 -> (fun x -> x <= 2)
+  | 2~1 -> (fun x -> true)
+  | 0~3 -> (fun x -> x = 1)
+  | 3~0 -> (fun x -> true)
+  | _ -> (fun x -> true)
+
+let merge node x y =
+  if x < y then x else y
+
+let trans edge x = x + 1
+
+let init node =
+  match node with
+  | 0n -> 0
+  | _ -> 10
+
+let sol = solution {init = init; trans = trans; merge = merge; interface = interface}
+
+assert foldNodes (fun u v acc -> acc && v < 3) sol true
+
+

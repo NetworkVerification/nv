@@ -47,9 +47,8 @@
   let local_let (id,params) body body_span span =
     (id, make_fun params body body_span span)
 
-  (* partitioning identifiers *)
+  (* partitioning identifier *)
   let partition_identifier = "partition"
-  let interface_identifier = "interface"
 
   let global_let (id,params) body body_span span =
     let e = make_fun params body body_span span in
@@ -132,13 +131,27 @@
       |> Integer.of_int
 
   let make_dsolve x r =
-    let (init, trans, merge) =
+    let (init, trans, merge, interface, ltrans, rtrans) =
       match r.e with
       | ERecord m ->
-        StringMap.find "init" m, StringMap.find "trans" m, StringMap.find "merge" m
+         StringMap.find "init" m,
+         StringMap.find "trans" m,
+         StringMap.find "merge" m,
+         StringMap.Exceptionless.find "interface" m,
+         StringMap.Exceptionless.find "ltrans" m,
+         StringMap.Exceptionless.find "rtrans" m
       | _ -> failwith "solution must take a direct record expression"
     in
-    DSolve ({aty = None; var_names = evar x; init; trans; merge})
+    let part = match interface with
+      | Some interface ->
+         let ltrans, rtrans = match (ltrans, rtrans) with
+           | (None, None) -> Some trans, None
+           | _ -> ltrans, rtrans
+         in
+         Some {interface; decomp = (ltrans, rtrans)}
+      | None -> None
+    in
+    DSolve ({aty = None; var_names = evar x; init; trans; merge; part})
 
 %}
 

@@ -1,0 +1,71 @@
+(* vim: set syntax=ocaml: *)
+
+(* An example using our notion of assume-guarantee over inputs and outputs.
+ * In order for an open SRP to compose stably, the inputs must guarantee the outputs,
+ * and the outputs must guarantee the inputs.
+ * Hence, we make assumptions about the inputs using require,
+ * and check guarantees on the outputs using assert.
+ *)
+
+type attribute = int
+
+(* Symbolic values representing the hypotheses. *)
+symbolic h1 : int
+symbolic h2 : int
+
+(* The predicates on the hypotheses: 
+ * the solution at 2 depends on 1, so we need an exact hypothesis.
+ * the solution at 1 doesn't depend on 2, so we just need a hypothesis 
+ * that's worse than 1's solution. 
+ * i.e. we are /assuming/ that our hypotheses respect this form
+ *)
+let lab_1 = 1 (* solution at 1 *)
+let lab_2 = 2 (* solution at 2 *)
+
+require h2 = lab_2 && h1 > lab_1
+
+(* Topology: a chain of nodes
+ * 0 = 1 = 2 = 3
+ * broken along the 1 = 2 edges
+ *)
+let nodes = 8
+
+let edges = {
+ 0=1;
+ 2=3;
+ 1-4; (* output of 1 *)
+ 5-2; (* input of 2 *)
+ 2-6; (* output of 2 *)
+ 7-1; (* input of 1 *)
+}
+
+let merge node x y = if x < y then x else y
+
+let trans edge x = 
+  match edge with
+  (* input~base edges just perform identity *)
+  | 5~2 -> x
+  | 7~1 -> x
+  | _ -> x + 1
+
+let init node =
+  match node with
+  (* routing destination *)
+  | 0n -> 0
+  (* annotate input to 2 *)
+  | 5n -> h2
+  (* annotate input to 1 *)
+  | 7n -> h1
+  (* default "unknown" value *)
+  | _ -> 10
+
+(* check: we want to guarantee that our outputs
+ * follow the form of our hypotheses.
+ * since we don't care what the output is that's 
+ * sent from the 2 = 3 side, we can use the same looser check
+ *)
+let assert node x =
+  match node with
+  | 4n -> x = lab_2
+  | 6n -> x > lab_1
+  | _ -> true
