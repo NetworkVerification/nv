@@ -1169,7 +1169,9 @@ let rec get_exp_vars (e : exp) : var list =
   match e.e with
   | EVar v -> [v]
   | EOp (_, es) -> List.fold_left (fun l e -> get_exp_vars e @ l) [] es
-  | EFun func -> get_exp_vars func.body
+  | EFun { arg; body; _ } ->
+    (* for functions, want to skip variables that are introduced as arguments *)
+    List.remove_all (get_exp_vars body) arg
   | EApp (e1, e2) -> get_exp_vars e1 @ get_exp_vars e2
   | EIf (e1, e2, e3) -> get_exp_vars e1 @ get_exp_vars e2 @ get_exp_vars e3
   | ELet (v, e1, e2) -> [v] @ get_exp_vars e1 @ get_exp_vars e2
