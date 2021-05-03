@@ -96,6 +96,11 @@ def parse_smt(output):
     z3action = re.compile(r"^\s*:(\w*)\s*(\d*\.?\d+)", re.M)
     # get all the transformation profiling
     profile = dict()
+    if "failed" in output:
+        print("WARNING: assertions failed during verification!")
+        profile["safe"] = False
+    else:
+        profile["safe"] = True
     for match in re.finditer(action, output):
         transform = match.group(1)
         time = float(match.group(2))
