@@ -201,7 +201,7 @@ def main():
     args = parser.parse_args()
     directory, benchstr = BENCHMARKS[args.benchmark]
     if args.op == "make":
-        fmtstr = directory + benchstr + ".nv"
+        fmtstr = os.path.join(directory, benchstr + ".nv")
         benchmarks = get_sp_benchmarks(fmtstr)
         create_benchmarks(benchmarks, args.cuts, simulate=args.simulate)
     if args.op == "clean":
