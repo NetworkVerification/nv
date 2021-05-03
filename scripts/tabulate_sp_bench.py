@@ -74,7 +74,7 @@ def mean_float_dict(dicts, multiop=LIST_OPERATIONS):
     return averaged
 
 
-def join_result_dicts(*dicts):
+def join_result_dicts(*dicts) -> dict:
     """
     Join the results dictionaries into a single dictionary.
     """
@@ -87,7 +87,7 @@ def join_result_dicts(*dicts):
     return joined
 
 
-def parse_smt(output):
+def parse_smt(output) -> dict:
     """
     Parse the output of an NV command.
     Returns a dictionary of strings to lists of floats.
@@ -98,9 +98,9 @@ def parse_smt(output):
     profile = dict()
     if "failed" in output:
         print("WARNING: assertions failed during verification!")
-        profile["safe"] = False
+        profile["safe"] = [False]
     else:
-        profile["safe"] = True
+        profile["safe"] = [True]
     for match in re.finditer(action, output):
         transform = match.group(1)
         time = float(match.group(2))
