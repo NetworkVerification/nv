@@ -15,11 +15,21 @@ from tabulate_sp_bench import (
     DISTINCT_OPERATIONS,
 )
 
-BENCH_DIR = "benchmarks/SinglePrefix"
+BENCHMARKS = {
+    # Single Prefix
+    "sp": ("benchmarks/SinglePrefix/FAT{0}/", "sp{0}"),
+    "sp_fatpol": ("benchmarks/SinglePrefix/FAT{0}", "fat{0}Pol"),
+    "sp_topzoo": ("benchmarks/SinglePrefix/TopologyZoo", "USCarrier"),
+    "ap_fatpol": ("benchmarks/AllPrefixes/FAT{0}", "fat{0}Pol"),
+    "ap_topzoo": ("benchmarks/AllPrefixes/TopologyZoo", "USCarrier"),
+}
 
 
-def get_benchmarks(fmtstr=f"{BENCH_DIR}/" + "FAT{0}/fat{0}Pol.nv"):
-    """Return the list of input benchmark files with their destinations."""
+def get_sp_benchmarks(fmtstr):
+    """
+    Return the list of input SinglePrefix benchmark files with their destinations.
+    Applies to SinglePrefix fatXPol and spX benchmarks.
+    """
     common = [(4, 10), (8, 12), (10, 13), (12, 64), (16, 0), (20, 0)]
     benches = [(fmtstr.format(sz), d) for (sz, d) in common]
     return benches
@@ -52,7 +62,8 @@ def clean_benchmarks(cuts, dry_run):
     pat = re.compile(r"^(fat\d*Pol|sp\d*)-(" + cutpat + r")(-x)?\d*\.nv$", re.M)
     if dry_run:
         print("clean will remove:")
-    for root, _, files in os.walk(BENCH_DIR):
+    # FIXME: take an argument
+    for root, _, files in os.walk("benchmarks/"):
         for fname in files:
             if pat.search(fname):
                 bench_path = os.path.join(root, fname)
@@ -70,7 +81,8 @@ def save_results(runs):
 
 
 def tabulate_fattree_benchmarks(
-    directory, benchstr, sizes, cuts, timeout=3600, trials=10, parallel=False
+    directory, benchstr, sizes, cuts, timeout=3600, trials=10, parallel=False,
+    simulate=True,
 ):
     """
     Run all the vertical and horizontal benchmarks.
@@ -79,11 +91,12 @@ def tabulate_fattree_benchmarks(
     benchstr should be the base name of the NV file, excluding the extension, with a
     str.format position for the size.
     The unpartitioned file should have the format "{benchstr.format(size)}.nv".
-    The partitioned files should have the format "{benchstr.format(size)}-{cut}.nv".
+    The partitioned files should have the format "{benchstr.format(size)}-{cut}.nv" if
+    unsimulated or "{benchstr.format(size)}-{cut}-x.nv" if simulated.
     """
     runs = []
     for size in sizes:
-        sim = "-x"  # for the simulation benchmarks
+        sim = "-x" if simulate else ""  # for the simulation benchmarks
         benches = [(None, f"{benchstr.format(size)}.nv")] + [
             (cut, f"{benchstr.format(size)}-{cut}{sim}.nv") for cut in cuts
         ]
@@ -123,6 +136,12 @@ def main():
         default=["h", "v", "p"],
         help="types of cut across the network (default: %(default)s)",
     )
+    parser_make.add_argument(
+        "-b",
+        "--benchmark",
+        choices=BENCHMARKS.keys(),
+        help="which benchmarks to make",
+    )
 
     parser_run = subparsers.add_parser("run")
     parser_run.add_argument(
@@ -156,6 +175,12 @@ def main():
         default=["h", "v", "p"],
         help="types of cut across the network (default: %(default)s)",
     )
+    parser_run.add_argument(
+        "-b",
+        "--benchmark",
+        choices=BENCHMARKS.keys(),
+        help="which benchmarks to run",
+    )
 
     parser_clean = subparsers.add_parser("clean")
     parser_clean.add_argument(
@@ -174,14 +199,13 @@ def main():
     )
 
     args = parser.parse_args()
-    directory = f"{BENCH_DIR}/" + "FAT{0}/"
-    # benchstr = "fat{0}Pol"
-    benchstr = "sp{0}"
+    directory, benchstr = BENCHMARKS[args.benchmark]
     if args.op == "make":
         fmtstr = directory + benchstr + ".nv"
-        benchmarks = get_benchmarks(fmtstr)
+        benchmarks = get_sp_benchmarks(fmtstr)
         create_benchmarks(benchmarks, args.cuts, simulate=args.simulate)
     if args.op == "clean":
+        # TODO: change to use benchmark group specified
         clean_benchmarks(args.cuts, dry_run=args.dry_run)
     if args.op == "run":
         results = tabulate_fattree_benchmarks(
