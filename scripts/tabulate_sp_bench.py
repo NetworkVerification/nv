@@ -133,12 +133,13 @@ def run_nv_smt(path, cut, time):
         proc = subprocess.run(
             args, text=True, check=True, capture_output=True, timeout=time
         )
+        print(proc.stdout)
         return parse_smt(proc.stdout)
     except subprocess.CalledProcessError as exn:
-        print(exn.stderr)
+        print(f"Process error: {exn}")
         return {}
     except subprocess.TimeoutExpired as exn:
-        print(exn.stderr)
+        print(f"Process timed out: {exn}")
         return {}
 
 
