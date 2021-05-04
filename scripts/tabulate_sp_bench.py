@@ -113,7 +113,7 @@ def parse_smt(output) -> dict:
     return profile
 
 
-def run_nv_smt(path, cut, time):
+def run_nv_smt(path, cut, time, verbose):
     """
     Run nv's SMT tool and capture its output.
     If it doesn't finish within the given time, kill it.
@@ -133,7 +133,8 @@ def run_nv_smt(path, cut, time):
         proc = subprocess.run(
             args, text=True, check=True, capture_output=True, timeout=time
         )
-        print(proc.stdout)
+        if verbose:
+            print(proc.stdout)
         return parse_smt(proc.stdout)
     except subprocess.CalledProcessError as exn:
         print(f"Process error: {exn}")
@@ -143,24 +144,24 @@ def run_nv_smt(path, cut, time):
         return {}
 
 
-def run_bench(cut, path, time):
-    return (cut, run_nv_smt(path, cut, time))
+def run_bench(cut, path, time, verbose):
+    return (cut, run_nv_smt(path, cut, time, verbose))
 
 
-def run_benchmarks_sync(benchdir, benches, time):
+def run_benchmarks_sync(benchdir, benches, time, verbose):
     """
     Run the given benchmarks in the given directory in sequence.
     """
     return join_result_dicts(
-        *[run_bench(c, os.path.join(benchdir, n), time) for (c, n) in benches]
+        *[run_bench(c, os.path.join(benchdir, n), time, verbose) for (c, n) in benches]
     )
 
 
-def run_benchmarks_parallel(benchdir, benches, time):
+def run_benchmarks_parallel(benchdir, benches, time, verbose):
     """
     Run the given benchmarks in the given directory in parallel.
     """
-    paths = map(lambda t: (t[0], os.path.join(benchdir, t[1]), time), benches)
+    paths = map(lambda t: (t[0], os.path.join(benchdir, t[1]), time, verbose), benches)
 
     with multiprocessing.Pool(processes=len(benches)) as pool:
         return join_result_dicts(
@@ -171,7 +172,7 @@ def run_benchmarks_parallel(benchdir, benches, time):
         )
 
 
-def run_trials_sync(benchdir, benches, time, trials, multiop):
+def run_trials_sync(benchdir, benches, time, trials, multiop, verbose):
     """
     Run trials of the given benchmarks
     and return a dictionary of profiling information.
@@ -179,21 +180,21 @@ def run_trials_sync(benchdir, benches, time, trials, multiop):
     runs = []
     for i in range(trials):
         print("Running trial " + str(i + 1) + " of " + str(trials))
-        results = run_benchmarks_sync(benchdir, benches, time)
+        results = run_benchmarks_sync(benchdir, benches, time, verbose)
         runs.append(results)
     mean = mean_float_dict(runs, multiop)
     mean["Benchmark"] = benchdir
     return mean
 
 
-def run_trials_parallel(benchdir, benches, time, trials, multiop):
+def run_trials_parallel(benchdir, benches, time, trials, multiop, verbose):
     """
     Run the benchmarks in the given directory and return a dictionary of
     profiling information.
     Runs each trial in parallel.
     """
     with multiprocessing.Pool(processes=trials) as pool:
-        args = [(benchdir, benches, time) for _ in range(trials)]
+        args = [(benchdir, benches, time, verbose) for _ in range(trials)]
         runs = pool.starmap(run_benchmarks_sync, args)
         mean = mean_float_dict(runs, multiop)
         mean["Benchmark"] = benchdir
@@ -230,5 +231,7 @@ if __name__ == "__main__":
             ("vertical", f"sp{sz}-vpart.nv"),
             ("pods", f"sp{sz}-pods.nv"),
         ]
-        RUNS.append(run_trials_sync(benchdir, benchmarks, TIMEOUT, TRIALS, OP))
+        RUNS.append(
+            run_trials_sync(benchdir, benchmarks, TIMEOUT, TRIALS, OP, verbose=False)
+        )
     write_csv(RUNS, "kirigami-results-test.csv")

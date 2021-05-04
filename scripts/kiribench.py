@@ -81,7 +81,13 @@ def save_results(runs):
 
 
 def tabulate_fattree_benchmarks(
-    directory, benchstr, sizes, cuts, timeout=3600, trials=10, parallel=False,
+    directory,
+    benchstr,
+    sizes,
+    cuts,
+    timeout=3600,
+    trials=10,
+    parallel=False,
     simulate=True,
 ):
     """
@@ -181,6 +187,12 @@ def main():
         choices=BENCHMARKS.keys(),
         help="which benchmarks to run",
     )
+    parser_run.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="print the trial's stdout",
+    )
 
     parser_clean = subparsers.add_parser("clean")
     parser_clean.add_argument(
@@ -216,6 +228,7 @@ def main():
             timeout=args.timeout,
             trials=args.trials,
             parallel=args.parallel,
+            verbose=args.verbose,
         )
         save_results(results)
 
