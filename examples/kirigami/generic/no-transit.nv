@@ -1,0 +1,65 @@
+(* vim: set syntax=ocaml *)
+(* Example for encoding no-transit properties in BGP networks. *)
+type bgpType = {bgpAd: int; lp: int; aslen: int; med:int; comms:set[int];}
+type attribute = option[bgpType]
+
+(* AS relationships *)
+let cust = 0
+let peer = 1
+let prov = 2
+
+(* Merge behaviour is standard *)
+
+let pickOption f x y =
+  match (x,y) with
+  | (None, None) -> None
+  | (None, Some _) -> y  | (Some _, None) -> x
+  | (Some a, Some b) -> Some (f a b)
+
+let betterBgp b1 b2 =
+  if b1.lp > b2.lp then b1
+  else if b2.lp > b1.lp then b2
+  else if b1.aslen < b2.aslen then b1
+  else if b2.aslen < b1.aslen then b2  else if b1.med >= b2.med then b1 else b2
+
+let mergeBgp x y = pickOption betterBgp x y
+
+let merge n x y = mergeBgp x y
+
+(* Trans behaviour encodes the import and export policies. *)
+(* We add community tags to designate providers, peers and customers,
+ * and use these tags to adjust local preference.
+ * We also need to identify when an edge is to a provider or a peer,
+ * in which case if the route is tagged as from a customer then it
+ * should be dropped.
+ * The relationship(a~b) edge function returns:
+ * - cust if a is a customer of b (b is a provider for a)
+ * - peer if a is a peer of b (should be symmetric)
+ * - prov if a is a provider for b (a is a customer of b)
+ *)
+
+let transferBgp e x =
+  match x with
+  | None -> None
+  | Some b -> (
+    (* enforce no transit *)
+    if !(relationship e = prov) && b.comms[cust] then None else
+    (* update LP *)
+    let lp = if (relationship e = cust) then 200
+        else if (relationship e = peer) then 100
+        else 0
+    in
+    (* update comms: mark the source of the message *)
+    let comms = if (relationship e = cust) then b.comms[cust := true]
+        else if (relationship e = peer) then b.comms[peer := true]
+        else b.comms[prov := true]
+    in
+    let b = {b with comms = comms; aslen = b.aslen + 1; lp = lp} in
+    Some b
+)
+
+let trans e x = transferBgp e x
+
+let assert_node u v = match v with
+  | None -> false
+  | Some _ -> true

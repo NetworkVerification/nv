@@ -1,0 +1,55 @@
+(* vim: set syntax=ocaml *)
+(* Template example for encoding hijacking in BGP networks. *)
+(* Intended to be used as an include, where user provides
+   destination and hijacker variables, along with the hijack predicate
+   and the edgePref function from edges to local preference integers. *)
+type bgpType = {bgpAd: int; lp: int; aslen: int; med:int; comms:set[int];}
+type attribute = option[bgpType]
+
+(* community tags for marking routes as safe or not *)
+let legitimate = 0
+let illegitimate = 1
+
+symbolic hijack : attribute
+require (hijackPredicate hijack)
+
+let init n =
+  if n = destination then Some { bgpAd = 0; lp = 100; aslen = 0; med = 0; comms = {} }
+  else if n = hijacker then hijack else None
+
+let pickOption f x y =
+  match (x,y) with
+  | (None, None) -> None
+  | (None, Some _) -> y  | (Some _, None) -> x
+  | (Some a, Some b) -> Some (f a b)
+
+let betterBgp b1 b2 =
+  if b1.lp > b2.lp then b1
+  else if b2.lp > b1.lp then b2
+  else if b1.aslen < b2.aslen then b1
+  else if b2.aslen < b1.aslen then b2  else if b1.med >= b2.med then b1 else b2
+
+let mergeBgp x y = pickOption betterBgp x y
+
+let merge n x y = mergeBgp x y
+
+(* Community tags to identify routes from the destination and from the hijacker. *)
+let edgeTag e = match e with
+  | a~b -> if a = destination then {legitimate} else if a = hijacker then {illegitimate} else {}
+
+let transferBgp e x =
+  match x with
+  | None -> None
+  | Some b -> (
+    let lp = edgePref e in
+    let comms = (edgeTag e) union b.comms in
+    let b = {b with comms = comms; aslen = b.aslen + 1; lp = lp} in
+    Some b
+)
+
+let trans e x = transferBgp e x
+
+(* Assert that no non-hijacker fell for the hijack. *)
+let assert_node u v = match v with
+  | None -> false
+  | Some b -> (u = hijacker) || (!b.comms[illegitimate])

@@ -1,0 +1,24 @@
+(* Three node topology. *)
+include "generic/no-transit.nv"
+
+let nodes = 3
+
+let edges = {
+    0=1;
+    1=2;
+}
+
+(* returns the relationship between a and b, where e = a~b *)
+let relationship e = match e with
+  | 0~1 -> cust
+  | 1~0 -> prov
+  | 1~2 -> prov
+  | 2~1 -> cust
+
+let init n = match n with
+  | 0n -> Some { bgpAd = 0; lp = 100; aslen = 0; med = 0; comms = {} }
+  | _ -> None
+
+let sol = solution { init = init; trans = trans; merge = merge; }
+
+assert foldNodes (fun u v acc -> acc && assert_node u v) sol true
