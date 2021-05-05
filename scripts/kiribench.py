@@ -89,6 +89,7 @@ def tabulate_fattree_benchmarks(
     trials=10,
     parallel=False,
     simulate=True,
+    verbose=False,
 ):
     """
     Run all the vertical and horizontal benchmarks.
@@ -112,7 +113,12 @@ def tabulate_fattree_benchmarks(
             fn = run_trials_sync
         try:
             results = fn(
-                directory.format(size), benches, timeout, trials, DISTINCT_OPERATIONS
+                directory.format(size),
+                benches,
+                timeout,
+                trials,
+                DISTINCT_OPERATIONS,
+                verbose,
             )
             runs.append(results)
         except KeyboardInterrupt:
