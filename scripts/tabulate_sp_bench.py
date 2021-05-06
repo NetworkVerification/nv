@@ -79,12 +79,14 @@ def join_result_dicts(*dicts) -> dict:
     Join the results dictionaries into a single dictionary.
     """
     joined = dict()
-    for (cut, results) in dicts:
+    logs = ""
+    for (log, cut, results) in dicts:
         for (key, val) in results.items():
             if cut is None:
                 cut = "monolithic"
             joined[key + f" ({cut})"] = val
-    return joined
+        logs += log
+    return logs, joined
 
 
 def parse_smt(output) -> dict:
@@ -97,7 +99,7 @@ def parse_smt(output) -> dict:
     # get all the transformation profiling
     profile = dict()
     if "failed" in output:
-        print("WARNING: assertions failed during verification!")
+        # print("WARNING: assertions failed during verification!")
         profile["safe"] = [False]
     else:
         profile["safe"] = [True]
@@ -118,6 +120,7 @@ def run_nv_smt(path, cut, time, verbose):
     Run nv's SMT tool and capture its output.
     If it doesn't finish within the given time, kill it.
     """
+    log = ""
     nvpath = os.path.join(os.getcwd(), "nv")
     if not os.path.exists(nvpath):
         print("Did not find 'nv' executable in the current working directory")
@@ -128,27 +131,28 @@ def run_nv_smt(path, cut, time, verbose):
         args += ["-k", path]
     else:
         args += [path]
-    print(f"Running {' '.join(args)}")
+    log += f"Running {' '.join(args)}\n"
     try:
         proc = subprocess.run(
             args, text=True, check=True, capture_output=True, timeout=time
         )
         if verbose:
-            print(proc.stdout)
-        return parse_smt(proc.stdout)
+            log += proc.stdout + "\n"
+        return log, parse_smt(proc.stdout)
     except subprocess.CalledProcessError as exn:
-        print(f"Process error: {exn}")
-        return {}
+        log += f"Error: {exn}\n"
+        return log, {}
     except subprocess.TimeoutExpired as exn:
-        print(f"Process timed out: {exn}")
-        return {}
+        log += f"Timeout: {exn}\n"
+        return log, {}
 
 
 def run_bench(cut, path, time, verbose):
-    return (cut, run_nv_smt(path, cut, time, verbose))
+    log, result = run_nv_smt(path, cut, time, verbose)
+    return (log, cut, result)
 
 
-def run_benchmarks_sync(benchdir, benches, time, verbose):
+def run_benchmarks_sync(benchdir, benches, time, verbose) -> (str, dict):
     """
     Run the given benchmarks in the given directory in sequence.
     """
@@ -157,7 +161,7 @@ def run_benchmarks_sync(benchdir, benches, time, verbose):
     )
 
 
-def run_benchmarks_parallel(benchdir, benches, time, verbose):
+def run_benchmarks_parallel(benchdir, benches, time, verbose) -> (str, dict):
     """
     Run the given benchmarks in the given directory in parallel.
     """
@@ -178,13 +182,15 @@ def run_trials_sync(benchdir, benches, time, trials, multiop, verbose):
     and return a dictionary of profiling information.
     """
     runs = []
+    log = ""
     for i in range(trials):
-        print("Running trial " + str(i + 1) + " of " + str(trials))
-        results = run_benchmarks_sync(benchdir, benches, time, verbose)
+        log += "Running trial " + str(i + 1) + " of " + str(trials) + "\n"
+        logs, results = run_benchmarks_sync(benchdir, benches, time, verbose)
+        log += logs
         runs.append(results)
     mean = mean_float_dict(runs, multiop)
     mean["Benchmark"] = benchdir
-    return mean
+    return log, mean
 
 
 def run_trials_parallel(benchdir, benches, time, trials, multiop, verbose):
@@ -196,9 +202,11 @@ def run_trials_parallel(benchdir, benches, time, trials, multiop, verbose):
     with multiprocessing.Pool(processes=trials) as pool:
         args = [(benchdir, benches, time, verbose) for _ in range(trials)]
         runs = pool.starmap(run_benchmarks_sync, args)
-        mean = mean_float_dict(runs, multiop)
+        logs, results = map(list, zip(*runs))
+        mean = mean_float_dict(results, multiop)
         mean["Benchmark"] = benchdir
-        return mean
+        log = "".join(logs)
+        return log, mean
 
 
 def write_csv(results, path):

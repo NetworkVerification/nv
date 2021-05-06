@@ -7,7 +7,7 @@ import argparse
 import os
 import re
 from datetime import datetime
-from gen_part_nv import gen_part_nv, run_nv_simulate, CUTS
+from gen_part_nv import gen_part_nv, run_nv_simulate, CUTS, FattreeCut
 from tabulate_sp_bench import (
     run_trials_sync,
     run_trials_parallel,
@@ -52,7 +52,7 @@ def create_benchmarks(benchmarks, cuts, simulate):
     """
     for (inputf, dest) in benchmarks:
         for cut in cuts:
-            gen_part_nv(inputf, dest, cut, simulate)
+            gen_part_nv(inputf, dest, FattreeCut.from_str(cut), simulate)
 
 
 def clean_benchmarks(cuts, dry_run):
@@ -112,7 +112,7 @@ def tabulate_fattree_benchmarks(
         else:
             fn = run_trials_sync
         try:
-            results = fn(
+            log, results = fn(
                 directory.format(size),
                 benches,
                 timeout,
@@ -120,6 +120,7 @@ def tabulate_fattree_benchmarks(
                 DISTINCT_OPERATIONS,
                 verbose,
             )
+            print(log)
             runs.append(results)
         except KeyboardInterrupt:
             print("User interrupted benchmarking. Saving partial results...")

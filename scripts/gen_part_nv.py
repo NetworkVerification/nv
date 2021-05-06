@@ -8,11 +8,12 @@ import sys
 import re
 import argparse
 import subprocess
+from enum import Enum
 
 # used for constructing the graph
 import igraph
 
-# Partition cut types
+# Fattree partition cut types
 CUTS = [
     # vertical cut: 2 parts
     "v",
@@ -31,28 +32,157 @@ CUTS = [
     "full",
 ]
 
-# Group
-# Core nodes are on the spine, edge nodes are ToR,
-# and aggregation nodes are between core and edge nodes
-CORE = 0
-AGGREGATION = 1
-EDGE = 2
-NONFAT = -1
 
-# Network types
-SP = 0
-FATPOL = 1
+class FattreeCut(Enum):
+    VERTICAL = ("v", "vertical", "Vertically partitioned")
+    HORIZONTAL = ("h", "horizontal", "Horizontally partitioned")
+    PODS = ("p", "pods", "Partitioned into pods")
+    SPINES = ("s", "spines", "Partitioned into pods and individual spines")
+    FULL = ("f", "full", "Fully partitioned")
+
+    def __init__(self, short, long, desc):
+        self.short = short
+        self.long = long
+        self.desc = desc
+
+    @property
+    def func(self):
+        # cut function
+        if self is FattreeCut.VERTICAL:
+            return nodes_cut_vertically
+        elif self is FattreeCut.HORIZONTAL:
+            return nodes_cut_horizontally
+        elif self is FattreeCut.PODS:
+            return nodes_cut_pods
+        elif self is FattreeCut.SPINES:
+            return nodes_cut_spines
+        elif self is FattreeCut.FULL:
+            return nodes_cut_fully
+
+    @staticmethod
+    def from_str(s):
+        for e in list(FattreeCut):
+            if s == e.short or s == e.long:
+                return e
+        raise KeyError("cut not found")
 
 
-def to_grp(name):
-    if name == "core":
-        return CORE
-    elif name == "aggregation":
-        return AGGREGATION
-    elif name == "edge":
-        return EDGE
-    else:
-        return NONFAT
+class NodeGroup(Enum):
+    """
+    Core nodes are on the spine, edge nodes are ToR,
+    and aggregation nodes are between core and edge nodes.
+    None is used when nodes are not in fattree networks.
+    """
+
+    CORE = 0
+    AGGREGATION = 1
+    EDGE = 2
+    NONE = 3
+
+    @staticmethod
+    def parse(name):
+        if name == "core":
+            return NodeGroup.CORE
+        elif name == "aggregation":
+            return NodeGroup.AGGREGATION
+        elif name == "edge":
+            return NodeGroup.EDGE
+        else:
+            return NodeGroup.NONE
+
+
+class NetType(Enum):
+    SP = 0
+    FATPOL = 1
+    NOTRANS = 2
+    HIJACK = 3
+    NONFAT = -1
+
+    @staticmethod
+    def from_filename(fname):
+        if fname.startswith("sp"):
+            return NetType.SP
+        elif fname.startswith("fat"):
+            return NetType.FATPOL
+        else:
+            return NetType.NONFAT
+
+
+class NvFile:
+    """
+    Representation of an NV file's internal information.
+    """
+
+    def __init__(self, path, net_type, simulate, dest, verbose=False):
+        self.path = path
+        self.net = net_type
+        self.dest = dest
+        self.verbose = verbose
+        with open(path) as f:
+            self.mono = f.read()
+        self.graph = construct_graph(self.mono, net_type)
+        if self.verbose:
+            print(self.print_graph())
+        if simulate:
+            self.sols = run_nv_simulate(self.path)
+        else:
+            self.sols = None
+
+    def cut(self, cut_type):
+        """
+        Given the cut, generate a new NV file with partition and interface functions.
+        """
+        nodes = cut_type.func(self.graph, self.dest)
+        if self.sols is not None:
+            edges = get_cross_edges(self.graph, nodes, ranked=False)
+        elif self.net is NetType.FATPOL and cut_type is FattreeCut.VERTICAL:
+            # special case for handling vertical cuts
+            edges = get_vertical_cross_edges(self.graph, nodes, self.dest)
+        else:
+            edges = get_cross_edges(self.graph, nodes, ranked=True)
+        if self.verbose:
+            print(nodes)
+            print([e for e in edges])
+        partition = write_partition_str(nodes)
+        if self.sols is not None:
+            interface = write_interface_from_sim(edges, self.sols)
+        else:
+            interface = write_interface_str(edges, self.net)
+        return partition, interface
+        # perform the decomposed transfer on the input side
+        repl = (
+            r"solution { init = init; trans = trans; merge = merge;"
+            r" interface = interface; rtrans = trans }"
+        )
+        text = re.sub(r"solution {.*}", repl, self.mono)
+        # put 'em all together
+        partition, interface = self.cut(cut_type)
+        return "\n".join([self._preamble(cut_type), text, partition, interface])
+
+    def hijack(self, predicate, misconfigured):
+        """
+        Return a new NV file which represents hijacking the network.
+        predicate describes the require predicate for the hijack.
+        misconfigured controls whether the network policy should successfully
+        block the hijack or if it should succeed.
+        """
+        # TODO: add a new hijacker node with edges to each of the spines
+        # TODO: add symbolic for new hijacker node and a require predicate
+        # TODO: modify init to initialize the hijacker
+        # TODO: add transferBgp cases for hijacker edges, and add special hijack tag
+        # TODO: add new assertion
+
+    def _preamble(self, cut_type):
+        """
+        Return the string representation of the preamble.
+        """
+        vim_modeline = "(* vim: set syntax=ocaml: *)"
+        file_info = f"(* {cut_type.desc} version of {os.path.basename(self.path)} *)"
+        generated_by = "(* Automatically generated by gen_part_nv.py *)"
+        return "\n".join([vim_modeline, file_info, generated_by])
+
+    def print_graph(self):
+        return str(self.graph)
 
 
 def construct_graph(text, is_fattree):
@@ -88,41 +218,20 @@ def find_edges(text, is_fattree):
     return outputs
 
 
-def find_nodes(text, is_fattree):
+def find_nodes(text, net_type):
     """Return the nodes."""
-    if is_fattree:
+
+    if net_type is not NetType.NONFAT:
         pat = r"(core|aggregation|edge)-\d*=(\d*)"
+
     else:
         pat = r"(\w+)(?:-\d*)?=(\d+)"
     prog = re.compile(pat)
     # find all nodes
     matches = prog.finditer(text)
-    vertices = [(int(m.group(2)), to_grp(m.group(1))) for m in matches]
+    vertices = [(int(m.group(2)), NodeGroup.parse(m.group(1))) for m in matches]
     vertices.sort()
     return vertices
-
-
-def write_preamble(spname, cut):
-    """
-    Return the string representation of the preamble.
-    """
-    vim_modeline = "(* vim: set syntax=ocaml: *)"
-    if cut == "v" or cut == "vertical":
-        oriented = "Vertically partitioned"
-    elif cut == "h" or cut == "horizontal":
-        oriented = "Horizontally partitioned"
-    elif cut == "p" or cut == "pods":
-        oriented = "Partitioned into pods"
-    elif cut == "s" or cut == "spines":
-        oriented = "Partitioned into pods and individual spines"
-    elif cut == "f" or cut == "full":
-        oriented = "Fully partitioned"
-    else:
-        raise Exception("Unexpected cut type")
-    file_info = f"(* {oriented} version of {spname} *)"
-    generated_by = "(* Automatically generated by gen_part_nv.py *)"
-    include_utils = 'include "../../../examples/utils.nv"'
-    return "\n".join([vim_modeline, file_info, generated_by, include_utils])
 
 
 def write_partition_str(partitions):
@@ -146,36 +255,26 @@ def write_interface_str(edges, net_type):
       | Some b -> f b
       | None -> false)
   in"""
-    if net_type == FATPOL:
+    if net_type is NetType.FATPOL:
         output += """
   let ignoreBgp = match x.bgp with
     | Some b -> ignore b.comms
     | None -> true
   in"""
         default = "match x.bgp with | Some b -> ignore b.comms | None -> true"
-    elif net_type == SP:
+    elif net_type is NetType.SP:
         default = "true"
     else:
         raise Exception("Unexpected net type")
     output += "\n  match edge with\n"
     for (start, end) in edges:
-        if net_type == SP:
+        if net_type is NetType.SP:
             fn = "(fun b -> true)"
-        elif net_type == FATPOL:
+        elif net_type is NetType.FATPOL:
             fn = "(fun b -> ignore b.comms)"
         output += f"  | {start}~{end} -> hasOnlyBgp {fn}\n"
     output += f"  | _ -> {default}\n"
     return output
-
-
-def get_net_type(root):
-    if root.startswith("sp"):
-        net_type = SP
-    elif root.startswith("fat"):
-        net_type = FATPOL
-    else:
-        net_type = NONFAT
-    return net_type
 
 
 def get_part_fname(nvfile, cut, simulate):
@@ -185,10 +284,10 @@ def get_part_fname(nvfile, cut, simulate):
     """
     spdir, spname = os.path.split(nvfile)
     root, nvext = os.path.splitext(spname)
-    net_type = get_net_type(root)
+    net_type = NetType.from_filename(root)
     # mark simulated solutions with an x for exact
     sim = "-x" if simulate else ""
-    prefix = f"{root}-{cut}{sim}"
+    prefix = f"{root}-{cut.short}{sim}"
     partfile = os.path.join(spdir, prefix + nvext)
     suffix = 1
     # don't overwrite an existing path: instead, create a new file
@@ -212,13 +311,13 @@ def nodes_cut_spines(graph, dest):
     is in one partition, the spine nodes are each in another
     and the other pod nodes are each in another.
     """
-    podgraph = graph.subgraph(graph.vs.select(g_ne=CORE))
+    podgraph = graph.subgraph(graph.vs.select(g_ne=NodeGroup.CORE))
     pods = podgraph.decompose()
     dest_idx = 0
     for (i, pod) in enumerate(pods):
         if dest in pod.vs["id"]:
             dest_idx = i
-    spines = [v["id"] for v in graph.vs.select(g_eq=CORE)]
+    spines = [v["id"] for v in graph.vs.select(g_eq=NodeGroup.CORE)]
     nondest_pods = [list(pod.vs["id"]) for pod in pods]
     dest_pod = nondest_pods.pop(dest_idx)
     dest_pod.sort()
@@ -234,13 +333,13 @@ def nodes_cut_pods(graph, dest):
     is in one partition, the spine nodes are in another and the
     other pod nodes are each in another.
     """
-    podgraph = graph.subgraph(graph.vs.select(g_ne=CORE))
+    podgraph = graph.subgraph(graph.vs.select(g_ne=NodeGroup.CORE))
     pods = podgraph.decompose()
     dest_idx = 0
     for (i, pod) in enumerate(pods):
         if dest in pod.vs["id"]:
             dest_idx = i
-    spines = [v["id"] for v in graph.vs.select(g_eq=CORE)]
+    spines = [v["id"] for v in graph.vs.select(g_eq=NodeGroup.CORE)]
     nondest_pods = [list(pod.vs["id"]) for pod in pods]
     dest_pod = nondest_pods.pop(dest_idx)
     dest_pod.sort()
@@ -256,7 +355,7 @@ def nodes_cut_horizontally(graph, dest):
     is in one partition, the spine nodes are in another and the
     other pod nodes are in a third.
     """
-    podgraph = graph.subgraph(graph.vs.select(g_ne=CORE))
+    podgraph = graph.subgraph(graph.vs.select(g_ne=NodeGroup.CORE))
     pods = podgraph.decompose()
     dest_pod = []
     nondest_pods = []
@@ -265,7 +364,7 @@ def nodes_cut_horizontally(graph, dest):
             dest_pod = [v["id"] for v in pod.vs]
         else:
             nondest_pods += [v["id"] for v in pod.vs]
-    spines = [v["id"] for v in graph.vs.select(g_eq=CORE)]
+    spines = [v["id"] for v in graph.vs.select(g_eq=NodeGroup.CORE)]
     dest_pod.sort()
     spines.sort()
     nondest_pods.sort()
@@ -278,16 +377,16 @@ def nodes_cut_vertically(graph, dest):
     nodes and half of the pods are in one partition
     and the others are in another.
     """
-    spines = [v for v in graph.vs.select(g_eq=CORE)]
+    spines = [v for v in graph.vs.select(g_eq=NodeGroup.CORE)]
     half_spines = spines[: (len(spines) // 2)]
-    aggs = [v for v in graph.vs.select(g_eq=AGGREGATION)]
+    aggs = [v for v in graph.vs.select(g_eq=NodeGroup.AGGREGATION)]
     half_aggs = aggs[: (len(aggs) // 2)]
     # use a set so as not to add twice
     pods = set()
     for v in half_aggs:
         pods.add(v.index)
         for u in v.neighbors():
-            if u["g"] == EDGE:
+            if u["g"] is NodeGroup.EDGE:
                 pods.add(u.index)
     # return half of the spines along with the pods
     group1 = [x.index for x in half_spines] + list(pods)
@@ -327,83 +426,11 @@ def get_vertical_cross_edges(graph, partitions, dest):
         # prune non-destination-pod cross edges
         node = graph.vs[e[0]]
         neighbors = [v["id"] for v in node.neighbors()]
-        if node["g"] == AGGREGATION and dest not in neighbors:
+        if node["g"] is NodeGroup.AGGREGATION and dest not in neighbors:
             continue
         else:
             updated.append(e)
     return updated
-
-
-def cut_nodes(graph, dest, cut):
-    """
-    Cut the graph's nodes into a list of list of nodes in partition rank order,
-    based on the given destination (always in the 0th partition) and the type
-    of cut desired.
-    """
-    if cut == "vertical" or cut == "v":
-        nodes = nodes_cut_vertically(graph, dest)
-    elif cut == "horizontal" or cut == "h":
-        nodes = nodes_cut_horizontally(graph, dest)
-    elif cut == "pods" or cut == "p":
-        nodes = nodes_cut_pods(graph, dest)
-    elif cut == "spines" or cut == "s":
-        nodes = nodes_cut_spines(graph, dest)
-    elif cut == "full" or cut == "f":
-        nodes = nodes_cut_fully(graph, dest)
-    else:
-        raise Exception("Unexpected cut type")
-    return nodes
-
-
-def split_prefooter(text):
-    """
-    Return all program text before and after the declaration of
-    the fattree node types, split into two.
-    """
-    prog = re.compile(r"\(\* {((edge|core|aggregation)-\d+=\d+,?\s*)*}\*\)")
-    match = prog.search(text)
-    end = match.end()
-    return (text[: end + 1], text[end + 1 :])
-
-
-def parse_sim(output):
-    """Parse the nv simulator solution."""
-    pat = re.compile(r"Node (\d+)\n-*\n((?:.|\n)+?)\n\n", re.M)
-    return dict((int(m.group(1)), m.group(2)) for m in pat.finditer(output))
-
-
-def format_fatPol_sols(sols, atype):
-    """
-    Parse the printed solution for a fatPol benchmark and
-    return a correctly-formatted NV attribute.
-    """
-
-    def record_to_str(d):
-        return "{" + "; ".join([f"{k}={v}" for k, v in d.items()]) + "}"
-
-    ribpat = re.compile(r"(\w*)= (Some\(((?:.|\n)*?)\)|None);", re.M)
-    bgppat = re.compile(r"(\w*)= (\d*u\d*|{ (?:\d*u32 \|-> true\n?)* });", re.M)
-    commslines = re.compile(r"\n", re.M)
-    commspat = re.compile(r"(\d*u32) \|-> true", re.M)
-    new_sols = dict()
-    for k, v in sols.items():
-        # parse the RIB
-        rib = dict()
-        rib = dict(m.group(1, 3) for m in ribpat.finditer(v))
-        bgpsol = rib.get("bgp")
-        if bgpsol is not None:
-            bgp = dict(m.group(1, 2) for m in bgppat.finditer(bgpsol))
-            commssol = bgp.get("comms")
-            if commssol is not None:
-                oneline = commslines.sub(r", ", commssol)
-                bgp["comms"] = commspat.sub(r"\1", oneline)
-            rib["bgp"] = f"{record_to_str(bgp)}"
-        # Add Some wrapper as needed for rib components
-        rib = dict(
-            (k, f"Some({v})" if v is not None else f"{v}") for k, v in rib.items()
-        )
-        new_sols[k] = record_to_str(rib)
-    return new_sols
 
 
 def run_nv_simulate(path):
@@ -416,8 +443,8 @@ def run_nv_simulate(path):
     print(f"Running {' '.join(args)}")
     try:
         proc = subprocess.run(args, text=True, check=True, capture_output=True)
-        return parse_sim(proc.stdout)
-        # return format_fatPol_sols(parse_sim(proc.stdout))
+        pat = re.compile(r"Node (\d+)\n-*\n((?:.|\n)+?)\n\n", re.M)
+        return {int(m.group(1)): m.group(2) for m in pat.finditer(proc.stdout)}
     except subprocess.CalledProcessError as exn:
         print(exn.stderr)
         return {}
@@ -443,49 +470,10 @@ def gen_part_nv(nvfile, dest, cut, simulate=True, verbose=False):
     part, net_type = get_part_fname(nvfile, cut, simulate)
     if verbose:
         print("Outfile: " + part)
-    if simulate:
-        # generate the solution from simulation
-        solution = run_nv_simulate(nvfile)
-        if verbose:
-            print("Simulated " + nvfile)
-    with open(nvfile, "r") as inputfile:
-        text = inputfile.read()
-    # compute the graph topology
-    graph = construct_graph(text, net_type != NONFAT)
-    if verbose:
-        print(str(graph))
-    # get the three parts
-    preamble = write_preamble(os.path.basename(nvfile), cut)
-    # include_sp, footer = split_prefooter(text)
-    nodes = cut_nodes(graph, dest, cut)
-    # get the cross edges
-    if simulate:
-        edges = get_cross_edges(graph, nodes, ranked=False)
-    elif net_type == FATPOL and (cut == "vertical" or cut == "v"):
-        # special case for handling vertical cuts
-        edges = get_vertical_cross_edges(graph, nodes, dest)
-    else:
-        edges = get_cross_edges(graph, nodes, ranked=True)
-    if verbose:
-        print(nodes)
-        print([e for e in edges])
-    partition = write_partition_str(nodes)
-    if simulate:
-        interface = write_interface_from_sim(edges, solution)
-    else:
-        interface = write_interface_str(edges, net_type)
-    # perform the decomposed transfer on the input side
-    repl = (
-        r"solution { init = init; trans = trans; merge = merge;"
-        r" interface = interface; rtrans = trans }"
-    )
-    # include_sp = re.sub(r"solution {.*}", repl, include_sp)
-    # footer = re.sub(r"solution {.*}", repl, footer)
-    text = re.sub(r"solution {.*}", repl, text)
-    # put 'em all together
-    output = "\n".join([preamble, text, partition, interface])
-    with open(part, "w") as outfile:
-        outfile.write(output)
+    nv = NvFile(nvfile, net_type, simulate, verbose)
+    partitioned = nv.cut(cut)
+    with open(part) as outfile:
+        outfile.write(partitioned)
     print(f"Saved network to {part}")
 
 
@@ -493,12 +481,9 @@ def print_graph(nvfile):
     """Print the associated graph for the given NV file."""
     _, spname = os.path.split(nvfile)
     root, _ = os.path.splitext(spname)
-    net_type = get_net_type(root)
-    with open(nvfile, "r") as inputfile:
-        text = inputfile.read()
-    # compute the graph topology
-    graph = construct_graph(text, net_type != NONFAT)
-    print(str(graph))
+    net_type = NetType.from_filename(root)
+    nv = NvFile(nvfile, net_type, False)
+    print(nv.print_graph())
     # adj = graph.get_adjlist(mode="all")
     # assert all([len(l) % 2 == 0 for l in adj])
 
@@ -565,7 +550,7 @@ def main():
             print_graph(file)
         else:
             for cut in args.cuts:
-                gen_part_nv(file, dest, cut, verbose=args.verbose)
+                gen_part_nv(file, dest, FattreeCut.from_str(cut), verbose=args.verbose)
 
 
 if __name__ == "__main__":
