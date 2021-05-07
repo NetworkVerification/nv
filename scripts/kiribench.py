@@ -7,7 +7,7 @@ import argparse
 import os
 import re
 from datetime import datetime
-from gen_part_nv import gen_part_nv, run_nv_simulate, CUTS, FattreeCut
+from gen_part_nv import gen_part_nv, run_nv_simulate, FattreeCut
 from tabulate_sp_bench import (
     run_trials_sync,
     run_trials_parallel,
@@ -133,6 +133,7 @@ def main():
         description="Frontend for benchmarking the Kirigami tool."
     )
     subparsers = parser.add_subparsers(dest="op")
+    cuts = FattreeCut.as_list()
 
     parser_make = subparsers.add_parser("make")
     parser_make.add_argument(
@@ -145,7 +146,7 @@ def main():
         "-c",
         "--cuts",
         nargs="+",
-        choices=CUTS,
+        choices=cuts,
         default=["h", "v", "p"],
         help="types of cut across the network (default: %(default)s)",
     )
@@ -184,7 +185,7 @@ def main():
         "-c",
         "--cuts",
         nargs="+",
-        choices=CUTS,
+        choices=cuts,
         default=["h", "v", "p"],
         help="types of cut across the network (default: %(default)s)",
     )
@@ -212,7 +213,7 @@ def main():
         "-c",
         "--cuts",
         nargs="+",
-        choices=CUTS,
+        choices=cuts,
         default=["h", "v", "p"],
         help="types of cut across the network (default: %(default)s)",
     )

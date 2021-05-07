@@ -7,6 +7,10 @@ default:
 #install: default
 #	cp _build/default/src/exe/main.exe nv
 
+nvgen:
+	dune build src/nvgen/nvgen.exe
+	cp _build/default/src/nvgen/nvgen.exe nvgen
+
 test: default
 	dune runtest -f --no-buffer
 
@@ -20,3 +24,4 @@ format:
 clean:
 	dune clean
 	rm -f nv
+	rm -f nvgen

@@ -1,0 +1,6 @@
+(executable
+ (name nvgen)
+ (libraries nv batteries)
+ (preprocess
+  (pps ppx_deriving_argparse ppx_deriving.std))
+)

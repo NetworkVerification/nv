@@ -6,26 +6,26 @@ maintainer: "Tim Alberdingk Thijm <tim.thijm@gmail.com>"
 authors:
   "Devon Loehr <devon.loehr@gmail.com>, Nick Giannarakis <nick.giannarakis@princeton.edu>, Tim Alberdingk Thijm <tim.thijm@gmail.com>, David Walker <dpw@cs.princeton.edu>"
 license: "MIT"
-homepage: "https://github.com/princedpw/nv"
-dev-repo: "git+https://github.com/princedpw/nv"
-bug-reports: "https://github.com/princedpw/nv/issues"
+homepage: "https://github.com/NetworkVerification/nv"
+dev-repo: "git+https://github.com/NetworkVerification/nv"
+bug-reports: "https://github.com/NetworkVerification/nv/issues"
 depends: [
   "dune" { build }
-  "odoc"
-  "ounit"
-  "integers"
   "ANSITerminal"
   "batteries"
+  "fileutils"
+  "fix"
+  "integers"
   "lru-cache"
-  "zarith"
+  "menhir"
   "mlcuddidl" { <= "3.0.4" }
   "ocamlgraph"
-  "fileutils"
+  "odoc"
+  "ounit"
+  "parmap"
   "ppx_deriving"
   "ppx_deriving_argparse"
-  "menhir"
-  "parmap"
-  "fix"
+  "zarith"
 ]
 build: [
   ["dune" "build" "-p" name "-j" jobs]
