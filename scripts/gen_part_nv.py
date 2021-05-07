@@ -9,6 +9,7 @@ import re
 import argparse
 import subprocess
 from enum import Enum
+from typing import Optional
 
 # used for constructing the graph
 import igraph
@@ -113,7 +114,14 @@ class NvFile:
     Representation of an NV file's internal information.
     """
 
-    def __init__(self, path, net_type, simulate, dest, verbose=False):
+    def __init__(
+        self,
+        path: str,
+        net_type: NetType,
+        simulate: bool,
+        dest: Optional[int],
+        verbose: bool = False,
+    ):
         self.path = path
         self.net = net_type
         self.dest = dest
@@ -147,8 +155,7 @@ class NvFile:
         if self.sols is not None:
             interface = write_interface_from_sim(edges, self.sols)
         else:
-            interface = write_interface_str(edges, self.net)
-        return partition, interface
+            interface = write_interface_str(edges)
         # perform the decomposed transfer on the input side
         repl = (
             r"solution { init = init; trans = trans; merge = merge;"
@@ -156,7 +163,6 @@ class NvFile:
         )
         text = re.sub(r"solution {.*}", repl, self.mono)
         # put 'em all together
-        partition, interface = self.cut(cut_type)
         return "\n".join([self._preamble(cut_type), text, partition, interface])
 
     def hijack(self, predicate, misconfigured):
@@ -196,7 +202,7 @@ def construct_graph(text, is_fattree):
     edges = find_edges(text, is_fattree)
     g.add_edges(edges)
     # add stable node numbering
-    for v in g.vs:
+    for v in g.vs():
         v["id"] = v.index
     return g
 
@@ -244,36 +250,21 @@ def write_partition_str(partitions):
     return output
 
 
-def write_interface_str(edges, net_type):
+def write_interface_str(edges):
     """
     Return the string representation of the interface function.
     """
     output = "let interface edge x ="
     output += """
-  let hasOnlyBgp f =
+  let hasOnlyBgp =
     x.selected = Some 3u2 && (match x.bgp with
-      | Some b -> f b
+      | Some b -> true
       | None -> false)
   in"""
-    if net_type is NetType.FATPOL:
-        output += """
-  let ignoreBgp = match x.bgp with
-    | Some b -> ignore b.comms
-    | None -> true
-  in"""
-        default = "match x.bgp with | Some b -> ignore b.comms | None -> true"
-    elif net_type is NetType.SP:
-        default = "true"
-    else:
-        raise Exception("Unexpected net type")
     output += "\n  match edge with\n"
     for (start, end) in edges:
-        if net_type is NetType.SP:
-            fn = "(fun b -> true)"
-        elif net_type is NetType.FATPOL:
-            fn = "(fun b -> ignore b.comms)"
-        output += f"  | {start}~{end} -> hasOnlyBgp {fn}\n"
-    output += f"  | _ -> {default}\n"
+        output += f"  | {start}~{end} -> hasOnlyBgp\n"
+    output += f"  | _ -> true\n"
     return output
 
 
@@ -470,7 +461,7 @@ def gen_part_nv(nvfile, dest, cut, simulate=True, verbose=False):
     part, net_type = get_part_fname(nvfile, cut, simulate)
     if verbose:
         print("Outfile: " + part)
-    nv = NvFile(nvfile, net_type, simulate, verbose)
+    nv = NvFile(nvfile, net_type, simulate, dest, verbose)
     partitioned = nv.cut(cut)
     with open(part) as outfile:
         outfile.write(partitioned)
@@ -482,7 +473,7 @@ def print_graph(nvfile):
     _, spname = os.path.split(nvfile)
     root, _ = os.path.splitext(spname)
     net_type = NetType.from_filename(root)
-    nv = NvFile(nvfile, net_type, False)
+    nv = NvFile(nvfile, net_type, False, None)
     print(nv.print_graph())
     # adj = graph.get_adjlist(mode="all")
     # assert all([len(l) % 2 == 0 for l in adj])
@@ -502,6 +493,7 @@ class ParseFileDest(argparse.Action):
             except ValueError:
                 break
 
+    @staticmethod
     def format_usage():
         return "file.nv:node"
 

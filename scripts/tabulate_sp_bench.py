@@ -8,6 +8,7 @@ import os
 import sys
 import re
 import csv
+import typing
 
 # constants for mean_float_dict's handling of operations that run multiple
 # times across partitions
@@ -19,7 +20,7 @@ LIST_OPERATIONS = 1
 DISTINCT_OPERATIONS = 2
 
 
-def fill_matrix(matrix):
+def fill_matrix(matrix: list[list[int]]):
     """
     Return a new list of lists (matrix) where inner lists all have the same
     length. Inner lists that are short elements have the element 0 added.
@@ -36,12 +37,10 @@ def fill_matrix(matrix):
     return result
 
 
-def mean_float_dict(dicts, multiop=LIST_OPERATIONS):
+def mean_float_dict(dicts: list[dict], multiop=LIST_OPERATIONS) -> dict:
     """
     Average the results across the given list of dictionaries.
     """
-    if len(dicts) == 0:
-        return []
     averaged = dict()
     keys = set()
     for d in dicts:
@@ -74,7 +73,7 @@ def mean_float_dict(dicts, multiop=LIST_OPERATIONS):
     return averaged
 
 
-def join_result_dicts(*dicts) -> dict:
+def join_result_dicts(*dicts) -> tuple[str, dict[str, typing.Any]]:
     """
     Join the results dictionaries into a single dictionary.
     """
@@ -89,7 +88,7 @@ def join_result_dicts(*dicts) -> dict:
     return logs, joined
 
 
-def parse_smt(output) -> dict:
+def parse_smt(output: str) -> dict:
     """
     Parse the output of an NV command.
     Returns a dictionary of strings to lists of floats.
@@ -115,7 +114,7 @@ def parse_smt(output) -> dict:
     return profile
 
 
-def run_nv_smt(path, cut, time, verbose):
+def run_nv_smt(path: str, cut: typing.Optional[str], time: float, verbose: bool):
     """
     Run nv's SMT tool and capture its output.
     If it doesn't finish within the given time, kill it.
@@ -152,7 +151,7 @@ def run_bench(cut, path, time, verbose):
     return (log, cut, result)
 
 
-def run_benchmarks_sync(benchdir, benches, time, verbose) -> (str, dict):
+def run_benchmarks_sync(benchdir, benches, time, verbose) -> tuple[str, dict]:
     """
     Run the given benchmarks in the given directory in sequence.
     """
@@ -161,7 +160,7 @@ def run_benchmarks_sync(benchdir, benches, time, verbose) -> (str, dict):
     )
 
 
-def run_benchmarks_parallel(benchdir, benches, time, verbose) -> (str, dict):
+def run_benchmarks_parallel(benchdir, benches, time, verbose) -> tuple[str, dict]:
     """
     Run the given benchmarks in the given directory in parallel.
     """
