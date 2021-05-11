@@ -15,8 +15,8 @@ let create s = s, 0
 let name (s, _) = s
 let to_var (s, i) = s, i
 let from_var (s, i) = s, i
-let to_string (s, i) = s ^ delim ^ string_of_int i
 let to_string_delim d (s, i) = s ^ d ^ string_of_int i
+let to_string = to_string_delim delim
 
 let of_var_string s =
   try
