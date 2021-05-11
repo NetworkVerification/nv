@@ -7,7 +7,7 @@ default:
 #install: default
 #	cp _build/default/src/exe/main.exe nv
 
-nvgen:
+nvgen: default $(wildcard src/nvgen/*.ml)
 	dune build src/nvgen/nvgen.exe
 	cp _build/default/src/nvgen/nvgen.exe nvgen
 

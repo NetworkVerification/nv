@@ -34,8 +34,9 @@ testfiles/*
 tmp.txt
 *.~
 
-# NV executable
+# NV executables
 nv
+nvgen
 
 # Native install files
 *.install
