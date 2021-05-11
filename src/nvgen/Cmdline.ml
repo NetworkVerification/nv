@@ -5,7 +5,8 @@ type t =
 [@@deriving
   show
   , argparse
-      { positional = ["file", "nv policy file"]
+      { positional =
+          ["file", "nv policy file"; "operation", "one of 'notrans', 'cut' or 'hijack'"]
       ; description = "nv: a network verification framework"
       }]
 
