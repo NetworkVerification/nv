@@ -10,8 +10,8 @@ open Hijack
 let strip_var_delims s =
   (* FIXME: want to keep ~ characters which are part of edges and remove others,
    * but this makes some mistakes *)
-  let regexp = Str.regexp "\\([0-9]*[^n]\\)~[0-9]*\\([^n]\\)" in
-  Str.global_replace regexp "\\1\\2" s
+  let regexp = Str.regexp "~[0-9]+\\b" in
+  Str.global_replace regexp "" s
 ;;
 
 type fatLevel =
@@ -85,20 +85,21 @@ type notransStub = { relationship : exp }
 let hijack decls hijackStub =
   let hijack_var = Var.fresh "hijack" in
   let new_node = get_nodes decls |> Option.get in
+  (* TODO: add ExitLeak case if necessary *)
   let new_edges =
-    List.map (fun u -> u, new_node) hijackStub.spines
-    @ List.map (fun v -> new_node, v) hijackStub.spines
+    List.map (fun u -> (u, new_node), ExitDrop) hijackStub.spines
+    @ List.map (fun v -> (new_node, v), Enter) hijackStub.spines
   in
   let aty = get_attr_type decls |> Option.get in
   let update_decl d =
     match d with
     | DNodes n -> DNodes (n + 1)
-    | DEdges es -> DEdges (es @ new_edges)
+    | DEdges es -> DEdges (es @ List.map fst new_edges)
     | DLet (v, oty, e) ->
       let e =
         match Var.name v with
         | "init" -> hijack_init new_node hijack_var e
-        | "transferBgp" -> hijack_transferBgp new_edges hijackStub.blocked e
+        | "transferBgp" -> hijack_transferBgp new_edges e
         | _ -> e
       in
       DLet (v, oty, e)

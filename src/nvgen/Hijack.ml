@@ -79,7 +79,8 @@ let hijack_transferBgp (edges : (edge * transferBgpBehavior) list) e =
     let body =
       match behavior with
       | ExitDrop -> e_val (voption None)
-      | _ -> esome e
+                      (* FIXME: kinda risky just assuming it's a b? *)
+      | _ -> esome (update_aslen (evar (Var.fresh "b")))
     in
     addBranch edgePat body branches
   in
