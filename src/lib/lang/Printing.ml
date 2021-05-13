@@ -156,9 +156,9 @@ let op_pos_to_string op =
   | NLeq -> Infix "<=n"
   | TGet (n1, n2, n3) -> Prefix (Printf.sprintf "tuple%dGet%d-%d" n1 n2 n3)
   | TSet (n1, n2, n3) -> Prefix (Printf.sprintf "tuple%dSet%d-%d" n1 n2 n3)
-  | MCreate -> Prefix "createMap"
+  | MCreate -> Prefix "createDict"
   | MGet -> Circumfix ["["; "]"]
-  | MSet -> Circumfix ["["; ":="; "]" ]
+  | MSet -> Circumfix ["["; ":="; "]"]
   | MMap -> Prefix "map"
   | MMapFilter -> Prefix "mapIf"
   | MMapIte -> Prefix "mapIte"
@@ -354,25 +354,28 @@ and branches_to_string ~show_types prec bs =
 and op_args_to_string ~show_types prec p op es =
   let exp_to_string_p = exp_to_string_p ~show_types in
   match op_pos_to_string op with
-  | Prefix o -> (match es with
+  | Prefix o ->
+    (match es with
     | [e1] -> o ^ " " ^ exp_to_string_p p e1
     | es -> o ^ " " ^ space_sep (exp_to_string_p max_prec) es)
-  | Infix o -> (match es with
-      | [e1; e2] -> exp_to_string_p p e1 ^ " " ^ o ^ " " ^ exp_to_string_p prec e2
-      | es -> sep (" " ^ o ^ " ") (exp_to_string_p p) es)
+  | Infix o ->
+    (match es with
+    | [e1; e2] -> exp_to_string_p p e1 ^ " " ^ o ^ " " ^ exp_to_string_p prec e2
+    | es -> sep (" " ^ o ^ " ") (exp_to_string_p p) es)
   | Circumfix os ->
     (* need to make sure that os has same length as es *)
     List.fold_left2 (fun s e o -> s ^ exp_to_string_p p e ^ o) "" es os
-  (* if is_keyword_op op
-   * then op_to_string op ^ "(" ^ comma_sep (exp_to_string_p max_prec) es ^ ")"
-   * else (
-   *   match es with
-   *   | [] -> op_to_string op ^ "()" (\* should not happen *\)
-   *   | [e1] -> op_to_string op ^ exp_to_string_p p e1
-   *   | [e1; e2] ->
-   *     exp_to_string_p p e1 ^ " " ^ op_to_string op ^ " " ^ exp_to_string_p prec e2
-   *   | es -> op_to_string op ^ "(" ^ comma_sep (exp_to_string_p max_prec) es ^ ")") *)
 ;;
+
+(* if is_keyword_op op
+ * then op_to_string op ^ "(" ^ comma_sep (exp_to_string_p max_prec) es ^ ")"
+ * else (
+ *   match es with
+ *   | [] -> op_to_string op ^ "()" (\* should not happen *\)
+ *   | [e1] -> op_to_string op ^ exp_to_string_p p e1
+ *   | [e1; e2] ->
+ *     exp_to_string_p p e1 ^ " " ^ op_to_string op ^ " " ^ exp_to_string_p prec e2
+ *   | es -> op_to_string op ^ "(" ^ comma_sep (exp_to_string_p max_prec) es ^ ")") *)
 
 let value_to_string ?(show_types = false) v = value_to_string_p ~show_types max_prec v
 let exp_to_string ?(show_types = false) e = exp_to_string_p ~show_types max_prec e
