@@ -34,6 +34,11 @@ let is_keyword_op op =
   | AtMost _ -> true
 ;;
 
+type op_position =
+  | Prefix of string
+  | Infix of string
+  | Circumfix of string list
+
 (* set to true if you want to print universal quanifiers explicitly *)
 let quantifiers = true
 let max_prec = 10
@@ -96,6 +101,7 @@ let rec term s f xs =
   | _ -> PrimitiveCollections.printList f xs "" s ""
 ;;
 
+let space_sep f xs = sep " " f xs
 let comma_sep f xs = sep "," f xs
 let semi_sep f xs = sep ";" f xs
 let semi_term f xs = term ";" f xs
@@ -135,32 +141,41 @@ and tyvar_to_string tv =
   | Link ty -> "<" ^ ty_to_string ty ^ ">"
 ;;
 
-let op_to_string op =
+let op_pos_to_string op =
   match op with
-  | And -> "&&"
-  | Or -> "||"
-  | Not -> "!"
-  | UAdd n -> "+" ^ "u" ^ string_of_int n
-  | USub n -> "-" ^ "u" ^ string_of_int n
-  | UAnd n -> "&" ^ "u" ^ string_of_int n
-  | Eq -> "="
-  | ULess n -> "<" ^ "u" ^ string_of_int n
-  | ULeq n -> "<=" ^ "u" ^ string_of_int n
-  | NLess -> "<n"
-  | NLeq -> "<=n"
-  | TGet (n1, n2, n3) -> Printf.sprintf "tuple%dGet%d-%d" n1 n2 n3
-  | TSet (n1, n2, n3) -> Printf.sprintf "tuple%dSet%d-%d" n1 n2 n3
-  | MCreate -> "createMap"
-  | MGet -> "at"
-  | MSet -> "set"
-  | MMap -> "map"
-  | MMapFilter -> "mapIf"
-  | MMapIte -> "mapIte"
-  | MMerge -> "combine"
-  | MFoldNode -> "foldNodes"
-  | MFoldEdge -> "foldEdges"
-  | AtMost _ -> "atMost"
-  | MForAll -> "forAll"
+  | And -> Infix "&&"
+  | Or -> Infix "||"
+  | Not -> Prefix "!"
+  | UAdd n -> Infix ("+" ^ "u" ^ string_of_int n)
+  | USub n -> Infix ("-" ^ "u" ^ string_of_int n)
+  | UAnd n -> Infix ("&" ^ "u" ^ string_of_int n)
+  | Eq -> Infix "="
+  | ULess n -> Infix ("<" ^ "u" ^ string_of_int n)
+  | ULeq n -> Infix ("<=" ^ "u" ^ string_of_int n)
+  | NLess -> Infix "<n"
+  | NLeq -> Infix "<=n"
+  | TGet (n1, n2, n3) -> Prefix (Printf.sprintf "tuple%dGet%d-%d" n1 n2 n3)
+  | TSet (n1, n2, n3) -> Prefix (Printf.sprintf "tuple%dSet%d-%d" n1 n2 n3)
+  | MCreate -> Prefix "createMap"
+  | MGet -> Circumfix ["["; "]"]
+  | MSet -> Circumfix ["["; ":="; "]" ]
+  | MMap -> Prefix "map"
+  | MMapFilter -> Prefix "mapIf"
+  | MMapIte -> Prefix "mapIte"
+  | MMerge -> Prefix "combine"
+  | MFoldNode -> Prefix "foldNodes"
+  | MFoldEdge -> Prefix "foldEdges"
+  | AtMost _ -> Prefix "atMost"
+  | MForAll -> Prefix "forAll"
+;;
+
+let op_to_string op =
+  match op_pos_to_string op with
+  | Prefix s | Infix s -> s
+  | Circumfix ss ->
+    (* create a set of dummy variables from 'a' onwards *)
+    let dummies = List.init (List.length ss) (fun n -> Char.chr (n + 61)) in
+    List.fold_left2 (fun s d o -> s ^ Char.escaped d ^ o) "" dummies ss
 ;;
 
 let rec pattern_to_string pattern =
@@ -335,17 +350,28 @@ and branches_to_string ~show_types prec bs =
   | b :: bs ->
     branch_to_string ~show_types prec b ^ "\n" ^ branches_to_string ~show_types prec bs
 
+(* prec is the precedence of the outer expression, while p is the precedence of the eop *)
 and op_args_to_string ~show_types prec p op es =
   let exp_to_string_p = exp_to_string_p ~show_types in
-  if is_keyword_op op
-  then op_to_string op ^ "(" ^ comma_sep (exp_to_string_p max_prec) es ^ ")"
-  else (
-    match es with
-    | [] -> op_to_string op ^ "()" (* should not happen *)
-    | [e1] -> op_to_string op ^ exp_to_string_p p e1
-    | [e1; e2] ->
-      exp_to_string_p p e1 ^ " " ^ op_to_string op ^ " " ^ exp_to_string_p prec e2
-    | es -> op_to_string op ^ "(" ^ comma_sep (exp_to_string_p max_prec) es ^ ")")
+  match op_pos_to_string op with
+  | Prefix o -> (match es with
+    | [e1] -> o ^ " " ^ exp_to_string_p p e1
+    | es -> o ^ " " ^ space_sep (exp_to_string_p max_prec) es)
+  | Infix o -> (match es with
+      | [e1; e2] -> exp_to_string_p p e1 ^ " " ^ o ^ " " ^ exp_to_string_p prec e2
+      | es -> sep (" " ^ o ^ " ") (exp_to_string_p p) es)
+  | Circumfix os ->
+    (* need to make sure that os has same length as es *)
+    List.fold_left2 (fun s e o -> s ^ exp_to_string_p p e ^ o) "" es os
+  (* if is_keyword_op op
+   * then op_to_string op ^ "(" ^ comma_sep (exp_to_string_p max_prec) es ^ ")"
+   * else (
+   *   match es with
+   *   | [] -> op_to_string op ^ "()" (\* should not happen *\)
+   *   | [e1] -> op_to_string op ^ exp_to_string_p p e1
+   *   | [e1; e2] ->
+   *     exp_to_string_p p e1 ^ " " ^ op_to_string op ^ " " ^ exp_to_string_p prec e2
+   *   | es -> op_to_string op ^ "(" ^ comma_sep (exp_to_string_p max_prec) es ^ ")") *)
 ;;
 
 let value_to_string ?(show_types = false) v = value_to_string_p ~show_types max_prec v
