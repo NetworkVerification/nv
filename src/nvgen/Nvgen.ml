@@ -67,7 +67,7 @@ let parse_node_groups (fname : string) : (int, nodeGroup) Map.t =
 ;;
 
 type hijackStub =
-  { blocked : bool
+  { leak : bool
   ; destination : int
   ; predicate : exp
   ; spines : int list
@@ -100,6 +100,7 @@ let hijack decls hijackStub =
         match Var.name v with
         | "init" -> hijack_init new_node hijack_var e
         | "transferBgp" -> hijack_transferBgp new_edges e
+        | "assert_node" -> (* TODO *) e
         | _ -> e
       in
       DLet (v, oty, e)
@@ -137,7 +138,9 @@ let main =
         groups
         []
     in
-    let test_stub = { blocked = true; destination = 0; predicate = ebool true; spines } in
+    let test_stub =
+      { leak = cfg.leak; destination = 0; predicate = ebool true; spines }
+    in
     let decls, _ = Input.parse file in
     let new_ds = hijack decls test_stub in
     let new_text = Printing.declarations_to_string new_ds in
