@@ -139,10 +139,14 @@ def run_nv_smt(path: str, cut: typing.Optional[str], time: float, verbose: bool)
             log += proc.stdout + "\n"
         return log, parse_smt(proc.stdout)
     except subprocess.CalledProcessError as exn:
+        if verbose:
+            log += exn.stdout + "\n"
         log += f"Error: {exn}\n"
         return log, {}
     except subprocess.TimeoutExpired as exn:
-        log += f"Timeout: {exn}\n"
+        if verbose:
+            log += exn.stdout + "\n"
+        log += f"Timeout after {exn.timeout} seconds: {exn}\n"
         return log, {}
 
 
@@ -215,7 +219,6 @@ def write_csv(results, path):
     for result in results:
         fields.update(set(result.keys()))
     with open(path, "w") as csvf:
-        # use the last results, which will have the most keys
         writer = csv.DictWriter(csvf, fieldnames=list(fields), restval="")
         writer.writeheader()
         for result in results:
