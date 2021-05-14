@@ -8,8 +8,6 @@ open Hijack
 
 (** Remove all variable delimiters "~n" from the given string. *)
 let strip_var_delims s =
-  (* FIXME: want to keep ~ characters which are part of edges and remove others,
-   * but this makes some mistakes *)
   let regexp = Str.regexp "~[0-9]+\\b" in
   Str.global_replace regexp "" s
 ;;
@@ -128,6 +126,8 @@ let main =
   let op = rest.(1) in
   match op with
   | "hijack" ->
+    if cfg.destination = -1 then failwith "No destination provided.";
+    let predicate = predicate_to_exp cfg.predicate in
     let groups = parse_node_groups file in
     let spines =
       Map.foldi
@@ -139,7 +139,7 @@ let main =
         []
     in
     let test_stub =
-      { leak = cfg.leak; destination = 0; predicate = ebool true; spines }
+      { leak = cfg.leak; destination = cfg.destination; predicate; spines }
     in
     let decls, _ = Input.parse file in
     let new_ds = hijack decls test_stub in
