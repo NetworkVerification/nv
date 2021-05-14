@@ -28,6 +28,7 @@ type t =
   ; destination : int [@short "-d"] (** destination node for cuts and hijacks *)
   ; predicate : predicate [@short "-p"] [@parse parse_predicate]
         (** predicate to use for cuts and hijacks: references should be in terms of a variable "x" *)
+  ; outfile : string [@short "-o"] (** file to output NV program to; '-' for stdout *)
   }
 [@@deriving
   show
@@ -38,7 +39,13 @@ type t =
       }]
 
 let default =
-  { verbose = false; simulate = false; leak = false; destination = -1; predicate = True }
+  { verbose = false
+  ; simulate = false
+  ; leak = false
+  ; destination = -1
+  ; predicate = True
+  ; outfile = "-"
+  }
 ;;
 
 let cfg = ref default

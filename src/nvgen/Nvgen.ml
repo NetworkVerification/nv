@@ -124,6 +124,11 @@ let main =
   let cfg, rest = argparse default "nvgen" Sys.argv in
   let file = rest.(0) in
   let op = rest.(1) in
+  let write =
+    match cfg.outfile with
+    | "-" -> IO.write_string IO.stdout
+    | s -> File.with_file_out s IO.write_string
+  in
   match op with
   | "hijack" ->
     if cfg.destination = -1 then failwith "No destination provided.";
@@ -138,12 +143,10 @@ let main =
         groups
         []
     in
-    let test_stub =
-      { leak = cfg.leak; destination = cfg.destination; predicate; spines }
-    in
+    let stub = { leak = cfg.leak; destination = cfg.destination; predicate; spines } in
     let decls, _ = Input.parse file in
-    let new_ds = hijack decls test_stub in
+    let new_ds = hijack decls stub in
     let new_text = Printing.declarations_to_string new_ds in
-    print_endline (strip_var_delims new_text)
+    write (strip_var_delims new_text)
   | _ -> ()
 ;;
