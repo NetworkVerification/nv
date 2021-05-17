@@ -12,6 +12,13 @@ let strip_var_delims s =
   Str.global_replace regexp "" s
 ;;
 
+let strip_sol_types s =
+  let regexp = Str.regexp "solution<.*>" in
+  Str.global_replace regexp "solution" s
+;;
+
+let clean_text = strip_var_delims % strip_sol_types
+
 type fatLevel =
   | Core
   | Aggregation
@@ -124,10 +131,10 @@ let main =
   let cfg, rest = argparse default "nvgen" Sys.argv in
   let file = rest.(0) in
   let op = rest.(1) in
-  let write =
+  let write s =
     match cfg.outfile with
-    | "-" -> IO.write_string IO.stdout
-    | s -> File.with_file_out s IO.write_string
+    | "-" -> IO.write_string IO.stdout s
+    | file -> File.with_file_out file (fun out -> IO.write_string out s)
   in
   match op with
   | "hijack" ->
@@ -147,6 +154,7 @@ let main =
     let decls, _ = Input.parse file in
     let new_ds = hijack decls stub in
     let new_text = Printing.declarations_to_string new_ds in
-    write (strip_var_delims new_text)
+    let cleaned = clean_text new_text in
+    write cleaned
   | _ -> ()
 ;;
