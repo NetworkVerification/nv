@@ -133,8 +133,8 @@ let main =
   let op = rest.(1) in
   let write s =
     match cfg.outfile with
-    | "-" -> IO.write_string IO.stdout s
-    | file -> File.with_file_out file (fun out -> IO.write_string out s)
+    | "-" -> IO.write_line IO.stdout s
+    | file -> File.with_file_out file (fun out -> IO.write_line out s)
   in
   match op with
   | "hijack" ->
