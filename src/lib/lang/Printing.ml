@@ -6,41 +6,14 @@ open Nv_utils.PrimitiveCollections
 open Nv_utils.RecordUtils
 open Nv_utils
 
-let is_keyword_op op =
-  match op with
-  | And
-  | Or
-  | Not
-  | UAdd _
-  | USub _
-  | UAnd _
-  | Eq
-  | ULess _
-  | ULeq _
-  | MGet
-  | NLess
-  | NLeq -> false
-  | TGet _
-  | TSet _
-  | MCreate
-  | MSet
-  | MMap
-  | MMerge
-  | MFoldNode
-  | MForAll
-  | MFoldEdge
-  | MMapFilter
-  | MMapIte
-  | AtMost _ -> true
-;;
-
 type op_position =
   | Prefix of string
   | Infix of string
   | Circumfix of string list
 
-(* set to true if you want to print universal quanifiers explicitly *)
-let quantifiers = true
+(** Precedence levels determine where parentheses are used to distinguish expressions.
+ ** A higher precedence expression enclosed by a lower precedence expression has parentheses.
+ ** The topmost level always starts at maximum precedence. *)
 let max_prec = 10
 
 let prec_op op =
@@ -200,7 +173,7 @@ let rec pattern_to_string pattern =
 ;;
 
 let padding i = String.init i (fun _ -> ' ')
-let ty_env_to_string env = Nv_datastructures.Env.to_string ty_to_string env.ty
+let ty_env_to_string env = Env.to_string ty_to_string env.ty
 
 let tyo_to_string tyo =
   match tyo with
@@ -211,10 +184,9 @@ let tyo_to_string tyo =
 let glob = ref false
 
 let rec value_env_to_string ~show_types env =
-  Nv_datastructures.Env.to_string (value_to_string_p ~show_types max_prec) env.value
+  Env.to_string (value_to_string_p ~show_types max_prec) env.value
 
 and env_to_string ?(show_types = false) env =
-  let open Nv_datastructures in
   if env.ty = Env.empty && env.value = Env.empty
   then " "
   else "[" ^ ty_env_to_string env ^ "|" ^ value_env_to_string ~show_types env ^ "] "
@@ -285,7 +257,7 @@ and value_to_string_p ~show_types prec v =
     (* Printf.sprintf "None:%s" (ty_to_string (oget v.vty)) *)
     "None"
   | VOption (Some v) ->
-    let s = "Some(" ^ value_to_string_p max_prec v ^ ")" in
+    let s = "Some " ^ value_to_string_p max_prec v in
     if max_prec > prec then "(" ^ s ^ ")" else s
   | VClosure cl -> closure_to_string_p ~show_types prec cl
   | VRecord map -> print_record "=" (value_to_string_p prec) map
@@ -301,7 +273,7 @@ and exp_to_string_p ~show_types prec e =
     | EVar x -> Var.to_string x
     | EVal v -> value_to_string_p prec v
     | EOp (op, es) -> op_args_to_string ~show_types prec p op es
-    | EFun f -> func_to_string_p ~show_types prec f
+    | EFun f -> func_to_string_p ~show_types p f
     | EApp (e1, e2) -> exp_to_string_p prec e1 ^ " " ^ exp_to_string_p p e2 ^ " "
     | EIf (e1, e2, e3) ->
       "if "
@@ -323,7 +295,7 @@ and exp_to_string_p ~show_types prec e =
       else if List.length es = 1
       then "ETuple1(" ^ exp_to_string_p max_prec (List.hd es) ^ ")"
       else "(" ^ comma_sep (exp_to_string_p max_prec) es ^ ")"
-    | ESome e -> "Some(" ^ exp_to_string_p prec e ^ ")"
+    | ESome e -> "Some " ^ exp_to_string_p prec e
     | EMatch (e1, bs) ->
       "(match "
       ^ exp_to_string_p max_prec e1
@@ -357,7 +329,7 @@ and op_args_to_string ~show_types prec p op es =
   | Prefix o ->
     (match es with
     | [e1] -> o ^ " " ^ exp_to_string_p p e1
-    | es -> o ^ " " ^ space_sep (exp_to_string_p max_prec) es)
+    | es -> o ^ " " ^ space_sep (exp_to_string_p p) es)
   | Infix o ->
     (match es with
     | [e1; e2] -> exp_to_string_p p e1 ^ " " ^ o ^ " " ^ exp_to_string_p prec e2
