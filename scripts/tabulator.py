@@ -182,21 +182,20 @@ def run_benchmarks_parallel(benchdir, benches, time, verbose) -> tuple[str, dict
         )
 
 
-def run_trials_sync(benchdir, benches, time, trials, verbose):
+def run_trials_sync(benchdir, benches, time, trials, verbose, logfile):
     """
     Run trials of the given benchmarks and return a dictionary of profiling information.
     """
     runs = {}
-    log = ""
     for i in range(trials):
-        log += "Running trial " + str(i + 1) + " of " + str(trials) + "\n"
+        logfile.write("Running trial " + str(i + 1) + " of " + str(trials) + "\n")
         logs, results = run_benchmarks_sync(benchdir, benches, time, verbose)
-        log += logs
+        logfile.write(logs)
         runs[i] = results
-    return log, runs
+    return runs
 
 
-def run_trials_parallel(benchdir, benches, time, trials, verbose):
+def run_trials_parallel(benchdir, benches, time, trials, verbose, logfile):
     """
     Run the benchmarks in the given directory and return a dictionary of
     profiling information.
@@ -207,8 +206,8 @@ def run_trials_parallel(benchdir, benches, time, trials, verbose):
         runs = pool.starmap(run_benchmarks_sync, args)
         logs, results = map(list, zip(*runs))
         results = dict(enumerate(results))
-        log = "".join(logs)
-        return log, results
+        logfile.write("".join(logs))
+        return results
 
 
 def invert_results_dict(results):
@@ -262,7 +261,6 @@ if __name__ == "__main__":
     TIMEOUT = 3600
     TRIALS = 2
     RUNS = {}
-    OP = DISTINCT_OPERATIONS
     for sz in SIZES:
         benchdir = DIRECTORY.format(sz)
         print(f"Running benchmark {benchdir}")
@@ -272,10 +270,14 @@ if __name__ == "__main__":
             # ("vertical", f"sp{sz}-vpart.nv"),
             ("pods", f"sp{sz}-pods.nv"),
         ]
-        log, results = run_trials_parallel(
-            benchdir, benchmarks, TIMEOUT, TRIALS, verbose=False
+        results = run_trials_parallel(
+            benchdir,
+            benchmarks,
+            TIMEOUT,
+            TRIALS,
+            verbose=False,
+            logfile=sys.stdout,
         )
-        print(log)
         RUNS[benchdir] = results
 
     write_csv(RUNS, "kirigami-results-test.csv")

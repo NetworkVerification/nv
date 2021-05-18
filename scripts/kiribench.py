@@ -6,6 +6,7 @@ Main module to generate, run and tabulate the Kirigami benchmarks.
 import argparse
 import os
 import re
+import sys
 from datetime import datetime
 from gen_part_nv import gen_part_nv, run_nv_simulate, FattreeCut
 from tabulator import (
@@ -89,6 +90,7 @@ def tabulate_fattree_benchmarks(
     parallel=False,
     simulate=True,
     verbose=False,
+    log=sys.stdout,
 ):
     """
     Run all the vertical and horizontal benchmarks.
@@ -101,6 +103,7 @@ def tabulate_fattree_benchmarks(
     unsimulated or "{benchstr.format(size)}-{cut}-x.nv" if simulated.
     """
     runs = {}
+    out = open(log, "a")
     for size in sizes:
         sim = "-x" if simulate else ""  # for the simulation benchmarks
         benches = [(None, f"{benchstr.format(size)}.nv")] + [
@@ -111,18 +114,20 @@ def tabulate_fattree_benchmarks(
         else:
             fn = run_trials_sync
         try:
-            log, results = fn(
+            results = fn(
                 directory.format(size),
                 benches,
                 timeout,
                 trials,
                 verbose,
+                out,
             )
-            print(log)
             runs[directory.format(size)] = results
         except KeyboardInterrupt:
             print("User interrupted benchmarking. Saving partial results...")
+            out.close()
             save_results(runs)
+    out.close()
     return runs
 
 
@@ -199,6 +204,15 @@ def main():
         action="store_true",
         help="print the trial's stdout",
     )
+    parser_run.add_argument(
+        "-l",
+        "--log-file",
+        nargs="?",
+        type=argparse.FileType("w"),
+        const=sys.stdout,
+        default=sys.stdout,
+        help="write output to a given log file",
+    )
 
     parser_clean = subparsers.add_parser("clean")
     parser_clean.add_argument(
@@ -235,6 +249,7 @@ def main():
             trials=args.trials,
             parallel=args.parallel,
             verbose=args.verbose,
+            log=args.log_file,
         )
         save_results(results)
 
