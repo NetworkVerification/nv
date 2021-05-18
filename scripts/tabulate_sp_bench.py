@@ -8,7 +8,7 @@ import os
 import sys
 import re
 import csv
-import typing
+from typing import Any, Optional
 
 # constants for mean_float_dict's handling of operations that run multiple
 # times across partitions
@@ -40,6 +40,8 @@ def fill_matrix(matrix: list[list[int]]):
 def mean_float_dict(dicts: list[dict], multiop=LIST_OPERATIONS) -> dict:
     """
     Average the results across the given list of dictionaries.
+    The multiop flag determines what to do in cases where an operation
+    occurs multiple times in a single run, e.g. inlining.
     """
     averaged = dict()
     keys = set()
@@ -58,13 +60,10 @@ def mean_float_dict(dicts: list[dict], multiop=LIST_OPERATIONS) -> dict:
             print(key)
             print([d[key] for d in dicts])
             sys.exit(1)
-        # if total is true, sum all the parts together
         if multiop == LIST_OPERATIONS:
             averaged[key] = newval
         elif multiop == SUM_OPERATIONS:
             averaged[key] = sum(newval)
-        # otherwise, just return a list of each time that
-        # operation was profiled
         elif multiop == DISTINCT_OPERATIONS:
             for (i, val) in enumerate(newval):
                 averaged[key + " " + str(i)] = val
@@ -73,9 +72,11 @@ def mean_float_dict(dicts: list[dict], multiop=LIST_OPERATIONS) -> dict:
     return averaged
 
 
-def join_result_dicts(*dicts) -> tuple[str, dict[str, typing.Any]]:
+def join_result_dicts(
+    *dicts: tuple[str, Optional[str], dict[str, Any]]
+) -> tuple[str, dict[str, Any]]:
     """
-    Join the results dictionaries into a single dictionary.
+    Join the results dictionaries for separate cuts into a single dictionary over all cuts.
     """
     joined = dict()
     logs = ""
@@ -95,26 +96,26 @@ def parse_smt(output: str) -> dict:
     """
     action = re.compile(r"(.*) took: (\d*\.?\d+) secs to complete", re.M)
     z3action = re.compile(r"^\s*:(\w*)\s*(\d*\.?\d+)", re.M)
-    # get all the transformation profiling
+    assertion = re.compile(r"(Assertion|Guarantee) (\d*) failed", re.M)
     profile = dict()
-    if "failed" in output:
-        # print("WARNING: assertions failed during verification!")
-        profile["safe"] = [False]
-    else:
-        profile["safe"] = [True]
-    for match in re.finditer(action, output):
+    # get transformation profiling
+    for match in action.finditer(output):
         transform = match.group(1)
         time = float(match.group(2))
         profile.setdefault(transform, list()).append(time)
-    # get all the z3 profiling
-    for match in re.finditer(z3action, output):
+    # get z3 profiling
+    for match in z3action.finditer(output):
         stat = "z3 " + match.group(1)
         qua = float(match.group(2))
         profile.setdefault(stat, list()).append(qua)
+    # get assertion failures
+    for match in assertion.finditer(output):
+        assn = match.group(2)
+        profile.setdefault("failed", list()).append(assn)
     return profile
 
 
-def run_nv_smt(path: str, cut: typing.Optional[str], time: float, verbose: bool):
+def run_nv_smt(path: str, cut: Optional[str], time: float, verbose: bool):
     """
     Run nv's SMT tool and capture its output.
     If it doesn't finish within the given time, kill it.
@@ -157,7 +158,8 @@ def run_bench(cut, path, time, verbose):
 
 def run_benchmarks_sync(benchdir, benches, time, verbose) -> tuple[str, dict]:
     """
-    Run the given benchmarks in the given directory in sequence.
+    Run the given benchmarks in the given directory in sequence (once each).
+    Return a log of output and a dictionary with the benchmark results for each cut.
     """
     return join_result_dicts(
         *[run_bench(c, os.path.join(benchdir, n), time, verbose) for (c, n) in benches]
@@ -166,8 +168,10 @@ def run_benchmarks_sync(benchdir, benches, time, verbose) -> tuple[str, dict]:
 
 def run_benchmarks_parallel(benchdir, benches, time, verbose) -> tuple[str, dict]:
     """
-    Run the given benchmarks in the given directory in parallel.
+    Run the given benchmarks in the given directory in parallel (once each).
+    Return a log of output and a dictionary with the benchmark results for each cut.
     """
+    # set up the args for each run_bench
     paths = map(lambda t: (t[0], os.path.join(benchdir, t[1]), time, verbose), benches)
 
     with multiprocessing.Pool(processes=len(benches)) as pool:
@@ -179,10 +183,9 @@ def run_benchmarks_parallel(benchdir, benches, time, verbose) -> tuple[str, dict
         )
 
 
-def run_trials_sync(benchdir, benches, time, trials, multiop, verbose):
+def run_trials_sync(benchdir, benches, time, trials, multiop, verbose, average):
     """
-    Run trials of the given benchmarks
-    and return a dictionary of profiling information.
+    Run trials of the given benchmarks and return a dictionary of profiling information.
     """
     runs = []
     log = ""
@@ -191,12 +194,15 @@ def run_trials_sync(benchdir, benches, time, trials, multiop, verbose):
         logs, results = run_benchmarks_sync(benchdir, benches, time, verbose)
         log += logs
         runs.append(results)
-    mean = mean_float_dict(runs, multiop)
-    mean["Benchmark"] = benchdir
+    if average:
+        mean = mean_float_dict(runs, multiop)
+        mean["Benchmark"] = benchdir
+    else:
+        mean = runs
     return log, mean
 
 
-def run_trials_parallel(benchdir, benches, time, trials, multiop, verbose):
+def run_trials_parallel(benchdir, benches, time, trials, multiop, verbose, average):
     """
     Run the benchmarks in the given directory and return a dictionary of
     profiling information.
@@ -206,18 +212,25 @@ def run_trials_parallel(benchdir, benches, time, trials, multiop, verbose):
         args = [(benchdir, benches, time, verbose) for _ in range(trials)]
         runs = pool.starmap(run_benchmarks_sync, args)
         logs, results = map(list, zip(*runs))
-        mean = mean_float_dict(results, multiop)
-        mean["Benchmark"] = benchdir
+        if average:
+            mean = mean_float_dict(results, multiop)
+            mean["Benchmark"] = benchdir
+        else:
+            mean = results
         log = "".join(logs)
         return log, mean
 
 
-def write_csv(results, path):
-    """Write the results dictionaries to a CSV."""
+def write_csv(results: dict[int, list[dict]], path):
+    """
+    Write the results dictionary to a CSV.
+    Each line of the CSV describes an operation run for a given cut during a given trial,
+    some number of times (some operations may run many times if the cut produces many subnetworks).
+    """
     # get all field names
     fields = set()
-    for result in results:
-        fields.update(set(result.keys()))
+    for result in results.values():
+        fields.update(set([r.keys() for r in result]))
     with open(path, "w") as csvf:
         writer = csv.DictWriter(csvf, fieldnames=list(fields), restval="")
         writer.writeheader()
@@ -242,6 +255,8 @@ if __name__ == "__main__":
             ("pods", f"sp{sz}-pods.nv"),
         ]
         RUNS.append(
-            run_trials_sync(benchdir, benchmarks, TIMEOUT, TRIALS, OP, verbose=False)
+            run_trials_sync(
+                benchdir, benchmarks, TIMEOUT, TRIALS, OP, verbose=False, average=True
+            )
         )
     write_csv(RUNS, "kirigami-results-test.csv")

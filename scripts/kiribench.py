@@ -77,7 +77,7 @@ def save_results(runs):
     """Save runs to CSV."""
     timestamp = datetime.now()
     time = timestamp.strftime("%Y-%m-%d-%H:%M:%S")
-    return write_csv(runs, f"kirigami-results-{time}.csv")
+    write_csv(runs, f"kirigami-results-{time}.csv")
 
 
 def tabulate_fattree_benchmarks(
@@ -90,6 +90,7 @@ def tabulate_fattree_benchmarks(
     parallel=False,
     simulate=True,
     verbose=False,
+    average=True,
 ):
     """
     Run all the vertical and horizontal benchmarks.
@@ -101,7 +102,7 @@ def tabulate_fattree_benchmarks(
     The partitioned files should have the format "{benchstr.format(size)}-{cut}.nv" if
     unsimulated or "{benchstr.format(size)}-{cut}-x.nv" if simulated.
     """
-    runs = []
+    runs = {}
     for size in sizes:
         sim = "-x" if simulate else ""  # for the simulation benchmarks
         benches = [(None, f"{benchstr.format(size)}.nv")] + [
@@ -119,9 +120,10 @@ def tabulate_fattree_benchmarks(
                 trials,
                 DISTINCT_OPERATIONS,
                 verbose,
+                average,
             )
             print(log)
-            runs.append(results)
+            runs.setdefault(size, list()).append(results)
         except KeyboardInterrupt:
             print("User interrupted benchmarking. Saving partial results...")
             save_results(runs)
@@ -201,6 +203,12 @@ def main():
         action="store_true",
         help="print the trial's stdout",
     )
+    parser_run.add_argument(
+        "-a",
+        "--all",
+        action="store_false",
+        help="write all trials separately, instead of one file with the average",
+    )
 
     parser_clean = subparsers.add_parser("clean")
     parser_clean.add_argument(
@@ -237,6 +245,7 @@ def main():
             trials=args.trials,
             parallel=args.parallel,
             verbose=args.verbose,
+            average=args.all,
         )
         save_results(results)
 
