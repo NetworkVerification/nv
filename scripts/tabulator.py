@@ -72,19 +72,18 @@ def mean_float_dict(dicts: list[dict], multiop=LIST_OPERATIONS) -> dict:
     return averaged
 
 
-def join_result_dicts(
+def join_cut_dicts(
     *dicts: tuple[str, Optional[str], dict[str, Any]]
-) -> tuple[str, dict[str, Any]]:
+) -> tuple[str, dict[str, dict[str, Any]]]:
     """
     Join the results dictionaries for separate cuts into a single dictionary over all cuts.
     """
     joined = dict()
     logs = ""
     for (log, cut, results) in dicts:
-        for (key, val) in results.items():
-            if cut is None:
-                cut = "monolithic"
-            joined[key + f" ({cut})"] = val
+        if cut is None:
+            cut = "monolithic"
+        joined[cut] = results
         logs += log
     return logs, joined
 
@@ -161,7 +160,7 @@ def run_benchmarks_sync(benchdir, benches, time, verbose) -> tuple[str, dict]:
     Run the given benchmarks in the given directory in sequence (once each).
     Return a log of output and a dictionary with the benchmark results for each cut.
     """
-    return join_result_dicts(
+    return join_cut_dicts(
         *[run_bench(c, os.path.join(benchdir, n), time, verbose) for (c, n) in benches]
     )
 
@@ -175,7 +174,7 @@ def run_benchmarks_parallel(benchdir, benches, time, verbose) -> tuple[str, dict
     paths = map(lambda t: (t[0], os.path.join(benchdir, t[1]), time, verbose), benches)
 
     with multiprocessing.Pool(processes=len(benches)) as pool:
-        return join_result_dicts(
+        return join_cut_dicts(
             *pool.starmap(
                 run_bench,
                 paths,
@@ -183,26 +182,21 @@ def run_benchmarks_parallel(benchdir, benches, time, verbose) -> tuple[str, dict
         )
 
 
-def run_trials_sync(benchdir, benches, time, trials, multiop, verbose, average):
+def run_trials_sync(benchdir, benches, time, trials, verbose):
     """
     Run trials of the given benchmarks and return a dictionary of profiling information.
     """
-    runs = []
+    runs = {}
     log = ""
     for i in range(trials):
         log += "Running trial " + str(i + 1) + " of " + str(trials) + "\n"
         logs, results = run_benchmarks_sync(benchdir, benches, time, verbose)
         log += logs
-        runs.append(results)
-    if average:
-        mean = mean_float_dict(runs, multiop)
-        mean["Benchmark"] = benchdir
-    else:
-        mean = runs
-    return log, mean
+        runs[i] = results
+    return log, runs
 
 
-def run_trials_parallel(benchdir, benches, time, trials, multiop, verbose, average):
+def run_trials_parallel(benchdir, benches, time, trials, verbose):
     """
     Run the benchmarks in the given directory and return a dictionary of
     profiling information.
@@ -212,38 +206,62 @@ def run_trials_parallel(benchdir, benches, time, trials, multiop, verbose, avera
         args = [(benchdir, benches, time, verbose) for _ in range(trials)]
         runs = pool.starmap(run_benchmarks_sync, args)
         logs, results = map(list, zip(*runs))
-        if average:
-            mean = mean_float_dict(results, multiop)
-            mean["Benchmark"] = benchdir
-        else:
-            mean = results
+        results = dict(enumerate(results))
         log = "".join(logs)
-        return log, mean
+        return log, results
 
 
-def write_csv(results: dict[int, list[dict]], path):
+def invert_results_dict(results):
+    """
+    Flatten the results nested dictionary into a CSV-writable format.
+    Results has the following nested structure as input:
+    dict[directory, dict[trial, dict[cut, dict[operation, list of occurrences]]]]
+    The output instead has the form:
+    list[dict[str,str]] of N elements, where each element has the following keys:
+    - 'trial'
+    - 'cut'
+    - 'operation'
+    - 'occurrence'
+    - and a key for each directory
+    and N = #trials * #cuts * #operations * #occurrences
+    """
+    output: dict[tuple, dict] = {}
+    for (dir, trials) in results.items():
+        for (trial, cuts) in trials.items():
+            for (cut, ops) in cuts.items():
+                for (op, occurrences) in ops.items():
+                    for (i, t) in enumerate(occurrences):
+                        common_hash = (trial, cut, op, i)
+                        output.setdefault(common_hash, dict())[f"{dir}"] = t
+    rows = []
+    for ((t, c, o, i), data) in output.items():
+        common = {"operation": o, "cut": c, "trial": t, "occurrence": i}
+        common.update(data)
+        rows.append(common)
+    return rows
+
+
+def write_csv(results: dict[str, dict[str, dict]], path):
     """
     Write the results dictionary to a CSV.
     Each line of the CSV describes an operation run for a given cut during a given trial,
     some number of times (some operations may run many times if the cut produces many subnetworks).
     """
-    # get all field names
-    fields = set()
-    for result in results.values():
-        fields.update(set([r.keys() for r in result]))
+    output = invert_results_dict(results)
+    fields = output[0].keys()
     with open(path, "w") as csvf:
         writer = csv.DictWriter(csvf, fieldnames=list(fields), restval="")
         writer.writeheader()
-        for result in results:
-            writer.writerow(result)
+        for row in output:
+            writer.writerow(row)
 
 
 if __name__ == "__main__":
     DIRECTORY = "benchmarks/SinglePrefix/FAT{}"
-    SIZES = [4, 8]
+    SIZES = [4]
     TIMEOUT = 3600
-    TRIALS = 10
-    RUNS = []
+    TRIALS = 2
+    RUNS = {}
     OP = DISTINCT_OPERATIONS
     for sz in SIZES:
         benchdir = DIRECTORY.format(sz)
@@ -251,12 +269,13 @@ if __name__ == "__main__":
         benchmarks = [
             (None, f"sp{sz}.nv"),
             ("horizontal", f"sp{sz}-part.nv"),
-            ("vertical", f"sp{sz}-vpart.nv"),
+            # ("vertical", f"sp{sz}-vpart.nv"),
             ("pods", f"sp{sz}-pods.nv"),
         ]
-        RUNS.append(
-            run_trials_sync(
-                benchdir, benchmarks, TIMEOUT, TRIALS, OP, verbose=False, average=True
-            )
+        log, results = run_trials_parallel(
+            benchdir, benchmarks, TIMEOUT, TRIALS, verbose=False
         )
+        print(log)
+        RUNS[benchdir] = results
+
     write_csv(RUNS, "kirigami-results-test.csv")

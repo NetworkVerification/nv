@@ -8,11 +8,10 @@ import os
 import re
 from datetime import datetime
 from gen_part_nv import gen_part_nv, run_nv_simulate, FattreeCut
-from tabulate_sp_bench import (
+from tabulator import (
     run_trials_sync,
     run_trials_parallel,
     write_csv,
-    DISTINCT_OPERATIONS,
 )
 
 BENCHMARKS = {
@@ -90,7 +89,6 @@ def tabulate_fattree_benchmarks(
     parallel=False,
     simulate=True,
     verbose=False,
-    average=True,
 ):
     """
     Run all the vertical and horizontal benchmarks.
@@ -118,12 +116,10 @@ def tabulate_fattree_benchmarks(
                 benches,
                 timeout,
                 trials,
-                DISTINCT_OPERATIONS,
                 verbose,
-                average,
             )
             print(log)
-            runs.setdefault(size, list()).append(results)
+            runs[directory.format(size)] = results
         except KeyboardInterrupt:
             print("User interrupted benchmarking. Saving partial results...")
             save_results(runs)
@@ -203,12 +199,6 @@ def main():
         action="store_true",
         help="print the trial's stdout",
     )
-    parser_run.add_argument(
-        "-a",
-        "--all",
-        action="store_false",
-        help="write all trials separately, instead of one file with the average",
-    )
 
     parser_clean = subparsers.add_parser("clean")
     parser_clean.add_argument(
@@ -245,7 +235,6 @@ def main():
             trials=args.trials,
             parallel=args.parallel,
             verbose=args.verbose,
-            average=args.all,
         )
         save_results(results)
 
