@@ -105,7 +105,7 @@ let hijack decls hijackStub =
         match Var.name v with
         | "init" -> hijack_init new_node hijack_var e
         | "transferBgp" -> hijack_transferBgp new_edges e
-        | "assert_node" -> (* TODO *) e
+        | "assert_node" -> hijack_assert_node new_node e
         | _ -> e
       in
       DLet (v, oty, e)

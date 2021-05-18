@@ -3,6 +3,9 @@ open Nv_lang
 open Syntax
 open Collections
 
+let legit = e_val (vint (Integer.of_int 0))
+let illegit = e_val (vint (Integer.of_int 1))
+
 (* e should be of the form:
  * fun node -> match node with | 0n -> ... | 1n -> ... *)
 let hijack_init hijacker hijack_var e =
@@ -32,8 +35,6 @@ let hijack_edgetag (hijacker : node) (dest : node) =
   let edge_var = Var.fresh "e" in
   let comms_var = Var.fresh "comms" in
   let tru = ebool true in
-  let legit = e_val (vint (Integer.of_int 0)) in
-  let illegit = e_val (vint (Integer.of_int 1)) in
   let set_add k = eop MSet [evar comms_var; k; tru] in
   let dest = e_val (vnode dest) in
   let hijacker = e_val (vnode hijacker) in
@@ -116,4 +117,70 @@ let hijack_transferBgp (edges : (edge * transferBgpBehavior) list) e =
   | EFun { arg; body; _ } ->
     efun (func arg (Visitors.map_exp (update_edge_match arg bvar) body))
   | _ -> failwith "hijack_transferBgp: expected a function"
+;;
+
+(* Return a match statement over the given variable's bgp field, testing an assertion. *)
+let assert_bgp x =
+  let b = Var.fresh "b" in
+  let comms = eproject (evar b) "comms" in
+  let has_illegit_tag = eop Not [eop MGet [comms; illegit]] in
+  let xbgp = eproject x "bgp" in
+  let branches = addBranch (POption (Some (PVar b))) has_illegit_tag emptyBranch in
+  let branches = addBranch (POption None) (ebool false) branches in
+  ematch xbgp branches
+;;
+
+(* Modify assert_node to instead have the form:
+ * match x.selected with
+ *   | None -> false
+ *   | Some prot -> !(prot = 3u2) || (match x.selected with
+ *      | None -> false
+ *      | Some b -> (node = hijacker) || (!b.comms[illegitimate]))
+ * where hijacker is the newly-added node and illegitimate is the tag to identify it.
+ *)
+let hijack_assert_node hijacker e =
+  let update_branch_case x (p, e) =
+    match p with
+    | POption None -> p, e
+    | PWild ->
+      (* change to capture the protocol, and test it.
+       * if it's BGP, perform the additional BGP test; otherwise, return true? *)
+      let prot = Var.fresh "prot" in
+      (* create a 3u2, used to identify the BGP protocol *)
+      let protoBgp = e_val (vint (Integer.create 3 2)) in
+      let isNotBgpProt = eop Not [eop Eq [evar prot; protoBgp]] in
+      let test = eop Or [isNotBgpProt; assert_bgp x] in
+      POption (Some (PVar prot)), test
+    | _ ->
+      failwith
+        ("found unexpected branch pattern in hijack_assert_node: "
+        ^ Printing.pattern_to_string p)
+  in
+  match e.e with
+  | EFun f1 ->
+    let body1 =
+      match f1.body.e with
+      | EFun f2 ->
+        let node = evar f1.arg in
+        let body2 =
+          match f2.body.e with
+          | EIf (e1, e2, e3) ->
+            let hijacker = e_val (vnode hijacker) in
+            let is_hijacker = eop Eq [node; hijacker] in
+            let x = evar f2.arg in
+            let e2' =
+              match e2.e with
+              | EMatch (e', bs) -> ematch e' (mapBranches (update_branch_case x) bs)
+              | _ -> failwith "unexpected inner expression in hijack_assert_node"
+            in
+            (* default to true for the hijacker: we don't care what their solution is *)
+            let e2or = eop Or [is_hijacker; e2'] in
+            eif e1 e2or e3
+          | _ -> failwith "unexpected outer expression in hijack_assert_node"
+        in
+        efunc { f2 with body = body2 }
+      | _ -> failwith "unexpected expression in hijack_assert_node"
+    in
+    efunc { f1 with body = body1 }
+  | _ -> failwith "unexpected expression in hijack_assert_node"
 ;;
