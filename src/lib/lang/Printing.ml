@@ -20,7 +20,7 @@ let prec_op op =
   match op with
   | And -> 7
   | Or -> 7
-  | Not -> 6
+  | Not -> 4
   | UAdd _ -> 4
   | USub _ -> 4
   | Eq -> 5
