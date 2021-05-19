@@ -138,7 +138,7 @@ class NvFile:
         self.verbose = verbose
         with open(path) as f:
             self.mono = f.read()
-        self.graph = construct_graph(self.mono, net_type)
+        self.graph = construct_graph(self.mono)
         if self.verbose:
             print(self.print_graph())
         if simulate:
@@ -196,32 +196,19 @@ class NvFile:
         # put 'em all together
         return "\n".join([text, partition, interface])
 
-    def hijack(self, predicate, misconfigured):
-        """
-        Return a new NV file which represents hijacking the network.
-        predicate describes the require predicate for the hijack.
-        misconfigured controls whether the network policy should successfully
-        block the hijack or if it should succeed.
-        """
-        # TODO: add a new hijacker node with edges to each of the spines
-        # TODO: add symbolic for new hijacker node and a require predicate
-        # TODO: modify init to initialize the hijacker
-        # TODO: add transferBgp cases for hijacker edges, and add special hijack tag
-        # TODO: add new assertion
-
     def print_graph(self):
         return str(self.graph)
 
 
-def construct_graph(text, is_fattree):
+def construct_graph(text: str):
     """
     Construct a digraph from the given edge and node information.
     """
     g = igraph.Graph(directed=True)
-    nodes = find_nodes(text, is_fattree)
+    nodes = find_nodes(text)
     for (v, grp) in nodes:
         g.add_vertex(g=grp)
-    edges = find_edges(text, is_fattree)
+    edges = find_edges(text)
     g.add_edges(edges)
     # add stable node numbering
     for v in g.vs():
@@ -229,35 +216,30 @@ def construct_graph(text, is_fattree):
     return g
 
 
-def find_edges(text, is_fattree):
+def node_to_int(node: str) -> int:
+    return int(node.rstrip("n"))
+
+
+def find_edges(text: str):
     """Return the edges."""
-    if is_fattree:
-        pat = (
-            r"(\d*)-(\d*); "
-            r"\(\*(core|aggregation|edge)-\d*,Serial\d*"
-            r" --> (core|aggregation|edge)-\d*,Serial\d*\*\)"
-        )
-    else:
-        pat = r"(\d*)-(\d*); \(\*[\w/,]* --> [\w/,]*\*\)"
+    pat = r"(\d*n?)-(\d*n?);"
     prog = re.compile(pat)
     matches = prog.finditer(text)
-    outputs = [(int(m.group(1)), int(m.group(2))) for m in matches]
+    # use an intermediate set to remove duplicates, just in case they occur
+    outputs = list(
+        set([(node_to_int(m.group(1)), node_to_int(m.group(2))) for m in matches])
+    )
     outputs.sort()
     return outputs
 
 
-def find_nodes(text, net_type):
+def find_nodes(text: str):
     """Return the nodes."""
-
-    if net_type is not NetType.NONFAT:
-        pat = r"(core|aggregation|edge)-\d*=(\d*)"
-
-    else:
-        pat = r"(\w+)(?:-\d*)?=(\d+)"
+    pat = r"(\w+)(?:-\d*)?=(\d+)"
     prog = re.compile(pat)
     # find all nodes
     matches = prog.finditer(text)
-    vertices = [(int(m.group(2)), NodeGroup.parse(m.group(1))) for m in matches]
+    vertices = [(node_to_int(m.group(2)), NodeGroup.parse(m.group(1))) for m in matches]
     vertices.sort()
     return vertices
 
@@ -447,7 +429,7 @@ def get_vertical_cross_edges(graph, partitions, dest):
 
 
 def run_nv_simulate(path):
-    """ Run nv's simulation tool and capture its output. """
+    """Run nv's simulation tool and capture its output."""
     nvpath = os.path.join(os.getcwd(), "nv")
     if not os.path.exists(nvpath):
         print("Did not find 'nv' executable in the current working directory")
@@ -489,7 +471,7 @@ def gen_part_nv(nvfile, dest, cut: FattreeCut, simulate=True, verbose=False):
         print(nodes)
         print([e for e in edges])
     partitioned = nv.generate_parted(nodes, edges)
-    with open(part) as outfile:
+    with open(part, "w") as outfile:
         # add the preamble for cuts
         outfile.write(cut.preamble(nvfile))
         outfile.write("\n")
