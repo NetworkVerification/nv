@@ -50,6 +50,7 @@ let parse_node_groups (fname : string) : (int, nodeGroup) Map.t =
     | _ -> Console.error ("File not found: " ^ fname)
   in
   let regexp = Str.regexp "\\([_a-zA-z0-9]+\\)\\(-[0-9]*\\)?=\\([0-9]+\\)" in
+  (* aux fn to add nodes to a map with their associated group *)
   let rec collect_matches m line i =
     let offset =
       try Some (Str.search_forward regexp line i) with
@@ -71,6 +72,14 @@ let parse_node_groups (fname : string) : (int, nodeGroup) Map.t =
   Enum.fold (fun m l -> collect_matches m l 0) Map.empty lines
 ;;
 
+let nodeGroups_to_string (map : (int, nodeGroup) Map.t) : string =
+  (* NOTE: we lose the indices associated with fattrees when we parse the groups,
+   * but since we don't seem to need them this is hopefully OK *)
+  let addGroup n g l = l @ [Printf.sprintf "%s=%d" (string_of_nodeGroup g) n] in
+  let nodes = String.concat ", " (Map.foldi addGroup map []) in
+  "(* {" ^ nodes ^ "} *)"
+;;
+
 type hijackStub =
   { leak : bool
   ; destination : int
@@ -90,10 +99,10 @@ type notransStub = { relationship : exp }
 let hijack decls hijackStub =
   let hijack_var = Var.fresh "hijack" in
   let new_node = get_nodes decls |> Option.get in
-  (* TODO: add ExitLeak case if necessary *)
+  let nspines = List.length hijackStub.spines in
   let new_edges =
-    List.map (fun u -> (u, new_node), ExitDrop) hijackStub.spines
-    @ List.map (fun v -> (new_node, v), Enter) hijackStub.spines
+    List.mapi (fun i u -> (u, new_node), i = nspines && hijackStub.leak) hijackStub.spines
+    @ List.map (fun v -> (new_node, v), true) hijackStub.spines
   in
   let aty = get_attr_type decls |> Option.get in
   let update_decl d =
@@ -119,7 +128,8 @@ let hijack decls hijackStub =
     annot TBool (eapp hijackStub.predicate (annot aty (evar hijack_var)))
   in
   let hijack_decls = [DSymbolic (hijack_var, Ty aty); DRequire hijack_app] in
-  edgeTag :: (decls @ hijack_decls)
+  (* return the hijacker node *)
+  edgeTag :: (decls @ hijack_decls), new_node
 ;;
 
 type genOp =
@@ -152,9 +162,12 @@ let main =
     in
     let stub = { leak = cfg.leak; destination = cfg.destination; predicate; spines } in
     let decls, _ = Input.parse file in
-    let new_ds = hijack decls stub in
+    let new_ds, hijacker = hijack decls stub in
     let new_text = Printing.declarations_to_string new_ds in
     let cleaned = clean_text new_text in
-    write cleaned
+    (* add the hijacker to the groups *)
+    let groups = Map.add hijacker (Fattree Core) groups in
+    let groupsComment = nodeGroups_to_string groups in
+    write (cleaned ^ groupsComment)
   | _ -> ()
 ;;

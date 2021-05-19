@@ -67,27 +67,22 @@ let mapi_record (f : String.t * exp -> exp) labels e =
 let update_record_at f label = mapi_record (fun (l, e) -> if l = label then f e else e)
 
 (* e is a function with an edge argument and a rib argument *)
-let hijack_transferBgp (edges : (edge * transferBgpBehavior) list) e =
-  (* The hijack edges don't need to do anything special in transferBgp, just increment the aslen.
-   * If leak is true, the last exiting edge will leak the route; otherwise, all exiting edges
-   * simply transfer None.
-   * For the opposite direction, no other special behaviour happens here: edgeTag takes care of the
-   * community tag. *)
-  (* FIXME: kinda risky just assuming this will work: relies on b being the chosen let var *)
+let hijack_transferBgp (edges : (edge * bool) list) e =
+  (* NOTE: kinda risky hardcoding this stuff, but what can ya do *)
   let bvar = Var.fresh "b" in
   let labels = ["bgpAd"; "lp"; "aslen"; "med"; "comms"] in
+  (* branch update to add legit/illegit tag *)
   let add_edgetag_call arg (pat, exp) =
     match pat with
     | POption (Some (PVar v)) when Var.equal_names v bvar ->
       let et = evar (Var.fresh edgetag) in
-      let update_comms =
-        update_record_at (fun e -> eapp (eapp et (evar arg)) e) "comms" labels
-      in
+      let update_comms = update_record_at (eapp (eapp et (evar arg))) "comms" labels in
       (* wrap the first expression with a let *)
       pat, elet bvar (update_comms (evar bvar)) exp
     | _ -> pat, exp
   in
-  let add_hijack_branch branches ((u, v), behavior) =
+  (* new branches for edges to and from hijacker *)
+  let add_hijack_branch branches ((u, v), forward) =
     let edgePat = PEdge (PNode u, PNode v) in
     let incr_aslen =
       update_record_at
@@ -95,27 +90,23 @@ let hijack_transferBgp (edges : (edge * transferBgpBehavior) list) e =
         "aslen"
         labels
     in
-    let body =
-      match behavior with
-      | ExitDrop -> e_val (voption None)
-      | _ -> esome (incr_aslen (evar bvar))
-    in
+    let body = if forward then esome (incr_aslen (evar bvar)) else e_val (voption None) in
     addBranch edgePat body branches
   in
-  let update_edge_match v2 v3 e =
+  let update_edge_match v2 e =
     match e.e with
     | EMatch (e1, bs) ->
       (match e1.e with
       | EVar v when Var.equal_names v v2 ->
         ematch e1 (List.fold_left add_hijack_branch bs edges)
-      | EVar v when Var.equal_names v v3 ->
+      | EVar v when Var.equal_names v bvar ->
         ematch e1 (mapBranches (add_edgetag_call v2) bs)
       | _ -> e)
     | _ -> e
   in
   match e.e with
   | EFun { arg; body; _ } ->
-    efun (func arg (Visitors.map_exp (update_edge_match arg bvar) body))
+    efun (func arg (Visitors.map_exp (update_edge_match arg) body))
   | _ -> failwith "hijack_transferBgp: expected a function"
 ;;
 
