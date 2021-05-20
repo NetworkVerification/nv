@@ -115,6 +115,7 @@ let hijack decls hijackStub =
         | "init" -> hijack_init new_node hijack_var e
         | "transferBgp" -> hijack_transferBgp new_edges e
         | "assert_node" -> hijack_assert_node new_node e
+        | "trans" -> hijack_trans e
         | _ -> e
       in
       DLet (v, oty, e)
