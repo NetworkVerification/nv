@@ -153,18 +153,7 @@ let get_decl_vars (var_m, decl_m) d =
 ;;
 
 let sort_decls ds =
-  let open Nv_datastructures.AdjGraph in
-  (* Add a dependency from k to each decl in decls in g;
-   * we add k to the graph as well in case it has no dependencies *)
-  let add_dep k decls g =
-    List.fold_left (fun g v -> DeclG.add_edge g k v) (DeclG.add_vertex g k) decls
-  in
-  (* Ordering:
-   * - Sort the user-defined types
-   * - Sort the symbolics based on which depends on another
-   * - Sort the let bindings based on which depends on another
-   * - Add links from the let bindings to all other declarations
-   *)
+  (* start by adding an ordering based on var dependencies *)
   let decl_to_vars, var_to_decl =
     List.fold_left get_decl_vars (Map.empty, Map.empty) ds
   in
@@ -174,7 +163,13 @@ let sort_decls ds =
     List.filter_map (fun v -> Map.Exceptionless.find v var_to_decl) vars
   in
   let decl_to_decls = Map.map map_vars_to_decls decl_to_vars in
+  (* Add a dependency from k to each decl in decls in g;
+   * we add k to the graph as well in case it has no dependencies *)
+  let add_dep (k : declaration) (decls : declarations) g =
+    List.fold_left (fun g -> DeclG.add_edge g k) (DeclG.add_vertex g k) decls
+  in
   let dep_graph : DeclG.t = Map.foldi add_dep decl_to_decls DeclG.empty in
+  (* TODO: additional ordering: put all user-defined types first *)
   (* return the newly sorted declarations *)
   DeclSort.fold List.cons dep_graph []
 ;;
