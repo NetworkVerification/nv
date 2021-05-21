@@ -52,7 +52,7 @@ z3 yourself, separately.
 Z3 version >= 4.8.7 is recommended to avoid a bug that our constraints sometimes trigger on earlier versions of z3.
 
 You will need Batteries version >= 3.0.0.
-You will also need `mlcuddidl` version < 3.0.4.
+You will also need `mlcuddidl` version <= 3.0.4.
 
 Then clone the repo and run `dune build src/exe/main.exe`.
 
