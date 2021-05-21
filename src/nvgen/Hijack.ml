@@ -20,12 +20,13 @@ let hijack_init hijacker hijack_var e =
       match f.body.e with
       | EMatch (e, branches) ->
         (* add a branch for the new node *)
-        ematch
-          e
-          (addBranch
-             (PNode hijacker)
-             (aexp (evar hijack_var, f.resty, Span.default))
-             branches)
+        let branches =
+          addBranch
+            (PNode hijacker)
+            (aexp (evar hijack_var, f.resty, Span.default))
+            branches
+        in
+        ematch e branches
       | _ -> failwith "hijack_init: expected an inner match statement"
     in
     efunc { f with body }
