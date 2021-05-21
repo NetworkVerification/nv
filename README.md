@@ -51,11 +51,26 @@ as it takes a long time, and may be out of date. It is recommended that you inst
 z3 yourself, separately. 
 Z3 version >= 4.8.7 is recommended to avoid a bug that our constraints sometimes trigger on earlier versions of z3.
 
+You will need Batteries version >= 3.0.0.
+You will also need `mlcuddidl` version < 3.0.4.
+
 Then clone the repo and run `dune build src/exe/main.exe`.
 
 ### MacOS
 
-For instructions on installing `mlcuddidl`, see Issue [#7](https://github.com/princedpw/nv/issues/7).
+You may encounter issues installing `mlcuddidl.3.0.4`. Per issue [#7](https://github.com/princedpw/nv/issues/7),
+we recommend you try building `mlcuddidl` from source:
+
+```
+opam source mlcuddidl.3.0.4 --dir "$YOUR_SRC_DIR"
+cd "$YOUR_SRC_DIR/mlcuddidl.3.0.4"
+make distclean # just to be safe
+./configure --disable-profiling
+make
+make install
+```
+
+This has been tested for ocaml 4.05.0 and 4.07.1.
 
 ### Ubuntu (16.04+)
 
