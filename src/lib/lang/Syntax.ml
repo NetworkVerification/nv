@@ -1150,18 +1150,16 @@ let unproj_var (x : var) =
 let rec get_ty_vars (t : ty) : var list =
   match t with
   | TVar tv ->
-    begin
-      match !tv with
-      | Unbound (tn, _) -> [tn]
-      | Link t -> get_ty_vars t
-    end
+    (match !tv with
+    | Unbound (tn, _) -> [tn]
+    | Link t -> get_ty_vars t)
   | QVar n -> [n]
   | TArrow (t1, t2) -> get_ty_vars t1 @ get_ty_vars t2
   | TTuple ts -> List.fold_left (fun l t -> get_ty_vars t @ l) [] ts
   | TOption t -> get_ty_vars t
   | TMap (t1, t2) -> get_ty_vars t1 @ get_ty_vars t2
   | TRecord tm -> StringMap.fold (fun _s t l -> get_ty_vars t @ l) tm []
-  | _ -> []
+  | TUnit | TBool | TInt _ | TNode | TEdge -> []
 ;;
 
 (** Get the variables referenced by the given expression. *)
@@ -1182,7 +1180,7 @@ let rec get_exp_vars (e : exp) : var list =
   | ETy (e, t) -> get_exp_vars e @ get_ty_vars t
   | ERecord em -> StringMap.fold (fun _s e l -> get_exp_vars e @ l) em []
   | EProject (e, _s) -> get_exp_vars e
-  | _ -> []
+  | EVal _ -> []
 ;;
 
 open BatSet

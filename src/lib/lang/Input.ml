@@ -146,8 +146,7 @@ let get_decl_vars (var_m, decl_m) d =
         List.fold_left (fun m v -> Map.add v d m) decl_m (get_exp_vars var_names)
       in
       vars, decl_m
-    (* DNodes and DEdges *)
-    | _ -> [], decl_m
+    | DNodes _ | DEdges _ -> [], decl_m
   in
   Map.modify_def [] d (fun v -> v @ vars) var_m, decl_m
 ;;
@@ -169,7 +168,18 @@ let sort_decls ds =
     List.fold_left (fun g -> DeclG.add_edge g k) (DeclG.add_vertex g k) decls
   in
   let dep_graph : DeclG.t = Map.foldi add_dep decl_to_decls DeclG.empty in
-  (* TODO: additional ordering: put all user-defined types first *)
+  (* additional ordering: put all user-defined types first *)
+  let sort_utys d (utys, nonutys) =
+    match d with
+    | DUserTy _ -> d :: utys, nonutys
+    | _ -> utys, d :: nonutys
+  in
+  let utys, nonutys = DeclG.fold_vertex sort_utys dep_graph ([], []) in
+  (* add a dependency to each of the user-defined types for d *)
+  let add_uty_deps (g : DeclG.t) (d : declaration) =
+    List.fold_left (fun g -> DeclG.add_edge g d) g utys
+  in
+  let dep_graph = List.fold_left add_uty_deps dep_graph nonutys in
   (* return the newly sorted declarations *)
   DeclSort.fold List.cons dep_graph []
 ;;
