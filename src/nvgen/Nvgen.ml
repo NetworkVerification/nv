@@ -5,6 +5,7 @@ open Nv_lang.Syntax
 open Nv_datastructures
 open Partition
 open Hijack
+open Maintenance
 
 (** Remove all variable delimiters "~n" from the given string. *)
 let strip_var_delims s =
@@ -128,9 +129,28 @@ let hijack decls hijackStub =
   let hijack_app =
     annot TBool (eapp hijackStub.predicate (annot aty (evar hijack_var)))
   in
-  let hijack_decls = [DSymbolic (hijack_var, Ty aty); DRequire hijack_app] in
+  let hijack_decls = [edgeTag; DSymbolic (hijack_var, Ty aty); DRequire hijack_app] in
   (* return the hijacker node *)
-  edgeTag :: (decls @ hijack_decls), new_node
+  decls @ hijack_decls, new_node
+;;
+
+let maintenance decls dest =
+  let down_var = Var.fresh "down" in
+  let update_decl d =
+    match d with
+    | DLet (v, oty, e) ->
+      let e =
+        match Var.name v with
+        | "trans" -> maintenance_trans e
+        | "transferBgp" -> maintenance_transferBgp e
+        | _ -> e
+      in
+      DLet (v, oty, e)
+    | _ -> d
+  in
+  let decls = List.map update_decl decls in
+  let tagDown = tagDown_decl down_var in
+  decls @ [tagDown]
 ;;
 
 type genOp =
@@ -147,28 +167,35 @@ let main =
     | "-" -> IO.write_line IO.stdout s
     | file -> File.with_file_out file (fun out -> IO.write_line out s)
   in
-  match op with
-  | "hijack" ->
-    if cfg.destination = -1 then failwith "No destination provided.";
-    let predicate = predicate_to_exp cfg.predicate in
-    let groups = parse_node_groups file in
-    let spines =
-      Map.foldi
-        (fun u g l ->
-          match g with
-          | Fattree Core -> u :: l
-          | _ -> l)
-        groups
-        []
-    in
-    let stub = { leak = cfg.leak; destination = cfg.destination; predicate; spines } in
-    let decls, _ = Input.parse file in
-    let new_ds, hijacker = hijack decls stub in
-    let new_text = Printing.declarations_to_string new_ds in
-    let cleaned = clean_text new_text in
-    (* add the hijacker to the groups *)
-    let groups = Map.add hijacker (Fattree Core) groups in
-    let groupsComment = nodeGroups_to_string groups in
-    write (cleaned ^ groupsComment)
-  | _ -> ()
+  let output =
+    match op, cfg.destination with
+    | _, -1 -> failwith "No destination provided."
+    | "hijack", destination ->
+      let predicate = predicate_to_exp cfg.predicate in
+      let groups = parse_node_groups file in
+      let spines =
+        Map.foldi
+          (fun u g l ->
+            match g with
+            | Fattree Core -> u :: l
+            | _ -> l)
+          groups
+          []
+      in
+      let stub = { leak = cfg.leak; destination; predicate; spines } in
+      let decls, _ = Input.parse file in
+      let new_ds, hijacker = hijack decls stub in
+      let new_text = Printing.declarations_to_string new_ds in
+      let cleaned = clean_text new_text in
+      (* add the hijacker to the groups *)
+      let groups = Map.add hijacker (Fattree Core) groups in
+      let groupsComment = nodeGroups_to_string groups in
+      cleaned ^ groupsComment
+    | "maintenance", destination ->
+      let decls, _ = Input.parse file in
+      let new_ds = maintenance decls destination in
+      Printing.declarations_to_string new_ds
+    | _ -> failwith ("invalid op: " ^ op)
+  in
+  write output
 ;;

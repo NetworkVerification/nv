@@ -6,6 +6,7 @@ open Nv_lang
 open Syntax
 open Collections
 open Batteries
+open Utils
 
 let legit = e_val (vint (Integer.of_int 0))
 let illegit = e_val (vint (Integer.of_int 1))
@@ -33,26 +34,7 @@ let hijack_init hijacker hijack_var e =
   | _ -> failwith "hijack_init: expected a function"
 ;;
 
-(* definitions we'll use for the functions.
- * the labels should really be extracted from the file instead of hardcoded,
- * but we can safely assume if we're just running hijack code on fatXPol examples
- * that all of these elements will always be present and save ourselves the work of
- * doing type inference. *)
 let edgetag = "edgeTag"
-let bgplabels = ["bgpAd"; "lp"; "aslen"; "med"; "comms"]
-let riblabels = ["bgp"; "connected"; "ospf"; "selected"; "static"]
-
-(** Given a function over record key-value pairs, return a new record expression.
- *)
-let mapi_record (f : String.t * exp -> exp) labels e =
-  erecord
-    (List.fold_left
-       (fun r l -> StringMap.add l (f (l, eproject e l)) r)
-       StringMap.empty
-       labels)
-;;
-
-let update_record_at f label = mapi_record (fun (l, e) -> if l = label then f e else e)
 
 (* Return a DLet declaration for an edgeTag function, used to update the BGP
  * community tags on transfer for edges leaving the destination or the hijacker.
@@ -62,21 +44,9 @@ let hijack_edgetag (hijacker : node) (dest : node) =
   let edge_var = Var.fresh "e" in
   let xvar = Var.fresh "x" in
   let bvar = Var.fresh "b" in
-  let update_comms comms =
-    let uvar = Var.fresh "u" in
-    let edgePat = PEdge (PVar uvar, PWild) in
-    let set_add k = eop MSet [comms; k; ebool true] in
-    (* if u = hijacker, then add the illegit comms tag *)
-    let hijack_if = eif (eop Eq [evar uvar; enode hijacker]) (set_add illegit) comms in
-    (* if u = dest, then add the legit comms tag *)
-    let dest_if = eif (eop Eq [evar uvar; enode dest]) (set_add legit) hijack_if in
-    ematch (evar edge_var) (addBranch edgePat dest_if emptyBranch)
-  in
-  let bupdate = update_record_at update_comms "comms" bgplabels in
+  let bupdate = update_comms [enode hijacker, illegit; enode dest, legit] in
   let branches = addBranch (POption None) (e_val (voption None)) emptyBranch in
-  let branches =
-    addBranch (POption (Some (PVar bvar))) (esome (bupdate (evar bvar))) branches
-  in
+  let branches = addBranch (POption (Some (PVar bvar))) (esome bupdate) branches in
   let xbgp = eproject (evar xvar) "bgp" in
   let bmatch = ematch xbgp branches in
   let fn = efunc (func xvar bmatch) in
@@ -115,41 +85,33 @@ let hijack_transferBgp (edges : (edge * bool) list) e =
   | _ -> failwith "hijack_transferBgp: expected a function"
 ;;
 
-(* add a call to edgetag to trans after calling transferBgp *)
+(* add a call to edgeTag before calling transferBgp *)
+
 let hijack_trans e =
   let et = evar (Var.fresh edgetag) in
   let etapp edge x = eapp (eapp et (evar edge)) (evar x) in
-  match e.e with
-  | EFun f1 ->
-    let body =
-      match f1.body.e with
-      | EFun f2 ->
-        (* add a call to edgeTag after the sequence of lets *)
-        let body =
-          match f2.body.e with
-          | ELet (ovar, otrans, obody) ->
-            let obody =
-              match obody.e with
-              | ELet (bvar, btrans, bbody) ->
-                (* NOTE: if we first do type inference, we can pull these out directly from f2.argty *)
-                let xupdate =
-                  mapi_record
-                    (fun (l, e) -> if l = "bgp" then etapp f1.arg f2.arg else e)
-                    riblabels
-                    (evar f2.arg)
-                in
-                let bbody = elet f2.arg xupdate bbody in
-                elet bvar btrans bbody
-              | _ -> failwith "hijack_trans: expected a let"
-            in
-            elet ovar otrans obody
-          | _ -> failwith "hijack_trans: expected a let"
-        in
-        efunc { f2 with body }
-      | _ -> failwith "hijack_trans: expected a function"
-    in
-    efunc { f1 with body }
-  | _ -> failwith "hijack_trans: expected a function"
+  let f vars e =
+    match e.e with
+    | ELet (ovar, otrans, obody) ->
+      let edge = List.nth vars 0 in
+      let x = List.nth vars 1 in
+      let xupdate =
+        mapi_record
+          (fun (l, e) -> if l = "bgp" then etapp edge x else e)
+          riblabels
+          (evar x)
+      in
+      (* add this update at the top of the body of let o = transferOspf e x in ...  *)
+      let obody = elet x xupdate obody in
+      elet ovar otrans obody
+    | _ -> e
+  in
+  let g e l =
+    match e.e with
+    | EFun f -> f.arg :: l
+    | _ -> l
+  in
+  descend f (fun l _ -> List.length l = 2) g [] e
 ;;
 
 (* Return a match statement over the given variable's bgp field, testing an assertion. *)
