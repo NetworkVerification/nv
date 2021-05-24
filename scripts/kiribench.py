@@ -103,7 +103,10 @@ def tabulate_fattree_benchmarks(
     unsimulated or "{benchstr.format(size)}-{cut}-x.nv" if simulated.
     """
     runs = {}
-    out = open(log, "a")
+    if log is not sys.stdout:
+        out = open(log, "a")
+    else:
+        out = sys.stdout
     for size in sizes:
         sim = "-x" if simulate else ""  # for the simulation benchmarks
         benches = [(None, f"{benchstr.format(size)}.nv")] + [
