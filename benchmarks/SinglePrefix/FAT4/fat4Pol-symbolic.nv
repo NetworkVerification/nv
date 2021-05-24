@@ -1667,4 +1667,11 @@ aggregation-8=16, aggregation-13=17, aggregation-12=18,
 edge-10=19}*)
 let sol = solution {init = init; trans = trans; merge = merge}
 
+(* Note: this assertion is not partitionable, as the two disjuncts have 
+ * final states for which they disagree.
+ * We can observe that the left disjunct may hold in one partition where
+ * every node has a BGP route, while the right disjunct may hold in a different
+ * partition where no node has a BGP route.
+ * Then neither disjunct will hold when we compose the two partitions.
+ *)
 assert (foldNodes (fun k v acc -> acc && assert_node k v) sol true) || (foldNodes (fun k v acc -> acc && notBgp k v) sol true)
