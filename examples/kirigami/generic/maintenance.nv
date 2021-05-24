@@ -1,0 +1,57 @@
+(* vim: set syntax=ocaml *)
+(* Template example for encoding node maintenance in BGP networks. *)
+(* Intended to be used as an include, where user provides topology. *)
+type bgpType = {bgpAd: int; lp: int; aslen: int; med:int; comms:set[int];}
+type attribute = option[bgpType]
+
+symbolic down : tnode
+(* the down node cannot be the destination *)
+require (down >n 0n)
+
+let maintenanceTag = 0
+
+let init n =
+  if n = 0n then Some { bgpAd = 0; lp = 100; aslen = 0; med = 0; comms = {} }
+  else None
+
+let pickOption f x y =
+  match (x,y) with
+  | (None, None) -> None
+  | (None, Some _) -> y  | (Some _, None) -> x
+  | (Some a, Some b) -> Some (f a b)
+
+let betterBgp b1 b2 =
+  if b1.lp > b2.lp then b1
+  else if b2.lp > b1.lp then b2
+  else if b1.aslen < b2.aslen then b1
+  else if b2.aslen < b1.aslen then b2  else if b1.med >= b2.med then b1 else b2
+
+let mergeBgp x y = pickOption betterBgp x y
+
+let merge n x y = mergeBgp x y
+
+let tagDown e b = match e with
+  | u~_ -> if u = down then b.comms[maintenanceTag := true] else b.comms
+
+let transferBgp e x =
+  match x with
+  | None -> None
+  | Some b -> (
+    let b = {b with comms = tagDown e b; aslen = b.aslen + 1; lp = b.lp} in
+    Some b
+)
+
+let trans e x =
+  let x = transferBgp e x in
+  match x with
+  | Some b -> if b.comms[maintenanceTag] then None else Some b
+  | None -> None
+
+(* Assert that no solution contains the maintenance tag. *)
+let assert_node u v = match v with
+  | None -> false
+  | Some b -> !b.comms[maintenanceTag]
+
+let sol = solution { init = init; trans = trans; merge = merge }
+
+assert foldNodes (fun u v acc -> acc && assert_node u v) sol true

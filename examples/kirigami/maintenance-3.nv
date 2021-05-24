@@ -1,0 +1,5 @@
+include "generic/maintenance.nv"
+
+let nodes = 3
+
+let edges = { 0=1; 1=2; }
