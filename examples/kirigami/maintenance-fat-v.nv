@@ -8,6 +8,20 @@ symbolic down : option[tnode]
 (* the down node cannot be the destination *)
 require !(down = Some 0n)
 
+let node_to_int n = match n with
+  | 0n -> 0
+  | 1n -> 1
+  | 2n -> 2
+  | 3n -> 3
+  | 4n -> 4
+  | 5n -> 5
+  | 6n -> 6
+  | 7n -> 7
+  | 8n -> 8
+  | 9n -> 9
+  | 10n -> 10
+  | 11n -> 11
+
 let maintenanceTag = 0
 
 let init n =
@@ -75,9 +89,10 @@ let edges = {
     9=2;
     9=6;
     10=1;
-    10=5;
+    10=6;
     11=2;
-    11=6;
+    11=5;
+    (* flipped 10 to connect to 6 and 11 to connect to 5 *)
 }
 
 let partition n = match n with
@@ -101,7 +116,7 @@ let interface e a = match e with
   | 6~9 -> a = Some { bgpAd = 0; lp = 100; aslen = 3; med = 0; comms = if down = Some 6n then {maintenanceTag} else {} }
   | 8~5 -> a = Some { bgpAd = 0; lp = 100; aslen = 2; med = 0; comms = if down = Some 8n then {maintenanceTag} else {} }
   | 9~6 -> a = Some { bgpAd = 0; lp = 100; aslen = 2; med = 0; comms = if down = Some 9n then {maintenanceTag} else {} }
-  | 10~1 -> a = Some { bgpAd = 0; lp = 100; aslen = if down = Some 1n then 4 else 2; med = 0; comms = if down = Some 10n then {maintenanceTag} else {} }
+  | 10~1 -> a = Some { bgpAd = 0; lp = 100; aslen = 2; med = 0; comms = if down = Some 10n then {maintenanceTag} else {} }
   | 11~2 -> a = Some { bgpAd = 0; lp = 100; aslen = 2; med = 0; comms = if down = Some 11n then {maintenanceTag} else {} }
 
 let sol = solution { init = init; trans = trans; merge = merge; interface = interface; rtrans = trans }
