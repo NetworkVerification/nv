@@ -1,4 +1,5 @@
 (* models bgp, ospf, static routes *)
+(* NOTE(Tim,2021-05-25): doesn't appear to converge to a solution *)
 
 type prefix = (int, int6) (* IP prefix; tuple of (address, length) *)
 type ospfType = {ospfAd: int8; weight: int16; areaType:int2; areaId: int;}

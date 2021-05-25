@@ -106,6 +106,8 @@ let simulate_declarations ~(throw_requires : bool) (decls : declarations) : Solu
     pad (num_asserts - List.length final_state.assertions) final_state.assertions
     |> List.rev
   in
-  let sol : Solution.t = { symbolics; solves; assertions; guarantees = []; nodes = list_seq n } in
+  let sol : Solution.t =
+    { symbolics; solves; assertions; guarantees = []; nodes = list_seq n }
+  in
   sol
 ;;

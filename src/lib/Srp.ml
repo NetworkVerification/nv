@@ -126,9 +126,10 @@ let simulate_step ({ graph = g; trans; merge; _ } : srp) s x =
         AdjGraph.VertexMap.add n (n_received, best) s, newTodo)
   in
   let initial_attribute = get_attribute x s in
-  (* if (x = 102) then
-    (Printf.printf "L(%d): %s\n" x (Printing.value_to_string (snd initial_attribute));
-    flush_all()); *)
+  (* if x = 102
+   * then (
+   *   Printf.printf "L(%d): %s\n" x (Printing.value_to_string (snd initial_attribute));
+   *   flush_all ()); *)
   let neighbors = AdjGraph.succ g x in
   List.fold_left (do_neighbor initial_attribute) (s, []) neighbors
 ;;
@@ -138,7 +139,7 @@ let rec simulate_init srp ((s, q) : state) =
   match QueueSet.pop q with
   | None -> s
   | Some (next, rest) ->
-    (* Printf.printf "%d," next;  *)
+    (* Printf.printf "%d," next; *)
     let s', more = simulate_step srp s next in
     simulate_init srp (s', QueueSet.add_all rest more)
 ;;

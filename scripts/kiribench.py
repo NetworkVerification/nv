@@ -22,6 +22,7 @@ BENCHMARKS = {
     "sp_topzoo": ("benchmarks/SinglePrefix/TopologyZoo", "USCarrier"),
     "ap_fatpol": ("benchmarks/AllPrefixes/FAT{0}", "fat{0}Pol"),
     "ap_topzoo": ("benchmarks/AllPrefixes/TopologyZoo", "USCarrier"),
+    "sp_maintenance": ("benchmarks/SinglePrefix/FAT{0}", "fat{0}PolMaintenance"),
 }
 
 

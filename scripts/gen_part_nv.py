@@ -539,19 +539,24 @@ def parser():
         help='unpartitioned network files with their unique associated \
         destination nodes, separated by a colon, e.g. "simple.nv:0"',
     )
-    parser.add_argument(
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument(
         "-c",
         "--cuts",
-        required=True,
         nargs="+",
         choices=FattreeCut.as_list(),
         help="types of cut across the network topology",
+    )
+    group.add_argument(
+        "-k",
+        "--hmetis",
+        help="hMETIS-created partitioning file",
     )
     parser.add_argument(
         "-s",
         "--simulate",
         action="store_true",
-        help="generate interface by simulating the given benchmark",
+        help="generate interface by simulating the given benchmark; ignored when --hmetis is present",
     )
     parser.add_argument(
         "-v", "--verbose", action="store_true", help="increase verbosity"
@@ -571,8 +576,13 @@ def main():
         if args.print:
             print_graph(file)
         else:
-            for cut in args.cuts:
-                gen_part_nv(file, dest, FattreeCut.from_str(cut), verbose=args.verbose)
+            if args.hmetis is None:
+                for cut in args.cuts:
+                    gen_part_nv(
+                        file, dest, FattreeCut.from_str(cut), verbose=args.verbose
+                    )
+            else:
+                gen_part_nv_hmetis(file, args.hmetis, verbose=args.verbose)
 
 
 if __name__ == "__main__":
