@@ -303,7 +303,7 @@ and exp_to_string_p ~show_types prec e =
       ^ "\n"
       ^ branches_to_string ~show_types prec (branchToList bs)
       ^ ")"
-    | ETy (e, t) -> exp_to_string_p prec e ^ ty_to_string t
+    | ETy (e, t) -> "(" ^ exp_to_string_p prec e ^ " : " ^ ty_to_string t ^ ")"
     | ERecord map -> print_record "=" (exp_to_string_p prec) map
     | EProject (e, l) -> exp_to_string_p prec e ^ "." ^ l
   in
