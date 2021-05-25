@@ -12,13 +12,24 @@ let maintenanceTag = e_val (vint (Integer.of_int 0))
 
 (* Return a DLet declaration for a tagDown function, used to update the BGP
  * community tags on transfer for edges leaving the down node.
- * tagDown has type edge -> bgpType -> bgpType
+ * Has the form:
+ * ```
+ * (* tagDown : edge -> bgpType -> bgpType *)
+ * let tagDown e b =
+ *   match down with
+ *   | None -> b
+ *   | Some d -> { b with comms = (match e with | u~_ -> if u = d then b.comms[0u32:=true] else b.comms) }
+ *  ```
  *)
 let tagDown_decl (down : var) =
   let edge_var = Var.fresh "e" in
   let bvar = Var.fresh "b" in
-  let bupdate = update_comms [evar down, maintenanceTag] in
-  let fn = efunc (func bvar bupdate) in
+  let dvar = Var.fresh "d" in
+  let bupdate = update_comms [evar dvar, maintenanceTag] in
+  let branches = addBranch (POption (Some (PVar dvar))) bupdate emptyBranch in
+  let branches = addBranch (POption None) (evar bvar) branches in
+  let downmatch = ematch (evar down) branches in
+  let fn = efunc (func bvar downmatch) in
   let fn = efunc (func edge_var fn) in
   DLet (Var.fresh "tagDown", None, fn)
 ;;
@@ -48,7 +59,7 @@ let maintenance_trans aty e =
   descend descender (fun l _ -> List.length l = 4) [] e
 ;;
 
-(* TODO: update the BGP comms with the down tag if need be;
+(* update the BGP comms with the down tag if need be;
  * ```
  * let transferBgp e x0 =
  *   match x0.selected with

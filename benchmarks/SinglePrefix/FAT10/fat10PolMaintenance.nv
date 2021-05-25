@@ -15471,11 +15471,14 @@ let ospfIntraArea = 0u2
 let ospfInterArea = 1u2
 let ospfE2 = 3u2
 let ospfE1 = 2u2
-let tagDown = (fun e -> (fun b -> {  aslen= b.aslen; bgpAd= b.bgpAd; comms= (match e with 
- | u~_ -> if u = down then 
+let tagDown = (fun e -> (fun b -> (match down with 
+ | None -> b
+ | Some d -> {  aslen= b.aslen; bgpAd= b.bgpAd; comms= (match e with 
+ | u~_ -> if u = d then 
 b.comms[0u32:=true] else 
 b.comms
-); lp= b.lp; med= b.med; } ) )
-symbolic down : tnode
-require ! (down = 13n)
+); lp= b.lp; med= b.med; }
+) ) )
+symbolic down : option[tnode]
+require ! (down = (Some 13n))
 (* {edge=0, edge=1, edge=2, edge=3, aggregation=4, aggregation=5, aggregation=6, aggregation=7, aggregation=8, edge=9, edge=10, edge=11, edge=12, edge=13, edge=14, edge=15, edge=16, aggregation=17, edge=18, aggregation=19, edge=20, edge=21, aggregation=22, aggregation=23, aggregation=24, aggregation=25, aggregation=26, aggregation=27, aggregation=28, aggregation=29, aggregation=30, edge=31, aggregation=32, edge=33, aggregation=34, edge=35, aggregation=36, edge=37, aggregation=38, edge=39, aggregation=40, aggregation=41, aggregation=42, aggregation=43, aggregation=44, edge=45, aggregation=46, aggregation=47, edge=48, aggregation=49, edge=50, aggregation=51, edge=52, aggregation=53, edge=54, aggregation=55, aggregation=56, edge=57, aggregation=58, edge=59, edge=60, aggregation=61, aggregation=62, edge=63, edge=64, aggregation=65, aggregation=66, aggregation=67, edge=68, edge=69, aggregation=70, aggregation=71, edge=72, edge=73, edge=74, core=75, core=76, core=77, edge=78, core=79, core=80, core=81, core=82, edge=83, core=84, edge=85, core=86, core=87, core=88, core=89, core=90, core=91, edge=92, edge=93, edge=94, core=95, edge=96, aggregation=97, edge=98, aggregation=99, edge=100, aggregation=101, edge=102, aggregation=103, aggregation=104, aggregation=105, core=106, core=107, core=108, core=109, core=110, core=111, core=112, core=113, core=114, core=115, edge=116, aggregation=117, edge=118, aggregation=119, edge=120, aggregation=121, edge=122, aggregation=123, edge=124} *)

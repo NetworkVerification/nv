@@ -26257,11 +26257,14 @@ let ospfIntraArea = 0u2
 let ospfInterArea = 1u2
 let ospfE2 = 3u2
 let ospfE1 = 2u2
-let tagDown = (fun e -> (fun b -> {  aslen= b.aslen; bgpAd= b.bgpAd; comms= (match e with 
- | u~_ -> if u = down then 
+let tagDown = (fun e -> (fun b -> (match down with 
+ | None -> b
+ | Some d -> {  aslen= b.aslen; bgpAd= b.bgpAd; comms= (match e with 
+ | u~_ -> if u = d then 
 b.comms[0u32:=true] else 
 b.comms
-); lp= b.lp; med= b.med; } ) )
-symbolic down : tnode
-require ! (down = 64n)
+); lp= b.lp; med= b.med; }
+) ) )
+symbolic down : option[tnode]
+require ! (down = (Some 64n))
 (* {aggregation=0, aggregation=1, aggregation=2, edge=3, edge=4, edge=5, edge=6, aggregation=7, aggregation=8, aggregation=9, edge=10, aggregation=11, edge=12, aggregation=13, aggregation=14, aggregation=15, aggregation=16, aggregation=17, aggregation=18, aggregation=19, edge=20, edge=21, edge=22, edge=23, edge=24, edge=25, aggregation=26, aggregation=27, aggregation=28, aggregation=29, aggregation=30, aggregation=31, aggregation=32, aggregation=33, aggregation=34, aggregation=35, aggregation=36, aggregation=37, edge=38, aggregation=39, aggregation=40, edge=41, edge=42, edge=43, edge=44, aggregation=45, edge=46, aggregation=47, edge=48, aggregation=49, edge=50, aggregation=51, edge=52, aggregation=53, aggregation=54, edge=55, edge=56, aggregation=57, aggregation=58, edge=59, aggregation=60, edge=61, edge=62, edge=63, edge=64, aggregation=65, aggregation=66, edge=67, aggregation=68, edge=69, aggregation=70, edge=71, aggregation=72, edge=73, edge=74, aggregation=75, edge=76, aggregation=77, edge=78, edge=79, aggregation=80, aggregation=81, aggregation=82, edge=83, edge=84, edge=85, edge=86, edge=87, aggregation=88, aggregation=89, aggregation=90, aggregation=91, edge=92, edge=93, core=94, core=95, core=96, aggregation=97, core=98, aggregation=99, core=100, edge=101, edge=102, edge=103, edge=104, edge=105, aggregation=106, core=107, edge=108, edge=109, aggregation=110, core=111, aggregation=112, core=113, aggregation=114, core=115, edge=116, core=117, edge=118, edge=119, core=120, edge=121, core=122, edge=123, core=124, core=125, edge=126, core=127, core=128, edge=129, core=130, core=131, edge=132, core=133, core=134, edge=135, aggregation=136, edge=137, core=138, aggregation=139, core=140, aggregation=141, core=142, core=143, core=144, core=145, edge=146, edge=147, aggregation=148, aggregation=149, edge=150, aggregation=151, aggregation=152, aggregation=153, aggregation=154, edge=155, edge=156, aggregation=157, edge=158, edge=159, core=160, core=161, core=162, edge=163, aggregation=164, edge=165, aggregation=166, edge=167, edge=168, core=169, core=170, aggregation=171, core=172, core=173, core=174, core=175, core=176, aggregation=177, edge=178, aggregation=179} *)

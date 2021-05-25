@@ -152,8 +152,12 @@ let maintenance dest decls =
   in
   let decls = List.map update_decl decls in
   let tagDown = tagDown_decl down_var in
-  let dest_not_down = eop Not [eop Eq [evar down_var; e_val (vnode dest)]] in
-  let new_decls = [tagDown; DSymbolic (down_var, Ty TNode); DRequire dest_not_down] in
+  let dest_not_down =
+    eop Not [eop Eq [evar down_var; e_val (voption (Some (vnode dest)))]]
+  in
+  let new_decls =
+    [tagDown; DSymbolic (down_var, Ty (TOption TNode)); DRequire dest_not_down]
+  in
   decls @ new_decls
 ;;
 

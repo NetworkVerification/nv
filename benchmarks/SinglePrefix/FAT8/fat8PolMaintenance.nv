@@ -8153,11 +8153,14 @@ let ospfIntraArea = 0u2
 let ospfInterArea = 1u2
 let ospfE2 = 3u2
 let ospfE1 = 2u2
-let tagDown = (fun e -> (fun b -> {  aslen= b.aslen; bgpAd= b.bgpAd; comms= (match e with 
- | u~_ -> if u = down then 
+let tagDown = (fun e -> (fun b -> (match down with 
+ | None -> b
+ | Some d -> {  aslen= b.aslen; bgpAd= b.bgpAd; comms= (match e with 
+ | u~_ -> if u = d then 
 b.comms[0u32:=true] else 
 b.comms
-); lp= b.lp; med= b.med; } ) )
-symbolic down : tnode
-require ! (down = 12n)
+); lp= b.lp; med= b.med; }
+) ) )
+symbolic down : option[tnode]
+require ! (down = (Some 12n))
 (* {edge=0, edge=1, edge=2, edge=3, edge=4, edge=5, aggregation=6, aggregation=7, edge=8, aggregation=9, edge=10, aggregation=11, edge=12, edge=13, aggregation=14, aggregation=15, edge=16, aggregation=17, edge=18, aggregation=19, edge=20, edge=21, edge=22, edge=23, edge=24, aggregation=25, edge=26, edge=27, aggregation=28, edge=29, aggregation=30, edge=31, aggregation=32, edge=33, aggregation=34, aggregation=35, edge=36, edge=37, aggregation=38, aggregation=39, core=40, core=41, edge=42, core=43, aggregation=44, edge=45, core=46, aggregation=47, edge=48, core=49, aggregation=50, edge=51, core=52, aggregation=53, core=54, core=55, core=56, core=57, aggregation=58, aggregation=59, aggregation=60, aggregation=61, aggregation=62, aggregation=63, edge=64, aggregation=65, core=66, core=67, core=68, aggregation=69, core=70, core=71, core=72, edge=73, edge=74, aggregation=75, edge=76, aggregation=77, aggregation=78, aggregation=79} *)

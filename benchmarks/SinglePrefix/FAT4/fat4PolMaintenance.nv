@@ -1233,11 +1233,14 @@ let ospfIntraArea = 0u2
 let ospfInterArea = 1u2
 let ospfE2 = 3u2
 let ospfE1 = 2u2
-let tagDown = (fun e -> (fun b -> {  aslen= b.aslen; bgpAd= b.bgpAd; comms= (match e with 
- | u~_ -> if u = down then 
+let tagDown = (fun e -> (fun b -> (match down with 
+ | None -> b
+ | Some d -> {  aslen= b.aslen; bgpAd= b.bgpAd; comms= (match e with 
+ | u~_ -> if u = d then 
 b.comms[0u32:=true] else 
 b.comms
-); lp= b.lp; med= b.med; } ) )
-symbolic down : tnode
-require ! (down = 10n)
+); lp= b.lp; med= b.med; }
+) ) )
+symbolic down : option[tnode]
+require ! (down = (Some 10n))
 (* {edge=0, core=1, edge=2, core=3, core=4, edge=5, aggregation=6, core=7, aggregation=8, edge=9, edge=10, edge=11, edge=12, aggregation=13, aggregation=14, aggregation=15, aggregation=16, aggregation=17, aggregation=18, edge=19} *)
