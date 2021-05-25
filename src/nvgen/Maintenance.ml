@@ -10,26 +10,21 @@ open Utils
 
 let maintenanceTag = e_val (vint (Integer.of_int 0))
 
-(* Return a DLet declaration for an edgeTag function, used to update the BGP
- * community tags on transfer for edges leaving the destination or the hijacker.
- * edgeTag has type edge -> bgpType -> bgpType
+(* Return a DLet declaration for a tagDown function, used to update the BGP
+ * community tags on transfer for edges leaving the down node.
+ * tagDown has type edge -> bgpType -> bgpType
  *)
 let tagDown_decl (down : var) =
   let edge_var = Var.fresh "e" in
-  let xvar = Var.fresh "x" in
   let bvar = Var.fresh "b" in
   let bupdate = update_comms [evar down, maintenanceTag] in
-  let branches = addBranch (POption None) (e_val (voption None)) emptyBranch in
-  let branches = addBranch (POption (Some (PVar bvar))) (esome bupdate) branches in
-  let xbgp = eproject (evar xvar) "bgp" in
-  let bmatch = ematch xbgp branches in
-  let fn = efunc (func xvar bmatch) in
+  let fn = efunc (func bvar bupdate) in
   let fn = efunc (func edge_var fn) in
   DLet (Var.fresh "tagDown", None, fn)
 ;;
 
 (* update the trans function to drop comms with the maintenance tag set *)
-let maintenance_trans e =
+let maintenance_trans aty e =
   let xvar = Var.fresh "x" in
   let bvar = Var.fresh "b" in
   let dropBgp =
@@ -40,27 +35,93 @@ let maintenance_trans e =
     let branches = addBranch (POption (Some (PVar bvar))) testTag branches in
     ematch (eproject (evar xvar) "bgp") branches
   in
-  let descendor _ e =
+  let descender _ e =
     match e.e with
     | ERecord _ ->
       (* change the old { ... } to be assigned to a variable x,
        * and then use that x in a call to dropBgp *)
       let newb = elet bvar dropBgp e in
-      elet xvar e newb
+      elet xvar (ety e aty) newb
     | _ -> e
   in
   (* stop after four levels deep *)
-  descend
-    descendor
-    (fun c _ -> c = 4)
-    (fun e c ->
-      match e.e with
-      | EFun _ -> c + 1
-      | ELet _ -> c + 1
-      | _ -> c)
-    0
-    e
+  descend descender (fun l _ -> List.length l = 4) [] e
 ;;
 
-(* TODO: update the BGP comms with the down tag if need be *)
-let maintenance_transferBgp e = e
+(* TODO: update the BGP comms with the down tag if need be;
+ * ```
+ * let transferBgp e x0 =
+ *   match x0.selected with
+ *   | None -> None
+ *   | Some prot ->
+ *      (let b = if (prot = 3u2) then match x0.bgp with
+ *        | None -> (...)
+ *        | Some b -> b
+ *       else (...)) in
+ *       let b = { b with comms = tagDown e b } in
+ *       match e with ...
+ * ```
+ *)
+let maintenance_transferBgp e =
+  let add_tagDown_before_edges edge e =
+    match e.e with
+    | ELet (bvar, bexp, edgebody) ->
+      let tagdown = Var.fresh "tagDown" in
+      let call = eapp (eapp (evar tagdown) edge) (evar bvar) in
+      let body = elet bvar call edgebody in
+      elet bvar bexp body
+    | _ -> failwith "maintenance_transferBgp: unexpected expr"
+  in
+  let update_branch_case edge (p, e) =
+    match p with
+    | POption (Some (PVar _)) -> p, add_tagDown_before_edges edge e
+    | _ -> p, e
+  in
+  let descender vars e =
+    let edge = List.nth vars 1 in
+    match e.e with
+    | EMatch (e1, bs) -> ematch e1 (mapBranches (update_branch_case (evar edge)) bs)
+    | _ -> e
+  in
+  descend descender (fun l _ -> List.length l = 2) [] e
+;;
+
+(* Modify assert_node to instead have the form:
+ * ```
+ *  match x.selected with
+ *   | None -> false
+ *   | _ -> (match x.bgp with
+ *      | None -> false
+ *      | Some b -> (!b.comms[maintenanceTag]))
+ * ```
+ *  where maintenanceTag is the tag to identify a node as under maintenance.
+ *)
+let maintenance_assert_node e =
+  let update_branch_case x (p, e) =
+    match p with
+    | PWild ->
+      (* change to capture the protocol, and test it.
+       * if it's BGP, perform the additional BGP test; otherwise, return true? *)
+      let xbgp = eproject x "bgp" in
+      let check_tag b =
+        let comms = eproject b "comms" in
+        eop Not [eop MGet [comms; maintenanceTag]]
+      in
+      let test = assert_bgp xbgp check_tag in
+      PWild, test
+    | _ -> p, e
+  in
+  let descender vars e =
+    let x = evar (List.nth vars 0) in
+    match e.e with
+    | EIf (e1, e2, e3) ->
+      let e2 =
+        match e2.e with
+        | EMatch (e', bs) -> ematch e' (mapBranches (update_branch_case x) bs)
+        | _ -> e2
+      in
+      eif e1 e2 e3
+    | _ -> failwith "maintenance_assert_node: expected if, got something else"
+  in
+  descend descender (fun l _ -> List.length l = 2) [] e
+;;

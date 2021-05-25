@@ -66,8 +66,9 @@ let hijack_transferBgp (edges : (edge * bool) list) e =
         (fun e -> eop (UAdd 32) [e; e_val (vint (Integer.of_int 1))])
         "aslen"
         bgplabels
+        (evar bvar)
     in
-    let body = if forward then esome (incr_aslen (evar bvar)) else e_val (voption None) in
+    let body = if forward then esome incr_aslen else e_val (voption None) in
     addBranch edgePat body branches
   in
   let update_edge_match v2 e =
@@ -93,8 +94,8 @@ let hijack_trans e =
   let f vars e =
     match e.e with
     | ELet (ovar, otrans, obody) ->
-      let edge = List.nth vars 0 in
-      let x = List.nth vars 1 in
+      let edge = List.nth vars 1 in
+      let x = List.nth vars 0 in
       let xupdate =
         mapi_record
           (fun (l, e) -> if l = "bgp" then etapp edge x else e)
@@ -106,23 +107,7 @@ let hijack_trans e =
       elet ovar otrans obody
     | _ -> e
   in
-  let g e l =
-    match e.e with
-    | EFun f -> f.arg :: l
-    | _ -> l
-  in
-  descend f (fun l _ -> List.length l = 2) g [] e
-;;
-
-(* Return a match statement over the given variable's bgp field, testing an assertion. *)
-let assert_bgp x =
-  let b = Var.fresh "b" in
-  let comms = eproject (evar b) "comms" in
-  let has_illegit_tag = eop Not [eop MGet [comms; illegit]] in
-  let xbgp = eproject x "bgp" in
-  let branches = addBranch (POption (Some (PVar b))) has_illegit_tag emptyBranch in
-  let branches = addBranch (POption None) (ebool false) branches in
-  ematch xbgp branches
+  descend f (fun l _ -> List.length l = 2) [] e
 ;;
 
 (* Modify assert_node to instead have the form:
@@ -144,38 +129,34 @@ let hijack_assert_node hijacker e =
       (* create a 3u2, used to identify the BGP protocol *)
       let protoBgp = e_val (vint (Integer.create 3 2)) in
       let isNotBgpProt = eop Not [eop Eq [evar prot; protoBgp]] in
-      let test = eop Or [isNotBgpProt; assert_bgp x] in
+      let xbgp = eproject x "bgp" in
+      let check_tag b =
+        let comms = eproject b "comms" in
+        eop Not [eop MGet [comms; illegit]]
+      in
+      let test = eop Or [isNotBgpProt; assert_bgp xbgp check_tag] in
       POption (Some (PVar prot)), test
     | _ ->
       failwith
         ("found unexpected branch pattern in hijack_assert_node: "
         ^ Printing.pattern_to_string p)
   in
-  match e.e with
-  | EFun f1 ->
-    let body1 =
-      match f1.body.e with
-      | EFun f2 ->
-        let node = evar f1.arg in
-        let body2 =
-          match f2.body.e with
-          | EIf (e1, e2, e3) ->
-            let hijacker = enode hijacker in
-            let is_hijacker = eop Eq [node; hijacker] in
-            let x = evar f2.arg in
-            let e2' =
-              match e2.e with
-              | EMatch (e', bs) -> ematch e' (mapBranches (update_branch_case x) bs)
-              | _ -> failwith "unexpected inner expression in hijack_assert_node"
-            in
-            (* default to true for the hijacker: we don't care what their solution is *)
-            let e2or = eop Or [is_hijacker; e2'] in
-            eif e1 e2or e3
-          | _ -> failwith "unexpected outer expression in hijack_assert_node"
-        in
-        efunc { f2 with body = body2 }
-      | _ -> failwith "unexpected expression in hijack_assert_node"
-    in
-    efunc { f1 with body = body1 }
-  | _ -> failwith "unexpected expression in hijack_assert_node"
+  let descender vars e =
+    let node = evar (List.nth vars 1) in
+    let x = evar (List.nth vars 0) in
+    match e.e with
+    | EIf (e1, e2, e3) ->
+      let hijacker = enode hijacker in
+      let is_hijacker = eop Eq [node; hijacker] in
+      let e2' =
+        match e2.e with
+        | EMatch (e', bs) -> ematch e' (mapBranches (update_branch_case x) bs)
+        | _ -> failwith "unexpected inner expression in hijack_assert_node"
+      in
+      (* default to true for the hijacker: we don't care what their solution is *)
+      let e2or = eop Or [is_hijacker; e2'] in
+      eif e1 e2or e3
+    | _ -> failwith "hijack_assert_node: expected if, got something else"
+  in
+  descend descender (fun l _ -> List.length l = 2) [] e
 ;;

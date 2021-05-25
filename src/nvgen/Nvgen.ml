@@ -134,15 +134,17 @@ let hijack decls hijackStub =
   decls @ hijack_decls, new_node
 ;;
 
-let maintenance decls dest =
+let maintenance dest decls =
   let down_var = Var.fresh "down" in
+  let aty = get_attr_type decls |> Option.get in
   let update_decl d =
     match d with
     | DLet (v, oty, e) ->
       let e =
         match Var.name v with
-        | "trans" -> maintenance_trans e
+        | "trans" -> maintenance_trans aty e
         | "transferBgp" -> maintenance_transferBgp e
+        | "assert_node" -> maintenance_assert_node e
         | _ -> e
       in
       DLet (v, oty, e)
@@ -150,7 +152,9 @@ let maintenance decls dest =
   in
   let decls = List.map update_decl decls in
   let tagDown = tagDown_decl down_var in
-  decls @ [tagDown]
+  let dest_not_down = eop Not [eop Eq [evar down_var; e_val (vnode dest)]] in
+  let new_decls = [tagDown; DSymbolic (down_var, Ty TNode); DRequire dest_not_down] in
+  decls @ new_decls
 ;;
 
 type genOp =
@@ -167,7 +171,7 @@ let main =
     | "-" -> IO.write_line IO.stdout s
     | file -> File.with_file_out file (fun out -> IO.write_line out s)
   in
-  let output =
+  let new_ds, groups =
     match op, cfg.destination with
     | _, -1 -> failwith "No destination provided."
     | "hijack", destination ->
@@ -185,17 +189,17 @@ let main =
       let stub = { leak = cfg.leak; destination; predicate; spines } in
       let decls, _ = Input.parse file in
       let new_ds, hijacker = hijack decls stub in
-      let new_text = Printing.declarations_to_string new_ds in
-      let cleaned = clean_text new_text in
       (* add the hijacker to the groups *)
-      let groups = Map.add hijacker (Fattree Core) groups in
-      let groupsComment = nodeGroups_to_string groups in
-      cleaned ^ groupsComment
-    | "maintenance", destination ->
+      new_ds, Map.add hijacker (Fattree Core) groups
+    | "maintenance", dest ->
       let decls, _ = Input.parse file in
-      let new_ds = maintenance decls destination in
-      Printing.declarations_to_string new_ds
+      let new_ds = maintenance dest decls in
+      new_ds, parse_node_groups file
     | _ -> failwith ("invalid op: " ^ op)
   in
+  let new_text = Printing.declarations_to_string new_ds in
+  let cleaned = clean_text new_text in
+  let groupsComment = nodeGroups_to_string groups in
+  let output = cleaned ^ groupsComment in
   write output
 ;;

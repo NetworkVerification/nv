@@ -11,11 +11,11 @@ val mapi_record : (String.t * exp -> exp) -> string list -> exp -> exp
 (* Shorthand for `mapi_record` called with a particular label to update *)
 val update_record_at : (exp -> exp) -> string -> string list -> exp -> exp
 val update_comms : (exp * exp) list -> exp
+val assert_bgp : exp -> (exp -> exp) -> exp
 
 val descend
-  :  ('a -> exp -> exp)
-  -> ('a -> exp -> bool)
-  -> (exp -> 'a -> 'a)
-  -> 'a
+  :  (var list -> exp -> exp)
+  -> (var list -> exp -> bool)
+  -> var list
   -> exp
   -> exp

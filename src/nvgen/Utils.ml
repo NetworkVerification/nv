@@ -24,6 +24,7 @@ let mapi_record (f : String.t * exp -> exp) labels e =
 
 let update_record_at f label = mapi_record (fun (l, e) -> if l = label then f e else e)
 
+(* type of resulting exp: TRecord *)
 let update_comms (pairs : (exp * exp) list) : exp =
   let bvar = Var.fresh "b" in
   let update_comms comms =
@@ -31,7 +32,6 @@ let update_comms (pairs : (exp * exp) list) : exp =
     let uvar = Var.fresh "u" in
     let edgePat = PEdge (PVar uvar, PWild) in
     let set_add k = eop MSet [comms; k; ebool true] in
-    (* if u = hijacker, then add the illegit comms tag *)
     let wrap_if e (case, tag) = eif (eop Eq [evar uvar; case]) (set_add tag) e in
     let body = List.fold_left wrap_if comms pairs in
     ematch (evar edge_var) (addBranch edgePat body emptyBranch)
@@ -39,23 +39,31 @@ let update_comms (pairs : (exp * exp) list) : exp =
   update_record_at update_comms "comms" bgplabels (evar bvar)
 ;;
 
+(* match on the given e1: if it is None, return false;
+ * otherwise, return the result of the test on the BGP variable b. *)
+let assert_bgp e1 test =
+  let b = Var.fresh "b" in
+  let branches = addBranch (POption (Some (PVar b))) (test (evar b)) emptyBranch in
+  let branches = addBranch (POption None) (ebool false) branches in
+  ematch e1 branches
+;;
+
 (* `descend f b g a e` walks down the given expression into its subexpressions
  * e1 until b a e1, at which point we call f a e1 and reascend.
- * descend only traverses functions and lets, and maintains an accumulator a using
- * accumulation function g.
+ * descend only traverses functions and lets, and maintains a list of all
+ * captured variables.
  *)
 let rec descend
-    (f : 'a -> exp -> exp)
-    (b : 'a -> exp -> bool)
-    (g : exp -> 'a -> 'a)
-    (a : 'a)
+    (f : var list -> exp -> exp)
+    (b : var list -> exp -> bool)
+    (a : var list)
     (e : exp)
     : exp
   =
   match e.e with
   | _ when b a e -> f a e
-  | EFun f1 -> efunc { f1 with body = descend f b g (g e a) f1.body }
-  | ELet (v, e1, b1) -> elet v e1 (descend f b g (g e a) b1)
+  | EFun f1 -> efunc { f1 with body = descend f b (f1.arg :: a) f1.body }
+  | ELet (v, e1, b1) -> elet v e1 (descend f b (v :: a) b1)
   (* other exp types are to-do, but it's not immediately obvious how to handle them *)
   | _ -> e
 ;;
