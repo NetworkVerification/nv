@@ -4,9 +4,9 @@
 type bgpType = {bgpAd: int; lp: int; aslen: int; med:int; comms:set[int];}
 type attribute = option[bgpType]
 
-symbolic down : tnode
+symbolic down : option[tnode]
 (* the down node cannot be the destination *)
-require (down >n 0n)
+require !(down = Some 0n)
 
 let maintenanceTag = 0
 
@@ -30,8 +30,10 @@ let mergeBgp x y = pickOption betterBgp x y
 
 let merge n x y = mergeBgp x y
 
-let tagDown e b = match e with
-  | u~_ -> if u = down then b.comms[maintenanceTag := true] else b.comms
+let tagDown e b = match down with 
+  | None -> b.comms
+  | Some d -> (match e with
+  | u~_ -> if u = d then b.comms[maintenanceTag := true] else b.comms)
 
 let transferBgp e x =
   match x with
