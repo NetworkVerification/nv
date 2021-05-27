@@ -23,6 +23,7 @@ BENCHMARKS = {
     "ap_fatpol": ("benchmarks/AllPrefixes/FAT{0}", "fat{0}Pol"),
     "ap_topzoo": ("benchmarks/AllPrefixes/TopologyZoo", "USCarrier"),
     "sp_maintenance": ("benchmarks/SinglePrefix/FAT{0}", "fat{0}PolMaintenance"),
+    "ex_topzoo": ("examples/uscarrier", "USCarrier"),
 }
 
 
@@ -140,7 +141,8 @@ def main():
         description="Frontend for benchmarking the Kirigami tool."
     )
     subparsers = parser.add_subparsers(dest="op")
-    cuts = FattreeCut.as_list()
+    hmetis_cuts = [f"hmetis{i + 1}" for i in range(20)]
+    cuts = FattreeCut.as_list() + hmetis_cuts
 
     parser_make = subparsers.add_parser("make")
     parser_make.add_argument(

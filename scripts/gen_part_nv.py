@@ -169,11 +169,11 @@ class NvFile:
             lines = partf.readlines()
         # increment the index by 1 and wrap around to change the last node into node 0
         mapping = {(i + 1) % len(lines): int(p) for (i, p) in enumerate(lines)}
-        nodes: list[list[int]] = []
+        nodes: list[list[int]] = [[]]
         # sort the mapped nodes into their partitions
         for (i, p) in mapping.items():
-            if p > len(nodes):
-                nodes.extend([] * (p - len(nodes)))
+            for _ in range(len(nodes), p + 1):
+                nodes.append([])
             nodes[p].append(i)
         if self.sols is not None:
             edges = get_cross_edges(self.graph, nodes, ranked=False)
@@ -488,7 +488,7 @@ def gen_part_nv_hmetis(nvfile, hmetisfile, verbose=False):
         print(nodes)
         print([e for e in edges])
     partitioned = nv.generate_parted(nodes, edges)
-    with open(part) as outfile:
+    with open(part, "w") as outfile:
         # add the preamble for cuts
         vim_modeline = "(* vim: set syntax=ocaml: *)"
         file_info = f"(* hMETIS-partitioned version of {os.path.basename(nvfile)} with {hmetisn} partitions *)"
