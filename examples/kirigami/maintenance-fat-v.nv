@@ -4,9 +4,10 @@
 type bgpType = {bgpAd: int; lp: int; aslen: int; med:int; comms:set[int];}
 type attribute = option[bgpType]
 
-symbolic down : option[tnode]
+(* symbolic down : option[tnode] *)
 (* the down node cannot be the destination *)
-require !(down = Some 0n)
+(* require !(down = Some 0n) *)
+let down = Some 1n
 
 let node_to_int n = match n with
   | 0n -> 0
@@ -110,13 +111,13 @@ let partition n = match n with
   | 11n -> 1
 
 let interface e a = match e with
-  | 1~10 -> a = Some { bgpAd = 0; lp = 100; aslen = 1; med = 0; comms = if down = Some 1n then {maintenanceTag} else {} }
-  | 2~11 -> a = Some { bgpAd = 0; lp = 100; aslen = 1; med = 0; comms = if down = Some 2n then {maintenanceTag} else {} }
-  | 5~8 -> a = Some { bgpAd = 0; lp = 100; aslen = 3; med = 0; comms = if down = Some 5n then {maintenanceTag} else {} }
-  | 6~9 -> a = Some { bgpAd = 0; lp = 100; aslen = 3; med = 0; comms = if down = Some 6n then {maintenanceTag} else {} }
-  | 8~5 -> a = Some { bgpAd = 0; lp = 100; aslen = 2; med = 0; comms = if down = Some 8n then {maintenanceTag} else {} }
-  | 9~6 -> a = Some { bgpAd = 0; lp = 100; aslen = 2; med = 0; comms = if down = Some 9n then {maintenanceTag} else {} }
-  | 10~1 -> a = Some { bgpAd = 0; lp = 100; aslen = 2; med = 0; comms = if down = Some 10n then {maintenanceTag} else {} }
-  | 11~2 -> a = Some { bgpAd = 0; lp = 100; aslen = 2; med = 0; comms = if down = Some 11n then {maintenanceTag} else {} }
+  | 1~10 -> a = Some { bgpAd = 0; lp = 100; aslen = 1; med = 0; comms = {} }
+  | 2~11 -> a = Some { bgpAd = 0; lp = 100; aslen = 1; med = 0; comms = {} }
+  | 5~8 -> a = Some { bgpAd = 0; lp = 100; aslen = 3; med = 0; comms = {} }
+  | 6~9 -> a = Some { bgpAd = 0; lp = 100; aslen = 3; med = 0; comms = {} }
+  | 8~5 -> a = Some { bgpAd = 0; lp = 100; aslen = 2; med = 0; comms = {} }
+  | 9~6 -> a = Some { bgpAd = 0; lp = 100; aslen = 2; med = 0; comms = {} }
+  | 10~1 -> a = Some { bgpAd = 0; lp = 100; aslen = if down = Some 1n then 4 else 2; med = 0; comms = {} }
+  | 11~2 -> a = Some { bgpAd = 0; lp = 100; aslen = 2; med = 0; comms = {} }
 
 let sol = solution { init = init; trans = trans; merge = merge; interface = interface; rtrans = trans }
