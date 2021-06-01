@@ -525,13 +525,17 @@ record_entry_ps:
   | record_entry_p SEMI UNDERSCORE      { ([$1], true) }
   | record_entry_p SEMI record_entry_ps { ($1::(fst $3), snd $3) }
 
+branchpat:
+  | BAR pattern                         { [$2] }
+  | BAR pattern branchpat               { $2::$3 }
+
 branch:
-    | BAR pattern ARROW expr            { ($2, $4) }
+    | branchpat ARROW expr            { List.map (fun p -> (p, $3)) $1 }
 ;
 
 branches:
-    | branch                            { addBranch (fst $1) (snd $1) emptyBranch }
-    | branch branches                   { addBranch (fst $1) (snd $1) $2 }
+  | branch                            { List.fold_left (fun b (p, e) -> addBranch p e b) emptyBranch $1 }
+  | branch branches                   { List.fold_left (fun b (p, e) -> addBranch p e b) $2 $1 }
 ;
 
 prog:
