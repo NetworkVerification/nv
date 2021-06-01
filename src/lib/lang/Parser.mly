@@ -530,7 +530,9 @@ branchpat:
   | BAR pattern branchpat               { $2::$3 }
 
 branch:
-    | branchpat ARROW expr            { List.map (fun p -> (p, $3)) $1 }
+  | branchpat ARROW expr            { (* NOTE: if branchpats bind different variables, the user may get *)
+                                      (* hard-to-understand typing errors *)
+                                      List.map (fun p -> (p, $3)) $1 }
 ;
 
 branches:
