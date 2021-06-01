@@ -97,18 +97,8 @@ let edges = {
 }
 
 let partition n = match n with
-  | 0n -> 0
-  | 1n -> 0
-  | 2n -> 0
-  | 3n -> 0
-  | 4n -> 1
-  | 5n -> 1
-  | 6n -> 1
-  | 7n -> 1
-  | 8n -> 0
-  | 9n -> 0
-  | 10n -> 1
-  | 11n -> 1
+  | 0n | 1n | 2n | 3n | 8n | 9n -> 0
+  | 4n | 5n | 6n | 7n | 10n | 11n -> 1
 
 let interface e a = match e with
   | 1~10 -> a = Some { bgpAd = 0; lp = 100; aslen = 1; med = 0; comms = {} }
