@@ -331,14 +331,104 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
       []
   ;;
 
-  let encode_kirigami_global str env global arglist count =
-    let encode_global i l =
-      let pred =
-        encode_predicate global (Printf.sprintf "global-assert-%s-%d-%d" str count i) env
-      in
-      pred, l
+  (* Extract variable names from var_names, and split them up based on which node they
+   *  belong to. In the end, label_vars.(i) is the list of attribute variables
+   *  for node i.
+   * NOTE: as we don't modify var_names as part of Kirigami,
+   * label_vars has a length proportional to the number of nodes in the original network,
+   * but not the number of nodes in the Kirigami networks. *)
+  let encode_label_vars aty var_names : var E.t array =
+    let aty_len =
+      match aty with
+      | TTuple tys -> List.length tys
+      | _ -> 1
     in
-    List.mapi encode_global arglist
+    match var_names.e with
+    | ETuple es ->
+      let varnames =
+        List.map
+          (fun e ->
+            match e.e with
+            | EVar x -> x
+            | _ -> failwith "")
+          es
+      in
+      varnames |> List.ntake aty_len |> Array.of_list |> Array.map of_list
+    | EVar x ->
+      (* Not sure if this can happen, but if it does it's in networks with only one node *)
+      Array.map of_list @@ Array.make 1 [x]
+    | _ -> failwith "internal error (encode_algebra)"
+  ;;
+
+  (* Map each edge to transfer function result *)
+  let encode_edge_transfers env count mapping nodes etrans graph =
+    (* incoming_map is a map from vertices to list of incoming edges *)
+    let incoming_map = Array.make nodes [] in
+    (* trans_map maps each edge to the variable that holds the result *)
+    let trans_map = ref EdgeMap.empty in
+    (* trans_input_map maps each edge to the incoming message variable *)
+    let trans_input_map = ref EdgeMap.empty in
+    let enc_z3_trans = encode_z3_trans etrans in
+    iter_edges_e
+      (fun (i, j) ->
+        incoming_map.(j) <- (i, j) :: incoming_map.(j);
+        let node_value n = avalue (vnode n, Some Typing.node_ty, Span.default) in
+        let edge =
+          if SmtUtils.smt_config.unboxing
+          then [node_value i; node_value j]
+          else
+            [ avalue
+                ( vtuple [node_value i; node_value j]
+                , Some (TTuple [TNode; TNode])
+                , Span.default ) ]
+        in
+        let trans, x =
+          enc_z3_trans
+            edge
+            (Printf.sprintf "trans%d-%d-%d" count mapping.(i) mapping.(j))
+            env
+        in
+        trans_input_map := EdgeMap.add (i, j) x !trans_input_map;
+        trans_map := EdgeMap.add (i, j) trans !trans_map)
+      graph;
+    incoming_map, trans_map, trans_input_map
+  ;;
+
+  (* Propagate labels across edges outputs *)
+  let encode_propagate_labels env trans_input_map labelling =
+    EdgeMap.iter
+      (fun (i, _) x ->
+        let label = labelling.(i) in
+        BatList.iter2
+          (fun label x -> SmtUtils.add_constraint env (mk_term (mk_eq label.t x.t)))
+          (to_list label)
+          x)
+      trans_input_map
+  ;;
+
+  (* Encode the series of merges at this node. *)
+  let encode_node_merges env count einit emerge in_trans node name =
+    (* compute each init attribute *)
+    let node = avalue (vnode node, Some Typing.node_ty, Span.default) in
+    let einit_i = InterpPartial.interp_partial_fun einit [node] in
+    let init = encode_z3_init (Printf.sprintf "init%d-%d" count name) env einit_i in
+    let emerge_i = InterpPartial.interp_partial_fun emerge [node] in
+    let merged =
+      BatList.fold_lefti
+        (fun prev_result idx trans ->
+          let str = Printf.sprintf "merge%d-%d-%d" count name idx in
+          let merge_result, x = encode_z3_merge str env emerge_i in
+          let trans_list = to_list trans in
+          let prev_result_list = to_list prev_result in
+          BatList.iter2
+            (fun y x -> SmtUtils.add_constraint env (mk_term (mk_eq y.t x.t)))
+            (prev_result_list @ trans_list)
+            x;
+          merge_result)
+        init
+        in_trans
+    in
+    merged
   ;;
 
   let encode_kirigami_solve
@@ -355,43 +445,14 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     let old_nodes = SrpRemapping.get_global_nodes parted_srp in
     let remapping = Array.of_list (SrpRemapping.get_old_nodes parted_srp) in
     let nodes = nb_vertex graph in
-    (* Extract variable names from e, and split them up based on which node they
-       belong to. In the end, label_vars.(i) is the list of attribute variables
-       for node i *)
-    (* NOTE: as we don't modify var_names as part of Kirigami,
-     * label_vars has a length proportional to the number of nodes in the original network *)
-    let label_vars : var E.t array =
-      let aty_len =
-        match aty with
-        | TTuple tys -> List.length tys
-        | _ -> 1
-      in
-      match var_names.e with
-      | ETuple es ->
-        (* Sanity check *)
-        (* assert (aty_len * nodes = List.length es); *)
-        let varnames =
-          List.map
-            (fun e ->
-              match e.e with
-              | EVar x -> x
-              | _ -> failwith "")
-            es
-        in
-        varnames |> List.ntake aty_len |> Array.of_list |> Array.map of_list
-      | EVar x ->
-        (* Not sure if this can happen, but if it does it's in networks with only one node *)
-        Array.map of_list @@ Array.make 1 [x]
-      | _ -> failwith "internal error (encode_algebra)"
+    let label_vars : var E.t array = encode_label_vars aty var_names in
+    let incoming_map, trans_map, trans_input_map =
+      encode_edge_transfers env count remapping nodes etrans graph
     in
-    (* Map each edge to transfer function result *)
-
-    (* incoming_map is a map from vertices to list of incoming edges *)
-    let incoming_map = Array.make nodes [] in
-    (* trans_map maps each edge to the variable that holds the result *)
-    let trans_map = ref EdgeMap.empty in
-    (* trans_input_map maps each edge to the incoming message variable *)
-    let trans_input_map = ref EdgeMap.empty in
+    (* Setup labelling functions *)
+    let attr_sort = ty_to_sorts aty in
+    (* Compute the labelling as the merge of all inputs *)
+    let labelling = Array.make nodes (of_list []) in
     let eouttrans, eintrans =
       match part with
       | Some { decomp = lt, rt; _ } -> lt, rt
@@ -399,81 +460,11 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     in
     (* construct the input constants *)
     let input_map = encode_kirigami_inputs env rank inputs eintrans count in
-    let enc_z3_trans = encode_z3_trans etrans in
-    iter_edges_e
-      (fun (i, j) ->
-        incoming_map.(j) <- (i, j) :: incoming_map.(j);
-        let node_value n = avalue (vnode n, Some Typing.node_ty, Span.default) in
-        let edge =
-          if SmtUtils.smt_config.unboxing
-          then [node_value i; node_value j]
-          else
-            [ avalue
-                ( vtuple [node_value i; node_value j]
-                , Some (TTuple [TNode; TNode])
-                , Span.default ) ]
-        in
-        (* Printf.printf "etrans:%s\n" (Printing.exp_to_string etrans); *)
-        let trans, x =
-          enc_z3_trans
-            edge
-            (Printf.sprintf "trans%d-%d-%d" count remapping.(i) remapping.(j))
-            env
-        in
-        trans_input_map := EdgeMap.add (i, j) x !trans_input_map;
-        trans_map := EdgeMap.add (i, j) trans !trans_map)
-      graph;
-    (* Setup labelling functions *)
-    let attr_sort = ty_to_sorts aty in
-    (* Compute the labelling as the merge of all inputs *)
-    let labelling = Array.make nodes (of_list []) in
-    let inits = ref [] in
     for i = 0 to nodes - 1 do
-      (* compute each init attribute *)
-      let node = avalue (vnode i, Some Typing.node_ty, Span.default) in
-      let einit_i = Nv_interpreter.InterpPartial.interp_partial_fun einit [node] in
-      let init =
-        encode_z3_init (Printf.sprintf "init%d-%d" count remapping.(i)) env einit_i
-      in
-      inits := init :: !inits;
-      let in_edges = incoming_map.(i) in
-      let emerge_i = InterpPartial.interp_partial_fun emerge [node] in
-      let idx = ref 0 in
-      let merged =
-        BatList.fold_left
-          (fun prev_result (x, y) ->
-            incr idx;
-            let trans = EdgeMap.find (x, y) !trans_map in
-            let str = Printf.sprintf "merge%d-%d-%d" count remapping.(i) !idx in
-            let merge_result, x = encode_z3_merge str env emerge_i in
-            let trans_list = to_list trans in
-            let prev_result_list = to_list prev_result in
-            BatList.iter2
-              (fun y x -> SmtUtils.add_constraint env (mk_term (mk_eq y.t x.t)))
-              (prev_result_list @ trans_list)
-              x;
-            merge_result)
-          init
-          in_edges
-      in
-      (* if there are no inputs, then return [] so we can skip *)
-      let inputs = VertexMap.find_default [] i input_map in
-      let merged =
-        BatList.fold_left
-          (fun prev_result (input, _) ->
-            incr idx;
-            let str = Printf.sprintf "merge-input%d-%d-%d" count remapping.(i) !idx in
-            let merge_result, x = encode_z3_merge str env emerge_i in
-            let input_list = to_list input in
-            let prev_result_list = to_list prev_result in
-            BatList.iter2
-              (fun y x -> SmtUtils.add_constraint env (mk_term (mk_eq y.t x.t)))
-              (prev_result_list @ input_list)
-              x;
-            merge_result)
-          merged
-          inputs
-      in
+      let in_trans = List.map (fun e -> EdgeMap.find e !trans_map) incoming_map.(i) in
+      (* Kirigami: get any input transfers from the input_map *)
+      let inputs = List.map fst (VertexMap.find_default [] i input_map) in
+      let merged = encode_node_merges env count einit emerge (in_trans @ inputs) i (remapping.(i)) in
       let lbl_iv = label_vars.(i) in
       add_symbolic env lbl_iv (Ty aty);
       let l =
@@ -486,26 +477,19 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
            merged);
       labelling.(i) <- l
     done;
-    (* Kirigami: add dummy labels for cut nodes; just need to make sure there's as many as before *)
+    (* Kirigami: add dummy labels for cut nodes; just need to make sure there's as many as before.
+     * This ensures the SMT query processes normally and can return counterexamples correctly. *)
     for i = nodes to old_nodes - 1 do
       let lbl_iv = label_vars.(i) in
       add_symbolic env lbl_iv (Ty aty);
       ignore
         (lift2 (fun lbl s -> mk_constant env (create_vars env "" lbl) s) lbl_iv attr_sort)
     done;
-    (* Propagate labels across edges outputs *)
-    EdgeMap.iter
-      (fun (i, _) x ->
-        let label = labelling.(i) in
-        BatList.iter2
-          (fun label x -> SmtUtils.add_constraint env (mk_term (mk_eq label.t x.t)))
-          (to_list label)
-          x)
-      !trans_input_map;
+    encode_propagate_labels env !trans_input_map labelling;
     (* construct the output constants *)
     let guarantees = encode_kirigami_outputs env outputs eouttrans labelling count in
     (* divide up the hypotheses *)
-    let lesser_hyps, greater_hyps =
+    let lesser, greater =
       VertexMap.fold
         (fun _ inputs hyps ->
           List.fold_left
@@ -518,99 +502,24 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
         input_map
         ([], [])
     in
-    (* lesser_hyps, greater_hyps, guarantees, global_reqs, global_asserts *)
-    lesser_hyps, greater_hyps, guarantees
+    lesser, greater, guarantees
   ;;
 
   let encode_solve env graph count { aty; var_names; init; trans; merge } =
     let aty = oget aty in
     let einit, etrans, emerge = init, trans, merge in
     let nodes = nb_vertex graph in
-    (* Extract variable names from e, and split them up based on which node they
-       belong to. In the end, label_vars.(i) is the list of attribute variables
-       for node i *)
-    let label_vars : var E.t array =
-      let aty_len =
-        match aty with
-        | TTuple tys -> List.length tys
-        | _ -> 1
-      in
-      match var_names.e with
-      | ETuple es ->
-        (* Sanity check *)
-        (* assert (aty_len * nodes = List.length es); *)
-        let varnames =
-          List.map
-            (fun e ->
-              match e.e with
-              | EVar x -> x
-              | _ -> failwith "")
-            es
-        in
-        varnames |> List.ntake aty_len |> Array.of_list |> Array.map of_list
-      | EVar x ->
-        (* Not sure if this can happen, but if it does it's in networks with only one node *)
-        Array.map of_list @@ Array.make 1 [x]
-      | _ -> failwith "internal error (encode_algebra)"
+    let label_vars = encode_label_vars aty var_names in
+    let incoming_map, trans_map, trans_input_map =
+      encode_edge_transfers env count (Array.of_list (list_seq nodes)) nodes etrans graph
     in
-    (* Map each edge to transfer function result *)
-
-    (* incoming_map is a map from vertices to list of incoming edges *)
-    let incoming_map = Array.make nodes [] in
-    (* trans_map maps each edge to the variable that holds the result *)
-    let trans_map = ref EdgeMap.empty in
-    (* trans_input_map maps each edge to the incoming message variable *)
-    let trans_input_map = ref EdgeMap.empty in
-    let enc_z3_trans = encode_z3_trans etrans in
-    iter_edges_e
-      (fun (i, j) ->
-        incoming_map.(j) <- (i, j) :: incoming_map.(j);
-        let node_value n = avalue (vnode n, Some Typing.node_ty, Span.default) in
-        let edge =
-          if SmtUtils.smt_config.unboxing
-          then [node_value i; node_value j]
-          else
-            [ avalue
-                ( vtuple [node_value i; node_value j]
-                , Some (TTuple [TNode; TNode])
-                , Span.default ) ]
-        in
-        (* Printf.printf "etrans:%s\n" (Printing.exp_to_string etrans); *)
-        let trans, x = enc_z3_trans edge (Printf.sprintf "trans%d-%d-%d" count i j) env in
-        trans_input_map := EdgeMap.add (i, j) x !trans_input_map;
-        trans_map := EdgeMap.add (i, j) trans !trans_map)
-      graph;
     (* Setup labelling functions *)
     let attr_sort = ty_to_sorts aty in
     (* Compute the labelling as the merge of all inputs *)
     let labelling = Array.make nodes (of_list []) in
     for i = 0 to nodes - 1 do
-      (* compute each init attribute *)
-      let node = avalue (vnode i, Some Typing.node_ty, Span.default) in
-      let einit_i = Nv_interpreter.InterpPartial.interp_partial_fun einit [node] in
-      let init = encode_z3_init (Printf.sprintf "init%d-%d" count i) env einit_i in
-      let in_edges = incoming_map.(i) in
-      let emerge_i = InterpPartial.interp_partial_fun emerge [node] in
-      (* Printf.printf "merge after interp:\n%s\n\n" (Printing.exp_to_string emerge_i);
-       * failwith "bla"; *)
-      let idx = ref 0 in
-      let merged =
-        BatList.fold_left
-          (fun prev_result (x, y) ->
-            incr idx;
-            let trans = EdgeMap.find (x, y) !trans_map in
-            let str = Printf.sprintf "merge%d-%d-%d" count i !idx in
-            let merge_result, x = encode_z3_merge str env emerge_i in
-            let trans_list = to_list trans in
-            let prev_result_list = to_list prev_result in
-            BatList.iter2
-              (fun y x -> SmtUtils.add_constraint env (mk_term (mk_eq y.t x.t)))
-              (prev_result_list @ trans_list)
-              x;
-            merge_result)
-          init
-          in_edges
-      in
+      let in_trans = List.map (fun e -> EdgeMap.find e !trans_map) incoming_map.(i) in
+      let merged = encode_node_merges env count einit emerge in_trans i i in
       let lbl_iv = label_vars.(i) in
       add_symbolic env lbl_iv (Ty aty);
       let l =
@@ -623,15 +532,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
            merged);
       labelling.(i) <- l
     done;
-    (* Propagate labels across edges outputs *)
-    EdgeMap.iter
-      (fun (i, _) x ->
-        let label = labelling.(i) in
-        BatList.iter2
-          (fun label x -> SmtUtils.add_constraint env (mk_term (mk_eq label.t x.t)))
-          (to_list label)
-          x)
-      !trans_input_map
+    encode_propagate_labels env !trans_input_map labelling
   ;;
 
   let add_assertions str env f assertions ~(negate : bool) =
@@ -641,7 +542,6 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
       let assert_vars =
         List.mapi
           (fun i eassert ->
-            (* print_endline (Printing.exp_to_string eassert); *)
             let z3_assert = f eassert |> to_list |> List.hd in
             let assert_var =
               mk_constant env (Printf.sprintf "%s-%d" str i) (ty_to_sort TBool)

@@ -30,8 +30,11 @@ let rec remap_exp parted_srp e =
       (match remap_value parted_srp v with
       | Some v1 -> e_val v1
       | None ->
-        failwith
-          ("remap_value given " ^ Printing.value_to_string v ^ ", which should be cut"))
+        print_endline
+          ("Warning: remap_value given "
+          ^ Printing.value_to_string v
+          ^ ", which should be cut");
+        e_val v)
     | EOp (op, es) -> remap_exp_op parted_srp op es
     | ESome e -> esome (f e)
     | ETuple es -> etuple (List.map f es)
@@ -61,7 +64,7 @@ and remap_branches parted_srp bs =
           (match VertexMap.find_default None u node_map with
           | Some u' -> (PNode u', f e) :: bs
           | None -> bs)
-        | PEdge _ -> failwith "edges should be unboxed before partitioning"
+        | PEdge _ -> failwith "remap_branches: found unboxed edge"
         | _ -> (p, f e) :: bs)
       []
       old_bs
@@ -90,7 +93,7 @@ and remap_exp_op parted_srp op es =
       then ebool false
       else eop op (List.map Option.get es1)
     | _ -> failwith (Printf.sprintf "unexpected operator %s over nodes" (show_op op)))
-  | TEdge -> failwith "not implemented; edges should already be unboxed"
+  | TEdge -> failwith "remap_exp_op: found unboxed edge"
   | _ -> eop op (List.map f es)
 ;;
 
@@ -150,7 +153,8 @@ let transform_assert (e : exp) (parted_srp : SrpRemapping.partitioned_srp) : exp
             Please check that the assert is of the form \"assert foldNodes (fun u v acc \
             -> acc && assertNode u v) sol true\"\n\
             Interpretation returned the following (expected an and operation): "
-          ^ Printing.exp_to_string e1);
+          ^ Printing.exp_to_string e1
+          ^ "\nIf this warning was false, please file an issue.");
         e)
     | _ -> e
   in
