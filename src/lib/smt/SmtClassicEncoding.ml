@@ -464,7 +464,9 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
       let in_trans = List.map (fun e -> EdgeMap.find e !trans_map) incoming_map.(i) in
       (* Kirigami: get any input transfers from the input_map *)
       let inputs = List.map fst (VertexMap.find_default [] i input_map) in
-      let merged = encode_node_merges env count einit emerge (in_trans @ inputs) i (remapping.(i)) in
+      let merged =
+        encode_node_merges env count einit emerge (in_trans @ inputs) i remapping.(i)
+      in
       let lbl_iv = label_vars.(i) in
       add_symbolic env lbl_iv (Ty aty);
       let l =
@@ -535,26 +537,27 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     encode_propagate_labels env !trans_input_map labelling
   ;;
 
-  let add_assertions str env f assertions ~(negate : bool) =
-    match assertions with
+  let encode_assertions str env (f : 'a -> term E.t) (assertions : 'a list) =
+    List.mapi
+      (fun i eassert ->
+        let z3_assert = f eassert |> to_list |> List.hd in
+        let assert_var =
+          mk_constant env (Printf.sprintf "%s-%d" str i) (ty_to_sort TBool)
+        in
+        SmtUtils.add_constraint env (mk_term (mk_eq assert_var.t z3_assert.t));
+        assert_var)
+      assertions
+  ;;
+
+  let conjoin_terms env terms ~(negate : bool) =
+    match terms with
     | [] -> ()
     | _ ->
-      let assert_vars =
-        List.mapi
-          (fun i eassert ->
-            let z3_assert = f eassert |> to_list |> List.hd in
-            let assert_var =
-              mk_constant env (Printf.sprintf "%s-%d" str i) (ty_to_sort TBool)
-            in
-            SmtUtils.add_constraint env (mk_term (mk_eq assert_var.t z3_assert.t));
-            assert_var)
-          assertions
-      in
+      (* Tim: could this just start with true and then use the whole list, instead of needing hd and tl?
+       * on the other hand, we certainly don't want to have negate be set and accidentally
+       * (add_constraint env false), so maybe this is fine for now *)
       let all_good =
-        List.fold_left
-          (fun acc v -> mk_and acc v.t)
-          (List.hd assert_vars).t
-          (List.tl assert_vars)
+        List.fold_left (fun acc v -> mk_and acc v.t) (List.hd terms).t (List.tl terms)
       in
       let term = if negate then mk_not all_good else all_good in
       SmtUtils.add_constraint env (mk_term term)
@@ -569,7 +572,10 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     let env = init_solver symbolics ~labels:[] in
     List.iteri (encode_solve env graph) solves;
     (* add assertions at the end *)
-    add_assertions "assert" env (fun e -> encode_exp_z3 "" env e) assertions ~negate:true;
+    let asserts =
+      encode_assertions "assert" env (fun e -> encode_exp_z3 "" env e) assertions
+    in
+    conjoin_terms env asserts ~negate:true;
     (* add any require clauses constraints *)
     add_symbolic_constraints env requires env.symbolics;
     env
@@ -596,7 +602,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     (* helper for applying tuples of constraints *)
     let apply (f, v) = f v in
     (* helper for scoping separate checks *)
-    let scope_checks env f =
+    let scope_checks env (f : smt_env -> unit) =
       add_command env ~comdescr:"push" SmtLang.Push;
       f env;
       (* marker to break up encoding *)
@@ -606,15 +612,29 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     (* these constraints are included in all scopes *)
     add_symbolic_constraints env requires VarMap.empty;
     (* ranked initial checks *)
-    add_assertions "lesser-hyp" env apply lesser_hyps ~negate:false;
+    conjoin_terms env (encode_assertions "lesser-hyp" env apply lesser_hyps) ~negate:false;
     let add_guarantees env =
-      add_assertions "guarantee" env apply guarantees ~negate:true
+      encode_assertions "guarantee" env apply guarantees
     in
     (* if performing ranked check, scope the guarantees separately *)
-    if check_ranked then scope_checks env add_guarantees else add_guarantees env;
+    let gs =
+      if check_ranked
+      then (scope_checks env (fun e -> add_guarantees e |> conjoin_terms e ~negate:true); [])
+      else add_guarantees env
+    in
+    (* FIXME: when guarantees are not scoped, they need to be coupled with the asserts,
+     * in an (assert (not (and (and assert-0 ... assert-n) (and guarantee-0 ... guarantee-m)))) statement *)
     (* safety checks: add other hypotheses, test original assertions *)
-    add_assertions "greater-hyp" env apply greater_hyps ~negate:false;
-    add_assertions "assert" env (fun e -> encode_exp_z3 "" env e) assertions ~negate:true;
+    conjoin_terms
+      env
+      (encode_assertions "greater-hyp" env apply greater_hyps)
+      ~negate:false;
+    let asserts = encode_assertions
+      "assert"
+      env
+      (fun e -> encode_exp_z3 "" env e)
+      assertions in
+    conjoin_terms env (gs @ asserts) ~negate:true;
     env
   ;;
 end

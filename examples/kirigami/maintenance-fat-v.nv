@@ -107,7 +107,7 @@ let interface e a = match e with
   | 6~9 -> a = Some { bgpAd = 0; lp = 100; aslen = 3; med = 0; comms = {} }
   | 8~5 -> a = Some { bgpAd = 0; lp = 100; aslen = 2; med = 0; comms = {} }
   | 9~6 -> a = Some { bgpAd = 0; lp = 100; aslen = 2; med = 0; comms = {} }
-  | 10~1 -> a = Some { bgpAd = 0; lp = 100; aslen = if down = Some 1n then 4 else 2; med = 0; comms = {} }
+  | 10~1 -> a = Some { bgpAd = 0; lp = 100; aslen = 2; med = 0; comms = {} }
   | 11~2 -> a = Some { bgpAd = 0; lp = 100; aslen = 2; med = 0; comms = {} }
 
 let sol = solution { init = init; trans = trans; merge = merge; interface = interface; rtrans = trans }
