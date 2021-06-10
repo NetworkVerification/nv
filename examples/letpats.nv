@@ -1,0 +1,42 @@
+(* vim: set syntax=ocaml: *)
+(* Demonstration of a variety of let patterns.
+ * Reference for issue #44.
+ * Each let pattern should desugar into a match statement.
+ *)
+type rec = { a: (int, int); b: bool }
+type attribute = option[rec]
+
+let nodes = 2
+let edges = {0=1;}
+
+let init n = match n with
+  | 0n -> Some { a = (0, 0); b = true }
+  | _ -> None
+
+let update_r { a = (a1, a2); b } =
+  { a = (a1 + 1, a2); b = b }
+
+let trans e x = 
+  let u~_ = e in
+  if u = 0n then match x with
+   | Some r -> Some (update_r r)
+   | None -> None
+  else None
+
+let merge n x y = 
+  match (x, y) with 
+  | (None, _) -> y
+  | (_, None) -> x
+  | (Some r1, Some r2) ->
+    let { a = a1; _ } = r1 in
+    let (a11, a12) = a1 in
+    let { a = (a21, a22); _ } = r2 in
+    if a11 < a21 then Some { a = a1; b = true } else Some { a = a2; b = false }
+
+let sol = solution { init = init; trans = trans; merge = merge }
+
+let assert_node n x = match x with
+  | Some _ -> true
+  | None -> false
+
+assert foldNodes (fun u v acc -> acc && assert_node u v) sol true
