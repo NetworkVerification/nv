@@ -4,10 +4,10 @@
 type bgpType = {bgpAd: int; lp: int; aslen: int; med:int; comms:set[int];}
 type attribute = option[bgpType]
 
-(* symbolic down : option[tnode] *)
+symbolic down : option[int]
 (* the down node cannot be the destination *)
-(* require !(down = Some 0n) *)
-let down = Some 1n
+require !(down = Some 0)
+(* let down = Some 1n *)
 
 let node_to_int n = match n with
   | 0n -> 0
@@ -48,7 +48,7 @@ let merge n x y = mergeBgp x y
 let tagDown e b = match down with 
   | None -> b.comms
   | Some d -> (match e with
-  | u~_ -> if u = d then b.comms[maintenanceTag := true] else b.comms)
+  | u~_ -> if (node_to_int u) = d then b.comms[maintenanceTag := true] else b.comms)
 
 let transferBgp e x =
   match x with
@@ -90,9 +90,9 @@ let edges = {
     9=2;
     9=6;
     10=1;
-    10=6;
+    10=5;
     11=2;
-    11=5;
+    11=6;
     (* flipped 10 to connect to 6 and 11 to connect to 5 *)
 }
 
@@ -100,14 +100,19 @@ let partition n = match n with
   | 0n | 1n | 2n | 3n | 8n | 9n -> 0
   | 4n | 5n | 6n | 7n | 10n | 11n -> 1
 
+(* It only matters if the aggregator nodes of the destination pod are down.
+ * Otherwise, there is a redundant route with the same length available.
+ * Hence, we just need to have conditional cases for if the relevant aggregator node
+ * is down for each edge.
+ *)
 let interface e a = match e with
   | 1~10 -> a = Some { bgpAd = 0; lp = 100; aslen = 1; med = 0; comms = {} }
   | 2~11 -> a = Some { bgpAd = 0; lp = 100; aslen = 1; med = 0; comms = {} }
-  | 5~8 -> a = Some { bgpAd = 0; lp = 100; aslen = 3; med = 0; comms = {} }
-  | 6~9 -> a = Some { bgpAd = 0; lp = 100; aslen = 3; med = 0; comms = {} }
-  | 8~5 -> a = Some { bgpAd = 0; lp = 100; aslen = 2; med = 0; comms = {} }
-  | 9~6 -> a = Some { bgpAd = 0; lp = 100; aslen = 2; med = 0; comms = {} }
-  | 10~1 -> a = Some { bgpAd = 0; lp = 100; aslen = 2; med = 0; comms = {} }
-  | 11~2 -> a = Some { bgpAd = 0; lp = 100; aslen = 2; med = 0; comms = {} }
+  | 5~8 -> a = Some { bgpAd = 0; lp = 100; aslen = if down = Some 1 then 5 else 3; med = 0; comms = {} }
+  | 6~9 -> a = Some { bgpAd = 0; lp = 100; aslen = if down = Some 2 then 5 else 3; med = 0; comms = {} }
+  | 8~5 -> a = Some { bgpAd = 0; lp = 100; aslen = if down = Some 1 then 6 else 2; med = 0; comms = {} }
+  | 9~6 -> a = Some { bgpAd = 0; lp = 100; aslen = if down = Some 2 then 6 else 2; med = 0; comms = {} }
+  | 10~1 -> a = Some { bgpAd = 0; lp = 100; aslen = if down = Some 1 then 6 else 2; med = 0; comms = {} }
+  | 11~2 -> a = Some { bgpAd = 0; lp = 100; aslen = if down = Some 2 then 6 else 2; med = 0; comms = {} }
 
 let sol = solution { init = init; trans = trans; merge = merge; interface = interface; rtrans = trans }
