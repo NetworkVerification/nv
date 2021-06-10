@@ -10,6 +10,8 @@ open Utils
 
 let maintenanceTag = e_val (vint (Integer.of_int 0))
 
+let tagDown = Var.fresh "tagDown"
+
 (* Return a DLet declaration for a tagDown function, used to update the BGP
  * community tags on transfer for edges leaving the down node.
  * Has the form:
@@ -31,7 +33,7 @@ let tagDown_decl (down : var) =
   let downmatch = ematch (evar down) branches in
   let fn = efunc (func bvar downmatch) in
   let fn = efunc (func edge_var fn) in
-  DLet (Var.fresh "tagDown", None, fn)
+  DLet (tagDown, None, fn)
 ;;
 
 (* update the trans function to drop comms with the maintenance tag set *)
@@ -77,8 +79,7 @@ let maintenance_transferBgp e =
   let add_tagDown_before_edges edge e =
     match e.e with
     | ELet (bvar, bexp, edgebody) ->
-      let tagdown = Var.fresh "tagDown" in
-      let call = eapp (eapp (evar tagdown) edge) (evar bvar) in
+      let call = eapp (eapp (evar tagDown) edge) (evar bvar) in
       let body = elet bvar call edgebody in
       elet bvar bexp body
     | _ -> failwith "maintenance_transferBgp: unexpected expr"

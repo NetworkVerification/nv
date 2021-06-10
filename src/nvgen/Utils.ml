@@ -4,6 +4,16 @@ open Batteries
 open Syntax
 open Collections
 
+let node_to_int = Var.fresh "node_to_int"
+
+let node_to_int_decl (nodes : int) =
+  let node_var = Var.fresh "node" in
+  let add_node_branch b i = addBranch (PNode i) (e_val (vint (Integer.of_int i))) b in
+  let branches = List.fold_left add_node_branch emptyBranch (Nv_utils.OCamlUtils.list_seq nodes) in
+  let body = ematch (evar node_var) branches in
+  let fn = efunc (func node_var body) in
+  DLet (node_to_int, None, fn)
+
 (* definitions we'll use for the functions.
  * the labels should really be extracted from the file instead of hardcoded,
  * but we can safely assume if we're running this code on fatXPol examples
@@ -32,7 +42,7 @@ let update_comms (pairs : (exp * exp) list) : exp =
     let uvar = Var.fresh "u" in
     let edgePat = PEdge (PVar uvar, PWild) in
     let set_add k = eop MSet [comms; k; ebool true] in
-    let wrap_if e (case, tag) = eif (eop Eq [evar uvar; case]) (set_add tag) e in
+    let wrap_if e (case, tag) = eif (eop Eq [eapp (evar node_to_int) (evar uvar); case]) (set_add tag) e in
     let body = List.fold_left wrap_if comms pairs in
     ematch (evar edge_var) (addBranch edgePat body emptyBranch)
   in

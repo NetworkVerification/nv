@@ -6,6 +6,7 @@ open Nv_datastructures
 open Partition
 open Hijack
 open Maintenance
+open Utils
 
 (** Remove all variable delimiters "~n" from the given string. *)
 let strip_var_delims s =
@@ -129,7 +130,8 @@ let hijack decls hijackStub =
   let hijack_app =
     annot TBool (eapp hijackStub.predicate (annot aty (evar hijack_var)))
   in
-  let hijack_decls = [edgeTag; DSymbolic (hijack_var, Ty aty); DRequire hijack_app] in
+  let nti = node_to_int_decl (new_node + 1) in
+  let hijack_decls = [nti; edgeTag; DSymbolic (hijack_var, Ty aty); DRequire hijack_app] in
   (* return the hijacker node *)
   decls @ hijack_decls, new_node
 ;;
@@ -153,10 +155,11 @@ let maintenance dest decls =
   let decls = List.map update_decl decls in
   let tagDown = tagDown_decl down_var in
   let dest_not_down =
-    eop Not [eop Eq [evar down_var; e_val (voption (Some (vnode dest)))]]
+    eop Not [eop Eq [evar down_var; e_val (voption (Some (vint (Integer.of_int dest))))]]
   in
+  let nodes = get_nodes decls |> Option.get in
   let new_decls =
-    [tagDown; DSymbolic (down_var, Ty (TOption TNode)); DRequire dest_not_down]
+    [node_to_int_decl nodes; tagDown; DSymbolic (down_var, Ty (TOption (TInt 32))); DRequire dest_not_down]
   in
   decls @ new_decls
 ;;

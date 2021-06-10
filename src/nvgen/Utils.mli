@@ -4,6 +4,10 @@ open Nv_lang.Syntax
 val bgplabels : String.t list
 val riblabels : String.t list
 
+(* Declaration for a function to match nodes with integers.
+ * Necessary for dealing with partitioning nodes. *)
+val node_to_int_decl : int -> declaration
+
 (* `mapi_record f ls e` returns a new ERecord exp with the given
  * labels `ls` updated according to `f` called on `l` in `ls` and `eproject e l`. *)
 val mapi_record : (String.t * exp -> exp) -> string list -> exp -> exp
