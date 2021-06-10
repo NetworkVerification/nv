@@ -6,6 +6,7 @@ Main module to generate, run and tabulate the Kirigami benchmarks.
 import argparse
 import os
 import re
+import subprocess
 import sys
 from datetime import datetime
 from gen_part_nv import gen_part_nv, run_nv_simulate, FattreeCut
@@ -22,7 +23,7 @@ BENCHMARKS = {
     "sp_topzoo": ("benchmarks/SinglePrefix/TopologyZoo", "USCarrier"),
     "ap_fatpol": ("benchmarks/AllPrefixes/FAT{0}", "fat{0}Pol"),
     "ap_topzoo": ("benchmarks/AllPrefixes/TopologyZoo", "USCarrier"),
-    "sp_maintenance": ("benchmarks/SinglePrefix/FAT{0}", "fat{0}PolMaintenance"),
+    "sp_maintenance": ("benchmarks/SinglePrefix/FAT{0}", "fat{0}Maintenance"),
     "ex_topzoo": ("examples/uscarrier", "USCarrier"),
 }
 
@@ -30,11 +31,32 @@ BENCHMARKS = {
 def get_sp_benchmarks(fmtstr):
     """
     Return the list of input SinglePrefix benchmark files with their destinations.
-    Applies to SinglePrefix fatXPol and spX benchmarks.
+    Applies to SinglePrefix fatXPol, fatXMaintenance and spX benchmarks.
     """
     common = [(4, 10), (8, 12), (10, 13), (12, 64), (16, 0), (20, 0)]
     benches = [(fmtstr.format(sz), d) for (sz, d) in common]
     return benches
+
+
+def gen_maintenance_benchmarks(benchmarks):
+    nvgenpath = os.path.join(os.getcwd(), "nvgen")
+    if not os.path.exists(nvgenpath):
+        print("Did not find 'nvgen' executable in the current working directory")
+        sys.exit(1)
+    outputs = []
+    for (inputf, dest) in benchmarks:
+        hd, tl = os.path.split(inputf)
+        # generate the new maintenance version of the fatXPol benchmark
+        outputf = os.path.join(hd, tl.replace("Pol", "Maintenance"))
+        args = [nvgenpath, "-d", str(dest), "-o", outputf, inputf, "maintenance"]
+        try:
+            proc = subprocess.run(args, check=True, capture_output=True)
+            print(proc.stdout)
+            outputs.append((outputf, dest))
+        except subprocess.CalledProcessError as exn:
+            print(exn)
+            continue
+    return outputs
 
 
 def simulate_benchmarks(benchmarks):
@@ -165,6 +187,12 @@ def main():
         choices=BENCHMARKS.keys(),
         help="which benchmarks to make",
     )
+    parser_make.add_argument(
+        "-m",
+        "--maintenance",
+        action="store_true",
+        help="generate maintenance version of benchmark first to use",
+    )
 
     parser_run = subparsers.add_parser("run")
     parser_run.add_argument(
@@ -241,6 +269,9 @@ def main():
     if args.op == "make":
         fmtstr = os.path.join(directory, benchstr + ".nv")
         benchmarks = get_sp_benchmarks(fmtstr)
+        # make intermediate maintenance benchmarks
+        if args.maintenance:
+            benchmarks = gen_maintenance_benchmarks(benchmarks)
         create_benchmarks(benchmarks, args.cuts, simulate=args.simulate)
     if args.op == "clean":
         # TODO: change to use benchmark group specified
