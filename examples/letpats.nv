@@ -13,15 +13,16 @@ let init n = match n with
   | 0n -> Some { a = (0, 0); b = true }
   | _ -> None
 
-let update_r { a = (a1, a2); b } =
-  { a = (a1 + 1, a2); b = b }
-
 let trans e x = 
   let u~_ = e in
   if u = 0n then match x with
    | Some r -> Some (update_r r)
    | None -> None
   else None
+
+(* TODO: pattern match r on input *)
+let update_r r = match r with
+  | { a = (a1, a2); b = b } -> { a = (a1 + 1, a2); b = b }
 
 let merge n x y = 
   match (x, y) with 
@@ -31,7 +32,7 @@ let merge n x y =
     let { a = a1; _ } = r1 in
     let (a11, a12) = a1 in
     let { a = (a21, a22); _ } = r2 in
-    if a11 < a21 then Some { a = a1; b = true } else Some { a = a2; b = false }
+    if a11 < a21 then Some { a = a1; b = true } else Some { a = (a21, a22); b = false }
 
 let sol = solution { init = init; trans = trans; merge = merge }
 

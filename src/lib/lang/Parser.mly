@@ -339,10 +339,8 @@ expr:
     | LET letvars EQ expr IN expr       { let span = (Span.extend $1 $6.espan) in
                                           let (id, e) = local_let $2 $4 $4.espan span in
                                           exp (elet id e $6) span }
-    | LET LPAREN patterns RPAREN EQ expr IN expr
-                                        { let p = tuple_pattern $3 in
-                                          let e = ematch $6 (addBranch p $8 emptyBranch) in
-                                          let span = Span.extend $1 $8.espan in
+    | LET pattern EQ expr IN expr       { let e = ematch $4 (addBranch $2 $6 emptyBranch) in
+                                          let span = Span.extend $1 $6.espan in
                                           exp e span }
     | IF expr THEN expr ELSE expr       { exp (eif $2 $4 $6) (Span.extend $1 $6.espan) }
     (* TODO: span does not include the branches here *)
