@@ -3,13 +3,14 @@
 gen_part_nv.py [nvfile]
 A module for generating spX-part.nv fileoutput from spX.nv files.
 """
+import itertools
 import os
 import sys
 import re
 import argparse
 import subprocess
-from enum import Enum
-from typing import Optional
+from enum import Enum, IntEnum
+from typing import Optional, Union
 
 # used for constructing the graph
 import igraph
@@ -75,7 +76,7 @@ class FattreeCut(Enum):
         return "\n".join([vim_modeline, file_info, generated_by])
 
 
-class NodeGroup(Enum):
+class NodeGroup(IntEnum):
     """
     Core nodes are on the spine, edge nodes are ToR,
     and aggregation nodes are between core and edge nodes.
@@ -103,18 +104,20 @@ class NetType(Enum):
     SP = 0
     FATPOL = 1
     NOTRANS = 2
-    HIJACK = 3
+    MAINTENANCE = 3
     USCARRIER = 4
     NONFAT = -1
 
     @staticmethod
     def from_filename(fname):
-        if fname.startswith("sp"):
+        if re.match(r"sp\d*", fname):
             return NetType.SP
-        elif fname.startswith("fat"):
+        elif re.match(r"fat\d*Pol", fname):
             return NetType.FATPOL
         elif fname.startswith("USCarrier"):
             return NetType.USCARRIER
+        elif re.match(r"fat\d*Maintenance", fname):
+            return NetType.MAINTENANCE
         else:
             return NetType.NONFAT
 
@@ -139,6 +142,9 @@ class NvFile:
         with open(path) as f:
             self.mono = f.read()
         self.graph = construct_graph(self.mono)
+        if self.dest is not None:
+            paths = get_maintenance_paths(self.graph, self.dest, 1)
+            exit(0)
         if self.verbose:
             print(self.print_graph())
         if simulate:
@@ -183,10 +189,7 @@ class NvFile:
 
     def generate_parted(self, nodes, edges):
         partition = write_partition_str(nodes)
-        if self.sols is not None:
-            interface = write_interface_from_sim(edges, self.sols)
-        else:
-            interface = write_interface_str(edges)
+        interface = write_interface_str(edges, self.sols)
         # perform the decomposed transfer on the input side
         repl = (
             r"solution { init = init; trans = trans; merge = merge;"
@@ -216,6 +219,48 @@ def construct_graph(text: str):
     return g
 
 
+def get_maintenance_paths(graph: igraph.Graph, dest, num_down):
+    """
+    Get all the paths from nodes to the destination, when up to num_down nodes
+    may be down for maintenance.
+    """
+    # paths is a dict of dicts: the first key is the node,
+    # and the internal dict maps path length keys to a list of which nodes are down
+    # we can then use the lists of down nodes to derive an interface describing
+    # the number of hops
+    paths = {v: {} for v in range(graph.vcount())}
+    for k in range(1, num_down + 1):
+        combinations = itertools.combinations(graph.vs.select(id_ne=dest), k)
+        # iterate over each combination of down nodes
+        for nodes in combinations:
+            g = graph.copy()
+            g.delete_vertices(nodes)
+            d = g.vs.find(id=dest)
+            ps = g.get_shortest_paths(d)
+            # map the terminal element to this path
+            p = [(g.vs[path[-1]]["id"], len(path)) for path in ps]
+            for (v, plen) in p:
+                # add cases for each possible path length
+                cases = paths[v].setdefault(plen, [])
+                cases.append([v["id"] for v in nodes])
+    print(paths)
+    return paths
+
+
+def write_maintenance_hyp(v, lengths):
+    if len(lengths.keys()) == 1:
+        aslen = lengths.keys()[0]
+    elif len(lengths.keys()) == 2:
+        for (l, cases) in lengths:
+            pass
+        # TODO: sort the lengths by ascending number of cases
+        # if a length only occurs in one case, give it an "if d = case then length else"
+        # and then let the last case be the final one
+        # alternatively (lazier to write), just do a match over the down nodes?
+    bgp = "Some {{ bgpAd = 20; lp = 100; aslen = {aslen}; med = 80; comms = {{}} }}"
+    pass
+
+
 def node_to_int(node: str) -> int:
     return int(node.rstrip("n"))
 
@@ -235,7 +280,7 @@ def find_edges(text: str):
 
 def find_nodes(text: str):
     """Return the nodes."""
-    pat = r"(\w+)(?:-\d*)?=(\d+)"
+    pat = r"(\w+)(?:(?:-|_)\d*)?=(\d+)(?:,|})"
     prog = re.compile(pat)
     # find all nodes
     matches = prog.finditer(text)
@@ -254,21 +299,26 @@ def write_partition_str(partitions):
     return output
 
 
-def write_interface_str(edges):
-    """
-    Return the string representation of the interface function.
-    """
-    output = "let interface edge x ="
-    output += """
-  let hasOnlyBgp =
-    x.selected = Some 3u2 && (match x.bgp with
-      | Some b -> true
-      | None -> false)
-  in"""
-    output += "\n  match edge with\n"
-    for (start, end) in edges:
-        output += f"  | {start}~{end} -> hasOnlyBgp\n"
-    output += f"  | _ -> true\n"
+def write_interface_str(edges, fmt: Union[dict[int, str], igraph.Graph, None]):
+    output = "let interface edge a ="
+    if fmt is None:
+        output += """
+    a.selected = Some 3u2 && (match a.bgp with
+    | Some b -> true
+    | None -> false)"""
+    else:
+        output += "\n  match edge with\n"
+        for (start, end) in edges:
+            if isinstance(fmt, dict):
+                pred = f"a = fmt[start]"
+            elif isinstance(fmt, igraph.Graph):
+                # TODO
+                # for each aggregation node in the destination pod, run a BFS with it removed
+                # produce the best and second-best solution in terms of hops
+                pred = f"a = fmt.vs[start]"
+            else:
+                raise TypeError("Unexpected fmt type given to write_interface_str")
+            output += f"  | {start}~{end} -> {pred}\n"
     return output
 
 
@@ -446,17 +496,6 @@ def run_nv_simulate(path):
     except subprocess.TimeoutExpired as exn:
         print(exn.stderr)
         return {}
-
-
-def write_interface_from_sim(edges, solution):
-    """
-    Write an interface string based on the given simulation.
-    """
-    output = "let interface edge a =\n  match edge with\n"
-    for (start, end) in edges:
-        sol = solution[start]
-        output += f"  | {start}~{end} -> a = {sol}\n"
-    return output
 
 
 # TODO: make the dest optional if simulate is True
