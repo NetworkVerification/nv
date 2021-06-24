@@ -142,13 +142,16 @@ class NvFile:
         with open(path) as f:
             self.mono = f.read()
         self.graph = construct_graph(self.mono)
-        if self.dest is not None:
-            paths = get_maintenance_paths(self.graph, self.dest, 1)
-            exit(0)
         if self.verbose:
             print(self.print_graph())
         if simulate:
             self.sols = run_nv_simulate(self.path)
+            if self.net == NetType.MAINTENANCE:
+                pat = re.compile(r"aslen=\d*u32")
+                aslens = get_maintenance_paths(self.graph, self.dest, 1)
+                # update the solution's aslen using the cases provided by the tree exploration
+                for (node, sol) in self.sols.items():
+                    self.sols[node] = pat.sub(f"aslen={aslens[node]}", sol)
         else:
             self.sols = None
 
@@ -244,21 +247,22 @@ def get_maintenance_paths(graph: igraph.Graph, dest, num_down):
                 cases = paths[v].setdefault(plen, [])
                 cases.append([v["id"] for v in nodes])
     print(paths)
-    return paths
+    return {k: write_maintenance_aslen(v) for k, v in paths.items()}
 
 
-def write_maintenance_hyp(v, lengths):
+def write_maintenance_aslen(lengths):
+    # NOTE: assumes at most 1 node down and cases which are singleton lists
     if len(lengths.keys()) == 1:
-        aslen = lengths.keys()[0]
+        aslen = str(list(lengths.keys())[0])
     elif len(lengths.keys()) == 2:
+        items = list(lengths.items())
+        items.sort(key=lambda x: len(x[1]))
+        aslen = f"if down = Some({items[-1][1][0][0]}) then {items[-1][0]} else {items[0][0]}"
+    else:
+        aslen = "match down with "
         for (l, cases) in lengths:
-            pass
-        # TODO: sort the lengths by ascending number of cases
-        # if a length only occurs in one case, give it an "if d = case then length else"
-        # and then let the last case be the final one
-        # alternatively (lazier to write), just do a match over the down nodes?
-    bgp = "Some {{ bgpAd = 20; lp = 100; aslen = {aslen}; med = 80; comms = {{}} }}"
-    pass
+            aslen += " ".join([f"| Some {c[0]}" for c in cases]) + f" -> {l}"
+    return aslen
 
 
 def node_to_int(node: str) -> int:
@@ -310,12 +314,7 @@ def write_interface_str(edges, fmt: Union[dict[int, str], igraph.Graph, None]):
         output += "\n  match edge with\n"
         for (start, end) in edges:
             if isinstance(fmt, dict):
-                pred = f"a = fmt[start]"
-            elif isinstance(fmt, igraph.Graph):
-                # TODO
-                # for each aggregation node in the destination pod, run a BFS with it removed
-                # produce the best and second-best solution in terms of hops
-                pred = f"a = fmt.vs[start]"
+                pred = f"a = {fmt[start]}"
             else:
                 raise TypeError("Unexpected fmt type given to write_interface_str")
             output += f"  | {start}~{end} -> {pred}\n"
