@@ -147,7 +147,7 @@ class NvFile:
         if simulate:
             self.sols = run_nv_simulate(self.path)
             if self.net == NetType.MAINTENANCE:
-                pat = re.compile(r"aslen=\d*u32")
+                pat = re.compile(r"aslen=\s*\d*u32")
                 aslens = get_maintenance_paths(self.graph, self.dest, 1)
                 # update the solution's aslen using the cases provided by the tree exploration
                 for (node, sol) in self.sols.items():
@@ -257,7 +257,9 @@ def write_maintenance_aslen(lengths):
     elif len(lengths.keys()) == 2:
         items = list(lengths.items())
         items.sort(key=lambda x: len(x[1]))
-        aslen = f"if down = Some({items[-1][1][0][0]}) then {items[-1][0]} else {items[0][0]}"
+        aslen = (
+            f"if down = Some({items[0][1][0][0]}) then {items[0][0]} else {items[1][0]}"
+        )
     else:
         aslen = "match down with "
         for (l, cases) in lengths:
