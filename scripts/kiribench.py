@@ -23,7 +23,7 @@ BENCHMARKS = {
     "sp_topzoo": ("benchmarks/SinglePrefix/TopologyZoo", "USCarrier"),
     "ap_fatpol": ("benchmarks/AllPrefixes/FAT{0}", "fat{0}Pol"),
     "ap_topzoo": ("benchmarks/AllPrefixes/TopologyZoo", "USCarrier"),
-    "sp_maintenance": ("benchmarks/SinglePrefix/FAT{0}", "fat{0}Maintenance"),
+    "sp_maintenance": ("benchmarks/SinglePrefix/FAT{0}", "maintenance{0}"),
     "ex_topzoo": ("examples/uscarrier", "USCarrier"),
 }
 
@@ -47,7 +47,7 @@ def gen_maintenance_benchmarks(benchmarks):
     for (inputf, dest) in benchmarks:
         hd, tl = os.path.split(inputf)
         # generate the new maintenance version of the fatXPol benchmark
-        outputf = os.path.join(hd, tl.replace("Pol", "Maintenance"))
+        outputf = os.path.join(hd, tl.replace("sp", "maintenance"))
         args = [nvgenpath, "-d", str(dest), "-o", outputf, inputf, "maintenance"]
         try:
             proc = subprocess.run(args, check=True, capture_output=True)

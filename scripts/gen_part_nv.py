@@ -116,7 +116,9 @@ class NetType(Enum):
             return NetType.FATPOL
         elif fname.startswith("USCarrier"):
             return NetType.USCARRIER
-        elif re.match(r"fat\d*Maintenance", fname):
+        elif re.match(r"maintenance\d*", fname) or re.match(
+            r"fat\d*Maintenance", fname
+        ):
             return NetType.MAINTENANCE
         else:
             return NetType.NONFAT
@@ -241,7 +243,8 @@ def get_maintenance_paths(graph: igraph.Graph, dest, num_down):
             d = g.vs.find(id=dest)
             ps = g.get_shortest_paths(d)
             # map the terminal element to this path
-            p = [(g.vs[path[-1]]["id"], len(path)) for path in ps]
+            # subtract one from the length, since we want the number of hops
+            p = [(g.vs[path[-1]]["id"], len(path) - 1) for path in ps]
             for (v, plen) in p:
                 # add cases for each possible path length
                 cases = paths[v].setdefault(plen, [])
