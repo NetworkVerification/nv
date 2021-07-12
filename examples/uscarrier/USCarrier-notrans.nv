@@ -430,6 +430,7 @@ let edges = {
 
 let nodes = 174
 
+(* TODO: choose relationships *)
 let relationship e = peer
 
 let ospfIntraArea = 0u2

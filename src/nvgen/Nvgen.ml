@@ -89,8 +89,6 @@ type hijackStub =
   ; spines : int list
   }
 
-type notransStub = { relationship : exp }
-
 (* Change the given fattree network benchmark to model a hijack.
  * We add community tags to distinguish the legitimate destination
  * (provided by the hijackStub) from the hijacker (a newly-added node).
@@ -131,7 +129,9 @@ let hijack decls hijackStub =
     annot TBool (eapp hijackStub.predicate (annot aty (evar hijack_var)))
   in
   let nti = node_to_int_decl (new_node + 1) in
-  let hijack_decls = [nti; edgeTag; DSymbolic (hijack_var, Ty aty); DRequire hijack_app] in
+  let hijack_decls =
+    [nti; edgeTag; DSymbolic (hijack_var, Ty aty); DRequire hijack_app]
+  in
   (* return the hijacker node *)
   decls @ hijack_decls, new_node
 ;;
@@ -159,15 +159,13 @@ let maintenance dest decls =
   in
   let nodes = get_nodes decls |> Option.get in
   let new_decls =
-    [node_to_int_decl nodes; tagDown; DSymbolic (down_var, Ty (TOption (TInt 32))); DRequire dest_not_down]
+    [ node_to_int_decl nodes
+    ; tagDown
+    ; DSymbolic (down_var, Ty (TOption (TInt 32)))
+    ; DRequire dest_not_down ]
   in
   decls @ new_decls
 ;;
-
-type genOp =
-  | Cut of networkCut
-  | Hijack of hijackStub
-  | Notrans of notransStub
 
 let main =
   let cfg, rest = argparse default "nvgen" Sys.argv in
