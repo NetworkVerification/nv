@@ -62,4 +62,4 @@ let trans e x = transferBgp e x
 
 let assert_node u v = match v with
   | None -> false
-  | Some _ -> true
+  | Some b -> true
