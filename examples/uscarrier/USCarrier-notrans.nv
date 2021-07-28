@@ -463,98 +463,98 @@ let relationship e = match e with
 (* 163 *) | 15~163 -> prov | 163~15 -> cust
 (* 167 *) | 8~167 -> prov | 167~8 -> cust
 (* Nodes of degree 2 *)
-(* 0 *) | 11~0 -> peer | 0~11 -> peer | 51~0 -> peer | 0~51 -> peer
+(* 0 *) | 11~0 -> prov | 0~11 -> cust | 51~0 -> prov | 0~51 -> cust
 (* 2 *) | 57~2 -> cust | 2~57 -> prov | 64~2 -> prov | 2~64 -> cust
 (* 3 *) | 129~3 -> prov | 3~129 -> cust | 165~3 -> prov | 3~165 -> cust
-(* 9 *) | 85~9 -> peer | 9~85 -> peer | 136~9 -> peer | 9~136 -> peer
-(* 11 *) | 81~11 -> peer | 11~81 -> peer (* seen: 11 at 2 *)
+(* 9 *) | 85~9 -> cust | 9~85 -> prov | 136~9 -> prov | 9~136 -> cust
+(* 11 *) | 81~11 -> prov | 11~81 -> cust (* seen: 11 at 2 *)
 (* 12 *) | 144~12 -> prov | 12~144 -> cust (* seen: 12 at 1 *)
-(* 13 *) | 45~13 -> peer | 13~45 -> peer | 86~13 -> peer | 13~86 -> peer
-(* 14 *) | 65~14 -> prov | 14~65 -> cust | 89~14 -> cust | 14~89 -> prov
-(* 17 *) | 92~17 -> peer | 17~92 -> peer | 108~17 -> peer | 17~108 -> peer
-(* 18 *) | 28~18 -> peer | 18~28 -> peer | 164~18 -> peer | 18~164 -> peer
-(* 19 *) | 123~19 -> peer | 19~123 -> peer | 138~19 -> peer | 19~138 -> peer
-(* 21 *) | 35~21 -> peer | 21~35 -> peer | 98~21 -> peer | 21~98 -> peer
-(* 22 *) | 31~22 -> peer | 22~31 -> peer | 61~22 -> peer | 22~61 -> peer
-(* 23 *) | 40~23 -> peer | 23~40 -> peer | 75~23 -> peer | 23~75 -> peer
-(* 25 *) | 104~25 -> peer | 25~104 -> peer | 135~25 -> peer | 25~135 -> peer
-(* 27 *) | 4~27 -> cust | 27~4 -> prov | 94~27 -> prov | 27~94 -> cust (* seen: 4 at 1 *)
-(* 28 *) | 18~28 -> peer | 28~18 -> peer | 101~28 -> peer | 28~101 -> peer (* seen: 28 at 2 *)
-(* 34 *) | 50~34 -> cust | 34~50 -> prov | 69~34 -> prov | 34~69 -> cust (* seen: 50 at 1 *)
-(* 36 *) | 39~36 -> peer | 36~39 -> peer | 81~36 -> peer | 36~81 -> peer (* seen: 81 at 2 *)
-(* 37 *) | 88~37 -> peer | 37~88 -> peer | 99~37 -> peer | 37~99 -> peer
-(* 40 *) | 23~40 -> peer | 40~23 -> peer | 107~40 -> peer | 40~107 -> peer (* seen: 40 at 2 *)
+(* 13 *) | 45~13 -> prov | 13~45 -> cust | 86~13 -> cust | 13~86 -> prov
+(* 14 *) | 65~14 -> prov | 14~65 -> cust | 89~14 -> prov | 14~89 -> cust
+(* 17 *) | 92~17 -> prov | 17~92 -> cust | 108~17 -> prov | 17~108 -> cust
+(* 18 *) | 28~18 -> prov | 18~28 -> cust | 164~18 -> cust | 18~164 -> prov
+(* 19 *) | 123~19 -> prov | 19~123 -> cust | 138~19 -> prov | 19~138 -> cust
+(* 21 *) | 35~21 -> prov | 21~35 -> cust | 98~21 -> prov | 21~98 -> cust
+(* 22 *) | 31~22 -> prov | 22~31 -> cust | 61~22 -> prov | 22~61 -> cust
+(* 23 *) | 40~23 -> prov | 23~40 -> cust | 75~23 -> prov | 23~75 -> cust
+(* 25 *) | 104~25 -> cust | 25~104 -> prov | 135~25 -> prov | 25~135 -> cust
+(* 27 *) | 4~27 -> prov | 27~4 -> cust | 94~27 -> prov | 27~94 -> cust (* seen: 4 at 1 *)
+(* 28 *) | 101~28 -> prov | 28~101 -> cust (* seen: 28 at 2 *)
+(* 34 *) | 50~34 -> prov | 34~50 -> cust | 69~34 -> prov | 34~69 -> cust (* seen: 50 at 1 *)
+(* 36 *) | 39~36 -> prov | 36~39 -> cust | 81~36 -> prov | 36~81 -> cust (* seen: 81 at 2 *)
+(* 37 *) | 88~37 -> cust | 37~88 -> prov | 99~37 -> prov | 37~99 -> cust
+(* 40 *) | 107~40 -> prov | 40~107 -> cust (* seen: 40 at 2 *)
 (* 41 *) | 126~41 -> prov | 41~126 -> cust (* seen: 41 at 1 *)
-(* 42 *) | 64~42 -> peer | 42~64 -> peer | 103~42 -> peer | 42~103 -> peer (* seen: 64 at 2 *)
-(* 43 *) | 134~43 -> peer | 43~134 -> peer | 155~43 -> peer | 43~155 -> peer
-(* 44 *) | 94~44 -> peer | 44~94 -> peer | 132~44 -> peer | 44~132 -> peer (* seen: 94 at 2 *)
-(* 45 *) | 13~45 -> peer | 45~13 -> peer | 15~45 -> peer | 45~15 -> peer (* seen: 45 at 2 *)
+(* 42 *) | 64~42 -> prov | 42~64 -> cust | 103~42 -> prov | 42~103 -> cust (* seen: 64 at 2 *)
+(* 43 *) | 134~43 -> prov | 43~134 -> cust | 155~43 -> prov | 43~155 -> cust
+(* 44 *) | 94~44 -> prov | 44~94 -> cust | 132~44 -> cust | 44~132 -> prov (* seen: 94 at 2 *)
+(* 45 *) | 15~45 -> prov | 45~15 -> cust (* seen: 45 at 2 *)
 (* 46 *) | 161~46 -> prov | 46~161 -> cust (* seen: 109 at 1 *)
-(* 49 *) | 67~49 -> peer | 49~67 -> peer | 122~49 -> peer | 49~122 -> peer
-(* 51 *) | 142~51 -> peer | 51~142 -> peer (* seen: 51 at 2 *)
-(* 52 *) | 24~52 -> prov | 52~24 -> cust | 149~52 -> cust | 52~149 -> prov (* seen: 149 at 1 *)
-(* 54 *) | 35~54 -> peer | 54~35 -> peer | 127~54 -> peer | 54~127 -> peer (* seen: 35 at 2 *)
-(* 57 *) | 2~57 -> prov | 57~2 -> cust | 166~57 -> cust | 57~166 -> prov (* seen: 57 at 2 *)
-(* 58 *) | 48~58 -> cust | 58~48 -> prov | 64~58 -> prov | 58~64 -> cust (* seen: 48 at 1; 64 at 2 *)
-(* 60 *) | 103~60 -> peer | 60~103 -> peer | 127~60 -> peer | 60~127 -> peer (* seen: 103 at 2; 127 at 2 *)
-(* 61 *) | 22~61 -> peer | 61~22 -> peer | 117~61 -> peer | 61~117 -> peer (* seen: 61 at 2 *)
-(* 63 *) | 38~63 -> peer | 63~38 -> peer | 70~63 -> peer | 63~70 -> peer
-(* 67 *) | 49~67 -> peer | 67~49 -> peer | 69~67 -> peer | 67~69 -> peer (* seen: 67 at 2 *)
-(* 68 *) | 15~68 -> peer | 68~15 -> peer | 76~68 -> peer | 68~76 -> peer (* seen: 15 at 2 *)
-(* 70 *) | 63~70 -> peer | 70~63 -> peer | 80~70 -> peer | 70~80 -> peer (* seen: 70 at 2 *)
-(* 71 *) | 121~71 -> cust | 71~121 -> prov | 158~71 -> prov | 71~158 -> cust (* seen: 121 at 1 *)
-(* 73 *) | 59~73 -> cust | 73~59 -> prov | 89~73 -> prov | 73~89 -> cust (* seen: 59 at 1; 89 at 2 *)
-(* 82 *) | 112~82 -> peer | 82~112 -> peer | 172~82 -> peer | 82~172 -> peer
-(* 85 *) | 161~85 -> peer | 85~161 -> peer (* seen: 85 at 2 *)
-(* 86 *) | 13~86 -> peer | 86~13 -> peer | 115~86 -> peer | 86~115 -> peer (* seen: 86 at 2 *)
-(* 88 *) | 37~88 -> peer | 88~37 -> peer | 132~88 -> peer | 88~132 -> peer (* seen: 88 at 2 *)
-(* 91 *) | 65~91 -> peer | 91~65 -> peer | 90~91 -> peer | 91~90 -> peer (* seen: 65 at 2 *)
-(* 93 *) | 69~93 -> peer | 93~69 -> peer | 97~93 -> peer | 93~97 -> peer (* seen: 69 at 2 *)
-(* 96 *) | 6~96 -> cust | 96~6 -> prov | 32~96 -> prov | 96~32 -> cust (* seen: 6 at 1 *)
-(* 97 *) | 26~97 -> peer | 97~26 -> peer | 93~97 -> peer | 97~93 -> peer (* seen: 97 at 2 *)
-(* 98 *) | 21~98 -> peer | 98~21 -> peer | 87~98 -> peer | 98~87 -> peer (* seen: 98 at 2 *)
-(* 99 *) | 4~99 -> prov | 99~4 -> cust | 37~99 -> cust | 99~37 -> prov (* seen: 99 at 2 *)
-(* 100 *) | 16~100 -> peer | 100~16 -> peer | 130~100 -> peer | 100~130 -> peer (* seen: 100 at 1 *)
-(* 101 *) | 28~101 -> peer | 101~28 -> peer | 136~101 -> peer | 101~136 -> peer (* seen: 101 at 2 *)
-(* 102 *) | 124~102 -> peer | 102~124 -> peer | 139~102 -> peer | 102~139 -> peer
-(* 104 *) | 25~104 -> peer | 104~25 -> peer | 164~104 -> peer | 104~164 -> peer (* seen: 104 at 2 *)
-(* 105 *) | 53~105 -> peer | 105~53 -> peer | 124~105 -> peer | 105~124 -> peer (* seen: 124 at 2 *)
-(* 109 *) | 46~109 -> peer | 109~46 -> peer | 137~109 -> peer | 109~137 -> peer (* seen: 109 at 2 *)
-(* 110 *) | 29~110 -> peer | 110~29 -> peer | 87~110 -> peer | 110~87 -> peer (* seen: 87 at 2 *)
-(* 112 *) | 32~112 -> peer | 112~32 -> peer | 82~112 -> peer | 112~82 -> peer (* seen: 112 at 2 *)
-(* 115 *) | 86~115 -> peer | 115~86 -> peer | 114~115 -> peer | 115~114 -> peer (* seen: 115 at 2 *)
-(* 116 *) | 15~116 -> peer | 116~15 -> peer | 139~116 -> peer | 116~139 -> peer (* seen: 15 at 2; 139 at 2 *)
-(* 120 *) | 24~120 -> peer | 120~24 -> peer | 81~120 -> peer | 120~81 -> peer (* seen: 24 at 2; 81 at 2 *)
-(* 123 *) | 19~123 -> peer | 123~19 -> peer | 24~123 -> peer | 123~24 -> peer (* seen: 123 at 2 *)
-(* 124 *) | 102~124 -> peer | 124~102 -> peer | 105~124 -> peer | 124~105 -> peer (* seen: 124 at 2 *)
-(* 125 *) | 103~125 -> peer | 125~103 -> peer | 173~125 -> peer | 125~173 -> peer (* seen: 103 at 2 *)
-(* 126 *) | 41~126 -> peer | 126~41 -> peer | 166~126 -> peer | 126~166 -> peer (* seen: 126 at 2 *)
-(* 129 *) | 3~129 -> peer | 129~3 -> peer | 5~129 -> peer | 129~5 -> peer (* seen: 129 at 2 *)
-(* 130 *) | 35~130 -> peer | 130~35 -> peer | 100~130 -> peer | 130~100 -> peer (* seen: 130 at 2 *)
-(* 131 *) | 31~131 -> peer | 131~31 -> peer | 149~131 -> peer | 131~149 -> peer (* seen: 31 at 2; 149 at 2 *)
-(* 132 *) | 44~132 -> peer | 132~44 -> peer | 88~132 -> peer | 132~88 -> peer (* seen: 132 at 2 *)
-(* 133 *) | 35~133 -> peer | 133~35 -> peer | 127~133 -> peer | 133~127 -> peer (* seen: 35 at 2; 127 at 2 *)
-(* 134 *) | 43~134 -> peer | 134~43 -> peer | 168~134 -> peer | 134~168 -> peer (* seen: 134 at 2 *)
-(* 138 *) | 19~138 -> peer | 138~19 -> peer | 24~138 -> peer | 138~24 -> peer (* seen: 138 at 2 *)
-(* 140 *) | 76~140 -> peer | 140~76 -> peer | 121~140 -> peer | 140~121 -> peer (* seen: 76 at 2; 121 at 2 *)
-(* 143 *) | 4~143 -> peer | 143~4 -> peer | 171~143 -> peer | 143~171 -> peer (* seen: 4 at 2 *)
-(* 144 *) | 12~144 -> peer | 144~12 -> peer | 155~144 -> peer | 144~155 -> peer (* seen: 144 at 2 *)
-(* 145 *) | 47~145 -> peer | 145~47 -> peer | 150~145 -> peer | 145~150 -> peer
-(* 148 *) | 77~148 -> peer | 148~77 -> peer | 80~148 -> peer | 148~80 -> peer (* seen: 148 at 1 *)
-(* 150 *) | 47~150 -> peer | 150~47 -> peer | 145~150 -> peer | 150~145 -> peer (* seen: 150 at 2 *)
-(* 151 *) | 30~151 -> peer | 151~30 -> peer | 154~151 -> peer | 151~154 -> peer (* seen: 30 at 1; 154 at 1 *)
-(* 152 *) | 8~152 -> peer | 152~8 -> peer | 38~152 -> peer | 152~38 -> peer (* seen: 8 at 1; 38 at 2 *)
-(* 153 *) | 135~153 -> peer | 153~135 -> peer | 136~153 -> peer | 153~136 -> peer (* seen: 135 at 2; 136 at 2 *)
-(* 158 *) | 71~158 -> peer | 158~71 -> peer | 75~158 -> peer | 158~75 -> peer (* seen: 158 at 2 *)
-(* 159 *) | 127~159 -> peer | 159~127 -> peer | 173~159 -> peer | 159~173 -> peer (* seen: 127 at 2; 173 at 2 *)
-(* 160 *) | 59~160 -> peer | 160~59 -> peer | 80~160 -> peer | 160~80 -> peer (* seen: 59 at 2; 80 at 2 *)
-(* 161 *) | 46~161 -> peer | 161~46 -> peer | 85~161 -> peer | 161~85 -> peer (* seen: 161 at 2 *)
-(* 164 *) | 18~164 -> peer | 164~18 -> peer | 104~164 -> peer | 164~104 -> peer (* seen: 164 at 2 *)
-(* 166 *) | 57~166 -> peer | 166~57 -> peer | 126~166 -> peer | 166~126 -> peer (* seen: 166 at 2 *)
-(* 169 *) | 75~169 -> peer | 169~75 -> peer | 106~169 -> peer | 169~106 -> peer (* seen: 75 at 2; 106 at 1 *)
-(* 170 *) | 35~170 -> peer | 170~35 -> peer | 84~170 -> peer | 170~84 -> peer (* seen: 35 at 2 *)
-(* 171 *) | 118~171 -> peer | 171~118 -> peer | 143~171 -> peer | 171~143 -> peer (* seen: 171 at 2 *)
-(* 173 *) | 125~173 -> peer | 173~125 -> peer | 159~173 -> peer | 173~159 -> peer (* seen: 173 at 2 *)
+(* 49 *) | 67~49 -> prov | 49~67 -> cust | 122~49 -> prov | 49~122 -> cust
+(* 51 *) | 142~51 -> prov | 51~142 -> cust (* seen: 51 at 2 *)
+(* 52 *) | 24~52 -> prov | 52~24 -> cust | 149~52 -> prov | 52~149 -> cust (* seen: 149 at 1 *)
+(* 54 *) | 35~54 -> prov | 54~35 -> cust | 127~54 -> prov | 54~127 -> cust (* seen: 35 at 2 *)
+(* 57 *) | 166~57 -> cust | 57~166 -> prov (* seen: 57 at 2 *)
+(* 58 *) | 48~58 -> prov | 58~48 -> cust | 64~58 -> prov | 58~64 -> cust (* seen: 48 at 1; 64 at 2 *)
+(* 60 *) | 103~60 -> prov | 60~103 -> cust | 127~60 -> prov | 60~127 -> cust (* seen: 103 at 2; 127 at 2 *)
+(* 61 *) | 117~61 -> prov | 61~117 -> cust (* seen: 61 at 2 *)
+(* 63 *) | 38~63 -> cust | 63~38 -> prov | 70~63 -> prov | 63~70 -> cust
+(* 67 *) | 69~67 -> prov | 67~69 -> cust (* seen: 67 at 2 *)
+(* 68 *) | 15~68 -> prov | 68~15 -> cust | 76~68 -> prov | 68~76 -> cust (* seen: 15 at 2 *)
+(* 70 *) | 80~70 -> prov | 70~80 -> cust (* seen: 70 at 2 *)
+(* 71 *) | 121~71 -> prov | 71~121 -> cust | 158~71 -> prov | 71~158 -> cust (* seen: 121 at 1 *)
+(* 73 *) | 59~73 -> prov | 73~59 -> cust | 89~73 -> prov | 73~89 -> cust (* seen: 59 at 1; 89 at 2 *)
+(* 82 *) | 112~82 -> prov | 82~112 -> cust | 172~82 -> prov | 82~172 -> cust
+(* 85 *) | 161~85 -> cust | 85~161 -> prov (* seen: 85 at 2 *)
+(* 86 *) | 115~86 -> cust | 86~115 -> prov (* seen: 86 at 2 *)
+(* 88 *) | 132~88 -> prov | 88~132 -> cust (* seen: 88 at 2 *)
+(* 91 *) | 65~91 -> prov | 91~65 -> cust | 90~91 -> prov | 91~90 -> cust (* seen: 65 at 2 *)
+(* 93 *) | 69~93 -> prov | 93~69 -> cust | 97~93 -> cust | 93~97 -> prov (* seen: 69 at 2 *)
+(* 96 *) | 6~96 -> prov | 96~6 -> cust | 32~96 -> prov | 96~32 -> cust (* seen: 6 at 1 *)
+(* 97 *) | 26~97 -> prov | 97~26 -> cust (* seen: 97 at 2 *)
+(* 98 *) | 87~98 -> prov | 98~87 -> cust (* seen: 98 at 2 *)
+(* 99 *) | 4~99 -> prov | 99~4 -> cust (* seen: 99 at 2 *)
+(* 100 *) | 130~100 -> prov | 100~130 -> cust (* seen: 100 at 1 *)
+(* 101 *) | 136~101 -> prov | 101~136 -> cust (* seen: 101 at 2 *)
+(* 102 *) | 124~102 -> cust | 102~124 -> prov | 139~102 -> prov | 102~139 -> cust
+(* 104 *) | 164~104 -> cust | 104~164 -> prov (* seen: 104 at 2 *)
+(* 105 *) | 53~105 -> prov | 105~53 -> cust | 124~105 -> cust | 105~124 -> prov (* seen: 124 at 2 *)
+(* 109 *) | 46~109 -> prov | 109~46 -> cust (* seen: 109 at 2 *)
+(* 110 *) | 29~110 -> prov | 110~29 -> cust | 87~110 -> prov | 110~87 -> cust (* seen: 87 at 2 *)
+(* 112 *) | 32~112 -> prov | 112~32 -> cust (* seen: 112 at 2 *)
+(* 115 *) | 114~115 -> prov | 115~114 -> cust (* seen: 115 at 2 *)
+(* 116 *) | 15~116 -> prov | 116~15 -> cust | 139~116 -> prov | 116~139 -> cust (* seen: 15 at 2; 139 at 2 *)
+(* 120 *) | 24~120 -> prov | 120~24 -> cust | 81~120 -> prov | 120~81 -> cust (* seen: 24 at 2; 81 at 2 *)
+(* 123 *) | 24~123 -> prov | 123~24 -> cust (* seen: 123 at 2 *)
+(* 124 *) | 102~124 -> prov | 124~102 -> cust | 105~124 -> prov | 124~105 -> cust (* seen: 124 at 2 *)
+(* 125 *) | 103~125 -> prov | 125~103 -> cust | 173~125 -> cust | 125~173 -> prov (* seen: 103 at 2 *)
+(* 126 *) | 166~126 -> prov | 126~166 -> cust (* seen: 126 at 2 *)
+(* 129 *) | 5~129 -> prov | 129~5 -> cust (* seen: 129 at 2 *)
+(* 130 *) | 35~130 -> prov | 130~35 -> cust (* seen: 130 at 2 *)
+(* 131 *) | 31~131 -> prov | 131~31 -> cust | 149~131 -> prov | 131~149 -> cust (* seen: 31 at 2; 149 at 2 *)
+(* 132 *) (* seen: 132 at 2 *)
+(* 133 *) | 35~133 -> prov | 133~35 -> cust | 127~133 -> prov | 133~127 -> cust (* seen: 35 at 2; 127 at 2 *)
+(* 134 *) | 168~134 -> prov | 134~168 -> cust (* seen: 134 at 2 *)
+(* 138 *) | 24~138 -> prov | 138~24 -> cust (* seen: 138 at 2 *)
+(* 140 *) | 76~140 -> prov | 140~76 -> cust | 121~140 -> prov | 140~121 -> cust (* seen: 76 at 2; 121 at 2 *)
+(* 143 *) | 4~143 -> prov | 143~4 -> cust | 171~143 -> cust | 143~171 -> prov (* seen: 4 at 2 *)
+(* 144 *) | 155~144 -> prov | 144~155 -> cust (* seen: 144 at 2 *)
+(* 145 *) | 47~145 -> prov | 145~47 -> cust | 150~145 -> cust | 145~150 -> prov
+(* 148 *) | 80~148 -> prov | 148~80 -> cust (* seen: 148 at 1 *)
+(* 150 *) | 47~150 -> prov | 150~47 -> cust (* seen: 150 at 2 *)
+(* 151 *) | 30~151 -> prov | 151~30 -> cust | 154~151 -> prov | 151~154 -> cust (* seen: 30 at 1; 154 at 1 *)
+(* 152 *) | 8~152 -> prov | 152~8 -> cust | 38~152 -> prov | 152~38 -> cust (* seen: 8 at 1; 38 at 2 *)
+(* 153 *) | 135~153 -> prov | 153~135 -> cust | 136~153 -> prov | 153~136 -> cust (* seen: 135 at 2; 136 at 2 *)
+(* 158 *) | 75~158 -> prov | 158~75 -> cust (* seen: 158 at 2 *)
+(* 159 *) | 127~159 -> prov | 159~127 -> cust | 173~159 -> cust | 159~173 -> prov (* seen: 127 at 2; 173 at 2 *)
+(* 160 *) | 59~160 -> prov | 160~59 -> cust | 80~160 -> prov | 160~80 -> cust (* seen: 59 at 2; 80 at 2 *)
+(* 161 *) (* seen: 161 at 2 *)
+(* 164 *) (* seen: 164 at 2 *)
+(* 166 *) (* seen: 166 at 2 *)
+(* 169 *) | 75~169 -> prov | 169~75 -> cust | 106~169 -> prov | 169~106 -> cust (* seen: 75 at 2; 106 at 1 *)
+(* 170 *) | 35~170 -> prov | 170~35 -> cust | 84~170 -> prov | 170~84 -> cust (* seen: 35 at 2 *)
+(* 171 *) | 118~171 -> prov | 171~118 -> cust (* seen: 171 at 2 *)
+(* 173 *) (* seen: 173 at 2 *)
 (* Nodes of degree 3 *)
 (* 5 *) | 15~5 -> peer | 5~15 -> peer | 114~5 -> peer | 5~114 -> peer | 129~5 -> peer | 5~129 -> peer (* seen: 5 at 2 *)
 (* 6 *) | 30~6 -> peer | 6~30 -> peer | 72~6 -> peer | 6~72 -> peer | 96~6 -> peer | 6~96 -> peer (* seen: 6 at 2 *)
@@ -617,213 +617,6 @@ let relationship e = match e with
 (* Nodes of degree 6 *)
 (* 15 *) | 5~15 -> peer | 15~5 -> peer | 45~15 -> peer | 15~45 -> peer | 68~15 -> peer | 15~68 -> peer | 114~15 -> peer | 15~114 -> peer | 116~15 -> peer | 15~116 -> peer | 163~15 -> peer | 15~163 -> peer (* seen: 15 at 3 *)
 (* 35 *) | 21~35 -> peer | 35~21 -> peer | 39~35 -> peer | 35~39 -> peer | 54~35 -> peer | 35~54 -> peer | 130~35 -> peer | 35~130 -> peer | 133~35 -> peer | 35~133 -> peer | 170~35 -> peer | 35~170 -> peer (* seen: 35 at 3 *)
-  (* nodes with only one edge are assumed to be stub customers *)
-  | 12~1 -> prov
-  | 1~12 -> cust
-  | 50~7 -> prov
-  | 7~50 -> cust
-  | 100~16 -> prov
-  | 16~100 -> cust
-  | 55~56 -> prov
-  | 56~55 -> cust
-  | 121~62 -> prov
-  | 62~121 -> cust
-  | 6~72 -> prov
-  | 72~6 -> cust
-  | 20~74 -> prov
-  | 74~20 -> cust
-  | 148~77 -> prov
-  | 77~148 -> cust
-  | 154~78 -> prov
-  | 78~154 -> cust
-  | 33~79 -> prov
-  | 79~33 -> cust
-  | 41~83 -> prov
-  | 83~41 -> cust
-  | 48~95 -> prov
-  | 95~48 -> cust
-  | 149~113 -> prov
-  | 113~149 -> cust
-  | 59~119 -> prov
-  | 119~59 -> cust
-  | 128~106 -> cust
-  | 137~109 -> cust
-  | 141~142 -> cust
-  | 146~107 -> cust
-  | 147~107 -> cust
-  | 156~30 -> cust
-  | 157~106 -> cust
-  | 162~4 -> cust
-  | 163~15 -> cust
-  | 167~8 -> cust
-  | 106~128 -> prov
-  | 109~137 -> prov
-  | 142~141 -> prov
-  | 107~146 -> prov
-  | 107~147 -> prov
-  | 30~156 -> prov
-  | 106~157 -> prov
-  | 4~162 -> prov
-  | 15~163 -> prov
-  | 8~167 -> prov
-  (* next we connect "chains", nodes that now have only a stub and one other node as a neighbor *)
-  | 11~0 -> peer | 0~11 -> peer | 51~0 -> peer | 0~51 -> peer
-  | 57~2 -> peer | 2~57 -> peer | 64~2 -> peer | 2~64 -> peer
-  | 129~3 -> peer | 3~129 -> peer | 165~3 -> peer | 3~165 -> peer
-  | 85~9 -> peer | 9~85 -> peer | 136~9 -> peer | 9~136 -> peer
-  | 81~11 -> peer | 11~81 -> peer (* already seen 0 *)
-  | 144~12 -> prov
-  | 12~144 -> cust
-  | 45~13 -> peer | 13~45 -> peer | 86~13 -> peer | 13~86 -> peer
-  | 65~14 -> peer | 14~65 -> peer | 89~14 -> peer | 14~89 -> peer
-  | 92~17 -> peer | 17~92 -> peer | 108~17 -> peer | 17~108 -> peer
-  | 28~18 -> peer | 18~28 -> peer | 164~18 -> peer | 18~164 -> peer
-  | 123~19 -> peer | 19~123 -> peer | 138~19 -> peer | 19~138 -> peer
-  | 35~21 -> peer | 21~35 -> peer | 98~21 -> peer | 21~98 -> peer
-  | 31~22 -> peer | 22~31 -> peer | 61~22 -> peer | 22~61 -> peer
-  | 40~23 -> peer | 23~40 -> peer | 75~23 -> peer | 23~75 -> peer
-  | 104~25 -> peer | 25~104 -> peer | 135~25 -> peer | 25~135 -> peer
-  | 4~27 -> cust | 27~4 -> prov | 94~27 -> cust | 27~94 -> prov (* seen: [4] *)
-  | 101~28 -> peer | 28~101 -> peer (* seen: [18] *)
-  | 50~34 -> cust | 34~50 -> prov
-  | 69~34 -> peer | 34~69 -> peer (* seen: [50] *)
-  | 39~36 -> peer | 36~39 -> peer | 81~36 -> peer | 36~81 -> peer (* seen: [81] *)
-  | 88~37 -> peer | 37~88 -> peer | 99~37 -> peer | 37~99 -> peer
-  | 23~40 -> peer | 40~23 -> peer | 107~40 -> peer | 40~107 -> peer (* seen: [23, 107] *)
-  | 83~41 -> peer | 41~83 -> peer | 126~41 -> peer | 41~126 -> peer (* seen: [83] *)
-  | 64~42 -> peer | 42~64 -> peer | 103~42 -> peer | 42~103 -> peer (* seen: [64] *)
-  | 134~43 -> peer | 43~134 -> peer | 155~43 -> peer | 43~155 -> peer
-  | 94~44 -> peer | 44~94 -> peer | 132~44 -> peer | 44~132 -> peer (* seen: [94] *)
-  | 13~45 -> peer | 45~13 -> peer | 15~45 -> peer | 45~15 -> peer (* seen: [13, 15] *)
-  | 109~46 -> peer | 46~109 -> peer | 161~46 -> peer | 46~161 -> peer (* seen: [109] *)
-  | 67~49 -> peer | 49~67 -> peer | 122~49 -> peer | 49~122 -> peer
-  | 0~51 -> peer | 51~0 -> peer | 142~51 -> peer | 51~142 -> peer (* seen: [0, 142] *)
-  | 24~52 -> peer | 52~24 -> peer | 149~52 -> peer | 52~149 -> peer (* seen: [149] *)
-  | 35~54 -> peer | 54~35 -> peer | 127~54 -> peer | 54~127 -> peer (* seen: [35] *)
-  | 2~57 -> peer | 57~2 -> peer | 166~57 -> peer | 57~166 -> peer (* seen: [2] *)
-  | 48~58 -> peer | 58~48 -> peer | 64~58 -> peer | 58~64 -> peer (* seen: [48, 64] *)
-  | 103~60 -> peer | 60~103 -> peer | 127~60 -> peer | 60~127 -> peer (* seen: [103, 127] *)
-  | 22~61 -> peer | 61~22 -> peer | 117~61 -> peer | 61~117 -> peer (* seen: [22] *)
-  | 38~63 -> peer | 63~38 -> peer | 70~63 -> peer | 63~70 -> peer
-  | 49~67 -> peer | 67~49 -> peer | 69~67 -> peer | 67~69 -> peer (* seen: [49, 69] *)
-  | 15~68 -> peer | 68~15 -> peer | 76~68 -> peer | 68~76 -> peer (* seen: [15] *)
-  | 63~70 -> peer | 70~63 -> peer | 80~70 -> peer | 70~80 -> peer (* seen: [63] *)
-  | 121~71 -> peer | 71~121 -> peer | 158~71 -> peer | 71~158 -> peer (* seen: [121] *)
-  | 59~73 -> peer | 73~59 -> peer | 89~73 -> peer | 73~89 -> peer (* seen: [59, 89] *)
-  | 112~82 -> peer | 82~112 -> peer | 172~82 -> peer | 82~172 -> peer
-  | 9~85 -> peer | 85~9 -> peer | 161~85 -> peer | 85~161 -> peer (* seen: [9, 161] *)
-  | 13~86 -> peer | 86~13 -> peer | 115~86 -> peer | 86~115 -> peer (* seen: [13] *)
-  | 37~88 -> peer | 88~37 -> peer | 132~88 -> peer | 88~132 -> peer (* seen: [37, 132] *)
-  | 65~91 -> peer | 91~65 -> peer | 90~91 -> peer | 91~90 -> peer (* seen: [65] *)
-  | 69~93 -> peer | 93~69 -> peer | 97~93 -> peer | 93~97 -> peer (* seen: [69] *)
-  | 6~96 -> peer | 96~6 -> peer | 32~96 -> peer | 96~32 -> peer (* seen: [6] *)
-  | 26~97 -> peer | 97~26 -> peer | 93~97 -> peer | 97~93 -> peer (* seen: [93] *)
-  | 21~98 -> peer | 98~21 -> peer | 87~98 -> peer | 98~87 -> peer (* seen: [21] *)
-  | 4~99 -> peer | 99~4 -> peer | 37~99 -> peer | 99~37 -> peer (* seen: [4, 37] *)
-  | 16~100 -> peer | 100~16 -> peer | 130~100 -> peer | 100~130 -> peer (* seen: [16] *)
-  | 28~101 -> peer | 101~28 -> peer | 136~101 -> peer | 101~136 -> peer (* seen: [28, 136] *)
-  | 124~102 -> peer | 102~124 -> peer | 139~102 -> peer | 102~139 -> peer
-  | 25~104 -> peer | 104~25 -> peer | 164~104 -> peer | 104~164 -> peer (* seen: [25, 164] *)
-  | 53~105 -> peer | 105~53 -> peer | 124~105 -> peer | 105~124 -> peer (* seen: [124] *)
-  | 46~109 -> peer | 109~46 -> peer | 137~109 -> peer | 109~137 -> peer (* seen: [46, 137] *)
-  | 29~110 -> peer | 110~29 -> peer | 87~110 -> peer | 110~87 -> peer (* seen: [87] *)
-  | 32~112 -> peer | 112~32 -> peer | 82~112 -> peer | 112~82 -> peer (* seen: [32, 82] *)
-  | 86~115 -> peer | 115~86 -> peer | 114~115 -> peer | 115~114 -> peer (* seen: [86] *)
-  | 15~116 -> peer | 116~15 -> peer | 139~116 -> peer | 116~139 -> peer (* seen: [15, 139] *)
-  | 24~120 -> peer | 120~24 -> peer | 81~120 -> peer | 120~81 -> peer (* seen: [24, 81] *)
-  | 19~123 -> peer | 123~19 -> peer | 24~123 -> peer | 123~24 -> peer (* seen: [19, 24] *)
-  | 102~124 -> peer | 124~102 -> peer | 105~124 -> peer | 124~105 -> peer (* seen: [102, 105] *)
-  | 103~125 -> peer | 125~103 -> peer | 173~125 -> peer | 125~173 -> peer (* seen: [103] *)
-  | 41~126 -> peer | 126~41 -> peer | 166~126 -> peer | 126~166 -> peer (* seen: [41, 166] *)
-  | 3~129 -> peer | 129~3 -> peer | 5~129 -> peer | 129~5 -> peer (* seen: [3] *)
-  | 35~130 -> peer | 130~35 -> peer | 100~130 -> peer | 130~100 -> peer (* seen: [35, 100] *)
-  | 31~131 -> peer | 131~31 -> peer | 149~131 -> peer | 131~149 -> peer (* seen: [31, 149] *)
-  | 44~132 -> peer | 132~44 -> peer | 88~132 -> peer | 132~88 -> peer (* seen: [44, 88] *)
-  | 35~133 -> peer | 133~35 -> peer | 127~133 -> peer | 133~127 -> peer (* seen: [35, 127] *)
-  | 43~134 -> peer | 134~43 -> peer | 168~134 -> peer | 134~168 -> peer (* seen: [43] *)
-  | 19~138 -> peer | 138~19 -> peer | 24~138 -> peer | 138~24 -> peer (* seen: [19, 24] *)
-  | 76~140 -> peer | 140~76 -> peer | 121~140 -> peer | 140~121 -> peer (* seen: [76, 121] *)
-  | 4~143 -> peer | 143~4 -> peer | 171~143 -> peer | 143~171 -> peer (* seen: [4] *)
-  | 12~144 -> peer | 144~12 -> peer | 155~144 -> peer | 144~155 -> peer (* seen: [12, 155] *)
-  | 47~145 -> peer | 145~47 -> peer | 150~145 -> peer | 145~150 -> peer
-  | 77~148 -> peer | 148~77 -> peer | 80~148 -> peer | 148~80 -> peer (* seen: [77, 80] *)
-  | 47~150 -> peer | 150~47 -> peer | 145~150 -> peer | 150~145 -> peer (* seen: [47, 145] *)
-  | 30~151 -> peer | 151~30 -> peer | 154~151 -> peer | 151~154 -> peer (* seen: [30, 154] *)
-  | 8~152 -> peer | 152~8 -> peer | 38~152 -> peer | 152~38 -> peer (* seen: [8, 38] *)
-  | 135~153 -> peer | 153~135 -> peer | 136~153 -> peer | 153~136 -> peer (* seen: [135, 136] *)
-  | 71~158 -> peer | 158~71 -> peer | 75~158 -> peer | 158~75 -> peer (* seen: [71, 75] *)
-  | 127~159 -> peer | 159~127 -> peer | 173~159 -> peer | 159~173 -> peer (* seen: [127, 173] *)
-  | 59~160 -> peer | 160~59 -> peer | 80~160 -> peer | 160~80 -> peer (* seen: [59, 80] *)
-  | 46~161 -> peer | 161~46 -> peer | 85~161 -> peer | 161~85 -> peer (* seen: [46, 85] *)
-  | 18~164 -> peer | 164~18 -> peer | 104~164 -> peer | 164~104 -> peer (* seen: [18, 104] *)
-  | 57~166 -> peer | 166~57 -> peer | 126~166 -> peer | 166~126 -> peer (* seen: [57, 126] *)
-  | 75~169 -> peer | 169~75 -> peer | 106~169 -> peer | 169~106 -> peer (* seen: [75, 106] *)
-  | 35~170 -> peer | 170~35 -> peer | 84~170 -> peer | 170~84 -> peer (* seen: [35] *)
-  | 118~171 -> peer | 171~118 -> peer | 143~171 -> peer | 171~143 -> peer (* seen: [143] *)
-  | 125~173 -> peer | 173~125 -> peer | 159~173 -> peer | 173~159 -> peer (* seen: [125, 159] *)
-  (* Nodes of degree 3 *)
-  | 15~5 -> peer | 5~15 -> peer | 114~5 -> peer | 5~114 -> peer | 129~5 -> peer | 5~129 -> peer (* seen: [15, 114, 129] *)
-  | 30~6 -> peer | 6~30 -> peer | 72~6 -> peer | 6~72 -> peer | 96~6 -> peer | 6~96 -> peer (* seen: [30, 72, 96] *)
-  | 38~8 -> peer | 8~38 -> peer | 152~8 -> peer | 8~152 -> peer | 167~8 -> peer | 8~167 -> peer (* seen: [38, 152, 167] *)
-  | 29~10 -> peer | 10~29 -> peer | 121~10 -> peer | 10~121 -> peer | 139~10 -> peer | 10~139 -> peer (* seen: [29, 121, 139] *)
-  | 53~26 -> peer | 26~53 -> peer | 97~26 -> peer | 26~97 -> peer | 172~26 -> peer | 26~172 -> peer (* seen: [53, 97, 172] *)
-  | 22~31 -> peer | 31~22 -> peer | 48~31 -> peer | 31~48 -> peer | 131~31 -> peer | 31~131 -> peer (* seen: [22, 48, 131] *)
-  | 79~33 -> peer | 33~79 -> peer | 94~33 -> peer | 33~94 -> peer | 118~33 -> peer | 33~118 -> peer (* seen: [79, 94, 118] *)
-  | 8~38 -> peer | 38~8 -> peer | 63~38 -> peer | 38~63 -> peer | 152~38 -> peer | 38~152 -> peer (* seen: [8, 63, 152] *)
-  | 35~39 -> peer | 39~35 -> peer | 36~39 -> peer | 39~36 -> peer | 55~39 -> peer | 39~55 -> peer (* seen: [35, 36, 55] *)
-  | 84~47 -> peer | 47~84 -> peer | 145~47 -> peer | 47~145 -> peer | 150~47 -> peer | 47~150 -> peer (* seen: [84, 145, 150] *)
-  | 31~48 -> peer | 48~31 -> peer | 58~48 -> peer | 48~58 -> peer | 95~48 -> peer | 48~95 -> peer (* seen: [31, 58, 95] *)
-  | 7~50 -> peer | 50~7 -> peer | 34~50 -> peer | 50~34 -> peer | 122~50 -> peer | 50~122 -> peer (* seen: [7, 34, 122] *)
-  | 20~53 -> peer | 53~20 -> peer | 26~53 -> peer | 53~26 -> peer | 105~53 -> peer | 53~105 -> peer (* seen: [20, 26, 105] *)
-  | 39~55 -> peer | 55~39 -> peer | 56~55 -> peer | 55~56 -> peer | 64~55 -> peer | 55~64 -> peer (* seen: [39, 56, 64] *)
-  | 73~59 -> peer | 59~73 -> peer | 119~59 -> peer | 59~119 -> peer | 160~59 -> peer | 59~160 -> peer (* seen: [73, 119, 160] *)
-  | 65~66 -> peer | 66~65 -> peer | 89~66 -> peer | 66~89 -> peer | 111~66 -> peer | 66~111 -> peer (* seen: [65, 89] *)
-  | 68~76 -> peer | 76~68 -> peer | 139~76 -> peer | 76~139 -> peer | 140~76 -> peer | 76~140 -> peer (* seen: [68, 139, 140] *)
-  | 11~81 -> peer | 81~11 -> peer | 36~81 -> peer | 81~36 -> peer | 120~81 -> peer | 81~120 -> peer (* seen: [11, 36, 120] *)
-  | 47~84 -> peer | 84~47 -> peer | 118~84 -> peer | 84~118 -> peer | 170~84 -> peer | 84~170 -> peer (* seen: [47, 118, 170] *)
-  | 91~90 -> peer | 90~91 -> peer | 155~90 -> peer | 90~155 -> peer | 168~90 -> peer | 90~168 -> peer (* seen: [91, 155, 168] *)
-  | 17~92 -> peer | 92~17 -> peer | 69~92 -> peer | 92~69 -> peer | 108~92 -> peer | 92~108 -> peer (* seen: [17, 69, 108] *)
-  | 27~94 -> peer | 94~27 -> peer | 33~94 -> peer | 94~33 -> peer | 44~94 -> peer | 94~44 -> peer (* seen: [27, 33, 44] *)
-  | 42~103 -> peer | 103~42 -> peer | 60~103 -> peer | 103~60 -> peer | 125~103 -> peer | 103~125 -> peer (* seen: [42, 60, 125] *)
-  | 17~108 -> peer | 108~17 -> peer | 92~108 -> peer | 108~92 -> peer | 165~108 -> peer | 108~165 -> peer (* seen: [17, 92, 165] *)
-  | 65~111 -> peer | 111~65 -> peer | 66~111 -> peer | 111~66 -> peer | 135~111 -> peer | 111~135 -> peer (* seen: [65, 66, 135] *)
-  | 5~114 -> peer | 114~5 -> peer | 15~114 -> peer | 114~15 -> peer | 115~114 -> peer | 114~115 -> peer (* seen: [5, 15, 115] *)
-  | 33~118 -> peer | 118~33 -> peer | 84~118 -> peer | 118~84 -> peer | 171~118 -> peer | 118~171 -> peer (* seen: [33, 84, 171] *)
-  | 49~122 -> peer | 122~49 -> peer | 50~122 -> peer | 122~50 -> peer | 80~122 -> peer | 122~80 -> peer (* seen: [49, 50, 80] *)
-  | 25~135 -> peer | 135~25 -> peer | 111~135 -> peer | 135~111 -> peer | 153~135 -> peer | 135~153 -> peer (* seen: [25, 111, 153] *)
-  | 9~136 -> peer | 136~9 -> peer | 101~136 -> peer | 136~101 -> peer | 153~136 -> peer | 136~153 -> peer (* seen: [9, 101, 153] *)
-  | 51~142 -> peer | 142~51 -> peer | 117~142 -> peer | 142~117 -> peer | 141~142 -> peer | 142~141 -> peer (* seen: [51, 117, 141] *)
-  | 52~149 -> peer | 149~52 -> peer | 113~149 -> peer | 149~113 -> peer | 131~149 -> peer | 149~131 -> peer (* seen: [52, 113, 131] *)
-  | 20~154 -> peer | 154~20 -> peer | 78~154 -> peer | 154~78 -> peer | 151~154 -> peer | 154~151 -> peer (* seen: [20, 78, 151] *)
-  | 3~165 -> peer | 165~3 -> peer | 108~165 -> peer | 165~108 -> peer | 168~165 -> peer | 165~168 -> peer (* seen: [3, 108, 168] *)
-  | 90~168 -> peer | 168~90 -> peer | 134~168 -> peer | 168~134 -> peer | 165~168 -> peer | 168~165 -> peer (* seen: [90, 134, 165] *)
-  | 26~172 -> peer | 172~26 -> peer | 32~172 -> peer | 172~32 -> peer | 82~172 -> peer | 172~82 -> peer (* seen: [26, 32, 82] *)
-  (* Nodes of degree 4 *)
-  | 27~4 -> peer | 4~27 -> peer | 99~4 -> peer | 4~99 -> peer | 143~4 -> peer | 4~143 -> peer | 162~4 -> peer | 4~162 -> peer (* seen: [27, 99, 143, 162] *)
-  | 29~20 -> peer | 20~29 -> peer | 53~20 -> peer | 20~53 -> peer | 74~20 -> peer | 20~74 -> peer | 154~20 -> peer | 20~154 -> peer (* seen: [29, 53, 74, 154] *)
-  | 52~24 -> peer | 24~52 -> peer | 120~24 -> peer | 24~120 -> peer | 123~24 -> peer | 24~123 -> peer | 138~24 -> peer | 24~138 -> peer (* seen: [52, 120, 123, 138] *)
-  | 6~30 -> peer | 30~6 -> peer | 32~30 -> peer | 30~32 -> peer | 151~30 -> peer | 30~151 -> peer | 156~30 -> peer | 30~156 -> peer (* seen: [6, 32, 151, 156] *)
-  | 30~32 -> peer | 32~30 -> peer | 96~32 -> peer | 32~96 -> peer | 112~32 -> peer | 32~112 -> peer | 172~32 -> peer | 32~172 -> peer (* seen: [30, 96, 112, 172] *)
-  | 2~64 -> peer | 64~2 -> peer | 42~64 -> peer | 64~42 -> peer | 55~64 -> peer | 64~55 -> peer | 58~64 -> peer | 64~58 -> peer (* seen: [2, 42, 55, 58] *)
-  | 14~65 -> peer | 65~14 -> peer | 66~65 -> peer | 65~66 -> peer | 91~65 -> peer | 65~91 -> peer | 111~65 -> peer | 65~111 -> peer (* seen: [14, 66, 91, 111] *)
-  | 34~69 -> peer | 69~34 -> peer | 67~69 -> peer | 69~67 -> peer | 92~69 -> peer | 69~92 -> peer | 93~69 -> peer | 69~93 -> peer (* seen: [34, 67, 92, 93] *)
-  | 23~75 -> peer | 75~23 -> peer | 117~75 -> peer | 75~117 -> peer | 158~75 -> peer | 75~158 -> peer | 169~75 -> peer | 75~169 -> peer (* seen: [23, 117, 158, 169] *)
-  | 70~80 -> peer | 80~70 -> peer | 122~80 -> peer | 80~122 -> peer | 148~80 -> peer | 80~148 -> peer | 160~80 -> peer | 80~160 -> peer (* seen: [70, 122, 148, 160] *)
-  | 29~87 -> peer | 87~29 -> peer | 98~87 -> peer | 87~98 -> peer | 107~87 -> peer | 87~107 -> peer | 110~87 -> peer | 87~110 -> peer (* seen: [29, 98, 107, 110] *)
-  | 14~89 -> peer | 89~14 -> peer | 66~89 -> peer | 89~66 -> peer | 73~89 -> peer | 89~73 -> peer | 155~89 -> peer | 89~155 -> peer (* seen: [14, 66, 73, 155] *)
-  | 29~106 -> peer | 106~29 -> peer | 128~106 -> peer | 106~128 -> peer | 157~106 -> peer | 106~157 -> peer | 169~106 -> peer | 106~169 -> peer (* seen: [29, 128, 157, 169] *)
-  | 61~117 -> peer | 117~61 -> peer | 75~117 -> peer | 117~75 -> peer | 107~117 -> peer | 117~107 -> peer | 142~117 -> peer | 117~142 -> peer (* seen: [61, 75, 107, 142] *)
-  | 10~121 -> peer | 121~10 -> peer | 62~121 -> peer | 121~62 -> peer | 71~121 -> peer | 121~71 -> peer | 140~121 -> peer | 121~140 -> peer (* seen: [10, 62, 71, 140] *)
-  | 54~127 -> peer | 127~54 -> peer | 60~127 -> peer | 127~60 -> peer | 133~127 -> peer | 127~133 -> peer | 159~127 -> peer | 127~159 -> peer (* seen: [54, 60, 133, 159] *)
-  | 10~139 -> peer | 139~10 -> peer | 76~139 -> peer | 139~76 -> peer | 102~139 -> peer | 139~102 -> peer | 116~139 -> peer | 139~116 -> peer (* seen: [10, 76, 102, 116] *)
-  | 43~155 -> peer | 155~43 -> peer | 89~155 -> peer | 155~89 -> peer | 90~155 -> peer | 155~90 -> peer | 144~155 -> peer | 155~144 -> peer (* seen: [43, 89, 90, 144] *)
-  (* Nodes of degree 5 *)
-  | 10~29 -> peer | 29~10 -> peer | 20~29 -> peer | 29~20 -> peer | 87~29 -> peer | 29~87 -> peer | 106~29 -> peer | 29~106 -> peer | 110~29 -> peer | 29~110 -> peer (* seen: [10, 20, 87, 106, 110] *)
-  | 40~107 -> peer | 107~40 -> peer | 87~107 -> peer | 107~87 -> peer | 117~107 -> peer | 107~117 -> peer | 146~107 -> peer | 107~146 -> peer | 147~107 -> peer | 107~147 -> peer (* seen: [40, 87, 117, 146, 147] *)
-  (* Nodes of degree 6 *)
-  | 5~15 -> peer | 15~5 -> peer | 45~15 -> peer | 15~45 -> peer | 68~15 -> peer | 15~68 -> peer | 114~15 -> peer | 15~114 -> peer | 116~15 -> peer | 15~116 -> peer | 163~15 -> peer | 15~163 -> peer (* seen: [5, 45, 68, 114, 116, 163] *)
-  | 21~35 -> peer | 35~21 -> peer | 39~35 -> peer | 35~39 -> peer | 54~35 -> peer | 35~54 -> peer | 130~35 -> peer | 35~130 -> peer | 133~35 -> peer | 35~133 -> peer | 170~35 -> peer | 35~170 -> peer (* seen: [21, 39, 54, 130, 133, 170] *)
-  | _ -> peer
 
 let ospfIntraArea = 0u2
 let ospfInterArea = 1u2
