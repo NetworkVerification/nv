@@ -1,0 +1,33 @@
+(* An example demonstrating how Kirigami handles
+ * statements over nodes in the monolithic network.
+ * When partitioning, the assertNode test is encoded for each
+ * partition by remapping 1n: in partition 1, 1n remaps to 0n.
+ * In partition 0, 1n is cut, so the test must be changed to
+ * be false.
+ * This then means the predicate is encoded as:
+ * In partition 0:
+ * `if false then true else v = 0`
+ * In partition 1:
+ * `if u = 0n then true else v = 0`
+ *)
+type attribute = int
+let nodes = 2
+let edges = {0=1;}
+
+let init n = if n = 0n then 0 else 16
+let trans e x = x + 1
+let merge n x y = if x < y then x else y
+
+let sol = solution { init = init; trans = trans; merge = merge; interface = interface; rtrans = trans }
+
+let partition n = match n with
+  | 0n -> 0
+  | 1n -> 1
+
+let interface e x = match e with
+  | 0~1 -> x = 0
+  | 1~0 -> x = 1
+
+let assertNode u v = if u = 1n then true else v = 0
+
+assert foldNodes (fun u v acc -> acc && assertNode u v) sol true
