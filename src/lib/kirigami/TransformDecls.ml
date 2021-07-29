@@ -155,22 +155,24 @@ let transform_assert (e : exp) (parted_srp : SrpRemapping.partitioned_srp) : exp
      * number of nodes in the original SRP, because we want to descend down
      * the chain of ands until there are only *nodes* many conjuncts left *)
     | EOp (And, _) -> remap_conjuncts (get_global_nodes parted_srp - nodes) e1
-    (* this case is a hack to handle when InterpPartialFull.interp_partial is
+    (* NOTE: this case is a hack to handle when InterpPartialFull.interp_partial is
      * too aggressive: this might happen if one of the later conjuncts simplifies
      * down to true and gets eliminated: we then assume we can replace the
      * assertion with true if the remaining expression contains variables referencing
-     * solve variables. *)
-    | EOp (_, es) ->
-      let names = List.map Var.name (List.flatten (List.map get_exp_vars es)) in
-      if List.exists (fun s -> String.starts_with s "solve-sol-proj") names
-      then (
-        print_endline
-          ("Warning: I was given: ["
-          ^ Printing.exp_to_string e1
-          ^ "] by the interpreter, which I assumed was a mistake, so I substituted"
-          ^ " [true].\nIf I made a mistake, please file an issue!");
-        ebool true)
-      else e
+     * solve variables.
+     * Unfortunately, this hack doesn't really solve the problem it's intended to fix,
+     * so we've commented it out for now. *)
+    (* | EOp (_, es) ->
+     *   let names = List.map Var.name (List.flatten (List.map get_exp_vars es)) in
+     *   if List.exists (fun s -> String.starts_with s "solve-sol-proj") names
+     *   then (
+     *     print_endline
+     *       ("Warning: I was given: ["
+     *       ^ Printing.exp_to_string e1
+     *       ^ "] by the interpreter, which I assumed was a mistake, so I substituted"
+     *       ^ " [true].\nIf I made a mistake, please file an issue!");
+     *     ebool true)
+     *   else e *)
     | _ ->
       print_endline
         ("Warning: while transforming the assert, I got something unexpected.\n\
