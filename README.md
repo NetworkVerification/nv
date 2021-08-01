@@ -12,7 +12,7 @@ Please note that NV is still at an early development stage.
 
 ## Building nv
 
-To start with, make sure you have all of these dependencies: `gcc, make, m4` for `ocaml`, `g++` for `mlcuddidl` and `z3` (which needs `python2.7` and `libgmp`).
+To start with, make sure you have all of these dependencies: `gcc, make, m4` for `ocaml`, `g++` for `mlcuddidl` and `z3` (which needs `python` and `libgmp`).
 Use `opam` to install the `ocaml` dependencies.
 
 If you don't have `opam` yet, see the [OPAM install instructions](https://opam.ocaml.org/doc/Install.html).
@@ -42,7 +42,6 @@ opam install -y \
   fileutils \
   parmap \
   fix \
-  jupyter \
   dune
 ```
 
@@ -52,9 +51,14 @@ z3 yourself, separately.
 Z3 version >= 4.8.7 is recommended to avoid a bug that our constraints sometimes trigger on earlier versions of z3.
 
 You will need Batteries version >= 3.0.0.
-You will also need `mlcuddidl` version <= 3.0.4.
+We've had issues with some versions of `mlcuddidl`. `mlcuddidl.3.0.4` and `mlcuddidl.3.0.7` both appear to work (tested on Linux).
 
-Then clone the repo and run `dune build src/exe/main.exe`.
+Then clone the repo and run `dune build src/exe/main.exe` or `make`.
+
+### nv_jupyter
+
+To use the `nv_jupyter` package, you will also need to install `jupyter`, which requires [`zeromq`](https://github.com/zeromq/libzmq) C bindings.
+Check your operating system's package manager to find out which package provides `/usr/include/zmq.h`.
 
 ### MacOS
 
@@ -76,7 +80,9 @@ This has been tested for ocaml 4.05.0 and 4.07.1.
 
 ```
 sudo apt update
-sudo apt install gcc g++ make m4 libgmp-dev python2.7 libz3-dev z3 libzmq3-dev zlib1g-dev
+sudo apt install gcc g++ make m4 libgmp-dev python libz3-dev z3 zlib1g-dev
+# for nv_jupyter
+sudo apt install libzmq3-dev
 ```
 
 ## Getting started with NV
