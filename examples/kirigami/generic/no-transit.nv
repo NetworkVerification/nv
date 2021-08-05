@@ -36,23 +36,28 @@ let merge n x y = mergeBgp x y
  * - cust if a is a customer of b (b is a provider for a)
  * - peer if a is a peer of b (should be symmetric)
  * - prov if a is a provider for b (a is a customer of b)
+ * A node v will only advertise a route from its neighbor u to another neighbor w according to the following rules:
+ * if relationship(uv) = customer, v will advertise the route to w;
+ * if relationship(uv) = peer or relationship(uv) = prov, v will only advertise the route to w if relationship(vw) = cust
  *)
 
 let transferBgp e x =
   match x with
   | None -> None
   | Some b -> (
-    (* enforce no transit *)
-    if !(relationship e = prov) && b.comms[cust] then None else
+    (* enforce no transit: if the route is neither from a customer nor to a customer, then drop it;
+     * don't use !(b.comms[cust]) since by default b.comms starts empty
+     *)
+    if (b.comms[peer] || b.comms[prov]) && !(relationship e = prov) then None else
     (* update LP *)
     let lp = if (relationship e = cust) then 200
         else if (relationship e = peer) then 100
         else 0
     in
-    (* update comms: mark the source of the message *)
-    let comms = if (relationship e = cust) then b.comms[cust := true]
-        else if (relationship e = peer) then b.comms[peer := true]
-        else b.comms[prov := true]
+    (* update comms: mark the source of the message and remove old relationship tags *)
+    let comms = if (relationship e = cust) then b.comms[cust := true][peer := false][prov := false]
+        else if (relationship e = peer) then b.comms[peer := true][cust := false][prov := false]
+        else b.comms[prov := true][cust := false][peer := false]
     in
     let b = {b with comms = comms; aslen = b.aslen + 1; lp = lp} in
     Some b

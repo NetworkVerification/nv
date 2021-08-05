@@ -32,5 +32,4 @@ let init n = match n with
 
 let sol = solution { init = init; trans = trans; merge = merge; }
 
-assert foldNodes (fun u v acc -> acc && assert_node u v) sol true
-
+assert foldNodes (fun u v acc -> acc && if u = 4n then v = None else assert_node u v) sol true
