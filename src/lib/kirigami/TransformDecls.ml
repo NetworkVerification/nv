@@ -108,6 +108,9 @@ let remap_solve parted_srp solve =
  ** The and statement is nested as follows:
  ** And (And (And x0 x1) x2) x3
  ** so we need to recurse in until we have dropped the right number of nodes.
+ ** Since the nodes are remapped, we drop the higher-numbered nodes under
+ ** the assumption that the other statements have been remapped to refer to
+ ** the correct nodes now.
  **)
 let rec remap_conjuncts nodes e =
   if nodes > 0
@@ -136,29 +139,51 @@ let rec remap_conjuncts nodes e =
  **)
 let transform_assert (e : exp) (parted_srp : SrpRemapping.partitioned_srp) : exp =
   let { nodes; _ } = parted_srp in
-  let e =
-    match e.e with
-    | EMatch _ ->
-      (* if there is only one branch, use interp to simplify;
-       * we should be left with an EOp statement which we can prune *)
-      let e1 = InterpPartialFull.interp_partial e in
-      (match e1.e with
-      (* we want to supply the *difference* between the current nodes and the
-       * number of nodes in the original SRP, because we want to descend down
-       * the chain of ands until there are only *nodes* many conjuncts left *)
-      | EOp (And, _) -> remap_conjuncts (get_global_nodes parted_srp - nodes) e1
-      | _ ->
-        print_endline
-          ("Warning: while transforming the assert, I got something unexpected.\n\
-            Please check that the assert is of the form \"assert foldNodes (fun u v acc \
-            -> acc && assertNode u v) sol true\"\n\
-            Interpretation returned the following (expected an and operation): "
-          ^ Printing.exp_to_string e1
-          ^ "\nIf this warning was false, please file an issue.");
-        e)
-    | _ -> e
-  in
-  remap_exp parted_srp e
+  (* we need to remap before interpreting just to stop interpretation from filling
+   * in all the nodes and simplifying statements we don't want it to simplify the
+   * wrong way *)
+  let e = remap_exp parted_srp e in
+  match e.e with
+  | EMatch _ ->
+    (* if there is only one branch, use interp to simplify;
+     * we should be left with an EOp statement which we can prune *)
+    let e1 = InterpPartialFull.interp_partial e in
+    (* FIXME: sometimes interp_partial is too aggressive; maybe we want to instead just
+     * simplify the match and the first conjunct ourselves and then handle the rest *)
+    (match e1.e with
+    (* we want to supply the *difference* between the current nodes and the
+     * number of nodes in the original SRP, because we want to descend down
+     * the chain of ands until there are only *nodes* many conjuncts left *)
+    | EOp (And, _) -> remap_conjuncts (get_global_nodes parted_srp - nodes) e1
+    (* NOTE: this case is a hack to handle when InterpPartialFull.interp_partial is
+     * too aggressive: this might happen if one of the later conjuncts simplifies
+     * down to true and gets eliminated: we then assume we can replace the
+     * assertion with true if the remaining expression contains variables referencing
+     * solve variables.
+     * Unfortunately, this hack doesn't really solve the problem it's intended to fix,
+     * so we've commented it out for now. *)
+    (* | EOp (_, es) ->
+     *   let names = List.map Var.name (List.flatten (List.map get_exp_vars es)) in
+     *   if List.exists (fun s -> String.starts_with s "solve-sol-proj") names
+     *   then (
+     *     print_endline
+     *       ("Warning: I was given: ["
+     *       ^ Printing.exp_to_string e1
+     *       ^ "] by the interpreter, which I assumed was a mistake, so I substituted"
+     *       ^ " [true].\nIf I made a mistake, please file an issue!");
+     *     ebool true)
+     *   else e *)
+    | _ ->
+      print_endline
+        ("Warning: while transforming the assert, I got something unexpected.\n\
+          Please check that the assert is of the form \"assert foldNodes (fun u v acc -> \
+          acc && assertNode u v) sol true\"\n\
+          Interpretation returned the following (expected an and operation): "
+        ^ Printing.exp_to_string e1
+        ^ "\nIf this warning was false, please file an issue."
+        ^ "\nIt's possible I reduced the expression too aggressively!");
+      e)
+  | _ -> e
 ;;
 
 (** Helper function to extract the edge predicate

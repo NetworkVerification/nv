@@ -45,14 +45,44 @@ def infer_relationships(graph: igraph.Graph):
     return g
 
 
+def sort_by_degree(graph: igraph.Graph):
+    """Return the vertices sorted by degree."""
+    vertices = [(v["id"], graph.predecessors(v)) for v in graph.vs]
+    vertices.sort(key=lambda x: len(x[1]))
+    return vertices
+
+
 def main(f):
     with open(f) as nvfile:
         text = nvfile.read()
     graph = gen_part_nv.construct_graph(text)
-    gprime = infer_relationships(graph)
-    edges = "\n".join([f"  {e.source} -> {e.target};" for e in gprime.es])
-    print(f"// edges: {graph.ecount()} --> {gprime.ecount()}")
-    print("digraph USCarrier {\n" + edges + "\n}")
+    vs = sort_by_degree(graph)
+    last = 0
+    seen = dict()
+    for (v, d) in vs:
+        if last < len(d):
+            print(f"(* Nodes of degree {len(d)} *)")
+        already_seen = (
+            [f"{v} at {seen[v]}"]
+            if v in seen
+            else [] + [f"{u} at {seen[u]}" for u in d if u in seen]
+        )
+        print(
+            f"(* {v} *) "
+            + " ".join([f"| {u}~{v} -> peer | {v}~{u} -> peer" for u in d])
+            + (
+                ""
+                if len(already_seen) == 0
+                else f" (* seen: {'; '.join(already_seen)} *)"
+            )
+        )
+        last = len(d)
+        seen[v] = len(d)
+        seen.update({u: len(d) for u in d})
+    # gprime = infer_relationships(graph)
+    # edges = "\n".join([f"  {e.source} -> {e.target};" for e in gprime.es])
+    # print(f"// edges: {graph.ecount()} --> {gprime.ecount()}")
+    # print("digraph USCarrier {\n" + edges + "\n}")
 
 
 if __name__ == "__main__":
