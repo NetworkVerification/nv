@@ -219,11 +219,6 @@ let run_simulator cfg _ decls fs =
 
 (** Native simulator - compiles SRP to OCaml *)
 let run_compiled file _ _ decls fs =
-  (* let decls =
-   *   match decls with
-   *   | Decls d -> d
-   *   | Grp g -> g.base @ g.prop
-   * in *)
   let path = Filename.remove_extension file in
   let name = Filename.basename path in
   let name = String.mapi (fun i c -> if i = 0 then Char.uppercase_ascii c else c) name in

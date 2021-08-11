@@ -26,6 +26,7 @@ type t =
   ; link_failures : int (** adds at most k link failures to the network  *)
   ; slicing : bool (** Try to slice the network's attribute *)
   ; parallelize : int option [@short "-p"] (** Try to parallelize using n cores **)
+  ; timeout : float [@short "-t"] (** Time out Z3 solving after n seconds (UNIX only) **)
   }
 [@@deriving
   show
@@ -60,6 +61,7 @@ let default =
   ; print_partitions = false
   ; slicing = false
   ; parallelize = None
+  ; timeout = 0.0
   }
 ;;
 
@@ -78,7 +80,6 @@ let update_cfg_dependencies () =
   if !cfg.slicing then cfg := { !cfg with unbox = true };
   if !cfg.hiding then cfg := { !cfg with unbox = true };
   if !cfg.smt_parallel then cfg := { !cfg with finite_arith = true };
-  if !cfg.print_partitions then cfg := { !cfg with kirigami = true };
-  if !cfg.ranked then cfg := { !cfg with kirigami = true };
+  if !cfg.print_partitions or !cfg.ranked then cfg := { !cfg with kirigami = true };
   ()
 ;;
