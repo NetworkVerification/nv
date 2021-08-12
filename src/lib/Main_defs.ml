@@ -53,7 +53,7 @@ let run_smt_classic_aux file cfg info decls part fs =
       then SmtHiding.solve_hiding ~starting_vars:[] ~full_chan:(smt_query_file file)
       else Smt.solveClassic
     in
-    match solve_fun info cfg.query (smt_query_file file) decls with
+    match solve_fun info cfg.query cfg.timeout (smt_query_file file) decls with
     | Unsat -> Success None, []
     | Unknown -> Console.error "SMT returned unknown"
     | Sat solution ->

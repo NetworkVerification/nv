@@ -106,16 +106,17 @@ let get_sat query chan info env solver renaming nodes asserts guars reply =
   | _ -> failwith "unexpected answer from solver\n"
 ;;
 
-(* Apparently not setting this option can lead to Z3 not giving us a response *)
-let solver =
+let solver time =
+  let params = if time > 0 then [Printf.sprintf "-t:%d" (time * 1000)] else [] in
   lazy
-    (let solver = start_solver [] in
+    (let solver = start_solver params in
+     (* Apparently not setting this option can lead to Z3 not giving us a response *)
      ask_solver solver "(set-option :model_evaluator.completion true)\n";
      solver)
 ;;
 
-let solve info query chan net_or_srp nodes assertions =
-  let solver = Lazy.force solver in
+let solve info query time chan net_or_srp nodes assertions =
+  let solver = Lazy.force (solver time) in
   let print_and_ask q =
     if query then printQuery chan q;
     ask_solver_blocking solver q
@@ -150,7 +151,7 @@ let solve info query chan net_or_srp nodes assertions =
   ret
 ;;
 
-let solveClassic info query chan ~decls =
+let solveClassic info query time chan ~decls =
   let open Nv_lang.Syntax in
   let module ExprEnc = (val expr_encoding smt_config) in
   let module Enc = (val (module SmtClassicEncoding.ClassicEncoding (ExprEnc))
@@ -159,6 +160,7 @@ let solveClassic info query chan ~decls =
   solve
     info
     query
+    time
     chan
     (fun () -> Enc.encode_z3 decls)
     (list_seq (Nv_datastructures.AdjGraph.nb_vertex (get_graph decls |> oget)))

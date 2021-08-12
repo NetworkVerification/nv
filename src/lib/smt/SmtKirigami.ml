@@ -11,8 +11,8 @@ open SmtOptimizations
 open Nv_datastructures.AdjGraph
 open Nv_kirigami.SrpRemapping
 
-let solve ?(check_ranked = false) info query chan net_or_srp nodes assertions guarantees =
-  let solver = Lazy.force solver in
+let solve ?(check_ranked = false) info query time chan net_or_srp nodes assertions guarantees =
+  let solver = Lazy.force (solver time) in
   let print_and_ask q =
     if query then printQuery chan q;
     ask_solver_blocking solver q
@@ -56,6 +56,7 @@ let solve ?(check_ranked = false) info query chan net_or_srp nodes assertions gu
       let ret1 = get_ret enc_part1 0 guarantees in
       let ret2 = get_ret enc_part2 assertions 0 in
       (* TODO: return both results, instead of the and *)
+      (* FIXME: handle Unknown *)
       match ret1 with
       | Unsat -> ret2
       | _ -> ret1)
@@ -69,7 +70,7 @@ let solve ?(check_ranked = false) info query chan net_or_srp nodes assertions gu
 ;;
 
 (* Solver for Kirigami *)
-let solveKirigami ?(check_ranked = false) info query chan ~part ~decls =
+let solveKirigami ?(check_ranked = false) info query time chan ~part ~decls =
   let open Nv_lang.Syntax in
   let module ExprEnc = (val expr_encoding smt_config) in
   let module Enc = (val (module SmtClassicEncoding.ClassicEncoding (ExprEnc))
@@ -83,6 +84,7 @@ let solveKirigami ?(check_ranked = false) info query chan ~part ~decls =
     ~check_ranked
     info
     query
+    time
     chan
     (fun () -> Enc.kirigami_encode_z3 ~check_ranked part decls)
     (get_old_nodes part)

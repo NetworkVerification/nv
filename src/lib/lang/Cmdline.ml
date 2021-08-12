@@ -16,8 +16,8 @@ type t =
   ; inline : bool [@short "-i"] (** inline the policy before simulation     *)
   ; compile : bool (** compile network to OCaml code before simulation *)
   ; unroll : bool
-        (* ; draw: bool                         (\** emits a .jpg file of the graph          *\) *)
-        (** whether to unroll maps or not           *)
+  (* ; draw: bool                         (\** emits a .jpg file of the graph          *\) *)
+  (** whether to unroll maps or not           *)
   ; depth : int (** search depth for refinement procedure   *)
   ; check_monotonicity : bool (** checks monotonicity of trans function   *)
   ; kirigami : bool [@short "-k"] (** enable partitioning features           *)
@@ -26,14 +26,14 @@ type t =
   ; link_failures : int (** adds at most k link failures to the network  *)
   ; slicing : bool (** Try to slice the network's attribute *)
   ; parallelize : int option [@short "-p"] (** Try to parallelize using n cores **)
-  ; timeout : float [@short "-t"] (** Time out Z3 solving after n seconds (UNIX only) **)
+  ; timeout : int [@short "-t"] (** Time out Z3 solving after n seconds (UNIX only) **)
   }
 [@@deriving
   show
-  , argparse
-      { positional = ["file", "nv policy file"]
-      ; description = "nv: a network verification framework"
-      }]
+, argparse
+    { positional = ["file", "nv policy file"]
+    ; description = "nv: a network verification framework"
+    }]
 
 let default =
   { debug = false
@@ -61,7 +61,7 @@ let default =
   ; print_partitions = false
   ; slicing = false
   ; parallelize = None
-  ; timeout = 0.0
+  ; timeout = 0
   }
 ;;
 
