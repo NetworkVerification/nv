@@ -97,6 +97,7 @@ def parse_smt(output: str) -> dict:
     z3action = re.compile(r"^\s*:(\w*)\s*(\d*\.?\d+)", re.M)
     assertion = re.compile(r"(Assertion|Guarantee) (\d*) failed", re.M)
     profile = dict()
+    print(output)
     # get transformation profiling
     for match in action.finditer(output):
         transform = match.group(1)
@@ -133,21 +134,27 @@ def run_nv_smt(path: str, cut: Optional[str], time: float, verbose: bool):
     log += f"Running {' '.join(args)}\n"
     try:
         proc = subprocess.run(
-            args, text=True, check=True, capture_output=True, timeout=time
+            args,
+            text=True,
+            check=True,
+            capture_output=True,
+            timeout=time,
+            encoding="utf-8",
         )
         if verbose:
             log += proc.stdout + "\n"
         return log, parse_smt(proc.stdout)
     except subprocess.CalledProcessError as exn:
         if verbose:
-            log += exn.stdout + "\n"
+            log += exn.output.decode("utf-8") + "\n"
         log += f"Error: {exn}\n"
         return log, {}
     except subprocess.TimeoutExpired as exn:
+        partial_output = exn.output.decode("utf-8")
         if verbose:
-            log += exn.stdout + "\n"
+            log += partial_output + "\n"
         log += f"Timeout after {exn.timeout} seconds: {exn}\n"
-        return log, {}
+        return log, parse_smt(partial_output)
 
 
 def run_bench(cut, path, time, verbose):
@@ -258,8 +265,8 @@ def write_csv(results: dict[str, dict[str, dict]], path):
 if __name__ == "__main__":
     DIRECTORY = "benchmarks/SinglePrefix/FAT{}"
     SIZES = [4]
-    TIMEOUT = 3600
-    TRIALS = 2
+    TIMEOUT = 1
+    TRIALS = 3
     RUNS = {}
     for sz in SIZES:
         benchdir = DIRECTORY.format(sz)
