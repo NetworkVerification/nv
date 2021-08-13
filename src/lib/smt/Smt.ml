@@ -23,6 +23,7 @@ open SmtModel
 type smt_result =
   | Unsat
   | Unknown
+  | Timeout
   | Sat of Nv_solution.Solution.t
 
 (** ** Translate the environment to SMT-LIB2 *)
@@ -85,6 +86,13 @@ let ask_for_model query chan info env solver renaming nodes asserts guars =
   | _ -> failwith "failed to parse a model"
 ;;
 
+let ask_if_canceled solver =
+  ask_solver solver "(get-info :reason-unknown)\n\n(echo \"end why\")\n";
+  let rs = get_reply_until "end why" solver in
+  let rs = String.concat "\n" rs in
+  BatString.exists rs "canceled"
+;;
+
 (** Asks the smt solver whether the query was unsat or not
     and returns a model if it was sat.*)
 let get_sat query chan info env solver renaming nodes asserts guars reply =
@@ -102,7 +110,7 @@ let get_sat query chan info env solver renaming nodes asserts guars reply =
   match reply with
   | UNSAT -> Unsat
   | SAT -> ask_for_model query chan info env solver renaming nodes asserts guars
-  | UNKNOWN -> Unknown
+  | UNKNOWN -> if ask_if_canceled solver then Timeout else Unknown
   | _ -> failwith "unexpected answer from solver\n"
 ;;
 

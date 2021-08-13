@@ -56,7 +56,6 @@ let solve ?(check_ranked = false) info query time chan net_or_srp nodes assertio
       let ret1 = get_ret enc_part1 0 guarantees in
       let ret2 = get_ret enc_part2 assertions 0 in
       (* TODO: return both results, instead of the and *)
-      (* FIXME: handle Unknown *)
       match ret1 with
       | Unsat -> ret2
       | _ -> ret1)

@@ -15,6 +15,7 @@ open Nv_kirigami
 type answer =
   | Success of Solution.t option
   | CounterExample of Solution.t
+  | Timeout of int
 
 let rec apply_all (s : Solution.t) fs =
   match fs with
@@ -56,6 +57,7 @@ let run_smt_classic_aux file cfg info decls part fs =
     match solve_fun info cfg.query cfg.timeout (smt_query_file file) decls with
     | Unsat -> Success None, []
     | Unknown -> Console.error "SMT returned unknown"
+    | Timeout -> Timeout cfg.timeout, []
     | Sat solution ->
       (match solution.assertions with
       | [] -> Success (Some solution), fs
@@ -81,8 +83,8 @@ let run_smt_classic_aux file cfg info decls part fs =
             get_answer net fs)
       in
       (match answer with
-      | CounterExample _, _ -> answer
-      | Success _, _ -> if BatList.is_empty tl then answer else solve_slices tl)
+      | Success _, _ -> if BatList.is_empty tl then answer else solve_slices tl
+      | _ -> answer)
   in
   (* let results = Parmap.parmap (BatPervasives.uncurry get_answer) @@ Parmap.L slices in
      match List.find_opt (function | CounterExample _, _ -> true | _ -> false) results with
@@ -99,6 +101,7 @@ let run_smt_classic_aux file cfg info decls part fs =
       (Parmap.L slices)
       (Success None, [])
       (fun ans1 ans2 ->
+         (* TODO: do we need to handle Timeouts here? *)
         match ans1 with
         | CounterExample _, _ -> ans1
         | _ -> ans2)
