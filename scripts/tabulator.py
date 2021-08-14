@@ -96,6 +96,7 @@ def parse_smt(output: str) -> dict:
     action = re.compile(r"(.*) took: (\d*\.?\d+) secs to complete", re.M)
     z3action = re.compile(r"^\s*:(\w*)\s*(\d*\.?\d+)", re.M)
     assertion = re.compile(r"(Assertion|Guarantee) (\d*) failed", re.M)
+    z3timeout = re.compile(r"Z3 timed out after (\d*)", re.M)
     profile = dict()
     print(output)
     # get transformation profiling
@@ -112,10 +113,14 @@ def parse_smt(output: str) -> dict:
     for match in assertion.finditer(output):
         assn = match.group(2)
         profile.setdefault("failed", list()).append(assn)
+    # get z3 timeouts
+    for match in z3timeout.finditer(output):
+        time = int(match.group(1))
+        profile.setdefault("z3 timeout", list()).append(time)
     return profile
 
 
-def run_nv_smt(path: str, cut: Optional[str], time: float, verbose: bool):
+def run_nv_smt(path: str, cut: Optional[str], z3time: int, time: float, verbose: bool):
     """
     Run nv's SMT tool and capture its output.
     If it doesn't finish within the given time, kill it.
@@ -126,7 +131,7 @@ def run_nv_smt(path: str, cut: Optional[str], time: float, verbose: bool):
         print("Did not find 'nv' executable in the current working directory")
         sys.exit(1)
     # set verbose, SMT flags, and partitioning if needed
-    args = [nvpath, "-v", "-m"]
+    args = [nvpath, "-v", "-m", "-t", str(z3time)]
     if cut is not None:
         args += ["-k", path]
     else:
@@ -153,32 +158,41 @@ def run_nv_smt(path: str, cut: Optional[str], time: float, verbose: bool):
         partial_output = exn.output.decode("utf-8")
         if verbose:
             log += partial_output + "\n"
-        log += f"Timeout after {exn.timeout} seconds: {exn}\n"
-        return log, parse_smt(partial_output)
+        log += f"Timeout (external) after {exn.timeout} seconds: {exn}\n"
+        parsed = parse_smt(partial_output)
+        parsed["external timeout"] = [exn.timeout]
+        return log, parsed
 
 
-def run_bench(cut, path, time, verbose):
-    log, result = run_nv_smt(path, cut, time, verbose)
+def run_bench(cut, path, z3time, time, verbose):
+    log, result = run_nv_smt(path, cut, z3time, time, verbose)
     return (log, cut, result)
 
 
-def run_benchmarks_sync(benchdir, benches, time, verbose) -> tuple[str, dict]:
+def run_benchmarks_sync(benchdir, benches, z3time, time, verbose) -> tuple[str, dict]:
     """
     Run the given benchmarks in the given directory in sequence (once each).
     Return a log of output and a dictionary with the benchmark results for each cut.
     """
     return join_cut_dicts(
-        *[run_bench(c, os.path.join(benchdir, n), time, verbose) for (c, n) in benches]
+        *[
+            run_bench(c, os.path.join(benchdir, n), z3time, time, verbose)
+            for (c, n) in benches
+        ]
     )
 
 
-def run_benchmarks_parallel(benchdir, benches, time, verbose) -> tuple[str, dict]:
+def run_benchmarks_parallel(
+    benchdir, benches, z3time, time, verbose
+) -> tuple[str, dict]:
     """
     Run the given benchmarks in the given directory in parallel (once each).
     Return a log of output and a dictionary with the benchmark results for each cut.
     """
     # set up the args for each run_bench
-    paths = map(lambda t: (t[0], os.path.join(benchdir, t[1]), time, verbose), benches)
+    paths = map(
+        lambda t: (t[0], os.path.join(benchdir, t[1]), z3time, time, verbose), benches
+    )
 
     with multiprocessing.Pool(processes=len(benches)) as pool:
         return join_cut_dicts(
@@ -189,27 +203,27 @@ def run_benchmarks_parallel(benchdir, benches, time, verbose) -> tuple[str, dict
         )
 
 
-def run_trials_sync(benchdir, benches, time, trials, verbose, logfile):
+def run_trials_sync(benchdir, benches, z3time, time, trials, verbose, logfile):
     """
     Run trials of the given benchmarks and return a dictionary of profiling information.
     """
     runs = {}
     for i in range(trials):
         logfile.write("Running trial " + str(i + 1) + " of " + str(trials) + "\n")
-        logs, results = run_benchmarks_sync(benchdir, benches, time, verbose)
+        logs, results = run_benchmarks_sync(benchdir, benches, z3time, time, verbose)
         logfile.write(logs)
         runs[i] = results
     return runs
 
 
-def run_trials_parallel(benchdir, benches, time, trials, verbose, logfile):
+def run_trials_parallel(benchdir, benches, z3time, time, trials, verbose, logfile):
     """
     Run the benchmarks in the given directory and return a dictionary of
     profiling information.
     Runs each trial in parallel.
     """
     with multiprocessing.Pool(processes=trials) as pool:
-        args = [(benchdir, benches, time, verbose) for _ in range(trials)]
+        args = [(benchdir, benches, z3time, time, verbose) for _ in range(trials)]
         runs = pool.starmap(run_benchmarks_sync, args)
         logs, results = map(list, zip(*runs))
         results = dict(enumerate(results))
@@ -265,7 +279,8 @@ def write_csv(results: dict[str, dict[str, dict]], path):
 if __name__ == "__main__":
     DIRECTORY = "benchmarks/SinglePrefix/FAT{}"
     SIZES = [4]
-    TIMEOUT = 1
+    Z3TIMEOUT = 3600
+    TIMEOUT = 3600
     TRIALS = 3
     RUNS = {}
     for sz in SIZES:
@@ -280,6 +295,7 @@ if __name__ == "__main__":
         results = run_trials_parallel(
             benchdir,
             benchmarks,
+            Z3TIMEOUT,
             TIMEOUT,
             TRIALS,
             verbose=False,

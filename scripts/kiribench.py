@@ -109,6 +109,7 @@ def tabulate_fattree_benchmarks(
     benchstr,
     sizes,
     cuts,
+    z3timeout=3600,
     timeout=3600,
     trials=10,
     parallel=False,
@@ -144,6 +145,7 @@ def tabulate_fattree_benchmarks(
             results = fn(
                 directory.format(size),
                 benches,
+                z3timeout,
                 timeout,
                 trials,
                 verbose,
@@ -210,6 +212,13 @@ def main():
         type=int,
         help="number of trials to run (default: %(default)s)",
         default=10,
+    )
+    parser_run.add_argument(
+        "-z",
+        "--z3time",
+        type=int,
+        help="number of seconds to run each trial for in z3 (default: %(default)s)",
+        default=3600,
     )
     parser_run.add_argument(
         "-t",
@@ -282,6 +291,7 @@ def main():
             benchstr,
             args.sizes,
             args.cuts,
+            z3timeout=args.z3time,
             timeout=args.timeout,
             trials=args.trials,
             parallel=args.parallel,
