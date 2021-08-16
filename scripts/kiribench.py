@@ -24,7 +24,8 @@ BENCHMARKS = {
     "ap_fatpol": ("benchmarks/AllPrefixes/FAT{0}", "fat{0}Pol"),
     "ap_topzoo": ("benchmarks/AllPrefixes/TopologyZoo", "USCarrier"),
     "sp_maintenance": ("benchmarks/SinglePrefix/FAT{0}", "maintenance{0}"),
-    "ex_topzoo": ("examples/uscarrier", "USCarrier"),
+    "ex_uscarrier": ("examples/uscarrier", "USCarrier"),
+    "ex_roedunet": ("examples/roedunet", "RoEduNet"),
 }
 
 
@@ -166,7 +167,7 @@ def main():
     )
     subparsers = parser.add_subparsers(dest="op")
     hmetis_cuts = [f"hmetis{i + 1}" for i in range(20)]
-    cuts = FattreeCut.as_list() + hmetis_cuts
+    cuts = FattreeCut.as_list()
 
     parser_make = subparsers.add_parser("make")
     parser_make.add_argument(
@@ -175,13 +176,21 @@ def main():
         action="store_true",
         help="generate interface by simulating the given benchmark",
     )
-    parser_make.add_argument(
+    cut_group = parser_make.add_mutually_exclusive_group()
+    cut_group.add_argument(
         "-c",
         "--cuts",
         nargs="+",
         choices=cuts,
-        default=["h", "v", "p"],
+        default=["h", "v", "p", "f"],
         help="types of cut across the network (default: %(default)s)",
+    )
+    cut_group.add_argument(
+        "-k",
+        "--hmetis",
+        nargs="+",
+        type=int,
+        help="types of hmetis cuts across the network",
     )
     parser_make.add_argument(
         "-b",
@@ -227,13 +236,21 @@ def main():
         help="number of seconds to run each trial for (default: %(default)s)",
         default=3600,
     )
-    parser_run.add_argument(
+    cut_group = parser_run.add_mutually_exclusive_group()
+    cut_group.add_argument(
         "-c",
         "--cuts",
         nargs="+",
         choices=cuts,
-        default=["h", "v", "p"],
+        default=["h", "v", "p", "f"],
         help="types of cut across the network (default: %(default)s)",
+    )
+    cut_group.add_argument(
+        "-k",
+        "--hmetis",
+        nargs="+",
+        type=int,
+        help="types of hmetis cuts across the network",
     )
     parser_run.add_argument(
         "-b",
@@ -264,33 +281,45 @@ def main():
         action="store_true",
         help="print benchmarks without deleting anything",
     )
-    parser_clean.add_argument(
+    cut_group = parser_clean.add_mutually_exclusive_group()
+    cut_group.add_argument(
         "-c",
         "--cuts",
         nargs="+",
         choices=cuts,
-        default=["h", "v", "p"],
+        default=["h", "v", "p", "f"],
         help="types of cut across the network (default: %(default)s)",
+    )
+    cut_group.add_argument(
+        "-k",
+        "--hmetis",
+        nargs="+",
+        type=int,
+        help="types of hmetis cuts across the network",
     )
 
     args = parser.parse_args()
     directory, benchstr = BENCHMARKS[args.benchmark]
+    if args.hmetis:
+        chosen_cuts = [f"hmetis{i}" for i in args.hmetis]
+    else:
+        chosen_cuts = args.cuts
     if args.op == "make":
         fmtstr = os.path.join(directory, benchstr + ".nv")
         benchmarks = get_sp_benchmarks(fmtstr)
         # make intermediate maintenance benchmarks
         if args.maintenance:
             benchmarks = gen_maintenance_benchmarks(benchmarks)
-        create_benchmarks(benchmarks, args.cuts, simulate=args.simulate)
+        create_benchmarks(benchmarks, chosen_cuts, simulate=args.simulate)
     if args.op == "clean":
         # TODO: change to use benchmark group specified
-        clean_benchmarks(args.cuts, dry_run=args.dry_run)
+        clean_benchmarks(chosen_cuts, dry_run=args.dry_run)
     if args.op == "run":
         results = tabulate_fattree_benchmarks(
             directory,
             benchstr,
             args.sizes,
-            args.cuts,
+            chosen_cuts,
             z3timeout=args.z3time,
             timeout=args.timeout,
             trials=args.trials,

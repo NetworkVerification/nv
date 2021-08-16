@@ -136,6 +136,7 @@ class NvFile:
         simulate: bool,
         dest: Optional[int],
         verbose: bool = False,
+        groups: bool = True,
     ):
         self.path = path
         self.net = net_type
@@ -143,7 +144,7 @@ class NvFile:
         self.verbose = verbose
         with open(path) as f:
             self.mono = f.read()
-        self.graph = construct_graph(self.mono)
+        self.graph = construct_graph(self.mono, groups)
         if self.verbose:
             print(self.print_graph())
         if simulate:
@@ -208,12 +209,15 @@ class NvFile:
         return str(self.graph)
 
 
-def construct_graph(text: str):
+def construct_graph(text: str, groups=True):
     """
     Construct a digraph from the given edge and node information.
     """
     g = igraph.Graph(directed=True)
-    nodes = find_nodes(text)
+    if groups:
+        nodes = find_nodes(text)
+    else:
+        nodes = find_nodes_nogroups(text)
     for (v, grp) in nodes:
         g.add_vertex(g=grp)
     edges = find_edges(text)
@@ -296,6 +300,19 @@ def find_nodes(text: str):
     vertices = [(node_to_int(m.group(2)), NodeGroup.parse(m.group(1))) for m in matches]
     vertices.sort()
     return vertices
+
+
+def find_nodes_nogroups(text: str):
+    """Return the nodes."""
+    pat = r"let nodes = (\d*)"
+    prog = re.compile(pat)
+    # find all nodes
+    match = prog.search(text)
+    if match:
+        vertices = [(v, NodeGroup.NONE) for v in range(int(match.group(1)))]
+        return vertices
+    else:
+        raise ValueError("nodes not found")
 
 
 def write_partition_str(partitions):
@@ -503,12 +520,14 @@ def run_nv_simulate(path):
 
 
 # TODO: make the dest optional if simulate is True
-def gen_part_nv(nvfile, dest, cut: FattreeCut, simulate=True, verbose=False):
+def gen_part_nv(
+    nvfile, dest, cut: FattreeCut, simulate=True, verbose=False, groups=True
+):
     """Generate the partition file."""
     part, net_type = get_part_fname(nvfile, cut.short, simulate)
     if verbose:
         print("Outfile: " + part)
-    nv = NvFile(nvfile, net_type, simulate, dest, verbose)
+    nv = NvFile(nvfile, net_type, simulate, dest, verbose, groups)
     nodes, edges = nv.cut(cut)
     if verbose:
         print(nodes)
@@ -522,10 +541,10 @@ def gen_part_nv(nvfile, dest, cut: FattreeCut, simulate=True, verbose=False):
     print(f"Saved network to {part}")
 
 
-def gen_part_nv_hmetis(nvfile, hmetisfile, verbose=False):
+def gen_part_nv_hmetis(nvfile, hmetisfile, verbose=False, groups=True):
     hmetisn = os.path.basename(hmetisfile).split(".")[-1]
     part, net_type = get_part_fname(nvfile, f"hmetis{hmetisn}", True)
-    nv = NvFile(nvfile, net_type, True, None, verbose)
+    nv = NvFile(nvfile, net_type, True, None, verbose, groups)
     nodes, edges = nv.hmetis_cut(hmetisfile)
     if verbose:
         print(nodes)
@@ -593,6 +612,7 @@ def parser():
     group.add_argument(
         "-k",
         "--hmetis",
+        nargs="+",
         help="hMETIS-created partitioning file",
     )
     parser.add_argument(
@@ -603,6 +623,12 @@ def parser():
     )
     parser.add_argument(
         "-v", "--verbose", action="store_true", help="increase verbosity"
+    )
+    parser.add_argument(
+        "-ng",
+        "--nogroups",
+        action="store_false",
+        help="don't search for nodes being grouped by any category",
     )
     parser.add_argument(
         "-p",
@@ -622,10 +648,17 @@ def main():
             if args.hmetis is None:
                 for cut in args.cuts:
                     gen_part_nv(
-                        file, dest, FattreeCut.from_str(cut), verbose=args.verbose
+                        file,
+                        dest,
+                        FattreeCut.from_str(cut),
+                        verbose=args.verbose,
+                        groups=args.nogroups,
                     )
             else:
-                gen_part_nv_hmetis(file, args.hmetis, verbose=args.verbose)
+                for hmetis in args.hmetis:
+                    gen_part_nv_hmetis(
+                        file, hmetis, verbose=args.verbose, groups=args.nogroups
+                    )
 
 
 if __name__ == "__main__":
