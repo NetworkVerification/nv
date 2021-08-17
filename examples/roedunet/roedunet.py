@@ -1,6 +1,7 @@
 """
 Utilities for generating RoEduNet benchmarks.
 """
+import itertools
 import os
 import sys
 
@@ -19,7 +20,7 @@ class NvFile:
 
     def add_topology(self, nodes, edges):
         self.consts.append(f"let nodes = {nodes}")
-        edge_list = "\n  ".join([f"{u}-{v};" for (u, v) in edges])
+        edge_list = "\n  ".join([f"{u}={v};" for (u, v) in undirected(edges)])
         self.consts.append(f"let edges = {{\n  {edge_list}\n}}")
 
     def add_let(self, fname, args, fbody):
@@ -216,6 +217,11 @@ def dict_to_match(d, exp):
     return f"match {exp} with\n{branches}"
 
 
+def undirected(directed):
+    """Convert a list of directed edges to undirected edges."""
+    return [(u, v) for (u, v) in directed if u < v]
+
+
 def to_nv(nodes, edges, business_rel):
     """
     Convert to an NV file
@@ -299,11 +305,27 @@ let trans e x = transferBgp e x"""
 
 
 def to_hgr(nodes, edges):
-    com = f"% generated from {os.path.basename(__file__)}\n% number of edges; number of vertices\n% note vertex numbering starts from 1, so 0 is remapped to {nodes}"
+    preamble = (
+        f"% generated from {os.path.basename(__file__)}\n"
+        "% number of edges; number of vertices\n"
+        f"% note vertex numbering starts from 1, so 0 is remapped to {nodes}"
+    )
+    # convert from directed to undirected, then
     # remap 0 to the max node to start numbering from 1
-    edges = [(u if u > 0 else nodes, v if v > 0 else nodes) for (u, v) in edges]
+    edges = [
+        (u if u > 0 else nodes, v if v > 0 else nodes) for (u, v) in undirected(edges)
+    ]
     edge_list = "\n".join([f"{u} {v}" for (u, v) in edges])
-    return com + f"\n{len(edges)} {nodes}\n" + edge_list
+    totals = f"{len(edges)} {nodes}"
+    return "\n".join([preamble, totals, edge_list])
+
+
+def to_dot(name, edges):
+    preamble = f"// generated from {os.path.basename(__file__)}"
+    # convert from directed to undirected
+    edges = undirected(edges)
+    edge_list = "\n".join([f"  {u} -- {v};" for (u, v) in edges])
+    return "\n".join([preamble, f"graph {name} {{", edge_list, "}"])
 
 
 if __name__ == "__main__":
@@ -312,3 +334,5 @@ if __name__ == "__main__":
         print(to_nv(nodes, edges, business_rel))
     elif sys.argv[1] == "hgr":
         print(to_hgr(nodes, edges))
+    elif sys.argv[1] == "dot":
+        print(to_dot("RoEduNet", edges))
