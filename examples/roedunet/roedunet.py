@@ -1,7 +1,6 @@
 """
 Utilities for generating RoEduNet benchmarks.
 """
-import itertools
 import os
 import sys
 
@@ -10,6 +9,8 @@ class NvFile:
     def __init__(self, name):
         self.name = name
         self.types = []
+        self.symbolics = []
+        self.requires = []
         self.consts = []
         self.funcs = []
         self.sols = []
@@ -22,6 +23,12 @@ class NvFile:
         self.consts.append(f"let nodes = {nodes}")
         edge_list = "\n  ".join([f"{u}={v};" for (u, v) in undirected(edges)])
         self.consts.append(f"let edges = {{\n  {edge_list}\n}}")
+
+    def add_symb(self, name, ty):
+        self.symbolics.append(f"symbolic {name} : {ty}")
+
+    def add_req(self, exp):
+        self.requires.append(f"require {exp}")
 
     def add_let(self, fname, args, fbody):
         if len(args) > 0:
@@ -222,7 +229,12 @@ def undirected(directed):
     return [(u, v) for (u, v) in directed if u < v]
 
 
-def to_nv(nodes, edges, business_rel):
+def node_to_int(nodes, node_exp):
+    """Create a match statement mapping nodes to integers."""
+    return dict_to_match({f"{n}n": n for n in range(nodes)}, node_exp)
+
+
+def to_nv(nodes, edges, business_rel, symb=False):
     """
     Convert to an NV file
     """
@@ -235,12 +247,18 @@ def to_nv(nodes, edges, business_rel):
     f.add_let("cust_prov", [], 0)
     f.add_let("peer_peer", [], 1)
     f.add_let("prov_cust", [], 2)
+    if symb:
+        f.add_symb("d", "int")
+        # TODO: requirement that d is not a provider
+        f.add_req(f"d < {nodes}")
+        f.add_let("node_to_int", ["n"], node_to_int(nodes, "n"))
+        cond = "(node_to_int n) = d"
+    else:
+        cond = "n = 2n"
     f.add_let("relationship", ["e"], relp_body)
 
     f.funcs.append(
-        r"""let init n = match n with
-  | 2n -> Some { bgpAd = 0; lp = 100; aslen = 0; med = 0; comms = {} }
-  | _ -> None"""
+        f"let init n = if {cond} then Some {{ bgpAd = 0; lp = 100; aslen = 0; med = 0; comms = {{}} }} else None"
     )
 
     f.funcs.append(
