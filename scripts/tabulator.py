@@ -98,7 +98,6 @@ def parse_smt(output: str) -> dict:
     assertion = re.compile(r"(Assertion|Guarantee) (\d*) failed", re.M)
     z3timeout = re.compile(r"Z3 timed out after (\d*)", re.M)
     profile = dict()
-    print(output)
     # get transformation profiling
     for match in action.finditer(output):
         transform = match.group(1)
