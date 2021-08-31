@@ -10,7 +10,7 @@ import re
 import argparse
 import subprocess
 from enum import Enum, IntEnum
-from typing import Optional, Union
+from typing import Optional, Any
 
 # used for constructing the graph
 import igraph
@@ -100,6 +100,50 @@ class NodeGroup(IntEnum):
             return NodeGroup.NONE
 
 
+class Bgp:
+    """A simplified version of the BGP attribute."""
+
+    def __init__(self, aslen, comms=set(), bgpAd=20, lp=100, med=80):
+        self.bgpAd = bgpAd
+        self.lp = lp
+        self.aslen = aslen
+        self.comms = comms
+        self.med = med
+
+    def set_aslen(self, aslen):
+        self.aslen = aslen
+
+    def __str__(self):
+        aslen = f"{self.aslen}u32" if isinstance(self.aslen, int) else self.aslen
+        comms = "{ " + "; ".join(self.comms) + "_ |-> false" + " }"
+        return f"{{  aslen= {aslen}; bgpAd= {self.bgpAd}u8; comms= {comms}; lp= {self.lp}u32; med= {self.med}u32; }}"
+
+
+class Rib:
+    """A simplified version of the RIB attribute."""
+
+    def __init__(self, bgp=None, static=None):
+        self.bgp = bgp
+        self.static = static
+        self.selected = None
+
+    def select(self):
+        # determine the selected attribute
+        if self.static:
+            self.selected = 1
+        elif self.bgp:
+            self.selected = 3
+        else:
+            self.selected = None
+        return self
+
+    def __str__(self):
+        sel = "None" if self.selected is None else f"Some {self.selected}u2"
+        static = "None" if self.static is None else f"Some {self.static}u8"
+        bgp = "None" if self.bgp is None else f"Some {self.bgp}"
+        return f"{{  bgp= {bgp}; connected= None; ospf= None; selected= {sel}; static= {static}; }}"
+
+
 class NetType(Enum):
     SP = 0
     FATPOL = 1
@@ -156,7 +200,22 @@ class NvFile:
                 for (node, sol) in self.sols.items():
                     self.sols[node] = pat.sub(f"aslen={aslens[node]}", sol)
         else:
-            self.sols = None
+            if self.net == NetType.SP and dest is not None:
+                self.sols = infer_sp_sols(self.graph, dest)
+            elif self.net == NetType.MAINTENANCE and dest is not None:
+                aslens = get_maintenance_paths(self.graph, self.dest, 1)
+                self.sols = {}
+                for (node, sol) in infer_sp_sols(self.graph, dest).items():
+                    # update the aslen from the maintenance paths
+                    if sol.bgp:
+                        sol.bgp.set_aslen(aslens[node])
+                    else:
+                        raise TypeError(
+                            "can't assign maintenance path to a node without BGP attribute set"
+                        )
+                    self.sols[node] = Rib(sol.bgp, sol.static).select()
+            else:
+                self.sols = None
 
     def cut(self, cut_type):
         """
@@ -274,6 +333,17 @@ def write_maintenance_aslen(lengths):
     return aslen
 
 
+def infer_sp_sols(graph: igraph.Graph, dest: int):
+    d = graph.vs.find(id=dest)
+    ps = graph.get_shortest_paths(d)
+    node_to_bgp = {graph.vs[path[-1]]["id"]: Bgp(aslen=len(path) - 1) for path in ps}
+    # generate a rib from the given BGP value and with possibly a static route
+    # call select() to assign the selected route
+    return {
+        v: Rib(bgp, 1 if v == dest else None).select() for v, bgp in node_to_bgp.items()
+    }
+
+
 def node_to_int(node: str) -> int:
     return int(node.rstrip("n"))
 
@@ -325,7 +395,7 @@ def write_partition_str(partitions):
     return output
 
 
-def write_interface_str(edges, fmt: Union[dict[int, str], igraph.Graph, None]):
+def write_interface_str(edges, fmt: Optional[dict[int, Any]]):
     output = "let interface edge a ="
     if fmt is None:
         output += """
@@ -335,10 +405,7 @@ def write_interface_str(edges, fmt: Union[dict[int, str], igraph.Graph, None]):
     else:
         output += "\n  match edge with\n"
         for (start, end) in edges:
-            if isinstance(fmt, dict):
-                pred = f"a = {fmt[start]}"
-            else:
-                raise TypeError("Unexpected fmt type given to write_interface_str")
+            pred = f"a = {fmt[start]}"
             output += f"  | {start}~{end} -> {pred}\n"
     return output
 
@@ -651,6 +718,7 @@ def main():
                         file,
                         dest,
                         FattreeCut.from_str(cut),
+                        simulate=args.simulate,
                         verbose=args.verbose,
                         groups=args.nogroups,
                     )
