@@ -453,10 +453,11 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     let attr_sort = ty_to_sorts aty in
     (* Compute the labelling as the merge of all inputs *)
     let labelling = Array.make nodes (of_list []) in
+    (* default behavior: transfer on input edge *)
     let eouttrans, eintrans =
       match part with
       | Some { decomp = lt, rt; _ } -> lt, rt
-      | None -> Some etrans, None
+      | None -> None, Some etrans
     in
     (* construct the input constants *)
     let input_map = encode_kirigami_inputs env rank inputs eintrans count in

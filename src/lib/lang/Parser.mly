@@ -142,10 +142,11 @@
          StringMap.Exceptionless.find "rtrans" m
       | _ -> failwith "solution must take a direct record expression"
     in
+    (* default behavior: transfer on input edge *)
     let part = match interface with
       | Some interface ->
          let ltrans, rtrans = match (ltrans, rtrans) with
-           | (None, None) -> Some trans, None
+           | (None, None) -> None, Some trans
            | _ -> ltrans, rtrans
          in
          Some {interface; decomp = (ltrans, rtrans)}

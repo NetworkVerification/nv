@@ -218,8 +218,6 @@ let fold_part f part acc =
 ;;
 
 (* var_names should be an exp that uses only the EVar and ETuple constructors *)
-(* interface is an optional expression to describe the network hypotheses *)
-(* global is an optional expression to check that every node satisfies some predicate *)
 type solve =
   { aty : ty option
   ; var_names : exp
