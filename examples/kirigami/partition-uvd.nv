@@ -39,8 +39,9 @@ let partition node = match node with
   | 2n -> 0
   | _ -> 1
 
-let interface edge = match edge with
-  | 1~2 -> Some (fun a -> a = 1 || a = 2)
-  | 2~1 -> Some (fun a -> a > 0)
+let interface edge a = match edge with
+  | 1~2 -> a = 1
+  | 2~1 -> a = 2
 
-let assert node x = x < 3
+let sol = solution { init = init; trans = trans; merge = merge; interface = interface; }
+assert foldNodes (fun u v acc -> acc && v < 3) sol true

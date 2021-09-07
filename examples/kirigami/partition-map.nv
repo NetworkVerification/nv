@@ -13,9 +13,9 @@ let partition node = match node with
   | 0n -> 0
   | 1n -> 1
 
-let interface edge = match edge with
-  | 0~1 -> (fun x -> x[0n] = Some 1)
-  | 1~0 -> (fun x -> x[1n] = Some 1)
+let interface edge x = match edge with
+  | 0~1 -> x = { 0n |-> Some 0; 1n |-> Some 1; _ |-> None }
+  | 1~0 -> x = { 1n |-> Some 0; 0n |-> Some 1; _ |-> None }
 
 let merge node x y =
   combine (fun o1 o2 -> mapbetter (fun n1 n2 -> if n1 < n2 then n1 else n2) o1 o2) x y

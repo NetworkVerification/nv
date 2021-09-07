@@ -5,22 +5,22 @@ let partition n = match n with
   | 1n -> 1
   | 2n -> 2
 
-let interface e = 
-  let eq t x = match x with
+let interface e x =
+  let eq t = match x with
   | Some x -> x = t
   | None -> false
   in
-  let le t x = match x with
+  let le t = match x with
   | Some x -> x <= t
   | None -> false
   in
   match e with
-  | 0~1 -> Some (eq 1)
-  | 0~2 -> Some (eq 1)
-  | 1~2 -> Some (le 3)
-  | 2~1 -> Some (le 3)
-  | 1~0 -> Some (fun a -> true)
-  | 2~0 -> Some (fun a -> true)
+  | 0~1 -> eq 1
+  | 0~2 -> eq 1
+  | 1~2 -> le 3
+  | 2~1 -> le 3
+  | 1~0 -> true
+  | 2~0 -> true
 
 let partsol = solution { init = init; trans = trans; merge = merge; interface = interface }
 

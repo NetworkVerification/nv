@@ -17,10 +17,9 @@ let partition node = match node with
   | 1n -> 0
   | _ -> 1
 
-let interface edge = match edge with
-  | 1~2 -> Some (fun x -> x[0n] = Some 2 && x[1n] = Some 1)
-  | 2~1 -> Some (fun x -> x[4n] = Some 3)
-  | _ -> None
+let interface edge x = match edge with
+  | 1~2 -> x = {0n |-> Some 1; 1n |-> Some 0; 2n |-> Some 1; 3n |-> Some 2; 4n |-> Some 3; _ |-> None}
+  | 2~1 -> x = {2n |-> Some 0; 3n |-> Some 1; 4n |-> Some 2; 0n |-> Some 2; 1n |-> Some 1; _ |-> None}
 
 let merge node x y =
   combine (fun o1 o2 -> mapbetter (fun n1 n2 -> if n1 < n2 then n1 else n2) o1 o2) x y
