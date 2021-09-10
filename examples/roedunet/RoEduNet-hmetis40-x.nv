@@ -7,97 +7,54 @@ type bgpType = {bgpAd: int; lp: int; aslen: int; med:int; comms:set[int];}
 
 type attribute = option[bgpType]
 
-let nodes = 40
+let nodes = 41
 
 let edges = {
-  0-1;
-  0-2;
-  0-3;
-  0-4;
-  0-5;
-  0-6;
-  0-7;
-  0-8;
-  0-9;
-  0-10;
-  0-15;
-  0-20;
-  0-26;
-  0-31;
-  1-0;
-  2-0;
-  3-0;
-  4-0;
-  5-0;
-  6-0;
-  7-0;
-  8-0;
-  9-0;
-  9-36;
-  10-11;
-  10-12;
-  10-13;
-  10-14;
-  10-0;
-  10-15;
-  11-10;
-  12-10;
-  13-10;
-  14-10;
-  15-16;
-  15-17;
-  15-18;
-  15-19;
-  15-0;
-  15-10;
-  15-20;
-  16-15;
-  17-15;
-  18-15;
-  19-15;
-  20-21;
-  20-22;
-  20-23;
-  20-24;
-  20-25;
-  20-0;
-  20-15;
-  20-26;
-  21-20;
-  22-20;
-  23-20;
-  24-20;
-  25-20;
-  26-27;
-  26-28;
-  26-29;
-  26-30;
-  26-0;
-  26-20;
-  27-26;
-  28-26;
-  29-26;
-  30-26;
-  30-31;
-  31-32;
-  31-33;
-  31-34;
-  31-35;
-  31-30;
-  31-0;
-  32-31;
-  33-31;
-  34-31;
-  35-31;
-  35-36;
-  36-37;
-  36-38;
-  36-39;
-  36-35;
-  36-9;
-  37-36;
-  38-36;
-  39-36;
+  3=36; (*Dolj <--> Olt*)
+  3=0; (*Dolj <--> Gorj*)
+  3=7; (*Dolj <--> Valcea*)
+  3=8; (*Dolj <--> Mehedinti*)
+  3=40; (*Dolj <--> Timis*)
+  12=14; (*Bucaresti <--> Cluj*)
+  12=9; (*Bucaresti <--> Ialomita*)
+  12=30; (*Bucaresti <--> Teleorman*)
+  12=4; (*Bucaresti <--> Giurgiu*)
+  12=26; (*Bucaresti <--> Calarasi*)
+  12=20; (*Bucaresti <--> Constanta*)
+  12=23; (*Bucaresti <--> Dambovita*)
+  12=25; (*Bucaresti <--> Prahova*)
+  12=38; (*Bucaresti <--> Buzau*)
+  12=40; (*Bucaresti <--> Timis*)
+  12=1; (*Bucaresti <--> Mures*)
+  12=15; (*Bucaresti <--> Galati*)
+  12=31; (*Bucaresti <--> Iasi*)
+  24=1; (*Covasna <--> Mures*)
+  27=14; (*Alba <--> Cluj*)
+  21=31; (*Bacau <--> Iasi*)
+  19=1; (*Harghita <--> Mures*)
+  18=31; (*Chisinau RENAM <--> Iasi*)
+  28=14; (*Bistrita-Nasaud <--> Cluj*)
+  15=37; (*Galati <--> Tulcea*)
+  15=31; (*Galati <--> Iasi*)
+  29=31; (*Botosani <--> Iasi*)
+  13=40; (*Caras-Severin <--> Timis*)
+  14=34; (*Cluj <--> Salaj*)
+  14=40; (*Cluj <--> Timis*)
+  10=40; (*Bihor <--> Timis*)
+  35=40; (*Arad <--> Timis*)
+  12=3; (*Bucaresti <--> Dolj*)
+  33=12; (*Arges <--> Bucaresti*)
+  17=40; (*Hunedora <--> Timis*)
+  14=2; (*Cluj <--> Satu Mare*)
+  14=39; (*Cluj <--> Maramures*)
+  1=16; (*Mures <--> Sibiu*)
+  31=11; (*Iasi <--> Vaslui*)
+  31=22; (*Iasi <--> Neamt*)
+  31=6; (*Iasi <--> Suceava*)
+  15=5; (*Galati <--> Vrancea*)
+  32=15; (*Braila <--> Galati*)
+  14=1; (*Cluj <--> Mures*)
+  31=1; (*Iasi <--> Mures*)
 }
 
 let cust_prov = 0
@@ -107,98 +64,98 @@ let peer_peer = 1
 let prov_cust = 2
 
 let relationship e = match e with
-| 0~1 -> prov_cust
-| 1~0 -> cust_prov
-| 0~2 -> prov_cust
-| 2~0 -> cust_prov
-| 0~3 -> prov_cust
-| 3~0 -> cust_prov
-| 0~4 -> prov_cust
-| 4~0 -> cust_prov
-| 0~5 -> prov_cust
-| 5~0 -> cust_prov
-| 0~6 -> prov_cust
-| 6~0 -> cust_prov
-| 0~7 -> prov_cust
-| 7~0 -> cust_prov
-| 0~8 -> prov_cust
-| 8~0 -> cust_prov
-| 0~9 -> prov_cust
-| 9~0 -> cust_prov
-| 10~11 -> prov_cust
-| 11~10 -> cust_prov
-| 10~12 -> prov_cust
-| 12~10 -> cust_prov
-| 10~13 -> prov_cust
-| 13~10 -> cust_prov
-| 10~14 -> prov_cust
-| 14~10 -> cust_prov
-| 15~16 -> prov_cust
-| 16~15 -> cust_prov
-| 15~17 -> prov_cust
-| 17~15 -> cust_prov
-| 15~18 -> prov_cust
-| 18~15 -> cust_prov
-| 15~19 -> prov_cust
-| 19~15 -> cust_prov
-| 20~21 -> prov_cust
-| 21~20 -> cust_prov
-| 20~22 -> prov_cust
-| 22~20 -> cust_prov
-| 20~23 -> prov_cust
-| 23~20 -> cust_prov
-| 20~24 -> prov_cust
-| 24~20 -> cust_prov
-| 20~25 -> prov_cust
-| 25~20 -> cust_prov
-| 26~27 -> prov_cust
-| 27~26 -> cust_prov
-| 26~28 -> prov_cust
-| 28~26 -> cust_prov
-| 26~29 -> prov_cust
-| 29~26 -> cust_prov
-| 26~30 -> prov_cust
-| 30~26 -> cust_prov
-| 31~32 -> prov_cust
-| 32~31 -> cust_prov
-| 31~33 -> prov_cust
-| 33~31 -> cust_prov
-| 31~34 -> prov_cust
-| 34~31 -> cust_prov
-| 31~35 -> prov_cust
-| 35~31 -> cust_prov
-| 31~30 -> prov_cust
-| 30~31 -> cust_prov
-| 36~37 -> prov_cust
-| 37~36 -> cust_prov
-| 36~38 -> prov_cust
-| 38~36 -> cust_prov
-| 36~39 -> prov_cust
-| 39~36 -> cust_prov
-| 36~35 -> prov_cust
-| 35~36 -> cust_prov
-| 0~10 -> prov_cust
-| 10~0 -> cust_prov
-| 0~15 -> prov_cust
-| 15~0 -> cust_prov
-| 0~20 -> prov_cust
-| 20~0 -> cust_prov
-| 0~26 -> prov_cust
-| 26~0 -> cust_prov
-| 0~31 -> prov_cust
-| 31~0 -> cust_prov
-| 36~9 -> cust_prov
-| 9~36 -> prov_cust
-| 10~15 -> peer_peer
-| 15~10 -> peer_peer
-| 15~20 -> peer_peer
-| 20~15 -> peer_peer
-| 20~26 -> peer_peer
-| 26~20 -> peer_peer
+| 3~36 -> prov_cust
+| 3~0 -> prov_cust
+| 3~7 -> prov_cust
+| 3~12 -> cust_prov
+| 3~8 -> prov_cust
+| 3~40 -> peer_peer
+| 12~14 -> prov_cust
+| 12~9 -> prov_cust
+| 12~30 -> prov_cust
+| 12~4 -> prov_cust
+| 12~26 -> prov_cust
+| 12~20 -> prov_cust
+| 12~33 -> prov_cust
+| 12~23 -> prov_cust
+| 12~25 -> prov_cust
+| 12~38 -> prov_cust
+| 12~40 -> prov_cust
+| 12~1 -> prov_cust
+| 12~15 -> prov_cust
+| 12~31 -> prov_cust
+| 24~1 -> cust_prov
+| 16~1 -> cust_prov
+| 27~14 -> cust_prov
+| 5~15 -> cust_prov
+| 21~31 -> cust_prov
+| 19~1 -> cust_prov
+| 18~31 -> cust_prov
+| 1~14 -> peer_peer
+| 1~31 -> peer_peer
+| 28~14 -> cust_prov
+| 11~31 -> cust_prov
+| 15~37 -> prov_cust
+| 15~32 -> prov_cust
+| 15~31 -> peer_peer
+| 22~31 -> cust_prov
+| 6~31 -> cust_prov
+| 29~31 -> cust_prov
+| 13~40 -> cust_prov
+| 2~14 -> cust_prov
+| 39~14 -> cust_prov
+| 14~34 -> prov_cust
+| 14~40 -> peer_peer
+| 10~40 -> cust_prov
+| 35~40 -> cust_prov
+| 40~17 -> prov_cust
+| 12~3 -> prov_cust
+| 14~12 -> cust_prov
+| 9~12 -> cust_prov
+| 30~12 -> cust_prov
+| 4~12 -> cust_prov
+| 26~12 -> cust_prov
+| 20~12 -> cust_prov
+| 33~12 -> cust_prov
+| 23~12 -> cust_prov
+| 25~12 -> cust_prov
+| 38~12 -> cust_prov
+| 40~12 -> cust_prov
+| 1~12 -> cust_prov
+| 15~12 -> cust_prov
+| 31~12 -> cust_prov
+| 36~3 -> cust_prov
+| 0~3 -> cust_prov
+| 7~3 -> cust_prov
+| 8~3 -> cust_prov
+| 40~13 -> prov_cust
+| 40~10 -> prov_cust
+| 40~35 -> prov_cust
+| 17~40 -> cust_prov
+| 14~27 -> prov_cust
+| 14~28 -> prov_cust
+| 14~2 -> prov_cust
+| 14~39 -> prov_cust
+| 34~14 -> cust_prov
+| 1~24 -> prov_cust
+| 1~16 -> prov_cust
+| 1~19 -> prov_cust
+| 31~21 -> prov_cust
+| 31~18 -> prov_cust
+| 31~11 -> prov_cust
+| 31~22 -> prov_cust
+| 31~6 -> prov_cust
+| 31~29 -> prov_cust
+| 15~5 -> prov_cust
+| 37~15 -> cust_prov
+| 32~15 -> cust_prov
+| 40~3 -> peer_peer
+| 14~1 -> peer_peer
+| 31~1 -> peer_peer
+| 31~15 -> peer_peer
+| 40~14 -> peer_peer
 
-let init n = match n with
-  | 2n -> Some { bgpAd = 0; lp = 100; aslen = 0; med = 0; comms = {} }
-  | _ -> None
+let init n = if n = 2n then Some { bgpAd = 0; lp = 100; aslen = 0; med = 0; comms = {} } else None
 
 let pickOption f x y =
   match (x,y) with
@@ -257,6 +214,8 @@ let assert_node u v = match v with | None -> false | _ -> true
 
 let sol = solution { init = init; trans = trans; merge = merge; interface = interface; rtrans = trans }
 
+(* {Gorj=0, Mures=1, Satu Mare=2, Dolj=3, Giurgiu=4, Vrancea=5, Suceava=6, Valcea=7, Mehedinti=8, Ialomita=9, Bihor=10, Vaslui=11, Bucaresti=12, Caras-Severin=13, Cluj=14, Galati=15, Sibiu=16, Hunedora=17, Chisinau RENAM=18, Harghita=19, Constanta=20, Bacau=21, Neamt=22, Dambovita=23, Covasna=24, Prahova=25, Calarasi=26, Alba=27, Bistrita-Nasaud=28, Botosani=29, Teleorman=30, Iasi=31, Braila=32, Arges=33, Salaj=34, Arad=35, Olt=36, Tulcea=37, Buzau=38, Maramures=39, Timis=40} *)
+
 assert foldNodes (fun u v acc -> acc && assert_node u v) sol true
 
 let partition node = match node with
@@ -299,95 +258,98 @@ let partition node = match node with
   | 37n -> 36
   | 38n -> 37
   | 39n -> 38
-  | 0n -> 39
+  | 40n -> 39
+  | 0n -> 40
 
 let interface edge a =
   match edge with
-  | 0~1 -> a = Some {  aslen= 1u32; bgpAd= 0u32; comms= { 0u32 |-> true ; _ |-> false}; lp= 200u32; med= 0u32; }
-  | 0~2 -> a = Some {  aslen= 1u32; bgpAd= 0u32; comms= { 0u32 |-> true ; _ |-> false}; lp= 200u32; med= 0u32; }
-  | 0~3 -> a = Some {  aslen= 1u32; bgpAd= 0u32; comms= { 0u32 |-> true ; _ |-> false}; lp= 200u32; med= 0u32; }
-  | 0~4 -> a = Some {  aslen= 1u32; bgpAd= 0u32; comms= { 0u32 |-> true ; _ |-> false}; lp= 200u32; med= 0u32; }
-  | 0~5 -> a = Some {  aslen= 1u32; bgpAd= 0u32; comms= { 0u32 |-> true ; _ |-> false}; lp= 200u32; med= 0u32; }
-  | 0~6 -> a = Some {  aslen= 1u32; bgpAd= 0u32; comms= { 0u32 |-> true ; _ |-> false}; lp= 200u32; med= 0u32; }
-  | 0~7 -> a = Some {  aslen= 1u32; bgpAd= 0u32; comms= { 0u32 |-> true ; _ |-> false}; lp= 200u32; med= 0u32; }
-  | 0~8 -> a = Some {  aslen= 1u32; bgpAd= 0u32; comms= { 0u32 |-> true ; _ |-> false}; lp= 200u32; med= 0u32; }
-  | 0~9 -> a = Some {  aslen= 1u32; bgpAd= 0u32; comms= { 0u32 |-> true ; _ |-> false}; lp= 200u32; med= 0u32; }
-  | 0~10 -> a = Some {  aslen= 1u32; bgpAd= 0u32; comms= { 0u32 |-> true ; _ |-> false}; lp= 200u32; med= 0u32; }
-  | 0~15 -> a = Some {  aslen= 1u32; bgpAd= 0u32; comms= { 0u32 |-> true ; _ |-> false}; lp= 200u32; med= 0u32; }
-  | 0~20 -> a = Some {  aslen= 1u32; bgpAd= 0u32; comms= { 0u32 |-> true ; _ |-> false}; lp= 200u32; med= 0u32; }
-  | 0~26 -> a = Some {  aslen= 1u32; bgpAd= 0u32; comms= { 0u32 |-> true ; _ |-> false}; lp= 200u32; med= 0u32; }
-  | 0~31 -> a = Some {  aslen= 1u32; bgpAd= 0u32; comms= { 0u32 |-> true ; _ |-> false}; lp= 200u32; med= 0u32; }
-  | 1~0 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 2~0 -> a = Some {  aslen= 0u32; bgpAd= 0u32; comms= { _ |-> false }; lp= 100u32; med= 0u32; }
-  | 3~0 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 4~0 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 5~0 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 6~0 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 7~0 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 8~0 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 9~0 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 9~36 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 10~0 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 10~11 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 10~12 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 10~13 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 10~14 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 10~15 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 11~10 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 12~10 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 13~10 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 14~10 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 15~0 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 15~10 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 15~16 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 15~17 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 15~18 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 15~19 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 15~20 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 16~15 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 17~15 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 18~15 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 19~15 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 20~0 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 20~15 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 20~21 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 20~22 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 20~23 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 20~24 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 20~25 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 20~26 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 21~20 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 22~20 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 23~20 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 24~20 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 25~20 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 26~0 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 26~20 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 26~27 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 26~28 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 26~29 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 26~30 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 27~26 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 28~26 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 29~26 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 30~26 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 30~31 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 31~0 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 31~30 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 31~32 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 31~33 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 31~34 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 31~35 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 32~31 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 33~31 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 34~31 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 35~31 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 35~36 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 36~9 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 36~35 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 36~37 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 36~38 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 36~39 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 37~36 -> a = Some {  aslen= 4u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 38~36 -> a = Some {  aslen= 4u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
-  | 39~36 -> a = Some {  aslen= 4u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 0~3 -> a = Some {  aslen= 4u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 1~12 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 1u32 |-> true ; _ |-> false}; lp= 100u32; med= 0u32; }
+  | 1~14 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 1u32 |-> true ; _ |-> false}; lp= 100u32; med= 0u32; }
+  | 1~16 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 1u32 |-> true ; _ |-> false}; lp= 100u32; med= 0u32; }
+  | 1~19 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 1u32 |-> true ; _ |-> false}; lp= 100u32; med= 0u32; }
+  | 1~24 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 1u32 |-> true ; _ |-> false}; lp= 100u32; med= 0u32; }
+  | 1~31 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 1u32 |-> true ; _ |-> false}; lp= 100u32; med= 0u32; }
+  | 2~14 -> a = Some {  aslen= 0u32; bgpAd= 0u32; comms= { _ |-> false }; lp= 100u32; med= 0u32; }
+  | 3~0 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 3~7 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 3~8 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 3~12 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 3~36 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 3~40 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 4~12 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 5~15 -> a = Some {  aslen= 4u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 6~31 -> a = Some {  aslen= 4u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 7~3 -> a = Some {  aslen= 4u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 8~3 -> a = Some {  aslen= 4u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 9~12 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 10~40 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 11~31 -> a = Some {  aslen= 4u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 12~1 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 0u32 |-> true ; _ |-> false}; lp= 200u32; med= 0u32; }
+  | 12~3 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 0u32 |-> true ; _ |-> false}; lp= 200u32; med= 0u32; }
+  | 12~4 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 0u32 |-> true ; _ |-> false}; lp= 200u32; med= 0u32; }
+  | 12~9 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 0u32 |-> true ; _ |-> false}; lp= 200u32; med= 0u32; }
+  | 12~14 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 0u32 |-> true ; _ |-> false}; lp= 200u32; med= 0u32; }
+  | 12~15 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 0u32 |-> true ; _ |-> false}; lp= 200u32; med= 0u32; }
+  | 12~20 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 0u32 |-> true ; _ |-> false}; lp= 200u32; med= 0u32; }
+  | 12~23 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 0u32 |-> true ; _ |-> false}; lp= 200u32; med= 0u32; }
+  | 12~25 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 0u32 |-> true ; _ |-> false}; lp= 200u32; med= 0u32; }
+  | 12~26 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 0u32 |-> true ; _ |-> false}; lp= 200u32; med= 0u32; }
+  | 12~30 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 0u32 |-> true ; _ |-> false}; lp= 200u32; med= 0u32; }
+  | 12~31 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 0u32 |-> true ; _ |-> false}; lp= 200u32; med= 0u32; }
+  | 12~33 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 0u32 |-> true ; _ |-> false}; lp= 200u32; med= 0u32; }
+  | 12~38 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 0u32 |-> true ; _ |-> false}; lp= 200u32; med= 0u32; }
+  | 12~40 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 0u32 |-> true ; _ |-> false}; lp= 200u32; med= 0u32; }
+  | 13~40 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 14~1 -> a = Some {  aslen= 1u32; bgpAd= 0u32; comms= { 0u32 |-> true ; _ |-> false}; lp= 200u32; med= 0u32; }
+  | 14~2 -> a = Some {  aslen= 1u32; bgpAd= 0u32; comms= { 0u32 |-> true ; _ |-> false}; lp= 200u32; med= 0u32; }
+  | 14~12 -> a = Some {  aslen= 1u32; bgpAd= 0u32; comms= { 0u32 |-> true ; _ |-> false}; lp= 200u32; med= 0u32; }
+  | 14~27 -> a = Some {  aslen= 1u32; bgpAd= 0u32; comms= { 0u32 |-> true ; _ |-> false}; lp= 200u32; med= 0u32; }
+  | 14~28 -> a = Some {  aslen= 1u32; bgpAd= 0u32; comms= { 0u32 |-> true ; _ |-> false}; lp= 200u32; med= 0u32; }
+  | 14~34 -> a = Some {  aslen= 1u32; bgpAd= 0u32; comms= { 0u32 |-> true ; _ |-> false}; lp= 200u32; med= 0u32; }
+  | 14~39 -> a = Some {  aslen= 1u32; bgpAd= 0u32; comms= { 0u32 |-> true ; _ |-> false}; lp= 200u32; med= 0u32; }
+  | 14~40 -> a = Some {  aslen= 1u32; bgpAd= 0u32; comms= { 0u32 |-> true ; _ |-> false}; lp= 200u32; med= 0u32; }
+  | 15~5 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 15~12 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 15~31 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 15~32 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 15~37 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 16~1 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 17~40 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 18~31 -> a = Some {  aslen= 4u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 19~1 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 20~12 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 21~31 -> a = Some {  aslen= 4u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 22~31 -> a = Some {  aslen= 4u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 23~12 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 24~1 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 25~12 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 26~12 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 27~14 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 28~14 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 29~31 -> a = Some {  aslen= 4u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 30~12 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 31~1 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 31~6 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 31~11 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 31~12 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 31~15 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 31~18 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 31~21 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 31~22 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 31~29 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 32~15 -> a = Some {  aslen= 4u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 33~12 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 34~14 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 35~40 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 36~3 -> a = Some {  aslen= 4u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 37~15 -> a = Some {  aslen= 4u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 38~12 -> a = Some {  aslen= 3u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 39~14 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 2u32 |-> true ; _ |-> false}; lp= 0u32; med= 0u32; }
+  | 40~3 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 1u32 |-> true ; _ |-> false}; lp= 100u32; med= 0u32; }
+  | 40~10 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 1u32 |-> true ; _ |-> false}; lp= 100u32; med= 0u32; }
+  | 40~12 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 1u32 |-> true ; _ |-> false}; lp= 100u32; med= 0u32; }
+  | 40~13 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 1u32 |-> true ; _ |-> false}; lp= 100u32; med= 0u32; }
+  | 40~14 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 1u32 |-> true ; _ |-> false}; lp= 100u32; med= 0u32; }
+  | 40~17 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 1u32 |-> true ; _ |-> false}; lp= 100u32; med= 0u32; }
+  | 40~35 -> a = Some {  aslen= 2u32; bgpAd= 0u32; comms= { 1u32 |-> true ; _ |-> false}; lp= 100u32; med= 0u32; }

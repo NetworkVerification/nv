@@ -10,7 +10,7 @@ import re
 import argparse
 import subprocess
 from enum import Enum, IntEnum
-from typing import Optional, Any
+from typing import Optional
 
 # used for constructing the graph
 import igraph
@@ -350,13 +350,27 @@ def node_to_int(node: str) -> int:
 
 def find_edges(text: str):
     """Return the edges."""
-    pat = r"(\d*n?)-(\d*n?);"
-    prog = re.compile(pat)
+
+    def to_int(match, flip=False):
+        if flip:
+            return (node_to_int(match.group(2)), node_to_int(match.group(1)))
+        else:
+            return (node_to_int(match.group(1)), node_to_int(match.group(2)))
+
+    directed = r"(\d*n?)-(\d*n?);"
+    undirected = r"(\d*n?)=(\d*n?);"
+    prog = re.compile(directed)
     matches = prog.finditer(text)
+    outputs = [to_int(m) for m in matches]
+    prog = re.compile(undirected)
+    matches = prog.finditer(text)
+    outputs += [
+        e
+        for pairs in [[to_int(m), to_int(m, flip=True)] for m in matches]
+        for e in pairs
+    ]
     # use an intermediate set to remove duplicates, just in case they occur
-    outputs = list(
-        set([(node_to_int(m.group(1)), node_to_int(m.group(2))) for m in matches])
-    )
+    outputs = list(set(outputs))
     outputs.sort()
     return outputs
 
@@ -395,18 +409,11 @@ def write_partition_str(partitions):
     return output
 
 
-def write_interface_str(edges, fmt: Optional[dict[int, Any]]):
+def write_interface_str(edges, fmt):
     output = "let interface edge a ="
-    if fmt is None:
-        output += """
-    a.selected = Some 3u2 && (match a.bgp with
-    | Some b -> true
-    | None -> false)"""
-    else:
-        output += "\n  match edge with\n"
-        for (start, end) in edges:
-            pred = f"a = {fmt[start]}"
-            output += f"  | {start}~{end} -> {pred}\n"
+    output += "\n  match edge with\n"
+    for (start, end) in edges:
+        output += f"  | {start}~{end} -> a = {fmt[start]}\n"
     return output
 
 

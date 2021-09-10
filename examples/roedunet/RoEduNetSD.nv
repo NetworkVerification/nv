@@ -4,109 +4,67 @@ type bgpType = {bgpAd: int; lp: int; aslen: int; med:int; comms:set[int];}
 
 type attribute = option[bgpType]
 
-let nodes = 40
+let nodes = 41
 
 let edges = {
-  0-1;
-  0-2;
-  0-3;
-  0-4;
-  0-5;
-  0-6;
-  0-7;
-  0-8;
-  0-9;
-  0-10;
-  0-15;
-  0-20;
-  0-26;
-  0-31;
-  1-0;
-  2-0;
-  3-0;
-  4-0;
-  5-0;
-  6-0;
-  7-0;
-  8-0;
-  9-0;
-  9-36;
-  10-11;
-  10-12;
-  10-13;
-  10-14;
-  10-0;
-  10-15;
-  11-10;
-  12-10;
-  13-10;
-  14-10;
-  15-16;
-  15-17;
-  15-18;
-  15-19;
-  15-0;
-  15-10;
-  15-20;
-  16-15;
-  17-15;
-  18-15;
-  19-15;
-  20-21;
-  20-22;
-  20-23;
-  20-24;
-  20-25;
-  20-0;
-  20-15;
-  20-26;
-  21-20;
-  22-20;
-  23-20;
-  24-20;
-  25-20;
-  26-27;
-  26-28;
-  26-29;
-  26-30;
-  26-0;
-  26-20;
-  27-26;
-  28-26;
-  29-26;
-  30-26;
-  30-31;
-  31-32;
-  31-33;
-  31-34;
-  31-35;
-  31-30;
-  31-0;
-  32-31;
-  33-31;
-  34-31;
-  35-31;
-  35-36;
-  36-37;
-  36-38;
-  36-39;
-  36-35;
-  36-9;
-  37-36;
-  38-36;
-  39-36;
+  32=14; (*Dolj <--> Olt*)
+  32=38; (*Dolj <--> Gorj*)
+  32=7; (*Dolj <--> Valcea*)
+  32=37; (*Dolj <--> Mehedinti*)
+  32=33; (*Dolj <--> Timis*)
+  17=6; (*Bucaresti <--> Cluj*)
+  17=10; (*Bucaresti <--> Ialomita*)
+  17=16; (*Bucaresti <--> Teleorman*)
+  17=27; (*Bucaresti <--> Giurgiu*)
+  17=19; (*Bucaresti <--> Calarasi*)
+  17=39; (*Bucaresti <--> Constanta*)
+  17=30; (*Bucaresti <--> Dambovita*)
+  17=18; (*Bucaresti <--> Prahova*)
+  17=12; (*Bucaresti <--> Buzau*)
+  17=33; (*Bucaresti <--> Timis*)
+  17=4; (*Bucaresti <--> Mures*)
+  17=34; (*Bucaresti <--> Galati*)
+  17=1; (*Bucaresti <--> Iasi*)
+  8=4; (*Covasna <--> Mures*)
+  22=6; (*Alba <--> Cluj*)
+  9=1; (*Bacau <--> Iasi*)
+  13=4; (*Harghita <--> Mures*)
+  0=1; (*Chisinau RENAM <--> Iasi*)
+  40=6; (*Bistrita-Nasaud <--> Cluj*)
+  34=21; (*Galati <--> Tulcea*)
+  34=1; (*Galati <--> Iasi*)
+  24=1; (*Botosani <--> Iasi*)
+  36=33; (*Caras-Severin <--> Timis*)
+  6=25; (*Cluj <--> Salaj*)
+  6=33; (*Cluj <--> Timis*)
+  5=33; (*Bihor <--> Timis*)
+  2=33; (*Arad <--> Timis*)
+  17=32; (*Bucaresti <--> Dolj*)
+  28=17; (*Arges <--> Bucaresti*)
+  26=33; (*Hunedora <--> Timis*)
+  6=3; (*Cluj <--> Satu Mare*)
+  6=29; (*Cluj <--> Maramures*)
+  4=35; (*Mures <--> Sibiu*)
+  1=20; (*Iasi <--> Vaslui*)
+  1=11; (*Iasi <--> Neamt*)
+  1=23; (*Iasi <--> Suceava*)
+  34=31; (*Galati <--> Vrancea*)
+  15=34; (*Braila <--> Galati*)
+  6=4; (*Cluj <--> Mures*)
+  1=4; (*Iasi <--> Mures*)
 }
-
-symbolic d : int
-(* restrict d to a non-provider *)
-require !(d = 0 || d = 20 || d = 15 || d = 10 || d = 9 || d = 36 || d = 31 || d = 26)
-require (d < 40)
 
 let cust_prov = 0
 
 let peer_peer = 1
 
 let prov_cust = 2
+
+symbolic d : int
+
+require d = 0 || d = 2 || d = 3 || d = 5 || d = 7 || d = 8 || d = 9 || d = 10 || d = 11 || d = 12 || d = 13 || d = 14 || d = 15 || d = 16 || d = 18 || d = 19 || d = 20 || d = 21 || d = 22 || d = 23 || d = 24 || d = 25 || d = 26 || d = 27 || d = 28 || d = 29 || d = 30 || d = 31 || d = 35 || d = 36 || d = 37 || d = 38 || d = 39 || d = 40
+
+require d < 41
 
 let node_to_int n = match n with
 | 0n -> 0
@@ -149,97 +107,99 @@ let node_to_int n = match n with
 | 37n -> 37
 | 38n -> 38
 | 39n -> 39
-
+| 40n -> 40
 
 let relationship e = match e with
-| 0~1 -> prov_cust
-| 1~0 -> cust_prov
-| 0~2 -> prov_cust
-| 2~0 -> cust_prov
-| 0~3 -> prov_cust
-| 3~0 -> cust_prov
-| 0~4 -> prov_cust
-| 4~0 -> cust_prov
-| 0~5 -> prov_cust
-| 5~0 -> cust_prov
-| 0~6 -> prov_cust
-| 6~0 -> cust_prov
-| 0~7 -> prov_cust
-| 7~0 -> cust_prov
-| 0~8 -> prov_cust
-| 8~0 -> cust_prov
-| 0~9 -> prov_cust
-| 9~0 -> cust_prov
-| 10~11 -> prov_cust
-| 11~10 -> cust_prov
-| 10~12 -> prov_cust
-| 12~10 -> cust_prov
-| 10~13 -> prov_cust
-| 13~10 -> cust_prov
-| 10~14 -> prov_cust
-| 14~10 -> cust_prov
-| 15~16 -> prov_cust
-| 16~15 -> cust_prov
-| 15~17 -> prov_cust
-| 17~15 -> cust_prov
-| 15~18 -> prov_cust
-| 18~15 -> cust_prov
-| 15~19 -> prov_cust
-| 19~15 -> cust_prov
-| 20~21 -> prov_cust
-| 21~20 -> cust_prov
-| 20~22 -> prov_cust
-| 22~20 -> cust_prov
-| 20~23 -> prov_cust
-| 23~20 -> cust_prov
-| 20~24 -> prov_cust
-| 24~20 -> cust_prov
-| 20~25 -> prov_cust
-| 25~20 -> cust_prov
-| 26~27 -> prov_cust
-| 27~26 -> cust_prov
-| 26~28 -> prov_cust
-| 28~26 -> cust_prov
-| 26~29 -> prov_cust
-| 29~26 -> cust_prov
-| 26~30 -> prov_cust
-| 30~26 -> cust_prov
-| 31~32 -> prov_cust
-| 32~31 -> cust_prov
-| 31~33 -> prov_cust
-| 33~31 -> cust_prov
-| 31~34 -> prov_cust
-| 34~31 -> cust_prov
-| 31~35 -> prov_cust
-| 35~31 -> cust_prov
-| 31~30 -> prov_cust
-| 30~31 -> cust_prov
-| 36~37 -> prov_cust
-| 37~36 -> cust_prov
-| 36~38 -> prov_cust
-| 38~36 -> cust_prov
-| 36~39 -> prov_cust
-| 39~36 -> cust_prov
-| 36~35 -> prov_cust
-| 35~36 -> cust_prov
-| 0~10 -> prov_cust
-| 10~0 -> cust_prov
-| 0~15 -> prov_cust
-| 15~0 -> cust_prov
-| 0~20 -> prov_cust
-| 20~0 -> cust_prov
-| 0~26 -> prov_cust
-| 26~0 -> cust_prov
-| 0~31 -> prov_cust
-| 31~0 -> cust_prov
-| 36~9 -> cust_prov
-| 9~36 -> prov_cust
-| 10~15 -> peer_peer
-| 15~10 -> peer_peer
-| 15~20 -> peer_peer
-| 20~15 -> peer_peer
-| 20~26 -> peer_peer
-| 26~20 -> peer_peer
+| 32~14 -> prov_cust
+| 32~38 -> prov_cust
+| 32~7 -> prov_cust
+| 32~17 -> cust_prov
+| 32~37 -> prov_cust
+| 32~33 -> peer_peer
+| 17~6 -> prov_cust
+| 17~10 -> prov_cust
+| 17~16 -> prov_cust
+| 17~27 -> prov_cust
+| 17~19 -> prov_cust
+| 17~39 -> prov_cust
+| 17~28 -> prov_cust
+| 17~30 -> prov_cust
+| 17~18 -> prov_cust
+| 17~12 -> prov_cust
+| 17~33 -> prov_cust
+| 17~4 -> prov_cust
+| 17~34 -> prov_cust
+| 17~1 -> prov_cust
+| 8~4 -> cust_prov
+| 35~4 -> cust_prov
+| 22~6 -> cust_prov
+| 31~34 -> cust_prov
+| 9~1 -> cust_prov
+| 13~4 -> cust_prov
+| 0~1 -> cust_prov
+| 4~6 -> peer_peer
+| 4~1 -> peer_peer
+| 40~6 -> cust_prov
+| 20~1 -> cust_prov
+| 34~21 -> prov_cust
+| 34~15 -> prov_cust
+| 34~1 -> peer_peer
+| 11~1 -> cust_prov
+| 23~1 -> cust_prov
+| 24~1 -> cust_prov
+| 36~33 -> cust_prov
+| 3~6 -> cust_prov
+| 29~6 -> cust_prov
+| 6~25 -> prov_cust
+| 6~33 -> peer_peer
+| 5~33 -> cust_prov
+| 2~33 -> cust_prov
+| 33~26 -> prov_cust
+| 17~32 -> prov_cust
+| 6~17 -> cust_prov
+| 10~17 -> cust_prov
+| 16~17 -> cust_prov
+| 27~17 -> cust_prov
+| 19~17 -> cust_prov
+| 39~17 -> cust_prov
+| 28~17 -> cust_prov
+| 30~17 -> cust_prov
+| 18~17 -> cust_prov
+| 12~17 -> cust_prov
+| 33~17 -> cust_prov
+| 4~17 -> cust_prov
+| 34~17 -> cust_prov
+| 1~17 -> cust_prov
+| 14~32 -> cust_prov
+| 38~32 -> cust_prov
+| 7~32 -> cust_prov
+| 37~32 -> cust_prov
+| 33~36 -> prov_cust
+| 33~5 -> prov_cust
+| 33~2 -> prov_cust
+| 26~33 -> cust_prov
+| 6~22 -> prov_cust
+| 6~40 -> prov_cust
+| 6~3 -> prov_cust
+| 6~29 -> prov_cust
+| 25~6 -> cust_prov
+| 4~8 -> prov_cust
+| 4~35 -> prov_cust
+| 4~13 -> prov_cust
+| 1~9 -> prov_cust
+| 1~0 -> prov_cust
+| 1~20 -> prov_cust
+| 1~11 -> prov_cust
+| 1~23 -> prov_cust
+| 1~24 -> prov_cust
+| 34~31 -> prov_cust
+| 21~34 -> cust_prov
+| 15~34 -> cust_prov
+| 33~32 -> peer_peer
+| 6~4 -> peer_peer
+| 1~4 -> peer_peer
+| 1~34 -> peer_peer
+| 33~6 -> peer_peer
 
 let init n = if (node_to_int n) = d then Some { bgpAd = 0; lp = 100; aslen = 0; med = 0; comms = {} } else None
 
@@ -299,5 +259,7 @@ let trans e x = transferBgp e x
 let assert_node u v = match v with | None -> false | _ -> true
 
 let sol = solution { init = init; trans = trans; merge = merge; }
+
+(* Chisinau RENAM=0, Iasi=1, Arad=2, Satu Mare=3, Mures=4, Bihor=5, Cluj=6, Valcea=7, Covasna=8, Bacau=9, Ialomita=10, Neamt=11, Buzau=12, Harghita=13, Olt=14, Braila=15, Teleorman=16, Bucaresti=17, Prahova=18, Calarasi=19, Vaslui=20, Tulcea=21, Alba=22, Suceava=23, Botosani=24, Salaj=25, Hunedora=26, Giurgiu=27, Arges=28, Maramures=29, Dambovita=30, Vrancea=31, Dolj=32, Timis=33, Galati=34, Sibiu=35, Caras-Severin=36, Mehedinti=37, Gorj=38, Constanta=39, Bistrita-Nasaud=40 *)
 
 assert foldNodes (fun u v acc -> acc && assert_node u v) sol true
