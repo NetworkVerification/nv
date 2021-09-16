@@ -235,25 +235,6 @@ let run_compiled file _ _ decls fs =
     else CounterExample solution, fs
 ;;
 
-let parse_input_aux cfg info file decls parts fs =
-  let decls, fs =
-    if cfg.unroll
-    then (
-      let decls, f =
-        (* unrolling maps *)
-        Profile.time_profile "Map unrolling" (fun () -> MapUnrolling.unroll info decls)
-      in
-      (* Inline again after unrolling. Could probably optimize this away during unrolling *)
-      let decls =
-        Profile.time_profile "Inlining" (fun () -> Inline.inline_declarations decls)
-      in
-      (* (Typing.infer_declarations info decls, f :: fs) (* TODO: is type inf necessary here?*) *)
-      decls, f :: fs)
-    else decls, fs
-  in
-  cfg, info, file, decls, parts, fs
-;;
-
 let parse_input (args : string array) =
   let cfg, rest = argparse default "nv" args in
   Cmdline.set_cfg cfg;
@@ -297,5 +278,20 @@ let parse_input (args : string array) =
       (Typing.infer_declarations info) decls, fs)
     else decls, fs
   in
-  parse_input_aux cfg info file decls partitions fs
+  let decls, fs =
+    if cfg.unroll
+    then (
+      let decls, f =
+        (* unrolling maps *)
+        Profile.time_profile "Map unrolling" (fun () -> MapUnrolling.unroll info decls)
+      in
+      (* Inline again after unrolling. Could probably optimize this away during unrolling *)
+      let decls =
+        Profile.time_profile "Inlining" (fun () -> Inline.inline_declarations decls)
+      in
+      (* (Typing.infer_declarations info decls, f :: fs) (* TODO: is type inf necessary here?*) *)
+      decls, f :: fs)
+    else decls, fs
+  in
+  cfg, info, file, decls, partitions, fs
 ;;
