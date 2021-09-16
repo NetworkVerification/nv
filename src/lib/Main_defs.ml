@@ -101,7 +101,7 @@ let run_smt_classic_aux file cfg info decls part fs =
       (Parmap.L slices)
       (Success None, [])
       (fun ans1 ans2 ->
-         (* TODO: do we need to handle Timeouts here? *)
+        (* TODO: do we need to handle Timeouts here? *)
         match ans1 with
         | CounterExample _, _ -> ans1
         | _ -> ans2)
@@ -111,17 +111,20 @@ let run_smt_classic_aux file cfg info decls part fs =
   | Some n -> solve_parallel n slices
 ;;
 
+let partition_decls cfg decls parts =
+  List.map
+    (fun p ->
+      let p, d = Partition.transform_declarations decls p in
+      if cfg.print_partitions
+      then print_endline (SrpRemapping.string_of_partitioned_srp p)
+      else ();
+      Some p, d)
+    parts
+;;
+
 let run_smt_partitioned file cfg info decls parts fs =
   let pds =
-    Profile.time_profile "Partitioning" (fun () ->
-        List.map
-          (fun p ->
-            let p, d = Partition.transform_declarations decls p in
-            if cfg.print_partitions
-            then print_endline (SrpRemapping.string_of_partitioned_srp p)
-            else ();
-            Some p, d)
-          parts)
+    Profile.time_profile "Partitioning" (fun () -> partition_decls cfg decls parts)
   in
   List.map (fun (p, d) -> run_smt_classic_aux file cfg info d p fs) pds
 ;;

@@ -69,3 +69,28 @@ let transform_declarations decls parted_srp =
   in
   List.fold_left add_new_decl (parted_srp, []) decls
 ;;
+
+let transform_declaration_inverted decl fragments : declaration option list =
+  (* TODO: visit the declarations and copy them to each fragment; *)
+  match decl with
+  | DNodes _ -> (List.map (fun p -> Some (DNodes p.nodes)) fragments)
+  | DEdges _ -> (List.map (fun p -> Some (DEdges p.edges)) fragments)
+  | DSymbolic (v, _) ->
+    let v = snd (unproj_var v) in
+    let filter_hyp p : declaration option =
+      let accepted = valid_hyps p in
+      if String.starts_with (Var.name v) "symbolic-hyp" && not (List.mem (Var.name v) accepted) then None else Some decl
+    in
+    List.map filter_hyp fragments
+  | DSolve _s -> (* for each fragment, remap the expressions appropriately *) failwith "todo"
+  | DPartition _ -> List.make (List.length fragments) (None:declaration option)
+  | DAssert _e -> (* for each fragment, trim the appropriate number of conjuncts *) failwith "todo"
+  | _ -> (List.make (List.length fragments) (Some decl))
+;;
+
+let transform_declarations_inverted decls fragments : declarations list =
+  (* use transpose to connect the declarations for each fragment *)
+  let fragment_decls = List.transpose (List.map (fun d -> transform_declaration_inverted d fragments) decls) in
+  (* filter out Nones in declarations *)
+  List.map (List.filter_map identity) fragment_decls
+;;
