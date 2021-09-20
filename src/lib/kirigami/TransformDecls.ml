@@ -5,6 +5,7 @@ open Nv_datastructures.AdjGraph
 open Syntax
 open Nv_interpreter
 open SrpRemapping
+open Nv_utils
 
 let remap_value parted_srp v =
   let { node_map; edge_map; _ } = parted_srp in
@@ -19,6 +20,8 @@ let remap_value parted_srp v =
     Option.map make_edge new_edge
   | _ -> Some v
 ;;
+
+let remap_value_inverted fragments v = List.map (fun f -> remap_value f v) fragments
 
 let rec remap_exp parted_srp e =
   let f = remap_exp parted_srp in
@@ -102,6 +105,76 @@ let remap_solve parted_srp solve =
   let trans = remap_exp parted_srp solve.trans in
   let merge = remap_exp parted_srp solve.merge in
   { solve with init; trans; merge }
+;;
+
+let rec remap_exp_inverted fragments e =
+  let f = remap_exp_inverted fragments in
+  List.map
+    (wrap e)
+    (match e.e with
+    | EMatch (e1, bs) ->
+      List.map2 ematch (f e1) (remap_branches_inverted fragments bs)
+    | EVal v ->
+      let vs = remap_value_inverted fragments v in
+      let remap_val x =
+        match x with
+        | Some v1 -> e_val v1
+        | None ->
+          print_endline
+            ("Warning: remap_value given "
+            ^ Printing.value_to_string v
+            ^ ", which should be cut");
+          e_val v
+      in
+      List.map remap_val vs
+    | EOp (op, es) -> remap_exp_op_inverted fragments op es
+    | ESome e -> List.map esome (f e)
+    | ETuple es -> List.map etuple (List.map f es)
+    | EProject (e, l) -> List.map (fun e -> eproject e l) (f e)
+    | EFun fn -> List.map (fun body -> efun { fn with body }) (f fn.body)
+    | EApp (e1, e2) -> List.map2 eapp (f e1) (f e2)
+    | ELet (x, e1, e2) -> List.map2 (elet x) (f e1) (f e2)
+    | EIf (test, e1, e2) -> OCamlUtils.map3 eif (f test) (f e1) (f e2)
+    | ERecord _ -> failwith "remap_exp: records should be unrolled"
+    | ETy (e, t) -> List.map (fun e -> ety e t) (f e)
+    | EVar _ -> List.make (List.length fragments) e)
+
+and remap_branches_inverted fragments bs =
+  List.map (fun f -> remap_branches f bs) fragments
+
+and remap_exp_op_inverted fragments op es =
+  let f = remap_exp_inverted fragments in
+  let ty = (List.hd es).ety |> Option.get in
+  (* check if the operation is over nodes *)
+  (* if so, if any nodes are cut, the op simplifies to false *)
+  match ty with
+  | TNode ->
+    (match op with
+    | Eq | NLess | NLeq ->
+      (* NOTE: won't be able to fix expressions where both sides are non-values *)
+      let remap_node_exp n =
+        if is_value n
+        then List.map (Option.map e_val) (remap_value_inverted fragments (to_value n))
+        else List.map Option.some (f n)
+      in
+      let es1s = List.map remap_node_exp es in
+      List.map (fun es1 ->
+      if List.exists Option.is_none es1
+      then ebool false
+      else eop op (List.map Option.get es1)) es1s
+    | _ -> failwith (Printf.sprintf "unexpected operator %s over nodes" (show_op op)))
+  | TEdge -> failwith "remap_exp_op: found unboxed edge"
+  | _ -> List.map (eop op) (List.map f es)
+;;
+
+let remap_solve_inverted fragments solve =
+  let init = remap_exp_inverted fragments solve.init in
+  let trans = remap_exp_inverted fragments solve.trans in
+  let merge = remap_exp_inverted fragments solve.merge in
+  (* put all 3 remappings together as a list of solves *)
+  OCamlUtils.map3
+    (fun init trans merge -> { solve with init; trans; merge })
+    init trans merge
 ;;
 
 (** Remap an and expression by dropping conjuncts that refer to cut nodes.

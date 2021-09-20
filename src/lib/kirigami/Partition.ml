@@ -82,7 +82,8 @@ let transform_declaration_inverted decl fragments : declaration option list =
       if String.starts_with (Var.name v) "symbolic-hyp" && not (List.mem (Var.name v) accepted) then None else Some decl
     in
     List.map filter_hyp fragments
-  | DSolve _s -> (* for each fragment, remap the expressions appropriately *) failwith "todo"
+  | DSolve s ->
+     (* for each fragment, remap the expressions appropriately *) failwith "todo"
   | DPartition _ -> List.make (List.length fragments) (None:declaration option)
   | DAssert _e -> (* for each fragment, trim the appropriate number of conjuncts *) failwith "todo"
   | _ -> (List.make (List.length fragments) (Some decl))
