@@ -36,7 +36,7 @@ let valid_hyps parted_srp =
 
 (** Return a transformed version of the given declaration, and optionally any new Kirigami constraints
  ** that need to be added with it. *)
-let transform_declaration parted_srp decl : transform_result =
+let transform_declaration exp_freqs parted_srp decl : transform_result =
   let ({ nodes; edges; _ } : partitioned_srp) = parted_srp in
   let valid_hyps = valid_hyps parted_srp in
   match decl with
@@ -53,16 +53,16 @@ let transform_declaration parted_srp decl : transform_result =
     then None
     else Network decl
   | DSolve s ->
-    let part', solve' = transform_solve s parted_srp in
+    let part', solve' = transform_solve exp_freqs s parted_srp in
     Solution (part', DSolve solve')
   | DPartition _ -> None
   | DAssert e -> Network (DAssert (transform_assert e parted_srp))
   | _ -> Network decl
 ;;
 
-let transform_declarations decls parted_srp =
+let transform_declarations exp_freqs decls parted_srp =
   let add_new_decl (part, decls) d =
-    match transform_declaration part d with
+    match transform_declaration exp_freqs part d with
     | Network d -> part, d :: decls
     | Solution (p, d) -> p, d :: decls
     | None -> part, decls
@@ -70,28 +70,41 @@ let transform_declarations decls parted_srp =
   List.fold_left add_new_decl (parted_srp, []) decls
 ;;
 
-let transform_declaration_inverted decl fragments : declaration option list =
+let transform_declaration_inverted decl fragments : transform_result list =
   (* TODO: visit the declarations and copy them to each fragment; *)
   match decl with
-  | DNodes _ -> (List.map (fun p -> Some (DNodes p.nodes)) fragments)
-  | DEdges _ -> (List.map (fun p -> Some (DEdges p.edges)) fragments)
+  | DNodes _ -> (List.map (fun p -> Network (DNodes p.nodes)) fragments)
+  | DEdges _ -> (List.map (fun p -> Network (DEdges p.edges)) fragments)
   | DSymbolic (v, _) ->
     let v = snd (unproj_var v) in
-    let filter_hyp p : declaration option =
+    let filter_hyp p : transform_result =
       let accepted = valid_hyps p in
-      if String.starts_with (Var.name v) "symbolic-hyp" && not (List.mem (Var.name v) accepted) then None else Some decl
+      if String.starts_with (Var.name v) "symbolic-hyp" && not (List.mem (Var.name v) accepted) then None else Network decl
     in
     List.map filter_hyp fragments
   | DSolve s ->
-     (* for each fragment, remap the expressions appropriately *) failwith "todo"
-  | DPartition _ -> List.make (List.length fragments) (None:declaration option)
-  | DAssert _e -> (* for each fragment, trim the appropriate number of conjuncts *) failwith "todo"
-  | _ -> (List.make (List.length fragments) (Some decl))
+     List.map (fun (p,s) -> Solution (p, DSolve s)) (transform_solve_inverted s fragments)
+  | DPartition _ -> List.make (List.length fragments) (None:transform_result)
+  | DAssert e ->
+     (* TODO: for each fragment, trim the appropriate number of conjuncts *)
+    List.map (fun f -> Network (DAssert (transform_assert e f))) fragments
+  | _ -> (List.make (List.length fragments) (Network decl))
 ;;
 
-let transform_declarations_inverted decls fragments : declarations list =
+let transform_declarations_inverted decls fragments
+  : (partitioned_srp * declarations) list =
   (* use transpose to connect the declarations for each fragment *)
-  let fragment_decls = List.transpose (List.map (fun d -> transform_declaration_inverted d fragments) decls) in
+  let fragment_decls = List.map2 Tuple2.make
+      fragments
+      (List.transpose (List.map (fun d -> transform_declaration_inverted d fragments) decls))
+  in
   (* filter out Nones in declarations *)
-  List.map (List.filter_map identity) fragment_decls
+  let add_result (p,ds) r = match r with
+    | Network d -> (p, d :: ds)
+    | Solution (p, d) -> (p, d :: ds)
+    | None -> (p, ds)
+  in
+  List.map
+    (fun (f, results) -> List.fold_left add_result (f, []) results)
+    fragment_decls
 ;;

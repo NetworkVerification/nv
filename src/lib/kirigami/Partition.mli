@@ -11,6 +11,11 @@ val get_hyp_symbolics : ty -> partitioned_srp list -> declarations
 
 (** Given the partitioned SRP, transform the declarations. *)
 val transform_declarations
-  :  declarations
+  :  (exp, int) Map.t ref -> declarations
   -> partitioned_srp
   -> partitioned_srp * declarations
+
+val transform_declarations_inverted
+  : declarations
+  -> partitioned_srp list
+  -> (partitioned_srp * declarations) list

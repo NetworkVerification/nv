@@ -23,12 +23,17 @@ let remap_value parted_srp v =
 
 let remap_value_inverted fragments v = List.map (fun f -> remap_value f v) fragments
 
-let rec remap_exp parted_srp e =
-  let f = remap_exp parted_srp in
+let rec remap_exp exp_freqs parted_srp e =
+  (* print_endline (Printing.exp_to_string e); *)
+  (* don't bother tracking variables or values *)
+  (match e.e with
+  | EVar _ | EVal _ -> ()
+  | _ -> exp_freqs := Map.modify_def 0 e Int.succ !exp_freqs);
+  let f = remap_exp exp_freqs parted_srp in
   wrap
     e
     (match e.e with
-    | EMatch (e1, bs) -> ematch (f e1) (remap_branches parted_srp bs)
+    | EMatch (e1, bs) -> ematch (f e1) (remap_branches exp_freqs parted_srp bs)
     | EVal v ->
       (match remap_value parted_srp v with
       | Some v1 -> e_val v1
@@ -38,7 +43,7 @@ let rec remap_exp parted_srp e =
           ^ Printing.value_to_string v
           ^ ", which should be cut");
         e_val v)
-    | EOp (op, es) -> remap_exp_op parted_srp op es
+    | EOp (op, es) -> remap_exp_op exp_freqs parted_srp op es
     | ESome e -> esome (f e)
     | ETuple es -> etuple (List.map f es)
     | EProject (e, l) -> eproject (f e) l
@@ -50,9 +55,9 @@ let rec remap_exp parted_srp e =
     | ETy (e, t) -> ety (f e) t
     | EVar _ -> e)
 
-and remap_branches parted_srp bs =
+and remap_branches exp_freqs parted_srp bs =
   let { node_map; _ } = parted_srp in
-  let f = remap_exp parted_srp in
+  let f = remap_exp exp_freqs parted_srp in
   let update_branches old_bs =
     foldBranches
       (fun (p, e) bs ->
@@ -76,8 +81,8 @@ and remap_branches parted_srp bs =
   (* put the branches back in the same order by going from the back *)
   List.fold_right (fun (p, e) b -> addBranch p e b) (List.rev pat_exps) emptyBranch
 
-and remap_exp_op parted_srp op es =
-  let f = remap_exp parted_srp in
+and remap_exp_op exp_freqs parted_srp op es =
+  let f = remap_exp exp_freqs parted_srp in
   let ty = (List.hd es).ety |> Option.get in
   (* check if the operation is over nodes *)
   (* if so, if any nodes are cut, the op simplifies to false *)
@@ -100,10 +105,11 @@ and remap_exp_op parted_srp op es =
   | _ -> eop op (List.map f es)
 ;;
 
-let remap_solve parted_srp solve =
-  let init = remap_exp parted_srp solve.init in
-  let trans = remap_exp parted_srp solve.trans in
-  let merge = remap_exp parted_srp solve.merge in
+let remap_solve exp_freqs parted_srp solve =
+  (* let exp_freqs = ref Map.empty in *)
+  let init = remap_exp exp_freqs parted_srp solve.init in
+  let trans = remap_exp exp_freqs parted_srp solve.trans in
+  let merge = remap_exp exp_freqs parted_srp solve.merge in
   { solve with init; trans; merge }
 ;;
 
@@ -140,7 +146,33 @@ let rec remap_exp_inverted fragments e =
     | EVar _ -> List.make (List.length fragments) e)
 
 and remap_branches_inverted fragments bs =
-  List.map (fun f -> remap_branches f bs) fragments
+  let f = remap_exp_inverted fragments in
+  let update_branches old_bs : (partitioned_srp * (pattern * exp) list) list =
+    foldBranches
+      (fun (p, e) (frag, bs) ->
+        match p with
+        | PTuple [PNode n1; PNode n2] ->
+          let n1' = VertexMap.find_default None n1 frag.node_map in
+          let n2' = VertexMap.find_default None n2 frag.node_map in
+          (frag, (match n1', n2' with
+          | Some u, Some v -> List.map (fun e -> (PTuple [PNode u; PNode v], e) :: bs) (f e)
+          | _ -> bs))
+        | PNode u ->
+          (frag, (match VertexMap.find_default None u frag.node_map with
+          | Some u' -> List.map (fun e -> (PNode u', e) :: bs) (f e)
+          | None -> bs))
+        | PEdge _ -> failwith "remap_branches: found unboxed edge"
+        | _ -> (frag, List.map (fun e -> (p, e) :: bs) (f e)))
+      (List.map (fun f -> (f, [])) fragments)
+      old_bs
+  in
+  let pat_exps = update_branches bs in
+  (* put the branches back in the same order by going from the back *)
+  List.map
+    (fun (_, pe) ->
+       List.fold_right (fun (p, e) b -> addBranch p e b) (List.rev pe) emptyBranch)
+        pat_exps
+  (* List.map (fun f -> remap_branches (ref Map.empty) f bs) fragments *)
 
 and remap_exp_op_inverted fragments op es =
   let f = remap_exp_inverted fragments in
@@ -215,7 +247,7 @@ let transform_assert (e : exp) (parted_srp : SrpRemapping.partitioned_srp) : exp
   (* we need to remap before interpreting just to stop interpretation from filling
    * in all the nodes and simplifying statements we don't want it to simplify the
    * wrong way *)
-  let e = remap_exp parted_srp e in
+  let e = remap_exp (ref Map.empty) parted_srp e in
   match e.e with
   | EMatch _ ->
     (* if there is only one branch, use interp to simplify;
@@ -285,13 +317,24 @@ let update_preds interface partitioned_srp =
   SrpRemapping.map_predicates intf partitioned_srp
 ;;
 
+let add_interface_to_partition solve partition =
+  match solve.part with
+  | Some { interface; _ } -> update_preds interface partition
+  | None -> partition
+;;
+
 (* Transform the given solve and return it along with a new expression to assert
  * and new expressions to require. *)
-let transform_solve solve (partition : partitioned_srp) : partitioned_srp * solve =
-  let partition' =
-    match solve.part with
-    | Some { interface; _ } -> update_preds interface partition
-    | None -> partition
-  in
-  partition', remap_solve partition' solve
+let transform_solve exp_freqs solve (partition : partitioned_srp) : partitioned_srp * solve =
+  let partition' = add_interface_to_partition solve partition in
+  partition', remap_solve exp_freqs partition' solve
+;;
+
+
+(* Transform the given solve and return it along with a new expression to assert
+ * and new expressions to require. *)
+let transform_solve_inverted solve fragments : (partitioned_srp * solve) list =
+  let fragments' = List.map (add_interface_to_partition solve) fragments in
+  let solves = remap_solve_inverted fragments' solve in
+  List.map2 Tuple2.make fragments' solves
 ;;
