@@ -112,21 +112,29 @@ let run_smt_classic_aux file cfg info decls part fs =
 ;;
 
 let partition_decls cfg decls parts =
-  (* let exp_freqs = ref BatMap.empty in *)
-  let pds = Partition.transform_declarations_inverted decls parts in
-  let pds = List.map
-    (fun (p,d) ->
-      if cfg.print_partitions
-      then print_endline (SrpRemapping.string_of_partitioned_srp p)
-      else ();
-      Some p, d)
-    pds in
-  (* BatMap.iter
-   *   (fun e freq ->
-   *      if freq > 1 then
-   *        Printf.printf "exp %s recurred %d times\n"
-   *          (Printing.exp_to_string e) freq
-   *      else ()) !exp_freqs; *)
+  let exp_freqs = ref BatMap.empty in
+  (* let pds = Partition.transform_declarations_inverted decls parts in *)
+  let l = List.length parts in
+  let pds =
+    List.mapi
+      (fun i p ->
+        let prof_msg = Printf.sprintf "Transforming declaration (%d of %d)" i l in
+        let p, d =
+          Profile.time_profile prof_msg (fun () ->
+              Partition.transform_declarations exp_freqs decls p)
+        in
+        if cfg.print_partitions
+        then print_endline (SrpRemapping.string_of_partitioned_srp p)
+        else ();
+        Some p, d)
+      parts
+  in
+  BatMap.iter
+    (fun e freq ->
+      if freq > 1
+      then Printf.printf "exp %s recurred %d times\n" (Printing.exp_to_string e) freq
+      else ())
+    !exp_freqs;
   pds
 ;;
 

@@ -118,8 +118,7 @@ let rec remap_exp_inverted fragments e =
   List.map
     (wrap e)
     (match e.e with
-    | EMatch (e1, bs) ->
-      List.map2 ematch (f e1) (remap_branches_inverted fragments bs)
+    | EMatch (e1, bs) -> List.map2 ematch (f e1) (remap_branches_inverted fragments bs)
     | EVal v ->
       let vs = remap_value_inverted fragments v in
       let remap_val x =
@@ -135,7 +134,7 @@ let rec remap_exp_inverted fragments e =
       List.map remap_val vs
     | EOp (op, es) -> remap_exp_op_inverted fragments op es
     | ESome e -> List.map esome (f e)
-    | ETuple es -> List.map etuple (List.map f es)
+    | ETuple es -> List.map etuple (List.transpose (List.map f es))
     | EProject (e, l) -> List.map (fun e -> eproject e l) (f e)
     | EFun fn -> List.map (fun body -> efun { fn with body }) (f fn.body)
     | EApp (e1, e2) -> List.map2 eapp (f e1) (f e2)
@@ -147,32 +146,51 @@ let rec remap_exp_inverted fragments e =
 
 and remap_branches_inverted fragments bs =
   let f = remap_exp_inverted fragments in
-  let update_branches old_bs : (partitioned_srp * (pattern * exp) list) list =
+  let update_branches old_bs =
     foldBranches
-      (fun (p, e) (frag, bs) ->
+      (fun (p, e) bs ->
         match p with
         | PTuple [PNode n1; PNode n2] ->
-          let n1' = VertexMap.find_default None n1 frag.node_map in
-          let n2' = VertexMap.find_default None n2 frag.node_map in
-          (frag, (match n1', n2' with
-          | Some u, Some v -> List.map (fun e -> (PTuple [PNode u; PNode v], e) :: bs) (f e)
-          | _ -> bs))
+          (* remap the nodes acc. to the fragments *)
+          let nodes =
+            List.map
+              (fun f ->
+                ( VertexMap.find_default None n1 f.node_map
+                , VertexMap.find_default None n2 f.node_map ))
+              fragments
+          in
+          OCamlUtils.map3
+            (fun (n1', n2') e bs ->
+              match n1', n2' with
+              | Some u, Some v -> (PTuple [PNode u; PNode v], e) :: bs
+              | _ -> bs)
+            nodes
+            (f e)
+            bs
         | PNode u ->
-          (frag, (match VertexMap.find_default None u frag.node_map with
-          | Some u' -> List.map (fun e -> (PNode u', e) :: bs) (f e)
-          | None -> bs))
+          let nodes =
+            List.map (fun f -> VertexMap.find_default None u f.node_map) fragments
+          in
+          OCamlUtils.map3
+            (fun u e bs ->
+              match u with
+              | Some u' -> (PNode u', e) :: bs
+              | None -> bs)
+            nodes
+            (f e)
+            bs
         | PEdge _ -> failwith "remap_branches: found unboxed edge"
-        | _ -> (frag, List.map (fun e -> (p, e) :: bs) (f e)))
-      (List.map (fun f -> (f, [])) fragments)
+        | _ -> List.map2 (fun e bs -> (p, e) :: bs) (f e) bs)
+      (List.make (List.length fragments) [])
       old_bs
   in
   let pat_exps = update_branches bs in
   (* put the branches back in the same order by going from the back *)
   List.map
-    (fun (_, pe) ->
-       List.fold_right (fun (p, e) b -> addBranch p e b) (List.rev pe) emptyBranch)
-        pat_exps
-  (* List.map (fun f -> remap_branches (ref Map.empty) f bs) fragments *)
+    (fun pe ->
+      List.fold_right (fun (p, e) b -> addBranch p e b) (List.rev pe) emptyBranch)
+    pat_exps
+(* List.map (fun f -> remap_branches (ref Map.empty) f bs) fragments *)
 
 and remap_exp_op_inverted fragments op es =
   let f = remap_exp_inverted fragments in
@@ -190,13 +208,15 @@ and remap_exp_op_inverted fragments op es =
         else List.map Option.some (f n)
       in
       let es1s = List.map remap_node_exp es in
-      List.map (fun es1 ->
-      if List.exists Option.is_none es1
-      then ebool false
-      else eop op (List.map Option.get es1)) es1s
+      List.map
+        (fun es1 ->
+          if List.exists Option.is_none es1
+          then ebool false
+          else eop op (List.map Option.get es1))
+        es1s
     | _ -> failwith (Printf.sprintf "unexpected operator %s over nodes" (show_op op)))
   | TEdge -> failwith "remap_exp_op: found unboxed edge"
-  | _ -> List.map (eop op) (List.map f es)
+  | _ -> List.map (eop op) (List.transpose (List.map f es))
 ;;
 
 let remap_solve_inverted fragments solve =
@@ -206,7 +226,9 @@ let remap_solve_inverted fragments solve =
   (* put all 3 remappings together as a list of solves *)
   OCamlUtils.map3
     (fun init trans merge -> { solve with init; trans; merge })
-    init trans merge
+    init
+    trans
+    merge
 ;;
 
 (** Remap an and expression by dropping conjuncts that refer to cut nodes.
@@ -325,16 +347,17 @@ let add_interface_to_partition solve partition =
 
 (* Transform the given solve and return it along with a new expression to assert
  * and new expressions to require. *)
-let transform_solve exp_freqs solve (partition : partitioned_srp) : partitioned_srp * solve =
+let transform_solve exp_freqs solve (partition : partitioned_srp)
+    : partitioned_srp * solve
+  =
   let partition' = add_interface_to_partition solve partition in
   partition', remap_solve exp_freqs partition' solve
 ;;
-
 
 (* Transform the given solve and return it along with a new expression to assert
  * and new expressions to require. *)
 let transform_solve_inverted solve fragments : (partitioned_srp * solve) list =
   let fragments' = List.map (add_interface_to_partition solve) fragments in
   let solves = remap_solve_inverted fragments' solve in
-  List.map2 Tuple2.make fragments' solves
+  List.combine fragments' solves
 ;;
