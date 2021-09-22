@@ -10,6 +10,7 @@ open Nv_kirigami
 open Batteries
 open SrpRemapping
 open AdjGraph
+open Nv_utils
 
 module type ClassicEncodingSig =
   SmtEncodingSigs.Encoding with type network_type = Syntax.declarations
@@ -514,12 +515,14 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     let nodes = nb_vertex graph in
     let label_vars = encode_label_vars aty var_names in
     let incoming_map, trans_map, trans_input_map =
-      encode_edge_transfers env count (Array.of_list (list_seq nodes)) nodes etrans graph
+      Profile.time_profile "Encoding edge transfers" (fun () ->
+      encode_edge_transfers env count (Array.of_list (list_seq nodes)) nodes etrans graph)
     in
     (* Setup labelling functions *)
     let attr_sort = ty_to_sorts aty in
     (* Compute the labelling as the merge of all inputs *)
     let labelling = Array.make nodes (of_list []) in
+    Profile.time_profile "Encoding node merges" (fun () ->
     for i = 0 to nodes - 1 do
       let in_trans = List.map (fun e -> EdgeMap.find e !trans_map) incoming_map.(i) in
       let merged = encode_node_merges env count einit emerge in_trans i i in
@@ -534,8 +537,8 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
            l
            merged);
       labelling.(i) <- l
-    done;
-    encode_propagate_labels env !trans_input_map labelling
+    done);
+    Profile.time_profile "Encoding label propagation" (fun () -> encode_propagate_labels env !trans_input_map labelling)
   ;;
 
   let encode_assertions str env (f : 'a -> term E.t) (assertions : 'a list) =
