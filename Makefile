@@ -4,6 +4,14 @@ default:
 	dune build src/exe/main.exe
 	cp _build/default/src/exe/main.exe nv
 
+release:
+	dune build --profile release src/exe/main.exe
+	cp _build/default/src/exe/main.exe nv.opt
+
+debug:
+	dune build --profile debug src/exe/main.exe
+	cp _build/default/src/exe/main.exe nv.debug
+
 #install: default
 #	cp _build/default/src/exe/main.exe nv
 
