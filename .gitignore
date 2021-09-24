@@ -36,6 +36,8 @@ tmp.txt
 
 # NV executables
 /nv
+/nv.opt
+/nv.debug
 /nvgen
 
 # Native install files
