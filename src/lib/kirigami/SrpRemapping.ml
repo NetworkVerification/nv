@@ -11,8 +11,8 @@ open Nv_utils.OCamlUtils
 type input_exp =
   { (* the associated original edge *)
     edge : E.t
-  ; (* the variable associated with the input node *)
-    var : Var.t
+  ; (* the variables associated with the input node *)
+    var : (var * ty) list
   ; (* the partition rank of the associated output *)
     rank : int
   ; (* the associated predicate expressions: functions over attributes *)
@@ -71,8 +71,8 @@ let get_old_nodes parted_srp =
 
 let string_of_input_exp { var; rank; edge; preds } =
   Printf.sprintf
-    "var %s (%d)\n%s: preds %s"
-    (Var.to_string var)
+    "vars %s (%d)\n%s: preds %s"
+    (list_to_string (fun (v,t) -> Printf.sprintf "(%s : %s)" (Var.to_string v) (Printing.ty_to_string t)) var)
     rank
     (Edge.to_string edge)
     (list_to_string Printing.exp_to_string preds)
@@ -204,8 +204,8 @@ let map_edges_to_parts partitions (old_edge, (edge, srp_edge)) =
       then (
         (* construct the record of the new input information: used when creating the
          * symbolic variable and the require predicate *)
-        let hyp_var = Var.fresh (Printf.sprintf "hyp_%s" (Edge.to_string old_edge)) in
-        let input_exp = { edge = old_edge; var = hyp_var; rank = i1; preds = [] } in
+        (* let hyp_var = Var.fresh (Printf.sprintf "hyp_%s" (Edge.to_string old_edge)) in *)
+        let input_exp = { edge = old_edge; var = []; rank = i1; preds = [] } in
         { partition with
           inputs = VertexMap.modify_def [] v (List.cons input_exp) partition.inputs
         })

@@ -7,8 +7,8 @@ open Nv_solution
 type input_exp =
   { (* the associated original edge *)
     edge : E.t
-  ; (* the variable associated with the input node *)
-    var : Var.t
+  ; (* the variables associated with the input node *)
+    var : (var * ty) list
   ; (* the partition rank of the associated output *)
     rank : int
   ; (* the associated predicate expression: a function over attributes *)

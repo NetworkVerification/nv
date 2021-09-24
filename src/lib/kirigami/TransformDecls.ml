@@ -204,6 +204,24 @@ let interp_interface edge intfe =
       ("expected intf value to be a function but got " ^ Printing.exp_to_string intf_app)
 ;;
 
+let fresh_hyp_vars ty edge =
+  let prefix = Printf.sprintf "hyp_%s" (Edge.to_string edge) in
+  match ty with
+  | TTuple tys ->
+    List.mapi (fun i ty -> Var.fresh (prefix ^ "-proj-" ^ string_of_int i), ty) tys
+  | TRecord _ -> failwith "fresh_hyp_vars: records must be unrolled"
+  | _ -> [Var.fresh prefix, ty]
+;;
+
+let update_vars aty partitioned_srp =
+  { partitioned_srp with
+    inputs =
+      VertexMap.map
+        (fun ies -> List.map (fun ie -> { ie with var = fresh_hyp_vars aty ie.edge }) ies)
+        partitioned_srp.inputs
+  }
+;;
+
 let update_preds interface partitioned_srp =
   let intf edge preds =
     let p = interp_interface edge interface in
@@ -215,10 +233,11 @@ let update_preds interface partitioned_srp =
 (* Transform the given solve and return it along with a new expression to assert
  * and new expressions to require. *)
 let transform_solve solve (partition : partitioned_srp) : partitioned_srp * solve =
-  let partition' =
+  let partition = update_vars (solve.aty |> Option.get) partition in
+  let partition =
     match solve.part with
     | Some { interface; _ } -> update_preds interface partition
     | None -> partition
   in
-  partition', remap_solve partition' solve
+  partition, remap_solve partition solve
 ;;

@@ -269,16 +269,17 @@ let parse_input (args : string array) =
   let decls = Typing.infer_declarations info decls in
   Typing.check_annot_decls decls;
   Wellformed.check info decls;
-  let partitions, decls =
+  let partitions =
     if cfg.kirigami
     then (
-      let parts = SrpRemapping.partition_declarations decls in
-      let new_symbolics =
-        let aty = get_attr_type decls |> oget in
-        Partition.get_hyp_symbolics aty parts
-      in
-      Some parts, new_symbolics @ decls)
-    else None, decls
+      Some (SrpRemapping.partition_declarations decls))
+      (* let parts = SrpRemapping.partition_declarations decls in
+       * let new_symbolics =
+       *   let aty = get_attr_type decls |> oget in
+       *   Partition.get_hyp_symbolics aty parts
+       * in
+       * Some parts, new_symbolics @ decls) *)
+    else None(* , decls *)
   in
   let decls, f = RecordUnrolling.unroll_declarations decls in
   let fs = [f] in
