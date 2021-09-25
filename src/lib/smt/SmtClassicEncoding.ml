@@ -249,31 +249,6 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     | None -> var
   ;;
 
-  let find_input_symbolics env (hyp_var : Var.t) =
-    (* TODO: use a more robust approach like a regular expression *)
-    let matches_format name =
-      let prefix = "symbolic-" ^ Var.name hyp_var in
-      (* add an extra little character after to avoid matching
-      * "hyp_0~10" when looking for "hyp_0~1" *)
-      String.starts_with name (prefix ^ "~") || String.starts_with name (prefix ^ "-")
-    in
-    let names =
-      ConstantSet.fold
-        (fun { cname; _ } l ->
-          if matches_format cname
-          then mk_term (mk_var cname) :: l
-          else l (* (print_endline cname; l) *))
-        env.const_decls
-        []
-    in
-    (* sanity check: *)
-    if List.length names = 0
-    then failwith "couldn't find the corresponding constant for hyp in smt_env"
-    else ();
-    (* order of names is reversed by fold, so flip them around *)
-    of_list (List.rev names)
-  ;;
-
   type 'a hyp_order =
     | Lesser of 'a
     | Greater of 'a
