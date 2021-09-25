@@ -12,12 +12,26 @@ type input_exp =
   { (* the associated original edge *)
     edge : E.t
   ; (* the variables associated with the input node *)
-    var : (var * ty) list
+    var_names : Var.t list
   ; (* the partition rank of the associated output *)
     rank : int
   ; (* the associated predicate expressions: functions over attributes *)
     preds : exp list
   }
+
+let hyp_prefix = "assume_"
+
+let edge_to_hyp (u,v) = Var.fresh (Printf.sprintf "$%s%s~%s$" hyp_prefix (Vertex.to_string u) (Vertex.to_string v))
+
+let is_hyp_var e v = String.exists (Var.name v) (Var.name (edge_to_hyp e))
+
+let var_to_edge (v : Var.t) =
+  let base = try Some (String.cut_on_char '$' 1 (Var.name v)) with
+    | Not_found -> None
+  in
+  let string_to_edge s = Tuple2.map int_of_string int_of_string (String.split s ~by:"~") in
+  Option.map (fun s -> string_to_edge (String.tail s (String.length hyp_prefix))) base
+;;
 
 (** A type for transforming the declarations over the old SRP
  ** to declarations for the new partitioned SRP.
@@ -66,13 +80,13 @@ let get_old_nodes parted_srp =
     | None -> l
   in
   let pairs = VertexMap.fold add_node parted_srp.node_map [] in
-  List.map (fun (_, u) -> u) (List.sort Pervasives.compare pairs)
+  List.map (fun (_, u) -> u) (List.sort compare pairs)
 ;;
 
-let string_of_input_exp { var; rank; edge; preds } =
+let string_of_input_exp { var_names; rank; edge; preds } =
   Printf.sprintf
     "vars %s (%d)\n%s: preds %s"
-    (list_to_string (fun (v,t) -> Printf.sprintf "(%s : %s)" (Var.to_string v) (Printing.ty_to_string t)) var)
+    (list_to_string Var.name var_names)
     rank
     (Edge.to_string edge)
     (list_to_string Printing.exp_to_string preds)
@@ -205,7 +219,7 @@ let map_edges_to_parts partitions (old_edge, (edge, srp_edge)) =
         (* construct the record of the new input information: used when creating the
          * symbolic variable and the require predicate *)
         (* let hyp_var = Var.fresh (Printf.sprintf "hyp_%s" (Edge.to_string old_edge)) in *)
-        let input_exp = { edge = old_edge; var = []; rank = i1; preds = [] } in
+        let input_exp = { edge = old_edge; var_names = [edge_to_hyp old_edge]; rank = i1; preds = [] } in
         { partition with
           inputs = VertexMap.modify_def [] v (List.cons input_exp) partition.inputs
         })

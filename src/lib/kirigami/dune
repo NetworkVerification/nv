@@ -6,7 +6,6 @@
     nv_solution
     nv_datastructures
     nv_utils
-    nv_transformations
     integers
     str
     batteries)

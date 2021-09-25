@@ -7,7 +7,7 @@ open Nv_solution.Solution
 open SrpRemapping
 
 (* Return a new set of declarations of all symbolics added by partitions. *)
-(* val get_hyp_symbolics : ty -> partitioned_srp list -> declarations *)
+val get_hyp_symbolics : ty -> partitioned_srp -> declarations
 
 (** Given the partitioned SRP, transform the declarations. *)
 val transform_declarations

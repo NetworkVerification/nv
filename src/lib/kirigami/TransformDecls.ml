@@ -205,19 +205,29 @@ let interp_interface edge intfe =
 ;;
 
 let fresh_hyp_vars ty edge =
-  let prefix = Printf.sprintf "hyp_%s" (Edge.to_string edge) in
+  let prefix = edge_to_hyp edge in
   match ty with
-  | TTuple tys ->
-    List.mapi (fun i ty -> Var.fresh (prefix ^ "-proj-" ^ string_of_int i), ty) tys
+  | TTuple tys -> List.mapi (fun i ty -> proj_var i prefix, ty) tys
   | TRecord _ -> failwith "fresh_hyp_vars: records must be unrolled"
-  | _ -> [Var.fresh prefix, ty]
+  | _ -> [prefix, ty]
 ;;
 
-let update_vars aty partitioned_srp =
+(* Collect all variables from symbolics associated with each input of the partitioned_srp.
+ * Implicitly assumes that variable names can be checked to determine the original variable
+ * after performing transformations. *)
+let update_vars_from_symbolics partitioned_srp (symbs : (var * ty_or_exp) list) =
+  let get_edge_symbs edge =
+    List.filter_map
+      (fun (v, _) -> if SrpRemapping.is_hyp_var edge v then Some v else None)
+      symbs
+  in
   { partitioned_srp with
     inputs =
       VertexMap.map
-        (fun ies -> List.map (fun ie -> { ie with var = fresh_hyp_vars aty ie.edge }) ies)
+        (fun ies ->
+          List.map
+            (fun (ie : input_exp) -> { ie with var_names = get_edge_symbs ie.edge })
+            ies)
         partitioned_srp.inputs
   }
 ;;
@@ -233,7 +243,6 @@ let update_preds interface partitioned_srp =
 (* Transform the given solve and return it along with a new expression to assert
  * and new expressions to require. *)
 let transform_solve solve (partition : partitioned_srp) : partitioned_srp * solve =
-  let partition = update_vars (solve.aty |> Option.get) partition in
   let partition =
     match solve.part with
     | Some { interface; _ } -> update_preds interface partition

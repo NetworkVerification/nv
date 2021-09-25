@@ -8,13 +8,19 @@ type input_exp =
   { (* the associated original edge *)
     edge : E.t
   ; (* the variables associated with the input node *)
-    var : (var * ty) list
+    var_names : Var.t list
   ; (* the partition rank of the associated output *)
     rank : int
   ; (* the associated predicate expression: a function over attributes *)
     (* optional: if not given, then assumed to always hold *)
     preds : exp list
   }
+
+val edge_to_hyp : E.t -> Var.t
+
+val is_hyp_var : E.t -> Var.t -> bool
+
+val var_to_edge : Var.t -> E.t option
 
 (** A type for transforming the declarations over the old SRP
  ** to declarations for the new partitioned SRP.

@@ -284,10 +284,10 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
    * 2. predicate encoding
    *)
   let encode_kirigami_inputs env r inputs eintrans count =
-    let encode_input { edge; rank; var; preds } =
+    let encode_input { edge; rank; var_names; preds } =
       let u, v = edge in
-      let xs = of_list (List.map (fun (v, _) -> mk_term (mk_var (Var.name v))) var) in
-      (* let xs = find_input_symbolics env var in *)
+      (* extract the variable name and create a term *)
+      let xs = of_list (List.map (mk_term % mk_var % Var.name) var_names) in
       (* get the relevant predicate *)
       let pred_to_hyp i p =
         let pred =
@@ -597,8 +597,8 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     (* (VarMap.iter (fun v _ -> print_endline (Var.name v)) env.symbolics); *)
     let lesser_hyps, greater_hyps, guarantees =
       List.fold_lefti
-        (fun (lhs, ghs, gs) i s ->
-          let lh, gh, g = encode_kirigami_solve env graph part i s in
+        (fun (lhs, ghs, gs) i solve ->
+          let lh, gh, g = encode_kirigami_solve env graph part i solve in
           lh @ lhs, gh @ ghs, g @ gs)
         ([], [], [])
         solves
