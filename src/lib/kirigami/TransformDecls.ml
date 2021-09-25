@@ -240,13 +240,40 @@ let update_preds interface partitioned_srp =
   SrpRemapping.map_predicates intf partitioned_srp
 ;;
 
+let get_predicates fragments interface =
+  let cross_edges =
+    List.fold_left
+      (fun es f -> EdgeSet.union (EdgeSet.of_list (SrpRemapping.get_cross_edges f)) es)
+      EdgeSet.empty
+      fragments
+  in
+  let intf edge preds =
+    let p = interp_interface edge interface in
+    p :: preds
+  in
+  let all_preds =
+    EdgeSet.fold (fun e m -> EdgeMap.modify_def [] e (intf e) m) cross_edges EdgeMap.empty
+  in
+  (* TODO: do we need to save the old predicates? *)
+  let add_input_preds input_exp =
+    { input_exp with preds = (EdgeMap.find input_exp.edge all_preds) @ input_exp.preds } in
+  let add_output_preds (edge, preds) =
+    (edge, (EdgeMap.find edge all_preds) @ preds) in
+  let add_predicates fragment =
+    { fragment with
+      inputs = VertexMap.map (fun input_exps -> List.map add_input_preds input_exps) fragment.inputs;
+      outputs = VertexMap.map (fun outputs -> List.map add_output_preds outputs) fragment.outputs}
+  in
+  List.map add_predicates fragments
+;;
+
 (* Transform the given solve and return it along with a new expression to assert
  * and new expressions to require. *)
 let transform_solve solve (partition : partitioned_srp) : partitioned_srp * solve =
-  let partition =
-    match solve.part with
-    | Some { interface; _ } -> update_preds interface partition
-    | None -> partition
-  in
+  (* let partition =
+   *   match solve.part with
+   *   | Some { interface; _ } -> update_preds interface partition
+   *   | None -> partition
+   * in *)
   partition, remap_solve partition solve
 ;;

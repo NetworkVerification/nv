@@ -101,7 +101,7 @@ let run_smt_classic_aux file cfg info decls part fs =
       (Parmap.L slices)
       (Success None, [])
       (fun ans1 ans2 ->
-         (* TODO: do we need to handle Timeouts here? *)
+        (* TODO: do we need to handle Timeouts here? *)
         match ans1 with
         | CounterExample _, _ -> ans1
         | _ -> ans2)
@@ -114,6 +114,11 @@ let run_smt_classic_aux file cfg info decls part fs =
 let run_smt_partitioned file cfg info decls parts fs =
   let pds =
     Profile.time_profile "Partitioning" (fun () ->
+        let solves = get_solves decls in
+        let interfaces =
+          List.filter_map (fun s -> Option.map (fun p -> p.interface) s.part) solves
+        in
+        let parts = List.fold_left TransformDecls.get_predicates parts interfaces in
         List.map
           (fun p ->
             let p, d = Partition.transform_declarations decls p in
@@ -276,7 +281,10 @@ let parse_input (args : string array) =
       let parts = SrpRemapping.partition_declarations decls in
       let new_symbolics =
         let aty = get_attr_type decls |> oget in
-        List.fold_left (fun l p -> List.append (Partition.get_hyp_symbolics aty p) l) [] parts
+        List.fold_left
+          (fun l p -> List.append (Partition.get_hyp_symbolics aty p) l)
+          []
+          parts
       in
       Some parts, new_symbolics @ decls)
     else None, decls

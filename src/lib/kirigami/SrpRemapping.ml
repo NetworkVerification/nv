@@ -83,6 +83,12 @@ let get_old_nodes parted_srp =
   List.map (fun (_, u) -> u) (List.sort compare pairs)
 ;;
 
+(* Return the old edges which crossed into this partitioned SRP. *)
+let get_cross_edges parted_srp =
+  let add_input_edges _ ies l = (List.map (fun ie -> ie.edge) ies) @ l in
+  VertexMap.fold add_input_edges parted_srp.inputs []
+;;
+
 let string_of_input_exp { var_names; rank; edge; preds } =
   Printf.sprintf
     "vars %s (%d)\n%s: preds %s"

@@ -64,6 +64,8 @@ val get_global_nodes : partitioned_srp -> int
  ** the 0th element of the list remaps to node 0, the 1st remaps to node 1 and so on. *)
 val get_old_nodes : partitioned_srp -> int list
 
+val get_cross_edges : partitioned_srp -> edge list
+
 (** Return a string representation of the partitioned SRP. *)
 val string_of_partitioned_srp : partitioned_srp -> string
 
