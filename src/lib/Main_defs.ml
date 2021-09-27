@@ -112,12 +112,12 @@ let run_smt_classic_aux file cfg info decls part fs =
 ;;
 
 let run_smt_partitioned file cfg info decls parts fs =
+  let open Batteries in
   let pds =
     Profile.time_profile "Partitioning" (fun () ->
         let solves = get_solves decls in
-        (* filter_map not in ocaml List until 4.08, so use batteries *)
         let interfaces =
-          BatList.filter_map (fun s -> Option.map (fun p -> p.interface) s.part) solves
+          List.filter_map (fun s -> Option.map (fun p -> p.interface) s.part) solves
         in
         let parts = List.fold_left TransformDecls.get_predicates parts interfaces in
         List.map
