@@ -39,5 +39,5 @@ assert
 
 (* These should fail *)
 (* assert (sol[1n] = Some 1 && sol[2n] = Some 1) *)
-(* assert (sol[1n] = Some 1 && sol[2n] = Some 2) *)
+assert (sol[1n] = Some 1 && sol[2n] = Some 2)
 assert (sol[1n] = Some 2 && sol[2n] = Some 1)

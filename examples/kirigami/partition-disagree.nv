@@ -1,27 +1,61 @@
-include "../disagree.nv"
+(* vim: set syntax=ocaml: *)
+(* The DISAGREE example from Griffin et al. *)
+
+type attribute = option[int]
+
+let nodes = 3
+let edges = {
+  0=1;
+  0=2;
+  1=2;
+}
+
+let init n =
+  match n with
+  | 0n -> Some 0
+  | _ -> None
+
+let trans e x =
+  match x with
+  | None -> None
+  | Some x -> Some (x+1)
+
+let merge n x y =
+  match (x,y) with
+  | (None, _) -> y
+  | (_, None) -> x
+  | (Some n1, Some n2) ->
+    if n1 = 0 || n2 = 0 then Some 0 else (* 0 is most preferred *)
+    if n1 = 2 || n2 = 2 then Some 2 else (* 2 is second most preferred *)
+    if n1 < n2 then Some n1 else Some n2 (* Otherwise standard order *)
+
+let sol = solution { init = init; trans = trans; merge = merge; interface = interface; }
+
+(* This should succeed *)
+(* assert
+  (match (sol[1n], sol[2n]) with
+   | (Some x, Some y) -> x <= 2 && y <= 2 && !(x = y)
+   | _ -> false)
+*)
+
+(* These should fail *)
+(* assert (sol[1n] = Some 1 && sol[2n] = Some 1) *)
+(* assert (sol[1n] = Some 1 && sol[2n] = Some 2) *)
+(* assert (sol[1n] = Some 2 && sol[2n] = Some 1) *)
 
 let partition n = match n with
   | 0n -> 0
   | 1n -> 1
   | 2n -> 2
 
-let interface e x =
-  let eq t = match x with
-  | Some x -> x = t
-  | None -> false
-  in
-  let le t = match x with
-  | Some x -> x <= t
-  | None -> false
-  in
-  match e with
-  | 0~1 -> eq 1
-  | 0~2 -> eq 1
-  | 1~2 -> le 3
-  | 2~1 -> le 3
-  | 1~0 -> true
-  | 2~0 -> true
+let interface e x = match e with
+  | 0~1 -> x = Some 0
+  | 0~2 -> x = Some 0
+  | 1~2 -> x = Some 1 || x = Some 2
+  | 2~1 -> x = Some 1 || x = Some 2
+  | 1~0 -> x = Some 1 || x = Some 2
+  | 2~0 -> x = Some 1 || x = Some 2
 
-let partsol = solution { init = init; trans = trans; merge = merge; interface = interface }
+let pred x = match x with | Some y -> y <= 1 | None -> false
 
-assert foldNodes (fun v x acc -> match x with | Some y -> acc && y <= 2 | None -> acc) partsol true
+assert foldNodes (fun v x acc -> acc && pred x) sol true
