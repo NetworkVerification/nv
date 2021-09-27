@@ -73,6 +73,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     loop merge []
   ;;
 
+  (* extract the attribute arguments from the trans exp and add them to acc *)
   let rec encode_z3_trans_aux trans acc =
     match trans.e with
     | EFun { arg = x; argty = Some xty; body = exp; _ } ->
@@ -248,31 +249,6 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     | None -> var
   ;;
 
-  let find_input_symbolics env (hyp_var : Var.t) =
-    let prefix = "symbolic-" ^ Var.name hyp_var in
-    (* add an extra little character after to avoid matching
-     * "hyp_0~10" when looking for "hyp_0~1" *)
-    (* TODO: use a more robust approach like a regular expression *)
-    let matches_format name =
-      String.starts_with name (prefix ^ "~") || String.starts_with name (prefix ^ "-")
-    in
-    let names =
-      ConstantSet.fold
-        (fun { cname; _ } l ->
-          if matches_format cname
-          then mk_term (mk_var cname) :: l
-          else l (* (print_endline cname; l) *))
-        env.const_decls
-        []
-    in
-    (* sanity check: *)
-    if List.length names = 0
-    then failwith "couldn't find the corresponding constant for hyp in smt_env"
-    else ();
-    (* order of names is reversed by fold, so flip them around *)
-    of_list (List.rev names)
-  ;;
-
   type 'a hyp_order =
     | Lesser of 'a
     | Greater of 'a
@@ -283,9 +259,10 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
    * 2. predicate encoding
    *)
   let encode_kirigami_inputs env r inputs eintrans count =
-    let encode_input { edge; rank; var; preds } =
+    let encode_input { edge; rank; var_names; preds } =
       let u, v = edge in
-      let xs = find_input_symbolics env var in
+      (* extract the variable name and create a term *)
+      let xs = of_list (List.map (mk_term % mk_var % Var.name) var_names) in
       (* get the relevant predicate *)
       let pred_to_hyp i p =
         let pred =
@@ -591,11 +568,12 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     let env = init_solver symbolics ~labels:[] in
     (* encode the symbolics first, so we can find them when we do the kirigami_solve
      * NOTE: could instead pass in the list of symbolics to encode_kirigami_solve *)
-    add_symbolic_constraints env [] env.symbolics;
+    (* add_symbolic_constraints env [] env.symbolics; *)
+    (* (VarMap.iter (fun v _ -> print_endline (Var.name v)) env.symbolics); *)
     let lesser_hyps, greater_hyps, guarantees =
       List.fold_lefti
-        (fun (lhs, ghs, gs) i s ->
-          let lh, gh, g = encode_kirigami_solve env graph part i s in
+        (fun (lhs, ghs, gs) i solve ->
+          let lh, gh, g = encode_kirigami_solve env graph part i solve in
           lh @ lhs, gh @ ghs, g @ gs)
         ([], [], [])
         solves
@@ -611,7 +589,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
       add_command env ~comdescr:"pop" SmtLang.Pop
     in
     (* these constraints are included in all scopes *)
-    add_symbolic_constraints env requires VarMap.empty;
+    add_symbolic_constraints env requires env.symbolics;
     (* ranked initial checks *)
     conjoin_terms env (encode_assertions "lesser-hyp" env apply lesser_hyps) ~negate:false;
     let add_guarantees env =

@@ -7,14 +7,20 @@ open Nv_solution
 type input_exp =
   { (* the associated original edge *)
     edge : E.t
-  ; (* the variable associated with the input node *)
-    var : Var.t
+  ; (* the variables associated with the input node *)
+    var_names : Var.t list
   ; (* the partition rank of the associated output *)
     rank : int
   ; (* the associated predicate expression: a function over attributes *)
     (* optional: if not given, then assumed to always hold *)
     preds : exp list
   }
+
+val edge_to_hyp : E.t -> Var.t
+
+val is_hyp_var : E.t -> Var.t -> bool
+
+val var_to_edge : Var.t -> E.t option
 
 (** A type for transforming the declarations over the old SRP
  ** to declarations for the new partitioned SRP.
@@ -57,6 +63,8 @@ val get_global_nodes : partitioned_srp -> int
 (** Return the list of old nodes in the network in order of how they were remapped, i.e.
  ** the 0th element of the list remaps to node 0, the 1st remaps to node 1 and so on. *)
 val get_old_nodes : partitioned_srp -> int list
+
+val get_cross_edges : partitioned_srp -> edge list
 
 (** Return a string representation of the partitioned SRP. *)
 val string_of_partitioned_srp : partitioned_srp -> string
