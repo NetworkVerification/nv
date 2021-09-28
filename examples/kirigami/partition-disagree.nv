@@ -56,6 +56,9 @@ let interface e x = match e with
   | 1~0 -> x = Some 1 || x = Some 2
   | 2~0 -> x = Some 1 || x = Some 2
 
-let pred x = match x with | Some y -> y <= 1 | None -> false
+let pred v x = 
+  match x with
+  | Some y -> y <= 1
+  | None -> false
 
-assert foldNodes (fun v x acc -> acc && pred x) sol true
+assert foldNodes (fun v x acc -> acc && pred v x) sol true

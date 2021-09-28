@@ -35,16 +35,7 @@ let get_hyp_symbolics aty (part : partitioned_srp) =
  ** correctly. *)
 let transform_declaration parted_srp decl : transform_result =
   let ({ nodes; edges; _ } : partitioned_srp) = parted_srp in
-  (* get the list of all assumptions which should not appear *)
-  (* let invalid_hyps =
-   *   EdgeMap.fold
-   *     (fun edge remap s ->
-   *       match remap with
-   *       | Some _ -> s
-   *       | None -> VarSet.add (edge_to_hyp edge) s)
-   *     edge_map
-   *     VarSet.empty
-   * in *)
+  (* get the list of all assumption symbolics which should appear *)
   let valid_edges = get_cross_edges parted_srp in
   match decl with
   | DNodes _ -> Decl (DNodes nodes)
@@ -53,7 +44,6 @@ let transform_declaration parted_srp decl : transform_result =
   | DSymbolic (v, _) ->
     (* print_endline (Var.name v); *)
     (* print_endline (Nv_utils.OCamlUtils.list_to_string (fun s -> s) valid_hyps); *)
-    (* get the original variable form in case it's been projected *)
     (match (SrpRemapping.var_to_edge v) with
     | Some e when not (List.exists ((=) e) valid_edges) -> Drop
     | _ -> Decl decl)

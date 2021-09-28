@@ -123,6 +123,7 @@ let run_smt_partitioned file cfg info decls parts fs =
         List.map
           (fun p ->
             let p, d = Partition.transform_declarations decls p in
+            (* print_endline (Printing.declarations_to_string d); *)
             if cfg.print_partitions
             then print_endline (SrpRemapping.string_of_partitioned_srp p)
             else ();

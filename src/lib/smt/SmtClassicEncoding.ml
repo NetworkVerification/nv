@@ -262,7 +262,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     let encode_input { edge; rank; var_names; preds } =
       let u, v = edge in
       (* extract the variable name and create a term *)
-      let xs = of_list (List.map (mk_term % mk_var % Var.name) var_names) in
+      let xs = of_list (List.map (mk_term % mk_var % Var.to_string) var_names) in
       (* get the relevant predicate *)
       let pred_to_hyp i p =
         let pred =
@@ -566,10 +566,6 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     let assertions = get_asserts ds |> List.map InterpPartialFull.interp_partial in
     let requires = get_requires ds in
     let env = init_solver symbolics ~labels:[] in
-    (* encode the symbolics first, so we can find them when we do the kirigami_solve
-     * NOTE: could instead pass in the list of symbolics to encode_kirigami_solve *)
-    (* add_symbolic_constraints env [] env.symbolics; *)
-    (* (VarMap.iter (fun v _ -> print_endline (Var.name v)) env.symbolics); *)
     let lesser_hyps, greater_hyps, guarantees =
       List.fold_lefti
         (fun (lhs, ghs, gs) i solve ->
@@ -601,8 +597,6 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
       then (scope_checks env (fun e -> add_guarantees e |> conjoin_terms e ~negate:true); [])
       else add_guarantees env
     in
-    (* FIXME: when guarantees are not scoped, they need to be coupled with the asserts,
-     * in an (assert (not (and (and assert-0 ... assert-n) (and guarantee-0 ... guarantee-m)))) statement *)
     (* safety checks: add other hypotheses, test original assertions *)
     conjoin_terms
       env
@@ -613,6 +607,8 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
       env
       (fun e -> encode_exp_z3 "" env e)
       assertions in
+    (* when guarantees are not scoped, they need to be coupled with the asserts,
+     * in an (assert (not (and (and assert-0 ... assert-n) (and guarantee-0 ... guarantee-m)))) statement *)
     conjoin_terms env (gs @ asserts) ~negate:true;
     env
   ;;
