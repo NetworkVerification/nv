@@ -51,7 +51,6 @@ z3 yourself, separately.
 Z3 version >= 4.8.7 is recommended to avoid a bug that our constraints sometimes trigger on earlier versions of z3.
 
 You will need Batteries version >= 3.0.0.
-We've had issues with some versions of `mlcuddidl`. `mlcuddidl.3.0.4` and `mlcuddidl.3.0.7` both appear to work (tested on Linux).
 
 Then clone the repo and run `dune build src/exe/main.exe` or `make`.
 
@@ -59,22 +58,6 @@ Then clone the repo and run `dune build src/exe/main.exe` or `make`.
 
 To use the `nv_jupyter` package, you will also need to install `jupyter`, which requires [`zeromq`](https://github.com/zeromq/libzmq) C bindings.
 Check your operating system's package manager to find out which package provides `/usr/include/zmq.h`.
-
-### MacOS
-
-You may encounter issues installing `mlcuddidl.3.0.4`. Per issue [#7](https://github.com/princedpw/nv/issues/7),
-we recommend you try building `mlcuddidl` from source:
-
-```
-opam source mlcuddidl.3.0.4 --dir "$YOUR_SRC_DIR"
-cd "$YOUR_SRC_DIR/mlcuddidl.3.0.4"
-make distclean # just to be safe
-./configure --disable-profiling
-make
-make install
-```
-
-This has been tested for ocaml 4.05.0 and 4.07.1.
 
 ### Ubuntu (16.04+)
 
