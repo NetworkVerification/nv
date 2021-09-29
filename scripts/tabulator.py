@@ -125,7 +125,7 @@ def run_nv_smt(path: str, cut: Optional[str], z3time: int, time: float, verbose:
     If it doesn't finish within the given time, kill it.
     """
     log = ""
-    nvpath = os.path.join(os.getcwd(), "nv")
+    nvpath = os.path.join(os.getcwd(), "nv.opt")
     if not os.path.exists(nvpath):
         print("Did not find 'nv' executable in the current working directory")
         sys.exit(1)
