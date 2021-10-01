@@ -195,6 +195,9 @@ let interp_interface edge intfe =
   let u, v = edge in
   let node_value n = avalue (vnode n, Some Typing.node_ty, Span.default) in
   let edge = [node_value u; node_value v] in
+  (* TODO: does it make a difference to write the interface with type e -> x -> bool versus
+     e -> (x -> bool) *)
+  (* TODO: does it make a difference to use InterpPartial versus InterpPartialFull here *)
   let intf_app = InterpPartial.interp_partial_fun intfe edge in
   match intf_app.e with
   | EFun _ -> intf_app
