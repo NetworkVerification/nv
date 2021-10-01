@@ -80,6 +80,6 @@ let update_cfg_dependencies () =
   if !cfg.slicing then cfg := { !cfg with unbox = true };
   if !cfg.hiding then cfg := { !cfg with unbox = true };
   if !cfg.smt_parallel then cfg := { !cfg with finite_arith = true };
-  if !cfg.print_partitions or !cfg.ranked then cfg := { !cfg with kirigami = true };
+  if !cfg.print_partitions || !cfg.ranked then cfg := { !cfg with kirigami = true };
   ()
 ;;
