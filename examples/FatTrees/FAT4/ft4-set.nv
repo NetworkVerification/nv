@@ -1,21 +1,13 @@
 (* Benchmark testing fault tolerance reachability to the destination. *)
 type attribute = bool
 
-symbolic failed0 : option[tedge]
-symbolic failed1 : option[tedge]
-(* symbolic failed2 : option[tedge] *)
+(* FIXME: Using a set like this appears to cause issues when transforming the network. *)
+symbolic failed : set[tedge]
 
-let oor f o1 o2 = match (o1, o2) with
-  | (None, _) -> f o2
-  | (_, None) -> f o1
-  | (Some a, Some b) -> (f o1) || (f o2)
+let cardinality s =
+  foldEdges (fun e b x -> if b then x + 1 else x) s 0
 
-let isEdge e o = match o with
-  | Some e1 -> e1 = e
-  | None -> false
-
-let isFailed e = let f = isEdge e in
-  (oor f failed0 failed1)
+require ((cardinality failed) <= 2)
 
 let dest = 10n
 
@@ -90,7 +82,7 @@ let edges = {
 
 let init n = if n = dest then true else false
 
-let trans e x = if (isFailed e) then false else x
+let trans e x = if failed[e] then false else x
 
 let merge n x y = x || y
 
