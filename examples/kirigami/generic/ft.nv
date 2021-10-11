@@ -1,0 +1,57 @@
+(* vim: set syntax=ocaml *)
+(* Template example for encoding fault tolerance in BGP networks. *)
+(* Intended to be used as an include, where user provides topology. *)
+type bgpType = {bgpAd: int; lp: int; aslen: int; med:int; comms:set[int];}
+type attribute = option[bgpType]
+
+symbolic down : set[tedge]
+
+let cardinality s =
+  foldEdges (fun e b x -> if b then x + 1 else x) s 0
+
+let maxDown = 2
+require (countEdges edges) <= maxDown
+
+let isFailed e = down[e]
+
+let init n =
+  if n = 0n then Some { bgpAd = 0; lp = 100; aslen = 0; med = 0; comms = {} }
+  else None
+
+let pickOption f x y =
+  match (x,y) with
+  | (None, None) -> None
+  | (None, Some _) -> y  | (Some _, None) -> x
+  | (Some a, Some b) -> Some (f a b)
+
+let betterBgp b1 b2 =
+  if b1.lp > b2.lp then b1
+  else if b2.lp > b1.lp then b2
+  else if b1.aslen < b2.aslen then b1
+  else if b2.aslen < b1.aslen then b2  else if b1.med >= b2.med then b1 else b2
+
+let mergeBgp x y = pickOption betterBgp x y
+
+let merge n x y = mergeBgp x y
+
+let transferBgp e x =
+  match x with
+  | None -> None
+  | Some b -> (
+    let b = {b with aslen = b.aslen + 1} in
+    Some b
+)
+
+let trans e x =
+  let x = transferBgp e x in
+  match x with
+  | Some b -> if (isFailed e) then None else Some b
+  | None -> None
+
+let assert_node u v = match v with
+  | None -> false
+  | Some _ -> true
+
+let sol = solution { init = init; trans = trans; merge = merge }
+
+assert foldNodes (fun u v acc -> acc && assert_node u v) sol true
