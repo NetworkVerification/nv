@@ -1,0 +1,186 @@
+(* Benchmark testing fault tolerance reachability to the destination. *)
+type attribute = bool
+
+symbolic failed0 : option[(int, int)]
+symbolic failed1 : option[(int, int)]
+symbolic failed2 : option[(int, int)]
+
+let edge_to_int_pair edge = match edge with
+  | 3~16 -> (3, 16)
+  | 13~12 -> (13, 12)
+  | 8~1 -> (8, 1)
+  | 6~7 -> (6, 7)
+  | 19~16 -> (19, 16)
+  | 14~3 -> (14, 3)
+  | 6~4 -> (6, 4)
+  | 4~13 -> (4, 13)
+  | 9~18 -> (9, 18)
+  | 17~0 -> (17, 0)
+  | 8~2 -> (8, 2)
+  | 3~14 -> (3, 14)
+  | 18~3 -> (18, 3)
+  | 1~8 -> (1, 8)
+  | 7~15 -> (7, 15)
+  | 15~5 -> (15, 5)
+  | 18~0 -> (18, 0)
+  | 10~8 -> (10, 8)
+  | 5~16 -> (5, 16)
+  | 6~2 -> (6, 2)
+  | 7~17 -> (7, 17)
+  | 15~4 -> (15, 4)
+  | 0~18 -> (0, 18)
+  | 7~6 -> (7, 6)
+  | 16~5 -> (16, 5)
+  | 13~7 -> (13, 7)
+  | 16~19 -> (16, 19)
+  | 14~11 -> (14, 11)
+  | 11~13 -> (11, 13)
+  | 3~18 -> (3, 18)
+  | 9~17 -> (9, 17)
+  | 6~10 -> (6, 10)
+  | 13~4 -> (13, 4)
+  | 2~6 -> (2, 6)
+  | 18~1 -> (18, 1)
+  | 15~19 -> (15, 19)
+  | 1~14 -> (1, 14)
+  | 2~8 -> (2, 8)
+  | 8~3 -> (8, 3)
+  | 17~4 -> (17, 4)
+  | 18~9 -> (18, 9)
+  | 0~17 -> (0, 17)
+  | 7~13 -> (7, 13)
+  | 4~17 -> (4, 17)
+  | 14~1 -> (14, 1)
+  | 8~10 -> (8, 10)
+  | 10~6 -> (10, 6)
+  | 1~18 -> (1, 18)
+  | 15~7 -> (15, 7)
+  | 11~14 -> (11, 14)
+  | 12~13 -> (12, 13)
+  | 17~7 -> (17, 7)
+  | 3~8 -> (3, 8)
+  | 17~9 -> (17, 9)
+  | 13~11 -> (13, 11)
+  | 16~1 -> (16, 1)
+  | 16~3 -> (16, 3)
+  | 4~15 -> (4, 15)
+  | 19~15 -> (19, 15)
+  | 12~14 -> (12, 14)
+  | 14~12 -> (14, 12)
+  | 1~16 -> (1, 16)
+  | 4~6 -> (4, 6)
+  | 5~15 -> (5, 15)
+
+let isEdge e o = match o with
+  | Some e1 -> e1 = e
+  | None -> false
+
+let nFailures = 2
+
+let isFailed e =
+  let (u, v) = edge_to_int_pair e in
+  let f = isEdge (u, v) in
+  match nFailures with
+  | 0 -> false
+  | 1 -> (f failed0)
+  | 2 -> (f failed0) || (f failed1)
+  | _ -> (f failed0) || (f failed1) || (f failed2)
+
+let dest = 10n
+
+let nodes = 20
+
+let edges = {
+  3-16; (*core-0,Serial0 --> aggregation-8,Serial0*)
+  13-12; (*aggregation-5,Serial3 --> edge-7,Serial1*)
+  8-1; (*aggregation-16,Serial1 --> core-1,Serial3*)
+  6-7; (*aggregation-17,Serial3 --> core-2,Serial1*)
+  19-16; (*edge-10,Serial0 --> aggregation-8,Serial2*)
+  14-3; (*aggregation-4,Serial0 --> core-0,Serial2*)
+  6-4; (*aggregation-17,Serial0 --> core-3,Serial1*)
+  4-13; (*core-3,Serial2 --> aggregation-5,Serial1*)
+  9-18; (*edge-14,Serial0 --> aggregation-12,Serial2*)
+  17-0; (*aggregation-13,Serial3 --> edge-15,Serial1*)
+  8-2; (*aggregation-16,Serial2 --> edge-18,Serial0*)
+  3-14; (*core-0,Serial2 --> aggregation-4,Serial0*)
+  18-3; (*aggregation-12,Serial0 --> core-0,Serial1*)
+  1-8; (*core-1,Serial3 --> aggregation-16,Serial1*)
+  7-15; (*core-2,Serial0 --> aggregation-9,Serial3*)
+  15-5; (*aggregation-9,Serial2 --> edge-11,Serial1*)
+  18-0; (*aggregation-12,Serial3 --> edge-15,Serial0*)
+  10-8; (*edge-19,Serial0 --> aggregation-16,Serial3*)
+  5-16; (*edge-11,Serial0 --> aggregation-8,Serial3*)
+  6-2; (*aggregation-17,Serial1 --> edge-18,Serial1*)
+  7-17; (*core-2,Serial3 --> aggregation-13,Serial0*)
+  15-4; (*aggregation-9,Serial0 --> core-3,Serial0*)
+  0-18; (*edge-15,Serial0 --> aggregation-12,Serial3*)
+  7-6; (*core-2,Serial1 --> aggregation-17,Serial3*)
+  16-5; (*aggregation-8,Serial3 --> edge-11,Serial0*)
+  13-7; (*aggregation-5,Serial0 --> core-2,Serial2*)
+  16-19; (*aggregation-8,Serial2 --> edge-10,Serial0*)
+  14-11; (*aggregation-4,Serial2 --> edge-6,Serial0*)
+  11-13; (*edge-6,Serial1 --> aggregation-5,Serial2*)
+  3-18; (*core-0,Serial1 --> aggregation-12,Serial0*)
+  9-17; (*edge-14,Serial1 --> aggregation-13,Serial2*)
+  6-10; (*aggregation-17,Serial2 --> edge-19,Serial1*)
+  13-4; (*aggregation-5,Serial1 --> core-3,Serial2*)
+  2-6; (*edge-18,Serial1 --> aggregation-17,Serial1*)
+  18-1; (*aggregation-12,Serial1 --> core-1,Serial1*)
+  15-19; (*aggregation-9,Serial1 --> edge-10,Serial1*)
+  1-14; (*core-1,Serial2 --> aggregation-4,Serial1*)
+  2-8; (*edge-18,Serial0 --> aggregation-16,Serial2*)
+  8-3; (*aggregation-16,Serial0 --> core-0,Serial3*)
+  17-4; (*aggregation-13,Serial1 --> core-3,Serial3*)
+  18-9; (*aggregation-12,Serial2 --> edge-14,Serial0*)
+  0-17; (*edge-15,Serial1 --> aggregation-13,Serial3*)
+  7-13; (*core-2,Serial2 --> aggregation-5,Serial0*)
+  4-17; (*core-3,Serial3 --> aggregation-13,Serial1*)
+  14-1; (*aggregation-4,Serial1 --> core-1,Serial2*)
+  8-10; (*aggregation-16,Serial3 --> edge-19,Serial0*)
+  10-6; (*edge-19,Serial1 --> aggregation-17,Serial2*)
+  1-18; (*core-1,Serial1 --> aggregation-12,Serial1*)
+  15-7; (*aggregation-9,Serial3 --> core-2,Serial0*)
+  11-14; (*edge-6,Serial0 --> aggregation-4,Serial2*)
+  12-13; (*edge-7,Serial1 --> aggregation-5,Serial3*)
+  17-7; (*aggregation-13,Serial0 --> core-2,Serial3*)
+  3-8; (*core-0,Serial3 --> aggregation-16,Serial0*)
+  17-9; (*aggregation-13,Serial2 --> edge-14,Serial1*)
+  13-11; (*aggregation-5,Serial2 --> edge-6,Serial1*)
+  16-1; (*aggregation-8,Serial1 --> core-1,Serial0*)
+  16-3; (*aggregation-8,Serial0 --> core-0,Serial0*)
+  4-15; (*core-3,Serial0 --> aggregation-9,Serial0*)
+  19-15; (*edge-10,Serial1 --> aggregation-9,Serial1*)
+  12-14; (*edge-7,Serial0 --> aggregation-4,Serial3*)
+  14-12; (*aggregation-4,Serial3 --> edge-7,Serial0*)
+  1-16; (*core-1,Serial0 --> aggregation-8,Serial1*)
+  4-6; (*core-3,Serial1 --> aggregation-17,Serial0*)
+  5-15; (*edge-11,Serial1 --> aggregation-9,Serial2*)
+}
+
+(* true for dest, false o.w. *)
+let init n = n = dest
+
+(* transfer if not failed *)
+let trans e x = !(isFailed e) && x
+
+let merge n x y = x || y
+
+let assert_node node x = x
+
+let partition n = match n with
+ | 2n | 6n | 8n | 10n -> 0
+ | 1n | 3n | 4n | 7n -> 1
+ | 11n | 12n | 13n | 14n -> 2
+ | 5n | 15n | 16n | 19n -> 3
+ | 0n | 9n | 17n | 18n -> 4
+
+let interface edge a = a = true
+
+ (* {edge-15=0, core-1=1, edge-18=2, core-0=3, core-3=4, edge-11=5,
+aggregation-17=6, core-2=7, aggregation-16=8, edge-14=9, edge-19=10, edge-6=11,
+edge-7=12, aggregation-5=13, aggregation-4=14, aggregation-9=15,
+aggregation-8=16, aggregation-13=17, aggregation-12=18,
+edge-10=19}*)
+let sol = solution {init = init; trans = trans; merge = merge; interface = interface; }
+
+assert foldNodes (fun k v acc -> acc && assert_node k v) sol true

@@ -1,0 +1,36 @@
+(* A minimal reachability isolation example.
+ * We can't conclude that u and v are isolated using a bool attribute.
+ *)
+type attribute = bool
+
+let nodes = 4
+
+let edges = {
+  0=1;
+  1=2;
+  2=3;
+}
+
+let init n = match n with
+  | 0n -> true
+  | _ -> false
+
+let trans e x = match e with
+  | 1~2 -> false
+  | _ -> x
+
+let merge n x y = x || y
+
+let assertNode u v = (1n <n u) || v
+
+let partition n = match n with
+  | 0n | 1n | 2n -> 0
+  | 3n -> 1
+
+let interface e x = match e with
+  | 2~3 -> x = true
+  | 3~2 -> x = true
+
+let sol = solution { init = init; trans = trans; merge = merge; interface = interface; }
+
+assert foldNodes (fun u v acc -> acc && assertNode u v) sol true

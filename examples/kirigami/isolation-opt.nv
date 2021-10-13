@@ -1,0 +1,42 @@
+(* A more complex reachability isolation example.
+ * We can conclude that u and v are isolated now using an option attribute.
+ *)
+type attribute = option[int]
+
+let nodes = 3
+
+let edges = {
+  0=1;
+  1=2;
+}
+
+let init n = match n with
+  | 0n -> Some 0
+  | _ -> None
+
+let trans e x = match e with
+  | 0~1 -> None
+  | _ -> (match x with
+    | None -> None
+    | Some a -> Some (a + 1))
+
+let merge n x y = match (x, y) with
+  | (None, _) -> y
+  | (_, None) -> x
+  | (Some a, Some b) -> if a < b then x else y
+
+let assertNode u v = match u with
+  | 0n -> !(v = None)
+  | _ -> v = None
+
+let partition n = match n with
+  | 0n | 1n -> 0
+  | 2n -> 1
+
+let interface e x = match e with
+  | 1~2 -> x = None
+  | 2~1 -> x = None
+
+let sol = solution { init = init; trans = trans; merge = merge; interface = interface; }
+
+assert foldNodes (fun u v acc -> acc && assertNode u v) sol true
