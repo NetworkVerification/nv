@@ -30,10 +30,9 @@ let rec remap_exp parted_srp e =
       (match remap_value parted_srp v with
       | Some v1 -> e_val v1
       | None ->
-        print_endline
-          ("Warning: remap_value given "
-          ^ Printing.value_to_string v
-          ^ ", which should be cut");
+        Printf.printf
+          "Warning: remap_value given %s, which should be cut.\n"
+          (Printing.value_to_string v);
         e_val v)
     | EOp (op, es) -> remap_exp_op parted_srp op es
     | ESome e -> esome (f e)
@@ -143,6 +142,9 @@ let transform_assert (e : exp) (parted_srp : SrpRemapping.partitioned_srp) : exp
    * in all the nodes and simplifying statements we don't want it to simplify the
    * wrong way *)
   let e = remap_exp parted_srp e in
+  (* FIXME: this will spit out a bunch of warnings if the predicate uses the node.
+   * we can ignore these if remapping conjuncts correctly drops them, but it's not helpful
+   * to the user to see. *)
   match e.e with
   | EMatch _ ->
     (* if there is only one branch, use interp to simplify;
