@@ -1,4 +1,7 @@
-(** * Adds link failures to a network *)
+(** * Adds link failures to a network
+    2021-12-14 (tim):
+    Currently deprecated, as it is not written
+    for updated network syntax. *)
 
 open Nv_datastructures
 open Nv_lang
@@ -157,7 +160,7 @@ let buildFailTrans
     }
 ;;
 
-let buildFailuresNet net k = failwith "need to be adapted to solve declarations"
+let buildFailuresNet _net _k = failwith "need to be adapted to solve declarations"
 
 (* let (failuresMap, failuresSym, failuresConstraint) =
     buildSymbolicFailures (AdjGraph.edges net.graph) k
