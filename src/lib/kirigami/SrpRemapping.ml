@@ -285,12 +285,20 @@ let partition_edges
 
 (** Helper function to extract the partition index
  *  from the partition expression.
+ *  Will fail if the partition expression does not return
+ *  an int index when given a node.
 *)
 let interp_partition parte node : int =
   let value = Nv_interpreter.Interp.apply empty_env (deconstructFun parte) (vnode node) in
   int_of_val value |> Option.get
 ;;
 
+(** Return a list of partitions from the given declarations.
+ *  Assumes that the declarations contain a partition decl,
+ *  a nodes and an edges decl.
+ *  Will fail if the partition decl does not return an int
+ *  when given a node.
+ *)
 let partition_declarations decls : partitioned_srp list =
   let partition = get_partition decls in
   match partition with

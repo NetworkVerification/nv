@@ -51,14 +51,14 @@ let partition n = match n with
 let interface e x = match e with
   | 0~1 -> x = Some 0
   | 0~2 -> x = Some 0
-  | 1~2 -> x = Some 1 || x = Some 2
-  | 2~1 -> x = Some 1 || x = Some 2
-  | 1~0 -> x = Some 1 || x = Some 2
-  | 2~0 -> x = Some 1 || x = Some 2
+  | 1~2 | 1~0 -> x = Some 1 (* || x = Some 2 *)
+  | 2~1 | 2~0 -> (* x = Some 1 || *) x = Some 2
 
 let pred v x = 
   match x with
-  | Some y -> y <= 1
+  | Some y -> (match v with
+    | 0n -> y = 0
+    | _ -> y = 1 || y = 2)
   | None -> false
 
 assert foldNodes (fun v x acc -> acc && pred v x) sol true
