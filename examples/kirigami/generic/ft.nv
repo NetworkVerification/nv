@@ -10,7 +10,7 @@ let cardinality s =
   foldEdges (fun e b x -> if b then x + 1 else x) s 0
 
 let maxDown = 2
-require (countEdges edges) <= maxDown
+require (cardinality down) <= maxDown
 
 let isFailed e = down[e]
 

@@ -1,0 +1,17 @@
+type attribute = option[(int, int)]
+
+let trans e x = match x with
+  | None -> None
+  | Some (a, b) -> (a, b + 1)
+
+let merge n x1 x2 = match (x1, x2) with
+  | (None, _) -> x2
+  | (_, None) -> x1
+  | (Some (a1, b1), Some (a2, b2)) -> if a1 < a2 then x1 else if a1 = a2 && b1 < b2 then x1 else x2
+
+let init n =
+  match n with
+  | 0n -> Some (1, 0)
+  | _ -> None
+
+let sol = solution {init = init; trans = trans; merge = merge}

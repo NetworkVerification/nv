@@ -1,0 +1,3 @@
+let nodes = 2
+
+let edges = { 0=1; }
