@@ -29,13 +29,14 @@ type t =
   ; nfaults : int [@short "-f"] (** number of failures to consider *)
   ; predicate : predicate [@short "-p"] [@parse parse_predicate]
         (** predicate to use for cuts and hijacks: references should be in terms of a variable "x" *)
+  ; topology : string option [@short "-t"] (** type of topology to generate    *)
   ; outfile : string [@short "-o"] (** file to output NV program to; '-' for stdout *)
   }
 [@@deriving
   show
   , argparse
       { positional =
-          ["file", "nv policy file"; "operation", "one of 'ft', 'notrans', 'cut' or 'hijack'"]
+          ["file", "nv policy file"; "operation", "one of 'topology', 'ft', 'notrans', 'cut' or 'hijack'"]
       ; description = "nv: a network verification framework"
       }]
 
@@ -46,6 +47,7 @@ let default =
   ; destination = -1
   ; predicate = True
   ; nfaults = 0
+  ; topology = None
   ; outfile = "-"
   }
 ;;

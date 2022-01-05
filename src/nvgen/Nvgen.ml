@@ -1,13 +1,18 @@
+(** A utility program to generate NV files.
+ *  Can be used to generate one file from another (extending a policy),
+ *  or to create stub topologies.
+ *)
 open Batteries
 open Cmdline
-open Nv_lang
 open Nv_lang.Syntax
+open Nv_lang.Input
 open Nv_datastructures
 open Partition
 open Hijack
 open Maintenance
 open FaultTolerance
 open Utils
+open Topologies
 
 (** Remove all variable delimiters "~n" from the given string. *)
 let strip_var_delims s =
@@ -22,35 +27,30 @@ let strip_sol_types s =
 
 let clean_text = strip_var_delims % strip_sol_types
 
-type fatLevel =
-  | Core
-  | Aggregation
-  | Edge
-
 type nodeGroup =
-  | Fattree of fatLevel
+  | Fat of Topologies.fatLevel
   | Custom of string
 
 let nodeGroup_of_string s =
   match s with
-  | "core" -> Fattree Core
-  | "aggregation" -> Fattree Aggregation
-  | "edge" -> Fattree Edge
+  | "core" -> Fat Core
+  | "aggregation" -> Fat Aggregation
+  | "edge" -> Fat Edge
   | _ -> Custom s
 ;;
 
 let string_of_nodeGroup g =
   match g with
-  | Fattree Core -> "core"
-  | Fattree Aggregation -> "aggregation"
-  | Fattree Edge -> "edge"
+  | Fat Core -> "core"
+  | Fat Aggregation -> "aggregation"
+  | Fat Edge -> "edge"
   | Custom s -> s
 ;;
 
 let parse_node_groups (fname : string) : (int, nodeGroup) Map.t =
   let lines =
     try File.lines_of fname with
-    | _ -> Console.error ("File not found: " ^ fname)
+    | _ -> Nv_lang.Console.error ("File not found: " ^ fname)
   in
   let regexp = Str.regexp "\\([_a-zA-z0-9]+\\)\\(-[0-9]*\\)?=\\([0-9]+\\)" in
   (* aux fn to add nodes to a map with their associated group *)
@@ -203,15 +203,17 @@ let main =
   let cfg, rest = argparse default "nvgen" Sys.argv in
   let file = rest.(0) in
   let op = rest.(1) in
-  let write s =
-    match cfg.outfile with
-    | "-" -> IO.write_line IO.stdout s
-    | file -> File.with_file_out file (fun out -> IO.write_line out s)
-  in
   let new_ds, groups =
     match op, cfg.destination with
+    | "topology", _ ->
+      (* use the given file as the outfile *)
+      let cfg : Cmdline.t = { cfg with outfile = file } in
+      let topology = Option.bind cfg.topology Topologies.parse_string in
+      (match topology with
+      | None -> failwith "Invalid topology given (should be a 'star', 'ring' or 'mesh' followed by an integer)."
+      | Some top -> Topologies.to_decls (Topologies.construct top), Map.empty)
     | "ft", _ ->
-      let decls, _ = Input.parse file in
+      let decls, _ = parse file in
       let new_ds = fault_tolerance cfg.nfaults decls in
       new_ds, parse_node_groups file
     | _, -1 -> failwith "No destination provided."
@@ -222,25 +224,27 @@ let main =
         Map.foldi
           (fun u g l ->
             match g with
-            | Fattree Core -> u :: l
+            | Fat Core -> u :: l
             | _ -> l)
           groups
           []
       in
       let stub = { leak = cfg.leak; destination; predicate; spines } in
-      let decls, _ = Input.parse file in
+      let decls, _ = parse file in
       let new_ds, hijacker = hijack decls stub in
       (* add the hijacker to the groups *)
-      new_ds, Map.add hijacker (Fattree Core) groups
+      new_ds, Map.add hijacker (Fat Core) groups
     | "maintenance", dest ->
-      let decls, _ = Input.parse file in
+      let decls, _ = parse file in
       let new_ds = maintenance dest decls in
       new_ds, parse_node_groups file
     | _ -> failwith ("invalid op: " ^ op)
   in
-  let new_text = Printing.declarations_to_string new_ds in
+  let new_text = Nv_lang.Printing.declarations_to_string new_ds in
   let cleaned = clean_text new_text in
   let groupsComment = nodeGroups_to_string groups in
   let output = cleaned ^ groupsComment in
-  write output
+  match cfg.outfile with
+  | "-" -> IO.write_line IO.stdout output
+  | f -> File.with_file_out f (fun out -> IO.write_line out output)
 ;;
