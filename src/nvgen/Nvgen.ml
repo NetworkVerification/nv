@@ -6,6 +6,7 @@ open Nv_datastructures
 open Partition
 open Hijack
 open Maintenance
+open FaultTolerance
 open Utils
 
 (** Remove all variable delimiters "~n" from the given string. *)
@@ -167,6 +168,37 @@ let maintenance dest decls =
   decls @ new_decls
 ;;
 
+let fault_tolerance nfaults decls =
+  (* for each fault, construct a failure variable *)
+  let fail_vars =
+    List.map
+      (fun i -> Var.fresh (Printf.sprintf "failed%d" i))
+      (Nv_utils.OCamlUtils.list_seq nfaults)
+  in
+  (* add a drop condition to the transfer *)
+  let update_decl d =
+    match d with
+    | DLet (v, oty, e) ->
+      let e =
+        match Var.name v with
+        | "trans" -> ft_trans e
+        | _ -> e
+      in
+      DLet (v, oty, e)
+    | _ -> d
+  in
+  let decls = List.map update_decl decls in
+  let edges = get_edges decls |> Option.get in
+  (* construct a symbolic for each failure *)
+  let fail_symbolics =
+    List.map
+      (fun var -> DSymbolic (var, Ty (TOption (TTuple [TInt 32; TInt 32]))))
+      fail_vars
+  in
+  let new_decls = [edge_to_int_pair_decl edges; isFailed_decl fail_vars] in
+  decls @ new_decls @ fail_symbolics
+;;
+
 let main =
   let cfg, rest = argparse default "nvgen" Sys.argv in
   let file = rest.(0) in
@@ -178,6 +210,10 @@ let main =
   in
   let new_ds, groups =
     match op, cfg.destination with
+    | "ft", _ ->
+      let decls, _ = Input.parse file in
+      let new_ds = fault_tolerance cfg.nfaults decls in
+      new_ds, parse_node_groups file
     | _, -1 -> failwith "No destination provided."
     | "hijack", destination ->
       let predicate = predicate_to_exp cfg.predicate in

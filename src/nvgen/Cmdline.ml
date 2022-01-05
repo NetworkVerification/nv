@@ -26,6 +26,7 @@ type t =
   ; simulate : bool [@short "-s"] (** simulate the network to produce a cut    *)
   ; leak : bool [@short "-l"] (** leak the route when performing a hijack     *)
   ; destination : int [@short "-d"] (** destination node for cuts and hijacks *)
+  ; nfaults : int [@short "-f"] (** number of failures to consider *)
   ; predicate : predicate [@short "-p"] [@parse parse_predicate]
         (** predicate to use for cuts and hijacks: references should be in terms of a variable "x" *)
   ; outfile : string [@short "-o"] (** file to output NV program to; '-' for stdout *)
@@ -34,7 +35,7 @@ type t =
   show
   , argparse
       { positional =
-          ["file", "nv policy file"; "operation", "one of 'notrans', 'cut' or 'hijack'"]
+          ["file", "nv policy file"; "operation", "one of 'ft', 'notrans', 'cut' or 'hijack'"]
       ; description = "nv: a network verification framework"
       }]
 
@@ -44,6 +45,7 @@ let default =
   ; leak = false
   ; destination = -1
   ; predicate = True
+  ; nfaults = 0
   ; outfile = "-"
   }
 ;;
