@@ -30,16 +30,17 @@ class FattreeCut(Enum):
     @property
     def desc(self):
         # description
-        if self is FattreeCut.VERTICAL:
-            return "Vertically partitioned"
-        elif self is FattreeCut.HORIZONTAL:
-            return "Horizontally partitioned"
-        elif self is FattreeCut.PODS:
-            return "Partitioned into pods"
-        elif self is FattreeCut.SPINES:
-            return "Partitioned into pods and individual spines"
-        elif self is FattreeCut.FULL:
-            return "Fully partitioned"
+        match self:
+            case FattreeCut.VERTICAL:
+                return "Vertically partitioned"
+            case FattreeCut.HORIZONTAL:
+                return "Horizontally partitioned"
+            case FattreeCut.PODS:
+                return "Partitioned into pods"
+            case FattreeCut.SPINES:
+                return "Partitioned into pods and individual spines"
+            case FattreeCut.FULL:
+                return "Fully partitioned"
 
     @property
     def func(self):

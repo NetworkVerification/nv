@@ -75,7 +75,7 @@ let isEdge e o = match o with
   | Some e1 -> e1 = e
   | None -> false
 
-let nFailures = 2
+let nFailures = 1
 
 let isFailed e =
   let (u, v) = edge_to_int_pair e in
