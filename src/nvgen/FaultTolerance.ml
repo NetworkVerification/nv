@@ -31,9 +31,10 @@ let isFailed_decl fail_variables =
 let ft_trans trans =
   let drop vars e =
     let edge_var = List.nth vars 1 in
+    let pair_var = Var.fresh "pair" in
     let pair = eapp (evar edge_to_int_pair) (evar edge_var) in
-    let testFailed = eapp (evar isFailed) pair in
-    eif testFailed defaultRib e
+    let testFailed = eapp (evar isFailed) (evar pair_var) in
+    elet pair_var pair (eif testFailed defaultRib e)
   in
   descend drop (fun l _ -> List.length l = 2) [] trans
 ;;
