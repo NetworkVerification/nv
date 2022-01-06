@@ -210,7 +210,9 @@ let main =
   let new_ds, groups =
     match op, cfg.destination with
     | "topology", d ->
-      let decls, _ = parse file in
+      let decls = match file with
+        | "_" -> []
+        | f -> fst (parse f) in
       let topology = Option.bind cfg.topology Topologies.parse_string in
       let topology_decls = match topology with
       | None -> failwith "Invalid topology given (should be a 'star', 'ring' or 'mesh' followed by an integer)."

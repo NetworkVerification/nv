@@ -6,6 +6,7 @@ type topology = private
   | FullMesh of int
   | Ring of int
   | Star of int
+  | Rand of int * float
 [@@deriving show]
 
 type fatLevel =
@@ -18,6 +19,8 @@ val star : int -> topology
 val ring : int -> topology
 
 val full_mesh : int -> topology
+
+val rand : int -> float -> topology
 
 val parse_string : string -> topology option
 
