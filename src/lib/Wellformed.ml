@@ -193,13 +193,32 @@ let check_nodes_and_edges info num_nodes edges _ (e : exp) =
   | _ -> ()
 ;;
 
+let check_valid_edges num_nodes edges =
+  let check_edge (u, v) =
+    if u < num_nodes && v < num_nodes
+    then ()
+    else (
+      let msg =
+        Printf.sprintf
+          "Edge %d~%d is invalid! (The highest node value is %d)"
+          u
+          v
+          num_nodes
+      in
+      Console.error msg)
+  in
+  List.iter check_edge edges
+;;
+
 let check info (ds : declarations) : unit =
   check_record_label_uniqueness info ds;
   Visitors.iter_exp_decls (check_types info) ds;
   (* Visitors.iter_exp_decls (check_closures info) ds ; *)
   (* Is this still necessary? *)
   (* Visitors.iter_exp_decls (check_keys info) ds; *)
-  (* Visitors.iter_exp_decls (check_nodes_and_edges info
-                             (get_nodes ds |> Nv_utils.OCamlUtils.oget) (get_edges ds |> Nv_utils.OCamlUtils.oget)) ds; *)
+  let nodes = get_nodes ds |> Option.get in
+  let edges = get_edges ds |> Option.get in
+  check_valid_edges nodes edges;
+  Visitors.iter_exp_decls (check_nodes_and_edges info nodes edges) ds;
   ()
 ;;
