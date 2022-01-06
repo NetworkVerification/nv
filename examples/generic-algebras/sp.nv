@@ -1,0 +1,112 @@
+(* Simplified version of SP benchmarks.
+ * Skips using routing prefixes, which could mean some logic is possibly lost.
+ * Users of this stub must define dest: node, the destination node.
+ *)
+
+type ospfType = {ospfAd: int8; weight: int16; areaType:int2; areaId: int;}
+type bgpType = {bgpAd: int8; lp: int; aslen: int; med:int; comms:set[int];}
+type rib = {
+    connected:option[int8];
+    static:option[int8];
+    ospf:option[ospfType];
+    bgp:option[bgpType];
+    selected:option[int2]; }
+type attribute = rib
+
+let min x y = x <u8 y
+let isProtocol fib x = fib = x
+
+let pickOption f x y =
+  match (x,y) with
+  | (None, _) -> false  | (_, None) -> true
+  | (Some a, Some b) -> f a b
+
+let betterOspf o1 o2 =
+  if o1.areaType >u2 o2.areaType then true
+  else if o2.areaType >u2 o1.areaType then false
+  else if o1.weight <=u16 o2.weight then true else false
+
+let betterBgp b1 b2 =
+  if b1.lp > b2.lp then true
+  else if b2.lp > b1.lp then false
+  else if b1.aslen < b2.aslen then true
+  else if b2.aslen < b1.aslen then false
+  else if b1.med >= b2.med then true else false
+
+let betterEqOption o1 o2 =
+  match (o1,o2) with
+  | (_, None) -> true
+  | (None, _) -> false
+  | (Some a, Some b) -> a <=u8 b
+
+let best c s o b =
+  match (c,s,o,b) with
+  | (None,None,None,None) -> None
+  | _ ->
+      let o = match o with | None -> None | Some o -> Some o.ospfAd in
+      let b = match b with | None -> None | Some b -> Some b.bgpAd in
+      let (x,p1) = if betterEqOption c s then (c,0u2) else (s,1u2) in
+      let (y,p2) = if betterEqOption o b then (o,2u2) else (b,3u2) in
+      Some (if betterEqOption x y then p1 else p2)
+
+let mergeValues x y =
+  let c = if (pickOption min x.connected y.connected) then x.connected else y.connected in
+  let s = if (pickOption min x.static y.static) then x.static else y.static in
+  let o = if (pickOption betterOspf x.ospf y.ospf) then x.ospf else y.ospf in
+  let b = if (pickOption betterBgp x.bgp y.bgp) then x.bgp else y.bgp in
+  { connected = c;
+    static = s;
+    ospf = o;
+    bgp = b;
+    selected = best c s o b}
+
+let merge node x y = mergeValues x y
+
+let transferOspf edge o =
+  match o with
+  | None -> None
+  | Some o -> (
+    match edge with
+    | _ -> None
+)
+
+(* FIXME: needs to be changed for the cases where the protocol is not bgp but we
+ * still want the route transferred (i.e. when sent from the origin)
+ *)
+let transferBgp e x0 =
+ match x0.selected with
+ | None -> None
+ | Some prot ->
+ (let b = if (prot = 3u2) then match x0.bgp with
+                 | None -> ({bgpAd = 20u8; lp = 100; aslen = 0; med = 80; comms = {}})
+                 | Some b -> b
+         else ({bgpAd = 20u8; lp = 100; aslen = 0; med = 80; comms = {}}) in
+  let b = (if (isProtocol prot 3u2) then
+   (Some {bgpAd= b.bgpAd; lp= b.lp; aslen= b.aslen + 1; med= b.med;comms= b.comms;})
+   else None)
+    in b)
+
+let trans edge x =
+  let o = transferOspf edge x.ospf in
+  let b = transferBgp edge x in
+  {connected=None; static=None; ospf=o; bgp=b; selected=None}
+
+let init n =
+  if n = dest then
+    let c = None in
+    let s = Some 1u8 in
+    let o = None in
+    let b = Some {bgpAd=20u8; lp=100; aslen=0; med=80; comms={};} in
+    let fib = best c s o b in
+      {connected=c; static=s; ospf=o; bgp=b; selected=fib;}
+  else
+    {connected=None; static=None; ospf=None; bgp=None; selected=None;}
+
+let sol = solution {init = init; trans = trans; merge = merge}
+
+let assert_node node x =
+  match x.selected with
+  | None -> false
+  | _ -> true
+
+assert foldNodes (fun u v acc -> acc && assert_node u v) sol true
