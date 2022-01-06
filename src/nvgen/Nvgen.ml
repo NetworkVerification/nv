@@ -27,6 +27,10 @@ let strip_sol_types s =
 
 let clean_text = strip_var_delims % strip_sol_types
 
+(** Return a declaration of a destination node. *)
+let dest_decl d =
+  DLet (Var.fresh "dest", None, e_val (vnode d))
+
 type nodeGroup =
   | Fat of Topologies.fatLevel
   | Custom of string
@@ -205,13 +209,15 @@ let main =
   let op = rest.(1) in
   let new_ds, groups =
     match op, cfg.destination with
-    | "topology", _ ->
-      (* use the given file as the outfile *)
-      let cfg : Cmdline.t = { cfg with outfile = file } in
+    | "topology", d ->
+      let decls, _ = parse file in
       let topology = Option.bind cfg.topology Topologies.parse_string in
-      (match topology with
+      let topology_decls = match topology with
       | None -> failwith "Invalid topology given (should be a 'star', 'ring' or 'mesh' followed by an integer)."
-      | Some top -> Topologies.to_decls (Topologies.construct top), Map.empty)
+      | Some top -> Topologies.to_decls (Topologies.construct top) in
+      (* add a destination, if provided *)
+      let decls = if d != -1 then (dest_decl d) :: decls else decls in
+      decls @ topology_decls, Map.empty
     | "ft", _ ->
       let decls, _ = parse file in
       let new_ds = fault_tolerance cfg.nfaults decls in

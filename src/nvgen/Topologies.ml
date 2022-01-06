@@ -2,9 +2,7 @@
 open Graph
 open Nv_datastructures
 open Nv_lang.Syntax
-
-(* used for generating full mesh graphs *)
-module Classic = Graph.Classic.P (AdjGraph)
+open Batteries
 
 type topology =
   (* A fattree topology of n _pods_ (not nodes). *)
@@ -42,7 +40,12 @@ type fatLevel =
 
 let construct top : AdjGraph.t =
   match top with
-  | FullMesh n -> Classic.full ~self:false n
+  | FullMesh n ->
+    let srcs = Nv_utils.OCamlUtils.list_seq n in
+    let edges = List.cartesian_product srcs srcs in
+    (* delete self-loops *)
+    let lf_edges = List.filter (fun (u,v) -> u != v) edges in
+    AdjGraph.of_edges lf_edges
   | Ring n ->
     let srcs = Nv_utils.OCamlUtils.list_seq n in
     let edges = List.map (fun x -> x, (x + 1) mod n) srcs in
