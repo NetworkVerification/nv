@@ -12,3 +12,7 @@ let init n =
   | _ -> None
 
 let sol = solution {init = init; trans = trans; merge = merge}
+
+let assert_node u x = !(x = None)
+
+assert foldNodes (fun u x acc -> acc && assert_node u x) sol true

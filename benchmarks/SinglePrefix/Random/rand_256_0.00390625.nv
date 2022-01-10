@@ -1,0 +1,34 @@
+let dest = 0n
+type attribute = option[int32]
+let mapbetter = (fun f -> (fun o1 -> (fun o2 -> (match (o1,o2) with 
+ | (None,x) -> x
+ | (x,None) -> x
+ | (Some x,Some y) -> Some f x  y 
+) ) ) )
+let mapo = (fun f -> (fun o -> (match o with 
+ | None -> None
+ | Some x -> Some f x 
+) ) )
+let init = (fun n -> (match n with 
+ | 0n -> Some 0u32
+ | _ -> None
+) )
+let merge = (fun n -> (fun x1 -> (fun x2 -> mapbetter (fun n1 -> (fun n2 -> if n1 <u32 n2 then 
+n1 else 
+n2 ) )  x1  x2  ) ) )
+let trans = (fun e -> (fun x -> mapo (fun n -> n +u32 1u32 )  x  ) )
+let assert_node = (fun u -> (fun x -> ! (x = None) ) )
+let sol = solution {init = init; trans = trans; merge = merge}
+assert foldNodes ((fun u -> (fun x -> (fun acc -> acc && assert_node u  x  ) ) )) sol true
+let subset = (fun s -> (fun t -> combine ((fun x -> (fun y -> x && y ) )) s t (Some true) (Some false) (Some true) (Some false) = s ) )
+let isSome = (fun o -> (match o with 
+ | Some _ -> true
+ | None -> false
+) )
+let flipEdge = (fun e -> (match e with 
+ | a~b -> toEdge b  a 
+) )
+let disjoint = (fun s -> (fun t -> combine ((fun x -> (fun y -> x && y ) )) s t (Some true) (Some false) (Some true) (Some false) = createDict false ) )
+let nodes = 256
+let edges = {254n-239n;254n-180n;254n-113n;253n-197n;249n-55n;247n-121n;247n-14n;244n-169n;243n-238n;242n-255n;241n-160n;241n-118n;241n-69n;238n-54n;237n-142n;234n-119n;232n-172n;232n-33n;230n-224n;230n-3n;229n-106n;229n-88n;228n-43n;227n-214n;224n-220n;223n-184n;222n-58n;221n-112n;219n-188n;219n-158n;219n-132n;218n-203n;218n-29n;216n-195n;215n-66n;215n-54n;215n-17n;215n-4n;212n-110n;211n-87n;210n-133n;209n-147n;207n-103n;207n-71n;207n-9n;206n-75n;205n-231n;205n-163n;205n-92n;204n-176n;203n-47n;202n-140n;202n-1n;201n-248n;201n-70n;200n-156n;200n-69n;199n-216n;199n-213n;199n-203n;199n-141n;199n-39n;198n-82n;197n-126n;197n-123n;196n-84n;194n-204n;194n-135n;194n-132n;192n-154n;191n-220n;191n-111n;191n-102n;190n-98n;188n-210n;187n-157n;185n-215n;185n-177n;185n-165n;185n-60n;183n-68n;182n-171n;177n-166n;177n-39n;176n-214n;175n-252n;175n-192n;170n-70n;168n-194n;168n-34n;167n-161n;167n-115n;167n-6n;165n-129n;165n-85n;163n-212n;163n-204n;163n-116n;159n-191n;157n-198n;157n-146n;156n-201n;155n-233n;155n-225n;155n-112n;154n-199n;153n-66n;153n-53n;152n-100n;151n-26n;143n-104n;143n-91n;139n-203n;138n-131n;138n-14n;136n-107n;136n-37n;134n-215n;132n-142n;130n-231n;126n-202n;125n-247n;125n-48n;124n-174n;123n-78n;122n-22n;120n-122n;117n-228n;117n-95n;117n-51n;115n-194n;115n-130n;114n-30n;114n-26n;113n-218n;112n-12n;111n-117n;110n-130n;107n-236n;106n-136n;105n-215n;105n-185n;104n-110n;104n-100n;99n-204n;98n-135n;98n-22n;97n-198n;97n-150n;96n-161n;94n-241n;93n-137n;92n-240n;92n-106n;91n-188n;90n-68n;89n-55n;88n-212n;83n-247n;83n-89n;82n-224n;82n-51n;81n-255n;81n-71n;80n-212n;79n-187n;79n-105n;76n-172n;76n-142n;76n-41n;75n-109n;75n-99n;74n-192n;74n-182n;73n-185n;72n-175n;72n-111n;72n-39n;72n-17n;71n-245n;70n-235n;69n-68n;69n-61n;68n-190n;68n-174n;67n-49n;66n-210n;66n-115n;66n-87n;65n-135n;64n-195n;60n-240n;60n-226n;60n-157n;60n-53n;59n-155n;58n-59n;57n-206n;57n-190n;55n-192n;52n-5n;50n-84n;50n-33n;50n-6n;49n-133n;46n-100n;45n-217n;45n-105n;44n-217n;44n-196n;44n-150n;43n-37n;41n-136n;41n-7n;40n-239n;39n-215n;38n-207n;36n-137n;35n-38n;34n-27n;33n-188n;33n-153n;33n-80n;33n-16n;30n-181n;28n-137n;27n-242n;26n-213n;24n-143n;21n-44n;19n-197n;18n-226n;18n-104n;16n-170n;16n-162n;14n-54n;14n-48n;13n-151n;13n-121n;13n-41n;11n-234n;11n-180n;9n-172n;7n-152n;7n-150n;7n-10n;6n-37n;4n-204n;4n-61n;4n-60n;3n-50n;0n-225n;0n-196n;}
+(* {} *)

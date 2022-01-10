@@ -26,6 +26,7 @@ BENCHMARKS = {
     "sp_maintenance": ("benchmarks/SinglePrefix/FAT{0}", "maintenance{0}"),
     "ex_uscarrier": ("examples/uscarrier", "USCarrier"),
     "ex_roedunet": ("examples/roedunet", "RoEduNet"),
+    "sp_rand": ("examples/generic-algebras", "distance-single"),
 }
 
 
@@ -37,6 +38,10 @@ def get_sp_benchmarks(fmtstr):
     common = [(4, 10), (8, 12), (10, 13), (12, 64), (16, 0), (20, 0)]
     benches = [(fmtstr.format(sz), d) for (sz, d) in common]
     return benches
+
+
+def get_rand_n_p(start: int, stop: int):
+    return [(2 ** k, 2 ** -k) for k in range(start, stop)]
 
 
 def gen_maintenance_benchmarks(benchmarks):
@@ -60,6 +65,36 @@ def gen_maintenance_benchmarks(benchmarks):
     return outputs
 
 
+def gen_rand_benchmarks(basefile, benchmarks: list[tuple[int, float]]):
+    nvgenpath = os.path.join(os.getcwd(), "nvgen")
+    if not os.path.exists(nvgenpath):
+        print("Did not find 'nvgen' executable in the current working directory")
+        sys.exit(1)
+    outputs = []
+    for (n, p) in benchmarks:
+        topology = f"rand_{n}_{p}"
+        outputf = os.path.join("benchmarks/SinglePrefix/Random", topology + ".nv")
+        args = [
+            nvgenpath,
+            "-d",
+            "0",
+            "-t",
+            topology,
+            "-o",
+            outputf,
+            basefile,
+            "topology",
+        ]
+        try:
+            proc = subprocess.run(args, check=True, capture_output=True)
+            print(proc.stdout)
+            outputs.append((outputf, 0))
+        except subprocess.CalledProcessError as exn:
+            print(exn)
+            continue
+    return outputs
+
+
 def simulate_benchmarks(benchmarks):
     """
     Simulate the given benchmarks and collect the results of simulation.
@@ -71,13 +106,19 @@ def simulate_benchmarks(benchmarks):
     return all_solutions
 
 
-def create_benchmarks(benchmarks, cuts, simulate):
+def create_benchmarks(benchmarks, cuts, simulate, groups):
     """
     Generate the necessary benchmarks to use.
     """
     for (inputf, dest) in benchmarks:
         for cut in cuts:
-            gen_part_nv(inputf, dest, FattreeCut.from_str(cut), simulate)
+            gen_part_nv(
+                nvfile=inputf,
+                dest=dest,
+                cut=FattreeCut.from_str(cut),
+                simulate=simulate,
+                groups=groups,
+            )
 
 
 def clean_benchmarks(cuts, dry_run):
@@ -204,6 +245,18 @@ def main():
         action="store_true",
         help="generate maintenance version of benchmark first to use",
     )
+    parser_make.add_argument(
+        "-r",
+        "--rand",
+        action="store_true",
+        help="generate random benchmarks to use first",
+    )
+    parser_make.add_argument(
+        "-ng",
+        "--nogroups",
+        action="store_false",
+        help="don't search for nodes being grouped by any category",
+    )
 
     parser_run = subparsers.add_parser("run")
     parser_run.add_argument(
@@ -310,7 +363,12 @@ def main():
         # make intermediate maintenance benchmarks
         if args.maintenance:
             benchmarks = gen_maintenance_benchmarks(benchmarks)
-        create_benchmarks(benchmarks, chosen_cuts, simulate=args.simulate)
+        elif args.rand:
+            n_p = get_rand_n_p(4, 12)
+            benchmarks = gen_rand_benchmarks(benchmarks[0][0], n_p)
+        create_benchmarks(
+            benchmarks, chosen_cuts, simulate=args.simulate, groups=args.nogroups
+        )
     if args.op == "clean":
         # TODO: change to use benchmark group specified
         clean_benchmarks(chosen_cuts, dry_run=args.dry_run)

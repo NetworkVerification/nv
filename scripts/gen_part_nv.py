@@ -145,12 +145,37 @@ class Rib:
         return f"{{  bgp= {bgp}; connected= None; ospf= None; selected= {sel}; static= {static}; }}"
 
 
+class AttrType(Enum):
+    """Control which type of attribute the file uses."""
+
+    INT_OPTION = 0
+    RIB = 1
+
+    @staticmethod
+    def parse_from_file(text):
+        pat = re.compile(r"type attribute = (.*)")
+        m = pat.search(text)
+        if m:
+            match m.group(1):
+                case "option[int]" | "option[int32]":
+                    return AttrType.INT_OPTION
+                case "rib":
+                    return AttrType.RIB
+                case _:
+                    raise ValueError(
+                        f"Couldn't determine attribute type from file contents: found {m.group(1)}"
+                    )
+        else:
+            raise ValueError("Couldn't find attribute declaration in NV file.")
+
+
 class NetType(Enum):
     SP = 0
     FATPOL = 1
     NOTRANS = 2
     MAINTENANCE = 3
     USCARRIER = 4
+    RAND = 5
     NONFAT = -1
 
     @staticmethod
@@ -161,6 +186,8 @@ class NetType(Enum):
             return NetType.FATPOL
         elif fname.startswith("USCarrier"):
             return NetType.USCARRIER
+        elif re.match(r"rand_\d*_\d*", fname):
+            return NetType.RAND
         elif re.match(r"maintenance\d*", fname) or re.match(
             r"fat\d*Maintenance", fname
         ):
@@ -172,6 +199,8 @@ class NetType(Enum):
 class NvFile:
     """
     Representation of an NV file's internal information.
+
+    We load the network in from the given path as self.mono.
     """
 
     def __init__(
@@ -183,39 +212,64 @@ class NvFile:
         verbose: bool = False,
         groups: bool = True,
     ):
+        """
+        Initialize an NvFile.
+
+        If dest is given, use it to set the destination node.
+        If verbose is true, print the constructed graph.
+        If groups is true, use the comment in the file to assign nodes to fattree groups.
+        """
         self.path = path
         self.net = net_type
         self.dest = dest
         self.verbose = verbose
         with open(path) as f:
             self.mono = f.read()
+        self.attr = AttrType.parse_from_file(self.mono)
         self.graph = construct_graph(self.mono, groups)
         if self.verbose:
             print(self.print_graph())
         if simulate:
             self.sols = run_nv_simulate(self.path)
-            if self.net == NetType.MAINTENANCE:
+            if self.net is NetType.MAINTENANCE:
                 pat = re.compile(r"aslen=\s*\d*u32")
                 aslens = get_maintenance_paths(self.graph, self.dest, 1)
                 # update the solution's aslen using the cases provided by the tree exploration
                 for (node, sol) in self.sols.items():
                     self.sols[node] = pat.sub(f"aslen={aslens[node]}", sol)
         else:
-            if self.net == NetType.SP and dest is not None:
-                self.sols = infer_sp_sols(self.graph, dest)
-            elif self.net == NetType.MAINTENANCE and dest is not None:
+            self.infer_sol()
+
+    def infer_sol(self):
+        """Infer the solutions to the network."""
+        match self.net:
+            case NetType.SP | NetType.RAND if self.dest is not None:
+                self.sols = infer_sp_sols(self.graph, self.dest, self.attr)
+                if self.attr is AttrType.INT_OPTION:
+                    # tag Some/None for solutions
+                    self.sols = {
+                        v: (f"Some {x}" if x else "None") for v, x in self.sols.items()
+                    }
+            case NetType.MAINTENANCE if self.dest is not None:
                 aslens = get_maintenance_paths(self.graph, self.dest, 1)
                 self.sols = {}
-                for (node, sol) in infer_sp_sols(self.graph, dest).items():
+                for (node, sol) in infer_sp_sols(
+                    self.graph, self.dest, self.attr
+                ).items():
                     # update the aslen from the maintenance paths
-                    if sol.bgp:
+                    if isinstance(sol, Rib) and sol.bgp:
                         sol.bgp.set_aslen(aslens[node])
+                        self.sols[node] = Rib(sol.bgp, sol.static).select()
+                    elif isinstance(sol, int):
+                        self.sols[node] = f"Some {aslens[node]}"
+                    elif sol is None:
+                        self.sols[node] = "None"
                     else:
                         raise TypeError(
                             "can't assign maintenance path to a node without BGP attribute set"
                         )
-                    self.sols[node] = Rib(sol.bgp, sol.static).select()
-            else:
+            case _:
+                print("Can't infer solutions of this network.")
                 self.sols = None
 
     def cut(self, cut_type):
@@ -223,13 +277,14 @@ class NvFile:
         Given the cut, generate a new NV file with partition and interface functions.
         """
         nodes = cut_type.func(self.graph, self.dest)
-        if self.sols is not None:
-            edges = get_cross_edges(self.graph, nodes, ranked=False)
-        elif self.net is NetType.FATPOL and cut_type is FattreeCut.VERTICAL:
-            # special case for handling vertical cuts
-            edges = get_vertical_cross_edges(self.graph, nodes, self.dest)
-        else:
-            edges = get_cross_edges(self.graph, nodes, ranked=True)
+        match self.net:
+            case NetType.SP | NetType.RAND | NetType.MAINTENANCE:
+                edges = get_cross_edges(self.graph, nodes, ranked=False)
+            case NetType.FATPOL if cut_type is FattreeCut.VERTICAL:
+                # special case for handling vertical cuts
+                edges = get_vertical_cross_edges(self.graph, nodes, self.dest)
+            case _:
+                edges = get_cross_edges(self.graph, nodes, ranked=True)
         return nodes, edges
 
     def hmetis_cut(self, hgr_part: str):
@@ -334,25 +389,41 @@ def write_maintenance_aslen(lengths):
     return aslen
 
 
-def infer_sp_sols(graph: igraph.Graph, dest: int):
+def infer_sp_sols(
+    graph: igraph.Graph, dest: int, attr_type: AttrType
+) -> dict[int, Rib | int | None]:
+    """
+    Infer the shortest path to the destination for each node.
+    Return a RIB if the attribute type is RIB, or an integer if it's an INT_OPTION.
+    """
+
+    def create_route(i, path):
+        node = graph.vs[i]["id"]
+        if len(path) == 0:
+            return node, None
+        hops = len(path) - 1
+        match attr_type:
+            case AttrType.INT_OPTION:
+                return node, hops
+            case AttrType.RIB:
+                # generate a rib from the given BGP value and with possibly a static route
+                # call select() to assign the selected route
+                return node, Rib(Bgp(aslen=hops), 1 if node == dest else None).select()
+
     d = graph.vs.find(id=dest)
     ps = graph.get_shortest_paths(d)
-    node_to_bgp = {graph.vs[path[-1]]["id"]: Bgp(aslen=len(path) - 1) for path in ps}
-    # generate a rib from the given BGP value and with possibly a static route
-    # call select() to assign the selected route
-    return {
-        v: Rib(bgp, 1 if v == dest else None).select() for v, bgp in node_to_bgp.items()
-    }
+    return dict([create_route(i, path) for i, path in enumerate(ps)])
 
 
 def node_to_int(node: str) -> int:
     return int(node.rstrip("n"))
 
 
-def find_edges(text: str):
+def find_edges(text: str) -> list[tuple[int, int]]:
     """Return the edges."""
 
     def to_int(match, flip=False):
+        # TODO: why do we need flip?
         if flip:
             return (node_to_int(match.group(2)), node_to_int(match.group(1)))
         else:
@@ -376,7 +447,7 @@ def find_edges(text: str):
     return outputs
 
 
-def find_nodes(text: str):
+def find_nodes(text: str) -> list[tuple[int, NodeGroup]]:
     """Return the nodes."""
     pat = r"(\w+)(?:(?:-|_)\d*)?=(\d+)(?:,|})"
     prog = re.compile(pat)
@@ -387,7 +458,7 @@ def find_nodes(text: str):
     return vertices
 
 
-def find_nodes_nogroups(text: str):
+def find_nodes_nogroups(text: str) -> list[tuple[int, NodeGroup]]:
     """Return the nodes."""
     pat = r"let nodes = (\d*)"
     prog = re.compile(pat)
@@ -400,7 +471,7 @@ def find_nodes_nogroups(text: str):
         raise ValueError("nodes not found")
 
 
-def write_partition_str(partitions):
+def write_partition_str(partitions) -> str:
     """
     Return the string representation of the partition function.
     """
@@ -410,7 +481,7 @@ def write_partition_str(partitions):
     return output
 
 
-def write_interface_str(edges, fmt):
+def write_interface_str(edges, fmt) -> str:
     output = "let interface edge a ="
     output += "\n  match edge with\n"
     for (start, end) in edges:
@@ -438,15 +509,22 @@ def get_part_fname(nvfile, cutname: str, simulate: bool):
     return partfile, net_type
 
 
-def nodes_cut_fully(graph, dest):
+def nodes_cut_fully(graph, dest) -> list[list[int]]:
     """
     Return the nodes divided up fully into separate partitions.
-    Order is established by BFS.
+    Order is established by BFS from the destination.
+    If any nodes are not reached by BFS, add them in arbitrary order after.
     """
-    return [[v["id"]] for v in graph.bfsiter(dest)]
+    connected = [[v["id"]] for v in graph.bfsiter(dest)]
+    if len(connected) < graph.vcount():
+        for v in graph.vs:
+            fragment = [v["id"]]
+            if fragment not in connected:
+                connected.append(fragment)
+    return connected
 
 
-def nodes_cut_spines(graph, dest):
+def nodes_cut_spines(graph, dest) -> list[list[int]]:
     """
     Return the nodes divided up such that the destination's pod
     is in one partition, the spine nodes are each in another
@@ -468,7 +546,7 @@ def nodes_cut_spines(graph, dest):
     return [dest_pod] + [[s] for s in spines] + nondest_pods
 
 
-def nodes_cut_pods(graph, dest):
+def nodes_cut_pods(graph, dest) -> list[list[int]]:
     """
     Return the nodes divided up such that the destination's pod
     is in one partition, the spine nodes are in another and the
@@ -490,7 +568,7 @@ def nodes_cut_pods(graph, dest):
     return [dest_pod, spines] + nondest_pods
 
 
-def nodes_cut_horizontally(graph, dest):
+def nodes_cut_horizontally(graph, dest) -> list[list[int]]:
     """
     Return the nodes divided up such that the destination's pod
     is in one partition, the spine nodes are in another and the
@@ -509,10 +587,10 @@ def nodes_cut_horizontally(graph, dest):
     dest_pod.sort()
     spines.sort()
     nondest_pods.sort()
-    return dest_pod, spines, nondest_pods
+    return [dest_pod, spines, nondest_pods]
 
 
-def nodes_cut_vertically(graph, dest):
+def nodes_cut_vertically(graph, dest) -> list[list[int]]:
     """
     Return the nodes divided up such that half of the spine
     nodes and half of the pods are in one partition
@@ -537,17 +615,18 @@ def nodes_cut_vertically(graph, dest):
     group1.sort()
     group2.sort()
     if dest in group1:
-        return group1, group2
+        return [group1, group2]
     else:
-        return group2, group1
+        return [group2, group1]
 
 
-def get_cross_edges(graph, partitions, ranked=False):
+def get_cross_edges(graph, partitions: list[list[int]], ranked=False):
     """
     Get the edges in the network which go between partitions.
     If ranked is True, only include edges which go from lower-ranked partitions
     to higher-ranked partitions.
     These edges are used to determine the interface functions.
+    NOTE: partitions must contain every node in the network.
     """
     # construct a map of nodes to their partitions
     n_parts = {node: i for (i, part) in enumerate(partitions) for node in part}

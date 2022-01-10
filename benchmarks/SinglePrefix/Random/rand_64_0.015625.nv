@@ -1,0 +1,34 @@
+let dest = 0n
+type attribute = option[int32]
+let mapbetter = (fun f -> (fun o1 -> (fun o2 -> (match (o1,o2) with 
+ | (None,x) -> x
+ | (x,None) -> x
+ | (Some x,Some y) -> Some f x  y 
+) ) ) )
+let mapo = (fun f -> (fun o -> (match o with 
+ | None -> None
+ | Some x -> Some f x 
+) ) )
+let init = (fun n -> (match n with 
+ | 0n -> Some 0u32
+ | _ -> None
+) )
+let merge = (fun n -> (fun x1 -> (fun x2 -> mapbetter (fun n1 -> (fun n2 -> if n1 <u32 n2 then 
+n1 else 
+n2 ) )  x1  x2  ) ) )
+let trans = (fun e -> (fun x -> mapo (fun n -> n +u32 1u32 )  x  ) )
+let assert_node = (fun u -> (fun x -> ! (x = None) ) )
+let sol = solution {init = init; trans = trans; merge = merge}
+assert foldNodes ((fun u -> (fun x -> (fun acc -> acc && assert_node u  x  ) ) )) sol true
+let subset = (fun s -> (fun t -> combine ((fun x -> (fun y -> x && y ) )) s t (Some true) (Some false) (Some true) (Some false) = s ) )
+let isSome = (fun o -> (match o with 
+ | Some _ -> true
+ | None -> false
+) )
+let flipEdge = (fun e -> (match e with 
+ | a~b -> toEdge b  a 
+) )
+let disjoint = (fun s -> (fun t -> combine ((fun x -> (fun y -> x && y ) )) s t (Some true) (Some false) (Some true) (Some false) = createDict false ) )
+let nodes = 64
+let edges = {58n-61n;57n-32n;57n-26n;56n-38n;56n-32n;55n-62n;55n-39n;55n-29n;55n-0n;54n-33n;54n-25n;53n-16n;50n-57n;50n-30n;48n-14n;47n-23n;47n-9n;45n-50n;45n-49n;45n-44n;45n-32n;42n-61n;41n-40n;40n-58n;39n-9n;35n-30n;30n-47n;30n-45n;28n-31n;27n-16n;26n-12n;25n-63n;25n-45n;24n-55n;23n-48n;23n-13n;22n-29n;19n-27n;17n-56n;17n-9n;17n-8n;16n-55n;14n-35n;13n-38n;13n-36n;12n-59n;11n-56n;11n-15n;9n-53n;9n-11n;7n-29n;5n-61n;3n-36n;3n-7n;2n-10n;1n-48n;1n-11n;0n-11n;}
+(* {} *)
