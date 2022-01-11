@@ -1,3 +1,4 @@
+(* Kentucky Datalink network. Topology generated from kdl.graphml. *)
 let nodes = 754
 
 let edges = {
@@ -1793,11 +1794,13 @@ let edges = {
   753-752; (* e8: Brainerd,753 --> Little Falls,752 *)
 }
 
+let dest = 0n
+
 type bgpType = {bgpAd: int; lp: int; aslen: int; med:int; comms:set[int];}
 
 type attribute = option[bgpType]
 
-let init n = if n = 2n then Some { bgpAd = 0; lp = 100; aslen = 0; med = 0; comms = {} } else None
+let init n = if n = dest then Some { bgpAd = 0; lp = 100; aslen = 0; med = 0; comms = {} } else None
 
 let pickOption f x y =
   match (x,y) with
