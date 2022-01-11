@@ -343,7 +343,7 @@ def construct_graph(text: str, groups=True):
     edges = find_edges(text)
     g.add_edges(edges)
     # add stable node numbering
-    for v in g.vs():
+    for v in g.vs:
         v["id"] = v.index
     return g
 
