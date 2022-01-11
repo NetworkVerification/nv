@@ -1,6 +1,15 @@
-include "../utils.nv"
-
 type attribute = option[int]
+
+let mapo f o =
+  match o with
+  | None -> None
+  | Some x -> Some (f x)
+
+let mapbetter f o1 o2 =
+  match (o1, o2) with
+  | (None, x) -> x
+  | (x, None) -> x
+  | (Some x, Some y) -> Some (f x y)
 
 let trans e x = mapo (fun n -> n + 1) x
 

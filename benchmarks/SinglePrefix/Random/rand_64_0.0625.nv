@@ -1,0 +1,24 @@
+type attribute = option[int32]
+let mapbetter = (fun f -> (fun o1 -> (fun o2 -> (match (o1,o2) with 
+ | (None,x) -> x
+ | (x,None) -> x
+ | (Some x,Some y) -> Some f x  y 
+) ) ) )
+let mapo = (fun f -> (fun o -> (match o with 
+ | None -> None
+ | Some x -> Some f x 
+) ) )
+let init = (fun n -> (match n with 
+ | 0n -> Some 0u32
+ | _ -> None
+) )
+let merge = (fun n -> (fun x1 -> (fun x2 -> mapbetter (fun n1 -> (fun n2 -> if n1 <u32 n2 then 
+n1 else 
+n2 ) )  x1  x2  ) ) )
+let trans = (fun e -> (fun x -> mapo (fun n -> n +u32 1u32 )  x  ) )
+let assert_node = (fun u -> (fun x -> ! (x = None) ) )
+let sol = solution {init = init; trans = trans; merge = merge}
+assert foldNodes ((fun u -> (fun x -> (fun acc -> acc && assert_node u  x  ) ) )) sol true
+let nodes = 64
+let edges = {63n-55n;63n-37n;63n-33n;63n-3n;63n-1n;62n-54n;62n-51n;62n-43n;62n-42n;62n-38n;62n-37n;62n-22n;62n-4n;61n-54n;61n-30n;60n-63n;60n-37n;60n-0n;59n-51n;59n-40n;59n-26n;59n-3n;58n-61n;58n-49n;58n-46n;57n-32n;57n-31n;57n-26n;57n-20n;57n-18n;56n-38n;56n-33n;56n-32n;56n-23n;56n-14n;56n-1n;55n-62n;55n-59n;55n-39n;55n-29n;55n-8n;55n-0n;54n-33n;54n-25n;54n-13n;53n-57n;53n-16n;53n-15n;52n-32n;52n-19n;51n-37n;51n-32n;51n-21n;51n-14n;50n-60n;50n-57n;50n-42n;50n-30n;50n-22n;50n-6n;50n-0n;49n-33n;49n-32n;49n-27n;49n-25n;49n-22n;49n-17n;49n-5n;48n-34n;48n-30n;48n-27n;48n-17n;48n-14n;48n-12n;48n-9n;47n-60n;47n-40n;47n-39n;47n-36n;47n-26n;47n-23n;47n-9n;46n-63n;46n-59n;46n-8n;45n-50n;45n-49n;45n-44n;45n-32n;45n-31n;45n-19n;45n-16n;44n-42n;44n-41n;44n-20n;44n-11n;42n-61n;42n-55n;42n-3n;41n-40n;41n-36n;41n-34n;41n-33n;40n-58n;40n-39n;40n-38n;40n-21n;40n-10n;40n-0n;39n-44n;39n-34n;39n-9n;38n-48n;38n-34n;38n-3n;36n-52n;36n-11n;35n-40n;35n-37n;35n-30n;35n-29n;35n-15n;35n-9n;34n-51n;34n-39n;34n-20n;34n-12n;33n-47n;33n-7n;31n-26n;31n-12n;30n-47n;30n-45n;30n-39n;30n-15n;30n-9n;29n-16n;28n-59n;28n-31n;27n-61n;27n-57n;27n-38n;27n-20n;27n-16n;27n-1n;26n-36n;26n-30n;26n-18n;26n-12n;25n-63n;25n-59n;25n-49n;25n-48n;25n-45n;25n-37n;25n-34n;25n-7n;24n-55n;24n-37n;24n-9n;23n-62n;23n-55n;23n-48n;23n-37n;23n-35n;23n-13n;23n-3n;22n-29n;22n-21n;22n-20n;22n-9n;21n-47n;21n-17n;21n-13n;20n-31n;20n-10n;20n-9n;20n-3n;19n-48n;19n-45n;19n-27n;19n-5n;18n-52n;18n-28n;18n-14n;18n-7n;18n-6n;17n-56n;17n-51n;17n-49n;17n-33n;17n-13n;17n-9n;17n-8n;16n-57n;16n-56n;16n-55n;16n-30n;15n-8n;14n-60n;14n-35n;14n-26n;14n-22n;14n-15n;13n-53n;13n-44n;13n-38n;13n-36n;13n-21n;12n-63n;12n-59n;12n-25n;12n-19n;12n-13n;11n-56n;11n-45n;11n-15n;10n-17n;9n-53n;9n-48n;9n-39n;9n-34n;9n-28n;9n-11n;9n-3n;9n-0n;8n-38n;8n-37n;8n-29n;8n-25n;7n-51n;7n-41n;7n-29n;7n-12n;6n-62n;6n-51n;5n-61n;4n-46n;4n-28n;4n-19n;3n-53n;3n-47n;3n-46n;3n-36n;3n-21n;3n-18n;3n-7n;2n-56n;2n-35n;2n-33n;2n-10n;1n-48n;1n-11n;0n-11n;}
+(* {} *)

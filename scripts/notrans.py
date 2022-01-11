@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Script to infer no-transit relationships based on a network's graph.
+# Not in active use.
 
 import sys
 import gen_part_nv

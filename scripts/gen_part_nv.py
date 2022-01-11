@@ -23,7 +23,7 @@ class FattreeCut(Enum):
     SPINES = ("s", "spines")
     FULL = ("f", "full")
 
-    def __init__(self, short, long):
+    def __init__(self, short: str, long: str):
         self.short = short
         self.long = long
 
@@ -45,16 +45,17 @@ class FattreeCut(Enum):
     @property
     def func(self):
         # cut function
-        if self is FattreeCut.VERTICAL:
-            return nodes_cut_vertically
-        elif self is FattreeCut.HORIZONTAL:
-            return nodes_cut_horizontally
-        elif self is FattreeCut.PODS:
-            return nodes_cut_pods
-        elif self is FattreeCut.SPINES:
-            return nodes_cut_spines
-        elif self is FattreeCut.FULL:
-            return nodes_cut_fully
+        match self:
+            case FattreeCut.VERTICAL:
+                return nodes_cut_vertically
+            case FattreeCut.HORIZONTAL:
+                return nodes_cut_horizontally
+            case FattreeCut.PODS:
+                return nodes_cut_pods
+            case FattreeCut.SPINES:
+                return nodes_cut_spines
+            case FattreeCut.FULL:
+                return nodes_cut_fully
 
     @staticmethod
     def as_list() -> list[str]:
@@ -276,7 +277,11 @@ class NvFile:
         """
         Given the cut, generate a new NV file with partition and interface functions.
         """
-        nodes = cut_type.func(self.graph, self.dest)
+        if self.net is NetType.RAND and cut_type is FattreeCut.FULL:
+            # special case when we want to do a full cut for a rand benchmark
+            nodes = cut_type.func(self.graph, None)
+        else:
+            nodes = cut_type.func(self.graph, self.dest)
         match self.net:
             case NetType.SP | NetType.RAND | NetType.MAINTENANCE:
                 edges = get_cross_edges(self.graph, nodes, ranked=False)
@@ -509,19 +514,18 @@ def get_part_fname(nvfile, cutname: str, simulate: bool):
     return partfile, net_type
 
 
-def nodes_cut_fully(graph, dest) -> list[list[int]]:
+def nodes_cut_fully(graph, dest: Optional[int]) -> list[list[int]]:
     """
     Return the nodes divided up fully into separate partitions.
-    Order is established by BFS from the destination.
-    If any nodes are not reached by BFS, add them in arbitrary order after.
+    Order is established by BFS from the destination if it is given,
+    otherwise all nodes are added in arbitrary order.
+    Note that nodes not reachable from the destination will NOT be added,
+    if a destination is given.
     """
-    connected = [[v["id"]] for v in graph.bfsiter(dest)]
-    if len(connected) < graph.vcount():
-        for v in graph.vs:
-            fragment = [v["id"]]
-            if fragment not in connected:
-                connected.append(fragment)
-    return connected
+    if dest is not None:
+        return [[v["id"]] for v in graph.bfsiter(dest)]
+    else:
+        return [[v["id"]] for v in graph.vs]
 
 
 def nodes_cut_spines(graph, dest) -> list[list[int]]:

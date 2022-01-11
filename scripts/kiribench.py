@@ -6,7 +6,6 @@ Main module to generate, run and tabulate the Kirigami benchmarks.
 import argparse
 import os
 import re
-import subprocess
 import sys
 from datetime import datetime
 from gen_part_nv import gen_part_nv, run_nv_simulate, FattreeCut
@@ -24,8 +23,8 @@ BENCHMARKS = {
     "ap_fatpol": ("benchmarks/AllPrefixes/FAT{0}", "fat{0}Pol"),
     "ap_topzoo": ("benchmarks/AllPrefixes/TopologyZoo", "USCarrier"),
     "sp_maintenance": ("benchmarks/SinglePrefix/FAT{0}", "maintenance{0}"),
-    "ex_uscarrier": ("examples/uscarrier", "USCarrier"),
-    "ex_roedunet": ("examples/roedunet", "RoEduNet"),
+    "ex_uscarrier": ("examples/TopologyZoo/uscarrier", "USCarrier"),
+    "ex_roedunet": ("examples/TopologyZoo/roedunet", "RoEduNet"),
     "sp_rand": ("examples/generic-algebras", "distance-single"),
 }
 
@@ -38,61 +37,6 @@ def get_sp_benchmarks(fmtstr):
     common = [(4, 10), (8, 12), (10, 13), (12, 64), (16, 0), (20, 0)]
     benches = [(fmtstr.format(sz), d) for (sz, d) in common]
     return benches
-
-
-def get_rand_n_p(start: int, stop: int):
-    return [(2 ** k, 2 ** -k) for k in range(start, stop)]
-
-
-def gen_maintenance_benchmarks(benchmarks):
-    nvgenpath = os.path.join(os.getcwd(), "nvgen")
-    if not os.path.exists(nvgenpath):
-        print("Did not find 'nvgen' executable in the current working directory")
-        sys.exit(1)
-    outputs = []
-    for (inputf, dest) in benchmarks:
-        hd, tl = os.path.split(inputf)
-        # generate the new maintenance version of the fatXPol benchmark
-        outputf = os.path.join(hd, tl.replace("sp", "maintenance"))
-        args = [nvgenpath, "-d", str(dest), "-o", outputf, inputf, "maintenance"]
-        try:
-            proc = subprocess.run(args, check=True, capture_output=True)
-            print(proc.stdout)
-            outputs.append((outputf, dest))
-        except subprocess.CalledProcessError as exn:
-            print(exn)
-            continue
-    return outputs
-
-
-def gen_rand_benchmarks(basefile, benchmarks: list[tuple[int, float]]):
-    nvgenpath = os.path.join(os.getcwd(), "nvgen")
-    if not os.path.exists(nvgenpath):
-        print("Did not find 'nvgen' executable in the current working directory")
-        sys.exit(1)
-    outputs = []
-    for (n, p) in benchmarks:
-        topology = f"rand_{n}_{p}"
-        outputf = os.path.join("benchmarks/SinglePrefix/Random", topology + ".nv")
-        args = [
-            nvgenpath,
-            "-d",
-            "0",
-            "-t",
-            topology,
-            "-o",
-            outputf,
-            basefile,
-            "topology",
-        ]
-        try:
-            proc = subprocess.run(args, check=True, capture_output=True)
-            print(proc.stdout)
-            outputs.append((outputf, 0))
-        except subprocess.CalledProcessError as exn:
-            print(exn)
-            continue
-    return outputs
 
 
 def simulate_benchmarks(benchmarks):
@@ -202,27 +146,14 @@ def tabulate_fattree_benchmarks(
     return runs
 
 
-def main():
-    parser = argparse.ArgumentParser(
-        description="Frontend for benchmarking the Kirigami tool."
-    )
-    subparsers = parser.add_subparsers(dest="op")
-    hmetis_cuts = [f"hmetis{i + 1}" for i in range(20)]
-    cuts = FattreeCut.as_list()
-
-    parser_make = subparsers.add_parser("make")
-    parser_make.add_argument(
-        "-s",
-        "--simulate",
-        action="store_true",
-        help="generate interface by simulating the given benchmark",
-    )
-    cut_group = parser_make.add_mutually_exclusive_group()
+def parse_cuts(parser: argparse.ArgumentParser):
+    """Add a parse group for cuts to the given parser."""
+    cut_group = parser.add_mutually_exclusive_group()
     cut_group.add_argument(
         "-c",
         "--cuts",
         nargs="+",
-        choices=cuts,
+        choices=FattreeCut.as_list(),
         default=["h", "v", "p", "f"],
         help="types of cut across the network (default: %(default)s)",
     )
@@ -233,23 +164,27 @@ def main():
         type=int,
         help="types of hmetis cuts across the network",
     )
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Frontend for benchmarking the Kirigami tool."
+    )
+    subparsers = parser.add_subparsers(dest="op")
+
+    parser_make = subparsers.add_parser("make")
+    parser_make.add_argument(
+        "-s",
+        "--simulate",
+        action="store_true",
+        help="generate interface by simulating the given benchmark",
+    )
+    parse_cuts(parser_make)
     parser_make.add_argument(
         "-b",
         "--benchmark",
         choices=BENCHMARKS.keys(),
         help="which benchmarks to make",
-    )
-    parser_make.add_argument(
-        "-m",
-        "--maintenance",
-        action="store_true",
-        help="generate maintenance version of benchmark first to use",
-    )
-    parser_make.add_argument(
-        "-r",
-        "--rand",
-        action="store_true",
-        help="generate random benchmarks to use first",
     )
     parser_make.add_argument(
         "-ng",
@@ -289,22 +224,7 @@ def main():
         help="number of seconds to run each trial for (default: %(default)s)",
         default=3600,
     )
-    cut_group = parser_run.add_mutually_exclusive_group()
-    cut_group.add_argument(
-        "-c",
-        "--cuts",
-        nargs="+",
-        choices=cuts,
-        default=["h", "v", "p", "f"],
-        help="types of cut across the network (default: %(default)s)",
-    )
-    cut_group.add_argument(
-        "-k",
-        "--hmetis",
-        nargs="+",
-        type=int,
-        help="types of hmetis cuts across the network",
-    )
+    parse_cuts(parser_run)
     parser_run.add_argument(
         "-b",
         "--benchmark",
@@ -334,22 +254,7 @@ def main():
         action="store_true",
         help="print benchmarks without deleting anything",
     )
-    cut_group = parser_clean.add_mutually_exclusive_group()
-    cut_group.add_argument(
-        "-c",
-        "--cuts",
-        nargs="+",
-        choices=cuts,
-        default=["h", "v", "p", "f"],
-        help="types of cut across the network (default: %(default)s)",
-    )
-    cut_group.add_argument(
-        "-k",
-        "--hmetis",
-        nargs="+",
-        type=int,
-        help="types of hmetis cuts across the network",
-    )
+    parse_cuts(parser_clean)
 
     args = parser.parse_args()
     directory, benchstr = BENCHMARKS[args.benchmark]
@@ -361,11 +266,11 @@ def main():
         fmtstr = os.path.join(directory, benchstr + ".nv")
         benchmarks = get_sp_benchmarks(fmtstr)
         # make intermediate maintenance benchmarks
-        if args.maintenance:
-            benchmarks = gen_maintenance_benchmarks(benchmarks)
-        elif args.rand:
-            n_p = get_rand_n_p(4, 12)
-            benchmarks = gen_rand_benchmarks(benchmarks[0][0], n_p)
+        # if args.maintenance:
+        #     benchmarks = gen_maintenance_benchmarks(benchmarks)
+        # elif args.rand:
+        #     n_p = get_rand_n_p(4, 12)
+        #     benchmarks = gen_rand_benchmarks(benchmarks[0][0], n_p)
         create_benchmarks(
             benchmarks, chosen_cuts, simulate=args.simulate, groups=args.nogroups
         )

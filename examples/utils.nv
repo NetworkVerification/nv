@@ -17,9 +17,3 @@ let isSome o =
   match o with
   | Some _ -> true
   | None -> false
-
-(* set utilities *)
-
-let subset s t = s inter t = s
-
-let disjoint s t = s inter t = {}

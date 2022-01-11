@@ -1,0 +1,5 @@
+(* set utilities *)
+
+let subset s t = s inter t = s
+
+let disjoint s t = s inter t = {}

@@ -1,0 +1,24 @@
+type attribute = option[int32]
+let mapbetter = (fun f -> (fun o1 -> (fun o2 -> (match (o1,o2) with 
+ | (None,x) -> x
+ | (x,None) -> x
+ | (Some x,Some y) -> Some f x  y 
+) ) ) )
+let mapo = (fun f -> (fun o -> (match o with 
+ | None -> None
+ | Some x -> Some f x 
+) ) )
+let init = (fun n -> (match n with 
+ | 0n -> Some 0u32
+ | _ -> None
+) )
+let merge = (fun n -> (fun x1 -> (fun x2 -> mapbetter (fun n1 -> (fun n2 -> if n1 <u32 n2 then 
+n1 else 
+n2 ) )  x1  x2  ) ) )
+let trans = (fun e -> (fun x -> mapo (fun n -> n +u32 1u32 )  x  ) )
+let assert_node = (fun u -> (fun x -> ! (x = None) ) )
+let sol = solution {init = init; trans = trans; merge = merge}
+assert foldNodes ((fun u -> (fun x -> (fun acc -> acc && assert_node u  x  ) ) )) sol true
+let nodes = 32
+let edges = {31n-27n;30n-28n;30n-23n;30n-11n;30n-2n;30n-0n;29n-17n;29n-13n;29n-8n;29n-4n;28n-29n;28n-26n;28n-25n;28n-4n;28n-3n;27n-25n;27n-19n;27n-17n;27n-12n;27n-10n;27n-2n;26n-29n;26n-12n;26n-8n;25n-28n;25n-5n;24n-31n;24n-25n;24n-4n;23n-28n;23n-25n;23n-14n;23n-7n;23n-6n;23n-2n;22n-26n;22n-19n;21n-26n;21n-24n;21n-13n;21n-8n;21n-4n;20n-31n;20n-27n;19n-31n;19n-26n;19n-16n;19n-11n;19n-5n;18n-24n;18n-20n;18n-12n;18n-9n;17n-27n;17n-23n;17n-15n;17n-14n;17n-13n;17n-5n;17n-1n;16n-8n;15n-27n;15n-25n;15n-17n;15n-16n;15n-13n;15n-5n;15n-4n;14n-19n;14n-12n;14n-5n;13n-26n;12n-16n;12n-3n;11n-30n;11n-3n;10n-17n;10n-13n;9n-19n;9n-0n;8n-23n;7n-29n;7n-25n;7n-19n;7n-18n;7n-13n;7n-10n;7n-8n;6n-31n;6n-24n;6n-21n;6n-10n;6n-9n;5n-27n;5n-25n;5n-6n;5n-3n;4n-30n;4n-24n;4n-15n;4n-14n;4n-12n;4n-5n;3n-18n;2n-30n;2n-25n;2n-22n;2n-12n;2n-11n;2n-9n;1n-16n;1n-12n;1n-7n;0n-31n;0n-30n;0n-11n;0n-7n;}
+(* {} *)

@@ -36,7 +36,7 @@ type t =
   show
   , argparse
       { positional =
-          ["file", "nv policy file"; "operation", "one of 'topology', 'ft', 'notrans', 'cut' or 'hijack'"]
+          ["file", "nv policy file"; "operation", "one of 'topology', 'ft', 'maintenance', 'notrans', 'cut' or 'hijack'"]
       ; description = "nv: a network verification framework"
       }]
 
