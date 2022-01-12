@@ -49,6 +49,31 @@ class NvFile:
         )
         self.consts.append(f"let edges = {{\n  {edge_list}\n}}")
 
+    def add_topology_from_graph(self, g: igraph.Graph):
+        """
+        Add the topology, parsed from the given Graph.
+        The graph should have a label str and id str attribute for each node,
+        and an id str attribute for each edge.
+        """
+
+        def node_to_name(v: igraph.Vertex):
+            return f"{v['label']},{int(v['id'])}"
+
+        nodes = f"let nodes = {g.vcount()}"
+        self.consts.append(nodes)
+        # add the node mapping to the end of the file
+        node_list = comment(
+            "{" + ", ".join([f"{node_to_name(v)}={v.index}" for v in g.vs]) + "}"
+        )
+        self.asserts.append(node_list)
+        es = []
+        for e in g.es:
+            u, v = e.vertex_tuple
+            s = f"  {u.index}-{v.index}; (* {e['id']}: {node_to_name(u)} --> {node_to_name(v)} *)"
+            es.append(s)
+        edges = "let edges = {{\n{}\n}}".format("\n".join(es))
+        self.consts.append(edges)
+
     def add_symb(self, name, ty):
         self.symbolics.append(f"symbolic {name} : {ty}")
 
@@ -107,19 +132,11 @@ def from_relns(relns_file: str):
 
 def from_graphml(graphml_file: str):
     """Import a network topology from a GraphML file."""
-
-    def node_to_name(u: igraph.Vertex):
-        return f"{u['label']},{int(u['id'])}"
-
     g = igraph.Graph.Read_GraphML(graphml_file)
+    g.to_directed()
     # if any multi-edges are in the graph, combine them
     g.simplify(combine_edges=dict(id=lambda edges: ", ".join(edges)))
-    edges = []
-    for e in g.es:
-        u, v = e.vertex_tuple
-        edges.append((node_to_name(u), node_to_name(v)))
-    name_to_node = {node_to_name(u): u.index for u in g.vs}
-    return g.vcount(), edges, None, name_to_node
+    return g
 
 
 def comment(s: str) -> str:
@@ -162,6 +179,82 @@ def stubs(nodes, relns) -> list[int]:
         elif relp == "prov_cust":
             stubs.discard(u)
     return list(stubs)
+
+
+def add_policy(nv: NvFile, business_rel: Optional[dict]):
+
+    # merge
+    nv.funcs.append(
+        r"""let pickOption f x y =
+  match (x,y) with
+  | (None, None) -> None
+  | (None, Some _) -> y  | (Some _, None) -> x
+  | (Some a, Some b) -> Some (f a b)
+
+let betterBgp b1 b2 =
+  if b1.lp > b2.lp then b1
+  else if b2.lp > b1.lp then b2
+  else if b1.aslen < b2.aslen then b1
+  else if b2.aslen < b1.aslen then b2  else if b1.med >= b2.med then b1 else b2
+
+let mergeBgp x y = pickOption betterBgp x y
+
+let merge n x y = mergeBgp x y"""
+    )
+
+    # transfer
+    if business_rel:
+        nv.funcs.append(
+            r"""(* We add community tags to designate providers, peers and customers,
+* and use these tags to adjust local preference.
+* We also need to identify when an edge is to a provider or a peer,
+* in which case if the route is tagged as from a customer then it
+* should be dropped.
+* The relationship(a~b) edge function returns:
+* - cust_prov if a is a customer of b (b is a provider for a)
+* - peer_peer if a is a peer of b (should be symmetric)
+* - prov_cust if a is a provider for b (b is a customer of a)
+* A node v will only advertise a route from its neighbor u to another neighbor w according to the following rules:
+* if relationship(uv) = customer, v will advertise the route to w;
+* if relationship(uv) = peer or relationship(uv) = prov, v will only advertise the route to w if relationship(vw) = cust
+*)
+let transferBgp e x =
+match x with
+| None -> None
+| Some b -> (
+    (* enforce no transit: if the route is neither from a customer nor to a customer, then drop it;
+    * don't use !(b.comms[cust_prov]) since by default b.comms starts empty
+    *)
+    if (b.comms[peer_peer] || b.comms[prov_cust]) && !(relationship e = prov_cust) then None else
+    (* update LP *)
+    let lp = if (relationship e = cust_prov) then 200
+        else if (relationship e = peer_peer) then 100
+        else 0
+    in
+    (* update comms: mark the source of the message and remove old relationship tags *)
+    let comms = if (relationship e = cust_prov) then b.comms[cust_prov := true][peer_peer := false][prov_cust := false]
+        else if (relationship e = peer_peer) then b.comms[peer_peer := true][cust_prov := false][prov_cust := false]
+        else b.comms[prov_cust := true][cust_prov := false][peer_peer := false]
+    in
+    let b = {b with comms = comms; aslen = b.aslen + 1; lp = lp} in
+    Some b
+)
+
+let trans e x = transferBgp e x"""
+        )
+    else:
+        nv.funcs.append(
+            r"""(* Simple shortest-path routing. *)
+let transferBgp e x =
+  match x with
+  | None -> None
+  | Some b -> Some {b with aslen = b.aslen + 1}
+
+let trans e x = transferBgp e x"""
+        )
+    nv.add_let("assert_node", ["u", "v"], "match v with | None -> false | _ -> true")
+    nv.add_solution("sol")
+    nv.add_assert("foldNodes (fun u v acc -> acc && assert_node u v) sol true")
 
 
 def to_nv(
@@ -207,79 +300,7 @@ def to_nv(
     f.funcs.append(
         f"let init n = if {cond} then Some {{ bgpAd = 0; lp = 100; aslen = 0; med = 0; comms = {{}} }} else None"
     )
-
-    # merge
-    f.funcs.append(
-        r"""let pickOption f x y =
-  match (x,y) with
-  | (None, None) -> None
-  | (None, Some _) -> y  | (Some _, None) -> x
-  | (Some a, Some b) -> Some (f a b)
-
-let betterBgp b1 b2 =
-  if b1.lp > b2.lp then b1
-  else if b2.lp > b1.lp then b2
-  else if b1.aslen < b2.aslen then b1
-  else if b2.aslen < b1.aslen then b2  else if b1.med >= b2.med then b1 else b2
-
-let mergeBgp x y = pickOption betterBgp x y
-
-let merge n x y = mergeBgp x y"""
-    )
-
-    # transfer
-    if business_rel:
-        f.funcs.append(
-            r"""(* We add community tags to designate providers, peers and customers,
-* and use these tags to adjust local preference.
-* We also need to identify when an edge is to a provider or a peer,
-* in which case if the route is tagged as from a customer then it
-* should be dropped.
-* The relationship(a~b) edge function returns:
-* - cust_prov if a is a customer of b (b is a provider for a)
-* - peer_peer if a is a peer of b (should be symmetric)
-* - prov_cust if a is a provider for b (b is a customer of a)
-* A node v will only advertise a route from its neighbor u to another neighbor w according to the following rules:
-* if relationship(uv) = customer, v will advertise the route to w;
-* if relationship(uv) = peer or relationship(uv) = prov, v will only advertise the route to w if relationship(vw) = cust
-*)
-let transferBgp e x =
-match x with
-| None -> None
-| Some b -> (
-    (* enforce no transit: if the route is neither from a customer nor to a customer, then drop it;
-    * don't use !(b.comms[cust_prov]) since by default b.comms starts empty
-    *)
-    if (b.comms[peer_peer] || b.comms[prov_cust]) && !(relationship e = prov_cust) then None else
-    (* update LP *)
-    let lp = if (relationship e = cust_prov) then 200
-        else if (relationship e = peer_peer) then 100
-        else 0
-    in
-    (* update comms: mark the source of the message and remove old relationship tags *)
-    let comms = if (relationship e = cust_prov) then b.comms[cust_prov := true][peer_peer := false][prov_cust := false]
-        else if (relationship e = peer_peer) then b.comms[peer_peer := true][cust_prov := false][prov_cust := false]
-        else b.comms[prov_cust := true][cust_prov := false][peer_peer := false]
-    in
-    let b = {b with comms = comms; aslen = b.aslen + 1; lp = lp} in
-    Some b
-)
-
-let trans e x = transferBgp e x"""
-        )
-    else:
-        f.funcs.append(
-            r"""(* Simple shortest-path routing. *)
-let transferBgp e x =
-  match x with
-  | None -> None
-  | Some b -> Some {b with aslen = b.aslen + 1}
-
-let trans e x = transferBgp e x"""
-        )
-    f.add_let("assert_node", ["u", "v"], "match v with | None -> false | _ -> true")
-    f.add_solution("sol")
-    f.add_assert("foldNodes (fun u v acc -> acc && assert_node u v) sol true")
+    add_policy(f, business_rel)
     return str(f)
 
 
