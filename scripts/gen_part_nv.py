@@ -295,6 +295,7 @@ class NvFile:
     def hmetis_cut(self, hgr_part: str):
         """
         Produce a cut based on a hypergraph partitioning produced by hMETIS.
+        :field hgr_part: a path to an .hgr file.
         """
         with open(hgr_part) as partf:
             # produce a mapping from nodes (lines) to partitions
