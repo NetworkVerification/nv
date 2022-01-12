@@ -2,12 +2,12 @@
 Utilities for generating Topology Zoo benchmarks.
 """
 from enum import Enum
-from typing import Iterable, Optional, Any
+from typing import Iterable
 import igraph
 import os
 import sys
 
-# TODO: use this
+
 class ASRelationship(Enum):
     CUST_PROV = "cust_prov"
     PEER_PEER = "peer_peer"
@@ -28,36 +28,15 @@ class NvFile:
     def add_type(self, tname, ty_exp):
         self.types.append(f"type {tname} = {ty_exp}")
 
-    def add_topology(self, nodes: int, edges, names=None):
-        """
-        Add the topology.
-        If names is given, the edges should be names; otherwise they should be node indices.
-        """
-        if names is not None:
-            node_list = comment(
-                "{" + ", ".join([f"{name}={i}" for (name, i) in names.items()]) + "}"
-            )
-            self.asserts.append(node_list)
-        self.consts.append(f"let nodes = {nodes}")
-        edge_list = "\n  ".join(
-            [
-                f"{u}={v};"
-                if names is None
-                else f"{names[u]}={names[v]}; (*{u} <--> {v}*)"
-                for (u, v) in undirected(edges)
-            ]
-        )
-        self.consts.append(f"let edges = {{\n  {edge_list}\n}}")
-
-    def add_topology_from_graph(self, g: igraph.Graph):
+    def add_topology(self, g: igraph.Graph):
         """
         Add the topology, parsed from the given Graph.
-        The graph should have a label str and id str attribute for each node,
-        and an id str attribute for each edge.
+        The graph should have a label attribute for each node,
+        and optionally an id str attribute for each edge.
         """
 
         def node_to_name(v: igraph.Vertex):
-            return f"{v['label']},{int(v['id'])}"
+            return f"{v['label']},{v.index}"
 
         nodes = f"let nodes = {g.vcount()}"
         self.consts.append(nodes)
@@ -69,7 +48,10 @@ class NvFile:
         es = []
         for e in g.es:
             u, v = e.vertex_tuple
-            s = f"  {u.index}-{v.index}; (* {e['id']}: {node_to_name(u)} --> {node_to_name(v)} *)"
+            if "id" in e.attribute_names():
+                s = f"  {u.index}-{v.index}; (* {e['id']}: {node_to_name(u)} --> {node_to_name(v)} *)"
+            else:
+                s = f"  {u.index}-{v.index}; (* {node_to_name(u)} --> {node_to_name(v)} *)"
             es.append(s)
         edges = "let edges = {{\n{}\n}}".format("\n".join(es))
         self.consts.append(edges)
@@ -110,27 +92,39 @@ class NvFile:
         return s
 
 
-def from_relns(relns_file: str):
+def from_relns(relns_file: str) -> igraph.Graph:
     """
     Import a topology and relationships from a relns.txt file.
     The file should be evaluated as a Python dictionary,
     where the keys are tuple[str,str] and the values are one of
     'prov_cust', 'peer_peer' and 'cust_prov'.
+    Returns a directed Graph with nodes labelled by their string names,
+    and edges labelled by their relationships.
     """
     with open(relns_file, "r") as relns_text:
         t = relns_text.read()
         relns: dict[tuple[str, str], str] = eval(t)
-    edges = relns.keys()
-    nodes = set(x for l in [[u, v] for (u, v) in edges] for x in l)
-    name_to_node = {name: i for (i, name) in enumerate(nodes)}
-    # edge_list = [(name_to_node[u], name_to_node[v]) for (u, v) in edges]
-    business_rel = {
-        (name_to_node[u], name_to_node[v]): rel for ((u, v), rel) in relns.items()
+    # edges as labelled node pairs
+    labelled_edges = relns.keys()
+    # get all node labels
+    node_labels = set(x for l in [[u, v] for (u, v) in labelled_edges] for x in l)
+    # map labels to node numbers
+    label_to_node = {name: i for (i, name) in enumerate(node_labels)}
+    # edges to edge labels
+    edge_labels = {
+        (label_to_node[u], label_to_node[v]): ASRelationship(rel)
+        for ((u, v), rel) in relns.items()
     }
-    return len(nodes), edges, business_rel, name_to_node
+    return igraph.Graph(
+        len(node_labels),
+        list(edge_labels.keys()),
+        directed=True,
+        vertex_attrs=dict(label=list(label_to_node.keys())),
+        edge_attrs=dict(rel=list(edge_labels.values())),
+    )
 
 
-def from_graphml(graphml_file: str):
+def from_graphml(graphml_file: str) -> igraph.Graph:
     """Import a network topology from a GraphML file."""
     g = igraph.Graph.Read_GraphML(graphml_file)
     g.to_directed()
@@ -156,7 +150,7 @@ def dict_to_match(d: dict, exp):
     return f"match {exp} with\n{branches}"
 
 
-def undirected(directed: Iterable[tuple[Any, Any]]):
+def undirected(directed: Iterable[tuple[int, int]]):
     """Convert a list of directed edges to undirected edges."""
     return [(u, v) for (u, v) in directed if u < v]
 
@@ -166,23 +160,24 @@ def node_to_int(nodes: int, node_exp) -> str:
     return dict_to_match({f"{n}n": n for n in range(nodes)}, node_exp)
 
 
-def stubs(nodes, relns) -> list[int]:
+def stubs(graph: igraph.Graph) -> list[int]:
     """Return the list of stub nodes."""
     # start from every node, drop any node that is ever a peer or a provider
-    stubs = set(range(0, nodes))
-    for ((u, v), relp) in relns.items():
-        if relp == "cust_prov":
-            stubs.discard(v)
-        elif relp == "peer_peer":
-            stubs.discard(u)
-            stubs.discard(v)
-        elif relp == "prov_cust":
-            stubs.discard(u)
+    stubs = set(range(0, graph.vcount()))
+    for e in graph.es:
+        u, v = e.tuple
+        match e["rel"]:
+            case ASRelationship.CUST_PROV:
+                stubs.discard(v)
+            case ASRelationship.PEER_PEER:
+                stubs.discard(u)
+                stubs.discard(v)
+            case ASRelationship.PROV_CUST:
+                stubs.discard(u)
     return list(stubs)
 
 
-def add_policy(nv: NvFile, business_rel: Optional[dict]):
-
+def add_policy(nv: NvFile, notrans: bool):
     # merge
     nv.funcs.append(
         r"""let pickOption f x y =
@@ -203,7 +198,7 @@ let merge n x y = mergeBgp x y"""
     )
 
     # transfer
-    if business_rel:
+    if notrans:
         nv.funcs.append(
             r"""(* We add community tags to designate providers, peers and customers,
 * and use these tags to adjust local preference.
@@ -257,14 +252,7 @@ let trans e x = transferBgp e x"""
     nv.add_assert("foldNodes (fun u v acc -> acc && assert_node u v) sol true")
 
 
-def to_nv(
-    net_name: str,
-    nodes: int,
-    edges: Iterable[tuple[Any, Any]],
-    business_rel: Optional[dict],
-    names: Optional[dict[str, int]],
-    symb=False,
-) -> str:
+def to_nv(net_name: str, graph: igraph.Graph, symb=False) -> str:
     """
     Create an NV file.
     If business_rel is not None, the policy should enforce no-transit; otherwise, it should
@@ -274,10 +262,11 @@ def to_nv(
     f.add_type("bgpType", "{bgpAd: int; lp: int; aslen: int; med:int; comms:set[int];}")
     f.add_type("attribute", "option[bgpType]")
 
-    f.add_topology(nodes, edges, names)
+    f.add_topology(graph)
+    no_trans = "rel" in graph.edge_attributes()
 
-    if business_rel:
-        relp_body = dict_to_match(business_rel, "e")
+    if no_trans:
+        relp_body = dict_to_match({e.tuple: e["rel"] for e in graph.es}, "e")
         f.add_let("cust_prov", [], 0)
         f.add_let("peer_peer", [], 1)
         f.add_let("prov_cust", [], 2)
@@ -286,45 +275,43 @@ def to_nv(
     # init
     if symb:
         f.add_symb("d", "int")
-        if business_rel:
-            # require that d is not a provider
-            allowed_nodes = " || ".join(
-                [f"d = {v}" for v in stubs(nodes, business_rel)]
-            )
+        if no_trans:
+            # require that d is a stub
+            allowed_nodes = " || ".join([f"d = {v}" for v in stubs(graph)])
             f.add_req(allowed_nodes)
-        f.add_req(f"d < {nodes}")
-        f.add_let("node_to_int", ["n"], node_to_int(nodes, "n"))
+        f.add_req(f"d < {graph.vcount()}")
+        f.add_let("node_to_int", ["n"], node_to_int(graph.vcount(), "n"))
         cond = "(node_to_int n) = d"
     else:
+        # TODO: change this from arbitrarily being node 2?
         cond = "n = 2n"
     f.funcs.append(
-        f"let init n = if {cond} then Some {{ bgpAd = 0; lp = 100; aslen = 0; med = 0; comms = {{}} }} else None"
+        f"let init n = if {cond} Some {{ bgpAd = 0; lp = 100; aslen = 0; med = 0; comms = {{}} }} else None"
     )
-    add_policy(f, business_rel)
+    add_policy(f, no_trans)
     return str(f)
 
 
-def to_hgr(nodes, edges):
+def to_hgr(graph):
+    graph.to_undirected()
+    edges = graph.get_edgelist()
+    nodes = graph.vcount()
     preamble = (
         f"% generated from {os.path.basename(__file__)}\n"
         "% number of edges; number of vertices\n"
         f"% note vertex numbering starts from 1, so 0 is remapped to {nodes}"
     )
-    # convert from directed to undirected, then
     # remap 0 to the max node to start numbering from 1
-    edges = [
-        (u if u > 0 else nodes, v if v > 0 else nodes) for (u, v) in undirected(edges)
-    ]
+    edges = [(u if u > 0 else nodes, v if v > 0 else nodes) for (u, v) in edges]
     edge_list = "\n".join([f"{u} {v}" for (u, v) in edges])
     totals = f"{len(edges)} {nodes}"
     return "\n".join([preamble, totals, edge_list])
 
 
-def to_dot(name, edges):
+def to_dot(name, graph):
+    graph.to_undirected()
     preamble = f"// generated from {os.path.basename(__file__)}"
-    # convert from directed to undirected
-    edges = undirected(edges)
-    edge_list = "\n".join([f"  {u} -- {v};" for (u, v) in edges])
+    edge_list = "\n".join([f"  {u} -- {v};" for (u, v) in graph.get_edgelist()])
     return "\n".join([preamble, f"graph {name} {{", edge_list, "}"])
 
 
@@ -333,11 +320,11 @@ if __name__ == "__main__":
     net_dir, net_file = os.path.split(input_file)
     if net_file.endswith(".graphml"):
         net_name = net_file.removesuffix(".graphml")
-        nodes, edges, business_rel, names = from_graphml(input_file)
+        graph = from_graphml(input_file)
     elif net_file.endswith("_relns.txt"):
         # get the name of the network from the relns file
         net_name = net_file.removesuffix("_relns.txt")
-        nodes, edges, business_rel, names = from_relns(input_file)
+        graph = from_relns(input_file)
     else:
         raise Exception(
             "Expected first argument to be a .graphml file or a _relns.txt file."
@@ -345,12 +332,8 @@ if __name__ == "__main__":
     match sys.argv[2:]:
         case ["nv", s, *_]:
             symb = s == "-s" or s == "--symbolic"
-            print(to_nv(net_name, nodes, edges, business_rel, names, symb))
+            print(to_nv(net_name, graph, symb))
         case ["hgr", *_]:
-            if names is not None:
-                edges = [(names[u], names[v]) for (u, v) in edges]
-            print(to_hgr(nodes, edges))
+            print(to_hgr(graph))
         case ["dot", *_]:
-            if names is not None:
-                edges = [(names[u], names[v]) for (u, v) in edges]
-            print(to_dot(net_name, edges))
+            print(to_dot(net_name, graph))
