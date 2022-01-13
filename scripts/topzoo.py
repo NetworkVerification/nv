@@ -2,7 +2,7 @@
 Utilities for generating Topology Zoo benchmarks.
 """
 from enum import Enum
-from typing import Iterable
+from typing import Iterable, Literal
 import igraph
 import os
 import sys
@@ -252,7 +252,7 @@ let trans e x = transferBgp e x"""
     nv.add_assert("foldNodes (fun u v acc -> acc && assert_node u v) sol true")
 
 
-def to_nv(net_name: str, graph: igraph.Graph, symb=False) -> str:
+def to_nv(net_name: str, graph: igraph.Graph, dest: int | Literal["symbolic"]) -> str:
     """
     Create an NV file.
     If business_rel is not None, the policy should enforce no-transit; otherwise, it should
@@ -273,7 +273,7 @@ def to_nv(net_name: str, graph: igraph.Graph, symb=False) -> str:
         f.add_let("relationship", ["e"], relp_body)
 
     # init
-    if symb:
+    if dest == "symbolic":
         f.add_symb("d", "int")
         if no_trans:
             # require that d is a stub
@@ -283,16 +283,19 @@ def to_nv(net_name: str, graph: igraph.Graph, symb=False) -> str:
         f.add_let("node_to_int", ["n"], node_to_int(graph.vcount(), "n"))
         cond = "(node_to_int n) = d"
     else:
-        # TODO: change this from arbitrarily being node 2?
-        cond = "n = 2n"
+        cond = f"n = {dest}n"
     f.funcs.append(
-        f"let init n = if {cond} Some {{ bgpAd = 0; lp = 100; aslen = 0; med = 0; comms = {{}} }} else None"
+        f"let init n = if {cond} then Some {{ bgpAd = 0; lp = 100; aslen = 0; med = 0; comms = {{}} }} else None"
     )
     add_policy(f, no_trans)
     return str(f)
 
 
 def to_hgr(graph):
+    """
+    Return a string representation of an hgr hypergraph file.
+    Requires converting the given graph to be undirected (if it isn't already).
+    """
     graph.to_undirected()
     edges = graph.get_edgelist()
     nodes = graph.vcount()
@@ -317,6 +320,9 @@ def to_dot(name, graph):
 
 if __name__ == "__main__":
     input_file = sys.argv[1]
+    if input_file == "-h" or input_file == "--help":
+        print("Usage: topzoo.py [graphml or relns file] [nv|hgr|dot]")
+        exit(0)
     net_dir, net_file = os.path.split(input_file)
     if net_file.endswith(".graphml"):
         net_name = net_file.removesuffix(".graphml")
@@ -326,14 +332,22 @@ if __name__ == "__main__":
         net_name = net_file.removesuffix("_relns.txt")
         graph = from_relns(input_file)
     else:
-        raise Exception(
+        raise ValueError(
             "Expected first argument to be a .graphml file or a _relns.txt file."
         )
-    match sys.argv[2:]:
-        case ["nv", s, *_]:
-            symb = s == "-s" or s == "--symbolic"
-            print(to_nv(net_name, graph, symb))
-        case ["hgr", *_]:
+    match sys.argv[2]:
+        case "nv":
+            match sys.argv[3:]:
+                case ["-s", *_] | ["--symbolic", *_]:
+                    dest = "symbolic"
+                case ["-d", d, *_] | ["--dest", d, *_]:
+                    dest = int(d)
+                case _:
+                    raise ValueError("No nv destination node provided!")
+            print(to_nv(net_name, graph, dest))
+        case "hgr":
             print(to_hgr(graph))
-        case ["dot", *_]:
+        case "dot":
             print(to_dot(net_name, graph))
+        case _:
+            print("Usage: topzoo.py [graphml or relns file] [nv|hgr|dot]")
