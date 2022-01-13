@@ -1,0 +1,6 @@
+benchmarks/SinglePrefix/FAT4/ fat4Pol.nv h:fat4Pol-h-x.nv v:fat4Pol-v-x.nv p:fat4Pol-p-x.nv f:fat4Pol-f-x.nv
+benchmarks/SinglePrefix/FAT8/ fat8Pol.nv h:fat8Pol-h-x.nv v:fat8Pol-v-x.nv p:fat8Pol-p-x.nv f:fat8Pol-f-x.nv
+benchmarks/SinglePrefix/FAT10/ fat10Pol.nv h:fat10Pol-h-x.nv v:fat10Pol-v-x.nv p:fat10Pol-p-x.nv f:fat10Pol-f-x.nv
+benchmarks/SinglePrefix/FAT12/ fat12Pol.nv h:fat12Pol-h-x.nv v:fat12Pol-v-x.nv p:fat12Pol-p-x.nv f:fat12Pol-f-x.nv
+benchmarks/SinglePrefix/FAT16/ fat16Pol.nv h:fat16Pol-h-x.nv v:fat16Pol-v-x.nv p:fat16Pol-p-x.nv f:fat16Pol-f-x.nv
+benchmarks/SinglePrefix/FAT20/ fat20Pol.nv h:fat20Pol-h-x.nv v:fat20Pol-v-x.nv p:fat20Pol-p-x.nv f:fat20Pol-f-x.nv

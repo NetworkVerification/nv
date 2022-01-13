@@ -2,6 +2,8 @@
 """
 Compute benchmark results comparing partitioned and unpartitioned SMT checks.
 """
+import argparse
+from datetime import datetime
 import multiprocessing
 import subprocess
 import os
@@ -9,67 +11,6 @@ import sys
 import re
 import csv
 from typing import Any, Optional
-
-# constants for mean_float_dict's handling of operations that run multiple
-# times across partitions
-# produce an int total of the time each operation took
-SUM_OPERATIONS = 0
-# produce a list of the time each operation took (default)
-LIST_OPERATIONS = 1
-# produce separate keys to distinguish each operation's time taken
-DISTINCT_OPERATIONS = 2
-
-
-def fill_matrix(matrix: list[list[int]]):
-    """
-    Return a new list of lists (matrix) where inner lists all have the same
-    length. Inner lists that are short elements have the element 0 added.
-    """
-    result = []
-    lengths = [len(row) for row in matrix]
-    maxlen = max(lengths)
-    for (i, row) in enumerate(matrix):
-        if lengths[i] < maxlen:
-            pad = [0] * (maxlen - lengths[i])
-        else:
-            pad = []
-        result.append(row + pad)
-    return result
-
-
-def mean_float_dict(dicts: list[dict], multiop=LIST_OPERATIONS) -> dict:
-    """
-    Average the results across the given list of dictionaries.
-    The multiop flag determines what to do in cases where an operation
-    occurs multiple times in a single run, e.g. inlining.
-    """
-    averaged = dict()
-    keys = set()
-    for d in dicts:
-        keys.update(set(d.keys()))
-    for key in keys:
-        try:
-            vals = [d[key] for d in dicts]
-            # fill in missing columns
-            corrected = fill_matrix(vals)
-            newval = [sum(x) / len(dicts) for x in zip(*corrected)]
-        except KeyError:
-            # skip any key that is missing from a dictionary
-            continue
-        except IndexError:
-            print(key)
-            print([d[key] for d in dicts])
-            sys.exit(1)
-        if multiop == LIST_OPERATIONS:
-            averaged[key] = newval
-        elif multiop == SUM_OPERATIONS:
-            averaged[key] = sum(newval)
-        elif multiop == DISTINCT_OPERATIONS:
-            for (i, val) in enumerate(newval):
-                averaged[key + " " + str(i)] = val
-        else:
-            raise NotImplementedError()
-    return averaged
 
 
 def join_cut_dicts(
@@ -95,7 +36,8 @@ def parse_smt(output: str) -> dict:
     """
     action = re.compile(r"(.*) took: (\d*\.?\d+) secs to complete", re.M)
     z3action = re.compile(r"^\s*:(\w*)\s*(\d*\.?\d+)", re.M)
-    assertion = re.compile(r"(Assertion|Guarantee) (\d*) failed", re.M)
+    assertion = re.compile(r"Assertion (\d*) failed", re.M)
+    guarantee = re.compile(r"Guarantee (\d*) failed", re.M)
     z3timeout = re.compile(r"Z3 timed out after (\d*)", re.M)
     profile = dict()
     # get transformation profiling
@@ -110,8 +52,12 @@ def parse_smt(output: str) -> dict:
         profile.setdefault(stat, list()).append(qua)
     # get assertion failures
     for match in assertion.finditer(output):
-        assn = match.group(2)
-        profile.setdefault("failed", list()).append(assn)
+        assn = match.group(1)
+        profile.setdefault("failed asserts", list()).append(assn)
+    # get guarantee failures
+    for match in guarantee.finditer(output):
+        guar = match.group(1)
+        profile.setdefault("failed guars", list()).append(guar)
     # get z3 timeouts
     for match in z3timeout.finditer(output):
         time = int(match.group(1))
@@ -125,10 +71,12 @@ def run_nv_smt(path: str, cut: Optional[str], z3time: int, time: float, verbose:
     If it doesn't finish within the given time, kill it.
     """
     log = ""
-    nvpath = os.path.join(os.getcwd(), "nv.opt")
+    nvcmd = "nv.opt"
+    nvpath = os.path.join(os.getcwd(), nvcmd)
     if not os.path.exists(nvpath):
-        print("Did not find 'nv' executable in the current working directory")
-        sys.exit(1)
+        raise Exception(
+            f"Did not find '{nvcmd}' executable in the current working directory!"
+        )
     # set verbose, SMT flags, and partitioning if needed
     args = [nvpath, "-v", "-m", "-t", str(z3time)]
     if cut is not None:
@@ -275,31 +223,86 @@ def write_csv(results: dict[str, dict[str, dict]], path):
             writer.writerow(row)
 
 
-if __name__ == "__main__":
-    DIRECTORY = "benchmarks/SinglePrefix/FAT{}"
-    SIZES = [4]
-    Z3TIMEOUT = 3600
-    TIMEOUT = 3600
-    TRIALS = 3
-    RUNS = {}
-    for sz in SIZES:
-        benchdir = DIRECTORY.format(sz)
-        print(f"Running benchmark {benchdir}")
-        benchmarks = [
-            (None, f"sp{sz}.nv"),
-            ("horizontal", f"sp{sz}-part.nv"),
-            # ("vertical", f"sp{sz}-vpart.nv"),
-            ("pods", f"sp{sz}-pods.nv"),
-        ]
-        results = run_trials_parallel(
-            benchdir,
-            benchmarks,
-            Z3TIMEOUT,
-            TIMEOUT,
-            TRIALS,
-            verbose=False,
-            logfile=sys.stdout,
-        )
-        RUNS[benchdir] = results
+def save_results(runs):
+    """Save runs to CSV."""
+    timestamp = datetime.now()
+    time = timestamp.strftime("%Y-%m-%d-%H:%M:%S")
+    write_csv(runs, f"kirigami-results-{time}.csv")
 
-    write_csv(RUNS, "kirigami-results-test.csv")
+
+def run_benchmark_txt(txtpath: str, z3time, timeout, trials, verbose):
+    """
+    Run a benchmark.txt file.
+    Each line of the file has the following format:
+    [directory] [monolithic benchmark] [cut name:cut benchmarks]*
+    Filenames must not have spaces!
+    """
+    runs = {}
+    with open(txtpath, "r") as benchmark_file:
+        for benchmarks in benchmark_file.readlines():
+            directory, monolithic, *cuts = benchmarks.split()
+            benches: list[tuple[Optional[str], str]] = [(None, monolithic)]
+            for cut in cuts:
+                cut_name, cut_path = cut.split(":")
+                benches.append((cut_name, cut_path))
+            try:
+                results = run_trials_parallel(
+                    directory,
+                    benches,
+                    z3time=z3time,
+                    time=timeout,
+                    trials=trials,
+                    verbose=verbose,
+                    logfile=sys.stdout,
+                )
+                runs[directory] = results
+            except KeyboardInterrupt:
+                print("User interrupted benchmarking. Exiting with partial results...")
+                break
+    return runs
+
+
+def parser():
+    parser = argparse.ArgumentParser(
+        description="Frontend for running Kirigami benchmarks."
+    )
+    parser.add_argument(
+        "file",
+        help="benchmark.txt file describing which benchmarks to run",
+    )
+    parser.add_argument(
+        "-n",
+        "--trials",
+        type=int,
+        help="number of trials to run (default: %(default)s)",
+        default=5,
+    )
+    parser.add_argument(
+        "-z",
+        "--z3time",
+        type=int,
+        help="number of seconds to run each trial for in z3 (default: %(default)s)",
+        default=3600,
+    )
+    parser.add_argument(
+        "-t",
+        "--timeout",
+        type=int,
+        help="number of seconds to run each trial for (default: %(default)s)",
+        default=3600,
+    )
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="print the trial's stdout",
+    )
+    return parser
+
+
+if __name__ == "__main__":
+    args = parser().parse_args()
+    runs = run_benchmark_txt(
+        args.file, args.z3time, args.timeout, args.trials, args.verbose
+    )
+    save_results(runs)

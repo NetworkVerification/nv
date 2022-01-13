@@ -1,0 +1,6 @@
+benchmarks/SinglePrefix/FAT4/ sp4.nv h:sp4-h-x.nv v:sp4-v-x.nv p:sp4-p-x.nv f:sp4-f-x.nv
+benchmarks/SinglePrefix/FAT8/ sp8.nv h:sp8-h-x.nv v:sp8-v-x.nv p:sp8-p-x.nv f:sp8-f-x.nv
+benchmarks/SinglePrefix/FAT10/ sp10.nv h:sp10-h-x.nv v:sp10-v-x.nv p:sp10-p-x.nv f:sp10-f-x.nv
+benchmarks/SinglePrefix/FAT12/ sp12.nv h:sp12-h-x.nv v:sp12-v-x.nv p:sp12-p-x.nv f:sp12-f-x.nv
+benchmarks/SinglePrefix/FAT16/ sp16.nv h:sp16-h-x.nv v:sp16-v-x.nv p:sp16-p-x.nv f:sp16-f-x.nv
+benchmarks/SinglePrefix/FAT20/ sp20.nv h:sp20-h-x.nv v:sp20-v-x.nv p:sp20-p-x.nv f:sp20-f-x.nv

@@ -7,35 +7,37 @@ import argparse
 import os
 import re
 import sys
-from datetime import datetime
 from gen_part_nv import gen_part_nv, run_nv_simulate, FattreeCut
 from tabulator import (
     run_trials_sync,
     run_trials_parallel,
-    write_csv,
+    save_results,
 )
 
-BENCHMARKS = {
-    # Single Prefix
-    "sp": ("benchmarks/SinglePrefix/FAT{0}/", "sp{0}"),
-    "sp_fatpol": ("benchmarks/SinglePrefix/FAT{0}", "fat{0}Pol"),
-    "sp_topzoo": ("benchmarks/SinglePrefix/TopologyZoo", "USCarrier"),
-    "ap_fatpol": ("benchmarks/AllPrefixes/FAT{0}", "fat{0}Pol"),
-    "ap_topzoo": ("benchmarks/AllPrefixes/TopologyZoo", "USCarrier"),
-    "sp_maintenance": ("benchmarks/SinglePrefix/FAT{0}", "maintenance{0}"),
+SP_FAT_BENCHMARKS = {
+    "sp": ("benchmarks/SinglePrefix/FAT{size}/", "sp{size}"),
+    "sp_fatpol": ("benchmarks/SinglePrefix/FAT{size}", "fat{size}Pol"),
+    "sp_maintenance": ("benchmarks/SinglePrefix/FAT{size}", "maintenance{size}"),
+}
+
+TOPZOO_BENCHMARKS = {
     "ex_uscarrier": ("examples/TopologyZoo/uscarrier", "USCarrier"),
     "ex_roedunet": ("examples/TopologyZoo/roedunet", "RoEduNet"),
-    "sp_rand": ("examples/generic-algebras", "distance-single"),
+    "ex_kdl": ("examples/TopologyZoo/kdl", "kdl"),
+}
+
+RAND_BENCHMARKS = {
+    "sp_rand": ("benchmarks/SinglePrefix/Random", "sp_{n}_{p}"),
 }
 
 
-def get_sp_benchmarks(fmtstr):
+def get_sp_fat_benchmarks(fmtstr: str) -> list[tuple[str, int]]:
     """
     Return the list of input SinglePrefix benchmark files with their destinations.
     Applies to SinglePrefix fatXPol, fatXMaintenance and spX benchmarks.
     """
     common = [(4, 10), (8, 12), (10, 13), (12, 64), (16, 0), (20, 0)]
-    benches = [(fmtstr.format(sz), d) for (sz, d) in common]
+    benches = [(fmtstr.format(size=sz), d) for (sz, d) in common]
     return benches
 
 
@@ -83,13 +85,6 @@ def clean_benchmarks(cuts, dry_run):
                     os.remove(bench_path)
 
 
-def save_results(runs):
-    """Save runs to CSV."""
-    timestamp = datetime.now()
-    time = timestamp.strftime("%Y-%m-%d-%H:%M:%S")
-    write_csv(runs, f"kirigami-results-{time}.csv")
-
-
 def tabulate_fattree_benchmarks(
     directory,
     benchstr,
@@ -104,7 +99,7 @@ def tabulate_fattree_benchmarks(
     log=sys.stdout,
 ):
     """
-    Run all the vertical and horizontal benchmarks.
+    Run all the benchmarks.
     directory should be the containing directory for all the benchmarks for the given
     cuts.
     benchstr should be the base name of the NV file, excluding the extension, with a
@@ -129,7 +124,7 @@ def tabulate_fattree_benchmarks(
             fn = run_trials_sync
         try:
             results = fn(
-                directory.format(size),
+                directory.format(size=size),
                 benches,
                 z3timeout,
                 timeout,
@@ -137,7 +132,7 @@ def tabulate_fattree_benchmarks(
                 verbose,
                 out,
             )
-            runs[directory.format(size)] = results
+            runs[directory.format(size=size)] = results
         except KeyboardInterrupt:
             print("User interrupted benchmarking. Saving partial results...")
             out.close()
@@ -183,7 +178,7 @@ def main():
     parser_make.add_argument(
         "-b",
         "--benchmark",
-        choices=BENCHMARKS.keys(),
+        choices=SP_FAT_BENCHMARKS.keys(),
         help="which benchmarks to make",
     )
     parser_make.add_argument(
@@ -228,7 +223,7 @@ def main():
     parser_run.add_argument(
         "-b",
         "--benchmark",
-        choices=BENCHMARKS.keys(),
+        choices=SP_FAT_BENCHMARKS.keys(),
         help="which benchmarks to run",
     )
     parser_run.add_argument(
@@ -257,20 +252,14 @@ def main():
     parse_cuts(parser_clean)
 
     args = parser.parse_args()
-    directory, benchstr = BENCHMARKS[args.benchmark]
+    directory, benchstr = SP_FAT_BENCHMARKS[args.benchmark]
     if args.hmetis:
         chosen_cuts = [f"hmetis{i}" for i in args.hmetis]
     else:
         chosen_cuts = args.cuts
     if args.op == "make":
         fmtstr = os.path.join(directory, benchstr + ".nv")
-        benchmarks = get_sp_benchmarks(fmtstr)
-        # make intermediate maintenance benchmarks
-        # if args.maintenance:
-        #     benchmarks = gen_maintenance_benchmarks(benchmarks)
-        # elif args.rand:
-        #     n_p = get_rand_n_p(4, 12)
-        #     benchmarks = gen_rand_benchmarks(benchmarks[0][0], n_p)
+        benchmarks = get_sp_fat_benchmarks(fmtstr)
         create_benchmarks(
             benchmarks, chosen_cuts, simulate=args.simulate, groups=args.nogroups
         )

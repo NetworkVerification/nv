@@ -1,0 +1,8 @@
+benchmarks/SinglePrefix/Random rand_16_0.25.nv f:rand_16_0.25-f.nv
+benchmarks/SinglePrefix/Random rand_32_0.125.nv f:rand_32_0.125-f.nv
+benchmarks/SinglePrefix/Random rand_64_0.0625.nv f:rand_64_0.0625-f.nv
+benchmarks/SinglePrefix/Random rand_128_0.03125.nv f:rand_128_0.03125-f.nv
+benchmarks/SinglePrefix/Random rand_256_0.015625.nv f:rand_256_0.015625-f.nv
+benchmarks/SinglePrefix/Random rand_512_0.0078125.nv f:rand_512_0.0078125-f.nv
+benchmarks/SinglePrefix/Random rand_1024_0.00390625.nv f:rand_1024_0.00390625-f.nv
+benchmarks/SinglePrefix/Random rand_2048_0.001953125.nv f:rand_2048_0.001953125-f.nv

@@ -1,0 +1,6 @@
+benchmarks/SinglePrefix/FAT4/ maintenance4.nv h:maintenance4-h-x.nv v:maintenance4-v-x.nv p:maintenance4-p-x.nv f:maintenance4-f-x.nv
+benchmarks/SinglePrefix/FAT8/ maintenance8.nv h:maintenance8-h-x.nv v:maintenance8-v-x.nv p:maintenance8-p-x.nv f:maintenance8-f-x.nv
+benchmarks/SinglePrefix/FAT10/ maintenance10.nv h:maintenance10-h-x.nv v:maintenance10-v-x.nv p:maintenance10-p-x.nv f:maintenance10-f-x.nv
+benchmarks/SinglePrefix/FAT12/ maintenance12.nv h:maintenance12-h-x.nv v:maintenance12-v-x.nv p:maintenance12-p-x.nv f:maintenance12-f-x.nv
+benchmarks/SinglePrefix/FAT16/ maintenance16.nv h:maintenance16-h-x.nv v:maintenance16-v-x.nv p:maintenance16-p-x.nv f:maintenance16-f-x.nv
+benchmarks/SinglePrefix/FAT20/ maintenance20.nv h:maintenance20-h-x.nv v:maintenance20-v-x.nv p:maintenance20-p-x.nv f:maintenance20-f-x.nv
