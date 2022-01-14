@@ -236,10 +236,14 @@ def run_benchmark_txt(txtpath: str, z3time, timeout, trials, verbose):
     Each line of the file has the following format:
     [directory] [monolithic benchmark] [cut name:cut benchmarks]*
     Filenames must not have spaces!
+    Files can contain line comments beginning with a '#'.
     """
     runs = {}
     with open(txtpath, "r") as benchmark_file:
         for benchmarks in benchmark_file.readlines():
+            # skip comments
+            if benchmarks.startswith("#"):
+                continue
             directory, monolithic, *cuts = benchmarks.split()
             benches: list[tuple[Optional[str], str]] = [(None, monolithic)]
             for cut in cuts:

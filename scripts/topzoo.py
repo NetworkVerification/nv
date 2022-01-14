@@ -259,7 +259,9 @@ def to_nv(net_name: str, graph: igraph.Graph, dest: int | Literal["symbolic"]) -
     be a shortest-paths policy.
     """
     f = NvFile(f"{net_name}.nv")
-    f.add_type("bgpType", "{bgpAd: int; lp: int; aslen: int; med:int; comms:set[int];}")
+    f.add_type(
+        "bgpType", "{bgpAd: int8; lp: int; aslen: int; med:int; comms:set[int];}"
+    )
     f.add_type("attribute", "option[bgpType]")
 
     f.add_topology(graph)
@@ -285,7 +287,7 @@ def to_nv(net_name: str, graph: igraph.Graph, dest: int | Literal["symbolic"]) -
     else:
         cond = f"n = {dest}n"
     f.funcs.append(
-        f"let init n = if {cond} then Some {{ bgpAd = 0; lp = 100; aslen = 0; med = 0; comms = {{}} }} else None"
+        f"let init n = if {cond} then Some {{ bgpAd = 0u8; lp = 100; aslen = 0; med = 0; comms = {{}} }} else None"
     )
     add_policy(f, no_trans)
     return str(f)
