@@ -5,20 +5,22 @@ import re
 from typing import Optional
 
 
-@dataclass
 class Bgp:
     """A simplified version of the BGP attribute."""
 
-    # 32-bit int
-    aslen: int | str
-    # set of 32-bit ints
-    comms: set[int] = set()
-    # 8-bit int
-    bgpAd: int = 20
-    # 32-bit int
-    lp: int = 100
-    # 32-bit int
-    med: int = 80
+    def __init__(
+        self,
+        aslen: int | str,
+        comms: set[int] = set(),
+        bgpAd: int = 20,
+        lp: int = 100,
+        med: int = 80,
+    ):
+        self.aslen = aslen
+        self.comms = comms
+        self.bgpAd = bgpAd
+        self.lp = lp
+        self.med = med
 
     def __str__(self):
         aslen = f"{self.aslen}u32" if isinstance(self.aslen, int) else self.aslen

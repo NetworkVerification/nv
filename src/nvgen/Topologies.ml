@@ -68,4 +68,4 @@ let construct top : AdjGraph.t =
   | Fattree _k -> failwith "todo"
 ;;
 
-let to_decls g = [DNodes (AdjGraph.nb_vertex g); DEdges (AdjGraph.edges g)]
+let to_decls g = [DNodes (AdjGraph.nb_vertex g); DEdges (List.rev (AdjGraph.edges g))]

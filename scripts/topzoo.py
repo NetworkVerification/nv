@@ -253,7 +253,9 @@ let trans e x = transferBgp e x"""
     nv.add_assert("foldNodes (fun u v acc -> acc && assert_node u v) sol true")
 
 
-def to_nv(net_name: str, graph: igraph.Graph, dest: int | Literal["symbolic"]) -> str:
+def to_nv(
+    net_name: str, graph: igraph.Graph, dest: int | Literal["symbolic"]
+) -> NvFile:
     """
     Create an NV file.
     If business_rel is not None, the policy should enforce no-transit; otherwise, it should
@@ -285,10 +287,10 @@ def to_nv(net_name: str, graph: igraph.Graph, dest: int | Literal["symbolic"]) -
         cond = "(node_to_int n) = d"
     else:
         cond = f"n = {dest}n"
-    bgp = Bgp(0, bgpAd=0)
+    bgp = Bgp(0)
     f.funcs.append(f"let init n = if {cond} then Some {bgp} else None")
     add_policy(f, no_trans)
-    return str(f)
+    return f
 
 
 def to_hgr(graph):

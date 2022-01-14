@@ -9,6 +9,9 @@ from pathlib import Path
 import subprocess
 import sys
 
+import topzoo
+import igraph
+
 
 def is_int(s):
     try:
@@ -128,32 +131,24 @@ def gen_maintenance_benchmarks(benchmarks: list[tuple[os.PathLike, int]]):
 
 
 def gen_rand_benchmarks(
-    basefile: os.PathLike[str],
     benchmarks: list[tuple[int, float]],
     outpath: os.PathLike,
 ):
-    nvgenpath = os.path.join(os.getcwd(), "nvgen")
-    if not os.path.exists(nvgenpath):
-        print("Did not find 'nvgen' executable in the current working directory")
-        sys.exit(1)
-    args = [
-        NvgenArgs(
-            basefile,
-            NvgenOperation.TOPOLOGY,
-            outfile=os.path.join(outpath, Topology.rand(n, p) + ".nv"),
-            destination=0,
-            topology=Topology.rand(n, p),
-        )
-        for (n, p) in benchmarks
-    ]
-    run_nvgen(*args)
+    for n, p in benchmarks:
+        g = igraph.Graph.Erdos_Renyi(n, p=p, directed=True, loops=False)
+        g.vs["label"] = [None] * g.vcount()
+        top = Topology.rand(n, p)
+        nvfile = topzoo.to_nv(top, g, dest=0)
+        outfile = os.path.join(outpath, nvfile.name)
+        with open(outfile, "w") as output:
+            output.write(str(nvfile))
 
 
 if __name__ == "__main__":
     match sys.argv[1:]:
-        case ["rand", basefile, outpath, start, stop]:
+        case ["rand", outpath, start, stop]:
             n_p = [(2 ** k, 2 ** (2 - k)) for k in range(int(start), int(stop))]
-            gen_rand_benchmarks(Path(basefile), n_p, Path(outpath))
+            gen_rand_benchmarks(n_p, Path(outpath))
         case ["maintenance", *directories]:
             pass
         case _:

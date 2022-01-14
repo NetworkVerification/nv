@@ -248,7 +248,8 @@ def infer_sp_sols(
     Return a RIB if the attribute type is RIB, or an integer if it's an INT_OPTION.
     """
 
-    def create_route(i, path):
+    def create_route(i: int, path: list[int]) -> tuple[int, Bgp | Rib | int | None]:
+        """i is a vertex id, path is a list of vertex ids"""
         node = graph.vs[i]["id"]
         if len(path) == 0:
             return node, None
@@ -264,8 +265,11 @@ def infer_sp_sols(
                 return node, Bgp(aslen=hops)
 
     d = graph.vs.find(id=dest)
-    ps = graph.get_shortest_paths(d)
-    return dict([create_route(i, path) for i, path in enumerate(ps)])
+    # mode="out" gives us the path to the destination from that node
+    ps = graph.get_shortest_paths(d, mode="out")
+    # ps is a list of lists of vertex ids
+    print(ps)
+    return dict(create_route(i, path) for i, path in enumerate(ps))
 
 
 def node_to_int(node: str) -> int:
@@ -276,7 +280,10 @@ def find_edges(text: str) -> list[tuple[int, int]]:
     """Return the edges."""
 
     def to_int(match, flip=False):
-        # TODO: why do we need flip?
+        """
+        Return a directed edge associated with the given match.
+        If flip is true, return the reverse edge.
+        """
         if flip:
             return (node_to_int(match.group(2)), node_to_int(match.group(1)))
         else:
@@ -660,24 +667,26 @@ def main():
             print_graph(file, dest)
         else:
             # either cuts or hmetis will be true, but not both
-            for cut in args.cuts:
-                gen_part_nv(
-                    file,
-                    dest,
-                    FattreeCut.from_str(cut),
-                    simulate=args.simulate,
-                    verbose=args.verbose,
-                    groups=args.nogroups,
-                )
-            for hmetis in args.hmetis:
-                gen_part_nv(
-                    file,
-                    dest,
-                    hmetis,
-                    simulate=args.simulate,
-                    verbose=args.verbose,
-                    groups=args.nogroups,
-                )
+            if args.cuts:
+                for cut in args.cuts:
+                    gen_part_nv(
+                        file,
+                        dest,
+                        FattreeCut.from_str(cut),
+                        simulate=args.simulate,
+                        verbose=args.verbose,
+                        groups=args.nogroups,
+                    )
+            elif args.hmetis:
+                for hmetis in args.hmetis:
+                    gen_part_nv(
+                        file,
+                        dest,
+                        hmetis,
+                        simulate=args.simulate,
+                        verbose=args.verbose,
+                        groups=args.nogroups,
+                    )
 
 
 if __name__ == "__main__":
