@@ -3,7 +3,7 @@
 # Supplementary tools to run nvgen and generate many benchmarks at once.
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional, SupportsFloat, SupportsInt
+from typing import Optional
 import os
 from pathlib import Path
 import subprocess

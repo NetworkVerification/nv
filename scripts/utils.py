@@ -9,16 +9,25 @@ from typing import Optional
 class Bgp:
     """A simplified version of the BGP attribute."""
 
+    # 32-bit int
     aslen: int | str
+    # set of 32-bit ints
     comms: set[int] = set()
+    # 8-bit int
     bgpAd: int = 20
+    # 32-bit int
     lp: int = 100
+    # 32-bit int
     med: int = 80
 
     def __str__(self):
         aslen = f"{self.aslen}u32" if isinstance(self.aslen, int) else self.aslen
         comms = "{ " + "; ".join(map(str, self.comms)) + "_ |-> false" + " }"
         return f"{{  aslen= {aslen}; bgpAd= {self.bgpAd}u8; comms= {comms}; lp= {self.lp}u32; med= {self.med}u32; }}"
+
+    @staticmethod
+    def TypeDeclaration() -> str:
+        return "type bgpType = {aslen: int; bgpAd: int8; comms: set[int]; lp: int; med: int;}"
 
 
 @dataclass
@@ -44,6 +53,10 @@ class Rib:
         static = "None" if self.static is None else f"Some {self.static}u8"
         bgp = "None" if self.bgp is None else f"Some {self.bgp}"
         return f"{{  bgp= {bgp}; connected= None; ospf= None; selected= {sel}; static= {static}; }}"
+
+    @staticmethod
+    def TypeDeclaration() -> str:
+        return "type rib = {\n  connected:option[int8]\n  static:option[int8];\n  ospf:option[ospfType];\n  bgp:option[bgpType];\n  selected:option[int2]; }"
 
 
 class AttrType(Enum):
