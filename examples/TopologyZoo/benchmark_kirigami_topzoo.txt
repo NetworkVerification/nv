@@ -1,0 +1,3 @@
+examples/TopologyZoo/roedunet/ RoEduNet.nv 2:RoEduNet-hmetis2-x.nv 4:RoEduNet-hmetis4-x.nv 7:RoEduNet-hmetis7-x.nv 41:RoEduNet-hmetis41-x.nv
+examples/TopologyZoo/uscarrier/ USCarrier.nv 2:USCarrier-hmetis2-x.nv 4:USCarrier-hmetis4-x.nv 20:USCarrier-hmetis20-x.nv 174:USCarrier-hmetis174-x.nv
+examples/TopologyZoo/kdl/ kdl.nv 2:kdl-hmetis2.nv 4:kdl-hmetis4.nv 8:kdl-hmetis8.nv 25:kdl-hmetis25.nv 75:kdl-hmetis75.nv 754:kdl-hmetis754.nv
