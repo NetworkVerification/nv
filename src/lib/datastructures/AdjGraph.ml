@@ -6,7 +6,7 @@ open Nv_utils.PrimitiveCollections
 module Vertex = struct
   type t = int (* Really should be Syntax.node, but that causes a dependency loop *)
 
-  let compare = Pervasives.compare
+  let compare = Stdlib.compare
   let equal a b = compare a b = 0
   let hash = Hashtbl.hash
   let to_string = string_of_int

@@ -68,7 +68,7 @@ module HashClosureMap = BatMap.Make (struct
 
   (*NOTE: unit here is a placeholder for the closure type which is a tuple of OCaml variables*)
 
-  let compare = Pervasives.compare
+  let compare = Stdlib.compare
 end)
 
 let map_cache = Obj.magic (ref HashClosureMap.empty)
@@ -119,7 +119,7 @@ let update record_fns (vmap : 'v t) (k : 'key) (v : 'v) : 'v t =
 module HashMergeMap = BatMap.Make (struct
   type t = (int * unit) * (unit * unit * unit * unit) option
 
-  let compare = Pervasives.compare
+  let compare = Stdlib.compare
 end)
 
 let merge_op_cache = ref HashMergeMap.empty
@@ -280,7 +280,7 @@ module HashClosureMap2 = BatMap.Make (struct
 
   (*NOTE: unit here is a placeholder for the closure type which is a tuple of OCaml variables*)
 
-  let compare = Pervasives.compare
+  let compare = Stdlib.compare
 end)
 
 let mapIte_op_cache = Obj.magic (ref HashClosureMap2.empty)

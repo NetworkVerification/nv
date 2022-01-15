@@ -68,7 +68,7 @@ module SrpSimulation (G : Topology) : SrpSimulationSig = struct
 
   let create_state (n : int) init : 'a state =
     let rec loop n (q : queue) m =
-      if Pervasives.compare n 0 > 0
+      if Stdlib.compare n 0 > 0
       then (
         let next_n = n - 1 in
         let next_q = QueueSet.add q next_n in
@@ -82,7 +82,7 @@ module SrpSimulation (G : Topology) : SrpSimulationSig = struct
         loop next_n next_q next_m)
       else m, q
     in
-    loop n (QueueSet.empty Pervasives.compare) AdjGraph.VertexMap.empty
+    loop n (QueueSet.empty Stdlib.compare) AdjGraph.VertexMap.empty
   ;;
 
   exception Require_false

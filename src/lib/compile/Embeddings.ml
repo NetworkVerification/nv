@@ -156,7 +156,7 @@ let rec unembed_value
 
 (* Cache of embed functions based on type. The size here is an arbitrary number,
    the size of the type array is what is eventually used. *)
-let embed_cache : (int * int -> int) array ref = ref (Array.create 100 (fun _ -> 0))
+let embed_cache : (int * int -> int) array ref = ref (Array.make 100 (fun _ -> 0))
 
 let build_embed_cache record_fns =
   embed_cache
@@ -165,7 +165,7 @@ let build_embed_cache record_fns =
          (Collections.TypeIds.to_array type_store)
 ;;
 
-let unembed_cache : (int * int -> int) array ref = ref (Array.create 100 (fun _ -> 0))
+let unembed_cache : (int * int -> int) array ref = ref (Array.make 100 (fun _ -> 0))
 
 let build_unembed_cache record_cnstrs record_fns =
   unembed_cache

@@ -100,7 +100,7 @@ let process_includes (fname : string) : string list =
 module DeclG = Graph.Persistent.Digraph.Concrete (struct
   type t = Syntax.declaration
 
-  let compare = Pervasives.compare
+  let compare = Stdlib.compare
   let equal a b = compare a b = 0
   let hash = Hashtbl.hash
 end)

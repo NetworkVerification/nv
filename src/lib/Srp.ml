@@ -32,7 +32,7 @@ type state = extendedSolution * queue
 (* add n nodes to the state, using the closure cl to generate the value for each node in 0..n *)
 let create_state n cl : state =
   let rec loop n (q : queue) m =
-    if Pervasives.compare n 0 > 0
+    if Stdlib.compare n 0 > 0
     then (
       let next_n = n - 1 in
       let next_q = QueueSet.add q next_n in
@@ -46,7 +46,7 @@ let create_state n cl : state =
       loop next_n next_q next_m)
     else m, q
   in
-  loop n (QueueSet.empty Pervasives.compare) AdjGraph.VertexMap.empty
+  loop n (QueueSet.empty Stdlib.compare) AdjGraph.VertexMap.empty
 ;;
 
 type info =

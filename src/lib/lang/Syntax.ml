@@ -90,11 +90,11 @@ module Pat = struct
 
   let rec compare p1 p2 =
     match p1, p2 with
-    | PInt n1, PInt n2 -> Pervasives.compare n1 n2
-    | PBool b1, PBool b2 -> Pervasives.compare b1 b2
-    | PNode n1, PNode n2 -> Pervasives.compare n1 n2
-    | PEdge (p1, p2), PEdge (p1', p2') -> Pervasives.compare (p1, p2) (p1', p2')
-    | POption p1, POption p2 -> Pervasives.compare p1 p2
+    | PInt n1, PInt n2 -> Stdlib.compare n1 n2
+    | PBool b1, PBool b2 -> Stdlib.compare b1 b2
+    | PNode n1, PNode n2 -> Stdlib.compare n1 n2
+    | PEdge (p1, p2), PEdge (p1', p2') -> Stdlib.compare (p1, p2) (p1', p2')
+    | POption p1, POption p2 -> Stdlib.compare p1 p2
     | PTuple ps1, PTuple ps2 ->
       BatList.fold_left2
         (fun b p1 p2 ->
@@ -1326,10 +1326,10 @@ let compare_es = compare_exp
 
 let compare_values v1 v2 =
   let cfg = Cmdline.get_cfg () in
-  if cfg.hashcons then v1.vtag - v2.vtag else Pervasives.compare v1 v2
+  if cfg.hashcons then v1.vtag - v2.vtag else Stdlib.compare v1 v2
 ;;
 
 let compare_exps e1 e2 =
   let cfg = Cmdline.get_cfg () in
-  if cfg.hashcons then e1.etag - e2.etag else Pervasives.compare e1 e2
+  if cfg.hashcons then e1.etag - e2.etag else Stdlib.compare e1 e2
 ;;

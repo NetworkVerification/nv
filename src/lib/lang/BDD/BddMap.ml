@@ -228,7 +228,7 @@ let vars_to_values vars ty =
 module ExpMap = BatMap.Make (struct
   type t = exp * value BatSet.PSet.t
 
-  let compare = Pervasives.compare
+  let compare = Stdlib.compare
 end)
 
 let map_cache = ref ExpMap.empty
@@ -371,7 +371,7 @@ let map_when ~op_key (pred : bool Mtbdd.t) (f : value -> value) ((vdd, ty) : t) 
 module ExpMap2 = BatMap.Make (struct
   type t = (exp * value BatSet.PSet.t) * (exp * value BatSet.PSet.t)
 
-  let compare = Pervasives.compare
+  let compare = Stdlib.compare
 end)
 
 let mapite_op_cache = ref ExpMap2.empty
@@ -460,7 +460,7 @@ let forall ~op_key (pred : bool Mtbdd.t) (f : value -> value) ((vdd, _) : t) : v
 module MergeMap = BatMap.Make (struct
   type t = (exp * value BatSet.PSet.t) * (value * value * value * value) option
 
-  let compare = Pervasives.compare
+  let compare = Stdlib.compare
 end)
 
 let unwrap x =

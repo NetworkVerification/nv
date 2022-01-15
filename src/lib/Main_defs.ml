@@ -204,7 +204,7 @@ let run_simulator cfg _ decls fs =
       | None ->
         ( Profile.time_profile "Interpreted simulation" (fun () ->
               Simulator.simulate_declarations ~throw_requires:true decls)
-        , QueueSet.empty Pervasives.compare )
+        , QueueSet.empty Stdlib.compare )
       | Some b ->
         ignore b;
         failwith "Don't know what this means"
