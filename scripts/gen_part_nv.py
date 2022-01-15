@@ -268,7 +268,6 @@ def infer_sp_sols(
     # mode="out" gives us the path to the destination from that node
     ps = graph.get_shortest_paths(d, mode="out")
     # ps is a list of lists of vertex ids
-    print(ps)
     return dict(create_route(i, path) for i, path in enumerate(ps))
 
 
