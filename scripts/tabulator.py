@@ -29,7 +29,7 @@ def join_cut_dicts(
     return logs, joined
 
 
-def parse_smt(output: str) -> dict:
+def parse_smt(output: str) -> dict[str, list[int | float]]:
     """
     Parse the output of an NV command.
     Returns a dictionary of strings to lists of floats.
@@ -52,11 +52,11 @@ def parse_smt(output: str) -> dict:
         profile.setdefault(stat, list()).append(qua)
     # get assertion failures
     for match in assertion.finditer(output):
-        assn = match.group(1)
+        assn = int(match.group(1))
         profile.setdefault("failed asserts", list()).append(assn)
     # get guarantee failures
     for match in guarantee.finditer(output):
-        guar = match.group(1)
+        guar = int(match.group(1))
         profile.setdefault("failed guars", list()).append(guar)
     # get z3 timeouts
     for match in z3timeout.finditer(output):
@@ -129,27 +129,6 @@ def run_benchmarks_sync(benchdir, benches, z3time, time, verbose) -> tuple[str, 
     )
 
 
-def run_benchmarks_parallel(
-    benchdir, benches, z3time, time, verbose
-) -> tuple[str, dict]:
-    """
-    Run the given benchmarks in the given directory in parallel (once each).
-    Return a log of output and a dictionary with the benchmark results for each cut.
-    """
-    # set up the args for each run_bench
-    paths = map(
-        lambda t: (t[0], os.path.join(benchdir, t[1]), z3time, time, verbose), benches
-    )
-
-    with multiprocessing.Pool(processes=len(benches)) as pool:
-        return join_cut_dicts(
-            *pool.starmap(
-                run_bench,
-                paths,
-            )
-        )
-
-
 def run_trials_sync(benchdir, benches, z3time, time, trials, verbose, logfile):
     """
     Run trials of the given benchmarks and return a dictionary of profiling information.
@@ -193,13 +172,13 @@ def invert_results_dict(results):
     and N = #trials * #cuts * #operations * #occurrences
     """
     output: dict[tuple, dict] = {}
-    for (dir, trials) in results.items():
+    for (benchmark, trials) in results.items():
         for (trial, cuts) in trials.items():
             for (cut, ops) in cuts.items():
                 for (op, occurrences) in ops.items():
                     for (i, t) in enumerate(occurrences):
                         common_hash = (trial, cut, op, i)
-                        output.setdefault(common_hash, dict())[f"{dir}"] = t
+                        output.setdefault(common_hash, dict())[f"{benchmark}"] = t
     rows = []
     for ((t, c, o, i), data) in output.items():
         common = {"operation": o, "cut": c, "trial": t, "occurrence": i}
@@ -259,7 +238,8 @@ def run_benchmark_txt(txtpath: str, z3time, timeout, trials, verbose):
                     verbose=verbose,
                     logfile=sys.stdout,
                 )
-                runs[directory] = results
+                benchmark_key = os.path.join(directory, monolithic)
+                runs[benchmark_key] = results
             except KeyboardInterrupt:
                 print("User interrupted benchmarking. Exiting with partial results...")
                 break
