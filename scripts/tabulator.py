@@ -129,7 +129,9 @@ def run_benchmarks_sync(benchdir, benches, z3time, time, verbose) -> tuple[str, 
     )
 
 
-def run_trials_sync(benchdir, benches, z3time, time, trials, verbose, logfile):
+def run_trials_sync(
+    benchdir, benches, z3time: float, time: float, trials: int, verbose: bool, logfile
+) -> dict[int, dict]:
     """
     Run trials of the given benchmarks and return a dictionary of profiling information.
     """
@@ -142,7 +144,9 @@ def run_trials_sync(benchdir, benches, z3time, time, trials, verbose, logfile):
     return runs
 
 
-def run_trials_parallel(benchdir, benches, z3time, time, trials, verbose, logfile):
+def run_trials_parallel(
+    benchdir, benches, z3time: float, time: float, trials: int, verbose: bool, logfile
+) -> dict[int, dict]:
     """
     Run the benchmarks in the given directory and return a dictionary of
     profiling information.
@@ -157,7 +161,9 @@ def run_trials_parallel(benchdir, benches, z3time, time, trials, verbose, logfil
         return results
 
 
-def invert_results_dict(results):
+def invert_results_dict(
+    results: dict[str, dict[str, dict[str, dict[str, list]]]]
+) -> list[dict[str, Any]]:
     """
     Flatten the results nested dictionary into a CSV-writable format.
     Results has the following nested structure as input:
@@ -187,7 +193,7 @@ def invert_results_dict(results):
     return rows
 
 
-def write_csv(results: dict[str, dict[str, dict]], path):
+def write_csv(results: dict[str, dict[str, dict]], path: str):
     """
     Write the results dictionary to a CSV.
     Each line of the CSV describes an operation run for a given cut during a given trial,
@@ -209,7 +215,9 @@ def save_results(runs):
     write_csv(runs, f"kirigami-results-{time}.csv")
 
 
-def run_benchmark_txt(txtpath: str, z3time, timeout, trials, verbose):
+def run_benchmark_txt(
+    txtpath: str, z3time: float, timeout: float, trials: int, verbose: bool
+):
     """
     Run a benchmark.txt file.
     Each line of the file has the following format:
