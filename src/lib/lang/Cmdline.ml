@@ -22,6 +22,7 @@ type t =
   ; kirigami : bool [@short "-k"] (** enable partitioning features           *)
   ; ranked : bool (** use the ranked check for kirigami       *)
   ; print_partitions : bool (** print the partitioned declarations in kirigami *)
+  ; fragments : string option [@short "-f"] (** only check the given fragments *)
   (* ; link_failures : int (\** adds at most k link failures to the network  *\) *)
   (* ; slicing : bool (\** Try to slice the network's attribute *\) *)
   ; parallelize : int option [@short "-p"] (** Try to parallelize solving using n cores **)
@@ -55,6 +56,7 @@ let default =
   ; kirigami = false
   ; ranked = false
   ; print_partitions = false
+  ; fragments = None
   ; parallelize = None
   ; timeout = 0
   (* NOTE: these options are not currently implemented *)

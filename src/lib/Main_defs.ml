@@ -279,8 +279,8 @@ let parse_input (args : string array) =
   let partitions, decls =
     if cfg.kirigami
     then (
-      (* Some (SrpRemapping.partition_declarations decls)) *)
-      let parts = SrpRemapping.partition_declarations decls in
+      let which = Option.map OCamlUtils.range_str_to_set cfg.fragments in
+      let parts = SrpRemapping.partition_declarations decls ~which in
       let new_symbolics =
         let aty = get_attr_type decls |> oget in
         List.fold_left

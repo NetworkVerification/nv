@@ -299,7 +299,7 @@ let interp_partition parte node : int =
  *  Will fail if the partition decl does not return an int
  *  when given a node.
  *)
-let partition_declarations decls : partitioned_srp list =
+let partition_declarations decls ?(which = None) : partitioned_srp list =
   let partition = get_partition decls in
   match partition with
   | Some part ->
@@ -307,6 +307,9 @@ let partition_declarations decls : partitioned_srp list =
     let node_list = List.range 0 `To (nodes - 1) in
     let edges = get_edges decls |> Option.get in
     let partf = interp_partition part in
-    partition_edges node_list edges partf
+    let srps = partition_edges node_list edges partf in
+    (match which with
+    | Some filt -> List.filteri (fun i _ -> Set.mem i filt) srps
+    | None -> srps)
   | None -> failwith "no partition expression found!"
 ;;

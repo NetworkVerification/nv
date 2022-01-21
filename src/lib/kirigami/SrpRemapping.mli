@@ -81,4 +81,4 @@ val map_predicates
  * where each structure represents one partition's topological structure
  * for each possible partition in the given declarations.
 *)
-val partition_declarations : declarations -> partitioned_srp list
+val partition_declarations : declarations -> ?which:int BatSet.t option -> partitioned_srp list

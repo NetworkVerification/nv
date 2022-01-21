@@ -261,9 +261,9 @@ let get_predicates fragments interface =
   in
   (* TODO: do we need to save the old predicates? *)
   let add_input_preds input_exp =
-    { input_exp with preds = (EdgeMap.find input_exp.edge all_preds) @ input_exp.preds } in
+    { input_exp with preds = (EdgeMap.find_default [] input_exp.edge all_preds) @ input_exp.preds } in
   let add_output_preds (edge, preds) =
-    (edge, (EdgeMap.find edge all_preds) @ preds) in
+    (edge, (EdgeMap.find_default [] edge all_preds) @ preds) in
   let add_predicates fragment =
     { fragment with
       inputs = VertexMap.map (fun input_exps -> List.map add_input_preds input_exps) fragment.inputs;

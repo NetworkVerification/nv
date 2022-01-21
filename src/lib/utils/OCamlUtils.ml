@@ -33,6 +33,21 @@ let rec list_seq n =
   | _ -> if n < 0 then failwith "list_seq: given negative n" else list_seq (n - 1) @ [n - 1]
 ;;
 
+(** Given a string representing a range of numbers, return a list of all integers in the range.
+ ** The string should match the regular expression "(A-B|C)(,A-B|C)*".
+ *)
+let range_str_to_set s : int BatSet.t =
+  let seqs = BatString.split_on_char ',' s in
+  let range_to_list rs =
+    let (start, stop) = try (BatString.split rs ~by:"-") with
+    | Not_found -> (rs, rs)
+    in BatList.range (int_of_string start) `To (int_of_string stop)
+  in
+  (* insert every element into the set *)
+  List.fold_left (fun set x -> BatSet.add x set) BatSet.empty (List.flatten (List.map range_to_list seqs))
+;;
+
+
 let rec list_to_string f lst =
   Printf.sprintf "[%s]" @@ BatString.concat ";" @@ List.map f lst
 ;;
