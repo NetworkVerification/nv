@@ -1,5 +1,3 @@
-(* Convert all edges and nodes in the program to new values,
-   after the SRP has been split *)
 open Batteries
 open Nv_datastructures.AdjGraph
 open Nv_lang
