@@ -303,7 +303,7 @@ component:
     | ASSERT expr                       { DAssert $2 }
     | LET EDGES EQ LBRACE RBRACE        { DEdges [] }
     | LET EDGES EQ LBRACE edges RBRACE  { DEdges $5 }
-    | LET NODES EQ NUM                  { DNodes (Nv_datastructures.Integer.to_int (snd $4)) }
+    | LET NODES EQ NUM                  { DNodes (List.init (Nv_datastructures.Integer.to_int (snd $4)) identity) }
     | TYPE ID EQ ty                     { (add_user_type (snd $2) $4; DUserTy (snd $2, $4)) }
 ;
 

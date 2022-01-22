@@ -26,13 +26,6 @@ let dmap (f : 'a -> 'b) (x : 'a delayed) : 'b delayed = fun () -> f (x ())
 
 (*** List Utilities ***)
 
-(** Generate an ascending list of numbers [0,n). *)
-let rec list_seq n =
-  match n with
-  | 0 -> []
-  | _ -> if n < 0 then failwith "list_seq: given negative n" else list_seq (n - 1) @ [n - 1]
-;;
-
 (** Given a string representing a range of numbers, return a list of all integers in the range.
  ** The string should match the regular expression "(A-B|C)(,A-B|C)*".
  *)
@@ -116,6 +109,9 @@ let replaceSlice lo hi ls slice =
   |> snd
 ;;
 
+(** [printList printer ls first sep last] pretty-prints a list [ls],
+ ** calling [printer] on each argument and inserting [sep] as a separator, with
+ ** [first] beforehand and [last] after. *)
 let printList
     (printer : 'a -> string)
     (ls : 'a list)

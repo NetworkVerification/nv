@@ -385,16 +385,16 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
   ;;
 
   (* Encode the series of merges at this node. *)
-  let encode_node_merges env count einit emerge in_trans node name =
+  let encode_node_merges env count einit emerge in_trans node =
     (* compute each init attribute *)
-    let node = avalue (vnode node, Some Typing.node_ty, Span.default) in
-    let einit_i = InterpPartial.interp_partial_fun einit [node] in
-    let init = encode_z3_init (Printf.sprintf "init%d-%d" count name) env einit_i in
-    let emerge_i = InterpPartial.interp_partial_fun emerge [node] in
+    let enode = avalue (vnode node, Some Typing.node_ty, Span.default) in
+    let einit_i = InterpPartial.interp_partial_fun einit [enode] in
+    let init = encode_z3_init (Printf.sprintf "init%d-%s" count (Vertex.to_string node)) env einit_i in
+    let emerge_i = InterpPartial.interp_partial_fun emerge [enode] in
     let merged =
       BatList.fold_lefti
         (fun prev_result idx trans ->
-          let str = Printf.sprintf "merge%d-%d-%d" count name idx in
+          let str = Printf.sprintf "merge%d-%s-%d" count (Vertex.to_string node) idx in
           let merge_result, x = encode_z3_merge str env emerge_i in
           let trans_list = to_list trans in
           let prev_result_list = to_list prev_result in
@@ -419,10 +419,6 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     let aty = oget aty in
     let einit, etrans, emerge = init, trans, merge in
     let { rank; inputs; outputs } = parted_srp in
-    (* save the number of nodes in the global network *)
-    let old_nodes = SrpRemapping.get_global_nodes parted_srp in
-    let remapping = Array.of_list (SrpRemapping.get_old_nodes parted_srp) in
-    let nodes = nb_vertex graph in
     let label_vars : var E.t array = encode_label_vars aty var_names in
     let trans_map, trans_input_map =
       encode_edge_transfers env count graph etrans
@@ -443,7 +439,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
       (* Kirigami: get any input transfers from the input_map *)
       let inputs = List.map fst (VertexMap.find_default [] v input_map) in
       let merged =
-        encode_node_merges env count einit emerge (in_trans @ inputs) v remapping.(v)
+        encode_node_merges env count einit emerge (in_trans @ inputs) v
       in
       let lbl_iv = label_vars.(v) in
       add_symbolic env lbl_iv (Ty aty);
@@ -459,12 +455,13 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     in
     (* Kirigami: add dummy labels for cut nodes; just need to make sure there's as many as before.
      * This ensures the SMT query processes normally and can return counterexamples correctly. *)
-    for i = nodes to old_nodes - 1 do
-      let lbl_iv = label_vars.(i) in
+    let add_dummy_label v =
+      let lbl_iv = label_vars.(v) in
       add_symbolic env lbl_iv (Ty aty);
       ignore
         (lift2 (fun lbl s -> mk_constant env (create_vars env "" lbl) s) lbl_iv attr_sort)
-    done;
+    in
+    List.iter add_dummy_label parted_srp.cut_nodes;
     let labelling = AdjGraph.fold_vertex (fun v m -> VertexMap.add v (constrain_label v) m) graph VertexMap.empty in
     encode_propagate_labels env !trans_input_map labelling;
     (* construct the output constants *)
@@ -499,7 +496,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     (* Compute the labelling as the merge of all inputs *)
     let constrain_label v =
       let in_trans = AdjGraph.fold_pred_e (fun e l -> (EdgeMap.find e !trans_map) :: l) graph v [] in
-      let merged = encode_node_merges env count einit emerge in_trans v v in
+      let merged = encode_node_merges env count einit emerge in_trans v in
       let lbl_iv = label_vars.(v) in
       add_symbolic env lbl_iv (Ty aty);
       let l =

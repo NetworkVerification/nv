@@ -86,7 +86,7 @@ let solveKirigami ?(check_ranked = false) info query time chan ~part ~decls =
     time
     chan
     (fun () -> Enc.kirigami_encode_z3 ~check_ranked part decls)
-    (get_old_nodes part)
+    (List.sort Vertex.compare (part.nodes @ part.cut_nodes))
     assertions
     guarantees
 ;;

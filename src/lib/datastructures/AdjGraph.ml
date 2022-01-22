@@ -41,17 +41,12 @@ let to_string g =
 
 (*** Vertex/Edge Utilities ***)
 
-let fold_vertices (f : Vertex.t -> 'a -> 'a) (i : int) (acc : 'a) : 'a =
-  let rec loop j = if i = j then acc else f j (loop (j + 1)) in
-  loop 0
-;;
-
 let vertices (g : t) = List.rev (fold_vertex List.cons g [])
 let edges (g : t) = BatList.rev (fold_edges_e List.cons g [])
 
 (*** Graph Creation **)
 
-let create n = fold_vertices (fun v g -> add_vertex g v) n empty
+let create vs = List.fold_left add_vertex empty vs
 
 let of_edges (l : (Vertex.t * Vertex.t) list) : t =
   BatList.fold_left (fun g e -> add_edge_e g e) empty l

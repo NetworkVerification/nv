@@ -13,7 +13,7 @@ open SrpRemapping
 type transform_result =
   | Decl of declaration
   (* Solution: return Solve and updated partitioned SRP *)
-  | UpdateDecl of (partitioned_srp * declaration)
+  (* | UpdateDecl of (partitioned_srp * declaration) *)
   | Drop
 
 (** Return a new set of declarations of all symbolics added by this partition. *)
@@ -47,9 +47,9 @@ let transform_declaration parted_srp decl : transform_result =
     (match (SrpRemapping.var_to_edge v) with
     | Some e when not (List.exists ((=) e) valid_edges) -> Drop
     | _ -> Decl decl)
-  | DSolve s ->
-    let part', solve' = transform_solve s parted_srp in
-    UpdateDecl (part', DSolve solve')
+  (* | DSolve s -> *)
+  (*   let part', solve' = transform_solve s parted_srp in *)
+  (*   UpdateDecl (part', DSolve solve') *)
   | DPartition _ -> Drop
   | DAssert e -> Decl (DAssert (transform_assert e parted_srp))
   | _ -> Decl decl
@@ -61,7 +61,7 @@ let transform_declarations decls parted_srp =
   let add_new_decl (part, decls) d =
     match transform_declaration part d with
     | Decl d -> part, d :: decls
-    | UpdateDecl (p, d) -> p, d :: decls
+    (* | UpdateDecl (p, d) -> p, d :: decls *)
     | Drop -> part, decls
   in
   List.fold_left add_new_decl (parted_srp, []) decls

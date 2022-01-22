@@ -175,9 +175,8 @@ let maintenance dest decls =
 let fault_tolerance nfaults decls =
   (* for each fault, construct a failure variable *)
   let fail_vars =
-    List.map
+    List.init nfaults
       (fun i -> Var.fresh (Printf.sprintf "failed%d" i))
-      (Nv_utils.OCamlUtils.list_seq nfaults)
   in
   (* add a drop condition to the transfer *)
   let update_decl d =

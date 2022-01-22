@@ -235,7 +235,7 @@ type declaration =
   | DSolve of solve
   | DRequire of exp
   | DPartition of exp (* partition ids *)
-  | DNodes of int
+  | DNodes of node list
   | DEdges of (node * node) list
 
 type declarations = declaration list
@@ -1051,7 +1051,7 @@ let get_nodes ds =
 
 let get_graph ds =
   match get_nodes ds, get_edges ds with
-  | Some n, Some es -> Some (List.fold_left AdjGraph.add_edge_e (AdjGraph.create n) es)
+  | Some vs, Some es -> Some (List.fold_left AdjGraph.add_edge_e (AdjGraph.create vs) es)
   | _ -> None
 ;;
 

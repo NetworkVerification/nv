@@ -26,7 +26,7 @@ module EdgeSet : BetterSet.S with type elt = Edge.t
 module EdgeMap : BetterMap.S with type key = Edge.t
 
 (** Graph creation **)
-val create : int -> t (* Disconnected graph with n nodes *)
+val create : Vertex.t list -> t (* Disconnected graph with given nodes *)
 
 val of_edges : Edge.t list -> t (* Graph with all edges & nodes in the list *)
 
