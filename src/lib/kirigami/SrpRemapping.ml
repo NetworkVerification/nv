@@ -198,10 +198,11 @@ let divide_edges (edges : Edge.t list) (node_srps : int VertexMap.t) npartitions
         node_srps
         ([], [])
     in
+    (* reverse the created lists to switch the order back *)
     { rank = i
-    ; nodes = kept
+    ; nodes = List.rev kept
     ; edges = []
-    ; cut_nodes = cut
+    ; cut_nodes = List.rev cut
     ; inputs = VertexMap.empty
     ; outputs = VertexMap.empty
     }
