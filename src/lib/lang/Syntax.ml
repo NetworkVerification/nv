@@ -5,7 +5,7 @@ open Nv_datastructures
 open Nv_utils.PrimitiveCollections
 open Nv_utils
 
-type node = int [@@deriving eq, ord]
+type node = AdjGraph.Vertex.t [@@deriving eq, ord]
 
 let tnode_sz = 12
 
@@ -1045,7 +1045,7 @@ let get_edges ds =
 let get_nodes ds =
   get_decl ds (fun d ->
       match d with
-      | DNodes i -> Some i
+      | DNodes vs -> Some vs
       | _ -> None)
 ;;
 

@@ -26,11 +26,7 @@ let simulate name decls =
      as defaultSymbolics populates type_array.*)
 
   (* Build the topology *)
-  let graph =
-    let n = get_nodes decls |> oget in
-    let es = get_edges decls |> oget in
-    List.fold_left AdjGraph.add_edge_e (AdjGraph.create n) es
-  in
+  let graph = get_graph decls |> oget in
   let module G : Topology = struct
     let graph = graph
   end
@@ -52,5 +48,5 @@ let simulate name decls =
     "Native simulation took: %f secs to complete\n%!"
     (finish_time -. start_time);
   (* Get the computed solutions *)
-  build_solutions (list_seq (AdjGraph.nb_vertex graph)) Srp.record_fns !SrpSimulator.solved
+  build_solutions (AdjGraph.vertices graph) Srp.record_fns !SrpSimulator.solved
 ;;

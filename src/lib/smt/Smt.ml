@@ -171,6 +171,6 @@ let solveClassic info query time chan ~decls =
     time
     chan
     (fun () -> Enc.encode_z3 decls)
-    (list_seq (Nv_datastructures.AdjGraph.nb_vertex (get_graph decls |> oget)))
+    (Nv_datastructures.AdjGraph.vertices (get_graph decls |> oget))
     (List.length (get_asserts decls))
 ;;

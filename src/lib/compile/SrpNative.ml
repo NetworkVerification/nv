@@ -96,7 +96,7 @@ module SrpSimulation (G : Topology) : SrpSimulationSig = struct
   let attr_equal = ref (fun _ _ -> true)
 
   let simulate_step trans merge (s : 'a extendedSolution) (origin : int) =
-    let do_neighbor (_, initial_attribute) (s, todo) neighbor =
+    let do_neighbor (_, initial_attribute) neighbor (s, todo) =
       let edge = origin, neighbor in
       (* Compute the incoming attribute from origin *)
       let n_incoming_attribute = trans edge initial_attribute in
@@ -147,8 +147,7 @@ module SrpSimulation (G : Topology) : SrpSimulationSig = struct
           AdjGraph.VertexMap.add neighbor (n_received, best) s, newTodo)
     in
     let initial_attribute = get_attribute origin s in
-    let neighbors = AdjGraph.succ G.graph origin in
-    BatList.fold_left (do_neighbor initial_attribute) (s, []) neighbors
+    AdjGraph.fold_succ (do_neighbor initial_attribute) G.graph origin (s, [])
   ;;
 
   (* simulate_init s q simulates srp starting with initial state (s,q) *)
@@ -215,7 +214,7 @@ let build_solution record_fns (vals, ty) =
   ocaml_to_nv_value record_fns ty vals
 ;;
 
-let build_solutions graph record_fns sols =
+let build_solutions nodes record_fns sols =
   let open Solution in
   { symbolics = []
   ; (*TODO: but it's not important for simulation.*)
@@ -228,6 +227,6 @@ let build_solutions graph record_fns sols =
           ( Var.create name
           , { sol_val = build_solution record_fns sol; mask = None; attr_ty = snd sol } ))
         sols
-  ; nodes = graph
+  ; nodes
   }
 ;;

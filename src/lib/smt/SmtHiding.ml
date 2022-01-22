@@ -518,7 +518,6 @@ let solve_hiding info query _time partial_chan ~full_chan ?(starting_vars = []) 
     in
     print_and_ask_partial partial_encoding;
     print_and_ask_full full_encoding;
-    let nodes = Nv_datastructures.AdjGraph.nb_vertex (get_graph decls |> oget) in
     let ask_for_nv_model solver =
       ask_for_model
         query
@@ -527,7 +526,7 @@ let solve_hiding info query _time partial_chan ~full_chan ?(starting_vars = []) 
         full_env
         solver
         renaming
-        (list_seq nodes)
+        (Nv_datastructures.AdjGraph.vertices (get_graph decls |> oget))
         (List.length (get_asserts decls))
         0
     in

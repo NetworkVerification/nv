@@ -28,11 +28,6 @@ let proj_rec i n =
   Printf.sprintf "p%d__%d" i n
 ;;
 
-(* don't call with a negative n...*)
-let rec fold_int (f : int -> 'a -> 'a) acc n =
-  if n = 0 then acc else fold_int f (f n acc) (n - 1)
-;;
-
 (** For each tuple of size n creates a corresponding record*)
 let build_record_type n =
   let lst = BatList.init n (fun i -> i) in
@@ -309,7 +304,7 @@ let rec value_to_ocaml_string v =
   | VOption (Some v) -> Printf.sprintf "(Some %s)" (value_to_ocaml_string v)
   | VClosure _ -> failwith "Closures shouldn't appear here."
   | VRecord map -> record_to_ocaml_record "=" value_to_ocaml_string map
-  | VNode n -> string_of_int n
+  | VNode n -> AdjGraph.Vertex.to_string n
   | VEdge (n1, n2) -> Printf.sprintf "(%d, %d)" n1 n2
 
 and exp_to_ocaml_string e =

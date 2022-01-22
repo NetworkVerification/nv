@@ -144,14 +144,14 @@ let map_predicates f partitioned_srp =
 (** Map each vertex in the list of vertices to a partition number.
  *  Return the map and the number of partitions.
 *)
-let map_vertices_to_parts vertices (partf : Vertex.t -> int) : int VertexMap.t * int =
-  let add_vertex (m, a) v =
+let map_vertices_to_parts graph (partf : Vertex.t -> int) : int VertexMap.t * int =
+  let add_vertex v (m, a) =
     let vnum = partf v in
     (* add the vertex and its partition mapping,
      * and increase the map number if it is the new largest mapping *)
     VertexMap.add v vnum m, max vnum a
   in
-  List.fold_left add_vertex (VertexMap.empty, 0) vertices
+  AdjGraph.fold_vertex add_vertex graph (VertexMap.empty, 0)
 ;;
 
 (* A data structure indicating a vertex remapping and giving the number of
@@ -165,8 +165,8 @@ type vmap = int * Vertex.t option VertexMap.t
  *  be Some v, where v is the new name for u.
  *  If not, its value will be None.
 *)
-let divide_vertices vmap nlists : vmap list =
-  let initial = List.make nlists (0, VertexMap.empty) in
+let divide_vertices vmap n : vmap list =
+  let initial = List.make n (0, VertexMap.empty) in
   (* add the vertex to the corresponding map and set it to None elsewhere *)
   let place_vertex vertex srp_ix l =
     List.mapi
@@ -192,10 +192,9 @@ let remap_edge edge (vmaps : vmap list) : Edge.t * srp_edge =
   let u, v = edge in
   (* For the given old vertex, find the associated new vertex *)
   let find_endpoint vertex =
-    let wrap_srp j = Option.map (fun i -> i, j) in
     let found =
       List.filteri_map
-        (fun j (_, m) -> wrap_srp j (VertexMap.find_default None vertex m))
+        (fun j (_, m) -> Option.map (fun i -> i, j) (VertexMap.find_default None vertex m))
         vmaps
     in
     assert (List.length found = 1);
@@ -272,15 +271,11 @@ let divide_edges (edges : Edge.t list) (vmaps : vmap list) : partitioned_srp lis
 (** Generate a list of partitioned_srp from the given list of nodes and edges,
  * along with their partitioning function and interface function.
 *)
-let partition_edges
-    (nodes : Vertex.t list)
-    (edges : Edge.t list)
-    (partf : Vertex.t -> int)
-  =
-  let node_srp_map, max_partition = map_vertices_to_parts nodes partf in
+let partition_edges (graph : AdjGraph.t) (partf : Vertex.t -> int) =
+  let node_srp_map, max_partition = map_vertices_to_parts graph partf in
   (* add 1 to max_partition to convert from max partition # to number of SRPS *)
   let divided_nodes = divide_vertices node_srp_map (max_partition + 1) in
-  divide_edges edges divided_nodes
+  divide_edges (AdjGraph.edges graph) divided_nodes
 ;;
 
 (** Helper function to extract the partition index
@@ -303,11 +298,9 @@ let partition_declarations decls ?(which = None) : partitioned_srp list =
   let partition = get_partition decls in
   match partition with
   | Some part ->
-    let nodes = get_nodes decls |> Option.get in
-    let node_list = List.range 0 `To (nodes - 1) in
-    let edges = get_edges decls |> Option.get in
+    let graph = get_graph decls |> Option.get in
     let partf = interp_partition part in
-    let srps = partition_edges node_list edges partf in
+    let srps = partition_edges graph partf in
     (match which with
     | Some filt -> List.filteri (fun i _ -> Set.mem i filt) srps
     | None -> srps)

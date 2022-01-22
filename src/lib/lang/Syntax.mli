@@ -2,7 +2,7 @@ open Cudd
 open Nv_datastructures
 open Nv_utils.PrimitiveCollections
 
-type node = int
+type node = AdjGraph.Vertex.t
 
 val tnode_sz : int
 

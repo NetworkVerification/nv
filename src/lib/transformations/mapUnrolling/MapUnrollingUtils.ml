@@ -142,16 +142,9 @@ let add_keys_for_nodes_and_edges decls maplist =
     aexp
       (e_val (avalue (vedge (i, j), Some TEdge, Span.default)), Some TEdge, Span.default)
   in
-  let nodes =
-    get_nodes decls
-    |> Nv_utils.OCamlUtils.oget
-    |> BatEnum.( --^ ) 0 (* Enum of 0 to (num_nodes - 1) *)
-    |> BatEnum.map make_node
-    |> ExpSet.of_enum
-  in
-  let edges =
-    get_edges decls |> Nv_utils.OCamlUtils.oget |> List.map make_edge |> ExpSet.of_list
-  in
+  let graph = get_graph decls |> Option.get in
+  let nodes = AdjGraph.fold_vertex (fun v s -> ExpSet.add (make_node v) s) graph ExpSet.empty in
+  let edges = AdjGraph.fold_edges_e (fun e s -> ExpSet.add (make_edge e) s) graph ExpSet.empty in
   List.map
     (fun (mapty, (const_keys, symb_keys)) ->
       match mapty with
