@@ -438,14 +438,14 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     (* construct the input constants *)
     let input_map = encode_kirigami_inputs env rank inputs eintrans count in
     (* Compute the labelling as the merge of all inputs *)
-    let constrain_label i =
-      let in_trans = List.map (fun e -> EdgeMap.find e !trans_map) (AdjGraph.pred_e graph i) in
+    let constrain_label v =
+      let in_trans = AdjGraph.fold_pred_e (fun e l -> (EdgeMap.find e !trans_map) :: l) graph v [] in
       (* Kirigami: get any input transfers from the input_map *)
-      let inputs = List.map fst (VertexMap.find_default [] i input_map) in
+      let inputs = List.map fst (VertexMap.find_default [] v input_map) in
       let merged =
-        encode_node_merges env count einit emerge (in_trans @ inputs) i remapping.(i)
+        encode_node_merges env count einit emerge (in_trans @ inputs) v remapping.(v)
       in
-      let lbl_iv = label_vars.(i) in
+      let lbl_iv = label_vars.(v) in
       add_symbolic env lbl_iv (Ty aty);
       let l =
         lift2 (fun lbl s -> mk_constant env (create_vars env "" lbl) s) lbl_iv attr_sort
@@ -498,7 +498,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     let attr_sort = ty_to_sorts aty in
     (* Compute the labelling as the merge of all inputs *)
     let constrain_label v =
-      let in_trans = List.map (fun e -> EdgeMap.find e !trans_map) (AdjGraph.pred_e graph v) in
+      let in_trans = AdjGraph.fold_pred_e (fun e l -> (EdgeMap.find e !trans_map) :: l) graph v [] in
       let merged = encode_node_merges env count einit emerge in_trans v v in
       let lbl_iv = label_vars.(v) in
       add_symbolic env lbl_iv (Ty aty);
