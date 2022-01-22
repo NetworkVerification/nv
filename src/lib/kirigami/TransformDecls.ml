@@ -9,23 +9,25 @@ open SrpRemapping
 (** Remap an and expression by dropping conjuncts that refer to cut nodes.
  ** The and statement is nested as follows:
  ** And (And (And x0 x1) x2) x3
- ** so we need to recurse in until we have dropped the right number of nodes.
- ** Since the nodes are remapped, we drop the higher-numbered nodes under
- ** the assumption that the other statements have been remapped to refer to
- ** the correct nodes now.
+ ** so we need to recurse in and drop the nodes as specified by the bool list [nodes].
+ ** remap_conjuncts (And x0 x1) [true; false] --> x0
+ ** remap_conjuncts (And x0 x1) [false; true] --> x1
  **)
-let rec remap_conjuncts nodes e =
-  print_endline (Printing.exp_to_string e);
-  if nodes > 0
-  then (
-    match e.e with
-    | EOp (And, [e2; _]) ->
-      (* go deeper *)
-      remap_conjuncts (nodes - 1) e2
+let rec remap_conjuncts e nodes =
+  match nodes with
+  | [] -> e
+  | keep :: tl ->
+    (match e.e with
+    | EOp (And, [e1; e2]) ->
+      (* descend *)
+      if keep then
+        (* keep the current conjunct *)
+        wrap e (eop And [remap_conjuncts e1 tl; e2])
+      else
+        remap_conjuncts e1 tl
     | EOp (And, _) -> failwith "and has wrong number of arguments"
     (* this case should be the last one *)
-    | _ -> e)
-  else e
+    | _ -> if keep then e else ebool true)
 ;;
 
 (** Assume the assert is of the form:
@@ -41,14 +43,12 @@ let rec remap_conjuncts nodes e =
  ** the k..2k variables belong to node 1, and so on.
  **)
 let transform_assert (e : exp) (parted_srp : SrpRemapping.partitioned_srp) : exp =
-  let { cut_nodes; _ } = parted_srp in
-  (* we need to remap before interpreting just to stop interpretation from filling
-   * in all the nodes and simplifying statements we don't want it to simplify the
-   * wrong way *)
-  (* let e = remap_exp parted_srp e in *)
-  (* FIXME: this will spit out a bunch of warnings if the predicate uses the node.
-   * we can ignore these if remapping conjuncts correctly drops them, but it's not helpful
-   * to the user to see. *)
+  let { nodes; cut_nodes; _ } = parted_srp in
+  let all_nodes = (List.map (fun v -> (v, true)) nodes) @ (List.map (fun v -> (v, false)) cut_nodes) in
+  (* sort all the vertices to obtain the original order (FIXME: assumes they've been given in the original order!).
+   * then, keep only the bools
+   *)
+  let to_keep = List.rev_map snd (List.sort (Tuple2.compare ~cmp1:Vertex.compare) all_nodes) in
   match e.e with
   | EMatch _ ->
     (* if there is only one branch, use interp to simplify;
@@ -57,10 +57,9 @@ let transform_assert (e : exp) (parted_srp : SrpRemapping.partitioned_srp) : exp
     (* FIXME: sometimes interp_partial is too aggressive; maybe we want to instead just
      * simplify the match and the first conjunct ourselves and then handle the rest *)
     (match e1.e with
-    (* we want to supply the *difference* between the current nodes and the
-     * number of nodes in the original SRP, because we want to descend down
-     * the chain of ands until there are only *nodes* many conjuncts left *)
-    | EOp (And, _) -> remap_conjuncts (List.length cut_nodes) e1
+    (* we supply a sequence of nodes in the original SRP, labelling which ones have been
+     * cut and which have been kept. we will now remove any conjuncts referring to cut nodes. *)
+    | EOp (And, _) -> remap_conjuncts e1 to_keep
     (* NOTE: this case is a hack to handle when InterpPartialFull.interp_partial is
      * too aggressive: this might happen if one of the later conjuncts simplifies
      * down to true and gets eliminated: we then assume we can replace the
