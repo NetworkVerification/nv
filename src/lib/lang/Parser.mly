@@ -304,6 +304,7 @@ component:
     | LET EDGES EQ LBRACE RBRACE        { DEdges [] }
     | LET EDGES EQ LBRACE edges RBRACE  { DEdges $5 }
     | LET NODES EQ NUM                  { DNodes (List.init (Nv_datastructures.Integer.to_int (snd $4)) identity) }
+    | LET NODES EQ LPAREN nodes RPAREN  { DNodes $5 }
     | TYPE ID EQ ty                     { (add_user_type (snd $2) $4; DUserTy (snd $2, $4)) }
 ;
 
@@ -479,6 +480,11 @@ exprsspace:
 edgenode:
     | NUM                               { Nv_datastructures.Integer.to_int (snd $1) }
     | NODE                              { snd $1 }
+;
+
+nodes:
+    | edgenode                          { [$1] }
+    | edgenode COMMA nodes              { $1 :: $3 }
 ;
 
 edge:

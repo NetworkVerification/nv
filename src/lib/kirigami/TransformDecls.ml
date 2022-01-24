@@ -43,12 +43,7 @@ let rec remap_conjuncts e nodes =
  ** the k..2k variables belong to node 1, and so on.
  **)
 let transform_assert (e : exp) (parted_srp : SrpRemapping.partitioned_srp) : exp =
-  let { nodes; cut_nodes; _ } = parted_srp in
-  let all_nodes = (List.map (fun v -> (v, true)) nodes) @ (List.map (fun v -> (v, false)) cut_nodes) in
-  (* sort all the vertices to obtain the original order (FIXME: assumes they've been given in the original order!).
-   * then, keep only the bools
-   *)
-  let to_keep = List.rev_map snd (List.sort (Tuple2.compare ~cmp1:Vertex.compare) all_nodes) in
+  let { nodes; cut_mask; _ } = parted_srp in
   match e.e with
   | EMatch _ ->
     (* if there is only one branch, use interp to simplify;
@@ -59,7 +54,7 @@ let transform_assert (e : exp) (parted_srp : SrpRemapping.partitioned_srp) : exp
     (match e1.e with
     (* we supply a sequence of nodes in the original SRP, labelling which ones have been
      * cut and which have been kept. we will now remove any conjuncts referring to cut nodes. *)
-    | EOp (And, _) -> remap_conjuncts e1 to_keep
+    | EOp (And, _) -> remap_conjuncts e1 cut_mask
     (* NOTE: this case is a hack to handle when InterpPartialFull.interp_partial is
      * too aggressive: this might happen if one of the later conjuncts simplifies
      * down to true and gets eliminated: we then assume we can replace the

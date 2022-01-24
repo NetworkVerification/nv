@@ -63,8 +63,10 @@ type partitioned_srp =
     nodes : Vertex.t list
   ; (* the edges in the network *)
     edges : Edge.t list
-  ; (* list of cut nodes in the monolithic network *)
-    cut_nodes : Vertex.t list
+  ; (* list of bools corresponding to nodes in the monolithic network,
+     * where [List.nth i cut_mask = true] iff [List.mem i nodes]
+     *)
+    cut_mask : bool list
   ; (* Maps from base nodes to their inputs and outputs *)
     (* the predicate applies to the input node as a `require`
      * on the hypothesis symbolic variable, and to the
@@ -190,9 +192,9 @@ let divide_edges (edges : Edge.t list) (node_srps : int VertexMap.t) npartitions
   =
   (* invert the node_srps map: divide the vertices into kept and cut for each partition *)
   let partitioned_srp_from_nodes i =
-    let kept, cut =
+    let kept, cut_mask =
       VertexMap.fold
-        (fun v j (k, c) -> if i = j then v :: k, c else k, v :: c)
+        (fun v j (k, c) -> (if i = j then v :: k else k), (i = j) :: c)
         node_srps
         ([], [])
     in
@@ -200,7 +202,7 @@ let divide_edges (edges : Edge.t list) (node_srps : int VertexMap.t) npartitions
     { rank = i
     ; nodes = List.rev kept
     ; edges = []
-    ; cut_nodes = List.rev cut
+    ; cut_mask = List.rev cut_mask
     ; inputs = VertexMap.empty
     ; outputs = VertexMap.empty
     }
