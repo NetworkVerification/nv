@@ -159,7 +159,7 @@ let solve info query time chan net_or_srp nodes assertions =
   ret
 ;;
 
-let solveClassic info query time chan ~decls =
+let solveClassic info query time chan decls =
   let open Nv_lang.Syntax in
   let module ExprEnc = (val expr_encoding smt_config) in
   let module Enc = (val (module SmtClassicEncoding.ClassicEncoding (ExprEnc))

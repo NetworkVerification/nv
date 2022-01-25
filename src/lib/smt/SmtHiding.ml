@@ -481,7 +481,7 @@ let full_solver =
      solver)
 ;;
 
-let solve_hiding info query _time partial_chan ~full_chan ?(starting_vars = []) ~decls =
+let solve_hiding info query _time partial_chan ~full_chan ?(starting_vars = []) decls =
   let partial_solver = Lazy.force partial_solver in
   let full_solver = Lazy.force full_solver in
   let print_and_ask solver chan q =

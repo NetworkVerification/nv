@@ -348,6 +348,7 @@ let exp_transformer (target : ty) (keys : keys) (recursors : Transformers.recurs
       | MFoldNode, [_; _; _]
       | MFoldEdge, [_; _; _]
       | MMapIte, [_; _; _; _] -> None
+      | MForAll, _ -> failwith "unroll_exp: forAll not implemented"
       | ( ( MCreate
           | MGet
           | MSet
