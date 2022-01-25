@@ -40,8 +40,8 @@ type partitioned_srp =
     nodes : Vertex.t list
   ; (* the edges in the network *)
     edges : Edge.t list
-  ; (* list of bools corresponding to nodes in the monolithic network,
-     * where [List.nth i cut_mask = true] iff [List.mem i nodes]
+  ; (* list of bools corresponding to nodes in the monolithic network in reverse order,
+     * where [List.nth i (List.rev cut_mask) = true] iff [List.mem i nodes]
      *)
     cut_mask : bool list
   ; (* Maps from base nodes to their inputs and outputs *)

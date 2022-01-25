@@ -132,7 +132,8 @@ let lookup_map_type ty lst = BatList.assoc ty lst
 (*
   In order to make sure fold works properly, we require that when we unroll
   maps whose keys are nodes or edges, we use all possible values for the keys,
-  instead of just the values which appear in the program
+  instead of just the values which appear in the program.
+  The return order is determined by AdjGraph.fold_vertex and AdjGraph.fold_edges_e.
 *)
 let add_keys_for_nodes_and_edges decls maplist =
   let make_node n =

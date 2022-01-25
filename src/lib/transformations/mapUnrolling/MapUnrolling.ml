@@ -2,11 +2,11 @@ open Batteries
 open Nv_lang
 open Syntax
 
-(* Unroll all map types contained in decls. Cannot handle polymorphism,
+(** Unroll all map types contained in decls. Cannot handle polymorphism,
  * so requires that inlining has been run first.
- *
- * Requires the user provide a maplist.
- * For the default maplist, see *unroll*, below. *)
+ * Maps over nodes and edges are unrolled according to the order their keys
+ * are returned by `AdjGraph.fold_vertex` and `AdjGraph.fold_edges_e`, respectively.
+ *)
 let unroll _ decls =
   let maplist = MapUnrollingUtils.collect_map_types_and_keys decls in
   let unrolled_decls, map_back1 =

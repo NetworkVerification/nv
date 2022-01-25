@@ -9,9 +9,12 @@ open SrpRemapping
 (** Remap an and expression by dropping conjuncts that refer to cut nodes.
  ** The and statement is nested as follows:
  ** And (And (And x0 x1) x2) x3
- ** so we need to recurse in and drop the nodes as specified by the bool list [nodes].
- ** remap_conjuncts (And x0 x1) [true; false] --> x0
- ** remap_conjuncts (And x0 x1) [false; true] --> x1
+ ** so we need to recurse in and drop the nodes as specified by the bool list [nodes],
+ ** which lists the conjuncts from right to left.
+ ** remap_conjuncts x0 [false] --> true
+ ** remap_conjuncts x0 [true] --> x0
+ ** remap_conjuncts (And x0 x1) [false; true] --> x0
+ ** remap_conjuncts (And x0 x1) [true; false] --> (And true x1)
  **)
 let rec remap_conjuncts e nodes =
   match nodes with
@@ -43,7 +46,6 @@ let rec remap_conjuncts e nodes =
  ** the k..2k variables belong to node 1, and so on.
  **)
 let transform_assert (e : exp) (parted_srp : SrpRemapping.partitioned_srp) : exp =
-  let { nodes; cut_mask; _ } = parted_srp in
   match e.e with
   | EMatch _ ->
     (* if there is only one branch, use interp to simplify;
@@ -54,7 +56,7 @@ let transform_assert (e : exp) (parted_srp : SrpRemapping.partitioned_srp) : exp
     (match e1.e with
     (* we supply a sequence of nodes in the original SRP, labelling which ones have been
      * cut and which have been kept. we will now remove any conjuncts referring to cut nodes. *)
-    | EOp (And, _) -> remap_conjuncts e1 cut_mask
+     | EOp (And, _) -> remap_conjuncts e1 parted_srp.cut_mask
     (* NOTE: this case is a hack to handle when InterpPartialFull.interp_partial is
      * too aggressive: this might happen if one of the later conjuncts simplifies
      * down to true and gets eliminated: we then assume we can replace the
