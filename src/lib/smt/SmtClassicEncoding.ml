@@ -624,10 +624,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
       else add_guarantees env
     in
     (* safety checks: add other hypotheses, test original assertions *)
-    conjoin_terms
-      env
-      (encode_assertions "greater-hyp" env apply greater_hyps)
-      ~negate:false;
+    conjoin_terms env (encode_assertions "greater-hyp" env apply greater_hyps) ~negate:false;
     let asserts =
       encode_assertions "assert" env (fun e -> encode_exp_z3 "" env e) assertions
     in
