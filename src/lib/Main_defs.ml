@@ -130,6 +130,7 @@ let run_smt_partitioned file cfg info decls parts fs =
             Some p, d)
           parts)
   in
+  (* TODO: add parallelization *)
   List.map (fun (p, d) -> run_smt_classic_aux file cfg info d p fs) pds
 ;;
 
@@ -168,9 +169,6 @@ let run_smt_classic file cfg info decls parts fs =
 let run_smt file cfg info decls parts fs =
   if cfg.finite_arith then SmtUtils.smt_config.infinite_arith <- false;
   if cfg.smt_parallel then SmtUtils.smt_config.parallel <- true;
-  (* if cfg.func then
-       run_smt_func file cfg info decls fs
-     else *)
   run_smt_classic file cfg info decls parts fs
 ;;
 
@@ -254,7 +252,6 @@ let parse_input_aux cfg info file decls parts fs =
       let decls =
         Profile.time_profile "Inlining" (fun () -> Inline.inline_declarations decls)
       in
-      (* (Typing.infer_declarations info decls, f :: fs) (* TODO: is type inf necessary here?*) *)
       decls, f :: fs)
     else decls, fs
   in
@@ -268,10 +265,7 @@ let parse_input (args : string array) =
   let cfg = Cmdline.get_cfg () in
   if cfg.debug then Printexc.record_backtrace true;
   let file = rest.(0) in
-  let ds, info = Input.parse file in
-  (* Parse nv file *)
-  let decls = ds in
-  (* print_endline @@ Printing.declarations_to_string decls ; *)
+  let decls, info = Input.parse file in
   let decls = ToEdge.toEdge_decl decls :: decls in
   let decls = Typing.infer_declarations info decls in
   Typing.check_annot_decls decls;
