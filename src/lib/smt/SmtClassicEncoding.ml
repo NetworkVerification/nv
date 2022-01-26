@@ -260,19 +260,18 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
    *)
   let encode_kirigami_inputs env r inputs eintrans count =
     let encode_input { edge; rank; var_names; preds } =
-      let u, v = edge in
       (* extract the variable name and create a term *)
       let xs = of_list (List.map (mk_term % mk_var % Var.to_string) var_names) in
       (* get the relevant predicate *)
       let pred_to_hyp i p =
         let pred =
-          encode_predicate p (Printf.sprintf "input-pred%d-%d-%d-%d" count i u v) env
+          encode_predicate p (Printf.sprintf "input-pred%d-%d-%s" count i (Edge.to_string edge)) env
         in
         pred, xs
       in
       let hyps = List.mapi pred_to_hyp preds in
       ( encode_kirigami_decomp
-          (Printf.sprintf "input%d-%d-%d" count u v)
+          (Printf.sprintf "input%d-%s" count (Edge.to_string edge))
           env
           eintrans
           edge
@@ -285,18 +284,17 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
   (* Return a list of output SMT terms to assert. *)
   let encode_kirigami_outputs env outputs eouttrans labelling count =
     let encode_output vtx (edge, preds) =
-      let u, v = edge in
       let pred_to_guar i p =
         let trans =
           encode_kirigami_decomp
-            (Printf.sprintf "output%d-%d-%d" count u v)
+            (Printf.sprintf "output%d-%s" count (Edge.to_string edge))
             env
             eouttrans
             edge
             (VertexMap.find vtx labelling)
         in
         let pred =
-          encode_predicate p (Printf.sprintf "output-pred%d-%d-%d-%d" count i u v) env
+          encode_predicate p (Printf.sprintf "output-pred%d-%d-%s" count i (Edge.to_string edge)) env
         in
         pred, trans
       in
@@ -309,8 +307,8 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
   ;;
 
   (* Extract variable names from var_names, and split them up based on which node they
-   *  belong to. In the end, label_vars.(i) is the list of attribute variables
-   *  for node i.
+   *  belong to. In the end, [List.nth i label_vars] is the list of attribute variables
+   *  for node [i].
    * NOTE: as we don't modify var_names as part of Kirigami,
    * label_vars has a length proportional to the number of nodes in the original network,
    * but not the number of nodes in the Kirigami networks. *)
@@ -345,8 +343,9 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     let trans_input_map = ref EdgeMap.empty in
     let enc_z3_trans = encode_z3_trans etrans in
     iter_edges_e
-      (fun (i, j) ->
+      (fun e ->
         let node_value n = avalue (vnode n, Some Typing.node_ty, Span.default) in
+        let i,j = e in
         let edge =
           if SmtUtils.smt_config.unboxing
           then [node_value i; node_value j]
@@ -360,14 +359,13 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
           enc_z3_trans
             edge
             (Printf.sprintf
-               "trans%d-%s-%s"
+               "trans%d-%s"
                count
-               (Vertex.to_string i)
-               (Vertex.to_string j))
+               (Edge.to_string e))
             env
         in
-        trans_input_map := EdgeMap.add (i, j) x !trans_input_map;
-        trans_map := EdgeMap.add (i, j) trans !trans_map)
+        trans_input_map := EdgeMap.add e x !trans_input_map;
+        trans_map := EdgeMap.add e trans !trans_map)
       graph;
     trans_map, trans_input_map
   ;;
