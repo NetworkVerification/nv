@@ -109,27 +109,34 @@ let interp_interface edge intfe =
       ("expected intf value to be a function but got " ^ Printing.exp_to_string intf_app)
 ;;
 
+(** For each of the given fragments, add its associated predicates from the given interface.*)
 let get_predicates fragments interface =
+  (* compute the set of all cross edges across fragments *)
   let cross_edges =
     List.fold_left
       (fun es f -> EdgeSet.union (EdgeSet.of_list (SrpRemapping.get_cross_edges f)) es)
       EdgeSet.empty
       fragments
   in
+  (* for every cross edge, map it to a list of predicates *)
   let all_preds =
     EdgeSet.fold
-      (fun e m -> EdgeMap.modify_def [] e (List.cons (interp_interface e interface)) m)
+      (fun e m -> EdgeMap.add e (interp_interface e interface) m)
       cross_edges
       EdgeMap.empty
   in
   (* TODO: do we need to save the old predicates? *)
   let add_input_preds input_exp =
     { input_exp with
-      preds = EdgeMap.find_default [] input_exp.edge all_preds @ input_exp.preds
+      preds = match (EdgeMap.Exceptionless.find input_exp.edge all_preds) with
+        | Some p -> p :: input_exp.preds
+        | None -> input_exp.preds
     }
   in
   let add_output_preds (edge, preds) =
-    edge, EdgeMap.find_default [] edge all_preds @ preds
+    edge, match (EdgeMap.Exceptionless.find edge all_preds) with
+    | Some p -> p :: preds
+    | None -> preds
   in
   let add_predicates fragment =
     { fragment with
