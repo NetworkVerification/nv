@@ -96,20 +96,20 @@ Encoding solutions also proceeds in multiple stages:
 2. Create two data structures, each proportional to `|E|`,
    to keep track of `trans` behavior along edges with `encode_edge_transfers`:
 
-- `trans_map`, a map from each edge `uv` to the encoded variable `y` where `y = (trans uv x)`
-- `trans_input_map`, a map from each edge `uv` to the encoded variable `x` where `y = (trans uv x)`
+- `trans_map`, a map from each vertex `v` to the list of encoded variables `y` where `y = (trans uv x)`, for all predecessors u of v
+- `trans_input_map`, a map from each vertex `u` to the list of encoded variables `x` where `y = (trans uv x)`, for all successors v of u
 
 The variables `x` and `y` are newly-declared constants, and we declare a constraint for each edge `uv` asserting
 `y = (trans uv x)`.
 We invert the arguments of `trans` before constructing the maps, but don't [partially interpret][interppartial]
 until each edge is supplied. (not totally clear why to me)
 
-3. For each node `v` (`O(|V|)`), collect all predecessor edges `uv` (`O(max(|V|,|E|)*ln|V|)`),
+3. For each node `v` (`O(|V|)`), collect all transferred `y` variables from `trans_map` (`O(lg|V|)` to lookup),
    and then encode the merge of `(init v)` with each of the transferred `y` variables.
    [Partially interpret][interppartial] `(init v)` and `(merge v)` before encoding.
    Successive merges are folded together one-by-one.
    The final declared label `l` is then stored in `labelling`: a `VertexMap.t` that maps nodes to their `smt_term`(s).
-4. For each label `l` in `labelling` (`O(|V|)`), add a constraint equating it to the `x` defined in `trans_input_map`.
+4. For each label `l` in `labelling` (`O(|V|)`), add a constraint equating it to the `x` defined in `trans_input_map` (`O(lg|V|)` to lookup).
 
 Once this is done, `encode_solve` returns.
 
