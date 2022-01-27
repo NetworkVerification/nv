@@ -335,12 +335,16 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     | _ -> failwith "internal error (encode_algebra)"
   ;;
 
-  (** Map each edge to transfer function result *)
+  (** Map each edge to transfer function result, producing two maps from vertices to lists:
+      - a map from target vertices to the results of incoming edges
+      - a map from source vertices to their input variables
+      The order in which the incoming edge results are returned is not guaranteed.
+   *)
   let encode_edge_transfers env count graph etrans =
-    (* trans_map maps each edge to the variable that holds the result *)
-    let trans_map = ref EdgeMap.empty in
+    (* trans_map maps each vertex to the variables that hold its results for merging *)
+    let trans_map = ref VertexMap.empty in
     (* trans_input_map maps each edge to the incoming message variable *)
-    let trans_input_map = ref EdgeMap.empty in
+    let trans_input_map = ref VertexMap.empty in
     let enc_z3_trans = encode_z3_trans etrans in
     iter_edges_e
       (fun e ->
@@ -364,24 +368,25 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
                (Edge.to_string e))
             env
         in
-        trans_input_map := EdgeMap.add e x !trans_input_map;
-        trans_map := EdgeMap.add e trans !trans_map)
+        trans_input_map := VertexMap.modify_def [] i (List.cons x) !trans_input_map;
+        trans_map := VertexMap.modify_def [] j (List.cons trans) !trans_map)
       graph;
     trans_map, trans_input_map
   ;;
 
   (** Propagate labels across edges outputs *)
   let encode_propagate_labels env trans_input_map labelling =
-    let encode_propagate x l =
+    let encode_propagate l x =
       BatList.iter2
         (fun label x -> SmtUtils.add_constraint env (mk_term (mk_eq label.t x.t)))
         (to_list l)
         x
     in
-    EdgeMap.iter
-      (fun (i, _) x ->
-        let label = VertexMap.find_opt i labelling in
-        Option.may (encode_propagate x) label)
+    VertexMap.iter
+      (fun v xs ->
+         (* TODO: why is this a find_opt instead of a find? *)
+        let label = VertexMap.find_opt v labelling in
+        Option.may (fun l -> BatList.iter (encode_propagate l) xs) label)
       trans_input_map
   ;;
 
@@ -415,6 +420,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     merged
   ;;
 
+
   let encode_kirigami_solve
       env
       graph
@@ -447,14 +453,8 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     (* construct the input constants *)
     let input_map = encode_kirigami_inputs env rank inputs eintrans count in
     (* Compute the labelling as the merge of all inputs *)
-    let constrain_label v lbl_vars =
-      let in_trans =
-        AdjGraph.fold_pred_e (fun e l -> EdgeMap.find e !trans_map :: l) graph v []
-      in
-      (* Kirigami: get any input transfers from the input_map *)
-      let inputs = List.map fst (VertexMap.find_default [] v input_map) in
-      let merged = encode_node_merges env count einit emerge (in_trans @ inputs) v in
-      let lbl_iv = List.hd lbl_vars in
+    let constrain_label v lbl_iv incoming_vars =
+      let merged = encode_node_merges env count einit emerge incoming_vars v in
       add_symbolic env lbl_iv (Ty aty);
       let l =
         lift2 (fun lbl s -> mk_constant env (create_vars env "" lbl) s) lbl_iv attr_sort
@@ -464,14 +464,17 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
            (fun l merged -> SmtUtils.add_constraint env (mk_term (mk_eq l.t merged.t)))
            l
            merged);
-      l, List.tl lbl_vars
+      l
     in
     (* include label_vars in the fold so that we pop off the elements as we go *)
     let labelling, _ =
       AdjGraph.fold_vertex
         (fun v (m, lbl_vars) ->
-          let l, vars = constrain_label v lbl_vars in
-          VertexMap.add v l m, vars)
+          let in_trans = VertexMap.find_default [] v !trans_map in
+          (* Kirigami: get any input transfers from the input_map *)
+          let inputs = List.map fst (VertexMap.find_default [] v input_map) in
+          let l = constrain_label v (List.hd lbl_vars) (in_trans @ inputs) in
+          VertexMap.add v l m, List.tl lbl_vars)
         graph
         (VertexMap.empty, kept_vars)
     in
@@ -506,18 +509,14 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
   let encode_solve env graph count { aty; var_names; init; trans; merge } =
     let aty = oget aty in
     let einit, etrans, emerge = init, trans, merge in
-    (* let nodes = nb_vertex graph in *)
     let label_vars = encode_label_vars aty var_names in
+    (* encode transfer, get maps for incoming and outgoing edges *)
     let trans_map, trans_input_map = encode_edge_transfers env count graph etrans in
     (* Setup labelling functions *)
     let attr_sort = ty_to_sorts aty in
     (* Compute the labelling as the merge of all inputs *)
-    let constrain_label v lbl_vars =
-      let in_trans =
-        AdjGraph.fold_pred_e (fun e l -> EdgeMap.find e !trans_map :: l) graph v []
-      in
-      let merged = encode_node_merges env count einit emerge in_trans v in
-      let lbl_iv = List.hd label_vars in
+    let constrain_label v lbl_iv incoming_vars =
+      let merged = encode_node_merges env count einit emerge incoming_vars v in
       add_symbolic env lbl_iv (Ty aty);
       let l =
         lift2 (fun lbl s -> mk_constant env (create_vars env "" lbl) s) lbl_iv attr_sort
@@ -527,14 +526,15 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
            (fun l merged -> SmtUtils.add_constraint env (mk_term (mk_eq l.t merged.t)))
            l
            merged);
-      l, List.tl lbl_vars
+      l
     in
     (* include label_vars in the fold so that we pop off the elements as we go *)
     let labelling, _ =
       AdjGraph.fold_vertex
         (fun v (m, lbl_vars) ->
-          let l, vars = constrain_label v lbl_vars in
-          VertexMap.add v l m, vars)
+          let in_trans = VertexMap.find_default [] v !trans_map in
+          let l = constrain_label v (List.hd lbl_vars) in_trans in
+          VertexMap.add v l m, List.tl lbl_vars)
         graph
         (VertexMap.empty, label_vars)
     in
