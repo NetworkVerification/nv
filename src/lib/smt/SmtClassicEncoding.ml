@@ -265,7 +265,10 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
       (* get the relevant predicate *)
       let pred_to_hyp i p =
         let pred =
-          encode_predicate p (Printf.sprintf "input-pred%d-%d-%s" count i (Edge.to_string edge)) env
+          encode_predicate
+            p
+            (Printf.sprintf "input-pred%d-%d-%s" count i (Edge.to_string edge))
+            env
         in
         pred, xs
       in
@@ -294,7 +297,10 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
             (VertexMap.find vtx labelling)
         in
         let pred =
-          encode_predicate p (Printf.sprintf "output-pred%d-%d-%s" count i (Edge.to_string edge)) env
+          encode_predicate
+            p
+            (Printf.sprintf "output-pred%d-%d-%s" count i (Edge.to_string edge))
+            env
         in
         pred, trans
       in
@@ -349,7 +355,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     iter_edges_e
       (fun e ->
         let node_value n = avalue (vnode n, Some Typing.node_ty, Span.default) in
-        let i,j = e in
+        let i, j = e in
         let edge =
           if SmtUtils.smt_config.unboxing
           then [node_value i; node_value j]
@@ -360,13 +366,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
                 , Span.default ) ]
         in
         let trans, x =
-          enc_z3_trans
-            edge
-            (Printf.sprintf
-               "trans%d-%s"
-               count
-               (Edge.to_string e))
-            env
+          enc_z3_trans edge (Printf.sprintf "trans%d-%s" count (Edge.to_string e)) env
         in
         trans_input_map := VertexMap.modify_def [] i (List.cons x) !trans_input_map;
         trans_map := VertexMap.modify_def [] j (List.cons trans) !trans_map)
@@ -377,14 +377,15 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
   (** Propagate labels across edges outputs *)
   let encode_propagate_labels env trans_input_map labelling =
     let encode_propagate l x =
-      BatList.iter2
-        (fun label x -> SmtUtils.add_constraint env (mk_term (mk_eq label.t x.t)))
-        (to_list l)
-        x
+      ignore
+        (lift2
+           (fun label x -> SmtUtils.add_constraint env (mk_term (mk_eq label.t x.t)))
+           l
+           (of_list x))
     in
     VertexMap.iter
       (fun v xs ->
-         (* TODO: why is this a find_opt instead of a find? *)
+        (* TODO: why is this a find_opt instead of a find? *)
         let label = VertexMap.find_opt v labelling in
         Option.may (fun l -> BatList.iter (encode_propagate l) xs) label)
       trans_input_map
@@ -420,7 +421,6 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     merged
   ;;
 
-
   let encode_kirigami_solve
       env
       graph
@@ -436,7 +436,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
         according to whether or not they should be kept or cut. *)
     let kept_vars, cut_vars =
       List.fold_left2
-        (fun (k, c) b v -> if b then (v :: k, c) else (k, v :: c))
+        (fun (k, c) b v -> if b then v :: k, c else k, v :: c)
         ([], [])
         parted_srp.cut_mask
         (List.rev label_vars)
@@ -555,11 +555,8 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
 
   let conjoin_terms env terms ~(negate : bool) =
     match terms with
-    | [] -> ()
+    | [] -> () (* don't add a constraint if the list is empty *)
     | _ ->
-      (* Tim: could this just start with true and then use the whole list, instead of needing hd and tl?
-       * on the other hand, we certainly don't want to have negate be set and accidentally
-       * (add_constraint env false), so maybe this is fine for now *)
       let all_good =
         List.fold_left (fun acc v -> mk_and acc v.t) (List.hd terms).t (List.tl terms)
       in
@@ -624,7 +621,10 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
       else add_guarantees env
     in
     (* safety checks: add other hypotheses, test original assertions *)
-    conjoin_terms env (encode_assertions "greater-hyp" env apply greater_hyps) ~negate:false;
+    conjoin_terms
+      env
+      (encode_assertions "greater-hyp" env apply greater_hyps)
+      ~negate:false;
     let asserts =
       encode_assertions "assert" env (fun e -> encode_exp_z3 "" env e) assertions
     in
