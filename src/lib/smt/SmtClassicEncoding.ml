@@ -506,6 +506,10 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     lesser, greater, guarantees
   ;;
 
+  (* TODO: the current implementation does some redundant work by using auxiliary data
+     structures to store and lookup (O(lg|V|)) vertex information while we work.
+     a more efficient implementation (O(|V| + |E|)) would use a labelled graph to have
+     this data available on-hand the moment we consider a given vertex. *)
   let encode_solve env graph count { aty; var_names; init; trans; merge } =
     let aty = oget aty in
     let einit, etrans, emerge = init, trans, merge in
