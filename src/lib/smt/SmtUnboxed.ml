@@ -79,7 +79,6 @@ module Unboxed : SmtEncodingSigs.ExprEncoding = struct
     | TNode -> ty_to_sort (TInt 32)
     | TEdge | TTuple _ | TMap _ -> failwith "Not a single sort"
     | TOption _ | TUnit -> failwith "should be unboxed"
-    (*       mk_array_sort ctx (ty_to_sort ctx ty1) (ty_to_sort ctx ty2)*)
     | TVar _ | QVar _ | TArrow _ | TRecord _ ->
       failwith
         (Printf.sprintf "internal error (ty_to_sort): %s" (Printing.ty_to_string ty))
@@ -208,7 +207,7 @@ module Unboxed : SmtEncodingSigs.ExprEncoding = struct
           if smt_config.infinite_arith
           then mk_uand ze1.t ze2.t sz |> mk_term ~tloc:e.espan
           else mk_bv_uand ze1.t ze2.t |> mk_term ~tloc:e.espan
-        | _ -> failwith "Invalid number of arguments to USub")
+        | _ -> failwith "Invalid number of arguments to UAnd")
       | Eq ->
         (match es with
         | [e1; e2] ->
@@ -279,7 +278,6 @@ module Unboxed : SmtEncodingSigs.ExprEncoding = struct
         failwith "internal error (encode_exp_z3)")
     | ETy (e, _) -> encode_exp_z3_single ~arith descr env e
     | _ ->
-      (* Printf.printf "expr: %s\n" (Printing.exp_to_string e); *)
       (* we always know this is going to be a singleton list *)
       let es = encode_exp_z3 descr env e in
       assert (List.length es = 1);
@@ -344,11 +342,7 @@ module Unboxed : SmtEncodingSigs.ExprEncoding = struct
       let zes2 = encode_exp_z3 descr env e2 in
       add_constraint env (mk_term (mk_eq za.t ze1.t));
       zes2
-    | ETuple es ->
-      (* Printf.printf "expr: %s\n" (Syntax.show_exp ~show_meta:false e); *)
-      (* List.fold_left (fun acc e -> *)
-      (*     (encode_exp_z3 descr env e) @ acc) [] es *)
-      lift1 (fun e -> encode_exp_z3 descr env e) es |> BatList.concat
+    | ETuple es -> lift1 (fun e -> encode_exp_z3 descr env e) es |> BatList.concat
     | ESome _ -> failwith "Some should be unboxed"
     | EMatch (e1, bs) ->
       let zes1 = encode_exp_z3 descr env e1 in
@@ -358,9 +352,7 @@ module Unboxed : SmtEncodingSigs.ExprEncoding = struct
     | ETy (e, _) -> encode_exp_z3 descr env e
     | EFun _ | EApp _ -> failwith "function in smt encoding"
     | ERecord _ | EProject _ -> failwith "record in smt encoding"
-    | _ ->
-      (* Printf.printf "expr: %s\n" (Syntax.show_exp ~show_meta:false e); *)
-      [encode_exp_z3_single descr env e]
+    | _ -> [encode_exp_z3_single descr env e]
 
   and encode_branches_z3 descr env names bs (t : ty) =
     match isEmptyBranch bs with

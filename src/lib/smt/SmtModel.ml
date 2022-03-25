@@ -39,7 +39,7 @@ let eval_model
         let ec = mk_echo ("\"" ^ var assu ^ "\"") |> mk_command in
         ec :: ev :: acc)
       base
-      (list_seq guarantees)
+      (List.init guarantees identity)
   in
   (* Compute eval statements for assertions *)
   let assertion_cmds =
@@ -51,7 +51,7 @@ let eval_model
         let ec = mk_echo ("\"" ^ var assu ^ "\"") |> mk_command in
         ec :: ev :: acc)
       guarantee_cmds
-      (list_seq assertions)
+      (List.init assertions identity)
   in
   (* Compute eval statements for symbolic variables *)
   let symbols =

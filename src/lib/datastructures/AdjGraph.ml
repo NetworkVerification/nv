@@ -4,10 +4,10 @@ open Nv_utils.PrimitiveCollections
 (*** Module definitions ***)
 
 module Vertex = struct
-  type t = int (* Really should be Syntax.node, but that causes a dependency loop *)
+  type t = int [@@deriving eq, ord] (* Really should be Syntax.node, but that causes a dependency loop *)
 
-  let compare = Stdlib.compare
-  let equal a b = compare a b = 0
+  (* let compare = Stdlib.compare *)
+  (* let equal a b = compare a b = 0 *)
   let hash = Hashtbl.hash
   let to_string = string_of_int
 end
@@ -17,6 +17,7 @@ include Persistent.Digraph.Concrete (Vertex)
 module Edge = struct
   include E
 
+  let equal a b = compare a b = 0
   let to_string e =
     Printf.sprintf "%s~%s" (Vertex.to_string (src e)) (Vertex.to_string (dst e))
   ;;
@@ -40,17 +41,12 @@ let to_string g =
 
 (*** Vertex/Edge Utilities ***)
 
-let fold_vertices (f : Vertex.t -> 'a -> 'a) (i : int) (acc : 'a) : 'a =
-  let rec loop j = if i = j then acc else f j (loop (j + 1)) in
-  loop 0
-;;
-
-let vertices (g : t) = fold_vertex VertexSet.add g VertexSet.empty
+let vertices (g : t) = List.rev (fold_vertex List.cons g [])
 let edges (g : t) = BatList.rev (fold_edges_e List.cons g [])
 
 (*** Graph Creation **)
 
-let create n = fold_vertices (fun v g -> add_vertex g v) n empty
+let create vs = List.fold_left add_vertex empty vs
 
 let of_edges (l : (Vertex.t * Vertex.t) list) : t =
   BatList.fold_left (fun g e -> add_edge_e g e) empty l
@@ -164,7 +160,7 @@ let min_cut g s t =
       EdgeSet.empty
   in
   (* return the cut-set, the visited vertices (s-set) and the non-visited vertices (t-set) *)
-  cut, visited, VertexSet.diff (vertices g) visited
+  cut, visited, VertexSet.diff (fold_vertex VertexSet.add g VertexSet.empty) visited
 ;;
 
 module DrawableGraph = struct

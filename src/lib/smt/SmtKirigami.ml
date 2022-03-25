@@ -69,13 +69,14 @@ let solve ?(check_ranked = false) info query time chan net_or_srp nodes assertio
 ;;
 
 (* Solver for Kirigami *)
-let solveKirigami ?(check_ranked = false) info query time chan ~part ~decls =
+let solveKirigami ?(check_ranked = false) info query time chan ~part decls =
   let open Nv_lang.Syntax in
   let module ExprEnc = (val expr_encoding smt_config) in
   let module Enc = (val (module SmtClassicEncoding.ClassicEncoding (ExprEnc))
                       : SmtClassicEncoding.ClassicEncodingSig)
   in
   let assertions = List.length (get_asserts decls) in
+  (* print_endline (Printing.declarations_to_string decls); *)
   (* count up a guarantee for every predicate on every output *)
   let outputs = VertexMap.fold (fun _ l acc -> l @ acc) part.outputs [] in
   let guarantees = List.fold_left (fun acc (_, ps) -> List.length ps + acc) 0 outputs in
@@ -86,7 +87,7 @@ let solveKirigami ?(check_ranked = false) info query time chan ~part ~decls =
     time
     chan
     (fun () -> Enc.kirigami_encode_z3 ~check_ranked part decls)
-    (get_old_nodes part)
+    part.nodes
     assertions
     guarantees
 ;;

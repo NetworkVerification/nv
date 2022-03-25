@@ -1,0 +1,22 @@
+type attribute = int
+
+let nodes = (1n, 2n, 3n)
+
+let edges = {
+  1=2;
+  2=3;
+}
+
+let init n = if n = 1n then 0 else 10
+let trans e x = x + 1
+let merge n x y = if x < y then x else y
+
+let partition n = if n = 2n then 0 else 1
+let interface e x = match e with
+ | 1~2 -> x = 0
+ | 2~_ -> x = 1
+ | 3~2 -> x = 2
+
+let sol = solution { init = init; trans = trans; merge = merge; interface = interface; }
+
+assert foldNodes (fun u v acc -> acc && v < 4) sol true

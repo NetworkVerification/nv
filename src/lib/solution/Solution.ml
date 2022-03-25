@@ -26,7 +26,7 @@ type t =
     assertions : bool list
   ; (* Kirigami's special asserts *)
     guarantees : bool list
-  ; nodes : int list
+  ; nodes : Vertex.t list
   }
 
 type map_back = t -> t
@@ -183,7 +183,6 @@ let rec print_masked mask v =
 ;;
 
 let print_fun nodes { sol_val; mask } =
-  let solString = ref [] in
   let m =
     match sol_val.v with
     | VMap m -> m
@@ -194,13 +193,13 @@ let print_fun nodes { sol_val; mask } =
     | None -> fun x -> Printing.value_to_string ~show_types:false x
     | Some m -> fun x -> print_masked m x
   in
-  for i = (List.length nodes) - 1 downto 0 do
-    let v = BddMap.find m (vnode i) in
-    solString := (List.nth nodes i, f v) :: !solString
-  done;
+  let lookupSol n =
+    let v = BddMap.find m (vnode n) in
+    (n, f v)
+  in
   PrimitiveCollections.printList
-    (fun (u, s) -> Printf.sprintf "Node %d\n---------\n%s" u s)
-    !solString
+    (fun (u, s) -> Printf.sprintf "Node %s\n---------\n%s" (Vertex.to_string u) s)
+    (List.map lookupSol nodes)
     ""
     "\n\n"
     "\n"

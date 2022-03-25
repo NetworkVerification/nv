@@ -23,8 +23,8 @@ let partition node = match node with
   | 1n -> 1
 
 let interface edge a = match edge with
-  | 0~1 -> a = 1
-  | 1~0 -> a = 2
+  | 0~1 -> a = 0
+  | 1~0 -> a = 1
 
 (* The merge function;
    It must have type UInt32 -> A -> A -> A

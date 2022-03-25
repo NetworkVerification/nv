@@ -102,8 +102,7 @@ module SmtLang = struct
   and constructor_decl =
     { constr_name : string (** name of constructor *)
     ; constr_args : (string * sort) list
-          (** projection functions
-                                           and their type *)
+          (** projection functions and their type *)
     }
 
   and sort =
@@ -334,8 +333,7 @@ module SmtLang = struct
     | Bool b -> if b then "true" else "false"
     | And (b1, b2) ->
       Printf.sprintf "(and %s %s)" (smt_term_to_smt b1) (smt_term_to_smt b2)
-    | Or (b1, b2) ->
-      Printf.sprintf "(or %s %s)" (smt_term_to_smt b1) (smt_term_to_smt b2)
+    | Or (b1, b2) -> Printf.sprintf "(or %s %s)" (smt_term_to_smt b1) (smt_term_to_smt b2)
     | Not b -> Printf.sprintf "(not %s)" (smt_term_to_smt b)
     | Add (n, m) -> Printf.sprintf "(+ %s %s)" (smt_term_to_smt n) (smt_term_to_smt m)
     | Sub (n, m) -> Printf.sprintf "(- %s %s)" (smt_term_to_smt n) (smt_term_to_smt m)
@@ -451,8 +449,8 @@ module SmtLang = struct
       then
         Printf.sprintf
           "(set-option :parallel.enable true)\n\
-           (check-sat-using (then simplify propagate-values simplify solve-eqs \
-           bit-blast psat))\n"
+           (check-sat-using (then simplify propagate-values simplify solve-eqs bit-blast \
+           psat))\n"
       else if smt_config.infinite_arith
       then
         Printf.sprintf
@@ -460,8 +458,8 @@ module SmtLang = struct
            (check-sat-using (then simplify propagate-values simplify solve-eqs smt))"
       else
         Printf.sprintf
-          "(check-sat-using (then simplify propagate-values simplify solve-eqs \
-           bit-blast smtfd))"
+          "(check-sat-using (then simplify propagate-values simplify solve-eqs bit-blast \
+           smtfd))"
     | GetModel -> Printf.sprintf "(get-model)"
     | Push -> Printf.sprintf "(push)"
     | Pop -> Printf.sprintf "(pop)"

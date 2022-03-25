@@ -132,7 +132,8 @@ let lookup_map_type ty lst = BatList.assoc ty lst
 (*
   In order to make sure fold works properly, we require that when we unroll
   maps whose keys are nodes or edges, we use all possible values for the keys,
-  instead of just the values which appear in the program
+  instead of just the values which appear in the program.
+  The return order is determined by AdjGraph.fold_vertex and AdjGraph.fold_edges_e.
 *)
 let add_keys_for_nodes_and_edges decls maplist =
   let make_node n =
@@ -142,16 +143,9 @@ let add_keys_for_nodes_and_edges decls maplist =
     aexp
       (e_val (avalue (vedge (i, j), Some TEdge, Span.default)), Some TEdge, Span.default)
   in
-  let nodes =
-    get_nodes decls
-    |> Nv_utils.OCamlUtils.oget
-    |> BatEnum.( --^ ) 0 (* Enum of 0 to (num_nodes - 1) *)
-    |> BatEnum.map make_node
-    |> ExpSet.of_enum
-  in
-  let edges =
-    get_edges decls |> Nv_utils.OCamlUtils.oget |> List.map make_edge |> ExpSet.of_list
-  in
+  let graph = get_graph decls |> Option.get in
+  let nodes = AdjGraph.fold_vertex (fun v s -> ExpSet.add (make_node v) s) graph ExpSet.empty in
+  let edges = AdjGraph.fold_edges_e (fun e s -> ExpSet.add (make_edge e) s) graph ExpSet.empty in
   List.map
     (fun (mapty, (const_keys, symb_keys)) ->
       match mapty with

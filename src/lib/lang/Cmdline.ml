@@ -16,24 +16,19 @@ type t =
   ; inline : bool [@short "-i"] (** inline the policy before simulation     *)
   ; compile : bool (** compile network to OCaml code before simulation *)
   ; unroll : bool (** whether to unroll maps or not           *)
-  (* ; draw: bool                         (\** emits a .jpg file of the graph          *\) *)
-  (* ; depth : int (\** search depth for refinement procedure   *\) *)
-  (* ; check_monotonicity : bool (\** checks monotonicity of trans function   *\) *)
   ; kirigami : bool [@short "-k"] (** enable partitioning features           *)
   ; ranked : bool (** use the ranked check for kirigami       *)
   ; print_partitions : bool (** print the partitioned declarations in kirigami *)
   ; fragments : string option [@short "-f"] (** only check the given fragments *)
-  (* ; link_failures : int (\** adds at most k link failures to the network  *\) *)
-  (* ; slicing : bool (\** Try to slice the network's attribute *\) *)
   ; parallelize : int option [@short "-p"] (** Try to parallelize solving using n cores **)
   ; timeout : int [@short "-t"] (** Time out Z3 solving after n seconds (UNIX only) **)
   }
 [@@deriving
   show
-, argparse
-    { positional = ["file", "nv policy file"]
-    ; description = "nv: a network verification framework"
-    }]
+  , argparse
+      { positional = ["file", "nv policy file"]
+      ; description = "nv: a network verification framework"
+      }]
 
 let default =
   { debug = false
@@ -59,12 +54,6 @@ let default =
   ; fragments = None
   ; parallelize = None
   ; timeout = 0
-  (* NOTE: these options are not currently implemented *)
-  (* ; draw=false *)
-  (* ; depth = 20 *)
-  (* ; check_monotonicity = false *)
-  (* ; link_failures = 0 *)
-  (* ; slicing = false *)
   }
 ;;
 
@@ -79,8 +68,6 @@ let set_cfg c = cfg := c
 let update_cfg_dependencies () =
   if !cfg.smt then cfg := { !cfg with unroll = true; unbox = true; inline = true };
   if !cfg.unroll then cfg := { !cfg with inline = true };
-  (* if !cfg.check_monotonicity then cfg := { !cfg with inline = true }; *)
-  (* if !cfg.slicing then cfg := { !cfg with unbox = true }; *)
   if !cfg.hiding then cfg := { !cfg with unbox = true };
   if !cfg.smt_parallel then cfg := { !cfg with finite_arith = true };
   if !cfg.print_partitions || !cfg.ranked then cfg := { !cfg with kirigami = true };

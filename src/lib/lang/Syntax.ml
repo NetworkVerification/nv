@@ -5,7 +5,7 @@ open Nv_datastructures
 open Nv_utils.PrimitiveCollections
 open Nv_utils
 
-type node = int [@@deriving eq, ord]
+type node = AdjGraph.Vertex.t [@@deriving eq, ord]
 
 let tnode_sz = 12
 
@@ -235,7 +235,7 @@ type declaration =
   | DSolve of solve
   | DRequire of exp
   | DPartition of exp (* partition ids *)
-  | DNodes of int
+  | DNodes of node list
   | DEdges of (node * node) list
 
 type declarations = declaration list
@@ -1045,13 +1045,13 @@ let get_edges ds =
 let get_nodes ds =
   get_decl ds (fun d ->
       match d with
-      | DNodes i -> Some i
+      | DNodes vs -> Some vs
       | _ -> None)
 ;;
 
 let get_graph ds =
   match get_nodes ds, get_edges ds with
-  | Some n, Some es -> Some (List.fold_left AdjGraph.add_edge_e (AdjGraph.create n) es)
+  | Some vs, Some es -> Some (List.fold_left AdjGraph.add_edge_e (AdjGraph.create vs) es)
   | _ -> None
 ;;
 

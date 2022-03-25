@@ -166,48 +166,30 @@ let check_record_label_uniqueness info decls =
    | _ -> () *)
 
 (* Ensures every node/edge value in the program actually exists in the network *)
-let check_nodes_and_edges info num_nodes edges _ (e : exp) =
+let check_nodes_and_edges info graph _ (e : exp) =
   match e.e with
   | EVal v ->
     begin
       match v.v with
       | VNode n ->
-        if n < num_nodes
+        if AdjGraph.mem_vertex graph n
         then ()
         else (
           let msg =
             Printf.sprintf
-              "Node %d does not appear in the network! (The highest node value is %d)"
-              n
-              (num_nodes - 1)
+              "Node %s does not appear in the network!"
+              (AdjGraph.Vertex.to_string n)
           in
           Console.error_position info v.vspan msg)
-      | VEdge (n1, n2) ->
-        if List.mem (n1, n2) edges
+      | VEdge e ->
+        if AdjGraph.mem_edge_e graph e
         then ()
         else (
-          let msg = Printf.sprintf "Edge %d~%d does not appear in the network!" n1 n2 in
+          let msg = Printf.sprintf "Edge %s does not appear in the network!" (AdjGraph.Edge.to_string e) in
           Console.error_position info v.vspan msg)
       | _ -> ()
     end
   | _ -> ()
-;;
-
-let check_valid_edges num_nodes edges =
-  let check_edge (u, v) =
-    if u < num_nodes && v < num_nodes
-    then ()
-    else (
-      let msg =
-        Printf.sprintf
-          "Edge %d~%d is invalid! (The highest node value is %d)"
-          u
-          v
-          num_nodes
-      in
-      Console.error msg)
-  in
-  List.iter check_edge edges
 ;;
 
 let check info (ds : declarations) : unit =
@@ -216,9 +198,7 @@ let check info (ds : declarations) : unit =
   (* Visitors.iter_exp_decls (check_closures info) ds ; *)
   (* Is this still necessary? *)
   (* Visitors.iter_exp_decls (check_keys info) ds; *)
-  let nodes = get_nodes ds |> Option.get in
-  let edges = get_edges ds |> Option.get in
-  check_valid_edges nodes edges;
-  Visitors.iter_exp_decls (check_nodes_and_edges info nodes edges) ds;
+  let graph = get_graph ds |> Option.get in
+  Visitors.iter_exp_decls (check_nodes_and_edges info graph) ds;
   ()
 ;;

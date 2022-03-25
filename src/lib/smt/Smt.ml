@@ -159,7 +159,7 @@ let solve info query time chan net_or_srp nodes assertions =
   ret
 ;;
 
-let solveClassic info query time chan ~decls =
+let solveClassic info query time chan decls =
   let open Nv_lang.Syntax in
   let module ExprEnc = (val expr_encoding smt_config) in
   let module Enc = (val (module SmtClassicEncoding.ClassicEncoding (ExprEnc))
@@ -171,6 +171,6 @@ let solveClassic info query time chan ~decls =
     time
     chan
     (fun () -> Enc.encode_z3 decls)
-    (list_seq (Nv_datastructures.AdjGraph.nb_vertex (get_graph decls |> oget)))
+    (Nv_datastructures.AdjGraph.vertices (get_graph decls |> oget))
     (List.length (get_asserts decls))
 ;;

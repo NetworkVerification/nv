@@ -397,11 +397,8 @@ let rec declaration_to_string ?(show_types = false) d =
       | Some p -> part_to_string p)
   | DPartition e -> "let partition = " ^ exp_to_string e (* partitioning *)
   | DRequire e -> "require " ^ exp_to_string e
-  | DNodes n -> "let nodes = " ^ string_of_int n
-  | DEdges es ->
-    "let edges = {"
-    ^ List.fold_right (fun (u, v) s -> Printf.sprintf "%s%dn-%dn;" s u v) es ""
-    ^ "}"
+  | DNodes vs -> OCamlUtils.printList AdjGraph.Vertex.to_string vs "let nodes = (" ", " ")"
+  | DEdges es -> OCamlUtils.printList AdjGraph.Edge.to_string es "let edges = {" "; " "}"
   | DUserTy (name, ty) ->
     Printf.sprintf "type %s = %s" (Var.to_string name) (ty_to_string ty)
 ;;

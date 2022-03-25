@@ -10,11 +10,25 @@ open Nv_interpreter
 open Nv_utils.OCamlUtils
 open SrpRemapping
 
-type transform_result =
-  | Decl of declaration
-  (* Solution: return Solve and updated partitioned SRP *)
-  | UpdateDecl of (partitioned_srp * declaration)
-  | Drop
+(* Collect all variables from symbolics associated with each input of the partitioned_srp.
+ * Implicitly assumes that variable names can be checked to determine the original variable
+ * after performing transformations. *)
+let update_vars_from_symbolics partitioned_srp (symbs : (var * ty_or_exp) list) =
+  let get_edge_symbs edge =
+    List.filter_map
+      (fun (v, _) -> if SrpRemapping.is_hyp_var edge v then Some v else None)
+      symbs
+  in
+  { partitioned_srp with
+    inputs =
+      VertexMap.map
+        (fun ies ->
+          List.map
+            (fun (ie : input_exp) -> { ie with var_names = get_edge_symbs ie.edge })
+            ies)
+        partitioned_srp.inputs
+  }
+;;
 
 (** Return a new set of declarations of all symbolics added by this partition. *)
 let get_hyp_symbolics aty (part : partitioned_srp) =
@@ -33,36 +47,30 @@ let get_hyp_symbolics aty (part : partitioned_srp) =
  ** that need to be added with it.
  ** NOTE: must run after Nv_transformations.RenameForSMT.rename_declarations in order to match symbolics
  ** correctly. *)
-let transform_declaration parted_srp decl : transform_result =
+let transform_declaration parted_srp decl : declaration option =
   let ({ nodes; edges; _ } : partitioned_srp) = parted_srp in
   (* get the list of all assumption symbolics which should appear *)
   let valid_edges = get_cross_edges parted_srp in
   match decl with
-  | DNodes _ -> Decl (DNodes nodes)
-  | DEdges _ -> Decl (DEdges edges)
+  | DNodes _ -> Some (DNodes nodes)
+  | DEdges _ -> Some (DEdges edges)
   (* drop any hypotheses that don't belong to this partition *)
   | DSymbolic (v, _) ->
-    (* print_endline (Var.name v); *)
-    (* print_endline (Nv_utils.OCamlUtils.list_to_string (fun s -> s) valid_hyps); *)
     (match (SrpRemapping.var_to_edge v) with
-    | Some e when not (List.exists ((=) e) valid_edges) -> Drop
-    | _ -> Decl decl)
-  | DSolve s ->
-    let part', solve' = transform_solve s parted_srp in
-    UpdateDecl (part', DSolve solve')
-  | DPartition _ -> Drop
-  | DAssert e -> Decl (DAssert (transform_assert e parted_srp))
-  | _ -> Decl decl
+    | Some e when not (List.exists ((=) e) valid_edges) -> None
+    | _ -> Some decl)
+  | DPartition _ -> None
+  | DAssert e -> Some (DAssert (transform_assert e parted_srp))
+  | _ -> Some decl
 ;;
 
 let transform_declarations decls parted_srp =
   let symbs = get_symbolics decls in
-  let parted_srp = TransformDecls.update_vars_from_symbolics parted_srp symbs in
+  let parted_srp = update_vars_from_symbolics parted_srp symbs in
   let add_new_decl (part, decls) d =
     match transform_declaration part d with
-    | Decl d -> part, d :: decls
-    | UpdateDecl (p, d) -> p, d :: decls
-    | Drop -> part, decls
+    | Some d -> part, d :: decls
+    | None -> part, decls
   in
   List.fold_left add_new_decl (parted_srp, []) decls
 ;;

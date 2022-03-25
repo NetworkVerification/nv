@@ -89,9 +89,7 @@ let simulate_declaration
 ;;
 
 let simulate_declarations ~(throw_requires : bool) (decls : declarations) : Solution.t =
-  let n = get_nodes decls |> oget in
-  let es = get_edges decls |> oget in
-  let graph = List.fold_left AdjGraph.add_edge_e (AdjGraph.create n) es in
+  let graph = get_graph decls |> oget in
   let final_state =
     List.fold_left (simulate_declaration ~throw_requires graph) empty_state decls
   in
@@ -107,7 +105,7 @@ let simulate_declarations ~(throw_requires : bool) (decls : declarations) : Solu
     |> List.rev
   in
   let sol : Solution.t =
-    { symbolics; solves; assertions; guarantees = []; nodes = list_seq n }
+    { symbolics; solves; assertions; guarantees = []; nodes = AdjGraph.vertices graph }
   in
   sol
 ;;

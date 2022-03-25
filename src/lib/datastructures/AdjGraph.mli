@@ -26,17 +26,14 @@ module EdgeSet : BetterSet.S with type elt = Edge.t
 module EdgeMap : BetterMap.S with type key = Edge.t
 
 (** Graph creation **)
-val create : int -> t (* Disconnected graph with n nodes *)
+val create : Vertex.t list -> t (* Disconnected graph with given nodes *)
 
 val of_edges : Edge.t list -> t (* Graph with all edges & nodes in the list *)
 
 (** Vertex/Edge retrieval **)
-val vertices : t -> VertexSet.t
+val vertices : t -> Vertex.t list
 
 val edges : t -> Edge.t list
-
-(** fold over a set of vertices from 0 to n-1 *)
-val fold_vertices : (Vertex.t -> 'a -> 'a) -> Vertex.t -> 'a -> 'a
 
 (** Printing *)
 val to_string : t -> string

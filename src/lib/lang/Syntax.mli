@@ -2,7 +2,7 @@ open Cudd
 open Nv_datastructures
 open Nv_utils.PrimitiveCollections
 
-type node = int
+type node = AdjGraph.Vertex.t
 
 val tnode_sz : int
 
@@ -186,7 +186,7 @@ type declaration =
   | DSolve of solve
   | DRequire of exp
   | DPartition of exp (* partition ids *)
-  | DNodes of int
+  | DNodes of node list
   | DEdges of (node * node) list
 
 type declarations = declaration list
@@ -259,7 +259,7 @@ val get_asserts : declarations -> exp list
 val get_solves : declarations -> solve list
 val get_partition : declarations -> exp option
 val get_edges : declarations -> (node * node) list option
-val get_nodes : declarations -> int option
+val get_nodes : declarations -> node list option
 val get_graph : declarations -> AdjGraph.t option
 val get_symbolics : declarations -> (var * ty_or_exp) list
 val get_requires : declarations -> exp list

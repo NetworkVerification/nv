@@ -51,17 +51,16 @@ type fatLevel =
 let construct top : AdjGraph.t =
   match top with
   | FullMesh n ->
-    let srcs = Nv_utils.OCamlUtils.list_seq n in
+    let srcs = List.init n identity in
     let edges = List.cartesian_product srcs srcs in
     (* delete self-loops *)
     let lf_edges = List.filter (fun (u, v) -> u != v) edges in
     AdjGraph.of_edges lf_edges
   | Ring n ->
-    let srcs = Nv_utils.OCamlUtils.list_seq n in
-    let edges = List.map (fun x -> x, (x + 1) mod n) srcs in
+    let edges = List.init n (fun x -> x, (x + 1) mod n) in
     AdjGraph.of_edges edges
   | Star n ->
-    let srcs = Nv_utils.OCamlUtils.list_seq n in
+    let srcs = List.init n identity in
     let edges = List.map (fun n -> List.hd srcs, n) (List.tl srcs) in
     AdjGraph.of_edges edges
   | Rand (n, p) -> RandomGraph.gnp ~loops:false ~v:n ~prob:p ()
