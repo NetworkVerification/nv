@@ -1,0 +1,57 @@
+include "bgp-util.nv"
+
+type attribute = option[(set[int], bgp)]
+
+let nodes = 6
+let edges = { 0n=1n; 1n=2n; 1n=4n; 2n=3n; 3n=5n; 4n=5n; }
+
+symbolic L1to2 : int
+symbolic L1to4 : int
+symbolic L2to3 : int
+
+require (L1to2 >= 2) && (L1to4 >= 2) && (L2to3 >= 2)
+require (L1to4 <= 3)
+
+let CSPA = 1000
+let CSPB = 1001
+let CSPC = 1002
+let CSPD = 1003
+
+let trans edge x = match x with
+  | Some (via, bgp) -> (match edge with
+    | 0~1 | 1~0 -> Some (via[CSPA := true], incr bgp 1)
+    | 1~2 | 2~1 -> Some (via[CSPB := true], incr bgp L1to2)
+    | 1~4 | 4~1 -> Some (via[CSPB := true], incr bgp L1to4)
+    | 2~3 | 3~2 -> Some (via[CSPC := true], incr bgp L2to3)
+    | 3~5 | 5~3 -> Some (via[CSPD := true], incr bgp 1)
+    | 4~5 | 5~4 -> Some (via[CSPD := true], incr bgp 1))
+  | None -> None
+
+let merge node x y = match (x, y) with
+  | (_, None) -> x
+  | (None, _) -> y
+  | (Some (v1, b1), Some (v2, b2)) -> if isBetter (Some b1) (Some b2) then x else y
+
+let init node = match node with
+  | 5n -> Some ({}, { lp = 100; length = 0; origin = 5n })
+  | _ -> None
+
+let sol = solution { init = init; trans = trans; merge = merge }
+
+let assertRoute x l = match x with
+  | Some (via, bgp) -> bgp.length <= l
+  | None -> false
+
+let assertAvoided x avoided = match x with
+  | Some (via, bgp) -> (via inter avoided = {})
+  | None -> false
+
+let subset s t = s inter t = s
+
+let assertContained x contained = match x with
+  | Some (via, bgp) -> (subset via contained)
+  | None -> false
+
+assert (assertRoute (sol[0n]) 5)
+assert (assertAvoided (sol[0n]) ({CSPC}))
+assert (assertContained (sol[0n]) ({CSPA, CSPB, CSPD}))

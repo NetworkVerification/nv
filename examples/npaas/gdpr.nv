@@ -1,0 +1,35 @@
+include "bgp-util.nv"
+
+type attribute = option[(set[tnode], bgp)]
+
+let nodes = 10
+let edges = { 0n=1n; 1n=6n; 6n=2n; 6n=7n; 8n=3n; 3n=5n; 2n=8n; 8n=9n; 7n=4n; 4n=5n; }
+
+let init node = match node with
+  | 5n -> Some ({}, { lp = 100; length = 0; origin = 5n })
+  | _ -> None
+
+let transVia edge x = match x with
+  | None -> None
+  | Some (via, bgp) -> (match edge with
+    | a~b -> Some (via[a := true], incr bgp 1))
+
+let mergeVia node x y = match (x,y) with
+  | (None, _) -> y
+  | (_, None) -> x
+  | (Some (vx, bx), Some (vy, by)) -> if isBetter (Some bx) (Some by) then x else y
+
+let assertAvoided x avoided = match x with
+  | Some (via, bgp) -> (via inter avoided = {})
+  | None -> false
+
+let subset s t = s inter t = s
+let assertContained x contained = match x with
+  | Some (via, bgp) -> (subset via contained)
+  | None -> false
+
+let sol = solution { init = init; trans = transVia; merge = mergeVia }
+
+assert (assertAvoided (sol[0n]) ({8n, 9n})) (* this passes *)
+assert (assertAvoided (sol[9n]) ({8n})) (* this is violated *)
+assert (assertContained (sol[0n]) ({0n, 1n, 2n, 3n, 4n, 5n, 6n, 7n})) (* this passes *)

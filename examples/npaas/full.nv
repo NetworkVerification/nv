@@ -1,0 +1,33 @@
+include "bgp-util.nv"
+
+let nodes = 10
+let edges = { 0n=1n; 1n=6n; 6n=2n; 6n=7n; 8n=3n; 3n=5n; 2n=8n; 8n=9n; 7n=4n; 4n=5n; }
+
+type bgp = { lp: int; length: int; origin: tnode }
+type attribute = option[bgp]
+
+let incr bgp i = { bgp with length = bgp.length + i }
+
+let transBgp edge (x : attribute) = match x with
+| Some r -> Some (incr r 1)
+| None -> None
+
+let isBetter (x : attribute) (y : attribute) = match (x, y) with
+| (None, _) -> false
+| (_, None) -> true
+| (Some b1, Some b2) -> (b1.lp > b2.lp) || (b1.lp = b2.lp && b1.length < b2.length)
+
+let mergeBgp node x y = if isBetter x y then x else y
+
+let assertRoute x len = match x with
+| Some r -> r.length <= len
+| None -> false
+
+let init node = match node with
+  | 5n -> Some { lp = 100; length = 0; origin = 5n }
+  | _ -> None
+
+let sol = solution { init = init; trans = transBgp; merge = mergeBgp }
+
+assert assertRoute (sol[0n]) 5 (* this passes *)
+assert assertRoute (sol[0n]) 3 (* this is violated *)

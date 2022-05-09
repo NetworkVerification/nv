@@ -1,0 +1,20 @@
+(* Utilities for BGP networks *)
+type bgp = { lp: int; length: int; origin: tnode }
+type attribute = option[bgp]
+
+let incr bgp i = { bgp with length = bgp.length + i }
+
+let transBgp edge (x : attribute) = match x with
+| Some r -> Some (incr r 1)
+| None -> None
+
+let isBetter (x : attribute) (y : attribute) = match (x, y) with
+| (None, _) -> false
+| (_, None) -> true
+| (Some b1, Some b2) -> (b1.lp > b2.lp) || (b1.lp = b2.lp && b1.length < b2.length)
+
+let mergeBgp node x y = if isBetter x y then x else y
+
+let assertRoute x len = match x with
+| Some r -> r.length <= len
+| None -> false
