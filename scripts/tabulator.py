@@ -65,7 +65,9 @@ def parse_smt(output: str) -> dict[str, list[int | float]]:
     return profile
 
 
-def run_nv_smt(path: str, cut: Optional[str], z3time: int, time: float, verbose: bool):
+def run_nv_smt(
+    path: str, cut: Optional[str], z3time: int, time: float, cores: int, verbose: bool
+):
     """
     Run nv's SMT tool and capture its output.
     If it doesn't finish within the given time, kill it.
@@ -80,6 +82,9 @@ def run_nv_smt(path: str, cut: Optional[str], z3time: int, time: float, verbose:
     # set verbose, SMT flags, and partitioning if needed
     args = [nvpath, "-v", "-m", "-t", str(z3time)]
     if cut is not None:
+        # run on multiple cores
+        if cores > 1:
+            args += ["-p", str(cores)]
         args += ["-k", path]
     else:
         args += [path]
@@ -111,26 +116,33 @@ def run_nv_smt(path: str, cut: Optional[str], z3time: int, time: float, verbose:
         return log, parsed
 
 
-def run_bench(cut, path, z3time, time, verbose):
-    log, result = run_nv_smt(path, cut, z3time, time, verbose)
-    return (log, cut, result)
-
-
-def run_benchmarks_sync(benchdir, benches, z3time, time, verbose) -> tuple[str, dict]:
+def run_benchmarks(benchdir, benches, z3time, time, cores, verbose) -> tuple[str, dict]:
     """
     Run the given benchmarks in the given directory in sequence (once each).
     Return a log of output and a dictionary with the benchmark results for each cut.
     """
+
+    def run(cut, path, z3time, time, cores, verbose):
+        log, result = run_nv_smt(path, cut, z3time, time, cores, verbose)
+        return (log, cut, result)
+
     return join_cut_dicts(
         *[
-            run_bench(c, os.path.join(benchdir, n), z3time, time, verbose)
+            run(c, os.path.join(benchdir, n), z3time, time, cores, verbose)
             for (c, n) in benches
         ]
     )
 
 
 def run_trials_sync(
-    benchdir, benches, z3time: float, time: float, trials: int, verbose: bool, logfile
+    benchdir,
+    benches,
+    z3time: float,
+    time: float,
+    trials: int,
+    cores: int,
+    verbose: bool,
+    logfile,
 ) -> dict[int, dict]:
     """
     Run trials of the given benchmarks and return a dictionary of profiling information.
@@ -138,14 +150,21 @@ def run_trials_sync(
     runs = {}
     for i in range(trials):
         logfile.write("Running trial " + str(i + 1) + " of " + str(trials) + "\n")
-        logs, results = run_benchmarks_sync(benchdir, benches, z3time, time, verbose)
+        logs, results = run_benchmarks(benchdir, benches, z3time, time, cores, verbose)
         logfile.write(logs)
         runs[i] = results
     return runs
 
 
 def run_trials_parallel(
-    benchdir, benches, z3time: float, time: float, trials: int, verbose: bool, logfile
+    benchdir,
+    benches,
+    z3time: float,
+    time: float,
+    trials: int,
+    cores: int,
+    verbose: bool,
+    logfile,
 ) -> dict[int, dict]:
     """
     Run the benchmarks in the given directory and return a dictionary of
@@ -153,8 +172,10 @@ def run_trials_parallel(
     Runs each trial in parallel.
     """
     with multiprocessing.Pool(processes=trials) as pool:
-        args = [(benchdir, benches, z3time, time, verbose) for _ in range(trials)]
-        runs = pool.starmap(run_benchmarks_sync, args)
+        args = [
+            (benchdir, benches, z3time, time, cores, verbose) for _ in range(trials)
+        ]
+        runs = pool.starmap(run_benchmarks, args)
         logs, results = map(list, zip(*runs))
         results = dict(enumerate(results))
         logfile.write("".join(logs))
@@ -216,7 +237,7 @@ def save_results(runs):
 
 
 def run_benchmark_txt(
-    txtpath: str, z3time: float, timeout: float, trials: int, verbose: bool
+    txtpath: str, z3time: float, timeout: float, trials: int, cores: int, verbose: bool
 ):
     """
     Run a benchmark.txt file.
@@ -243,6 +264,7 @@ def run_benchmark_txt(
                     z3time=z3time,
                     time=timeout,
                     trials=trials,
+                    cores=cores,
                     verbose=verbose,
                     logfile=sys.stdout,
                 )
@@ -284,6 +306,13 @@ def parser():
         default=3600,
     )
     parser.add_argument(
+        "-p",
+        "--parallel",
+        type=int,
+        help="number of cores to use for each trial (default: %(default)s)",
+        default=1,
+    )
+    parser.add_argument(
         "-v",
         "--verbose",
         action="store_true",
@@ -295,6 +324,6 @@ def parser():
 if __name__ == "__main__":
     args = parser().parse_args()
     runs = run_benchmark_txt(
-        args.file, args.z3time, args.timeout, args.trials, args.verbose
+        args.file, args.z3time, args.timeout, args.trials, args.parallel, args.verbose
     )
     save_results(runs)
