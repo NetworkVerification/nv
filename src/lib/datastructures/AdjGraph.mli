@@ -25,6 +25,10 @@ module VertexSetMap : BetterMap.S with type key = VertexSet.t
 module EdgeSet : BetterSet.S with type elt = Edge.t
 module EdgeMap : BetterMap.S with type key = Edge.t
 
+module Labelled (E: Graph.Sig.ORDERED_TYPE_DFT) : sig
+  include module type of Graph.Persistent.Digraph.ConcreteLabeled(Vertex)(E)
+end
+
 (** Graph updates **)
 val add_vertices : Vertex.t list -> t -> t (* Disconnected graph with given nodes *)
 

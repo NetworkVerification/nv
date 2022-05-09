@@ -30,6 +30,10 @@ module VertexSetMap = BetterMap.Make (VertexSet)
 module EdgeMap = BetterMap.Make (Edge)
 module EdgeSet = BetterSet.Make (Edge)
 
+module Labelled (E: Graph.Sig.ORDERED_TYPE_DFT) = struct
+  include Graph.Persistent.Digraph.ConcreteLabeled(Vertex)(E)
+end
+
 (*** Printing ***)
 
 let to_string g =
