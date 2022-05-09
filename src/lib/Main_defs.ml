@@ -31,88 +31,31 @@ let smt_query_file =
     lazy (open_out (file ^ "-" ^ string_of_int count ^ "-query"))
 ;;
 
-let run_smt_classic_aux file cfg info decls part fs =
-  (* Attribute Slicing requires the net to have an assertion and for its attribute
-     to be a tuple type. *)
-  let slices =
-    (* Disable slicing until we figure out it works in the new model *)
-    (* match cfg.slicing, net.assertion, net.attr_type with
-       | true, Some _, TTuple _ ->
-       AttributeSlicing.slice_network net
-       |> List.map (dmap (fun (net, f) -> net, f :: fs))
-       | _ -> *)
-    [(fun () -> decls, fs)]
+(** Run the SMT solver appropriate for this instance. *)
+let solve_smt file cfg info decls part fs =
+  let solve_fun =
+    if cfg.kirigami
+    then SmtKirigami.solveKirigami ~check_ranked:cfg.ranked ~part:(part |> oget)
+    else if cfg.hiding
+    then SmtHiding.solve_hiding ~starting_vars:[] ~full_chan:(smt_query_file file)
+    else Smt.solveClassic
   in
-  (* NOTE: slicing can introduce units, so if we ever re-introduce it,
-   * this code needs to be moved up to use UnboxUnits *)
-  let slices = List.map (dmap (fun (decls, fs) -> decls, fs)) slices in
-  let get_answer decls fs =
-    let solve_fun =
-      if cfg.kirigami
-      then SmtKirigami.solveKirigami ~check_ranked:cfg.ranked ~part:(part |> oget)
-      else if cfg.hiding
-      then SmtHiding.solve_hiding ~starting_vars:[] ~full_chan:(smt_query_file file)
-      else Smt.solveClassic
-    in
-    match solve_fun info cfg.query cfg.timeout (smt_query_file file) decls with
-    | Unsat -> Success None, []
-    | Unknown -> Console.error "SMT returned unknown"
-    | Timeout -> Timeout cfg.timeout, []
-    | Sat solution ->
-      (match solution.assertions with
-      | [] -> Success (Some solution), fs
-      | lst ->
-        if List.for_all (fun b -> b) lst
-        then Success (Some solution), fs
-        else CounterExample solution, fs)
-  in
-  (* Return the first slice that returns a counterexample, or the result of the
-     last slice if all of them succeed *)
-  (* List.iter (fun f -> print_endline @@ Printing.declarations_to_string (fst @@ f ())) slices; *)
-  let count = ref (-1) in
-  let rec solve_slices slices =
-    match slices with
-    | [] -> failwith "impossible"
-    | laz :: tl ->
-      let answer =
-        incr count;
-        Profile.time_profile_absolute
-          ("Slice " ^ string_of_int !count)
-          (fun () ->
-            let net, fs = laz () in
-            get_answer net fs)
-      in
-      (match answer with
-      | Success _, _ -> if BatList.is_empty tl then answer else solve_slices tl
-      | _ -> answer)
-  in
-  (* let results = Parmap.parmap (BatPervasives.uncurry get_answer) @@ Parmap.L slices in
-     match List.find_opt (function | CounterExample _, _ -> true | _ -> false) results with
-     | Some answer -> answer
-     | None -> List.hd results *)
-  let solve_parallel ncores slices =
-    Parmap.parfold
-      ~ncores
-      (fun laz acc ->
-        let net, fs = laz () in
-        match acc with
-        | CounterExample _, _ -> acc
-        | _ -> get_answer net fs)
-      (Parmap.L slices)
-      (Success None, [])
-      (fun ans1 ans2 ->
-        (* TODO: do we need to handle Timeouts here? *)
-        match ans1 with
-        | CounterExample _, _ -> ans1
-        | _ -> ans2)
-  in
-  match cfg.parallelize with
-  | None -> solve_slices slices
-  | Some n -> solve_parallel n slices
+  match solve_fun info cfg.query cfg.timeout (smt_query_file file) decls with
+  | Unsat -> Success None, []
+  | Unknown -> Console.error "SMT returned unknown"
+  | Timeout -> Timeout cfg.timeout, []
+  | Sat solution ->
+    (match solution.assertions with
+    | [] -> Success (Some solution), fs
+    | lst ->
+      if List.for_all (fun b -> b) lst
+      then Success (Some solution), fs
+      else CounterExample solution, fs)
 ;;
 
 let run_smt_partitioned file cfg info decls parts fs =
   let open Batteries in
+  (* construct a separate partition and decls to solve for each fragment *)
   let pds =
     Profile.time_profile "Partitioning" (fun () ->
         let solves = get_solves decls in
@@ -130,8 +73,18 @@ let run_smt_partitioned file cfg info decls parts fs =
             Some p, d)
           parts)
   in
-  (* TODO: add parallelization *)
-  List.map (fun (p, d) -> run_smt_classic_aux file cfg info d p fs) pds
+  (* run fragments in parallel *)
+  let solve_parallel ncores fragments =
+    Parmap.parmap
+      ~ncores
+      (fun laz ->
+        let part, decls, fs = laz () in
+        solve_smt file cfg info decls part fs)
+      (Parmap.L fragments)
+  in
+  match cfg.parallelize with
+  | None -> List.map (fun (p, d) -> solve_smt file cfg info d p fs) pds
+  | Some n -> solve_parallel n (List.map (fun (p,d) -> (fun () -> (p,d,fs))) pds)
 ;;
 
 let run_smt_classic file cfg info decls parts fs =
@@ -163,7 +116,7 @@ let run_smt_classic file cfg info decls parts fs =
   in
   match parts with
   | Some p -> run_smt_partitioned file cfg info decls p fs
-  | None -> [run_smt_classic_aux file cfg info decls None fs]
+  | None -> [solve_smt file cfg info decls None fs]
 ;;
 
 let run_smt file cfg info decls parts fs =
