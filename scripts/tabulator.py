@@ -29,7 +29,7 @@ def join_cut_dicts(
     return logs, joined
 
 
-def parse_smt(output: str) -> dict[str, list[int | float]]:
+def parse_smt(output: str) -> dict[str, list]:
     """
     Parse the output of an NV command.
     Returns a dictionary of strings to lists of floats.
