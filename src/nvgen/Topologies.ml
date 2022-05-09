@@ -55,16 +55,16 @@ let construct top : AdjGraph.t =
     let edges = List.cartesian_product srcs srcs in
     (* delete self-loops *)
     let lf_edges = List.filter (fun (u, v) -> u != v) edges in
-    AdjGraph.of_edges lf_edges
+    AdjGraph.add_edges lf_edges AdjGraph.empty
   | Ring n ->
     let edges = List.init n (fun x -> x, (x + 1) mod n) in
-    AdjGraph.of_edges edges
+    AdjGraph.add_edges edges AdjGraph.empty
   | Star n ->
     let srcs = List.init n identity in
     let edges = List.map (fun n -> List.hd srcs, n) (List.tl srcs) in
-    AdjGraph.of_edges edges
+    AdjGraph.add_edges edges AdjGraph.empty
   | Rand (n, p) -> RandomGraph.gnp ~loops:false ~v:n ~prob:p ()
   | Fattree _k -> failwith "todo"
 ;;
 
-let to_decls g = [DNodes (AdjGraph.nb_vertex g); DEdges (List.rev (AdjGraph.edges g))]
+let to_decls g = [DNodes (AdjGraph.vertices g); DEdges (List.rev (AdjGraph.edges g))]

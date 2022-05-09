@@ -103,7 +103,8 @@ type hijackStub =
  *)
 let hijack decls hijackStub =
   let hijack_var = Var.fresh "hijack" in
-  let new_node = get_nodes decls |> Option.get in
+  let graph = get_graph decls |> Option.get in
+  let new_node = 9999999 in
   let nspines = List.length hijackStub.spines in
   let new_edges =
     List.mapi (fun i u -> (u, new_node), i = nspines && hijackStub.leak) hijackStub.spines
@@ -112,7 +113,7 @@ let hijack decls hijackStub =
   let aty = get_attr_type decls |> Option.get in
   let update_decl d =
     match d with
-    | DNodes n -> DNodes (n + 1)
+    | DNodes vs -> DNodes (vs @ [new_node])
     | DEdges es -> DEdges (es @ List.map fst new_edges)
     | DLet (v, oty, e) ->
       let e =
@@ -133,7 +134,7 @@ let hijack decls hijackStub =
   let hijack_app =
     annot TBool (eapp hijackStub.predicate (annot aty (evar hijack_var)))
   in
-  let nti = node_to_int_decl (new_node + 1) in
+  let nti = node_to_int_decl graph in
   let hijack_decls =
     [nti; edgeTag; DSymbolic (hijack_var, Ty aty); DRequire hijack_app]
   in
@@ -162,9 +163,9 @@ let maintenance dest decls =
   let dest_not_down =
     eop Not [eop Eq [evar down_var; e_val (voption (Some (vint (Integer.of_int dest))))]]
   in
-  let nodes = get_nodes decls |> Option.get in
+  let graph = get_graph decls |> Option.get in
   let new_decls =
-    [ node_to_int_decl nodes
+    [ node_to_int_decl graph
     ; tagDown
     ; DSymbolic (down_var, Ty (TOption (TInt 32)))
     ; DRequire dest_not_down ]
@@ -191,14 +192,14 @@ let fault_tolerance nfaults decls =
     | _ -> d
   in
   let decls = List.map update_decl decls in
-  let edges = get_edges decls |> Option.get in
+  let graph = get_graph decls |> Option.get in
   (* construct a symbolic for each failure *)
   let fail_symbolics =
     List.map
       (fun var -> DSymbolic (var, Ty (TOption (TTuple [TInt 32; TInt 32]))))
       fail_vars
   in
-  let new_decls = [edge_to_int_pair_decl edges; isFailed_decl fail_vars] in
+  let new_decls = [edge_to_int_pair_decl graph; isFailed_decl fail_vars] in
   decls @ new_decls @ fail_symbolics
 ;;
 

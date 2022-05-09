@@ -25,10 +25,10 @@ module VertexSetMap : BetterMap.S with type key = VertexSet.t
 module EdgeSet : BetterSet.S with type elt = Edge.t
 module EdgeMap : BetterMap.S with type key = Edge.t
 
-(** Graph creation **)
-val create : Vertex.t list -> t (* Disconnected graph with given nodes *)
+(** Graph updates **)
+val add_vertices : Vertex.t list -> t -> t (* Disconnected graph with given nodes *)
 
-val of_edges : Edge.t list -> t (* Graph with all edges & nodes in the list *)
+val add_edges : Edge.t list -> t -> t (* Graph with all edges & nodes in the list *)
 
 (** Vertex/Edge retrieval **)
 val vertices : t -> Vertex.t list
@@ -37,9 +37,6 @@ val edges : t -> Edge.t list
 
 (** Printing *)
 val to_string : t -> string
-
-(** computes min-cut between s and t and the returns the min-cut and the S and T sets *)
-val min_cut : t -> Vertex.t -> Vertex.t -> EdgeSet.t * VertexSet.t * VertexSet.t
 
 module DrawableGraph : sig
   val graph_dot_file : int -> string -> string

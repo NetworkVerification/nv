@@ -1051,7 +1051,7 @@ let get_nodes ds =
 
 let get_graph ds =
   match get_nodes ds, get_edges ds with
-  | Some vs, Some es -> Some (List.fold_left AdjGraph.add_edge_e (AdjGraph.create vs) es)
+  | Some vs, Some es -> Some (AdjGraph.add_edges es (AdjGraph.add_vertices vs AdjGraph.empty))
   | _ -> None
 ;;
 

@@ -7,24 +7,24 @@ open Collections
 let node_to_int = Var.fresh "node_to_int"
 let edge_to_int_pair = Var.fresh "edge_to_int_pair"
 
-let node_to_int_decl (nodes : int) =
+let node_to_int_decl graph =
   let node_var = Var.fresh "node" in
-  let add_node_branch b i = addBranch (PNode i) (e_val (vint (Integer.of_int i))) b in
+  let add_node_branch i b = addBranch (PNode i) (e_val (vint (Integer.of_int i))) b in
   let branches =
-    List.fold_left add_node_branch emptyBranch (Nv_utils.OCamlUtils.list_seq nodes)
+    AdjGraph.fold_vertex add_node_branch graph emptyBranch
   in
   let body = ematch (evar node_var) branches in
   let fn = efunc (func node_var body) in
   DLet (node_to_int, None, fn)
 ;;
 
-let edge_to_int_pair_decl edges =
+let edge_to_int_pair_decl graph =
   let edge_var = Var.fresh "edge" in
-  let add_edge_branch b (u, v) =
+  let add_edge_branch (u, v) b =
     let pair = vtuple [vint (Integer.of_int u); vint (Integer.of_int v)] in
     addBranch (PEdge (PNode u, PNode v)) (e_val pair) b
   in
-  let branches = List.fold_left add_edge_branch emptyBranch edges in
+  let branches = AdjGraph.fold_edges_e add_edge_branch graph emptyBranch in
   let body = ematch (evar edge_var) branches in
   let fn = efunc (func edge_var body) in
   DLet (edge_to_int_pair, None, fn)
