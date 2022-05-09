@@ -9,7 +9,6 @@ open SmtEncodingSigs
 open Smt
 open SmtOptimizations
 open Nv_datastructures.AdjGraph
-open Nv_kirigami.SrpRemapping
 
 let solve ?(check_ranked = false) info query time chan net_or_srp nodes assertions guarantees =
   let solver = Lazy.force (solver time) in
@@ -71,6 +70,7 @@ let solve ?(check_ranked = false) info query time chan net_or_srp nodes assertio
 (* Solver for Kirigami *)
 let solveKirigami ?(check_ranked = false) info query time chan ~part decls =
   let open Nv_lang.Syntax in
+  let open Nv_kirigami.SrpRemapping in
   let module ExprEnc = (val expr_encoding smt_config) in
   let module Enc = (val (module SmtClassicEncoding.ClassicEncoding (ExprEnc))
                       : SmtClassicEncoding.ClassicEncodingSig)

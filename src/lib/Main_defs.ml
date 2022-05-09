@@ -62,13 +62,13 @@ let run_smt_partitioned file cfg info decls parts fs =
         let interfaces =
           List.filter_map (fun s -> Option.map (fun p -> p.interface) s.part) solves
         in
-        let parts = List.fold_left TransformDecls.get_predicates parts interfaces in
+        let parts = List.fold_left Partition.get_predicates parts interfaces in
         List.map
           (fun p ->
             let p, d = Partition.transform_declarations decls p in
             (* print_endline (Printing.declarations_to_string d); *)
             if cfg.print_partitions
-            then print_endline (SrpRemapping.string_of_partitioned_srp p)
+            then print_endline (SrpRemapping.string_of_fragment p)
             else ();
             Some p, d)
           parts)

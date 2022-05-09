@@ -1,7 +1,7 @@
 open Nv_lang
 open SmtUtils
 open SmtLang
-open Nv_kirigami.SrpRemapping
+open Nv_kirigami
 
 module type ExprEncoding = sig
   type 'a t
@@ -41,7 +41,7 @@ module type Encoding = sig
 
   val kirigami_encode_z3
     :  ?check_ranked:bool
-    -> partitioned_srp
+    -> SrpRemapping.fragment
     -> network_type
     -> smt_env
 

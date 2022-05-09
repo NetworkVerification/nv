@@ -424,13 +424,13 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
   let encode_kirigami_solve
       env
       graph
-      parted_srp
+      frag
       count
       { aty; var_names; init; trans; merge; part; _ }
     =
     let aty = oget aty in
     let einit, etrans, emerge = init, trans, merge in
-    let { rank; inputs; outputs } = parted_srp in
+    let { rank; inputs; outputs } = frag in
     let label_vars = encode_label_vars aty var_names in
     (* Separate the label_vars (which has length = #nodes in the monolithic network)
         according to whether or not they should be kept or cut. *)
@@ -438,7 +438,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
       List.fold_left2
         (fun (k, c) b v -> if b then v :: k, c else k, v :: c)
         ([], [])
-        parted_srp.cut_mask
+        frag.cut_mask
         (List.rev label_vars)
     in
     let trans_map, trans_input_map = encode_edge_transfers env count graph etrans in

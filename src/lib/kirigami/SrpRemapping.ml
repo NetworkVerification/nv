@@ -46,7 +46,7 @@ let var_to_edge (v : Var.t) =
 ;;
 
 (** A type for transforming the declarations over the old SRP
- ** to declarations for the new partitioned SRP.
+ ** to declarations for the new fragment.
  ** The nodes and edges maps help us to remap nodes and edges.
  ** If an old node or edge is not a value in the map,
  ** then we know it has been removed and we can drop it from
@@ -56,8 +56,8 @@ let var_to_edge (v : Var.t) =
  ** have associated predicates (required on the hypotheses and
  ** asserted on the output solutions, respectively).
  **)
-type partitioned_srp =
-  { (* the rank of the partitioned srp *)
+type fragment =
+  { (* the rank of the fragment *)
     rank : int
   ; (* the nodes in the network *)
     nodes : Vertex.t list
@@ -76,10 +76,10 @@ type partitioned_srp =
   ; outputs : (Edge.t * exp list) list VertexMap.t
   }
 
-(* Return the old edges which crossed into this partitioned SRP. *)
-let get_cross_edges parted_srp =
+(* Return the old edges which crossed into this fragment. *)
+let get_cross_edges frag =
   let add_input_edges _ ies l = List.map (fun ie -> ie.edge) ies @ l in
-  VertexMap.fold add_input_edges parted_srp.inputs []
+  VertexMap.fold add_input_edges frag.inputs []
 ;;
 
 let string_of_input_exp { var_names; rank; edge; preds } =
@@ -91,7 +91,7 @@ let string_of_input_exp { var_names; rank; edge; preds } =
     (list_to_string Printing.exp_to_string preds)
 ;;
 
-let string_of_partitioned_srp p =
+let string_of_fragment p =
   let output_to_string (e, p) =
     Printf.sprintf
       "%s: preds %s"
@@ -109,12 +109,12 @@ let string_of_partitioned_srp p =
     outputs
 ;;
 
-let map_predicates f partitioned_srp =
+let map_predicates f fragment =
   let inf ie = { ie with preds = f ie.edge ie.preds } in
   let outf (e, ps) = e, f e ps in
-  { partitioned_srp with
-    inputs = VertexMap.map (fun is -> List.map inf is) partitioned_srp.inputs
-  ; outputs = VertexMap.map (fun os -> List.map outf os) partitioned_srp.outputs
+  { fragment with
+    inputs = VertexMap.map (fun is -> List.map inf is) fragment.inputs
+  ; outputs = VertexMap.map (fun os -> List.map outf os) fragment.outputs
   }
 ;;
 
@@ -186,12 +186,12 @@ let map_edges_to_parts partitions (edge, srp_edge) =
   List.mapi add_edge partitions
 ;;
 
-(** Map each edge in edges to a partitioned_srp based on where its endpoints lie. *)
+(** Map each edge in edges to a fragment based on where its endpoints lie. *)
 let divide_edges (edges : Edge.t list) (node_srps : int VertexMap.t) npartitions
-    : partitioned_srp list
+    : fragment list
   =
   (* invert the node_srps map: divide the vertices into kept and cut for each partition *)
-  let partitioned_srp_from_nodes i =
+  let fragment_from_nodes i =
     let kept, cut_mask =
       VertexMap.fold
         (fun v j (k, c) -> (if i = j then v :: k else k), (i = j) :: c)
@@ -207,12 +207,12 @@ let divide_edges (edges : Edge.t list) (node_srps : int VertexMap.t) npartitions
     ; outputs = VertexMap.empty
     }
   in
-  let initial = List.init npartitions partitioned_srp_from_nodes in
+  let initial = List.init npartitions fragment_from_nodes in
   let new_edges = List.map (fun e -> e, get_srp_edge e node_srps) edges in
   List.fold_left map_edges_to_parts initial new_edges
 ;;
 
-(** Generate a list of partitioned_srp from the given list of nodes and edges,
+(** Generate a list of fragments from the given list of nodes and edges,
  * along with their partitioning function and interface function.
 *)
 let partition_edges (graph : AdjGraph.t) (partf : Vertex.t -> int) =
@@ -221,7 +221,7 @@ let partition_edges (graph : AdjGraph.t) (partf : Vertex.t -> int) =
   divide_edges (AdjGraph.edges graph) node_srp_map (max_partition + 1)
 ;;
 
-(** Helper function to extract the partition index
+(** Helper function to extract the fragment index
  *  from the partition expression.
  *  Will fail if the partition expression does not return
  *  an int index when given a node.
@@ -231,13 +231,13 @@ let interp_partition parte node : int =
   int_of_val value |> Option.get
 ;;
 
-(** Return a list of partitions from the given declarations.
+(** Return a list of fragments from the given declarations.
  *  Assumes that the declarations contain a partition decl,
  *  a nodes and an edges decl.
  *  Will fail if the partition decl does not return an int
  *  when given a node.
  *)
-let partition_declarations ?(which = None) decls : partitioned_srp list =
+let partition_declarations ?(which = None) decls : fragment list =
   let partition = get_partition decls in
   match partition with
   | Some part ->

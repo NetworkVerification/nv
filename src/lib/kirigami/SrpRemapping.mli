@@ -23,7 +23,7 @@ val is_hyp_var : E.t -> Var.t -> bool
 val var_to_edge : Var.t -> E.t option
 
 (** A type for transforming the declarations over the old SRP
- ** to declarations for the new partitioned SRP.
+ ** to declarations for the new fragment.
  ** The nodes and edges maps help us to remap nodes and edges.
  ** If an old node or edge is not a value in the map,
  ** then we know it has been removed and we can drop it from
@@ -33,8 +33,8 @@ val var_to_edge : Var.t -> E.t option
  ** have associated predicates (required on the hypotheses and
  ** asserted on the output solutions, respectively).
  **)
-type partitioned_srp =
-  { (* the rank of the partitioned srp *)
+type fragment =
+  { (* the rank of the fragment *)
     rank : int
   ; (* the nodes in the network *)
     nodes : Vertex.t list
@@ -53,21 +53,21 @@ type partitioned_srp =
   ; outputs : (Edge.t * exp list) list VertexMap.t
   }
 
-val get_cross_edges : partitioned_srp -> edge list
+val get_cross_edges : fragment -> edge list
 
-(** Return a string representation of the partitioned SRP. *)
-val string_of_partitioned_srp : partitioned_srp -> string
+(** Return a string representation of the fragment. *)
+val string_of_fragment : fragment -> string
 
-(** Map a function over the inputs and outputs of the partitioned SRP.
+(** Map a function over the inputs and outputs of the fragments.
  ** The function should take an edge as an argument and a list of predicates as its second argument.
  **)
 val map_predicates
   :  (Edge.t -> exp list -> exp list)
-  -> partitioned_srp
-  -> partitioned_srp
+  -> fragment
+  -> fragment
 
-(** Create a list of partitioned SRP structures,
+(** Create a list of fragments,
  * where each structure represents one partition's topological structure
  * for each possible partition in the given declarations.
 *)
-val partition_declarations : ?which:int BatSet.t option -> declarations -> partitioned_srp list
+val partition_declarations : ?which:int BatSet.t option -> declarations -> fragment list

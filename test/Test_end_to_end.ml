@@ -10,7 +10,7 @@ type testfun =
   -> Cmdline.t
   -> Console.info
   -> Syntax.declarations
-  -> SrpRemapping.partitioned_srp list option
+  -> SrpRemapping.fragment list option
   -> (Solution.t -> Solution.t) list
   -> (Main_defs.answer * (Solution.t -> Solution.t) list) list
 
