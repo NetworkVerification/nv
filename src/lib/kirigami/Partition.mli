@@ -7,7 +7,7 @@ open Nv_solution.Solution
 open SrpRemapping
 
 (** Add the predicates to the given partitions from the given interface. *)
-val get_predicates : fragment list -> exp -> fragment list
+val add_interface_predicates : fragment list -> exp -> fragment list
 
 (* Return a new set of declarations of all symbolics added by partitions. *)
 val get_hyp_symbolics : ty -> fragment -> declarations

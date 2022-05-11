@@ -63,8 +63,10 @@ let interp_interface edge intfe =
       ("expected intf value to be a function but got " ^ Printing.exp_to_string intf_app)
 ;;
 
-(** For each of the given fragments, add its associated predicates from the given interface.*)
-let get_predicates fragments interface =
+(** For each of the given fragments, add its associated predicates from the given interface.
+ ** Computes the predicate for each cross edge.
+*)
+let add_interface_predicates fragments interface =
   (* compute the set of all cross edges across fragments *)
   let cross_edges =
     List.fold_left

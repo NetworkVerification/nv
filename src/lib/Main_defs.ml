@@ -56,22 +56,26 @@ let solve_smt file cfg info decls part fs =
 let run_smt_partitioned file cfg info decls parts fs =
   let open Batteries in
   (* construct a separate partition and decls to solve for each fragment *)
+  let partition frag =
+    let frag, d = Partition.transform_declarations decls frag in
+    if cfg.print_partitions
+    then print_endline (SrpRemapping.string_of_fragment frag)
+    else ();
+    Some frag, d
+  in
+  let partition_parallel ncores parts =
+    Parmap.parmap ~ncores (fun laz -> partition (laz ())) (Parmap.L parts)
+  in
   let pds =
     Profile.time_profile "Partitioning" (fun () ->
         let solves = get_solves decls in
         let interfaces =
           List.filter_map (fun s -> Option.map (fun p -> p.interface) s.part) solves
         in
-        let parts = List.fold_left Partition.get_predicates parts interfaces in
-        List.map
-          (fun p ->
-            let p, d = Partition.transform_declarations decls p in
-            (* print_endline (Printing.declarations_to_string d); *)
-            if cfg.print_partitions
-            then print_endline (SrpRemapping.string_of_fragment p)
-            else ();
-            Some p, d)
-          parts)
+        let parts = List.fold_left Partition.add_interface_predicates parts interfaces in
+        match cfg.parallelize with
+        | Some n -> partition_parallel n (List.map (fun p -> (fun () -> p)) parts)
+        | None -> List.map partition parts)
   in
   (* run fragments in parallel *)
   let solve_parallel ncores fragments =
