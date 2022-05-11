@@ -74,7 +74,7 @@ let run_smt_partitioned file cfg info decls parts fs =
         in
         let parts = List.fold_left Partition.add_interface_predicates parts interfaces in
         match cfg.parallelize with
-        | Some n -> partition_parallel n (List.map (fun p -> (fun () -> p)) parts)
+        | Some n -> partition_parallel n (List.map (fun p () -> p) parts)
         | None -> List.map partition parts)
   in
   (* run fragments in parallel *)
@@ -88,7 +88,7 @@ let run_smt_partitioned file cfg info decls parts fs =
   in
   match cfg.parallelize with
   | None -> List.map (fun (p, d) -> solve_smt file cfg info d p fs) pds
-  | Some n -> solve_parallel n (List.map (fun (p,d) -> (fun () -> (p,d,fs))) pds)
+  | Some n -> solve_parallel n (List.map (fun (p, d) () -> p, d, fs) pds)
 ;;
 
 let run_smt_classic file cfg info decls parts fs =

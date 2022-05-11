@@ -92,13 +92,15 @@ class NetType(Enum):
     SP = 0
     FATPOL = 1
     MAINTENANCE = 2
-    RAND = 3
-    OTHER = 4
+    FT = 3
+    AP = 4
+    RAND = 5
+    OTHER = 6
 
     def is_fattree(self):
         """Return True if the network is a fattree network (SP, FATPOL or MAINTENANCE)."""
         match self:
-            case NetType.SP | NetType.FATPOL | NetType.MAINTENANCE:
+            case NetType.SP | NetType.FATPOL | NetType.MAINTENANCE | NetType.FT | NetType.AP:
                 return True
             case _:
                 return False
@@ -107,6 +109,8 @@ class NetType(Enum):
     def from_filename(fname):
         if re.match(r"sp\d*", fname):
             return NetType.SP
+        elif re.match(r"ap\d*", fname):
+            return NetType.AP
         elif re.match(r"fat\d*Pol", fname):
             return NetType.FATPOL
         elif re.match(r"rand_\d*_\d*", fname):
