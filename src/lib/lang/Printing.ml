@@ -289,12 +289,18 @@ and exp_to_string_p ~show_types prec e =
       ^ exp_to_string_p max_prec e1
       ^ " in \n"
       ^ exp_to_string_p prec e2
-    | ETuple es ->
-      if List.is_empty es
+    | ETuple es -> (
+            match es with
+            | [] -> "ETuple0"
+            | [h] -> "ETuple1(" ^ exp_to_string_p max_prec h ^ ")"
+            (* | [e1; e2] when e1.ety = Some (TInt 32) && e2.ety = Some (TInt 6) -> failwith "todo" (* infer that this represents a prefix we want to convert back *) *)
+            | _ -> "(" ^ comma_sep (exp_to_string_p max_prec) es ^ ")"
+    )
+      (* if List.is_empty es
       then "ETuple0"
       else if List.length es = 1
       then "ETuple1(" ^ exp_to_string_p max_prec (List.hd es) ^ ")"
-      else "(" ^ comma_sep (exp_to_string_p max_prec) es ^ ")"
+      else "(" ^ comma_sep (exp_to_string_p max_prec) es ^ ")" *)
     | ESome e -> "Some " ^ exp_to_string_p prec e
     | EMatch (e1, bs) ->
       "(match "
