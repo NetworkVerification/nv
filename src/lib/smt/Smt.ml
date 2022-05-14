@@ -107,6 +107,8 @@ let get_sat query chan info env solver renaming nodes asserts guars reply =
     |> String.concat "\n"
   in
   Printf.printf "Z3 stats:\n %s\n" rs;
+  (* need to explicitly ask for stdout to be flushed, otherwise these aren't always printed in parallel contexts *)
+  Stdlib.flush stdout;
   match reply with
   | UNSAT -> Unsat
   | SAT -> ask_for_model query chan info env solver renaming nodes asserts guars
