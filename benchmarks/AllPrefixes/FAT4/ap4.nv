@@ -1092,7 +1092,7 @@ let trans edge x =
 
 let assert_node node x =
   let (daddr, dlen) = d in
-  if (dlen >=u6 24u6 && dlen <=u6 32u6 && daddr >= 70.0.19.0 && daddr < 70.0.20.0) then
+  if (dlen = 24u6 && (daddr = 70.0.6.0 || daddr = 70.0.7.0 || daddr = 70.0.10.0 || daddr = 70.0.11.0 || daddr = 70.0.14.0 || daddr = 70.0.15.0 || daddr = 70.0.18.0 || daddr = 70.0.19.0)) then
     match x.selected with
       | None -> false
       | _ -> true
