@@ -203,6 +203,20 @@ let fault_tolerance nfaults decls =
   decls @ new_decls @ fail_symbolics
 ;;
 
+let all_tor decls =
+  (* change d to be symbolic, and change the assert_node accordingly *)
+  let update_decl d =
+    match d with
+    | DLet (v, oty, e) when Var.name v = "d" ->
+      DSymbolic (v, Ty (TTuple [TInt 32; TInt 6]))
+    | DLet (v, oty, e) when Var.name v = "assertNode" ->
+      (* TODO *)
+      d
+    | _ -> d
+  in
+  List.map update_decl decls
+;;
+
 let main =
   let cfg, rest = argparse default "nvgen" Sys.argv in
   let file = rest.(0) in
