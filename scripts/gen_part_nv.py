@@ -90,11 +90,14 @@ class NvFile:
                             bgp=Bgp(aslen=f"if pod = {node['p']} then 1 else 3")
                         ).select()
                     elif node["g"] == NodeGroup.EDGE:
+                        # don't call select() here since we set it ourselves according to the symbolic
                         self.sols[node["id"]] = Rib(
                             bgp=Bgp(
-                                aslen=f"if pod = {node['p']} and d = ({node['addr']}, 24u6) then 0 else if pod = {node['p']} then 2 else 4"
-                            )
-                        ).select()
+                                aslen=f"if pod = {node['p']} && d = ({node['addr']}, 24u6) then 0 else if pod = {node['p']} then 2 else 4"
+                            ),
+                            static=f"if d = ({node['addr']}, 24u6) then Some 1u8 else None",
+                            selected=f"if d = ({node['addr']}, 24u6) then Some 1u2 else Some 3u2",
+                        )
                     else:
                         raise Exception(
                             f"Invalid node group {node['g']} for {self.net}"
@@ -390,7 +393,7 @@ def write_interface_str(edges, fmt) -> str:
     return output
 
 
-def get_part_fname(nvfile, cutname: str, simulate: bool):
+def get_part_fname(nvfile, cutname: str, simulate: bool, overwrite: bool):
     """
     Return the name of the partition file for the corresponding nv file,
     and the network type.
@@ -404,7 +407,7 @@ def get_part_fname(nvfile, cutname: str, simulate: bool):
     partfile = os.path.join(spdir, prefix + nvext)
     suffix = 1
     # don't overwrite an existing path: instead, create a new file
-    while os.path.exists(partfile):
+    while os.path.exists(partfile) and not overwrite:
         partfile = os.path.join(spdir, prefix + str(suffix) + nvext)
         suffix += 1
     return partfile, net_type
@@ -585,7 +588,13 @@ def run_nv_simulate(path: str):
 
 
 def gen_part_nv(
-    nvfile, dest, cut: FattreeCut | str, simulate=True, verbose=False, groups=True
+    nvfile,
+    dest,
+    cut: FattreeCut | str,
+    simulate=True,
+    verbose=False,
+    groups=True,
+    overwrite=False,
 ):
     """Generate the partition file."""
     if isinstance(cut, FattreeCut):
@@ -595,7 +604,7 @@ def gen_part_nv(
         hmetisn = os.path.basename(cut).split(".")[-1]
         cut_name = f"hmetis{hmetisn}"
         file_info = f"(* hMETIS-partitioned version of {os.path.basename(nvfile)} with {hmetisn} partitions *)"
-    part, net_type = get_part_fname(nvfile, cut_name, simulate)
+    part, net_type = get_part_fname(nvfile, cut_name, simulate, overwrite)
     if verbose:
         print("Outfile: " + part)
     nv = NvFile(nvfile, net_type, simulate, dest, verbose, groups)
@@ -698,6 +707,12 @@ def parser():
         action="store_true",
         help="print topology info instead of generating partition",
     )
+    parser.add_argument(
+        "-o",
+        "--overwrite",
+        action="store_true",
+        help="overwrite existing files",
+    )
     return parser
 
 
@@ -717,6 +732,7 @@ def main():
                         simulate=args.simulate,
                         verbose=args.verbose,
                         groups=args.nogroups,
+                        overwrite=args.overwrite,
                     )
             elif args.hmetis:
                 for hmetis in args.hmetis:
@@ -727,6 +743,7 @@ def main():
                         simulate=args.simulate,
                         verbose=args.verbose,
                         groups=args.nogroups,
+                        overwrite=args.overwrite,
                     )
 
 

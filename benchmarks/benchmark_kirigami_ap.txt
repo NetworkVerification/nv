@@ -1,0 +1,6 @@
+benchmarks/AllPrefixes/FAT4/ ap4.nv h:ap4-h.nv v:ap4-v.nv p:ap4-p.nv f:ap4-f.nv
+benchmarks/AllPrefixes/FAT8/ ap8.nv h:ap8-h.nv v:ap8-v.nv p:ap8-p.nv f:ap8-f.nv
+benchmarks/AllPrefixes/FAT10/ ap10.nv h:ap10-h.nv v:ap10-v.nv p:ap10-p.nv f:ap10-f.nv
+benchmarks/AllPrefixes/FAT12/ ap12.nv h:ap12-h.nv v:ap12-v.nv p:ap12-p.nv f:ap12-f.nv
+benchmarks/AllPrefixes/FAT16/ ap16.nv h:ap16-h.nv v:ap16-v.nv p:ap16-p.nv f:ap16-f.nv
+benchmarks/AllPrefixes/FAT20/ ap20.nv h:ap20-h.nv v:ap20-v.nv p:ap20-p.nv f:ap20-f.nv

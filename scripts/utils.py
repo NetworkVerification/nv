@@ -37,8 +37,8 @@ class Rib:
     """A simplified version of the RIB attribute."""
 
     bgp: Optional[Bgp] = None
-    static: Optional[int] = None
-    selected: Optional[int] = None
+    static: Optional[int | str] = None
+    selected: Optional[int | str] = None
 
     def select(self):
         # determine the selected attribute
@@ -51,8 +51,24 @@ class Rib:
         return self
 
     def __str__(self):
-        sel = "None" if self.selected is None else f"Some {self.selected}u2"
-        static = "None" if self.static is None else f"Some {self.static}u8"
+        match self.selected:
+            case None:
+                sel = "None"
+            case int() as v:
+                sel = f"Some {v}u2"
+            case str() as v:
+                sel = v
+            case _:
+                raise Exception("Invalid self.selected type")
+        match self.static:
+            case None:
+                static = "None"
+            case int() as v:
+                static = f"Some {v}u8"
+            case str() as v:
+                static = v
+            case _:
+                raise Exception("Invalid self.static type")
         bgp = "None" if self.bgp is None else f"Some {self.bgp}"
         return f"{{  bgp= {bgp}; connected= None; ospf= None; selected= {sel}; static= {static}; }}"
 
