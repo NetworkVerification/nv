@@ -8,8 +8,8 @@ type rib = {
     selected:option[int2]; }
 type attribute = rib
 
-(* let d = (70.0.19.0/24u6) *)
 symbolic d : (int, int6)
+symbolic pod : int
 
 let edges = {
   3-16; (*core-0,Serial0 --> aggregation-8,Serial0*)
@@ -1091,8 +1091,7 @@ let trans edge x =
   {connected=None; static=None; ospf=o; bgp=b; selected=None}
 
 let assert_node node x =
-  let (daddr, dlen) = d in
-  if (dlen = 24u6 && (daddr = 70.0.6.0 || daddr = 70.0.7.0 || daddr = 70.0.10.0 || daddr = 70.0.11.0 || daddr = 70.0.14.0 || daddr = 70.0.15.0 || daddr = 70.0.18.0 || daddr = 70.0.19.0)) then
+  if true then
     match x.selected with
       | None -> false
       | _ -> true
@@ -1106,3 +1105,13 @@ edge-10=19}*)
 let sol = solution {init = init; trans = trans; merge = merge}
 
 assert foldNodes (fun k v acc -> acc && assert_node k v) sol true
+require (match (d, pod) with
+ | ((1174408960, 24u6), 2) -> true
+ | ((1174409728, 24u6), 3) -> true
+ | ((1174407936, 24u6), 1) -> true
+ | ((1174408704, 24u6), 2) -> true
+ | ((1174409984, 24u6), 3) -> true
+ | ((1174406656, 24u6), 0) -> true
+ | ((1174406912, 24u6), 0) -> true
+ | ((1174407680, 24u6), 1) -> true
+ | _ -> false)

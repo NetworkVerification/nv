@@ -29,7 +29,11 @@ done
 require="${require}\n | _ -> false)"
 
 # change d to a symbolic and remove test on d's value from assert_node
+# two versions, depending on if d is written in prefix form or tuple form
 sed -e 's/let d = (70.[0-9]*.[0-9]*.0\/24u6)/symbolic d : (int, int6)\nsymbolic pod : int/' \
-  -e 's/(d = (70.[0-9]*.[0-9]*.0\/24u6))/true/' "$INPUT"
+    -e 's/let d = ([0-9]*, 24u6)/symbolic d : (int, int6)\nsymbolic pod : int/' \
+    -e 's/  if (d = (70.[0-9]*.[0-9]*.0\/24u6)) then/  if true then/' \
+    -e 's/  if (d = ([0-9]*, 24u6)) then/  if true then/' \
+    "$INPUT"
 # add the require clause
 echo -e "$require"
