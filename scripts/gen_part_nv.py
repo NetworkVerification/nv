@@ -4,10 +4,12 @@ gen_part_nv.py [nvfile]
 A module for generating spX-part.nv fileoutput from spX.nv files.
 """
 import itertools
+import math
 import os
 import re
 import argparse
 import subprocess
+from typing import Literal, Optional
 from utils import NetType, NodeGroup, FattreeCut, AttrType, Bgp, Rib
 
 # used for constructing the graph
@@ -77,6 +79,26 @@ class NvFile:
                     self.sols = {
                         v: (f"Some {x}" if x else "None") for v, x in self.sols.items()
                     }
+            case NetType.AP:
+                # need to determine each node's pod and prefix to figure out when it is the destination
+                self.sols = {}
+                for node in self.graph.vs:
+                    if node["g"] == NodeGroup.CORE:
+                        self.sols[node["id"]] = Rib(bgp=Bgp(aslen=2)).select()
+                    elif node["g"] == NodeGroup.AGGREGATION:
+                        self.sols[node["id"]] = Rib(
+                            bgp=Bgp(aslen=f"if pod = {node['p']} then 1 else 3")
+                        ).select()
+                    elif node["g"] == NodeGroup.EDGE:
+                        self.sols[node["id"]] = Rib(
+                            bgp=Bgp(
+                                aslen=f"if pod = {node['p']} and d = ({node['addr']}, 24u6) then 0 else if pod = {node['p']} then 2 else 4"
+                            )
+                        ).select()
+                    else:
+                        raise Exception(
+                            f"Invalid node group {node['g']} for {self.net}"
+                        )
             case NetType.MAINTENANCE:
                 aslens = get_maintenance_paths(self.graph, self.dest, 1)
                 self.sols = {}
@@ -127,7 +149,7 @@ class NvFile:
             case NetType.FATPOL if cut_type is FattreeCut.VERTICAL:
                 # special case for handling vertical cuts
                 edges = get_vertical_cross_edges(self.graph, nodes, self.dest)
-            case NetType.FATPOL | NetType.SP | NetType.MAINTENANCE:
+            case NetType.FATPOL | NetType.SP | NetType.AP | NetType.MAINTENANCE:
                 edges = get_cross_edges(self.graph, nodes, ranked=False)
             case _:
                 raise TypeError(f"Invalid network type {self.net} for fat_cut")
@@ -176,17 +198,31 @@ class NvFile:
         return str(self.graph)
 
 
-def construct_graph(text: str, groups=True):
+def construct_graph(text: str, groups=True) -> igraph.Graph:
     """
     Construct a digraph from the given edge and node information.
     """
     g = igraph.Graph(directed=True)
     if groups:
         nodes = find_nodes(text)
+        npods = int(math.sqrt(len(nodes) * 0.8))
+        ncores = (npods // 2) ** 2
     else:
         nodes = find_nodes_nogroups(text)
-    for (v, grp) in nodes:
-        g.add_vertex(g=grp)
+        npods = 0
+        ncores = 0
+    for (v, grp, old_num) in nodes:
+        if old_num is None:
+            g.add_vertex(g=grp, p=None)
+        else:
+            bf_node = int(old_num)
+            if bf_node < ncores:
+                pod = npods
+            else:
+                pod = (int(old_num) - ncores) // npods
+            # compute the ip address of this node's /24 prefix
+            addr = 70 * 256**3 + bf_node * 256
+            g.add_vertex(g=grp, p=pod, addr=addr)
     edges = find_edges(text)
     g.add_edges(edges)
     # add stable node numbering
@@ -288,8 +324,8 @@ def find_edges(text: str) -> list[tuple[int, int]]:
         else:
             return (node_to_int(match.group(1)), node_to_int(match.group(2)))
 
-    directed = r"(\d*n?)-(\d*n?);"
-    undirected = r"(\d*n?)=(\d*n?);"
+    directed = r"(\d+n?)-(\d+n?);"
+    undirected = r"(\d+n?)=(\d+n?);"
     prog = re.compile(directed)
     matches = prog.finditer(text)
     outputs = [to_int(m) for m in matches]
@@ -306,25 +342,31 @@ def find_edges(text: str) -> list[tuple[int, int]]:
     return outputs
 
 
-def find_nodes(text: str) -> list[tuple[int, NodeGroup]]:
+def find_nodes(text: str) -> list[tuple[int, NodeGroup, Optional[str]]]:
     """Return the nodes."""
-    pat = r"(\w+)(?:(?:-|_)\d*)?=(\d+)(?:,|})"
+    # first group "ng" is the node group
+    # second "num" is the old node number
+    # third "node" is the NV node number
+    pat = r"(?P<ng>\w+)(?:(?:-|_)(?P<num>\d*))?=(?P<node>\d+)(?:,|})"
     prog = re.compile(pat)
     # find all nodes
     matches = prog.finditer(text)
-    vertices = [(node_to_int(m.group(2)), NodeGroup.parse(m.group(1))) for m in matches]
+    vertices = [
+        (node_to_int(m.group("node")), NodeGroup.parse(m.group("ng")), m.group("num"))
+        for m in matches
+    ]
     vertices.sort()
     return vertices
 
 
-def find_nodes_nogroups(text: str) -> list[tuple[int, NodeGroup]]:
-    """Return the nodes."""
+def find_nodes_nogroups(text: str) -> list[tuple[int, Literal[NodeGroup.NONE], None]]:
+    """Return the nodes with no node groups or old node numbers saved."""
     pat = r"let nodes = (\d*)"
     prog = re.compile(pat)
     # find all nodes
     match = prog.search(text)
     if match:
-        vertices = [(v, NodeGroup.NONE) for v in range(int(match.group(1)))]
+        vertices = [(v, NodeGroup.NONE, None) for v in range(int(match.group(1)))]
         return vertices
     else:
         raise ValueError("nodes not found")

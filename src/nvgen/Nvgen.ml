@@ -3,9 +3,10 @@
  *  or to create stub topologies.
  *)
 open Batteries
+
 open Cmdline
+open Nv_lang
 open Nv_lang.Syntax
-open Nv_lang.Input
 open Nv_datastructures
 open Partition
 open Hijack
@@ -28,8 +29,7 @@ let strip_sol_types s =
 let clean_text = strip_var_delims % strip_sol_types
 
 (** Return a declaration of a destination node. *)
-let dest_decl d =
-  DLet (Var.fresh "dest", None, e_val (vnode d))
+let dest_decl d = DLet (Var.fresh "dest", None, e_val (vnode d))
 
 type nodeGroup =
   | Fat of Topologies.fatLevel
@@ -175,10 +175,7 @@ let maintenance dest decls =
 
 let fault_tolerance nfaults decls =
   (* for each fault, construct a failure variable *)
-  let fail_vars =
-    List.init nfaults
-      (fun i -> Var.fresh (Printf.sprintf "failed%d" i))
-  in
+  let fail_vars = List.init nfaults (fun i -> Var.fresh (Printf.sprintf "failed%d" i)) in
   (* add a drop condition to the transfer *)
   let update_decl d =
     match d with
@@ -203,20 +200,6 @@ let fault_tolerance nfaults decls =
   decls @ new_decls @ fail_symbolics
 ;;
 
-let all_tor decls =
-  (* change d to be symbolic, and change the assert_node accordingly *)
-  let update_decl d =
-    match d with
-    | DLet (v, oty, e) when Var.name v = "d" ->
-      DSymbolic (v, Ty (TTuple [TInt 32; TInt 6]))
-    | DLet (v, oty, e) when Var.name v = "assertNode" ->
-      (* TODO *)
-      d
-    | _ -> d
-  in
-  List.map update_decl decls
-;;
-
 let main =
   let cfg, rest = argparse default "nvgen" Sys.argv in
   let file = rest.(0) in
@@ -224,18 +207,25 @@ let main =
   let new_ds, groups =
     match op, cfg.destination with
     | "topology", d ->
-      let decls = match file with
+      let decls =
+        match file with
         | "_" -> []
-        | f -> fst (parse f) in
+        | f -> fst (Input.parse f)
+      in
       let topology = Option.bind cfg.topology Topologies.parse_string in
-      let topology_decls = match topology with
-      | None -> failwith "Invalid topology given (should be a 'star', 'ring' or 'mesh' followed by an integer)."
-      | Some top -> Topologies.to_decls (Topologies.construct top) in
+      let topology_decls =
+        match topology with
+        | None ->
+          failwith
+            "Invalid topology given (should be a 'star', 'ring' or 'mesh' followed by an \
+             integer)."
+        | Some top -> Topologies.to_decls (Topologies.construct top)
+      in
       (* add a destination, if provided *)
-      let decls = if d != -1 then (dest_decl d) :: decls else decls in
+      let decls = if d != -1 then dest_decl d :: decls else decls in
       decls @ topology_decls, Map.empty
     | "ft", _ ->
-      let decls, _ = parse file in
+      let decls, _ = Input.parse file in
       let new_ds = fault_tolerance cfg.nfaults decls in
       new_ds, parse_node_groups file
     | _, -1 -> failwith "No destination provided."
@@ -252,12 +242,12 @@ let main =
           []
       in
       let stub = { leak = cfg.leak; destination; predicate; spines } in
-      let decls, _ = parse file in
+      let decls, _ = Input.parse file in
       let new_ds, hijacker = hijack decls stub in
       (* add the hijacker to the groups *)
       new_ds, Map.add hijacker (Fat Core) groups
     | "maintenance", dest ->
-      let decls, _ = parse file in
+      let decls, _ = Input.parse file in
       let new_ds = maintenance dest decls in
       new_ds, parse_node_groups file
     | _ -> failwith ("invalid op: " ^ op)
