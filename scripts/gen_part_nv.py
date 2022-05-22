@@ -6,6 +6,7 @@ A module for generating spX-part.nv fileoutput from spX.nv files.
 import itertools
 import math
 import os
+import pathlib
 import re
 import argparse
 import subprocess
@@ -199,6 +200,9 @@ class NvFile:
 
     def print_graph(self):
         return str(self.graph)
+
+    def to_graphml(self, outfile):
+        self.graph.write_graphmlz(outfile)
 
 
 def construct_graph(text: str, groups=True) -> igraph.Graph:
@@ -610,12 +614,14 @@ def gen_part_nv(
     nv = NvFile(nvfile, net_type, simulate, dest, verbose, groups)
     if net_type.is_fattree() and isinstance(cut, FattreeCut):
         nodes, edges = nv.fat_cut(cut)
+    elif (net_type is NetType.OTHER or net_type is NetType.RAND) and isinstance(
+        cut, str
+    ):
+        nodes, edges = nv.hmetis_cut(cut)
     elif net_type is NetType.RAND:
-        # rand always defaults to a full cut
+        # rand otherwise defaults to a full cut
         print("Ignoring cut argument for rand network...")
         nodes, edges = nv.rand_cut()
-    elif net_type is NetType.OTHER and isinstance(cut, str):
-        nodes, edges = nv.hmetis_cut(cut)
     else:
         raise Exception(
             f"Called gen_part_nv with unexpected cut/net combination: {cut}/{net_type}"
@@ -640,6 +646,15 @@ def print_graph(nvfile, dest):
     print(nv.print_graph())
     # adj = graph.get_adjlist(mode="all")
     # assert all([len(l) % 2 == 0 for l in adj])
+
+
+def write_graphml(nvfile, dest):
+    _, spname = os.path.split(nvfile)
+    root, _ = os.path.splitext(spname)
+    p = pathlib.Path(nvfile)
+    net_type = NetType.from_filename(root)
+    nv = NvFile(nvfile, net_type, dest=dest, simulate=False)
+    nv.to_graphml(os.path.join(p.with_suffix(".graphml.gz")))
 
 
 class ParseFileDest(argparse.Action):
@@ -701,11 +716,17 @@ def parser():
         action="store_false",
         help="don't search for nodes being grouped by any category",
     )
-    parser.add_argument(
+    group.add_argument(
         "-p",
         "--print",
         action="store_true",
         help="print topology info instead of generating partition",
+    )
+    group.add_argument(
+        "-g",
+        "--graphml",
+        action="store_true",
+        help="save to a zipped graphml file instead of generating partition",
     )
     parser.add_argument(
         "-o",
@@ -721,30 +742,21 @@ def main():
     for (file, dest) in args.files.items():
         if args.print:
             print_graph(file, dest)
+        elif args.graphml:
+            write_graphml(file, dest)
         else:
             # either cuts or hmetis will be true, but not both
-            if args.cuts:
-                for cut in args.cuts:
-                    gen_part_nv(
-                        file,
-                        dest,
-                        FattreeCut.from_str(cut),
-                        simulate=args.simulate,
-                        verbose=args.verbose,
-                        groups=args.nogroups,
-                        overwrite=args.overwrite,
-                    )
-            elif args.hmetis:
-                for hmetis in args.hmetis:
-                    gen_part_nv(
-                        file,
-                        dest,
-                        hmetis,
-                        simulate=args.simulate,
-                        verbose=args.verbose,
-                        groups=args.nogroups,
-                        overwrite=args.overwrite,
-                    )
+            cuts = args.hmetis if args.hmetis else map(FattreeCut.from_str, args.cuts)
+            for cut in cuts:
+                gen_part_nv(
+                    file,
+                    dest,
+                    cut,
+                    simulate=args.simulate,
+                    verbose=args.verbose,
+                    groups=args.nogroups,
+                    overwrite=args.overwrite,
+                )
 
 
 if __name__ == "__main__":

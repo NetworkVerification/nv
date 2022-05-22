@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<graphml xmlns="http://graphml.graphdrawing.org/xmlns"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns
+         http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd">
+<!-- Created by igraph -->
+  <key id="v_g" for="node" attr.name="g" attr.type="double"/>
+  <key id="v_p" for="node" attr.name="p" attr.type="boolean"/>
+  <key id="v_id" for="node" attr.name="id" attr.type="double"/>
+  <graph id="G" edgedefault="directed">
+    <node id="n0">
+      <data key="v_g">3</data>
+      <data key="v_p">false</data>
+      <data key="v_id">0</data>
+    </node>
+    <node id="n1">
+      <data key="v_g">3</data>
+      <data key="v_p">false</data>
+      <data key="v_id">1</data>
+    </node>
+    <node id="n2">
+      <data key="v_g">3</data>
+      <data key="v_p">false</data>
+      <data key="v_id">2</data>
+    </node>
+    <node id="n3">
+      <data key="v_g">3</data>
+      <data key="v_p">false</data>
+      <data key="v_id">3</data>
+    </node>
+    <node id="n4">
+      <data key="v_g">3</data>
+      <data key="v_p">false</data>
+      <data key="v_id">4</data>
+    </node>
+    <node id="n5">
+      <data key="v_g">3</data>
+      <data key="v_p">false</data>
+      <data key="v_id">5</data>
+    </node>
+    <node id="n6">
+      <data key="v_g">3</data>
+      <data key="v_p">false</data>
+      <data key="v_id">6</data>
+    </node>
+    <node id="n7">
+      <data key="v_g">3</data>
+      <data key="v_p">false</data>
+      <data key="v_id">7</data>
+    </node>
+    <node id="n8">
+      <data key="v_g">3</data>
+      <data key="v_p">false</data>
+      <data key="v_id">8</data>
+    </node>
+    <node id="n9">
+      <data key="v_g">3</data>
+      <data key="v_p">false</data>
+      <data key="v_id">9</data>
+    </node>
+    <node id="n10">
+      <data key="v_g">3</data>
+      <data key="v_p">false</data>
+      <data key="v_id">10</data>
+    </node>
+    <node id="n11">
+      <data key="v_g">3</data>
+      <data key="v_p">false</data>
+      <data key="v_id">11</data>
+    </node>
+    <node id="n12">
+      <data key="v_g">3</data>
+      <data key="v_p">false</data>
+      <data key="v_id">12</data>
+    </node>
+    <node id="n13">
+      <data key="v_g">3</data>
+      <data key="v_p">false</data>
+      <data key="v_id">13</data>
+    </node>
+    <node id="n14">
+      <data key="v_g">3</data>
+      <data key="v_p">false</data>
+      <data key="v_id">14</data>
+    </node>
+    <node id="n15">
+      <data key="v_g">3</data>
+      <data key="v_p">false</data>
+      <data key="v_id">15</data>
+    </node>
+    <edge source="n0" target="n1">
+    </edge>
+    <edge source="n0" target="n5">
+    </edge>
+    <edge source="n0" target="n13">
+    </edge>
+    <edge source="n0" target="n14">
+    </edge>
+    <edge source="n1" target="n2">
+    </edge>
+    <edge source="n2" target="n1">
+    </edge>
+    <edge source="n3" target="n2">
+    </edge>
+    <edge source="n3" target="n4">
+    </edge>
+    <edge source="n3" target="n7">
+    </edge>
+    <edge source="n3" target="n9">
+    </edge>
+    <edge source="n3" target="n11">
+    </edge>
+    <edge source="n3" target="n12">
+    </edge>
+    <edge source="n4" target="n1">
+    </edge>
+    <edge source="n4" target="n2">
+    </edge>
+    <edge source="n4" target="n10">
+    </edge>
+    <edge source="n4" target="n15">
+    </edge>
+    <edge source="n5" target="n0">
+    </edge>
+    <edge source="n5" target="n8">
+    </edge>
+    <edge source="n5" target="n12">
+    </edge>
+    <edge source="n6" target="n1">
+    </edge>
+    <edge source="n6" target="n2">
+    </edge>
+    <edge source="n6" target="n8">
+    </edge>
+    <edge source="n6" target="n13">
+    </edge>
+    <edge source="n7" target="n12">
+    </edge>
+    <edge source="n8" target="n4">
+    </edge>
+    <edge source="n8" target="n5">
+    </edge>
+    <edge source="n8" target="n9">
+    </edge>
+    <edge source="n8" target="n14">
+    </edge>
+    <edge source="n9" target="n2">
+    </edge>
+    <edge source="n9" target="n10">
+    </edge>
+    <edge source="n9" target="n13">
+    </edge>
+    <edge source="n9" target="n14">
+    </edge>
+    <edge source="n9" target="n15">
+    </edge>
+    <edge source="n10" target="n1">
+    </edge>
+    <edge source="n10" target="n3">
+    </edge>
+    <edge source="n10" target="n5">
+    </edge>
+    <edge source="n10" target="n6">
+    </edge>
+    <edge source="n10" target="n12">
+    </edge>
+    <edge source="n10" target="n15">
+    </edge>
+    <edge source="n11" target="n2">
+    </edge>
+    <edge source="n11" target="n5">
+    </edge>
+    <edge source="n11" target="n9">
+    </edge>
+    <edge source="n11" target="n10">
+    </edge>
+    <edge source="n11" target="n12">
+    </edge>
+    <edge source="n12" target="n1">
+    </edge>
+    <edge source="n13" target="n7">
+    </edge>
+    <edge source="n13" target="n8">
+    </edge>
+    <edge source="n13" target="n12">
+    </edge>
+    <edge source="n14" target="n6">
+    </edge>
+    <edge source="n14" target="n8">
+    </edge>
+    <edge source="n14" target="n10">
+    </edge>
+    <edge source="n15" target="n0">
+    </edge>
+    <edge source="n15" target="n5">
+    </edge>
+    <edge source="n15" target="n9">
+    </edge>
+    <edge source="n15" target="n10">
+    </edge>
+    <edge source="n15" target="n14">
+    </edge>
+  </graph>
+</graphml>
