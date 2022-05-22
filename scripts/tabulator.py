@@ -229,11 +229,11 @@ def write_csv(results: dict[str, dict[str, dict]], path: str):
             writer.writerow(row)
 
 
-def save_results(runs):
+def save_results(runs, prefix="kirigami-results"):
     """Save runs to CSV."""
     timestamp = datetime.now()
     time = timestamp.strftime("%Y-%m-%d-%H:%M:%S")
-    write_csv(runs, f"kirigami-results-{time}.csv")
+    write_csv(runs, f"{prefix}-{time}.csv")
 
 
 def run_benchmark_txt(
@@ -326,4 +326,6 @@ if __name__ == "__main__":
     runs = run_benchmark_txt(
         args.file, args.z3time, args.timeout, args.trials, args.parallel, args.verbose
     )
-    save_results(runs)
+    prefix = os.path.basename(args.file)
+    prefix = prefix[:-4] if prefix.endswith(".txt") else prefix
+    save_results(runs, prefix)
