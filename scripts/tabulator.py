@@ -92,11 +92,11 @@ def write_csv(results: dict[str, dict[str, dict]], path: str):
             writer.writerow(row)
 
 
-def save_results(runs: dict[str, dict[str, dict]]):
+def save_results(runs, prefix="kirigami-results"):
     """Save runs to CSV."""
     timestamp = datetime.now()
     time = timestamp.strftime("%Y-%m-%d-%H:%M:%S")
-    write_csv(runs, f"kirigami-results-{time}.csv")
+    write_csv(runs, f"{prefix}-{time}.csv")
 
 
 def tabulate(bench: str, trial: int, cut: str, output: str):
@@ -113,3 +113,4 @@ if __name__ == "__main__":
     for f in sys.argv[1:]:
         with open(f, "r") as data:
             parsed = parse_smt(data.read())
+            # TODO: export this parsed data to a results file
