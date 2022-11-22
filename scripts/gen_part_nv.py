@@ -73,14 +73,16 @@ class NvFile:
     def infer_sol(self):
         """Infer the solutions to the network."""
         match self.net:
-            case NetType.SP | NetType.RAND | NetType.OTHER:
-                self.sols = infer_sp_sols(self.graph, self.dest, self.attr)
+            case NetType.SP | NetType.FATPOL | NetType.RAND | NetType.OTHER:
+                self.sols = infer_single_destination_routes(
+                    self.graph, self.dest, self.attr, NetType is NetType.FATPOL
+                )
                 if self.attr == AttrType.INT_OPTION or self.attr == AttrType.BGP:
                     # tag Some/None for solutions
                     self.sols = {
                         v: (f"Some {x}" if x else "None") for v, x in self.sols.items()
                     }
-            case NetType.AP:
+            case NetType.AP if self.attr == Bgp:
                 # need to determine each node's pod and prefix to figure out when it is the destination
                 self.sols = {}
                 for node in self.graph.vs:
@@ -106,8 +108,8 @@ class NvFile:
             case NetType.MAINTENANCE:
                 aslens = get_maintenance_paths(self.graph, self.dest, 1)
                 self.sols = {}
-                for (node, sol) in infer_sp_sols(
-                    self.graph, self.dest, self.attr
+                for (node, sol) in infer_single_destination_routes(
+                    self.graph, self.dest, self.attr, False
                 ).items():
                     # update the aslen from the maintenance paths
                     if isinstance(sol, Rib) and sol.bgp:
@@ -208,6 +210,11 @@ class NvFile:
 def construct_graph(text: str, groups=True) -> igraph.Graph:
     """
     Construct a digraph from the given edge and node information.
+    Vertices have three attributes:
+    - g: the vertex group
+    - p: the vertex pod
+    - addr: the associated IPv4 address
+    The pod and addr are only included if groups is True.
     """
     g = igraph.Graph(directed=True)
     if groups:
@@ -283,12 +290,21 @@ def write_maintenance_aslen(lengths):
     return aslen
 
 
-def infer_sp_sols(
-    graph: igraph.Graph, dest: int, attr_type: AttrType
+def infer_node_comms(graph: igraph.Graph, path: list[int]) -> set[int]:
+    """
+    Return a set of BGP community tags inferred from the given AS path.
+    """
+    return set(graph.vs[i]["g"].community(graph.vs[i]["p"], False) for i in path)
+
+
+def infer_single_destination_routes(
+    graph: igraph.Graph, dest: int, attr_type: AttrType, policy: bool
 ) -> dict[int, Bgp | Rib | int | None]:
     """
     Infer the shortest path to the destination for each node.
     Return a RIB if the attribute type is RIB, or an integer if it's an INT_OPTION.
+    If policy is True, then when the attribute type is BGP or RIB, community tags
+    will be inferred, as in the fatXPol benchmarks.
     """
 
     def create_route(i: int, path: list[int]) -> tuple[int, Bgp | Rib | int | None]:
@@ -303,7 +319,11 @@ def infer_sp_sols(
             case AttrType.RIB:
                 # generate a rib from the given BGP value and with possibly a static route
                 # call select() to assign the selected route
-                return node, Rib(Bgp(aslen=hops), 1 if node == dest else None).select()
+                if policy:
+                    bgp = Bgp(aslen=hops, comms=set(infer_node_comms(graph, path)))
+                else:
+                    bgp = Bgp(aslen=hops)
+                return node, Rib(bgp, 1 if node == dest else None).select()
             case AttrType.BGP:
                 return node, Bgp(aslen=hops)
 
@@ -350,7 +370,7 @@ def find_edges(text: str) -> list[tuple[int, int]]:
 
 
 def find_nodes(text: str) -> list[tuple[int, NodeGroup, Optional[str]]]:
-    """Return the nodes."""
+    """Return the nodes, along with an associated NodeGroup and node number, if present."""
     # first group "ng" is the node group
     # second "num" is the old node number
     # third "node" is the NV node number
@@ -358,7 +378,9 @@ def find_nodes(text: str) -> list[tuple[int, NodeGroup, Optional[str]]]:
     prog = re.compile(pat)
     # find all nodes
     matches = prog.finditer(text)
-    vertices = [
+    # we provide the type annotation here as m.group("num") is not able to confirm that
+    # it produces a str
+    vertices: list[tuple[int, NodeGroup, Optional[str]]] = [
         (node_to_int(m.group("node")), NodeGroup.parse(m.group("ng")), m.group("num"))
         for m in matches
     ]
@@ -595,12 +617,13 @@ def gen_part_nv(
     nvfile,
     dest,
     cut: FattreeCut | str,
-    simulate=True,
+    simulate=False,
     verbose=False,
     groups=True,
     overwrite=False,
 ):
     """Generate the partition file."""
+    # distinguish fattree cuts from hMETIS cuts
     if isinstance(cut, FattreeCut):
         cut_name = cut.short
         file_info = f"(* {cut.desc} version of {os.path.basename(nvfile)} *)"
@@ -608,10 +631,19 @@ def gen_part_nv(
         hmetisn = os.path.basename(cut).split(".")[-1]
         cut_name = f"hmetis{hmetisn}"
         file_info = f"(* hMETIS-partitioned version of {os.path.basename(nvfile)} with {hmetisn} partitions *)"
+    # determine the output file name
     part, net_type = get_part_fname(nvfile, cut_name, simulate, overwrite)
     if verbose:
         print("Outfile: " + part)
-    nv = NvFile(nvfile, net_type, simulate, dest, verbose, groups)
+    nv = NvFile(
+        nvfile,
+        net_type=net_type,
+        dest=dest,
+        simulate=simulate,
+        verbose=verbose,
+        groups=groups,
+    )
+    # perform the cut
     if net_type.is_fattree() and isinstance(cut, FattreeCut):
         nodes, edges = nv.fat_cut(cut)
     elif (net_type is NetType.OTHER or net_type is NetType.RAND) and isinstance(
@@ -629,6 +661,7 @@ def gen_part_nv(
     if verbose:
         print(nodes)
         print([e for e in edges])
+    # generate the partitioned network's interface
     partitioned = nv.generate_parted(nodes, edges)
     with open(part, "w") as outfile:
         parts = preamble(file_info)

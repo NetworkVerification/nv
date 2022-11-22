@@ -110,13 +110,14 @@ class NetType(Enum):
     MAINTENANCE = 2
     FT = 3
     AP = 4
-    RAND = 5
-    OTHER = 6
+    APPOL = 5
+    RAND = 6
+    OTHER = 7
 
     def is_fattree(self):
         """Return True if the network is a fattree network (SP, FATPOL or MAINTENANCE)."""
         match self:
-            case NetType.SP | NetType.FATPOL | NetType.MAINTENANCE | NetType.FT | NetType.AP:
+            case NetType.SP | NetType.FATPOL | NetType.MAINTENANCE | NetType.FT | NetType.AP | NetType.APPOL:
                 return True
             case _:
                 return False
@@ -127,6 +128,8 @@ class NetType(Enum):
             return NetType.SP
         elif re.match(r"ap\d*", fname):
             return NetType.AP
+        elif re.match(r"apFat\d*Pol", fname):
+            return NetType.APPOL
         elif re.match(r"fat\d*Pol", fname):
             return NetType.FATPOL
         elif re.match(r"rand_\d*_\d*", fname):
@@ -161,6 +164,34 @@ class NodeGroup(IntEnum):
             return NodeGroup.EDGE
         else:
             return NodeGroup.NONE
+
+    def community(self, pod: int, follow_up: bool) -> int:
+        """
+        Return the first BGP community tag associated with the node.
+        If follow_up is true, this is the second tag that is added
+        once the first is already present (see topoconfig.py).
+        NOTE: the community tag is a standard community represented by a 32-bit integer,
+        meaning the pod must be at most 65535.
+        """
+        if not (0 <= pod < 65536):
+            raise ValueError("pod must be a number between [0,65535]")
+        match self:
+            case NodeGroup.CORE:
+                asn = 6 if follow_up else 3
+                tag = 0
+            case NodeGroup.AGGREGATION:
+                asn = 4 if follow_up else 1
+                tag = pod
+            case NodeGroup.EDGE:
+                asn = 5 if follow_up else 2
+                tag = pod
+            case _:
+                asn = 0
+                tag = 0
+        # the resulting community int is a 32-bit number, where the asn occupies the upper 16 bits
+        # and the tag occupies the lower 16 bits
+        # see https://github.com/batfish/batfish/blob/master/projects/batfish-common-protocol/src/main/java/org/batfish/datamodel/bgp/community/StandardCommunity.java
+        return asn << 16 | tag
 
 
 class FattreeCut(Enum):
