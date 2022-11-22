@@ -5,6 +5,16 @@ import re
 from typing import Optional
 
 
+class If:
+    def __init__(self, condition, then_branch, else_branch):
+        self.condition = condition
+        self.then_branch = then_branch
+        self.else_branch = else_branch
+
+    def __str__(self) -> str:
+        return f"if {self.condition} then {self.then_branch} else {self.else_branch}"
+
+
 class Bgp:
     """A simplified version of the BGP attribute."""
 

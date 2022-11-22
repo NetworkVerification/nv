@@ -11,7 +11,7 @@ import re
 import argparse
 import subprocess
 from typing import Literal, Optional
-from utils import NetType, NodeGroup, FattreeCut, AttrType, Bgp, Rib
+from utils import If, NetType, NodeGroup, FattreeCut, AttrType, Bgp, Rib
 
 # used for constructing the graph
 import igraph
@@ -82,29 +82,12 @@ class NvFile:
                     self.sols = {
                         v: (f"Some {x}" if x else "None") for v, x in self.sols.items()
                     }
-            case NetType.AP if self.attr == Bgp:
+            case NetType.AP if self.attr is AttrType.RIB:
+                # TODO: add APPOL support
                 # need to determine each node's pod and prefix to figure out when it is the destination
-                self.sols = {}
-                for node in self.graph.vs:
-                    if node["g"] == NodeGroup.CORE:
-                        self.sols[node["id"]] = Rib(bgp=Bgp(aslen=2)).select()
-                    elif node["g"] == NodeGroup.AGGREGATION:
-                        self.sols[node["id"]] = Rib(
-                            bgp=Bgp(aslen=f"if pod = {node['p']} then 1 else 3")
-                        ).select()
-                    elif node["g"] == NodeGroup.EDGE:
-                        # don't call select() here since we set it ourselves according to the symbolic
-                        self.sols[node["id"]] = Rib(
-                            bgp=Bgp(
-                                aslen=f"if pod = {node['p']} && d = ({node['addr']}, 24u6) then 0 else if pod = {node['p']} then 2 else 4"
-                            ),
-                            static=f"if d = ({node['addr']}, 24u6) then Some 1u8 else None",
-                            selected=f"if d = ({node['addr']}, 24u6) then Some 1u2 else Some 3u2",
-                        )
-                    else:
-                        raise Exception(
-                            f"Invalid node group {node['g']} for {self.net}"
-                        )
+                self.sols = infer_all_tor_destination_routes(
+                    self.graph, self.net is NetType.APPOL
+                )
             case NetType.MAINTENANCE:
                 aslens = get_maintenance_paths(self.graph, self.dest, 1)
                 self.sols = {}
@@ -280,8 +263,8 @@ def write_maintenance_aslen(lengths):
     elif len(lengths.keys()) == 2:
         items = list(lengths.items())
         items.sort(key=lambda x: len(x[1]))
-        aslen = (
-            f"if down = Some({items[0][1][0][0]}) then {items[0][0]} else {items[1][0]}"
+        aslen = str(
+            If(f"down = Some({items[0][1][0][0]})", f"{items[0][0]}", f"{items[1][0]}")
         )
     else:
         aslen = "match down with "
@@ -323,15 +306,60 @@ def infer_single_destination_routes(
                     bgp = Bgp(aslen=hops, comms=set(infer_node_comms(graph, path)))
                 else:
                     bgp = Bgp(aslen=hops)
-                return node, Rib(bgp, 1 if node == dest else None).select()
+                return node, Rib(bgp, static=1 if node == dest else None).select()
             case AttrType.BGP:
-                return node, Bgp(aslen=hops)
+                if policy:
+                    bgp = Bgp(aslen=hops, comms=set(infer_node_comms(graph, path)))
+                else:
+                    bgp = Bgp(aslen=hops)
+                return node, bgp
 
     d = graph.vs.find(id=dest)
     # mode="out" gives us the path to the destination from that node
     ps = graph.get_shortest_paths(d, mode="out")
     # ps is a list of lists of vertex ids
     return dict(create_route(i, path) for i, path in enumerate(ps))
+
+
+def infer_all_tor_destination_routes(
+    graph: igraph.Graph, policy: bool
+) -> dict[int, Rib]:
+    """
+    Infer the solutions for each node when the destination is symbolic.
+    If policy is True, then community tags
+    will be inferred, as in the fatXPol benchmarks.
+    """
+    # TODO: the specific community tags will depend on the destination's pod;
+    # every destination has its own particular sequence of tags unfortunately
+    sols = {}
+    for node in graph.vs:
+        if node["g"] == NodeGroup.CORE:
+            sols[node["id"]] = Rib(bgp=Bgp(aslen=2)).select()
+        elif node["g"] == NodeGroup.AGGREGATION:
+            sols[node["id"]] = Rib(
+                bgp=Bgp(aslen=str(If(f"pod = {node['p']}", 1, 3)))
+            ).select()
+        elif node["g"] == NodeGroup.EDGE:
+            # don't call select() here since we set it ourselves according to the symbolic
+            aslen = str(
+                If(
+                    # case where this node is the destination
+                    f"pod = {node['p']} && d = ({node['addr']}, 24u6)",
+                    0,
+                    # case where this node is in the destination's pod or not
+                    If(f"pod = {node['p']}", 2, 4),
+                )
+            )
+            sols[node["id"]] = Rib(
+                bgp=Bgp(
+                    aslen=aslen,
+                ),
+                static=str(If(f"d = ({node['addr']}, 24u6)", "Some 1u8", "None")),
+                selected=str(If(f"d = ({node['addr']}, 24u6)", "Some 1u2", "Some 3u2")),
+            )
+        else:
+            raise Exception(f"Invalid node group {node['g']}")
+    return sols
 
 
 def node_to_int(node: str) -> int:
