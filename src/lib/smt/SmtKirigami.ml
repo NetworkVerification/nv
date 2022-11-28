@@ -10,7 +10,17 @@ open Smt
 open SmtOptimizations
 open Nv_datastructures.AdjGraph
 
-let solve ?(check_ranked = false) info query time chan net_or_srp nodes assertions guarantees =
+type kirigami_result =
+  | Unknown
+  | Timeout
+  (* guarantee is unsat, fail early *)
+  | GuaranteeFailure
+  (* guarantee is sat, but property fails *)
+  | PropertyFailure of Nv_solution.Solution.t
+  (* guarantee is sat, property holds *)
+  | PropertyPass
+
+let solve info query time chan net_or_srp nodes assertions guarantees =
   let solver = Lazy.force (solver time) in
   let print_and_ask q =
     if query then printQuery chan q;
@@ -33,34 +43,36 @@ let solve ?(check_ranked = false) info query time chan net_or_srp nodes assertio
     in
     (* print query to a file if asked to *)
 
-    (* Printf.printf "communicating with solver"; *)
-    let get_ret enc assertions guarantees =
+    (* submit the given encoded SMT string to the solver, which returns a result for the given
+       number of assertions and guarantees
+     *)
+    let get_ret enc nassertions nguarantees =
       print_and_ask enc;
       let q = check_sat info in
       print_and_ask q;
       let reply = solver |> parse_reply in
-      get_sat query chan info env solver renaming nodes assertions guarantees reply
+      get_sat query chan info env solver renaming nodes nassertions nguarantees reply
     in
-    if check_ranked
-    then (
-      let enc_parts =
-        String.split_on_string smt_encoding ~by:"(echo \"#END_OF_SCOPE#\")"
-      in
-      (* ranked checks have multiple scopes to test guarantees & assertions separately *)
-      let enc_part1, enc_part2 =
-        match enc_parts with
-        | [a; b] -> a, b
-        | _ -> failwith "solveKirigami: wrong number of scopes"
-      in
-      let ret1 = get_ret enc_part1 0 guarantees in
-      let ret2 = get_ret enc_part2 assertions 0 in
-      (* TODO: return both results, instead of the and *)
-      match ret1 with
-      | Unsat -> ret2
-      | _ -> ret1)
-    else get_ret smt_encoding assertions guarantees
+    let enc_parts = String.split_on_string smt_encoding ~by:"(echo \"#END_OF_SCOPE#\")" in
+    let enc_part1, enc_part2 =
+      match enc_parts with
+      | [a; b] -> a, b
+      | _ -> failwith "solveKirigami: wrong number of scopes"
+    in
+    (* ask if there is a satisfying assignment for the guarantees *)
+    let ret1 = get_ret enc_part1 0 guarantees in
+    (* ask if there is a solution that does not satisfy the assertions *)
+    let ret2 = get_ret enc_part2 assertions guarantees in
+    match ret1 with
+    | Sat _ -> (match ret2 with
+        | Sat m -> PropertyFailure m
+        | Unsat -> PropertyPass
+        | Unknown -> Unknown
+        | Timeout -> Timeout)
+    | Unsat -> GuaranteeFailure
+    | Unknown -> Unknown
+    | Timeout -> Timeout
   in
-  (* Initial check *)
   print_and_ask "(push)";
   let ret = solve_aux () in
   print_and_ask "(pop)";
@@ -68,7 +80,7 @@ let solve ?(check_ranked = false) info query time chan net_or_srp nodes assertio
 ;;
 
 (* Solver for Kirigami *)
-let solveKirigami ?(check_ranked = false) info query time chan ~part decls =
+let solveKirigami info query time chan ~part decls =
   let open Nv_lang.Syntax in
   let open Nv_kirigami.SrpRemapping in
   let module ExprEnc = (val expr_encoding smt_config) in
@@ -81,12 +93,11 @@ let solveKirigami ?(check_ranked = false) info query time chan ~part decls =
   let outputs = VertexMap.fold (fun _ l acc -> l @ acc) part.outputs [] in
   let guarantees = List.fold_left (fun acc (_, ps) -> List.length ps + acc) 0 outputs in
   solve
-    ~check_ranked
     info
     query
     time
     chan
-    (fun () -> Enc.kirigami_encode_z3 ~check_ranked part decls)
+    (fun () -> Enc.kirigami_encode_z3 part decls)
     part.nodes
     assertions
     guarantees

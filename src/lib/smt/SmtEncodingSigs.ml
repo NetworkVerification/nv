@@ -40,8 +40,7 @@ module type Encoding = sig
   val encode_z3 : network_type -> smt_env
 
   val kirigami_encode_z3
-    :  ?check_ranked:bool
-    -> SrpRemapping.fragment
+    : SrpRemapping.fragment
     -> network_type
     -> smt_env
 

@@ -258,8 +258,8 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
    * 1. transfer encoding
    * 2. predicate encoding
    *)
-  let encode_kirigami_inputs env r inputs eintrans count =
-    let encode_input { edge; rank; var_names; preds } =
+  let encode_kirigami_inputs env inputs eintrans count =
+    let encode_input { edge; var_names; preds } =
       (* extract the variable name and create a term *)
       let xs = of_list (List.map (mk_term % mk_var % Var.to_string) var_names) in
       (* get the relevant predicate *)
@@ -279,7 +279,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
           eintrans
           edge
           xs
-      , if rank < r then Lesser hyps else Greater hyps )
+      , hyps )
     in
     VertexMap.map (fun inputs -> List.map encode_input inputs) inputs
   ;;
@@ -430,7 +430,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     =
     let aty = oget aty in
     let einit, etrans, emerge = init, trans, merge in
-    let { rank; inputs; outputs } = frag in
+    let { inputs; outputs } = frag in
     let label_vars = encode_label_vars aty var_names in
     (* Separate the label_vars (which has length = #nodes in the monolithic network)
         according to whether or not they should be kept or cut. *)
@@ -451,7 +451,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
       | None -> None, Some etrans
     in
     (* construct the input constants *)
-    let input_map = encode_kirigami_inputs env rank inputs eintrans count in
+    let input_map = encode_kirigami_inputs env inputs eintrans count in
     (* Compute the labelling as the merge of all inputs *)
     let constrain_label v lbl_iv incoming_vars =
       let merged = encode_node_merges env count einit emerge incoming_vars v in
@@ -502,6 +502,12 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
             inputs)
         input_map
         ([], [])
+    in
+    let hypotheses =
+      VertexMap.fold
+        (fun _ inputs hyps -> List.fold_left (fun h (_, preds) -> preds @ h) hyps inputs)
+        input_map
+        []
     in
     lesser, greater, guarantees
   ;;
@@ -586,7 +592,7 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     env
   ;;
 
-  let kirigami_encode_z3 ?(check_ranked = false) part ds : SmtUtils.smt_env =
+  let kirigami_encode_z3 part ds : SmtUtils.smt_env =
     let symbolics = get_symbolics ds in
     let graph = get_graph ds |> oget in
     let solves = get_solves ds in
@@ -603,38 +609,18 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     in
     (* helper for applying tuples of constraints *)
     let apply (f, v) = f v in
-    (* helper for scoping separate checks *)
-    let scope_checks env (f : smt_env -> unit) =
-      add_command env ~comdescr:"push" SmtLang.Push;
-      f env;
-      (* marker to break up encoding *)
-      add_command env ~comdescr:"" (SmtLang.mk_echo "\"#END_OF_SCOPE#\"");
-      add_command env ~comdescr:"pop" SmtLang.Pop
-    in
-    (* these constraints are included in all scopes *)
     add_symbolic_constraints env requires env.symbolics;
-    (* ranked initial checks *)
-    conjoin_terms env (encode_assertions "lesser-hyp" env apply lesser_hyps) ~negate:false;
-    let add_guarantees env = encode_assertions "guarantee" env apply guarantees in
-    (* if performing ranked check, scope the guarantees separately *)
-    let gs =
-      if check_ranked
-      then (
-        scope_checks env (fun e -> add_guarantees e |> conjoin_terms e ~negate:true);
-        [])
-      else add_guarantees env
-    in
+    conjoin_terms env (encode_assertions "hyp" env apply lesser_hyps) ~negate:false;
+    conjoin_terms env (encode_assertions "hyp" env apply greater_hyps) ~negate:false;
+    conjoin_terms env (encode_assertions "guarantee" env apply guarantees) ~negate:false;
+    add_command env ~comdescr:"" (SmtLang.mk_echo "\"#END_OF_SCOPE#\"");
     (* safety checks: add other hypotheses, test original assertions *)
-    conjoin_terms
-      env
-      (encode_assertions "greater-hyp" env apply greater_hyps)
-      ~negate:false;
     let asserts =
       encode_assertions "assert" env (fun e -> encode_exp_z3 "" env e) assertions
     in
     (* when guarantees are not scoped, they need to be coupled with the asserts,
      * in an (assert (not (and (and assert-0 ... assert-n) (and guarantee-0 ... guarantee-m)))) statement *)
-    conjoin_terms env (gs @ asserts) ~negate:true;
+    conjoin_terms env asserts ~negate:true;
     env
   ;;
 end
