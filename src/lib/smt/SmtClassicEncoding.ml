@@ -489,27 +489,13 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     encode_propagate_labels env !trans_input_map labelling;
     (* construct the output constants *)
     let guarantees = encode_kirigami_outputs env outputs eouttrans labelling count in
-    (* divide up the hypotheses *)
-    let lesser, greater =
-      VertexMap.fold
-        (fun _ inputs hyps ->
-          List.fold_left
-            (fun (lh, gh) (_, preds) ->
-              match preds with
-              | Lesser p -> p @ lh, gh
-              | Greater p -> lh, p @ gh)
-            hyps
-            inputs)
-        input_map
-        ([], [])
-    in
-    let hypotheses =
+    let assumptions =
       VertexMap.fold
         (fun _ inputs hyps -> List.fold_left (fun h (_, preds) -> preds @ h) hyps inputs)
         input_map
         []
     in
-    lesser, greater, guarantees
+    assumptions, guarantees
   ;;
 
   (* TODO: the current implementation does some redundant work by using auxiliary data
@@ -599,19 +585,18 @@ module ClassicEncoding (E : SmtEncodingSigs.ExprEncoding) : ClassicEncodingSig =
     let assertions = get_asserts ds |> List.map InterpPartialFull.interp_partial in
     let requires = get_requires ds in
     let env = init_solver symbolics ~labels:[] in
-    let lesser_hyps, greater_hyps, guarantees =
+    let assumes, guarantees =
       List.fold_lefti
-        (fun (lhs, ghs, gs) i solve ->
-          let lh, gh, g = encode_kirigami_solve env graph part i solve in
-          lh @ lhs, gh @ ghs, g @ gs)
-        ([], [], [])
+        (fun (ass, gs) i solve ->
+          let a, g = encode_kirigami_solve env graph part i solve in
+          a @ ass, g @ gs)
+        ([], [])
         solves
     in
     (* helper for applying tuples of constraints *)
     let apply (f, v) = f v in
     add_symbolic_constraints env requires env.symbolics;
-    conjoin_terms env (encode_assertions "hyp" env apply lesser_hyps) ~negate:false;
-    conjoin_terms env (encode_assertions "hyp" env apply greater_hyps) ~negate:false;
+    conjoin_terms env (encode_assertions "assumption" env apply assumes) ~negate:false;
     conjoin_terms env (encode_assertions "guarantee" env apply guarantees) ~negate:false;
     add_command env ~comdescr:"" (SmtLang.mk_echo "\"#END_OF_SCOPE#\"");
     (* safety checks: add other hypotheses, test original assertions *)

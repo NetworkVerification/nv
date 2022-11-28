@@ -15,6 +15,7 @@ open Nv_kirigami
 type answer =
   | Success of Solution.t option
   | CounterExample of Solution.t
+  | Fail
   | Timeout of int
 
 let rec apply_all (s : Solution.t) fs =
@@ -33,10 +34,26 @@ let smt_query_file =
 
 (** Run the SMT solver appropriate for this instance. *)
 let solve_smt file cfg info decls part fs =
+  let solution_to_ctex (solution : Solution.t) =
+    match solution.assertions with
+    | [] -> Success (Some solution), fs
+    | lst ->
+      if List.for_all (fun b -> b) lst
+      then Success (Some solution), fs
+      else CounterExample solution, fs
+    in
+  if cfg.kirigami then
+    match (SmtKirigami.solveKirigami ~part:(part |> oget) info cfg.query cfg.timeout (smt_query_file file) decls) with
+    | Unknown -> Console.error "SMT returned unknown"
+    | Timeout -> Timeout cfg.timeout, []
+    | GuaranteeFailure -> Fail, []
+    | PropertyFailure solution -> solution_to_ctex solution
+    | PropertyPass -> Success None, []
+  else
   let solve_fun =
-    if cfg.kirigami
-    then SmtKirigami.solveKirigami ~check_ranked:cfg.ranked ~part:(part |> oget)
-    else if cfg.hiding
+    (* if cfg.kirigami *)
+    (* then SmtKirigami.solveKirigami ~check_ranked:cfg.ranked ~part:(part |> oget) *)
+    if cfg.hiding
     then SmtHiding.solve_hiding ~starting_vars:[] ~full_chan:(smt_query_file file)
     else Smt.solveClassic
   in
@@ -44,13 +61,7 @@ let solve_smt file cfg info decls part fs =
   | Unsat -> Success None, []
   | Unknown -> Console.error "SMT returned unknown"
   | Timeout -> Timeout cfg.timeout, []
-  | Sat solution ->
-    (match solution.assertions with
-    | [] -> Success (Some solution), fs
-    | lst ->
-      if List.for_all (fun b -> b) lst
-      then Success (Some solution), fs
-      else CounterExample solution, fs)
+  | Sat solution -> solution_to_ctex solution
 ;;
 
 let run_smt_partitioned file cfg info decls parts fs =

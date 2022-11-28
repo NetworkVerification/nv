@@ -6,6 +6,7 @@ open Cmdline
 let handle_op is_parted i result =
   if is_parted then Printf.printf "Partition %d\n" i;
   match result with
+  | Fail, _ -> Printf.printf "Failed: no solutions found\n"
   | CounterExample sol, fs -> Solution.print_solution (apply_all sol fs)
   | Success (Some sol), fs ->
     Printf.printf "No counterexamples found\n";
