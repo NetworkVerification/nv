@@ -17,7 +17,6 @@ type t =
   ; compile : bool (** compile network to OCaml code before simulation *)
   ; unroll : bool (** whether to unroll maps or not           *)
   ; kirigami : bool [@short "-k"] (** enable partitioning features           *)
-  ; ranked : bool (** use the ranked check for kirigami       *)
   ; print_partitions : bool (** print the partitioned declarations in kirigami *)
   ; fragments : string option [@short "-f"] (** only check the given fragments *)
   ; parallelize : int option [@short "-p"] (** Try to parallelize solving using n cores **)
@@ -49,7 +48,6 @@ let default =
   ; finite_arith = false
   ; hiding = false
   ; kirigami = false
-  ; ranked = false
   ; print_partitions = false
   ; fragments = None
   ; parallelize = None
@@ -70,6 +68,6 @@ let update_cfg_dependencies () =
   if !cfg.unroll then cfg := { !cfg with inline = true };
   if !cfg.hiding then cfg := { !cfg with unbox = true };
   if !cfg.smt_parallel then cfg := { !cfg with finite_arith = true };
-  if !cfg.print_partitions || !cfg.ranked then cfg := { !cfg with kirigami = true };
+  if !cfg.print_partitions then cfg := { !cfg with kirigami = true };
   ()
 ;;

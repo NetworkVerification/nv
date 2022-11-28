@@ -51,8 +51,6 @@ let solve_smt file cfg info decls part fs =
     | PropertyPass -> Success None, []
   else
   let solve_fun =
-    (* if cfg.kirigami *)
-    (* then SmtKirigami.solveKirigami ~check_ranked:cfg.ranked ~part:(part |> oget) *)
     if cfg.hiding
     then SmtHiding.solve_hiding ~starting_vars:[] ~full_chan:(smt_query_file file)
     else Smt.solveClassic
