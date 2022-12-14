@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 """
 Compute benchmark results comparing partitioned and unpartitioned SMT checks.
+Takes output of runs of NV as input and produces a CSV.
 """
 import re
 from datetime import datetime
@@ -107,6 +108,7 @@ def tabulate(bench: str, trial: int, cut: str, output: str):
             rows.append(
                 {"operation": operation, "cut": cut, "trial": trial, "occurrence": i}
             )
+            # TODO
 
 
 if __name__ == "__main__":
