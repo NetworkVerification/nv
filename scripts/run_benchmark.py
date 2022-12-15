@@ -4,7 +4,8 @@ Commandline helper to run nv's SMT tool on various benchmarks.
 Accepts a benchmark.txt file which can specify benchmarks to run,
 where each line of the file has the format:
     [directory] [monolithic benchmark] [cut name:cut benchmarks]*
-Filenames and cut names must not have spaces!
+(first listed file is the monolithic benchmark)
+Filenames and cut names must not have spaces or colons!
 Files can contain line comments beginning with a '#'.
 Each benchmark's result is then saved to a benchmark_output.txt file.
 """
@@ -57,7 +58,7 @@ class BenchmarkParams:
 
 def run_nv_smt(
     benchmark_path: str,
-    cut: Optional[str],
+    cut: bool,
     params: BenchmarkParams,
 ) -> tuple[RunSmtResult, str]:
     """
@@ -68,7 +69,7 @@ def run_nv_smt(
     """
     # set verbose, SMT flags, and partitioning if needed
     args = [params.nv_exe_path, "-v", "-m", "-t", str(params.z3_timeout)]
-    if cut is not None:
+    if cut:
         # run on multiple cores
         if params.nv_cores > 1:
             args += ["-p", str(params.nv_cores)]
@@ -100,7 +101,7 @@ def run_nv_smt(
 
 def log_nv_smt_run(
     benchmark_path: str,
-    cut: Optional[str],
+    cut: bool,
     params: BenchmarkParams,
     log_file: str,
 ):
@@ -124,7 +125,7 @@ def run_benchmarks(
     benchmark_args = [
         (
             os.path.join(benchdir, benchmark),
-            cut,
+            cut is not None,
             params,
             os.path.join(
                 results_dir, f"{benchmark}-{cut if cut else 'mono'}{trial_idx}.txt"
