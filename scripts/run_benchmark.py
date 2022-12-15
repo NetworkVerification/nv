@@ -23,15 +23,6 @@ class RunSmtResult(Enum):
     TIMEOUT = 1
     ERROR = 2
 
-    def __str__(self):
-        match self:
-            case RunSmtResult.SUCCEEDED:
-                return "Success"
-            case RunSmtResult.TIMEOUT:
-                return "Timeout"
-            case RunSmtResult.ERROR:
-                return "Error"
-
 
 @dataclass
 class BenchmarkParams:
@@ -204,13 +195,13 @@ def parser():
         "-x",
         "--nv-path",
         default=os.path.join(os.getcwd(), default_params.nv_exe_path),
-        help="which executable to run as NV (default: %(default))",
+        help="which executable to run as NV (default: %(default)s)",
     )
     parser.add_argument(
         "-d",
         "--results-dir",
         default=default_params.results_directory_name,
-        help="name of the directory to store results (default: %(default))",
+        help="name of the directory to store results (default: %(default)s)",
     )
     parser.add_argument(
         "-n",
