@@ -10,7 +10,7 @@ import csv
 from typing import Any
 
 
-def parse_smt(output: str) -> dict[str, list]:
+def parse_smt(output: str) -> dict[str, list[int | float]]:
     """
     Parse the output of an NV command.
     Return a dictionary of operations to lists of times taken by those operations.

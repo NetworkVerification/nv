@@ -2,21 +2,19 @@
 """
 Commandline helper to run nv's SMT tool on various benchmarks.
 Accepts a benchmark.txt file which can specify benchmarks to run,
-where each line of the file has the form:
+where each line of the file has the format:
     [directory] [monolithic benchmark] [cut name:cut benchmarks]*
+Filenames and cut names must not have spaces!
+Files can contain line comments beginning with a '#'.
 Each benchmark's result is then saved to a benchmark_output.txt file.
 """
 import argparse
+from dataclasses import dataclass
 from enum import Enum
 import multiprocessing
 import subprocess
 import os
 from typing import Optional
-
-# the default name of the NV executable
-# we use nv.opt, which is the version with optimizations
-NV_CMD = "nv.opt"
-
 
 # the result of running nv -smt
 class RunSmtResult(Enum):
@@ -34,13 +32,33 @@ class RunSmtResult(Enum):
                 return "Error"
 
 
+@dataclass
+class BenchmarkParams:
+    """The set of parameters one can specify for running the benchmarks."""
+
+    # the default name of the NV executable
+    # we use nv.opt, which is the version with optimizations
+    nv_exe_path: str = "nv.opt"
+    # the maximum time for z3 to run, as specified to nv via the -t flag
+    z3_timeout: int = 3600
+    # the maximum time for nv to run, as specified to subprocess.run
+    nv_timeout: float = 3600
+    # the number of cores nv may use to parallelize fragment solving
+    nv_cores: int = 1
+    # the number of trials to run
+    ntrials: int = 1
+    # the name of the directory in which logs should be saved
+    results_directory_name: str = "results"
+    # whether or not trials should run as separate processes
+    parallelize_trials: bool = False
+    # whether or not to announce a trial before it runs
+    announce_trials: bool = False
+
+
 def run_nv_smt(
-    nv_exe_path: str,
     benchmark_path: str,
     cut: Optional[str],
-    z3time: int,
-    time: float,
-    cores: int,
+    params: BenchmarkParams,
 ) -> tuple[RunSmtResult, str]:
     """
     Run nv's SMT tool and return the result and its output.
@@ -48,28 +66,28 @@ def run_nv_smt(
     is specified by benchmark_path.
     If it doesn't finish within the given time, kill it.
     """
-    if not os.path.exists(nv_exe_path):
-        raise Exception(f"Did not find '{nv_exe_path}' executable!")
     # set verbose, SMT flags, and partitioning if needed
-    args = [nv_exe_path, "-v", "-m", "-t", str(z3time)]
+    args = [params.nv_exe_path, "-v", "-m", "-t", str(params.z3_timeout)]
     if cut is not None:
         # run on multiple cores
-        if cores > 1:
-            args += ["-p", str(cores)]
+        if params.nv_cores > 1:
+            args += ["-p", str(params.nv_cores)]
         args += ["-k", benchmark_path]
     else:
         args += [benchmark_path]
-    output = f"Running {' '.join(args)}\n"
+    trial_args = f"Running {' '.join(args)}"
+    if params.announce_trials:
+        print(trial_args)
     try:
         proc = subprocess.run(
             args,
             text=True,
             check=True,
             capture_output=True,
-            timeout=time,
+            timeout=params.nv_timeout,
             encoding="utf-8",
         )
-        return RunSmtResult.SUCCEEDED, output + proc.stdout
+        return RunSmtResult.SUCCEEDED, "\n".join([trial_args, proc.stdout])
     except subprocess.CalledProcessError as exn:
         return RunSmtResult.ERROR, "Error: {exn}"
     except subprocess.TimeoutExpired as exn:
@@ -80,48 +98,23 @@ def run_nv_smt(
         )
 
 
-def run_benchmarks(
-    nv_exe_path, benchdir, benches: list[tuple], z3time, time, cores, results_dir
-) -> dict[str, str]:
-    """
-    Run the given benchmarks in the given directory in sequence (once each).
-    Return a log of output and a dictionary with the benchmark results for each cut.
-    """
-
-    benchmark_outputs = {}
-    for (cut, benchmark) in benches:
-        result, output = run_nv_smt(
-            nv_exe_path, os.path.join(benchdir, benchmark), cut, z3time, time, cores
-        )
-        if cut is None:
-            cut = "monolithic"
-        benchmark_outputs[cut] = output
-    return benchmark_outputs
-
-
 def log_nv_smt_run(
-    nv_exe_path: str,
     benchmark_path: str,
     cut: Optional[str],
-    z3time: int,
-    time: float,
-    cores: int,
+    params: BenchmarkParams,
     log_file: str,
 ):
-    result, output = run_nv_smt(nv_exe_path, benchmark_path, cut, z3time, time, cores)
+    """Run the given nv executable for the given benchmark, and log the results."""
+    result, output = run_nv_smt(benchmark_path, cut, params)
     with open(log_file, "w") as log:
         log.write(f"RESULT: {result}\n")
         log.write(output)
 
 
-def run_benchmarks_parallel(
-    nv_exe_path,
+def run_benchmarks(
     benchdir,
     benches: list[tuple[str | None, str]],
-    z3time: float,
-    time: float,
-    trials: int,
-    cores: int,
+    params: BenchmarkParams,
     results_dir: str,
 ):
     """
@@ -130,85 +123,39 @@ def run_benchmarks_parallel(
     """
     benchmark_args = [
         (
-            nv_exe_path,
             os.path.join(benchdir, benchmark),
             cut,
-            z3time,
-            time,
-            cores,
-            os.path.join(results_dir, f"{benchmark}-{trial_idx}.txt"),
+            params,
+            os.path.join(
+                results_dir, f"{benchmark}-{cut if cut else 'mono'}{trial_idx}.txt"
+            ),
         )
         for (cut, benchmark) in benches
-        for trial_idx in range(trials)
+        for trial_idx in range(params.ntrials)
     ]
-    with multiprocessing.Pool(processes=trials * len(benches)) as pool:
-        pool.starmap(log_nv_smt_run, benchmark_args)
-
-
-def run_trials_sync(
-    nv_exe_path,
-    benchdir,
-    benches: list[tuple],
-    z3time: float,
-    time: float,
-    trials: int,
-    cores: int,
-    results_dir: str,
-) -> dict[int, dict[str, str]]:
-    """
-    Run trials of the given benchmarks and return a dictionary of profiling information.
-    """
-    return {
-        i: run_benchmarks(
-            nv_exe_path, benchdir, benches, z3time, time, cores, results_dir
-        )
-        for i in range(trials)
-    }
-
-
-def run_trials_parallel(
-    nv_exe_path,
-    benchdir,
-    benches,
-    z3time: float,
-    time: float,
-    trials: int,
-    cores: int,
-    results_dir: str,
-) -> dict[int, dict[str, str]]:
-    """
-    Run the benchmarks in the given directory and return a dictionary of
-    profiling information.
-    Runs each trial in parallel.
-    """
-    with multiprocessing.Pool(processes=trials) as pool:
-        args = [
-            (nv_exe_path, benchdir, benches, z3time, time, cores, results_dir)
-            for _ in range(trials)
-        ]
-        runs = pool.starmap(run_benchmarks, args)
-        return dict(enumerate(runs))
+    if params.parallelize_trials:
+        with multiprocessing.Pool(processes=params.ntrials * len(benches)) as pool:
+            pool.starmap(log_nv_smt_run, benchmark_args)
+    else:
+        for args in benchmark_args:
+            log_nv_smt_run(*args)
 
 
 def run_benchmark_txt(
-    nv_exe_path: str,
     txtpath: str,
-    results_dir_name: str,
-    z3time: float,
-    timeout: float,
-    trials: int,
-    cores: int,
-) -> dict[str, dict[int, dict[str, str]]]:
+    params: BenchmarkParams,
+) -> None:
     """
     Run a benchmark.txt file.
     Each line of the file has the following format:
     [directory] [monolithic benchmark] [cut name:cut benchmarks]*
-    Filenames must not have spaces!
+    Filenames and cut names must not have spaces!
     Files can contain line comments beginning with a '#'.
     Return a dict from benchmarks to dicts from trials to dicts from cuts to outputs
     (triply-nested dict).
     """
-    runs = {}
+    if not os.path.exists(params.nv_exe_path):
+        raise Exception(f"Did not find '{params.nv_exe_path}' executable!")
     with open(txtpath, "r") as benchmark_file:
         for benchmarks in benchmark_file.readlines():
             # skip comments
@@ -220,29 +167,23 @@ def run_benchmark_txt(
                 cut_name, cut_path = cut.split(":")
                 benches.append((cut_name, cut_path))
             try:
-                results_dir = os.path.join(directory, results_dir_name)
+                results_dir = os.path.join(directory, params.results_directory_name)
                 # create the results directory if it is missing
                 if not os.path.exists(results_dir):
                     os.mkdir(results_dir)
-                results = run_benchmarks_parallel(
-                    nv_exe_path,
+                run_benchmarks(
                     directory,
                     benches,
-                    z3time=z3time,
-                    time=timeout,
-                    trials=trials,
-                    cores=cores,
+                    params,
                     results_dir=results_dir,
                 )
-                benchmark_key = os.path.join(directory, monolithic)
-                runs[benchmark_key] = results
             except KeyboardInterrupt:
                 print("User interrupted benchmarking. Exiting with partial results...")
                 break
-    return runs
 
 
 def parser():
+    default_params = BenchmarkParams()
     parser = argparse.ArgumentParser(
         description="Frontend for running Kirigami benchmarks."
     )
@@ -253,13 +194,13 @@ def parser():
     parser.add_argument(
         "-x",
         "--nv-path",
-        default=os.path.join(os.getcwd(), NV_CMD),
+        default=os.path.join(os.getcwd(), default_params.nv_exe_path),
         help="which executable to run as NV (default: %(default))",
     )
     parser.add_argument(
         "-d",
         "--results-dir",
-        default="results",
+        default=default_params.results_directory_name,
         help="name of the directory to store results (default: %(default)) inside the benchmarks' directory",
     )
     parser.add_argument(
@@ -267,53 +208,54 @@ def parser():
         "--trials",
         type=int,
         help="number of trials to run (default: %(default)s)",
-        default=1,
+        default=default_params.ntrials,
     )
     parser.add_argument(
         "-z",
         "--z3time",
         type=int,
         help="number of seconds to run each trial for in z3 (default: %(default)s)",
-        default=3600,
+        default=default_params.z3_timeout,
     )
     parser.add_argument(
         "-t",
         "--timeout",
         type=int,
         help="number of seconds to run each trial for (default: %(default)s)",
-        default=3600,
+        default=default_params.nv_timeout,
     )
     parser.add_argument(
         "-p",
         "--parallel",
         type=int,
         help="number of cores to use for each trial (default: %(default)s)",
-        default=1,
+        default=default_params.nv_cores,
+    )
+    parser.add_argument(
+        "-P",
+        "--parallel-trials",
+        action="store_true",
+        help="if specified, run each benchmark in a directory as a separate process",
     )
     parser.add_argument(
         "-v",
         "--verbose",
         action="store_true",
-        help="print the trial's stdout",
+        help="print when trials are run",
     )
     return parser
 
 
 if __name__ == "__main__":
     args = parser().parse_args()
-    runs = run_benchmark_txt(
-        args.nv_path,
-        args.file,
-        args.results_dir,
-        args.z3time,
-        args.timeout,
-        args.trials,
-        args.parallel,
+    params = BenchmarkParams(
+        nv_exe_path=args.nv_path,
+        results_directory_name=args.results_dir,
+        z3_timeout=args.z3time,
+        nv_timeout=args.timeout,
+        nv_cores=args.parallel,
+        ntrials=args.trials,
+        parallelize_trials=args.parallel_trials,
+        announce_trials=args.verbose,
     )
-    # if verbose, print the output to stdout
-    # if args.verbose:
-    #     for (b, trials) in runs.items():
-    #         for (t, cuts) in trials.items():
-    #             for (c, output) in cuts.items():
-    #                 print(f"Benchmark {b}, trial {t}, cut {c}:")
-    #                 print(output)
+    run_benchmark_txt(args.file, params)
