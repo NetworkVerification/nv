@@ -7,10 +7,10 @@ import re
 from datetime import datetime
 import sys
 import csv
-from typing import Any
+from typing import Any, Union
 
 
-def parse_smt(output: str) -> dict[str, list[int | float]]:
+def parse_smt(output: str) -> dict[str, list[Union[int, float]]]:
     """
     Parse the output of an NV command.
     Return a dictionary of operations to lists of times taken by those operations.
@@ -47,7 +47,7 @@ def parse_smt(output: str) -> dict[str, list[int | float]]:
 
 
 def invert_results_dict(
-    results: dict[str, dict[str, dict[str, dict[str, list]]]]
+    results: dict[str, dict[str, dict[str, dict[str, list[Union[int, float]]]]]]
 ) -> list[dict[str, Any]]:
     """
     Flatten the results nested dictionary into a CSV-writable format.
@@ -62,7 +62,7 @@ def invert_results_dict(
     - and a key for each directory
     and N = #trials * #cuts * #operations * #occurrences
     """
-    output: dict[tuple, dict] = {}
+    output: dict[tuple[str, str, str, int], dict] = {}
     for (benchmark, trials) in results.items():
         for (trial, cuts) in trials.items():
             for (cut, ops) in cuts.items():

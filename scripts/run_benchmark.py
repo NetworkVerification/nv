@@ -114,13 +114,13 @@ def log_nv_smt_run(
 
 def run_benchmarks(
     benchdir,
-    benches: list[tuple[str | None, str]],
+    benches: list[tuple[Optional[str], str]],
     params: BenchmarkParams,
-    results_dir: str,
+    output_directory: str,
 ):
     """
     Run the given benchmarks in the given directory in parallel, spawning a separate process for each benchmark.
-    Log each benchmark's result to a file in results_dir.
+    Log each benchmark's result to a file in output_directory.
     """
     benchmark_args = [
         (
@@ -128,7 +128,7 @@ def run_benchmarks(
             cut is not None,
             params,
             os.path.join(
-                results_dir, f"{benchmark}-{cut if cut else 'mono'}{trial_idx}.txt"
+                output_directory, f"{benchmark}-{cut if cut else 'mono'}{trial_idx}.txt"
             ),
         )
         for (cut, benchmark) in benches
@@ -176,7 +176,7 @@ def run_benchmark_txt(
                     directory,
                     benches,
                     params,
-                    results_dir=results_dir,
+                    output_directory=results_dir,
                 )
             except KeyboardInterrupt:
                 print("User interrupted benchmarking. Exiting with partial results...")
