@@ -125,28 +125,28 @@ class NvFile:
         """
         match cut_type:
             case FattreeCut.VERTICAL:
-                nodes = nodes_cut_vertically(self.graph, self.dest)
+                nodes = nodes_cut_vertically(self.graph)
             case FattreeCut.HORIZONTAL:
-                nodes = nodes_cut_horizontally(self.graph, self.dest)
+                nodes = nodes_cut_horizontally(self.graph)
             case FattreeCut.PODS:
-                nodes = nodes_cut_pods(self.graph, self.dest)
+                nodes = nodes_cut_pods(self.graph)
             case FattreeCut.SPINES:
-                nodes = nodes_cut_spines(self.graph, self.dest)
+                nodes = nodes_cut_spines(self.graph)
             case FattreeCut.FULL:
-                nodes = nodes_cut_fully_connected(self.graph, self.dest)
+                nodes = nodes_cut_fully(self.graph)
         match self.net:
             case NetType.FATPOL if cut_type is FattreeCut.VERTICAL:
                 # special case for handling vertical cuts
                 edges = get_vertical_cross_edges(self.graph, nodes, self.dest)
             case NetType.FATPOL | NetType.SP | NetType.AP | NetType.MAINTENANCE:
-                edges = get_cross_edges(self.graph, nodes, ranked=False)
+                edges = get_cross_edges(self.graph, nodes)
             case _:
                 raise TypeError(f"Invalid network type {self.net} for fat_cut")
         return nodes, edges
 
     def rand_cut(self):
-        nodes = nodes_cut_fully_disconnected(self.graph)
-        edges = get_cross_edges(self.graph, nodes, ranked=False)
+        nodes = nodes_cut_fully(self.graph)
+        edges = get_cross_edges(self.graph, nodes)
         return nodes, edges
 
     def hmetis_cut(self, hgr_part: str):
@@ -166,7 +166,7 @@ class NvFile:
                 nodes.append([])
             nodes[p].append(i)
         if self.sols:
-            edges = get_cross_edges(self.graph, nodes, ranked=False)
+            edges = get_cross_edges(self.graph, nodes)
         else:
             raise Exception("Can't rank cross edges for hMETIS cut networks.")
         return nodes, edges
@@ -467,90 +467,56 @@ def get_part_fname(nvfile, cutname: str, simulate: bool, overwrite: bool):
     return partfile, net_type
 
 
-def nodes_cut_fully_connected(graph: igraph.Graph, dest: int) -> list[list[int]]:
+def nodes_cut_fully(graph: igraph.Graph) -> list[list[int]]:
     """
-    Return the nodes divided up fully into separate partitions.
-    Order is established by BFS from the destination if it is given.
-    Note that nodes not reachable from the destination will NOT be added.
-    """
-    return [[v["id"]] for v in graph.bfsiter(dest)]
-
-
-def nodes_cut_fully_disconnected(graph: igraph.Graph) -> list[list[int]]:
-    """
-    Return the nodes divided up into individual partitions in arbitrary order.
-    Does not require the graph to be connected.
+    Return the nodes divided up into individual partitions.
     """
     return [[v["id"]] for v in graph.vs]
 
 
-def nodes_cut_spines(graph: igraph.Graph, dest: int) -> list[list[int]]:
+def nodes_cut_spines(graph: igraph.Graph) -> list[list[int]]:
     """
-    Return the nodes divided up such that the destination's pod
-    is in one partition, the spine nodes are each in another
-    and the other pod nodes are each in another.
+    Return the nodes divided up such that each spine node is in its own
+    partition, and so is each pod.
     """
     podgraph = graph.subgraph(graph.vs.select(g_ne=NodeGroup.CORE))
     pods = podgraph.decompose()
-    dest_idx = 0
-    for (i, pod) in enumerate(pods):
-        if dest in pod.vs["id"]:
-            dest_idx = i
     spines = [v["id"] for v in graph.vs.select(g_eq=NodeGroup.CORE)]
-    nondest_pods = [list(pod.vs["id"]) for pod in pods]
-    dest_pod = nondest_pods.pop(dest_idx)
-    dest_pod.sort()
-    spines.sort()
-    for pod in nondest_pods:
+    pod_nodes = [list(pod.vs["id"]) for pod in pods]
+    for pod in pod_nodes:
         pod.sort()
-    return [dest_pod] + [[s] for s in spines] + nondest_pods
+    pod_nodes.sort()
+    spines.sort()
+    return pod_nodes + [[s] for s in spines]
 
 
-def nodes_cut_pods(graph: igraph.Graph, dest: int) -> list[list[int]]:
+def nodes_cut_pods(graph: igraph.Graph) -> list[list[int]]:
     """
-    Return the nodes divided up such that the destination's pod
-    is in one partition, the spine nodes are in another and the
-    other pod nodes are each in another.
+    Return the nodes divided up such that the spine nodes are in one partition,
+    and each pod is in its own partition.
     """
     podgraph = graph.subgraph(graph.vs.select(g_ne=NodeGroup.CORE))
     pods = podgraph.decompose()
-    dest_idx = 0
-    for (i, pod) in enumerate(pods):
-        if dest in pod.vs["id"]:
-            dest_idx = i
     spines = [v["id"] for v in graph.vs.select(g_eq=NodeGroup.CORE)]
-    nondest_pods = [list(pod.vs["id"]) for pod in pods]
-    dest_pod = nondest_pods.pop(dest_idx)
-    dest_pod.sort()
-    spines.sort()
-    for pod in nondest_pods:
+    pod_nodes = [list(pod.vs["id"]) for pod in pods]
+    for pod in pod_nodes:
         pod.sort()
-    return [dest_pod, spines] + nondest_pods
+    return [spines] + pod_nodes
 
 
-def nodes_cut_horizontally(graph: igraph.Graph, dest: int) -> list[list[int]]:
+def nodes_cut_horizontally(graph: igraph.Graph) -> list[list[int]]:
     """
-    Return the nodes divided up such that the destination's pod
-    is in one partition, the spine nodes are in another and the
-    other pod nodes are in a third.
+    Return the nodes divided up such that the spine nodes are in one partition,
+    and the pod nodes are in the other.
     """
-    podgraph = graph.subgraph(graph.vs.select(g_ne=NodeGroup.CORE))
-    pods = podgraph.decompose()
-    dest_pod = []
-    nondest_pods = []
-    for pod in pods:
-        if dest in pod.vs["id"]:
-            dest_pod = [v["id"] for v in pod.vs]
-        else:
-            nondest_pods += [v["id"] for v in pod.vs]
+    pod_nodes = [v["id"] for v in graph.vs.select(g_ne=NodeGroup.CORE)]
     spines = [v["id"] for v in graph.vs.select(g_eq=NodeGroup.CORE)]
-    dest_pod.sort()
+    pod_nodes.sort()
     spines.sort()
-    nondest_pods.sort()
-    return [dest_pod, spines, nondest_pods]
+    return [pod_nodes, spines]
 
 
-def nodes_cut_vertically(graph: igraph.Graph, dest: int) -> list[list[int]]:
+def nodes_cut_vertically(graph: igraph.Graph) -> list[list[int]]:
     """
     Return the nodes divided up such that half of the spine
     nodes and half of the pods are in one partition
@@ -574,17 +540,12 @@ def nodes_cut_vertically(graph: igraph.Graph, dest: int) -> list[list[int]]:
     group2 = [x for x in all_nodes.difference(set(group1))]
     group1.sort()
     group2.sort()
-    if dest in group1:
-        return [group1, group2]
-    else:
-        return [group2, group1]
+    return [group1, group2]
 
 
-def get_cross_edges(graph: igraph.Graph, partitions: list[list[int]], ranked=False):
+def get_cross_edges(graph: igraph.Graph, partitions: list[list[int]]):
     """
     Get the edges in the network which go between partitions.
-    If ranked is True, only include edges which go from lower-ranked partitions
-    to higher-ranked partitions.
     These edges are used to determine the interface functions.
     Throws a ValueError if partitions does not contain any node in the graph.
     """
@@ -596,18 +557,13 @@ def get_cross_edges(graph: igraph.Graph, partitions: list[list[int]], ranked=Fal
     # construct a map of nodes to their partitions
     n_parts = {node: i for (i, part) in enumerate(partitions) for node in part}
 
-    def edge_predicate(e):
-        src = n_parts[e.source]
-        tgt = n_parts[e.target]
-        return (ranked and src < tgt) or (not ranked and src != tgt)
-
-    return [e.tuple for e in graph.es if edge_predicate(e)]
+    return [e.tuple for e in graph.es if n_parts[e.source] != n_parts[e.target]]
 
 
 def get_vertical_cross_edges(
-    graph: igraph.Graph, partitions: list[list[int]], dest: int, ranked=False
+    graph: igraph.Graph, partitions: list[list[int]], dest: int
 ):
-    all_cross = get_cross_edges(graph, partitions, ranked)
+    all_cross = get_cross_edges(graph, partitions)
     updated = []
     for e in all_cross:
         # prune non-destination-pod cross edges

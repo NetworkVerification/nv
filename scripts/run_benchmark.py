@@ -47,7 +47,7 @@ class BenchmarkParams:
     announce_trials: bool = False
     # whether or not to use SLURM's job arrays to manage trials
     # the array should have size = (number of trials) * (number of cuts)
-    # setting this to True overrides parallelize_trials
+    # setting this to True overrides parallelize_trials and ntrials
     use_slurm_job_array: bool = False
 
 
@@ -152,8 +152,6 @@ def run_benchmark_txt(
     [directory] [monolithic benchmark] [cut name:cut benchmarks]*
     Filenames and cut names must not have spaces!
     Files can contain line comments beginning with a '#'.
-    Return a dict from benchmarks to dicts from trials to dicts from cuts to outputs
-    (triply-nested dict).
     """
     if not os.path.exists(params.nv_exe_path):
         raise Exception(f"Did not find '{params.nv_exe_path}' executable!")
