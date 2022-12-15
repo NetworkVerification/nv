@@ -165,10 +165,7 @@ class NvFile:
             for _ in range(len(nodes), p + 1):
                 nodes.append([])
             nodes[p].append(i)
-        if self.sols:
-            edges = get_cross_edges(self.graph, nodes)
-        else:
-            raise Exception("Can't rank cross edges for hMETIS cut networks.")
+        edges = get_cross_edges(self.graph, nodes)
         return nodes, edges
 
     def generate_parted(self, nodes, edges):

@@ -113,7 +113,7 @@ def from_relns(relns_file: str) -> igraph.Graph:
     label_to_node = {name: i for (i, name) in enumerate(node_labels)}
     # edges to edge labels
     edge_labels = {
-        (label_to_node[u], label_to_node[v]): ASRelationship(rel)
+        (label_to_node[u], label_to_node[v]): ASRelationship(rel).value
         for ((u, v), rel) in relns.items()
     }
     return igraph.Graph(
