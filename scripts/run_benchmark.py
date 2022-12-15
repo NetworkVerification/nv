@@ -124,7 +124,7 @@ def run_benchmarks(
             params,
             os.path.join(
                 results_directory,
-                f"{benchmark}-{cut if cut else 'mono'}{trial_idx}.txt",
+                f"{benchmark}-{cut if cut else 'mono'}-{trial_idx}.txt",
             ),
         )
         for (cut, benchmark) in benches

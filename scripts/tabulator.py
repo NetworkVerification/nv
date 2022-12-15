@@ -46,73 +46,77 @@ def parse_smt(output: str) -> dict[str, list[Union[int, float]]]:
     return profile
 
 
-def invert_results_dict(
-    results: dict[str, dict[str, dict[str, dict[str, list[Union[int, float]]]]]]
-) -> list[dict[str, Any]]:
-    """
-    Flatten the results nested dictionary into a CSV-writable format.
-    Results has the following nested structure as input:
-    dict[directory, dict[trial, dict[cut, dict[operation, list of occurrences]]]]
-    The output instead has the form:
-    list[dict[str,str]] of N elements, where each element has the following keys:
-    - 'trial'
-    - 'cut'
-    - 'operation'
-    - 'occurrence'
-    - and a key for each directory
-    and N = #trials * #cuts * #operations * #occurrences
-    """
-    output: dict[tuple[str, str, str, int], dict] = {}
-    for (benchmark, trials) in results.items():
-        for (trial, cuts) in trials.items():
-            for (cut, ops) in cuts.items():
-                for (op, occurrences) in ops.items():
-                    for (i, time) in enumerate(occurrences):
-                        common_hash = (trial, cut, op, i)
-                        output.setdefault(common_hash, dict())[f"{benchmark}"] = time
-    rows = []
-    for ((t, c, o, i), data) in output.items():
-        common = {"operation": o, "cut": c, "trial": t, "occurrence": i}
-        common.update(data)
-        rows.append(common)
-    return rows
-
-
-def write_csv(results: dict[str, dict[str, dict]], path: str):
+def write_csv(rows: list[dict[str, Any]], path: str):
     """
     Write the results dictionary to a CSV.
     Each line of the CSV describes an operation run for a given cut during a given trial,
     some number of times (some operations may run many times if the cut produces many subnetworks).
     """
-    output = invert_results_dict(results)
-    fields = output[0].keys()
+    fields = rows[0].keys()
     with open(path, "w") as csvf:
         writer = csv.DictWriter(csvf, fieldnames=list(fields), restval="")
         writer.writeheader()
-        for row in output:
+        for row in rows:
             writer.writerow(row)
 
 
-def save_results(runs, prefix="kirigami-results"):
+def save_results(runs: list[dict[str, Any]], prefix="kirigami-results"):
     """Save runs to CSV."""
     timestamp = datetime.now()
     time = timestamp.strftime("%Y-%m-%d-%H:%M:%S")
     write_csv(runs, f"{prefix}-{time}.csv")
 
 
-def tabulate(bench: str, trial: int, cut: str, output: str):
-    op_times = parse_smt(output)
-    rows = []
-    for (operation, times) in op_times.items():
-        for (i, t) in enumerate(times):
-            rows.append(
-                {"operation": operation, "cut": cut, "trial": trial, "occurrence": i}
-            )
-            # TODO
+def parse_file_name(file_name: str) -> tuple:
+    """
+    Return the benchmark group, cut and trial that a file represents.
+    Assumes the file name has the form "{prefix}[-cut].nv-{cut}-{trial}.txt".
+    """
+    pat = re.compile(r"([\w_\.]*)(?:-.*)?\.nv-(\w*)-([0-9]*)\.txt")
+    m = pat.search(file_name)
+    if m is not None:
+        return m.groups()
+    else:
+        raise ValueError(f"Unable to parse file name {file_name}")
+
+
+def collect_results(
+    files: list[str],
+) -> dict[str, dict[str, dict[int, dict[int, dict[str, Union[int, float]]]]]]:
+    """
+    Collect the results of the SMT output for each provided file.
+    Each file is treated as a separate benchmark column.
+    """
+    results = {}
+
+    for f in files:
+        with open(f, "r") as data:
+            bench, cut, trial = parse_file_name(f)
+            operation_times = parse_smt(data.read())
+            for (operation, times) in operation_times.items():
+                if operation not in results:
+                    results[operation] = {}
+                if cut not in results[operation]:
+                    results[operation][cut] = {}
+                if trial not in results[operation][cut]:
+                    results[operation][cut][trial] = {}
+                for (i, time) in enumerate(times):
+                    if i not in results[operation][cut][trial]:
+                        results[operation][cut][trial][i] = {}
+                    results[operation][cut][trial][i][bench] = time
+    return results
 
 
 if __name__ == "__main__":
-    for f in sys.argv[1:]:
-        with open(f, "r") as data:
-            parsed = parse_smt(data.read())
-            # TODO: export this parsed data to a results file
+    # each file passed in is treated as a column
+    # first we build a nested series of dictionaries storing the times
+    results = collect_results(sys.argv[1:])
+    # then we write these out as CSV rows
+    rows = [
+        ({"operation": operation, "cut": cut, "trial": trial, "occurrence": i} | times)
+        for (operation, cuts) in results.items()
+        for (cut, trials) in cuts.items()
+        for (trial, occurrences) in trials.items()
+        for (i, times) in occurrences.items()
+    ]
+    save_results(rows)
