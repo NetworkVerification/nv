@@ -54,6 +54,10 @@ class BenchmarkParams:
     parallelize_trials: bool = False
     # whether or not to announce a trial before it runs
     announce_trials: bool = False
+    # whether or not to use SLURM's job arrays to manage trials
+    # the array should have size = (number of trials) * (number of cuts)
+    # setting this to True overrides parallelize_trials
+    use_slurm_job_array: bool = False
 
 
 def run_nv_smt(
@@ -116,7 +120,7 @@ def run_benchmarks(
     benchdir,
     benches: list[tuple[Optional[str], str]],
     params: BenchmarkParams,
-    output_directory: str,
+    results_directory: str,
 ):
     """
     Run the given benchmarks in the given directory in parallel, spawning a separate process for each benchmark.
@@ -128,16 +132,21 @@ def run_benchmarks(
             cut is not None,
             params,
             os.path.join(
-                output_directory, f"{benchmark}-{cut if cut else 'mono'}{trial_idx}.txt"
+                results_directory,
+                f"{benchmark}-{cut if cut else 'mono'}{trial_idx}.txt",
             ),
         )
         for (cut, benchmark) in benches
         for trial_idx in range(params.ntrials)
     ]
-    if params.parallelize_trials:
+    if params.use_slurm_job_array:  # run in parallel via Slurm
+        slurm_job_idx = int(os.environ["SLURM_ARRAY_TASK_ID"])
+        # run just this task's benchmark
+        log_nv_smt_run(*benchmark_args[slurm_job_idx])
+    elif params.parallelize_trials:  # run in parallel using a Pool
         with multiprocessing.Pool(processes=params.ntrials * len(benches)) as pool:
             pool.starmap(log_nv_smt_run, benchmark_args)
-    else:
+    else:  # run sequentially
         for args in benchmark_args:
             log_nv_smt_run(*args)
 
@@ -168,15 +177,14 @@ def run_benchmark_txt(
                 cut_name, cut_path = cut.split(":")
                 benches.append((cut_name, cut_path))
             try:
-                results_dir = os.path.join(directory, params.results_directory_name)
                 # create the results directory if it is missing
-                if not os.path.exists(results_dir):
-                    os.mkdir(results_dir)
+                if not os.path.exists(params.results_directory_name):
+                    os.mkdir(params.results_directory_name)
                 run_benchmarks(
                     directory,
                     benches,
                     params,
-                    output_directory=results_dir,
+                    results_directory=params.results_directory_name,
                 )
             except KeyboardInterrupt:
                 print("User interrupted benchmarking. Exiting with partial results...")
@@ -202,7 +210,7 @@ def parser():
         "-d",
         "--results-dir",
         default=default_params.results_directory_name,
-        help="name of the directory to store results (default: %(default)) inside the benchmarks' directory",
+        help="name of the directory to store results (default: %(default))",
     )
     parser.add_argument(
         "-n",
@@ -239,6 +247,12 @@ def parser():
         help="if specified, run each benchmark in a directory as a separate process",
     )
     parser.add_argument(
+        "-S",
+        "--slurm",
+        action="store_true",
+        help="if specified, delegate to Slurm's SLURM_ARRAY_TASK_ID to control which benchmark runs",
+    )
+    parser.add_argument(
         "-v",
         "--verbose",
         action="store_true",
@@ -258,5 +272,6 @@ if __name__ == "__main__":
         ntrials=args.trials,
         parallelize_trials=args.parallel_trials,
         announce_trials=args.verbose,
+        use_slurm_job_array=args.slurm,
     )
     run_benchmark_txt(args.file, params)
