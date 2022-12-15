@@ -1,9 +1,9 @@
-benchmarks/SinglePrefix/Random rand_16_0.25.nv f:rand_16_0.25-f.nv
-benchmarks/SinglePrefix/Random rand_32_0.125.nv f:rand_32_0.125-f.nv
-benchmarks/SinglePrefix/Random rand_64_0.0625.nv f:rand_64_0.0625-f.nv
-benchmarks/SinglePrefix/Random rand_128_0.03125.nv f:rand_128_0.03125-f.nv
-benchmarks/SinglePrefix/Random rand_256_0.015625.nv f:rand_256_0.015625-f.nv
-benchmarks/SinglePrefix/Random rand_512_0.0078125.nv f:rand_512_0.0078125-f.nv
-benchmarks/SinglePrefix/Random rand_1024_0.00390625.nv f:rand_1024_0.00390625-f.nv
-benchmarks/SinglePrefix/Random rand_2048_0.001953125.nv f:rand_2048_0.001953125-f.nv
-benchmarks/SinglePrefix/Random rand_4096_0.0009765625.nv f:rand_4096_0.0009765625-f.nv
+benchmarks/SinglePrefix/Random rand_16_0.25.nv 4:rand_16_0.25-hmetis4.nv 8:rand_16_0.25-hmetis8.nv 16:rand_16_0.24-f.nv f:rand_16_0.25-f.nv
+benchmarks/SinglePrefix/Random rand_32_0.125.nv 4:rand_32_0.125-hmetis4.nv 8:rand_32_0.125-hmetis8.nv 16:rand_32_0.125-hmetis16.nv f:rand_32_0.125-f.nv
+benchmarks/SinglePrefix/Random rand_64_0.0625.nv 4:rand_64_0.0625-hmetis4.nv 8:rand_64_0.0625-hmetis8.nv 16:rand_64_0.0625-hmetis16.nv f:rand_64_0.0625-f.nv
+benchmarks/SinglePrefix/Random rand_128_0.03125.nv 4:rand_128_0.03125-hmetis4.nv 8:rand_128_0.03125-hmetis8.nv 16:rand_128_0.03125-hmetis16.nv f:rand_128_0.03125-f.nv
+benchmarks/SinglePrefix/Random rand_256_0.015625.nv 4:rand_256_0.015625-hmetis4.nv 8:rand_256_0.015625-hmetis8.nv 16:rand_256_0.015625-hmetis16.nv f:rand_256_0.015625-f.nv
+benchmarks/SinglePrefix/Random rand_512_0.0078125.nv 4:rand_512_0.0078125-hmetis4.nv 8:rand_512_0.0078125-hmetis8.nv 16:rand_512_0.0078125-hmetis16.nv f:rand_512_0.0078125-f.nv
+benchmarks/SinglePrefix/Random rand_1024_0.00390625.nv 4:rand_1024_0.00390625-hmetis4.nv 8:rand_1024_0.00390625-hmetis8.nv 16:rand_1024_0.00390625-hmetis16.nv f:rand_1024_0.00390625-f.nv
+benchmarks/SinglePrefix/Random rand_2048_0.001953125.nv 4:rand_2048_0.001953125-hmetis4.nv 8:rand_2048_0.001953125-hmetis8.nv 16:rand_2048_0.001953125-hmetis16.nv f:rand_2048_0.001953125-f.nv
+benchmarks/SinglePrefix/Random rand_4096_0.0009765625.nv 4:rand_4096_0.0009765625-hmetis4.nv 8:rand_4096_0.0009765625-hmetis8.nv 16:rand_4096_0.0009765625-hmetis16.nv f:rand_4096_0.0009765625-f.nv
