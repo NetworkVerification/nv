@@ -1,13 +1,15 @@
 (* vim: set syntax=ocaml: *)
-(* The DISAGREE example from Griffin et al. *)
+(* The DISAGREE example from Griffin et al., plus an extra node connected to 0.
+ * Illustrates multi-solution fragments. *)
 
 type attribute = option[int]
 
-let nodes = 3
+let nodes = 4
 let edges = {
   0=1;
   0=2;
   1=2;
+  0=3;
 }
 
 let init n =
@@ -31,35 +33,22 @@ let merge n x y =
 
 let sol = solution { init = init; trans = trans; merge = merge; interface = interface; }
 
-(* -- Checks we can do on the monolithic network -- *)
-(* This should succeed *)
-(* assert
-  (match (sol[1n], sol[2n]) with
-   | (Some x, Some y) -> x <= 2 && y <= 2 && !(x = y)
-   | _ -> false)
-*)
-
-(* These should fail *)
-(* assert (sol[1n] = Some 1 && sol[2n] = Some 1) *)
-(* assert (sol[1n] = Some 1 && sol[2n] = Some 2) *)
-(* assert (sol[1n] = Some 2 && sol[2n] = Some 1) *)
-
 (* Kirigami instrumentation *)
 let partition n = match n with
   | 0n -> 0
-  | 1n -> 1
-  | 2n -> 2
+  | 1n -> 0
+  | 2n -> 0
+  | 3n -> 1
 
 let interface e x = match e with
-  | 0~1 -> x = Some 0
-  | 0~2 -> x = Some 0
-  | 1~2 | 1~0 -> x = Some 1
-  | 2~1 | 2~0 -> x = Some 2
+  | 0~3 -> x = Some 0
+  | 3~0 -> x = Some 1
 
-let pred v x = 
+let pred v x =
   match x with
   | Some y -> (match v with
     | 0n -> y = 0
+    | 3n -> y = 1
     | _ -> y = 1 || y = 2)
   | None -> false
 
