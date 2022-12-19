@@ -85,7 +85,7 @@ def run_nv_smt(
         )
         return RunSmtResult.SUCCEEDED, "\n".join([trial_args, proc.stdout])
     except subprocess.CalledProcessError as exn:
-        return RunSmtResult.ERROR, "Error: {exn}"
+        return RunSmtResult.ERROR, f"Error: {exn}"
     except subprocess.TimeoutExpired as exn:
         partial_output = exn.output.decode("utf-8")
         return (
