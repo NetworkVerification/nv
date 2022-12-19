@@ -34,7 +34,7 @@ class Bgp:
 
     def __str__(self):
         aslen = f"{self.aslen}u32" if isinstance(self.aslen, int) else self.aslen
-        comms = "{ " + "; ".join(map(str, self.comms)) + "_ |-> false" + " }"
+        comms = "{ " + ", ".join(map(str, self.comms)) + " }"
         return f"{{  aslen= {aslen}; bgpAd= {self.bgpAd}u8; comms= {comms}; lp= {self.lp}u32; med= {self.med}u32; }}"
 
     @staticmethod

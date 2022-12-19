@@ -23246,503 +23246,503 @@ let partition node = match node with
 
 let interface edge a =
   match edge with
-  | 4~84 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 4~87 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 4~89 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 4~91 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 4~95 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 5~109 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 5~110 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 5~111 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 5~112 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 5~113 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 6~75 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 6~76 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 6~77 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 6~79 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 6~81 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 7~106 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 7~107 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 7~108 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 7~114 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 7~115 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 8~80 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 8~82 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 8~86 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 8~88 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 8~90 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 17~109 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 17~110 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 17~111 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 17~112 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 17~113 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 19~106 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 19~107 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 19~108 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 19~114 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 19~115 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 22~84 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 22~87 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 22~89 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 22~91 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 22~95 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 23~80 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 23~82 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 23~86 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 23~88 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 23~90 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 24~75 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 24~76 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 24~77 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 24~79 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 24~81 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 25~80 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 25~82 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 25~86 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 25~88 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 25~90 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 26~75 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 26~76 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 26~77 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 26~79 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 26~81 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 27~84 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 27~87 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 27~89 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 27~91 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 27~95 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 28~109 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 28~110 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 28~111 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 28~112 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 28~113 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 29~106 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 29~107 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 29~108 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 29~114 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 29~115 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 30~75 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 30~76 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 30~77 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 30~79 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 30~81 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 32~106 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 32~107 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 32~108 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 32~114 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 32~115 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 34~80 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 34~82 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 34~86 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 34~88 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 34~90 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 36~84 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 36~87 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 36~89 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 36~91 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 36~95 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 38~109 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 38~110 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 38~111 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 38~112 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 38~113 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 40~75 -> a = {  bgp= Some {  aslen= 1u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 40~76 -> a = {  bgp= Some {  aslen= 1u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 40~77 -> a = {  bgp= Some {  aslen= 1u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 40~79 -> a = {  bgp= Some {  aslen= 1u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 40~81 -> a = {  bgp= Some {  aslen= 1u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 41~84 -> a = {  bgp= Some {  aslen= 1u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 41~87 -> a = {  bgp= Some {  aslen= 1u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 41~89 -> a = {  bgp= Some {  aslen= 1u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 41~91 -> a = {  bgp= Some {  aslen= 1u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 41~95 -> a = {  bgp= Some {  aslen= 1u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 42~109 -> a = {  bgp= Some {  aslen= 1u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 42~110 -> a = {  bgp= Some {  aslen= 1u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 42~111 -> a = {  bgp= Some {  aslen= 1u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 42~112 -> a = {  bgp= Some {  aslen= 1u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 42~113 -> a = {  bgp= Some {  aslen= 1u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 43~106 -> a = {  bgp= Some {  aslen= 1u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 43~107 -> a = {  bgp= Some {  aslen= 1u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 43~108 -> a = {  bgp= Some {  aslen= 1u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 43~114 -> a = {  bgp= Some {  aslen= 1u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 43~115 -> a = {  bgp= Some {  aslen= 1u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 44~80 -> a = {  bgp= Some {  aslen= 1u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 44~82 -> a = {  bgp= Some {  aslen= 1u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 44~86 -> a = {  bgp= Some {  aslen= 1u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 44~88 -> a = {  bgp= Some {  aslen= 1u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 44~90 -> a = {  bgp= Some {  aslen= 1u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 46~84 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 46~87 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 46~89 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 46~91 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 46~95 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 47~80 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 47~82 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 47~86 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 47~88 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 47~90 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 49~75 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 49~76 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 49~77 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 49~79 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 49~81 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 51~109 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 51~110 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 51~111 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 51~112 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 51~113 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 53~106 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 53~107 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 53~108 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 53~114 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 53~115 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 55~84 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 55~87 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 55~89 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 55~91 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 55~95 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 56~109 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 56~110 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 56~111 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 56~112 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 56~113 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 58~75 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 58~76 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 58~77 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 58~79 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 58~81 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 61~106 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 61~107 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 61~108 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 61~114 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 61~115 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 62~80 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 62~82 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 62~86 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 62~88 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 62~90 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 65~109 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 65~110 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 65~111 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 65~112 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 65~113 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 66~106 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 66~107 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 66~108 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 66~114 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 66~115 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 67~84 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 67~87 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 67~89 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 67~91 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 67~95 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 70~80 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 70~82 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 70~86 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 70~88 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 70~90 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 71~75 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 71~76 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 71~77 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 71~79 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 71~81 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 75~6 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 75~24 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 75~26 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 75~30 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 75~40 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 75~49 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 75~58 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 75~71 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 75~104 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 75~119 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 76~6 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 76~24 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 76~26 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 76~30 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 76~40 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 76~49 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 76~58 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 76~71 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 76~104 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 76~119 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 77~6 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 77~24 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 77~26 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 77~30 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 77~40 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 77~49 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 77~58 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 77~71 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 77~104 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 77~119 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 79~6 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 79~24 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 79~26 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 79~30 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 79~40 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 79~49 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 79~58 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 79~71 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 79~104 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 79~119 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 80~8 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 80~23 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 80~25 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 80~34 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 80~44 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 80~47 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 80~62 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 80~70 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 80~99 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 80~117 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 81~6 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 81~24 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 81~26 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 81~30 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 81~40 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 81~49 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 81~58 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 81~71 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 81~104 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 81~119 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 82~8 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 82~23 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 82~25 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 82~34 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 82~44 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 82~47 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 82~62 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 82~70 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 82~99 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 82~117 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 84~4 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 84~22 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 84~27 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 84~36 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 84~41 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 84~46 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 84~55 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 84~67 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 84~101 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 84~105 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 86~8 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 86~23 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 86~25 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 86~34 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 86~44 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 86~47 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 86~62 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 86~70 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 86~99 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 86~117 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 87~4 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 87~22 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 87~27 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 87~36 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 87~41 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 87~46 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 87~55 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 87~67 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 87~101 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 87~105 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 88~8 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 88~23 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 88~25 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 88~34 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 88~44 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 88~47 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 88~62 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 88~70 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 88~99 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 88~117 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 89~4 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 89~22 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 89~27 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 89~36 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 89~41 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 89~46 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 89~55 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 89~67 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 89~101 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 89~105 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 90~8 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 90~23 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 90~25 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 90~34 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 90~44 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 90~47 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 90~62 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 90~70 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 90~99 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 90~117 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 91~4 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 91~22 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 91~27 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 91~36 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 91~41 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 91~46 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 91~55 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 91~67 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 91~101 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 91~105 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 95~4 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 95~22 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 95~27 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 95~36 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 95~41 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 95~46 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 95~55 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 95~67 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 95~101 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 95~105 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 97~106 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 97~107 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 97~108 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 97~114 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 97~115 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 99~80 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 99~82 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 99~86 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 99~88 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 99~90 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 101~84 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 101~87 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 101~89 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 101~91 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 101~95 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 103~109 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 103~110 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 103~111 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 103~112 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 103~113 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 104~75 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 104~76 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 104~77 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 104~79 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 104~81 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 105~84 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 105~87 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 105~89 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 105~91 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 105~95 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 106~7 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 106~19 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 106~29 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 106~32 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 106~43 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 106~53 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 106~61 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 106~66 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 106~97 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 106~123 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 107~7 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 107~19 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 107~29 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 107~32 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 107~43 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 107~53 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 107~61 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 107~66 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 107~97 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 107~123 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 108~7 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 108~19 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 108~29 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 108~32 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 108~43 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 108~53 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 108~61 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 108~66 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 108~97 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 108~123 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 109~5 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 109~17 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 109~28 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 109~38 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 109~42 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 109~51 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 109~56 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 109~65 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 109~103 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 109~121 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 110~5 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 110~17 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 110~28 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 110~38 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 110~42 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 110~51 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 110~56 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 110~65 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 110~103 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 110~121 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 111~5 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 111~17 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 111~28 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 111~38 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 111~42 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 111~51 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 111~56 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 111~65 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 111~103 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 111~121 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 112~5 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 112~17 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 112~28 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 112~38 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 112~42 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 112~51 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 112~56 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 112~65 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 112~103 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 112~121 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 113~5 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 113~17 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 113~28 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 113~38 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 113~42 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 113~51 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 113~56 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 113~65 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 113~103 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 113~121 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 114~7 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 114~19 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 114~29 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 114~32 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 114~43 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 114~53 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 114~61 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 114~66 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 114~97 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 114~123 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 115~7 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 115~19 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 115~29 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 115~32 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 115~43 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 115~53 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 115~61 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 115~66 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 115~97 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 115~123 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 117~80 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 117~82 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 117~86 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 117~88 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 117~90 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 119~75 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 119~76 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 119~77 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 119~79 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 119~81 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 121~109 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 121~110 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 121~111 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 121~112 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 121~113 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 123~106 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 123~107 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 123~108 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 123~114 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
-  | 123~115 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { _ |-> false }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 4~84 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 4~87 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 4~89 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 4~91 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 4~95 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 5~109 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 5~110 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 5~111 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 5~112 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 5~113 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 6~75 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 6~76 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 6~77 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 6~79 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 6~81 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 7~106 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 7~107 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 7~108 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 7~114 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 7~115 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 8~80 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 8~82 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 8~86 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 8~88 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 8~90 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 17~109 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 17~110 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 17~111 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 17~112 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 17~113 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 19~106 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 19~107 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 19~108 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 19~114 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 19~115 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 22~84 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 22~87 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 22~89 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 22~91 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 22~95 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 23~80 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 23~82 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 23~86 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 23~88 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 23~90 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 24~75 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 24~76 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 24~77 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 24~79 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 24~81 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 25~80 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 25~82 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 25~86 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 25~88 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 25~90 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 26~75 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 26~76 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 26~77 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 26~79 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 26~81 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 27~84 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 27~87 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 27~89 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 27~91 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 27~95 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 28~109 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 28~110 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 28~111 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 28~112 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 28~113 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 29~106 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 29~107 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 29~108 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 29~114 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 29~115 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 30~75 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 30~76 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 30~77 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 30~79 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 30~81 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 32~106 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 32~107 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 32~108 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 32~114 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 32~115 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 34~80 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 34~82 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 34~86 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 34~88 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 34~90 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 36~84 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 36~87 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 36~89 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 36~91 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 36~95 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 38~109 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 38~110 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 38~111 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 38~112 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 38~113 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 40~75 -> a = {  bgp= Some {  aslen= 1u32; bgpAd= 20u8; comms= { 131080 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 40~76 -> a = {  bgp= Some {  aslen= 1u32; bgpAd= 20u8; comms= { 131080 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 40~77 -> a = {  bgp= Some {  aslen= 1u32; bgpAd= 20u8; comms= { 131080 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 40~79 -> a = {  bgp= Some {  aslen= 1u32; bgpAd= 20u8; comms= { 131080 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 40~81 -> a = {  bgp= Some {  aslen= 1u32; bgpAd= 20u8; comms= { 131080 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 41~84 -> a = {  bgp= Some {  aslen= 1u32; bgpAd= 20u8; comms= { 131080 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 41~87 -> a = {  bgp= Some {  aslen= 1u32; bgpAd= 20u8; comms= { 131080 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 41~89 -> a = {  bgp= Some {  aslen= 1u32; bgpAd= 20u8; comms= { 131080 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 41~91 -> a = {  bgp= Some {  aslen= 1u32; bgpAd= 20u8; comms= { 131080 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 41~95 -> a = {  bgp= Some {  aslen= 1u32; bgpAd= 20u8; comms= { 131080 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 42~109 -> a = {  bgp= Some {  aslen= 1u32; bgpAd= 20u8; comms= { 131080 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 42~110 -> a = {  bgp= Some {  aslen= 1u32; bgpAd= 20u8; comms= { 131080 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 42~111 -> a = {  bgp= Some {  aslen= 1u32; bgpAd= 20u8; comms= { 131080 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 42~112 -> a = {  bgp= Some {  aslen= 1u32; bgpAd= 20u8; comms= { 131080 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 42~113 -> a = {  bgp= Some {  aslen= 1u32; bgpAd= 20u8; comms= { 131080 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 43~106 -> a = {  bgp= Some {  aslen= 1u32; bgpAd= 20u8; comms= { 131080 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 43~107 -> a = {  bgp= Some {  aslen= 1u32; bgpAd= 20u8; comms= { 131080 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 43~108 -> a = {  bgp= Some {  aslen= 1u32; bgpAd= 20u8; comms= { 131080 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 43~114 -> a = {  bgp= Some {  aslen= 1u32; bgpAd= 20u8; comms= { 131080 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 43~115 -> a = {  bgp= Some {  aslen= 1u32; bgpAd= 20u8; comms= { 131080 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 44~80 -> a = {  bgp= Some {  aslen= 1u32; bgpAd= 20u8; comms= { 131080 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 44~82 -> a = {  bgp= Some {  aslen= 1u32; bgpAd= 20u8; comms= { 131080 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 44~86 -> a = {  bgp= Some {  aslen= 1u32; bgpAd= 20u8; comms= { 131080 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 44~88 -> a = {  bgp= Some {  aslen= 1u32; bgpAd= 20u8; comms= { 131080 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 44~90 -> a = {  bgp= Some {  aslen= 1u32; bgpAd= 20u8; comms= { 131080 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 46~84 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 46~87 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 46~89 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 46~91 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 46~95 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 47~80 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 47~82 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 47~86 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 47~88 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 47~90 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 49~75 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 49~76 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 49~77 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 49~79 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 49~81 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 51~109 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 51~110 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 51~111 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 51~112 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 51~113 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 53~106 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 53~107 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 53~108 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 53~114 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 53~115 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 55~84 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 55~87 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 55~89 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 55~91 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 55~95 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 56~109 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 56~110 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 56~111 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 56~112 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 56~113 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 58~75 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 58~76 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 58~77 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 58~79 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 58~81 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 61~106 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 61~107 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 61~108 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 61~114 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 61~115 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 62~80 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 62~82 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 62~86 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 62~88 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 62~90 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 65~109 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 65~110 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 65~111 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 65~112 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 65~113 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 66~106 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 66~107 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 66~108 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 66~114 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 66~115 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 67~84 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 67~87 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 67~89 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 67~91 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 67~95 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 70~80 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 70~82 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 70~86 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 70~88 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 70~90 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 71~75 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 71~76 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 71~77 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 71~79 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 71~81 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 75~6 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 75~24 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 75~26 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 75~30 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 75~40 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 75~49 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 75~58 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 75~71 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 75~104 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 75~119 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 76~6 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 76~24 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 76~26 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 76~30 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 76~40 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 76~49 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 76~58 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 76~71 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 76~104 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 76~119 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 77~6 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 77~24 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 77~26 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 77~30 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 77~40 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 77~49 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 77~58 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 77~71 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 77~104 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 77~119 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 79~6 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 79~24 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 79~26 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 79~30 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 79~40 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 79~49 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 79~58 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 79~71 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 79~104 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 79~119 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 80~8 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 80~23 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 80~25 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 80~34 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 80~44 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 80~47 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 80~62 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 80~70 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 80~99 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 80~117 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 81~6 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 81~24 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 81~26 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 81~30 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 81~40 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 81~49 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 81~58 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 81~71 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 81~104 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 81~119 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 82~8 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 82~23 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 82~25 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 82~34 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 82~44 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 82~47 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 82~62 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 82~70 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 82~99 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 82~117 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 84~4 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 84~22 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 84~27 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 84~36 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 84~41 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 84~46 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 84~55 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 84~67 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 84~101 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 84~105 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 86~8 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 86~23 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 86~25 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 86~34 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 86~44 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 86~47 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 86~62 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 86~70 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 86~99 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 86~117 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 87~4 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 87~22 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 87~27 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 87~36 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 87~41 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 87~46 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 87~55 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 87~67 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 87~101 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 87~105 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 88~8 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 88~23 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 88~25 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 88~34 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 88~44 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 88~47 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 88~62 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 88~70 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 88~99 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 88~117 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 89~4 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 89~22 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 89~27 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 89~36 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 89~41 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 89~46 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 89~55 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 89~67 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 89~101 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 89~105 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 90~8 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 90~23 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 90~25 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 90~34 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 90~44 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 90~47 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 90~62 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 90~70 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 90~99 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 90~117 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 91~4 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 91~22 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 91~27 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 91~36 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 91~41 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 91~46 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 91~55 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 91~67 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 91~101 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 91~105 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 95~4 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 95~22 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 95~27 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 95~36 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 95~41 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 95~46 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 95~55 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 95~67 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 95~101 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 95~105 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 97~106 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 97~107 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 97~108 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 97~114 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 97~115 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 99~80 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 99~82 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 99~86 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 99~88 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 99~90 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 101~84 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 101~87 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 101~89 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 101~91 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 101~95 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 103~109 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 103~110 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 103~111 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 103~112 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 103~113 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 104~75 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 104~76 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 104~77 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 104~79 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 104~81 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 105~84 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 105~87 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 105~89 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 105~91 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 105~95 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 106~7 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 106~19 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 106~29 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 106~32 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 106~43 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 106~53 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 106~61 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 106~66 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 106~97 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 106~123 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 107~7 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 107~19 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 107~29 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 107~32 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 107~43 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 107~53 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 107~61 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 107~66 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 107~97 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 107~123 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 108~7 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 108~19 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 108~29 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 108~32 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 108~43 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 108~53 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 108~61 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 108~66 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 108~97 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 108~123 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 109~5 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 109~17 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 109~28 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 109~38 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 109~42 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 109~51 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 109~56 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 109~65 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 109~103 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 109~121 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 110~5 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 110~17 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 110~28 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 110~38 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 110~42 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 110~51 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 110~56 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 110~65 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 110~103 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 110~121 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 111~5 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 111~17 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 111~28 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 111~38 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 111~42 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 111~51 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 111~56 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 111~65 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 111~103 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 111~121 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 112~5 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 112~17 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 112~28 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 112~38 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 112~42 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 112~51 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 112~56 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 112~65 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 112~103 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 112~121 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 113~5 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 113~17 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 113~28 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 113~38 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 113~42 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 113~51 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 113~56 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 113~65 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 113~103 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 113~121 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 114~7 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 114~19 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 114~29 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 114~32 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 114~43 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 114~53 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 114~61 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 114~66 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 114~97 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 114~123 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 115~7 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 115~19 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 115~29 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 115~32 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 115~43 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 115~53 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 115~61 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 115~66 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 115~97 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 115~123 -> a = {  bgp= Some {  aslen= 2u32; bgpAd= 20u8; comms= { 131080, 65544 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 117~80 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 117~82 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 117~86 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 117~88 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 117~90 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 119~75 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 119~76 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 119~77 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 119~79 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 119~81 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 121~109 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 121~110 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 121~111 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 121~112 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 121~113 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 123~106 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 123~107 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 123~108 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 123~114 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
+  | 123~115 -> a = {  bgp= Some {  aslen= 3u32; bgpAd= 20u8; comms= { 131080, 65544, 196608 }; lp= 100u32; med= 80u32; }; connected= None; ospf= None; selected= Some 3u2; static= None; }
