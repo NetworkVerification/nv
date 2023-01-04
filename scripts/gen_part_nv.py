@@ -75,7 +75,7 @@ class NvFile:
         match self.net:
             case NetType.SP | NetType.FATPOL | NetType.RAND | NetType.OTHER:
                 self.sols = infer_single_destination_routes(
-                    self.graph, self.dest, self.attr, NetType is NetType.FATPOL
+                    self.graph, self.dest, self.attr, self.net is NetType.FATPOL
                 )
                 if self.attr == AttrType.INT_OPTION or self.attr == AttrType.BGP:
                     # tag Some/None for solutions
@@ -135,9 +135,9 @@ class NvFile:
             case FattreeCut.FULL:
                 nodes = nodes_cut_fully(self.graph)
         match self.net:
-            case NetType.FATPOL if cut_type is FattreeCut.VERTICAL:
-                # special case for handling vertical cuts
-                edges = get_vertical_cross_edges(self.graph, nodes, self.dest)
+            # case NetType.FATPOL if cut_type is FattreeCut.VERTICAL:
+            # special case for handling vertical cuts
+            # edges = get_vertical_cross_edges(self.graph, nodes, self.dest)
             case NetType.FATPOL | NetType.SP | NetType.AP | NetType.MAINTENANCE:
                 edges = get_cross_edges(self.graph, nodes)
             case _:
@@ -274,6 +274,7 @@ def infer_node_comms(graph: igraph.Graph, path: list[int]) -> set[int]:
     """
     Return a set of BGP community tags inferred from the given AS path.
     """
+    # drop the last item from the path?
     return set(graph.vs[i]["g"].community(graph.vs[i]["p"], False) for i in path)
 
 
@@ -288,11 +289,15 @@ def infer_single_destination_routes(
     """
 
     def create_route(i: int, path: list[int]) -> tuple[int, Bgp | Rib | int | None]:
-        """i is a vertex id, path is a list of vertex ids"""
+        """
+        i is a vertex id, path is a list of vertex ids starting from the destination and ending at i
+        """
         node = graph.vs[i]["id"]
         if len(path) == 0:
             return node, None
         hops = len(path) - 1
+        # we drop the
+        previous_path = path[:-1]
         match attr_type:
             case AttrType.INT_OPTION:
                 return node, hops
@@ -300,20 +305,24 @@ def infer_single_destination_routes(
                 # generate a rib from the given BGP value and with possibly a static route
                 # call select() to assign the selected route
                 if policy:
-                    bgp = Bgp(aslen=hops, comms=set(infer_node_comms(graph, path)))
+                    bgp = Bgp(
+                        aslen=hops, comms=set(infer_node_comms(graph, previous_path))
+                    )
                 else:
                     bgp = Bgp(aslen=hops)
                 return node, Rib(bgp, static=1 if node == dest else None).select()
             case AttrType.BGP:
                 if policy:
-                    bgp = Bgp(aslen=hops, comms=set(infer_node_comms(graph, path)))
+                    bgp = Bgp(
+                        aslen=hops, comms=set(infer_node_comms(graph, previous_path))
+                    )
                 else:
                     bgp = Bgp(aslen=hops)
                 return node, bgp
 
     d = graph.vs.find(id=dest)
-    # mode="out" gives us the path to the destination from that node
-    ps = graph.get_shortest_paths(d, mode="out")
+    # mode="out" gives us the path from the destination d to that node
+    ps: list[list[int]] = graph.get_shortest_paths(d, mode="out")
     # ps is a list of lists of vertex ids
     return dict(create_route(i, path) for i, path in enumerate(ps))
 
