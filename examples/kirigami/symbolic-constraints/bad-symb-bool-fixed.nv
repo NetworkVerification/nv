@@ -1,0 +1,57 @@
+(* An example where the interface constrains symbolic variables
+ * and hides violations in the monolithic network.
+ * In this variant, a symbolic boolean is used to identify the destination.
+ * The provided interface contains a bug: it reasons as if *both* nodes
+ * are the destination by checking that both their routes are Some 0.
+ * This is a possible solution in each fragment separately, but the combined
+ * solutions are incompatible, as they assign different values to d.
+ * This version presents a technique to prevent this unsoundness, by
+ * encoding the symbolic variable in the attribute.
+ * This does not really "fix" the problem: we can still provide each fragment
+ * with a different value at the interface.
+ * However, it does perhaps make it more explicit that something is wrong?
+ *)
+
+(* The second field represents the choice of d. *)
+type attribute = (option[int], bool)
+
+symbolic d : bool
+
+let nodes = 2
+let edges = { 0=1; }
+
+let init n = match n with
+ | 0n -> if d then (Some 0, d) else (None, d)
+ | 1n -> if !d then (Some 0, d) else (None, d)
+
+let trans e x =
+ let (xx, d) = x in
+ match xx with
+ | Some a -> (Some (a + 1), d)
+ | None -> (None, d)
+
+let merge n x y =
+ let (xx, _) = x in
+ let (yy, _) = y in
+ match (xx, yy) with
+ | (Some a, Some b) -> if a < b then x else y
+ | (None, _) -> y
+ | (_, None) -> x
+
+let partition n = match n with
+ | 0n -> 0
+ | 1n -> 1
+
+let interface e x = match e with
+ | 0~_ -> x = (Some 0, true)
+ | 1~_ -> x = (Some 0, true)
+
+let sol = solution { init = init; trans = trans; merge = merge; interface = interface }
+
+let pred u x =
+ let (xx, _) = x in
+ match xx with
+ | Some a -> a < 1
+ | None -> false
+
+assert foldNodes (fun u x acc -> acc && pred u x) sol true
