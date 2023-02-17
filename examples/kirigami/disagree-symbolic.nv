@@ -1,0 +1,94 @@
+(* vim: set syntax=ocaml: *)
+(* The DISAGREE example from Griffin et al. *)
+
+type attribute = option[int]
+
+symbolic b : bool
+
+let nodes = 3
+let edges = {
+  0=1;
+  0=2;
+  1=2;
+  1=3;
+  2=3;
+}
+
+let init n =
+  match n with
+  | 0n -> if b then Some 0 else None
+  | 3n -> if !b then Some 0 else None
+  | _ -> None
+
+let trans e x =
+  match x with
+  | None -> x
+  | Some x -> Some (x+1)
+
+let merge n x y =
+  match (x,y) with
+  | (None, _) -> y
+  | (_, None) -> x
+  | (Some n1, Some n2) ->
+    if n1 = 0 then x else (* 0 is most preferred *)
+    if n2 = 0 then y else
+    if n1 = 2 then x else (* 2 is second most preferred *)
+    if n2 = 2 then y else
+    if n1 < n2 then x else y (* Otherwise standard order *)
+
+let sol = solution { init = init; trans = trans; merge = merge; interface = interface; }
+
+(* Kirigami instrumentation *)
+let partition n = match n with
+  | 0n -> 0
+  | 1n -> 1
+  | 2n -> 2
+  | 3n -> 3
+
+(* good restrictive *)
+(* let interface e x = match e with
+  | 0~1 | 0~2 -> x = Some 0
+  | 1~2 | 1~0 | 1~3 -> x = Some 1
+  | 2~1 | 2~0 | 2~3 -> x = Some 2
+  | 3~1 | 3~2 -> x = Some 2 *)
+(* good restrictive in opposite direction *)
+(* let interface e x = match e with
+  | 0~1 | 0~2 -> x = Some 0
+  | 1~2 | 1~0 | 1~3 -> x = Some 2
+  | 2~1 | 2~0 | 2~3 -> x = Some 1
+  | 3~1 | 3~2 -> x = Some 2 *)
+(* bad, no solution in 1 or 2 *)
+(* let interface e x = match e with
+  | 0~1 | 0~2 -> x = Some 0
+  | 1~2 | 1~0 | 1~3 -> x = Some 1
+  | 2~1 | 2~0 | 2~3 -> x = Some 1
+  | 3~1 | 3~2 -> x = Some 2 *)
+(* bad, no solution in 1 or 2 *)
+(* let interface e x = match e with
+  | 0~1 | 0~2 -> x = Some 0
+  | 1~2 | 1~0 | 1~3 -> x = Some 2
+  | 2~1 | 2~0 | 2~3 -> x = Some 2
+  | 3~1 | 3~2 -> x = Some 3 *)
+(* bad, inconsistent setting of b *)
+(* let interface e x = match e with
+  | 0~1 | 0~2 -> x = Some 0
+  | 1~2 | 1~0 | 1~3 -> x = Some 1
+  | 2~1 | 2~0 | 2~3 -> x = Some 2
+  | 3~1 | 3~2 -> x = Some 0 *)
+(* bad, inconsistent setting of b *)
+let interface e x = match e with
+  | 0~1 | 0~2 -> x = None
+  | 1~2 | 1~0 | 1~3 -> x = None
+  | 2~1 | 2~0 | 2~3 -> x = None
+  | 3~1 | 3~2 -> x = None
+
+
+let pred v x =
+  match x with
+  | Some y -> (match v with
+    | 0n -> y = 0
+    | 1n | 2n -> y = 1 || y = 2
+    | 3n -> y = 0)
+  | None -> false
+
+assert foldNodes (fun v x acc -> acc && pred v x) sol true
